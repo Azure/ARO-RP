@@ -10,15 +10,15 @@ OC ?= oc
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-MARINER_VERSION = 20240301
-FLUENTBIT_VERSION = 1.9.10
+MARINER_VERSION = 20250701
+FLUENTBIT_VERSION = 4.0.4
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
-AUTOREST_VERSION = 3.6.3
-AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
-GATEKEEPER_VERSION = v3.15.1
+AUTOREST_VERSION = 3.7.2
+AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
+GATEKEEPER_VERSION = v3.19.2
 
 # Golang version go mod tidy compatibility
-GOLANG_VERSION ?= 1.22.9
+GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
 
 include .bingo/Variables.mk
 
@@ -32,15 +32,20 @@ else
 	VERSION = $(TAG)
 endif
 
+# REGISTRY and BUILDER_REGISTRY are set conditionally below based on RP_IMAGE_ACR
 # default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
+	BUILDER_REGISTRY = arointsvc.azurecr.io
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
+	BUILDER_REGISTRY = arosvc.azurecr.io
 else ifeq ($(RP_IMAGE_ACR),)
-	REGISTRY = registry.access.redhat.com
+	REGISTRY ?= registry.access.redhat.com
+	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
 else
 	REGISTRY = $(RP_IMAGE_ACR)
+	BUILDER_REGISTRY = quay.io/openshift-release-dev
 endif
 
 # prod images
@@ -82,6 +87,13 @@ az: pyenv
 	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
 
+# Freeze the dependencies of the current pyenv for hoped-for reproducibility.
+# Don't depend on az as that will reinstall the requirements.txt which makes this pointless.
+.PHONY: az-freeze
+az-freeze:
+	. pyenv/bin/activate && \
+	pip freeze > requirements.txt
+
 .PHONY: clean
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
@@ -90,8 +102,13 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
-client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
+client: generate client-generate lint-go-fix lint-go
+
+.PHONY: client-generate
+client-generate:
+	hack/apiclients/generate-swagger-checksum.sh 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
+# Only generate the clients we use in our dev Python extension or in e2e clients
+	hack/apiclients/build-dev-api-clients.sh "${AUTOREST_IMAGE}" 2024-08-12-preview 2025-07-25
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -110,9 +127,14 @@ discoverycache:
 	$(MAKE) generate
 
 .PHONY: generate
-generate: install-tools
+generate: install-tools generate-swagger
 	go generate ./...
 	$(MAKE) imports
+
+.PHONY: generate-swagger
+generate-swagger:
+	go run ./hack/swagger github.com/Azure/ARO-RP/pkg/api/v20240812preview ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/preview/2024-08-12-preview
+	go run ./hack/swagger github.com/Azure/ARO-RP/pkg/api/v20250725 ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/stable/2025-07-25
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
@@ -134,8 +156,7 @@ generate-kiota:
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
 .PHONY: imports
-imports: $(OPENSHIFT_GOIMPORTS)
-	$(OPENSHIFT_GOIMPORTS) --module github.com/Azure/ARO-RP
+imports: lint-go-fix
 
 .PHONY: validate-imports
 validate-imports: imports
@@ -151,7 +172,7 @@ init-contrib:
 
 .PHONY: image-aro-multistage
 image-aro-multistage:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-autorest
 image-autorest:
@@ -163,12 +184,12 @@ image-fluentbit:
 
 .PHONY: image-proxy
 image-proxy:
-	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
+	docker pull $(REGISTRY)/ubi9/ubi-minimal
+	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-gatekeeper
 image-gatekeeper:
-	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
+	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
 
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
@@ -196,7 +217,7 @@ publish-image-gatekeeper: image-gatekeeper
 
 .PHONY: image-e2e
 image-e2e:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: publish-image-e2e
 publish-image-e2e: image-e2e
@@ -228,7 +249,8 @@ pyenv:
 	. pyenv/bin/activate && \
 		pip install -U pip && \
 		pip install -r requirements.txt && \
-		azdev setup -r .
+		azdev setup -r . && \
+		az config set extension.dev_sources=$(PWD)/python
 
 .PHONY: secrets
 secrets:
@@ -277,7 +299,7 @@ validate-go: validate-imports
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action: validate-imports
+validate-go-action: validate-imports validate-lint-go-fix
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -298,12 +320,25 @@ unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 .PHONY: lint-go
-lint-go:
+lint-go: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --verbose
+
+.PHONY: lint-go-fix
+lint-go-fix: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run --verbose --fix
+	cd pkg/api/ && $(GOLANGCI_LINT) run --verbose --fix ./...
+
+.PHONY: validate-lint-go-fix
+validate-lint-go-fix: lint-go-fix
+	if ! git diff --quiet HEAD; then \
+		git diff; \
+		echo "You need to run 'make lint-go-fix' to update the codebase and commit the changes"; \
+		exit 1; \
+	fi
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
-	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
+	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
 	docker run --platform=linux/amd64 -t --rm linter:latest
 
 .PHONY: test-python
@@ -313,11 +348,26 @@ test-python: pyenv az
 		azdev style && \
 		hack/unit-test-python.sh
 
+.PHONY: test-python-podman
+test-python-podman:
+	rm -rf pyenv
+	docker run --platform=linux/amd64 -t --rm \
+	    -v ./:/app:z \
+		--user=0 \
+	 	$(REGISTRY)/ubi9/python-312:latest \
+		bash -c "cd /app && ls && make test-python"
+
 .PHONY: shared-cluster-login
 shared-cluster-login:
 	@oc login $(shell az aro show -g sre-shared-cluster -n sre-shared-cluster -ojson --query apiserverProfile.url) \
 		-u kubeadmin \
 		-p $(shell az aro list-credentials -g sre-shared-cluster -n sre-shared-cluster  -ojson --query "kubeadminPassword")
+
+.PHONY: shared-miwi-cluster-login
+shared-miwi-cluster-login:
+	@oc login $(shell az aro show -g sre-shared-miwi-cluster -n sre-shared-miwi-cluster -ojson --query apiserverProfile.url) \
+		-u kubeadmin \
+		-p $(shell az aro list-credentials -g sre-shared-miwi-cluster -n sre-shared-miwi-cluster  -ojson --query "kubeadminPassword")
 
 .PHONY: shared-cluster-create
 shared-cluster-create:
@@ -326,6 +376,14 @@ shared-cluster-create:
 .PHONY: shared-cluster-delete
 shared-cluster-delete:
 	./hack/shared-cluster.sh delete
+
+.PHONY: shared-miwi-cluster-create
+shared-miwi-cluster-create:
+	./hack/shared-miwi-cluster.sh create
+
+.PHONY: shared-miwi-cluster-delete
+shared-miwi-cluster-delete:
+	./hack/shared-miwi-cluster.sh delete
 
 .PHONY: unit-test-python
 unit-test-python:
@@ -341,11 +399,17 @@ aks.kubeconfig:
 
 .PHONY: go-tidy
 go-tidy: # Run go mod tidy - add missing and remove unused modules.
+	echo "tidying main module"
 	go mod tidy -compat=${GOLANG_VERSION}
+	echo "tidying pkg/api/"
+	cd pkg/api/ && go mod tidy -compat=${GOLANG_VERSION}
 
 .PHONY: go-verify
 go-verify: go-tidy # Run go mod verify - verify dependencies have expected content
+	echo "verifying main module"
 	go mod verify
+	echo "verifying pkg/api/"
+	cd pkg/api/ && go mod verify
 
 .PHONY: xmlcov
 xmlcov: $(GOCOV) $(GOCOV_XML)
@@ -412,10 +476,11 @@ ci-rp:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=${REGISTRY} \
-		--build-arg ARO_VERSION=${VERSION} \
-		--no-cache=${NO_CACHE} \
-		-t ${LOCAL_ARO_RP_IMAGE}:${VERSION}
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 
 	# Extract test coverage files from build to local filesystem
 	docker create --name extract_cover_out ${LOCAL_ARO_RP_IMAGE}:${VERSION}; \
@@ -428,10 +493,11 @@ aro-e2e:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.aro-e2e \
 		--ulimit=nofile=4096:4096 \
-		--build-arg REGISTRY=${REGISTRY} \
-		--build-arg ARO_VERSION=${VERSION} \
-		--no-cache=${NO_CACHE} \
-		-t ${LOCAL_E2E_IMAGE}:${VERSION}
+		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
+		--build-arg ARO_VERSION=$(VERSION) \
+		--no-cache=$(NO_CACHE) \
+		-t $(LOCAL_E2E_IMAGE):$(VERSION)
 
 .PHONY: ci-tunnel
 ci-tunnel:
@@ -440,6 +506,7 @@ ci-tunnel:
 		-f Dockerfile.ci-tunnel \
 		--ulimit=nofile=4096:4096 \
 		--build-arg REGISTRY=$(REGISTRY) \
+		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_TUNNEL_IMAGE):$(VERSION)

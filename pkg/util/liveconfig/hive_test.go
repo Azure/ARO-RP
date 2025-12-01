@@ -11,12 +11,12 @@ import (
 	"testing"
 
 	azfake "github.com/Azure/azure-sdk-for-go/sdk/azcore/fake"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armcontainerservice "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	fake "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 //go:embed testdata
@@ -33,17 +33,17 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	managedClustersList := []*armcontainerservice.ManagedCluster{
 		{
-			Name:     to.Ptr("aro-aks-cluster-001"),
-			Location: to.Ptr("eastus"),
+			Name:     pointerutils.ToPtr("aro-aks-cluster-001"),
+			Location: pointerutils.ToPtr("eastus"),
 			Properties: &armcontainerservice.ManagedClusterProperties{
-				NodeResourceGroup: to.Ptr("rp-eastus-aks1"),
+				NodeResourceGroup: pointerutils.ToPtr("rp-eastus-aks1"),
 			},
 		},
 		{
-			Name:     to.Ptr("aro-aks-cluster-002"),
-			Location: to.Ptr("eastus"),
+			Name:     pointerutils.ToPtr("aro-aks-cluster-002"),
+			Location: pointerutils.ToPtr("eastus"),
 			Properties: &armcontainerservice.ManagedClusterProperties{
-				NodeResourceGroup: to.Ptr("rp-eastus-aks2"),
+				NodeResourceGroup: pointerutils.ToPtr("rp-eastus-aks2"),
 			},
 		},
 	}
@@ -55,7 +55,7 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	kcresp := []*armcontainerservice.CredentialResult{
 		{
-			Name:  to.Ptr("admin config"),
+			Name:  pointerutils.ToPtr("admin config"),
 			Value: kc,
 		},
 	}
@@ -121,7 +121,7 @@ func TestProdHiveAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(adminCredsResult.CredentialResults.Kubeconfigs) != 1 {
+	if len(adminCredsResult.Kubeconfigs) != 1 {
 		t.Fatal(errors.New("invalid number of credentials returned"))
 	}
 

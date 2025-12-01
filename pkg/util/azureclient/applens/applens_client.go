@@ -46,11 +46,11 @@ func (c *Client) Endpoint() string {
 // NewClient creates a new instance of AppLens client with Azure AD access token authentication. It uses the default pipeline configuration.
 // endpoint - The AppLens service endpoint to use.
 // issuerUrlTemplate - The URL template to fetch the certs used by AppLens example: https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s
-// caName - Is the certificate authority used by AppLens example: ame
+// caNames - A list of certificate authorities used by AppLens example: ame
 // cred - The credential used to authenticate with the AppLens service.
 // options - Optional AppLens client options.  Pass nil to accept default values.
-func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
-	pipeline, err := newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName)
+func NewClient(endpoint string, issuerUrlTemplate string, caNames []string, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
+	pipeline, err := newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caNames)
 
 	if err != nil {
 		return nil, err
@@ -59,22 +59,25 @@ func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.To
 	return &Client{endpoint: endpoint, pipeline: *pipeline}, nil
 }
 
-func getClientOptions(initialOptions *ClientOptions, issuerUrlTemplate, caName string) (*ClientOptions, error) {
+func getClientOptions(initialOptions *ClientOptions, issuerUrlTemplate string, caNames []string) (*ClientOptions, error) {
 	if initialOptions != nil {
 		return initialOptions, nil
 	}
 
-	if issuerUrlTemplate == "" || caName == "" {
+	if issuerUrlTemplate == "" || len(caNames) == 0 {
 		return NewClientOptions(nil), nil
 	}
 
-	url := fmt.Sprintf(issuerUrlTemplate, caName)
-	rootCAs, err := pki.FetchDataFromGetIssuerPki(url)
+	var urls []string
+	for _, ca := range caNames {
+		urls = append(urls, fmt.Sprintf(issuerUrlTemplate, ca))
+	}
+	rootCAs, err := pki.FetchDataFromGetIssuerPkiUrls(urls)
 	if err != nil {
 		return nil, err
 	}
 
-	certPool, err := pki.BuildCertPoolForCaName(rootCAs)
+	certPool, err := pki.BuildCertPoolFromCAData(rootCAs)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +85,8 @@ func getClientOptions(initialOptions *ClientOptions, issuerUrlTemplate, caName s
 	return NewClientOptions(certPool), nil
 }
 
-func newPipeline(authPolicy []policy.Policy, initialClientOptions *ClientOptions, issuerUrlTemplate, caName string) (*runtime.Pipeline, error) {
-	options, err := getClientOptions(initialClientOptions, issuerUrlTemplate, caName)
+func newPipeline(authPolicy []policy.Policy, initialClientOptions *ClientOptions, issuerUrlTemplate string, caNames []string) (*runtime.Pipeline, error) {
+	options, err := getClientOptions(initialClientOptions, issuerUrlTemplate, caNames)
 	if err != nil {
 		return nil, err
 	}

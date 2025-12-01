@@ -23,6 +23,8 @@ from azext_aro._validators import (
     validate_enable_managed_identity,
     validate_platform_workload_identities,
     validate_cluster_identity,
+    validate_cluster_identity_update,
+    validate_delete_identities,
     validate_upgradeable_to_format,
 )
 from azure.cli.core.commands.parameters import (
@@ -89,13 +91,13 @@ def load_arguments(self, _):
                    options_list=['--master-encryption-at-host', '--master-enc-host'],
                    help='Encryption at host flag for master VMs. [Default: false]')
         c.argument('master_vm_size',
-                   help='Size of master VMs. [Default: Standard_D8s_v3]')
+                   help='Size of master VMs. [Default: Standard_D8s_v5]')
 
         c.argument('worker_encryption_at_host', arg_type=get_three_state_flag(),
                    options_list=['--worker-encryption-at-host', '--worker-enc-host'],
                    help='Encryption at host flag for worker VMs. [Default: false]')
         c.argument('worker_vm_size',
-                   help='Size of worker VMs. [Default: Standard_D4s_v3]')
+                   help='Size of worker VMs. [Default: Standard_D4s_v5]')
         c.argument('worker_vm_disk_size_gb',
                    type=int,
                    help='Disk size in GB of worker VMs. [Default: 128]',
@@ -160,6 +162,10 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
+        c.argument('mi_user_assigned', arg_group='Identity', is_preview=True,
+                   help='Set the user managed identity on the cluster. Value must be an identity name or resource ID.',
+                   options_list=['--mi-user-assigned', '--assign-cluster-identity'],
+                   validator=validate_cluster_identity_update)
         c.argument('platform_workload_identities', arg_group='Identity', is_preview=True,
                    help='Assign a platform workload identity used within the cluster. Requires two values: \
                            an operator name and either the name or resource ID of the Azure identity to use for it.',
@@ -174,3 +180,11 @@ def load_arguments(self, _):
         c.argument('file',
                    help='Path to the file where kubeconfig should be saved. Default: kubeconfig in local directory',
                    options_list=['--file', '-f'])
+
+    with self.argument_context('aro delete') as c:
+        c.argument('delete_identities',
+                   is_preview=True,
+                   arg_group='Identity',
+                   arg_type=get_three_state_flag(),
+                   validator=validate_delete_identities,
+                   help='Delete the cluster\'s associated managed identities together with the cluster.')

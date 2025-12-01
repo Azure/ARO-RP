@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testcontainer-n-{{.DeploymentNumber}}
+  namespace: {{.NamespaceName}}
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: testcontainer-n-{{.DeploymentNumber}}
+  template:
+    metadata:
+      labels:
+        app: testcontainer-n-{{.DeploymentNumber}}
+    spec:
+      containers:
+        - name: test
+          image: arointsvc.azurecr.io/ubi9/ubi-micro:latest
+          command: ["bash"]
+          args: ["-c", "while :; do sleep 2073600; done"]

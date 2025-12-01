@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestMarshalFloat(t *testing.T) {
@@ -17,7 +17,7 @@ func TestMarshalFloat(t *testing.T) {
 		dimensions: map[string]string{"key": "value"},
 
 		timestamp:  time.Unix(0, 0),
-		valueFloat: to.Float64Ptr(1.0),
+		valueFloat: pointerutils.ToPtr(1.0),
 	}
 	b, err := f.marshalStatsd()
 	if err != nil {
@@ -36,7 +36,7 @@ func TestMarshalGauge(t *testing.T) {
 		dimensions: map[string]string{"key": "value"},
 
 		timestamp:  time.Unix(0, 0),
-		valueGauge: to.Int64Ptr(42),
+		valueGauge: pointerutils.ToPtr(int64(42)),
 	}
 	b, err := g.marshalStatsd()
 	if err != nil {

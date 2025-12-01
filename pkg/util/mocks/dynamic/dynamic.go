@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	gomock "go.uber.org/mock/gomock"
+
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 	armauthorization "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
@@ -112,20 +113,6 @@ func (mr *MockDynamicMockRecorder) ValidateDiskEncryptionSets(ctx, oc any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDiskEncryptionSets", reflect.TypeOf((*MockDynamic)(nil).ValidateDiskEncryptionSets), ctx, oc)
 }
 
-// ValidateEncryptionAtHost mocks base method.
-func (m *MockDynamic) ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateEncryptionAtHost", ctx, oc)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateEncryptionAtHost indicates an expected call of ValidateEncryptionAtHost.
-func (mr *MockDynamicMockRecorder) ValidateEncryptionAtHost(ctx, oc any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockDynamic)(nil).ValidateEncryptionAtHost), ctx, oc)
-}
-
 // ValidateLoadBalancerProfile mocks base method.
 func (m *MockDynamic) ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()
@@ -141,7 +128,7 @@ func (mr *MockDynamicMockRecorder) ValidateLoadBalancerProfile(ctx, oc any) *gom
 }
 
 // ValidatePlatformWorkloadIdentityProfile mocks base method.
-func (m *MockDynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient, clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient, platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity) error {
+func (m *MockDynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRolesByRoleName map[string][]api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient, clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient, platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidatePlatformWorkloadIdentityProfile", ctx, oc, platformWorkloadIdentityRolesByRoleName, roleDefinitions, clusterMsiFederatedIdentityCredentials, platformWorkloadIdentities)
 	ret0, _ := ret[0].(error)

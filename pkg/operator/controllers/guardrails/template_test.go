@@ -5,8 +5,9 @@ package guardrails
 
 import (
 	"context"
-	_ "embed"
 	"testing"
+
+	_ "embed"
 
 	"github.com/go-test/deep"
 	"go.uber.org/mock/gomock"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -67,7 +69,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	expectedKinds := map[string]int{
 		"ClusterRole":                    1,
 		"ClusterRoleBinding":             1,
-		"CustomResourceDefinition":       13,
+		"CustomResourceDefinition":       14,
 		"Deployment":                     2,
 		"Namespace":                      1,
 		"Role":                           1,

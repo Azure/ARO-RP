@@ -12,14 +12,15 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -46,26 +47,25 @@ import (
 func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	nic, err := m.interfaces.Get(ctx, resourceGroup, nicName, "")
+	nic, err := m.armInterfaces.Get(ctx, resourceGroup, nicName, nil)
 
 	// nic is already gone which typically happens on PLS / PE nics
 	// as they are deleted in a different step
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
+	if azuresdkerrors.IsNotFoundError(err) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 
-	if nic.ProvisioningState == mgmtnetwork.Failed {
+	if *nic.Properties.ProvisioningState == armnetwork.ProvisioningStateFailed {
 		m.log.Printf("NIC '%s' is in a Failed provisioning state, attempting to reconcile prior to deletion.", *nic.ID)
-		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic)
+		err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic.Interface, nil)
 		if err != nil {
 			return err
 		}
 	}
-	return m.interfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name)
+	return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
 }
 
 func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string) error {
@@ -88,14 +88,26 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		// Note: subnet only has value in the ID field,
 		// so we have to make another API request to get full subnet struct
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := m.subnet.Get(ctx, *subnet.ID)
+		r, err := arm.ParseResourceID(*subnet.ID)
+		if err != nil {
+			return &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidResourceID,
+					Message: "Invalid subnet resource ID format. For more details, please refer to https://docs.microsoft.com/azure/azure-resource-manager/management/resource-name-rules",
+					Target:  *subnet.ID,
+				},
+			}
+		}
+
+		subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
 		if err != nil {
 			b, _ := json.Marshal(err)
 
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidLinkedVNet,
+					Code:    api.CloudErrorCodeInvalidLinkedSubnet,
 					Message: fmt.Sprintf("Failed to get subnet '%s'.", *subnet.ID),
 					Details: []api.CloudErrorBody{
 						{
@@ -106,22 +118,24 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 			}
 		}
 
-		if s.SubnetPropertiesFormat == nil || s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
-			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, *nsg.ID) {
+		s := subnetResponse.Subnet
+
+		if s.Properties == nil || s.Properties.NetworkSecurityGroup == nil ||
+			!strings.EqualFold(*s.Properties.NetworkSecurityGroup.ID, *nsg.ID) {
 			continue
 		}
 
-		s.SubnetPropertiesFormat.NetworkSecurityGroup = nil
+		s.Properties.NetworkSecurityGroup = nil
 
 		m.log.Printf("disconnecting network security group from subnet %s", *s.ID)
-		err = m.subnet.CreateOrUpdate(ctx, *s.ID, s)
+		err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 		if err != nil {
 			b, _ := json.Marshal(err)
 
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidLinkedVNet,
+					Code:    api.CloudErrorCodeInvalidLinkedSubnet,
 					Message: fmt.Sprintf("Failed to update subnet '%s'.", *subnet.ID),
 					Details: []api.CloudErrorBody{
 						{
@@ -196,6 +210,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				m.log.Warnf("skipping resource %s", *resource.ID)
 				continue
 			}
+			m.log.Printf("deleting %s", *resource.ID)
 
 			switch strings.ToLower(*resource.Type) {
 			case "microsoft.network/networksecuritygroups":
@@ -219,7 +234,6 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				}
 			}
 
-			m.log.Printf("deleting %s", *resource.ID)
 			future, err := m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
 			if err != nil {
 				return deleteByIdCloudError(err)
@@ -377,7 +391,16 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 }
 
 func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() || m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() ||
+		m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil ||
+		len(m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities) == 0 {
+		return nil
+	}
+
+	// before deleting federated credentials, ensure validity of the MSI cert
+	err := m.ensureClusterMsiCertificate(ctx)
+	if err != nil {
+		m.log.Errorf("ensureClusterMsiCertificate failed with error: %v", err)
 		return nil
 	}
 
@@ -505,7 +528,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Print("deleting private endpoint")
-	err = m.fpPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID)
+	err = m.armFPPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, nil)
 	if err != nil {
 		return err
 	}

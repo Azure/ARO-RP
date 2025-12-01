@@ -715,7 +715,8 @@
         },
         "oidcIssuer": {
           "$ref": "#/definitions/OIDCIssuer",
-          "description": "The URL of the managed OIDC issuer in a workload identity cluster."
+          "description": "The URL of the managed OIDC issuer in a workload identity cluster.",
+          "readOnly": true
         }
       }
     },

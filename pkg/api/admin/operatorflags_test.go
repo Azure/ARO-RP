@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	apitesterror "github.com/Azure/ARO-RP/pkg/api/test/error"
 )
 
 func TestOperatorFlagsMergeStrategy(t *testing.T) {
@@ -52,8 +52,8 @@ func TestOperatorFlagsMergeStrategy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := OperatorFlagsMergeStrategy(tt.oc, tt.body)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			err := OperatorFlagsMergeStrategy(tt.oc, tt.body, api.OperatorFlags{})
+			apitesterror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

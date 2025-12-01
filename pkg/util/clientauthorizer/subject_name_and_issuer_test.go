@@ -5,22 +5,25 @@ package clientauthorizer
 
 import (
 	"crypto/tls"
-	"errors"
+	"crypto/x509"
 	"testing"
 
 	"github.com/sirupsen/logrus"
 
-	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
 func TestSubjectNameAndIssuer(t *testing.T) {
-	caBundlePath := "/fake/path/to/ca/cert.pem"
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	for _, cert := range validCaCerts {
+		caCertPool.AddCert(cert)
 	}
 
 	for _, tt := range []struct {
@@ -120,20 +123,7 @@ func TestSubjectNameAndIssuer(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			authorizer := &subjectNameAndIssuer{
-				clientCertCommonName: "validclient",
-
-				log: log,
-				readFile: func(filename string) ([]byte, error) {
-					if filename != caBundlePath {
-						t.Fatal(filename)
-						return nil, errors.New("noop")
-					}
-
-					return utilpem.Encode(validCaCerts...)
-				},
-			}
-			err := authorizer.readCABundle(caBundlePath)
+			authorizer, err := NewSubjectNameAndIssuer(log, caCertPool, "validclient")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -146,78 +136,6 @@ func TestSubjectNameAndIssuer(t *testing.T) {
 			result := authorizer.IsAuthorized(cs)
 			if result != tt.want {
 				t.Error(result)
-			}
-		})
-	}
-}
-
-func TestSubjectNameAndIssuerReadCABundle(t *testing.T) {
-	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, validClientCert, err := utiltls.GenerateKeyAndCertificate("validclient", validCaKey, validCaCerts[0], false, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cs := &tls.ConnectionState{PeerCertificates: validClientCert}
-
-	for _, tt := range []struct {
-		name     string
-		readFile func(string) ([]byte, error)
-		want     bool
-	}{
-		{
-			name: "valid ca cert",
-			readFile: func(string) ([]byte, error) {
-				return utilpem.Encode(validCaCerts...)
-			},
-			want: true,
-		},
-		{
-			name: "error reading ca cert file",
-			readFile: func(string) ([]byte, error) {
-				return nil, errors.New("noop")
-			},
-		},
-		{
-			name: "error decoding ca cert file",
-			readFile: func(string) ([]byte, error) {
-				return []byte("invalid-ca-cert"), nil
-			},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			authorizer := &subjectNameAndIssuer{
-				clientCertCommonName: "validclient",
-
-				log:      logrus.NewEntry(logrus.StandardLogger()),
-				readFile: tt.readFile,
-			}
-
-			if authorizer.IsAuthorized(cs) {
-				t.Error("expected deny before the readCABundle call")
-			}
-
-			readCABundleErr := authorizer.readCABundle("/fake/path/to/ca/cert.pem")
-			IsAuthorized := authorizer.IsAuthorized(cs)
-
-			if tt.want {
-				if readCABundleErr != nil {
-					t.Error(readCABundleErr)
-				}
-				if !IsAuthorized {
-					t.Error("expected to allow")
-				}
-			} else {
-				if readCABundleErr == nil {
-					t.Error("expected an error")
-				}
-				if IsAuthorized {
-					t.Error("expected deny")
-				}
 			}
 		})
 	}

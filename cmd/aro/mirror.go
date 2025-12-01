@@ -11,12 +11,17 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -38,9 +43,8 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 	}, nil
 }
 
-func mirror(ctx context.Context, log *logrus.Entry) error {
+func mirror(ctx context.Context, _log *logrus.Entry) error {
 	err := env.ValidateVars(
-		"DST_AUTH",
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
 		"SRC_AUTH_REDHAT")
@@ -49,19 +53,55 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	env, err := env.NewCoreForCI(ctx, log)
-	if err != nil {
-		return err
+	var _env env.Core
+	var tokenCredential azcore.TokenCredential
+	if os.Getenv("AZURE_EV2") != "" {
+		var err error
+		_env, err = env.NewCore(ctx, _log, env.SERVICE_MIRROR)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().ManagedIdentityCredentialOptions()
+		// use specific user-assigned managed identity if set
+		if os.Getenv("AZURE_CLIENT_ID") != "" {
+			options.ID = azidentity.ClientID(os.Getenv("AZURE_CLIENT_ID"))
+		}
+		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := env.ValidateVars(
+			"AZURE_CLIENT_ID",
+			"AZURE_CLIENT_SECRET",
+			"AZURE_SUBSCRIPTION_ID",
+			"AZURE_TENANT_ID")
+
+		if err != nil {
+			return err
+		}
+
+		_env, err = env.NewCoreForCI(ctx, _log, env.SERVICE_MIRROR)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().EnvironmentCredentialOptions()
+		tokenCredential, err = azidentity.NewEnvironmentCredential(options)
+		if err != nil {
+			return err
+		}
 	}
+	env := _env
 
 	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
 
-	dstAuth, err := getAuth("DST_AUTH")
+	dstAcr := os.Getenv("DST_ACR_NAME") + acrDomainSuffix
+	acrAuthenticationClient, err := azcontainerregistry.NewAuthenticationClient(fmt.Sprintf("https://%s", dstAcr), env.Environment().AzureClientOptions())
 	if err != nil {
 		return err
 	}
 
-	dstAcr := os.Getenv("DST_ACR_NAME")
+	acrauth := pkgmirror.NewAcrAuth(dstAcr, env, tokenCredential, acrAuthenticationClient)
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
@@ -73,11 +113,16 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	mirrorLog := _env.LoggerForComponent("mirror")
+
 	// We can lose visibility of early image mirroring errors because logs are trimmed in the output of Ev2 pipelines.
 	// If images fail to mirror, those errors need to be returned together and logged at the end of the execution.
-	var imageMirroringErrors []string
+	var imageMirroringSummary []string
 
 	for _, ref := range []string{
+
+		// https://hub.docker.com/_/fedora
+		"registry.fedoraproject.org/fedora:42",
 
 		// https://mcr.microsoft.com/en-us/product/azure-cli/about
 		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
@@ -99,42 +144,57 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/openshift4/ose-cli-rhel9:v4.17",
 		"registry.redhat.io/openshift4/ose-cli-rhel9:latest",
 
-		// https://catalog.redhat.com/software/containers/ubi8/ubi-minimal/5c359a62bed8bd75a2c3fba8
 		// https://catalog.redhat.com/software/containers/ubi9/ubi-minimal/615bd9b4075b022acc111bf5
-		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
 		"registry.access.redhat.com/ubi9/ubi-minimal:latest",
+
+		// https://catalog.redhat.com/software/containers/ubi9/ubi-micro/615bd9b4075b022acc111bf5
+		"registry.access.redhat.com/ubi9/ubi-micro:latest",
+
+		// https://catalog.redhat.com/software/containers/ubi9/toolbox/615bd9b4075b022acc111bf5
+		"registry.access.redhat.com/ubi9/toolbox:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
-
-		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
-		"registry.access.redhat.com/ubi8/go-toolset:1.22",
+		// https://catalog.redhat.com/software/containers/ubi9/nodejs-18/62e8e7ed22d1d3c2dfe2ca01
+		"registry.access.redhat.com/ubi9/nodejs-18:latest",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
 
-		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:5d3f4d77dc",
+		// https://registry.redhat.io/openshift4/ose-must-gather (standard OpenShift must-gather)
+		"registry.redhat.io/openshift4/ose-must-gather:latest",
+
+		// OpenShift Automated Release Tooling partner images
+		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.23-openshift-4.19",
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20",
 	} {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+		l := mirrorLog.WithField("payload", ref)
+		startTime := time.Now()
+		l.Debugf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr, ref))
 
 		srcAuth := srcAuthRedhat
 		if strings.Index(ref, "quay.io") == 0 {
 			srcAuth = srcAuthQuay
 		}
 
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
+		dstAuth, err := acrauth.Get(ctx)
 		if err != nil {
-			imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", ref, err))
+			return err
+		}
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr, ref), ref, dstAuth, srcAuth)
+		l.WithError(err).WithField("duration", time.Since(startTime)).Printf("mirroring completed")
+		if err != nil {
+			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s: %s", ref, err))
 		}
 	}
 
 	// OCP release mirroring
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
-		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 14))
+		mirrorLog.Print("reading release graph")
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 12))
 		if err != nil {
 			return err
 		}
@@ -165,22 +225,24 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	for _, release := range releases {
+		l := mirrorLog.WithFields(logrus.Fields{"release": release.Version, "payload": release.Payload})
 		if _, ok := doNotMirrorTags[release.Version]; ok {
-			log.Printf("skipping mirror of release %s", release.Version)
+			l.Printf("skipping mirror due to hard-coded deny list")
 			continue
 		}
-		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		l.Debugf("mirroring release")
+		dstAuth, err := acrauth.Get(ctx)
 		if err != nil {
-			imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", release, err))
+			return err
+		}
+		c, err := pkgmirror.Mirror(ctx, l, dstAcr, release.Payload, dstAuth, srcAuthQuay)
+		imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("%s (%d)", release.Version, c))
+		if err != nil {
+			imageMirroringSummary = append(imageMirroringSummary, fmt.Sprintf("Error on %s: %s", release, err))
 		}
 	}
-
-	log.Print("done")
-
-	if imageMirroringErrors != nil {
-		return fmt.Errorf("failed to mirror image/s\n%s", strings.Join(imageMirroringErrors, "\n"))
-	}
+	fmt.Print("==========\nSummary\n==========\n", strings.Join(imageMirroringSummary, "\n"))
+	mirrorLog.Print("done")
 
 	return nil
 }

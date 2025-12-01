@@ -10,16 +10,17 @@ import (
 	"strings"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -69,7 +70,7 @@ func TestAdminListVMSizeList(t *testing.T) {
 					VMSizeList(gomock.Any()).
 					Return([]mgmtcompute.ResourceSku{
 						{
-							Name: to.StringPtr("Standard_D8s_v90"),
+							Name: pointerutils.ToPtr("Standard_D8s_v90"),
 							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{
 								{
 									Type: mgmtcompute.Location,
@@ -77,7 +78,7 @@ func TestAdminListVMSizeList(t *testing.T) {
 							},
 						},
 						{
-							Name:         to.StringPtr("Standard_D8s_v9001"),
+							Name:         pointerutils.ToPtr("Standard_D8s_v9001"),
 							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
 						},
 					}, nil)

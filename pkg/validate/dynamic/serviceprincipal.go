@@ -7,9 +7,10 @@ import (
 	"context"
 	"net/http"
 
+	jwt "github.com/golang-jwt/jwt/v4"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	jwt "github.com/golang-jwt/jwt/v4"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"

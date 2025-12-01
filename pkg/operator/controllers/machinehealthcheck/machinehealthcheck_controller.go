@@ -5,8 +5,9 @@ package machinehealthcheck
 
 import (
 	"context"
-	_ "embed"
 	"time"
+
+	_ "embed"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,9 +36,6 @@ import (
 
 //go:embed staticresources/machinehealthcheck.yaml
 var machinehealthcheckYaml []byte
-
-//go:embed staticresources/mhcremediationalert.yaml
-var mhcremediationalertYaml []byte
 
 const (
 	ControllerName      string = "MachineHealthCheck"
@@ -84,6 +83,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
 
+		r.ClearConditions(ctx)
+		return reconcile.Result{}, nil
+	}
+
+	var resources []kruntime.Object
+
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineHealthCheckManaged) {
 		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
 		if err != nil {
 			r.Log.Error(err)
@@ -91,14 +97,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
-
-		r.ClearConditions(ctx)
-		return reconcile.Result{}, nil
 	}
 
-	var resources []kruntime.Object
-
-	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
+	for _, asset := range [][]byte{machinehealthcheckYaml} {
 		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
 		if err != nil {
 			r.Log.Error(err)
@@ -117,7 +118,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			if isUpgrading {
-				mhc.ObjectMeta.Annotations = map[string]string{
+				mhc.Annotations = map[string]string{
 					MHCPausedAnnotation: "",
 				}
 			}

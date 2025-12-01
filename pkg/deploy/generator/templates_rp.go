@@ -5,10 +5,10 @@ package generator
 
 import (
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (g *generator) rpManagedIdentityTemplate() *arm.Template {
@@ -29,6 +29,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		"databaseAccountName",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
+		"globalDevopsServicePrincipalId",
 	}
 	if g.production {
 		params = append(params,
@@ -57,7 +58,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"gatewayDomains",
 			"gatewayResourceGroupName",
 			"gatewayServicePrincipalId",
-			"globalDevopsServicePrincipalId",
 			"ipRules",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
@@ -83,6 +83,14 @@ func (g *generator) rpTemplate() *arm.Template {
 			"oidcStorageAccountName",
 			"otelAuditQueueSize",
 			"msiRpEndpoint",
+			"tokenContributorRoleID",
+			"tokenContributorRoleName",
+
+			// Log levels
+			"rpLogLevel",
+			"monitorLogLevel",
+			"portalLogLevel",
+			"mimoActuatorLogLevel",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -99,10 +107,12 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = false
 		case "ipRules":
 			p.Type = "array"
-		case "armApiCaBundle",
+		case "adminApiCaBundle",
+			"armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",
 			"gatewayDomains",
+			"globalDevopsServicePrincipalId",
 			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
@@ -142,7 +152,10 @@ func (g *generator) rpTemplate() *arm.Template {
 				"uaenorth",
 				"westus",
 				"japanwest",
+				"uaecentral",
 			}
+		case "rpLogLevel", "portalLogLevel", "monitorLogLevel", "mimoActuatorLogLevel":
+			p.DefaultValue = "info"
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		case "clustersInstallViaHive",
@@ -157,13 +170,13 @@ func (g *generator) rpTemplate() *arm.Template {
 		t.Variables = map[string]interface{}{
 			"rpCosmoDbVirtualNetworkRules": &[]mgmtdocumentdb.VirtualNetworkRule{
 				{
-					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 				},
 				{
-					ID: to.StringPtr("[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
+					ID: pointerutils.ToPtr("[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 				},
 				{
-					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"),
+					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"),
 					// TODO: AKS Sharding: add rules for additional AKS shards for this RP instance. Currently only shard 1, which has subnet ClusterSubnet-001, is set above.
 					// AKS subnet design: https://docs.google.com/document/d/1gTGSW5S4uN1vB2hqVFKYr-qp6n62WbkdQMrKg-qvPbE
 				},
@@ -203,12 +216,14 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 		"globalDevopsServicePrincipalId",
+		"tokenContributorRoleID",
 	}
 
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "acrLocationOverride":
+		case "acrLocationOverride",
+			"globalDevopsServicePrincipalId":
 			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p
@@ -249,10 +264,17 @@ func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
 func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
+	params := []string{
+		"tokenContributorRoleID",
+		"tokenContributorRoleName",
+	}
+
 	t.Resources = append(t.Resources,
 		g.rpRoleDefinitionTokenContributor(),
 	)
-
+	for _, param := range params {
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+	}
 	return t
 }
 

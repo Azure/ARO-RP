@@ -5,15 +5,20 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	machineAnnotationKey = "machine.openshift.io/machine"
+	machineRoleLabelKey  = "machine.openshift.io/cluster-api-machine-role"
+	machinesetLabelKey   = "machine.openshift.io/cluster-api-machineset"
 )
 
 var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus{
@@ -24,28 +29,36 @@ var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus
 }
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
-	ns, err := mon.listNodes(ctx)
-	if err != nil {
-		return err
-	}
+	count := 0
+	machines := mon.getMachines(ctx)
 
-	spotInstances := mon.getSpotInstances(ctx)
+	err := mon.iterateOverNodes(ctx, func(n *corev1.Node) {
+		machineNamespacedName := n.Annotations[machineAnnotationKey]
+		machine, hasMachine := machines[machineNamespacedName]
+		isSpotInstance := hasMachine && isSpotInstance(machine)
 
-	mon.emitGauge("node.count", int64(len(ns.Items)), nil)
+		role := ""
+		if hasMachine {
+			role = machine.Labels[machineRoleLabelKey]
+		}
 
-	for _, n := range ns.Items {
+		machineset := ""
+		if hasMachine {
+			machineset = machine.Labels[machinesetLabelKey]
+		}
+
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
 				continue
 			}
-
-			_, isSpotInstance := spotInstances[n.Name]
 
 			mon.emitGauge("node.conditions", 1, map[string]string{
 				"nodeName":     n.Name,
 				"status":       string(c.Status),
 				"type":         string(c.Type),
 				"spotInstance": strconv.FormatBool(isSpotInstance),
+				"role":         role,
+				"machineset":   machineset,
 			})
 
 			if mon.hourlyRun {
@@ -56,42 +69,49 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 					"type":         c.Type,
 					"message":      c.Message,
 					"spotInstance": isSpotInstance,
+					"role":         role,
+					"machineset":   machineset,
 				}).Print()
 			}
 		}
 
 		mon.emitGauge("node.kubelet.version", 1, map[string]string{
 			"nodeName":       n.Name,
+			"role":           role,
 			"kubeletVersion": n.Status.NodeInfo.KubeletVersion,
 		})
+
+		count += 1
+	})
+	if err != nil {
+		return err
 	}
+
+	mon.emitGauge("node.count", int64(count), nil)
 
 	return nil
 }
 
-// getSpotInstances returns a map where the keys are the machine name and only exist if the machine is a spot instance
-func (mon *Monitor) getSpotInstances(ctx context.Context) map[string]struct{} {
-	spotInstances := make(map[string]struct{})
-	machines, err := mon.maocli.MachineV1beta1().Machines("openshift-machine-api").List(ctx, metav1.ListOptions{})
+// Helper function for iterating over nodes in a paginated fashion
+func (mon *Monitor) iterateOverNodes(ctx context.Context, onEach func(*corev1.Node)) error {
+	var cont string
+	l := &corev1.NodeList{}
 
-	if err != nil {
-		// when this call fails we may report spot vms as non spot until the next successful call
-		mon.log.Error(err)
-		return spotInstances
-	}
-
-	for _, machine := range machines.Items {
-		var spec machinev1beta1.AzureMachineProviderSpec
-		err = json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
+	for {
+		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
 		if err != nil {
-			mon.log.Error(err)
-			continue
+			return fmt.Errorf("error in Node list operation: %w", err)
 		}
 
-		if spec.SpotVMOptions != nil {
-			spotInstances[machine.Name] = struct{}{}
+		for _, n := range l.Items {
+			onEach(&n)
+		}
+
+		cont = l.Continue
+		if cont == "" {
+			break
 		}
 	}
 
-	return spotInstances
+	return nil
 }

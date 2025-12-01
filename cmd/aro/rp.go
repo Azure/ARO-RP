@@ -6,14 +6,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 
 	kmetrics "k8s.io/client-go/tools/metrics"
+
+	"github.com/Azure/go-autorest/tracing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/api/admin"
@@ -27,6 +29,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/api/v20230904"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20231122"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -42,10 +45,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
-func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
+func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
+	_env, err := env.NewEnv(ctx, _log, env.SERVICE_RP)
 	if err != nil {
 		return err
 	}
@@ -88,9 +91,10 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		return err
 	}
 
-	metrics := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	metrics := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go metrics.Run(stop)
 
-	g, err := golang.NewMetrics(log.WithField("component", "metrics"), metrics)
+	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), metrics)
 	if err != nil {
 		return err
 	}
@@ -103,14 +107,15 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(metrics),
 	})
 
-	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	clusterm := statsd.NewMetricsForCluster(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	go clusterm.Run(stop)
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, metrics, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, metrics, aead)
 	if err != nil {
 		return err
 	}
@@ -150,24 +155,29 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		return err
 	}
 
+	dbMaintenanceManifests, err := database.NewMaintenanceManifests(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	// Note: When handling DB operations don't delete records but set TTL on them otherwise if we're leveraging change feeds, it will break.
 	dbPlatformWorkloadIdentityRoleSets, err := database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	go database.EmitOpenShiftClustersMetrics(ctx, log, dbOpenShiftClusters, metrics)
+	go database.EmitOpenShiftClustersMetrics(ctx, _env.LoggerForComponent("metrics"), dbOpenShiftClusters, metrics)
 
 	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
-	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, log, _env)
+	hiveClusterManager, err := hive.NewFromEnvCLusterManager(ctx, _env.LoggerForComponent("hiveclustermanager"), _env)
 	if err != nil {
 		return err
 	}
 
-	hiveSyncSetManager, err := hive.NewFromEnvSyncSetManager(ctx, log, _env)
+	hiveSyncSetManager, err := hive.NewFromEnvSyncSetManager(ctx, _env.LoggerForComponent("hivesyncsetmanager"), _env)
 	if err != nil {
 		return err
 	}
@@ -177,16 +187,8 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		WithOpenShiftClusters(dbOpenShiftClusters).
 		WithOpenShiftVersions(dbOpenShiftVersions).
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
-		WithSubscriptions(dbSubscriptions)
-
-	// MIMO only activated in development for now
-	if _env.IsLocalDevelopmentMode() {
-		dbMaintenanceManifests, err := database.NewMaintenanceManifests(ctx, dbc, dbName)
-		if err != nil {
-			return err
-		}
-		dbg.WithMaintenanceManifests(dbMaintenanceManifests)
-	}
+		WithSubscriptions(dbSubscriptions).
+		WithMaintenanceManifests(dbMaintenanceManifests)
 
 	size, err := _env.OtelAuditQueueSize()
 	if err != nil {
@@ -198,12 +200,12 @@ func rp(ctx context.Context, log, auditLog *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, auditLog, log.WithField("component", "frontend"), outelAuditClient, _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+	f, err := frontend.NewFrontend(ctx, auditLog, _env.LoggerForComponent("frontend"), outelAuditClient, _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}
 
-	b, err := backend.NewBackend(log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, aead, metrics)
+	b, err := backend.NewBackend(_env.LoggerForComponent("backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, aead, metrics)
 	if err != nil {
 		return err
 	}

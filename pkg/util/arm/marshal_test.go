@@ -9,8 +9,7 @@ import (
 	"testing"
 
 	armcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
-	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/to"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiljson "github.com/Azure/ARO-RP/test/util/json"
@@ -37,7 +36,7 @@ func TestResourceMarshal(t *testing.T) {
 						"zero": {Uint: 0, Unmarshaled: 1},
 						"one":  {Uint: 1, Unmarshaled: 1},
 					},
-					Ptr:         to.StringPtr("test"),
+					Ptr:         pointerutils.ToPtr("test"),
 					Slice:       []*testResource{{Float: 1.1, Unmarshaled: 1}},
 					ByteSlice:   []byte("test"),
 					String:      "test",
@@ -275,6 +274,35 @@ func TestResourceMarshal(t *testing.T) {
         }
     },
     "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
+}`),
+		},
+		{
+			name: "type and location should be included",
+			r: &Resource{
+				APIVersion: "2020-08-01",
+				Type:       "Microsoft.Network/virtualNetworks",
+				Location:   "westus",
+				Resource: armnetwork.VirtualNetwork{
+					Name: pointerutils.ToPtr("test-vnet"),
+					Properties: &armnetwork.VirtualNetworkPropertiesFormat{
+						AddressSpace: &armnetwork.AddressSpace{
+							AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/16")},
+						},
+					},
+				},
+			},
+			want: []byte(`{
+    "apiVersion": "2020-08-01",
+    "location": "westus",
+    "name": "test-vnet",
+    "properties": {
+        "addressSpace": {
+            "addressPrefixes": [
+                "10.0.0.0/16"
+            ]
+        }
+    },
+    "type": "Microsoft.Network/virtualNetworks"
 }`),
 		},
 	}

@@ -6,12 +6,12 @@ package cluster
 import (
 	"context"
 
-	azcertificates_sdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+
+	azcertificates_sdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
 
 	configv1 "github.com/openshift/api/config/v1"
 
@@ -62,7 +62,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		m.log.Printf("waiting for certificate %s", c.certificateName)
-		if err := azcertificates.WaitForCertificateOperation(ctx, func(ctx context.Context) (azcertificates_sdk.CertificateOperation, error) {
+		if err := azcertificates.WaitForCertificateOperation(ctx, m.log, func(ctx context.Context) (azcertificates_sdk.CertificateOperation, error) {
 			op, err := m.env.ClusterCertificates().GetCertificateOperation(ctx, c.certificateName, nil)
 			if err != nil {
 				return azcertificates_sdk.CertificateOperation{}, err

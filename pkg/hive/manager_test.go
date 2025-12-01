@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -448,7 +449,7 @@ func TestResetCorrelationData(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if err == nil {
-				cd, err := c.GetClusterDeployment(context.Background(), doc)
+				cd, err := c.GetClusterDeployment(context.Background(), doc.OpenShiftCluster)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -557,7 +558,7 @@ func TestGetClusterDeployment(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := c.GetClusterDeployment(context.Background(), doc)
+			result, err := c.GetClusterDeployment(context.Background(), doc.OpenShiftCluster)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
@@ -605,7 +606,7 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := c.GetClusterSync(context.Background(), doc)
+			result, err := c.GetClusterSync(context.Background(), doc.OpenShiftCluster)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

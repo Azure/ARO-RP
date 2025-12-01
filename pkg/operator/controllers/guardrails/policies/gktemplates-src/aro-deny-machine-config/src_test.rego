@@ -23,7 +23,22 @@ test_input_not_allowed_with_aro_keyword {
     }
     results := violation with input as input
     count(results) == 1
+}
 
+test_input_allowed_with_master_reboot_keyword {
+    input := {
+        "review": fake_machine_config_input_review("25-machineconfig-master-reboot", "CREATE")
+    }
+    results := violation with input as input
+    count(results) == 0
+}
+
+test_input_allowed_with_worker_reboot_keyword {
+    input := {
+        "review": fake_machine_config_input_review("25-machineconfig-worker-reboot", "UPDATE")
+    }
+    results := violation with input as input
+    count(results) == 0
 }
 
 test_input_allowed_with_custom_name {

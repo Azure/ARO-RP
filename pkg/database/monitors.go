@@ -38,6 +38,12 @@ func NewMonitors(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string
 		uuid: uuid.DefaultGenerator.Generate(),
 	}, nil
 }
+func NewMonitorsWithProvidedClient(client cosmosdb.MonitorDocumentClient, uuid string) Monitors {
+	return &monitors{
+		c:    client,
+		uuid: uuid,
+	}
+}
 
 func (c *monitors) Create(ctx context.Context, doc *api.MonitorDocument) (*api.MonitorDocument, error) {
 	if doc.ID != strings.ToLower(doc.ID) {

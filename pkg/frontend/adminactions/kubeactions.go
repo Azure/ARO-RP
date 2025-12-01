@@ -5,9 +5,9 @@ package adminactions
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,10 +19,13 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -40,6 +43,9 @@ type KubeActions interface {
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 	// kubeWatch returns a watch object for the provided label selector key
 	KubeWatch(ctx context.Context, o *unstructured.Unstructured, label string) (watch.Interface, error)
+	// Fetch top pods and nodes metrics
+	TopPods(ctx context.Context, restConfig *restclient.Config, allNamespaces bool) ([]PodMetrics, error)
+	TopNodes(ctx context.Context, restConfig *restclient.Config) ([]NodeMetrics, error)
 }
 
 type kubeActions struct {
@@ -152,8 +158,8 @@ func (k *kubeActions) KubeWatch(ctx context.Context, o *unstructured.Unstructure
 	}
 
 	listOpts := metav1.ListOptions{
-		Limit:         1000, // just in case
-		LabelSelector: o.GetLabels()[labelKey],
+		LabelSelector: fmt.Sprintf("%v=%v", labelKey, o.GetLabels()[labelKey]),
+		Watch:         true,
 	}
 
 	w, err := k.dyn.Resource(gvr).Namespace(o.GetNamespace()).Watch(ctx, listOpts)
@@ -172,7 +178,7 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 
 	resourceDeleteOptions := metav1.DeleteOptions{}
 	if force {
-		resourceDeleteOptions.GracePeriodSeconds = to.Int64Ptr(0)
+		resourceDeleteOptions.GracePeriodSeconds = pointerutils.ToPtr(int64(0))
 	}
 
 	if propagationPolicy != nil {

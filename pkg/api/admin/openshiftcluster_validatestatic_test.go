@@ -13,8 +13,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/test/validate"
 )
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
@@ -172,6 +173,22 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleProfile.URL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.consoleProfile.url: Changing property 'properties.consoleProfile.url' is not allowed.",
+		},
+		{
+			name: "oidc url change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						ClusterProfile: ClusterProfile{
+							OIDCIssuer: (*OIDCIssuer)(pointerutils.ToPtr("validurl")),
+						},
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.OIDCIssuer = (*OIDCIssuer)(pointerutils.ToPtr("invalid"))
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.oidcIssuer: Changing property 'properties.clusterProfile.oidcIssuer' is not allowed.",
 		},
 		{
 			name: "domain change is not allowed",
@@ -680,6 +697,19 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 		},
 		{
+			name: "maintenanceTask change to MigrateLB is allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceTask: "",
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = MaintenanceTaskMigrateLoadBalancer
+			},
+		},
+		{
 			name: "maintenanceTask change to blank allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
@@ -758,7 +788,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			(&openShiftClusterConverter{}).ToInternal(tt.oc(), current)
 
 			v := &openShiftClusterStaticValidator{}
-			err := v.Static(oc, current, "", "", true, "")
+			err := v.Static(oc, current, "", "", true, api.ArchitectureVersionV2, "")
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Error(err)

@@ -10,13 +10,13 @@ import (
 	"net/http"
 	"net/netip"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/sirupsen/logrus"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -45,19 +45,17 @@ type NSGMonitor struct {
 	emitter metrics.Emitter
 	oc      *api.OpenShiftCluster
 
-	wg *sync.WaitGroup
-
 	subnetClient sdknetwork.SubnetsClient
 	dims         map[string]string
 }
 
-func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, wg *sync.WaitGroup, trigger <-chan time.Time) monitoring.Monitor {
+func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor {
 	if oc == nil {
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	emitter.EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
@@ -65,14 +63,14 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 	select {
 	case <-trigger:
 	default:
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	token, err := e.FPNewClientCertificateCredential(tenantID, nil)
 	if err != nil {
 		log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
 		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	clientOptions := arm.ClientOptions{
@@ -85,7 +83,7 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 	if err != nil {
 		log.Error("Unable to create the subnet client for NSG monitoring", err)
 		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
-		return &monitoring.NoOpMonitor{Wg: wg}
+		return &monitoring.NoOpMonitor{}
 	}
 
 	return &NSGMonitor{
@@ -94,7 +92,6 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 		oc:      oc,
 
 		subnetClient: client,
-		wg:           wg,
 
 		dims: dims,
 	}
@@ -144,10 +141,16 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 }
 
 // Monitor checks the custom NSGs customers attach to their ARO subnets
-func (n *NSGMonitor) Monitor(ctx context.Context) []error {
-	defer n.wg.Done()
+func (n *NSGMonitor) Monitor(ctx context.Context) (_err error) {
+	// guard for any monitor-level panics
+	defer func() {
+		if e := recover(); e != nil {
+			_err = &monitoring.MonitorPanic{PanicValue: e}
+		}
+	}()
 
-	errors := []error{}
+	now := time.Now()
+	errs := []error{}
 
 	// to make sure each NSG is processed only once
 	nsgSet := map[string]*armnetwork.SecurityGroup{}
@@ -155,7 +158,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	masterSubnet, err := n.toSubnetConfig(ctx, n.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		// FP has no access to the subnet
-		errors = append(errors, err)
+		errs = append(errs, err)
 	} else {
 		if masterSubnet.nsg != nil && masterSubnet.nsg.ID != nil {
 			nsgSet[*masterSubnet.nsg.ID] = masterSubnet.nsg
@@ -181,7 +184,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 		s, err := n.toSubnetConfig(ctx, subnetID)
 		if err != nil {
 			// FP has no access to the subnet
-			errors = append(errors, err)
+			errs = append(errs, err)
 		} else {
 			workerPrefixes = append(workerPrefixes, s.prefix...)
 			if s.nsg != nil && s.nsg.ID != nil {
@@ -200,7 +203,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			nsgResource, err := arm.ParseResourceID(nsgID)
 			if err != nil {
 				n.log.Errorf("Unable to parse NSG resource ID: %s. %s", nsgID, err)
-				errors = append(errors, err)
+				errs = append(errs, err)
 				continue
 			}
 
@@ -220,5 +223,13 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			}
 		}
 	}
-	return errors
+
+	// emit a metric with how long we took
+	n.emitter.EmitFloat("monitor.nsg.duration", time.Since(now).Seconds(), n.dims)
+
+	return errors.Join(errs...)
+}
+
+func (m *NSGMonitor) MonitorName() string {
+	return "nsg"
 }

@@ -40,6 +40,17 @@ func NewFakeSubscriptions() (db database.Subscriptions, client *cosmosdb.FakeSub
 	return db, client
 }
 
+func NewFakeMonitors() (db database.Monitors, client *cosmosdb.FakeMonitorDocumentClient) {
+	client = cosmosdb.NewFakeMonitorDocumentClient(jsonHandle)
+	injectMonitors(client)
+	db = database.NewMonitorsWithProvidedClient(client, uuid.DefaultGenerator.Generate())
+	return db, client
+}
+
+func NewFakeMonitorWithExistingClient(client *cosmosdb.FakeMonitorDocumentClient) database.Monitors {
+	return database.NewMonitorsWithProvidedClient(client, uuid.DefaultGenerator.Generate())
+}
+
 func NewFakeBilling() (db database.Billing, client *cosmosdb.FakeBillingDocumentClient) {
 	client = cosmosdb.NewFakeBillingDocumentClient(jsonHandle)
 	injectBilling(client)
@@ -77,15 +88,6 @@ func NewFakeOpenShiftVersions(uuid uuid.Generator) (db database.OpenShiftVersion
 func NewFakePlatformWorkloadIdentityRoleSets(uuid uuid.Generator) (db database.PlatformWorkloadIdentityRoleSets, client *cosmosdb.FakePlatformWorkloadIdentityRoleSetDocumentClient) {
 	client = cosmosdb.NewFakePlatformWorkloadIdentityRoleSetDocumentClient(jsonHandle)
 	db = database.NewPlatformWorkloadIdentityRoleSetsWithProvidedClient(client, uuid)
-	return db, client
-}
-
-func NewFakeClusterManager() (db database.ClusterManagerConfigurations, client *cosmosdb.FakeClusterManagerConfigurationDocumentClient) {
-	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.CLUSTERMANAGER)
-	client = cosmosdb.NewFakeClusterManagerConfigurationDocumentClient(jsonHandle)
-	injectClusterManager(client)
-	coll := &fakeCollectionClient{}
-	db = database.NewClusterManagerConfigurationsWithProvidedClient(client, coll, "", uuid)
 	return db, client
 }
 

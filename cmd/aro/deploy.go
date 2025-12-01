@@ -10,16 +10,18 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/sirupsen/logrus"
 
 	pkgdeploy "github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func deploy(ctx context.Context, log *logrus.Entry) error {
+func deploy(ctx context.Context, _log *logrus.Entry) error {
 	// TODO(mjudeikis): Remove this hack in public once we moved to EV2
 	// We are not able to use MSI in public cloud CI as we would need
 	// to have dedicated node pool with MSI where we can controll which jobs are running
@@ -32,7 +34,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 	var tokenCredential azcore.TokenCredential
 	if os.Getenv("AZURE_EV2") != "" { // running in EV2 - use MSI
 		var err error
-		_env, err = env.NewCore(ctx, log, env.COMPONENT_DEPLOY)
+		_env, err = env.NewCore(ctx, _log, env.SERVICE_DEPLOY)
 		if err != nil {
 			return err
 		}
@@ -52,7 +54,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 			return err
 		}
 
-		_env, err = env.NewCoreForCI(ctx, log)
+		_env, err = env.NewCoreForCI(ctx, _log, env.SERVICE_DEPLOY)
 		if err != nil {
 			return err
 		}
@@ -66,6 +68,8 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 
 	deployVersion, location := version.GitCommit, flag.Arg(2)
 
+	log := _env.Logger()
+
 	log.Printf("deploying version %s to location %s", deployVersion, location)
 
 	if deployVersion == "unknown" ||
@@ -77,12 +81,35 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("location %s must be lower case", location)
 	}
 
-	config, err := pkgdeploy.GetConfig(flag.Arg(1), location)
+	var config *pkgdeploy.RPConfig
+	classicConfig, err := pkgdeploy.GetConfig(flag.Arg(1), location)
 	if err != nil {
 		return err
 	}
+	config = classicConfig
 
-	deployer, err := pkgdeploy.New(ctx, log, env, config, deployVersion, tokenCredential)
+	if raConfigFile := os.Getenv("RA_CONFIG_FILE"); raConfigFile != "" {
+		raConfig, err := pkgdeploy.GetConfig(raConfigFile, location)
+		if err != nil {
+			if os.Getenv("RA_CONFIG_STRICT") == "true" {
+				return fmt.Errorf("error reading RA config file %s: %w", raConfigFile, err)
+			}
+		} else {
+			if diff := cmp.Diff(classicConfig, raConfig); diff != "" {
+				if os.Getenv("RA_CONFIG_STRICT") == "true" {
+					return fmt.Errorf("RA config file %s differs from deploy config: %s", raConfigFile, diff)
+				} else {
+					log.Printf("RA config file %s differs from deploy config: %s", raConfigFile, diff)
+				}
+			} else {
+				if os.Getenv("PREFER_RA_CONFIG") == "true" {
+					config = raConfig
+				}
+			}
+		}
+	}
+
+	deployer, err := pkgdeploy.New(ctx, env, config, deployVersion, tokenCredential)
 	if err != nil {
 		return err
 	}

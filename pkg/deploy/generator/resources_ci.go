@@ -5,10 +5,10 @@ package generator
 
 import (
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (g *generator) ciACR() *arm.Resource {
@@ -18,11 +18,11 @@ func (g *generator) ciACR() *arm.Resource {
 				Name: mgmtcontainerregistry.Premium,
 			},
 			RegistryProperties: &mgmtcontainerregistry.RegistryProperties{
-				DataEndpointEnabled: to.BoolPtr(true),
+				DataEndpointEnabled: pointerutils.ToPtr(true),
 			},
-			Name:     to.StringPtr("[parameters('acrName')]"),
-			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries"),
-			Location: to.StringPtr("[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]"),
+			Name:     pointerutils.ToPtr("[parameters('acrName')]"),
+			Type:     pointerutils.ToPtr("Microsoft.ContainerRegistry/registries"),
+			Location: pointerutils.ToPtr("[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}

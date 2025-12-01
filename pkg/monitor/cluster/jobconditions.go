@@ -5,12 +5,12 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Azure/ARO-RP/pkg/util/namespace"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var jobConditionsExpected = map[batchv1.JobConditionType]corev1.ConditionStatus{
@@ -19,47 +19,43 @@ var jobConditionsExpected = map[batchv1.JobConditionType]corev1.ConditionStatus{
 }
 
 func (mon *Monitor) emitJobConditions(ctx context.Context) error {
-	var cont string
-	var count int64
-	for {
-		jobs, err := mon.cli.BatchV1().Jobs("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
-		if err != nil {
-			return err
-		}
+	// Only fetch in the namespaces we manage
+	for _, ns := range mon.namespacesToMonitor {
+		var cont string
+		l := &batchv1.JobList{}
 
-		count += int64(len(jobs.Items))
-
-		for _, job := range jobs.Items {
-			if !namespace.IsOpenShiftNamespace(job.Namespace) {
-				continue
+		for {
+			err := mon.ocpclientset.List(ctx, l, client.InNamespace(ns), client.Continue(cont), client.Limit(mon.queryLimit))
+			if err != nil {
+				return fmt.Errorf("error in list operation: %w", err)
 			}
 
-			if job.Status.Active > 0 {
-				// some pods are still active = job is still running, ignore
-				continue
-			}
-
-			for _, cond := range job.Status.Conditions {
-				if cond.Status == jobConditionsExpected[cond.Type] {
+			for _, job := range l.Items {
+				if job.Status.Active > 0 {
+					// some pods are still active = job is still running, ignore
 					continue
 				}
 
-				mon.emitGauge("job.conditions", 1, map[string]string{
-					"name":      job.Name,
-					"namespace": job.Namespace,
-					"type":      string(cond.Type),
-					"status":    string(cond.Status),
-				})
+				for _, cond := range job.Status.Conditions {
+					if cond.Status == jobConditionsExpected[cond.Type] {
+						continue
+					}
+
+					mon.emitGauge("job.conditions", 1, map[string]string{
+						"name":      job.Name,
+						"namespace": job.Namespace,
+						"type":      string(cond.Type),
+						"status":    string(cond.Status),
+					})
+				}
+			}
+
+			cont = l.Continue
+			if cont == "" {
+				break
 			}
 		}
-
-		cont = jobs.Continue
-		if cont == "" {
-			break
-		}
 	}
-
-	mon.emitGauge("job.count", count, nil)
 
 	return nil
 }

@@ -14,10 +14,10 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/api/util/pullsecret"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -30,7 +30,7 @@ type openShiftClusterStaticValidator struct {
 }
 
 // Validate validates an OpenShift cluster
-func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sWorkers bool, resourceID string) error {
+func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sWorkers bool, installArchitectureVersion api.ArchitectureVersion, resourceID string) error {
 	sv.location = location
 	sv.domain = domain
 	sv.requireD2sWorkers = requireD2sWorkers
@@ -95,10 +95,10 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
+	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, isCreate); err != nil {
 		return err
 	}
-	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
+	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile, p.ClusterProfile.Version); err != nil {
 		return err
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
@@ -109,7 +109,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 		if len(p.WorkerProfiles) != 1 {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
 		}
-		if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
+		if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile, p.ClusterProfile.Version); err != nil {
 			return err
 		}
 
@@ -196,7 +196,7 @@ func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path s
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile, isCreate bool) error {
 	podIP, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", fmt.Sprintf("The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err))
@@ -206,10 +206,14 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", fmt.Sprintf("The provided pod CIDR '%s' is invalid: must be IPv4.", np.PodCIDR))
 	}
 
-	for _, s := range api.JoinCIDRRange {
-		_, cidr, _ := net.ParseCIDR(s)
-		if cidr.Contains(pod.IP) || pod.Contains(cidr.IP) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidCIDRRange, path, fmt.Sprintf("Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '%s' IP address range in any other CIDR definitions in your cluster.", np.PodCIDR))
+	// Only validate against JoinCIDRRange during cluster creation
+	// For existing clusters, allow OVN default ranges to support SDN->OVN migrations
+	if isCreate {
+		for _, s := range api.JoinCIDRRange {
+			_, cidr, _ := net.ParseCIDR(s)
+			if cidr.Contains(pod.IP) || pod.Contains(cidr.IP) {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidCIDRRange, path, fmt.Sprintf("Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '%s' IP address range in any other CIDR definitions in your cluster.", np.PodCIDR))
+			}
 		}
 	}
 
@@ -233,10 +237,14 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".serviceCidr", fmt.Sprintf("The provided service CIDR '%s' is invalid: must be IPv4.", np.ServiceCIDR))
 	}
 
-	for _, s := range api.JoinCIDRRange {
-		_, cidr, _ := net.ParseCIDR(s)
-		if cidr.Contains(service.IP) || service.Contains(cidr.IP) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidCIDRRange, path, fmt.Sprintf("Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '%s' IP address range in any other CIDR definitions in your cluster.", np.ServiceCIDR))
+	// Only validate against JoinCIDRRange during cluster creation
+	// For existing clusters, allow OVN default ranges to support SDN->OVN migrations
+	if isCreate {
+		for _, s := range api.JoinCIDRRange {
+			_, cidr, _ := net.ParseCIDR(s)
+			if cidr.Contains(service.IP) || service.Contains(cidr.IP) {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidCIDRRange, path, fmt.Sprintf("Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '%s' IP address range in any other CIDR definitions in your cluster.", np.ServiceCIDR))
+			}
 		}
 	}
 
@@ -254,8 +262,8 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
-	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true) {
+func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile, version string) error {
+	if !validate.VMSizeIsValidForVersion(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true, version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid.", mp.VMSize))
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
@@ -289,11 +297,11 @@ func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp 
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp *WorkerProfile, mp *MasterProfile) error {
+func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp *WorkerProfile, mp *MasterProfile, version string) error {
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", fmt.Sprintf("The provided worker name '%s' is invalid.", wp.Name))
 	}
-	if !validate.VMSizeIsValid(api.VMSize(wp.VMSize), sv.requireD2sWorkers, false) {
+	if !validate.VMSizeIsValidForVersion(api.VMSize(wp.VMSize), sv.requireD2sWorkers, false, version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided worker VM size '%s' is invalid.", wp.VMSize))
 	}
 	if !validate.DiskSizeIsValid(wp.DiskSizeGB) {

@@ -5,12 +5,16 @@ package actuator
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -23,21 +27,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type fakeMetricsEmitter struct {
 	Metrics map[string]int64
+	m       sync.RWMutex
 }
 
 func newfakeMetricsEmitter() *fakeMetricsEmitter {
 	m := make(map[string]int64)
 	return &fakeMetricsEmitter{
 		Metrics: m,
+		m:       sync.RWMutex{},
 	}
 }
 
 func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
+	e.m.Lock()
+	defer e.m.Unlock()
 	e.Metrics[metricName] = metricValue
 }
 
@@ -58,7 +65,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var ctx context.Context
 	var cancel context.CancelFunc
 
-	//var hook *test.Hook
 	var log *logrus.Entry
 	var _env env.Interface
 
@@ -83,22 +89,28 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 
 		ctx, cancel = context.WithCancel(context.Background())
 
-		_, log = testlog.New()
-
-		m = newfakeMetricsEmitter()
+		log = logrus.NewEntry(&logrus.Logger{
+			Out:       GinkgoWriter,
+			Formatter: new(logrus.TextFormatter),
+			Hooks:     make(logrus.LevelHooks),
+			Level:     logrus.DebugLevel,
+		})
 
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
 	})
 
 	BeforeEach(func() {
+		m = newfakeMetricsEmitter()
+
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
 		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
 
-		svc = NewService(_env, log, nil, dbg, m)
+		svc = NewService(_env, log, nil, dbg, m, []int{1})
 		svc.now = now
+		svc.workerDelay = func() time.Duration { return 0 * time.Second }
 		svc.serveHealthz = false
 	})
 
@@ -111,9 +123,17 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		BeforeEach(func() {
 			fixtures.Clear()
 			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
+				Key:    strings.ToLower(clusterResourceID),
+				Bucket: 1,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterResourceID,
+				},
+			})
+			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key:    strings.ToLower(clusterResourceID + "ignored"),
+				Bucket: 2,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID + "ignored",
 				},
 			})
 		})
@@ -128,7 +148,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			newOld, err := svc.poll(ctx, lastGotDocs)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(newOld).To(HaveLen(1))
+			// Contains one that we check and one that we don't
+			Expect(newOld).To(HaveLen(2))
 		})
 
 		It("removes clusters if they are not in the doc", func() {
@@ -140,7 +161,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			newOld, err := svc.poll(ctx, lastGotDocs)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(newOld).To(HaveLen(1))
+			// Contains one that we check and one that we don't
+			Expect(newOld).To(HaveLen(2))
 		})
 	})
 
@@ -149,21 +171,41 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 
 		BeforeEach(func() {
 			fixtures.Clear()
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-						NetworkProfile: api.NetworkProfile{
-							PodCIDR: "0.0.0.0/32",
+			fixtures.AddOpenShiftClusterDocuments(
+				&api.OpenShiftClusterDocument{
+					Key:    strings.ToLower(clusterResourceID),
+					Bucket: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: clusterResourceID,
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR: "0.0.0.0/32",
+							},
 						},
 					},
 				},
-			})
+				// Cluster that will not be served because we are only looking at
+				// bucket 1
+				&api.OpenShiftClusterDocument{
+					Key:    strings.ToLower(clusterResourceID + "ignored"),
+					Bucket: 2,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: clusterResourceID + "ignored",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR: "0.0.0.0/32",
+							},
+						},
+					},
+				},
+			)
 
 			manifestID = manifests.NewUUID()
 			manifestID2 := manifests.NewUUID()
+			manifestID3 := manifests.NewUUID()
+
 			fixtures.AddMaintenanceManifestDocuments(
 				&api.MaintenanceManifestDocument{
 					ID:                manifestID,
@@ -183,7 +225,19 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 						RunAfter:          0,
 						MaintenanceTaskID: "0000-0000-0001",
 					},
-				})
+				},
+				// A manifest for a cluster that is not served by our bucket allocation
+				&api.MaintenanceManifestDocument{
+					ID:                manifestID3,
+					ClusterResourceID: strings.ToLower(clusterResourceID + "ignored"),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						RunBefore:         300,
+						RunAfter:          0,
+						MaintenanceTaskID: "0000-0000-0001",
+					},
+				},
+			)
 
 			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(
@@ -209,34 +263,46 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 						MaintenanceTaskID: "0000-0000-0001",
 					},
 				},
+				// manifest will not be served
+				&api.MaintenanceManifestDocument{
+					ID:                manifestID3,
+					ClusterResourceID: strings.ToLower(clusterResourceID + "ignored"),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						RunBefore:         300,
+						RunAfter:          0,
+						MaintenanceTaskID: "0000-0000-0001",
+					},
+				},
 			)
 		})
 
 		It("expires them", func() {
-			// run once
-			done := make(chan struct{})
-			svc.pollTime = time.Second
+			svc.pollTime = time.Millisecond
 
-			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					// once we've run this task, stop the worker
 					svc.stopping.Store(true)
 					th.SetResultMessage("ok")
 					return nil
 				},
 			})
 
-			svc.worker(done, 0*time.Second, clusterResourceID)
+			_, err := svc.poll(ctx, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Wait for all of the workers to have stopped
+			svc.workerRoutines.Wait()
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
 		})
 
 		It("loads the full cluster document", func() {
-			// run once
-			done := make(chan struct{})
-			svc.pollTime = time.Second
+			svc.pollTime = time.Millisecond
 
-			svc.SetMaintenanceTasks(map[string]tasks.MaintenanceTask{
+			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					// Only the ClusterResourceID is available to the bucket
 					// worker, so make sure this is the full document
@@ -248,10 +314,94 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				},
 			})
 
-			svc.worker(done, 0*time.Second, clusterResourceID)
+			_, err := svc.poll(ctx, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Wait for all of the workers to have stopped
+			svc.workerRoutines.Wait()
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
 		})
+	})
+})
+
+var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
+	var controller *gomock.Controller
+	var _env *mock_env.MockInterface
+	var log *logrus.Entry
+
+	BeforeAll(func() {
+		log = logrus.NewEntry(&logrus.Logger{
+			Out:       GinkgoWriter,
+			Formatter: new(logrus.TextFormatter),
+			Hooks:     make(logrus.LevelHooks),
+			Level:     logrus.DebugLevel,
+		})
+
+		controller = gomock.NewController(nil)
+		_env = mock_env.NewMockInterface(controller)
+
+		_env.EXPECT().Logger().Return(log).AnyTimes()
+	})
+
+	It("serves all buckets with 3 workers", func() {
+		_env.EXPECT().IsLocalDevelopmentMode().Return(false).Times(3)
+
+		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-00", nil })
+		b2 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
+		b3 := DetermineBuckets(_env, func() (string, error) { return "vm-02", nil })
+
+		all := slices.Concat(b1, b2, b3)
+
+		Expect(all).To(HaveLen(256))
+		for i := range 256 {
+			Expect(all).To(ContainElement(i))
+		}
+	})
+
+	It("will serve all buckets if it cannot get the hostname", func() {
+		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
+		b1 := DetermineBuckets(_env, func() (string, error) { return "", errors.New("boo") })
+
+		for i := range 256 {
+			Expect(b1).To(ContainElement(i))
+		}
+	})
+
+	It("will serve all buckets if it does not understand the hostname", func() {
+		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
+		b1 := DetermineBuckets(_env, func() (string, error) { return "foobar", nil })
+
+		for i := range 256 {
+			Expect(b1).To(ContainElement(i))
+		}
+	})
+
+	It("will serve all buckets if the hostname does not end in a number", func() {
+		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
+		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-bar", nil })
+
+		for i := range 256 {
+			Expect(b1).To(ContainElement(i))
+		}
+	})
+
+	It("will serve all buckets if the hostname ending in a number that is not 0-2", func() {
+		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
+		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-03", nil })
+
+		for i := range 256 {
+			Expect(b1).To(ContainElement(i))
+		}
+	})
+
+	It("will serve all buckets in local dev", func() {
+		_env.EXPECT().IsLocalDevelopmentMode().Return(true)
+		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
+
+		for i := range 256 {
+			Expect(b1).To(ContainElement(i))
+		}
 	})
 })

@@ -12,15 +12,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
@@ -31,19 +32,23 @@ import (
 
 type Feature int
 
-// At least to start with, features are intended to be used so that the
-// production default is not set (in production RP_FEATURES is unset).
+// RP Features are boolean options with defined on/off behaviour that is
+// required at the RP level. Most of them are only relevant for development
+// environments.
 const (
 	FeatureDisableDenyAssignments Feature = iota
 	FeatureDisableSignedCertificates
 	FeatureEnableDevelopmentAuthorizer
 	FeatureRequireD2sWorkers
 	FeatureDisableReadinessDelay
-	FeatureEnableOCMEndpoints
 	FeatureRequireOIDCStorageWebEndpoint
 	FeatureUseMockMsiRp
 	FeatureEnableMISE
 	FeatureEnforceMISE
+	// Expanded Availability Zones are AZs in zonal regions above 3. This
+	// affects whether we allow it for created clusters, it does not affect the
+	// RP's deployments.
+	FeatureEnableClusterExpandedAvailabilityZones
 )
 
 const (
@@ -109,18 +114,14 @@ type Interface interface {
 	OIDCKeyBitSize() int
 	OtelAuditQueueSize() (int, error)
 	MsiRpEndpoint() string
-	MsiDataplaneClientOptions() (*policy.ClientOptions, error)
+	MsiDataplaneClientOptions(correlationData *api.CorrelationData) (*policy.ClientOptions, error)
 	MockMSIResponses(msiResourceId *arm.ResourceID) dataplane.ClientFactory
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
-
-	// VMSku returns SKU for a given vm size. Note that this
-	// returns a pointer to partly populated object.
-	VMSku(vmSize string) (*mgmtcompute.ResourceSku, error)
 	ClusterCertificates() azcertificates.Client
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
+func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceName) (Interface, error) {
 	if IsLocalDevelopmentMode() {
 		if err := ValidateVars(ProxyHostName); err != nil {
 			return nil, err

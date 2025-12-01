@@ -6,7 +6,7 @@ package armnetwork
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // SubnetsClientAddons contains addons for SubnetsClient
@@ -17,7 +17,7 @@ type SubnetsClientAddons interface {
 }
 
 func (c *subnetsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, subnetParameters armnetwork.Subnet, options *armnetwork.SubnetsClientBeginCreateOrUpdateOptions) error {
-	poller, err := c.SubnetsClient.BeginCreateOrUpdate(ctx, resourceGroupName, virtualNetworkName, subnetName, subnetParameters, options)
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, virtualNetworkName, subnetName, subnetParameters, options)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (c *subnetsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroup
 }
 
 func (c *subnetsClient) DeleteAndWait(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, options *armnetwork.SubnetsClientBeginDeleteOptions) error {
-	poller, err := c.SubnetsClient.BeginDelete(ctx, resourceGroupName, virtualNetworkName, subnetName, options)
+	poller, err := c.BeginDelete(ctx, resourceGroupName, virtualNetworkName, subnetName, options)
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func (c *subnetsClient) DeleteAndWait(ctx context.Context, resourceGroupName, vi
 }
 
 func (c *subnetsClient) List(ctx context.Context, resourceGroupName, virtualNetworkName string, options *armnetwork.SubnetsClientListOptions) (result []*armnetwork.Subnet, err error) {
-	pager := c.SubnetsClient.NewListPager(resourceGroupName, virtualNetworkName, options)
+	pager := c.NewListPager(resourceGroupName, virtualNetworkName, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)

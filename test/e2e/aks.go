@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -23,6 +24,14 @@ var _ = Describe("AKS cluster present", Pending, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	ctx := context.Background()
+
+	var adminAPICluster *admin.OpenShiftCluster
+
+	BeforeEach(func(ctx context.Context) {
+		adminAPICluster = adminGetCluster(Default, ctx, clusterResourceID)
+
+		skipIfNotHiveManagedCluster(adminAPICluster)
+	})
 
 	// TODO: remove this when all regions have the AKS
 	//       since this is going to happen in a weeks,

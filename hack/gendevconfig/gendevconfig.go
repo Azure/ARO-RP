@@ -37,7 +37,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		log.Warnf("environment variable SSH_PUBLIC_KEY unset, will use %s/.ssh/id_rsa.pub", os.Getenv("HOME"))
 	}
 
-	env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	env, err := env.NewCore(ctx, log, env.SERVICE_TOOLING)
 	if err != nil {
 		return err
 	}

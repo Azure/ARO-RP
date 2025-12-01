@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -53,7 +52,7 @@ func TestStepRunner(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		steps       func(*gomock.Controller) []Step
-		wantEntries []map[string]types.GomegaMatcher
+		wantEntries []testlog.ExpectedLogEntry
 		wantErr     string
 	}{
 		{
@@ -65,7 +64,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -89,7 +88,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -114,7 +113,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -139,7 +138,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -164,7 +163,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -188,7 +187,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -221,7 +220,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -251,7 +250,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -276,7 +275,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 				}
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),

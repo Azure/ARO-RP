@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client"
 import App from "./App"
 import { mergeStyles } from "@fluentui/react"
-import { createBrowserRouter, RouterProvider } from "react-router-dom"
+import { createBrowserRouter, RouterProvider } from "react-router"
 
 import { initializeIcons } from "@fluentui/font-icons-mdl2"
 initializeIcons()

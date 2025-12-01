@@ -7,10 +7,11 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"

@@ -8,15 +8,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
@@ -41,7 +42,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/blob"
@@ -52,7 +52,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
@@ -78,34 +77,32 @@ type manager struct {
 	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
-	spGraphClient            *utilgraph.GraphServiceClient
-	disks                    compute.DisksClient
-	virtualMachines          compute.VirtualMachinesClient
-	interfaces               network.InterfacesClient // TODO: use armInterfaces instead. https://issues.redhat.com/browse/ARO-4665
-	armInterfaces            armnetwork.InterfacesClient
-	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
-	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead. https://issues.redhat.com/browse/ARO-4665
-	armLoadBalancers         armnetwork.LoadBalancersClient
-	armPrivateEndpoints      armnetwork.PrivateEndpointsClient
-	armSecurityGroups        armnetwork.SecurityGroupsClient
-	deployments              features.DeploymentsClient
-	resourceGroups           features.ResourceGroupsClient
-	resources                features.ResourcesClient
-	privateZones             privatedns.PrivateZonesClient
-	virtualNetworkLinks      privatedns.VirtualNetworkLinksClient
-	roleAssignments          authorization.RoleAssignmentsClient
-	roleDefinitions          authorization.RoleDefinitionsClient
-	armRoleDefinitions       armauthorization.RoleDefinitionsClient
-	denyAssignments          authorization.DenyAssignmentClient
-	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead. https://issues.redhat.com/browse/ARO-4665
-	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
-	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
-	armSubnets               armnetwork.SubnetsClient
-	userAssignedIdentities   armmsi.UserAssignedIdentitiesClient
+	spGraphClient                 *utilgraph.GraphServiceClient
+	disks                         compute.DisksClient
+	virtualMachines               compute.VirtualMachinesClient
+	resourceSkus                  compute.ResourceSkusClient
+	armInterfaces                 armnetwork.InterfacesClient
+	armPublicIPAddresses          armnetwork.PublicIPAddressesClient
+	armLoadBalancers              armnetwork.LoadBalancersClient
+	armPrivateEndpoints           armnetwork.PrivateEndpointsClient
+	armSecurityGroups             armnetwork.SecurityGroupsClient
+	deployments                   features.DeploymentsClient
+	resourceGroups                features.ResourceGroupsClient
+	resources                     features.ResourcesClient
+	privateZones                  privatedns.PrivateZonesClient
+	virtualNetworkLinks           privatedns.VirtualNetworkLinksClient
+	roleAssignments               authorization.RoleAssignmentsClient
+	roleDefinitions               authorization.RoleDefinitionsClient
+	armRoleDefinitions            armauthorization.RoleDefinitionsClient
+	denyAssignments               authorization.DenyAssignmentClient
+	armFPPrivateEndpoints         armnetwork.PrivateEndpointsClient
+	armRPPrivateLinkServices      armnetwork.PrivateLinkServicesClient
+	armClusterPrivateLinkServices armnetwork.PrivateLinkServicesClient
+	armSubnets                    armnetwork.SubnetsClient
+	userAssignedIdentities        armmsi.UserAssignedIdentitiesClient
 
 	dns     dns.Manager
 	storage storage.Manager
-	subnet  subnet.Manager // TODO: use armSubnets instead. https://issues.redhat.com/browse/ARO-4665
 	graph   graph.Manager
 	rpBlob  blob.Manager
 
@@ -233,6 +230,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	clusterRPPrivateLinkServices, err := armnetwork.NewPrivateLinkServicesClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	storage, err := storage.NewManager(r.SubscriptionID, _env.Environment().StorageEndpointSuffix, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity(), clientOptions)
 	if err != nil {
 		return nil, err
@@ -256,43 +258,41 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
 
 	m := &manager{
-		log:                      log,
-		env:                      _env,
-		db:                       db,
-		dbGateway:                dbGateway,
-		dbOpenShiftVersions:      dbOpenShiftVersions,
-		billing:                  billing,
-		doc:                      doc,
-		subscriptionDoc:          subscriptionDoc,
-		fpAuthorizer:             fpAuthorizer,
-		localFpAuthorizer:        localFPAuthorizer,
-		metricsEmitter:           metricsEmitter,
-		disks:                    compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		virtualMachines:          compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		interfaces:               network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		armInterfaces:            armInterfacesClient,
-		armPublicIPAddresses:     armPublicIPAddressesClient,
-		loadBalancers:            network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		armLoadBalancers:         armLoadBalancersClient,
-		armPrivateEndpoints:      armPrivateEndpoints,
-		armSecurityGroups:        armSecurityGroupsClient,
-		deployments:              features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		resourceGroups:           features.NewResourceGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		resources:                features.NewResourcesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		privateZones:             privatedns.NewPrivateZonesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		virtualNetworkLinks:      privatedns.NewVirtualNetworkLinksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		roleAssignments:          authorization.NewRoleAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		roleDefinitions:          authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		armRoleDefinitions:       armRoleDefinitionsClient,
-		denyAssignments:          authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
-		armFPPrivateEndpoints:    armFPPrivateEndpoints,
-		armRPPrivateLinkServices: armRPPrivateLinkServices,
-		armSubnets:               armSubnetsClient,
+		log:                           log,
+		env:                           _env,
+		db:                            db,
+		dbGateway:                     dbGateway,
+		dbOpenShiftVersions:           dbOpenShiftVersions,
+		billing:                       billing,
+		doc:                           doc,
+		subscriptionDoc:               subscriptionDoc,
+		fpAuthorizer:                  fpAuthorizer,
+		localFpAuthorizer:             localFPAuthorizer,
+		metricsEmitter:                metricsEmitter,
+		disks:                         compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualMachines:               compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resourceSkus:                  compute.NewResourceSkusClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armInterfaces:                 armInterfacesClient,
+		armPublicIPAddresses:          armPublicIPAddressesClient,
+		armLoadBalancers:              armLoadBalancersClient,
+		armPrivateEndpoints:           armPrivateEndpoints,
+		armSecurityGroups:             armSecurityGroupsClient,
+		deployments:                   features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resourceGroups:                features.NewResourceGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resources:                     features.NewResourcesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		privateZones:                  privatedns.NewPrivateZonesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualNetworkLinks:           privatedns.NewVirtualNetworkLinksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleAssignments:               authorization.NewRoleAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleDefinitions:               authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armRoleDefinitions:            armRoleDefinitionsClient,
+		denyAssignments:               authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armFPPrivateEndpoints:         armFPPrivateEndpoints,
+		armRPPrivateLinkServices:      armRPPrivateLinkServices,
+		armClusterPrivateLinkServices: clusterRPPrivateLinkServices,
+		armSubnets:                    armSubnetsClient,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,
-		subnet:                                 subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:                                  graph.NewManager(_env, log, aead, storage),
 		rpBlob:                                 rpBlob,
 		installViaHive:                         installViaHive,
@@ -321,7 +321,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		if _env.FeatureIsSet(env.FeatureUseMockMsiRp) {
 			msiDataplane = _env.MockMSIResponses(msiResourceId)
 		} else {
-			msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions()
+			msiDataplaneClientOptions, err := _env.MsiDataplaneClientOptions(doc.CorrelationData)
 			if err != nil {
 				return nil, err
 			}

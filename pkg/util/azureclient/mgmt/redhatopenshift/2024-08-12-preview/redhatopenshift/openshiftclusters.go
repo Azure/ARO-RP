@@ -9,8 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
 	gofrsuuid "github.com/gofrs/uuid"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -19,6 +20,7 @@ import (
 
 // OpenShiftClustersClient is a minimal interface for azure OpenshiftClustersClient
 type OpenShiftClustersClient interface {
+	ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20240812preview.OpenShiftClusterAdminKubeconfig, err error)
 	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20240812preview.OpenShiftClusterCredentials, err error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20240812preview.OpenShiftCluster, err error)
 	OpenShiftClustersClientAddons
@@ -38,7 +40,7 @@ func NewOpenShiftClustersClient(environment *azureclient.AROEnvironment, subscri
 		client.Sender = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // #nosec G402
+					InsecureSkipVerify: true, // #nosec G402  // CodeQL [SM03511] only used in local development
 				},
 			},
 		}

@@ -11,10 +11,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"golang.org/x/crypto/ssh"
 
 	"sigs.k8s.io/yaml"
+
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -44,7 +45,7 @@ type Configuration struct {
 	AzureSecPackVSATenantId            *string                `json:"azureSecPackVSATenantId,omitempty"`
 	RPVersionStorageAccountName        *string                `json:"rpVersionStorageAccountName,omitempty" value:"required"`
 	ACRReplicaDisabled                 *bool                  `json:"acrReplicaDisabled,omitempty"`
-	AdminAPICABundle                   *string                `json:"adminApiCaBundle,omitempty" value:"required"`
+	AdminAPICABundle                   *string                `json:"adminApiCaBundle,omitempty"`
 	AdminAPIClientCertCommonName       *string                `json:"adminApiClientCertCommonName,omitempty" value:"required"`
 	ARMAPICABundle                     *string                `json:"armApiCaBundle,omitempty"`
 	ARMAPIClientCertCommonName         *string                `json:"armApiClientCertCommonName,omitempty"`
@@ -75,7 +76,7 @@ type Configuration struct {
 	GlobalResourceGroupName            *string                `json:"globalResourceGroupName,omitempty" value:"required"`
 	GlobalResourceGroupLocation        *string                `json:"globalResourceGroupLocation,omitempty" value:"required"`
 	GlobalSubscriptionID               *string                `json:"globalSubscriptionId,omitempty" value:"required"`
-	GlobalDevopsManagedIdentity        *string                `json:"globalDevopsManagedIdentity,omitempty" value:"required"`
+	GlobalDevopsManagedIdentity        *string                `json:"globalDevopsManagedIdentity,omitempty"`
 	KeyvaultDNSSuffix                  *string                `json:"keyvaultDNSSuffix,omitempty" value:"required"`
 	KeyvaultPrefix                     *string                `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string                `json:"mdmFrontendUrl,omitempty" value:"required"`
@@ -103,6 +104,15 @@ type Configuration struct {
 	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
 	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
 	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`
+	TokenContributorRoleID             *string                `json:"tokenContributorRoleID,omitempty" value:"required"`
+	TokenContributorRoleName           *string                `json:"tokenContributorRoleName,omitempty" value:"required"`
+
+	// Log levels for ARO services running on the VMSSes
+	RPLogLevel           *string `json:"rpLogLevel,omitempty"`
+	GatewayLogLevel      *string `json:"gatewayLogLevel,omitempty"`
+	PortalLogLevel       *string `json:"portalLogLevel,omitempty"`
+	MonitorLogLevel      *string `json:"monitorLogLevel,omitempty"`
+	MimoActuatorLogLevel *string `json:"mimoActuatorLogLevel,omitempty"`
 
 	// TODO: Replace with Live Service Configuration in KeyVault
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
@@ -130,6 +140,11 @@ func GetConfig(path, location string) (*RPConfig, error) {
 		return nil, err
 	}
 
+	return ResolveConfig(config, location)
+}
+
+// ResolveConfig return RP configuration from the env config
+func ResolveConfig(config *Config, location string) (*RPConfig, error) {
 	for _, c := range config.RPs {
 		if c.Location == location {
 			configuration, err := mergeConfig(c.Configuration, config.Configuration)
@@ -142,7 +157,7 @@ func GetConfig(path, location string) (*RPConfig, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("location %s not found in %s", location, path)
+	return nil, fmt.Errorf("location %s not found in config", location)
 }
 
 // mergeConfig merges two Configuration structs, replacing each zero field in
@@ -177,7 +192,7 @@ func (conf *RPConfig) validate() error {
 			return err
 		}
 		publicKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
-		conf.Configuration.SSHPublicKey = to.StringPtr(string(publicKeyBytes))
+		conf.Configuration.SSHPublicKey = pointerutils.ToPtr(string(publicKeyBytes))
 	}
 
 	for i := 0; i < v.NumField(); i++ {

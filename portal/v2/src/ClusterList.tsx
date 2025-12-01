@@ -22,7 +22,7 @@ import {
 import { fetchClusters } from "./Request"
 import { ToolIcons } from "./ToolIcons"
 import { ICluster, headerStyles } from "./App"
-import { useHref, useLinkClickHandler } from "react-router-dom"
+import { useHref, useLinkClickHandler } from "react-router"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 

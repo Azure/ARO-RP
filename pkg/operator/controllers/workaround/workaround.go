@@ -15,7 +15,7 @@ type Workaround interface {
 	Name() string
 	// IsRequired returns true when the clusterversion is indicates that the cluster
 	// is effected by the bug that the workaround fixes.
-	IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool
+	IsRequired(clusterVersion version.Version, cluster *arov1alpha1.Cluster) bool
 	// Ensure will apply the workaround to the cluster.
 	Ensure(context.Context) error
 	// Remove will remove the workaround from the cluster

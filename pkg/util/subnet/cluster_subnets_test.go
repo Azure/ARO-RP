@@ -11,10 +11,12 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
+	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -31,13 +33,13 @@ func TestListFromCluster(t *testing.T) {
 	for _, tt := range []struct {
 		name         string
 		machinelabel string
-		expect       []Subnet
+		expect       []subnet.Subnet
 		modify       func(*machinev1beta1.MachineSet, *machinev1beta1.Machine)
 		wantErr      string
 	}{
 		{
 			name: "main path",
-			expect: []Subnet{
+			expect: []subnet.Subnet{
 				{
 					ResourceID: "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker,
 				},

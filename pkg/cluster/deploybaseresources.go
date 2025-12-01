@@ -13,15 +13,15 @@ import (
 	"strings"
 	"time"
 
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
-
-	utilrand "k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -135,7 +135,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
-		group.Tags["purge"] = to.StringPtr("true")
+		group.Tags["purge"] = pointerutils.ToPtr("true")
 	}
 
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
@@ -179,6 +179,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, resourceGroup)
 }
 
+// deployBaseResourceTemplate is only called during bootstrap
 func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
@@ -297,19 +298,25 @@ func (m *manager) subnetsWithServiceEndpoint(ctx context.Context, serviceEndpoin
 	for subnetId := range subnetsMap {
 		// We purposefully fail if we can't fetch the subnet as the FPSP most likely
 		// lost read permission over the subnet.
-		subnet, err := m.subnet.Get(ctx, subnetId)
+		r, err := armsdk.ParseResourceID(subnetId)
 		if err != nil {
 			return nil, err
 		}
 
-		if subnet.SubnetPropertiesFormat == nil || subnet.ServiceEndpoints == nil {
+		subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+		if err != nil {
+			return nil, err
+		}
+		subnet := subnetResponse.Subnet
+
+		if subnet.Properties == nil || subnet.Properties.ServiceEndpoints == nil {
 			continue
 		}
 
-		for _, endpoint := range *subnet.ServiceEndpoints {
+		for _, endpoint := range subnet.Properties.ServiceEndpoints {
 			if endpoint.Service != nil && strings.EqualFold(*endpoint.Service, serviceEndpoint) && endpoint.Locations != nil {
-				for _, loc := range *endpoint.Locations {
-					if loc == "*" || strings.EqualFold(loc, m.doc.OpenShiftCluster.Location) {
+				for _, loc := range endpoint.Locations {
+					if loc != nil && (*loc == "*" || strings.EqualFold(*loc, m.doc.OpenShiftCluster.Location)) {
 						subnets = append(subnets, subnetId)
 					}
 				}
@@ -368,13 +375,19 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				// We use the outer context, not the timeout context, as we do not want
 				// to time out the condition function itself, only stop retrying once
 				// timeoutCtx's timeout has fired.
-				s, err := m.subnet.Get(ctx, subnetID)
+				r, err := armsdk.ParseResourceID(subnetID)
 				if err != nil {
 					return false, err
 				}
 
-				if s.SubnetPropertiesFormat == nil {
-					s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+				subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+				if err != nil {
+					return false, err
+				}
+				s := subnetResponse.Subnet
+
+				if s.Properties == nil {
+					s.Properties = &armnetwork.SubnetPropertiesFormat{}
 				}
 
 				nsgID, err := apisubnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
@@ -386,23 +399,23 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				// subnets and our validation code. We try to catch this early, but
 				// these errors is propagated to make the user-facing error more clear incase
 				// modification happened after we ran validation code and we lost the race
-				if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-					if strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+				if s.Properties.NetworkSecurityGroup != nil {
+					if strings.EqualFold(*s.Properties.NetworkSecurityGroup.ID, nsgID) {
 						continue
 					}
 
 					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", fmt.Sprintf("The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID))
 				}
 
-				s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
-					ID: to.StringPtr(nsgID),
+				s.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
+					ID: pointerutils.ToPtr(nsgID),
 				}
 
 				// Because we attempt to attach the NSG immediately after the base resource deployment
 				// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
 				// an error to occur here. So if this particular error occurs, return nil to retry.
 				// But if some other type of error occurs, just return that error.
-				err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
+				err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 				if err != nil {
 					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
 						return false, nil
@@ -422,13 +435,19 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	// TODO: there is probably an undesirable race condition here - check if etags can help.
 	subnetId := m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
-	s, err := m.subnet.Get(ctx, subnetId)
+	r, err := armsdk.ParseResourceID(subnetId)
 	if err != nil {
 		return err
 	}
 
-	if s.SubnetPropertiesFormat == nil {
-		s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+	subnetResponse, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
+	if err != nil {
+		return err
+	}
+	s := subnetResponse.Subnet
+
+	if s.Properties == nil {
+		s.Properties = &armnetwork.SubnetPropertiesFormat{}
 	}
 
 	// we need to track whether or not we need to send an update to the AzureRM API based on whether
@@ -437,15 +456,15 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	var needsUpdate bool
 
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		if s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies == nil || *s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies != "Disabled" {
+		if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
 			needsUpdate = true
-			s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+			s.Properties.PrivateEndpointNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
 		}
 	}
 
-	if s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies == nil || *s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies != "Disabled" {
+	if s.Properties.PrivateLinkServiceNetworkPolicies == nil || *s.Properties.PrivateLinkServiceNetworkPolicies != armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled {
 		needsUpdate = true
-		s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+		s.Properties.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
 	}
 
 	// return if we do not need to update the subnet
@@ -453,7 +472,7 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		return nil
 	}
 
-	err = m.subnet.CreateOrUpdate(ctx, subnetId, s)
+	err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
@@ -489,7 +508,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 		return errors.New("OIDCIssuer is nil")
 	}
 
-	issuer := to.StringPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+	issuer := pointerutils.ToPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
 
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -500,12 +519,12 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 			return err
 		}
 
-		platformWIRole, exists := platformWIRolesByRoleName[name]
+		platformWIRoles, exists := platformWIRolesByRoleName[name]
 		if !exists {
 			return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(m.doc.OpenShiftCluster, platformWIRolesByRoleName)
 		}
 
-		for _, sa := range platformWIRole.ServiceAccounts {
+		for _, sa := range platformWIRoles[0].ServiceAccounts {
 			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
 			if err != nil {
 				return err
@@ -518,9 +537,9 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				federatedIdentityCredentialResourceName,
 				armmsi.FederatedIdentityCredential{
 					Properties: &armmsi.FederatedIdentityCredentialProperties{
-						Audiences: []*string{to.StringPtr("openshift")},
+						Audiences: []*string{pointerutils.ToPtr("openshift")},
 						Issuer:    issuer,
-						Subject:   to.StringPtr(sa),
+						Subject:   pointerutils.ToPtr(sa),
 					},
 				},
 				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},

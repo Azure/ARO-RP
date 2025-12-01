@@ -6,14 +6,16 @@ package log
 import (
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-systemd/v22/journal"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
@@ -23,7 +25,7 @@ import (
 var (
 	_, thisfile, _, _ = runtime.Caller(0)
 	pkgpath           = filepath.Dir(thisfile)
-	repopath          = strings.Replace(thisfile, "pkg/util/log/log.go", "", -1)
+	repopath          = strings.ReplaceAll(thisfile, "pkg/util/log/log.go", "")
 
 	loglevel = flag.String("loglevel", "info", "{panic,fatal,error,warning,info,debug,trace}")
 
@@ -44,6 +46,8 @@ const (
 	SuccessResultType     ResultType = "Success"
 	UserErrorResultType   ResultType = "UserError"
 	ServerErrorResultType ResultType = "InternalServerError"
+
+	logLevelEnvKey = "ARO_LOG_LEVEL"
 )
 
 func MapStatusCodeToResultType(statusCode int) ResultType {
@@ -107,7 +111,13 @@ func GetLogger() *logrus.Entry {
 
 	log := logrus.NewEntry(logger)
 
-	l, err := logrus.ParseLevel(*loglevel)
+	// Get the log level from the environment or command line flag
+	envLevel, ext := os.LookupEnv(logLevelEnvKey)
+	if !ext {
+		envLevel = *loglevel
+	}
+
+	l, err := logrus.ParseLevel(envLevel)
 	if err == nil {
 		logger.SetLevel(l)
 	} else {

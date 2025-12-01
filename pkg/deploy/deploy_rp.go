@@ -11,11 +11,11 @@ import (
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
@@ -29,9 +29,15 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
-	globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
-	if err != nil {
-		return err
+	var globalDevopsMsiPrincipalId string
+
+	if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
+		globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+		if err != nil {
+			return err
+		}
+
+		globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
 	}
 
 	deploymentName := "rp-production-" + d.version
@@ -49,8 +55,10 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
-		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
+	if d.config.Configuration.AdminAPICABundle != nil {
+		parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
+			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
+		}
 	}
 	if d.config.Configuration.ARMAPICABundle != nil {
 		parameters.Parameters["armApiCaBundle"] = &arm.ParametersParameter{
@@ -83,7 +91,7 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		Value: d.env.Environment().ActualCloudName,
 	}
 	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
-		Value: globalDevopsMSI.PrincipalID.String(),
+		Value: globalDevopsMsiPrincipalId,
 	}
 	if d.config.Configuration.CosmosDB != nil {
 		parameters.Parameters["cosmosDB"] = &arm.ParametersParameter{
@@ -112,12 +120,12 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
-	rpPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", "")
+	rpPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", nil)
 	if err != nil {
 		return err
 	}
 
-	portalPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", "")
+	portalPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", nil)
 	if err != nil {
 		return err
 	}
@@ -129,10 +137,10 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Int64Ptr(3600),
+			TTL: pointerutils.ToPtr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: rpPIP.IPAddress,
+					Ipv4Address: rpPIP.Properties.IPAddress,
 				},
 			},
 		},
@@ -143,10 +151,10 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Int64Ptr(3600),
+			TTL: pointerutils.ToPtr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: portalPIP.IPAddress,
+					Ipv4Address: portalPIP.Properties.IPAddress,
 				},
 			},
 		},
@@ -164,7 +172,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL:       to.Int64Ptr(3600),
+			TTL:       pointerutils.ToPtr(int64(3600)),
 			NsRecords: &nsRecords,
 		},
 	}, "", "")
@@ -174,7 +182,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.IPAddressOrRange {
 	ips := []mgmtdocumentdb.IPAddressOrRange{}
 	for _, v := range ipSlice {
-		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.StringPtr(v)})
+		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: pointerutils.ToPtr(v)})
 	}
 	return ips
 }

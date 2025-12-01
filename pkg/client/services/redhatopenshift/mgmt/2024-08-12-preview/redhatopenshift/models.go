@@ -102,8 +102,29 @@ type ClusterProfile struct {
 	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
 	// FipsValidatedModules - If FIPS validated crypto modules are used. Possible values include: 'FipsValidatedModulesDisabled', 'FipsValidatedModulesEnabled'
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
-	// OidcIssuer - The URL of the managed OIDC issuer in a workload identity cluster.
+	// OidcIssuer - READ-ONLY; The URL of the managed OIDC issuer in a workload identity cluster.
 	OidcIssuer *string `json:"oidcIssuer,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ClusterProfile.
+func (cp ClusterProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if cp.PullSecret != nil {
+		objectMap["pullSecret"] = cp.PullSecret
+	}
+	if cp.Domain != nil {
+		objectMap["domain"] = cp.Domain
+	}
+	if cp.Version != nil {
+		objectMap["version"] = cp.Version
+	}
+	if cp.ResourceGroupID != nil {
+		objectMap["resourceGroupId"] = cp.ResourceGroupID
+	}
+	if cp.FipsValidatedModules != "" {
+		objectMap["fipsValidatedModules"] = cp.FipsValidatedModules
+	}
+	return json.Marshal(objectMap)
 }
 
 // ConsoleProfile consoleProfile represents a console profile.

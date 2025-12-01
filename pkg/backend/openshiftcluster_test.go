@@ -11,12 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster"
@@ -482,7 +482,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 		name                     string
 		initialProvisioningState api.ProvisioningState
 		backendErr               error
-		wantEntries              []map[string]types.GomegaMatcher
+		wantEntries              []testlog.ExpectedLogEntry
 	}{
 		{
 			name:                     "Success Status Code",
@@ -495,7 +495,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Succeeded"),
@@ -515,7 +515,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Failed"),
@@ -535,7 +535,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Failed"),
@@ -553,7 +553,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 				&http.Response{StatusCode: http.StatusInternalServerError},
 				"An error message",
 			),
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Failed"),
@@ -571,7 +571,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 				&http.Response{StatusCode: http.StatusBadRequest},
 				"An error message",
 			),
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Failed"),
@@ -588,7 +588,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 				"methodName",
 				"An error message",
 			),
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Failed"),
@@ -603,7 +603,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			backendErr: runtime.NewResponseError(
 				&http.Response{StatusCode: http.StatusInternalServerError},
 			),
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Failed"),
@@ -618,7 +618,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			backendErr: runtime.NewResponseError(
 				&http.Response{StatusCode: http.StatusUnauthorized},
 			),
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"LOGKIND":         gomega.Equal("asyncqos"),
 					"operationType":   gomega.Equal("Failed"),

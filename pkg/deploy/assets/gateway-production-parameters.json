@@ -26,6 +26,9 @@
         "gatewayFeatures": {
             "value": ""
         },
+        "gatewayLogLevel": {
+            "value": "info"
+        },
         "gatewayMdsdConfigVersion": {
             "value": ""
         },
@@ -60,7 +63,8 @@
                 "northcentralus",
                 "uaenorth",
                 "westus",
-                "japanwest"
+                "japanwest",
+                "uaecentral"
             ]
         },
         "rpImage": {

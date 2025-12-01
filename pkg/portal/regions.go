@@ -75,7 +75,7 @@ func (p *portal) regions(w http.ResponseWriter, r *http.Request) {
 
 	if value, found := os.LookupEnv("AZURE_ENVIRONMENT"); found {
 		// AZURE_ENVIRONMENT variable can either be AZUREPUBLICCLOUD or AZUREUSGOVERNMENTCLOUD
-		if strings.EqualFold(value, azureclient.PublicCloud.Environment.Name) {
+		if strings.EqualFold(value, azureclient.PublicCloud.Name) {
 			for _, region := range PROD_REGIONS {
 				resp.Regions = append(resp.Regions, Region{
 					Name: region,

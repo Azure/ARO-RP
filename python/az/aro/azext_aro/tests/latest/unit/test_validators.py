@@ -22,7 +22,8 @@ from azext_aro._validators import (
     validate_enable_managed_identity,
     validate_platform_workload_identities,
     validate_cluster_identity,
-    validate_upgradeable_to_format
+    validate_upgradeable_to_format,
+    validate_delete_identities
 )
 from azure.cli.core.azclierror import (
     InvalidArgumentValueError, RequiredArgumentMissingError,
@@ -1015,27 +1016,6 @@ test_validate_enable_managed_identity_data = [
         InvalidArgumentValueError, 'Must not specify --client-secret when --enable-managed-identity is True'
     ),
     (
-        "Should raise InvalidArgumentValueError when version is not present",
-        Mock(enable_managed_identity=True,
-             client_id=None, client_secret=None,
-             version=None),
-        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
-    ),
-    (
-        "Should raise InvalidArgumentValueError when version is invalid",
-        Mock(enable_managed_identity=True,
-             client_id=None, client_secret=None,
-             version="a"),
-        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
-    ),
-    (
-        "Should raise InvalidArgumentValueError when version < 4.14.0",
-        Mock(enable_managed_identity=True,
-             client_id=None, client_secret=None,
-             version="4.13.99"),
-        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
-    ),
-    (
         "Should raise RequiredArgumentMissingError when no platform workload identities are set",
         Mock(enable_managed_identity=True,
              client_id=None, client_secret=None,
@@ -1336,3 +1316,40 @@ def test_validate_upgradeable_to(test_description, namespace, expected_exception
     else:
         with pytest.raises(expected_exception):
             validate_upgradeable_to_format(namespace)
+
+
+test_validate_delete_identities_data = [
+    (
+        "should not raise any exception when delete_identities is None",
+        Mock(delete_identities=None, no_wait=False),
+        None
+    ),
+    (
+        "should not raise any exception when delete_identities is True and no_wait is False",
+        Mock(delete_identities=True, no_wait=False),
+        None
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when delete_identities is True and no_wait is True",
+        Mock(delete_identities=True, no_wait=True),
+        MutuallyExclusiveArgumentError
+    ),
+    (
+        "should not raise any exception when delete_identities is False and no_wait is True",
+        Mock(delete_identities=False, no_wait=True),
+        None
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception",
+    test_validate_delete_identities_data,
+    ids=[i[0] for i in test_validate_delete_identities_data]
+)
+def test_validate_delete_identities(test_description, namespace, expected_exception):
+    if expected_exception is None:
+        validate_delete_identities(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_delete_identities(namespace)

@@ -4,11 +4,13 @@ package rbac
 // Licensed under the Apache License 2.0.
 
 import (
+	"strings"
+
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -43,20 +45,50 @@ func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, con
 // deployed, to preserve the name and avoid a RoleAssignmentExists error.
 func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, name string, condition ...interface{}) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
+
+	roleDefinitionID := "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"
+	if strings.HasPrefix(roleID, "parameters") {
+		roleDefinitionID = "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"
+	}
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[" + name + "]"),
-			Type: to.StringPtr(resourceType + "/providers/roleAssignments"),
+			Name: pointerutils.ToPtr("[" + name + "]"),
+			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[" + resourceID + "]"),
-				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
-				PrincipalID:      to.StringPtr("[" + spID + "]"),
+				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
+				RoleDefinitionID: pointerutils.ToPtr(roleDefinitionID),
+				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
 		DependsOn: []string{
 			"[" + resourceID + "]",
+		},
+	}
+
+	if len(condition) > 0 {
+		r.Condition = condition[0]
+	}
+
+	return r
+}
+
+func ResourceRoleAssignmentWithScope(roleID, spID, resourceType string, scope string, names string, condition ...interface{}) *arm.Resource {
+	r := &arm.Resource{
+		Resource: mgmtauthorization.RoleAssignment{
+			Name: pointerutils.ToPtr("[" + names + "]"),
+			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            pointerutils.ToPtr("[" + scope + "]"),
+				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
+				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
+		DependsOn: []string{
+			"[" + scope + "]",
 		},
 	}
 
@@ -81,12 +113,12 @@ func resourceGroupRoleAssignmentWithDetails(roleID, spID string, name string, de
 	}
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[" + name + "]"),
-			Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+			Name: pointerutils.ToPtr("[" + name + "]"),
+			Type: pointerutils.ToPtr("Microsoft.Authorization/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[resourceGroup().id]"),
-				RoleDefinitionID: to.StringPtr("[" + resourceIDFunction + "('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"),
-				PrincipalID:      to.StringPtr("[" + spID + "]"),
+				Scope:            pointerutils.ToPtr("[resourceGroup().id]"),
+				RoleDefinitionID: pointerutils.ToPtr("[" + resourceIDFunction + "('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"),
+				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},

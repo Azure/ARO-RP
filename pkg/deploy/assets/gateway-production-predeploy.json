@@ -33,14 +33,20 @@
     },
     "resources": [
         {
-            "properties": {},
-            "name": "gateway-nsg",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01",
             "condition": "[parameters('deployNSGs')]",
-            "apiVersion": "2020-08-01"
+            "location": "[resourceGroup().location]",
+            "name": "gateway-nsg",
+            "properties": {},
+            "type": "Microsoft.Network/networkSecurityGroups"
         },
         {
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "gateway-vnet",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -49,57 +55,50 @@
                 },
                 "subnets": [
                     {
+                        "name": "gateway-subnet",
                         "properties": {
                             "addressPrefix": "10.0.8.0/24",
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]",
-                                "tags": null
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"
                             },
+                            "privateLinkServiceNetworkPolicies": "Disabled",
                             "serviceEndpoints": [
                                 {
-                                    "service": "Microsoft.AzureCosmosDB",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.AzureCosmosDB"
                                 },
                                 {
-                                    "service": "Microsoft.ContainerRegistry",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.ContainerRegistry"
                                 },
                                 {
-                                    "service": "Microsoft.EventHub",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.EventHub"
                                 },
                                 {
-                                    "service": "Microsoft.Storage",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.Storage"
                                 },
                                 {
-                                    "service": "Microsoft.KeyVault",
                                     "locations": [
                                         "*"
-                                    ]
+                                    ],
+                                    "service": "Microsoft.KeyVault"
                                 }
-                            ],
-                            "privateLinkServiceNetworkPolicies": "Disabled"
-                        },
-                        "name": "gateway-subnet"
+                            ]
+                        }
                     }
                 ]
             },
-            "name": "gateway-vnet",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"
-            ]
+            "type": "Microsoft.Network/virtualNetworks"
         },
         {
             "name": "[concat(parameters('keyvaultPrefix'), '-gwy')]",

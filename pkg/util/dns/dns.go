@@ -12,12 +12,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
 	azerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -114,7 +114,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 
 	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, sdkdns.RecordSet{
 		Properties: &sdkdns.RecordSetProperties{
-			TTL: to.Int64Ptr(300),
+			TTL: pointerutils.ToPtr(int64(300)),
 			ARecords: []*sdkdns.ARecord{
 				{
 					IPv4Address: &routerIP,
@@ -148,7 +148,7 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	}
 
 	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-		IfMatch: to.StringPtr(""),
+		IfMatch: pointerutils.ToPtr(""),
 	})
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 			Metadata: map[string]*string{
 				resourceID: &oc.ID,
 			},
-			TTL: to.Int64Ptr(300),
+			TTL: pointerutils.ToPtr(int64(300)),
 		},
 	}
 

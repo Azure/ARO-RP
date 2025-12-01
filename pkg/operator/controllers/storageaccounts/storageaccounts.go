@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
-
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -33,29 +34,35 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	// Check each of the cluster subnets for the Microsoft.Storage service endpoint. If the subnet has
 	// the service endpoint, it needs to be included in the storage account vnet rules.
 	for _, subnet := range subnets {
-		mgmtSubnet, err := r.subnets.Get(ctx, subnet.ResourceID)
+		subnetResource, err := arm.ParseResourceID(subnet.ResourceID)
+		if err != nil {
+			return err
+		}
+		subnetName := subnetResource.Name
+		resourceGroupName := subnetResource.ResourceGroupName
+		vnetName := subnetResource.Parent.Name
+
+		armSubnet, err := r.subnets.Get(ctx, resourceGroupName, vnetName, subnetName, nil)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
 				r.log.Infof("Subnet %s not found, skipping", subnet.ResourceID)
-				break
+				continue
 			}
 			return err
 		}
 
-		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints != nil {
-			for _, serviceEndpoint := range *mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints {
+		if armSubnet.Properties != nil && armSubnet.Properties.ServiceEndpoints != nil {
+			for _, serviceEndpoint := range armSubnet.Properties.ServiceEndpoints {
 				isStorageEndpoint := (serviceEndpoint.Service != nil) && (*serviceEndpoint.Service == "Microsoft.Storage")
 				matchesClusterLocation := false
-
 				if serviceEndpoint.Locations != nil {
-					for _, l := range *serviceEndpoint.Locations {
-						if l == "*" || l == location {
+					for _, l := range serviceEndpoint.Locations {
+						if l != nil && (*l == "*" || *l == location) {
 							matchesClusterLocation = true
 							break
 						}
 					}
 				}
-
 				if isStorageEndpoint && matchesClusterLocation {
 					serviceSubnets = append(serviceSubnets, subnet.ResourceID)
 					break
@@ -91,9 +98,9 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			// if subnet ResourceID was found and we need to append
 			found := false
 
-			if account.AccountProperties.NetworkRuleSet != nil && account.AccountProperties.NetworkRuleSet.VirtualNetworkRules != nil {
-				for _, rule := range *account.AccountProperties.NetworkRuleSet.VirtualNetworkRules {
-					if strings.EqualFold(to.String(rule.VirtualNetworkResourceID), subnet) {
+			if account.NetworkRuleSet != nil && account.NetworkRuleSet.VirtualNetworkRules != nil {
+				for _, rule := range *account.NetworkRuleSet.VirtualNetworkRules {
+					if rule.VirtualNetworkResourceID != nil && strings.EqualFold(*rule.VirtualNetworkResourceID, subnet) {
 						found = true
 						break
 					}
@@ -102,8 +109,8 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 
 			// if rule was not found - we add it
 			if !found {
-				*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules = append(*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-					VirtualNetworkResourceID: to.StringPtr(subnet),
+				*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+					VirtualNetworkResourceID: pointerutils.ToPtr(subnet),
 					Action:                   mgmtstorage.ActionAllow,
 				})
 				changed = true
@@ -113,7 +120,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 		if changed {
 			sa := mgmtstorage.AccountUpdateParameters{
 				AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-					NetworkRuleSet: account.AccountProperties.NetworkRuleSet,
+					NetworkRuleSet: account.NetworkRuleSet,
 				},
 			}
 

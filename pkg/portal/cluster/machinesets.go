@@ -65,8 +65,8 @@ func (f *realFetcher) MachineSetsFromMachineSetList(ctx context.Context, machine
 
 		final.MachineSets = append(final.MachineSets, MachineSetsInformation{
 			Name:                     machineSet.Name,
-			Type:                     machineSet.ObjectMeta.Labels["machine.openshift.io/cluster-api-machine-type"],
-			CreatedAt:                machineSet.ObjectMeta.CreationTimestamp.String(),
+			Type:                     machineSet.Labels["machine.openshift.io/cluster-api-machine-type"],
+			CreatedAt:                machineSet.CreationTimestamp.String(),
 			DesiredReplicas:          int(*machineSet.Spec.Replicas),
 			Replicas:                 int(machineSet.Status.Replicas),
 			ErrorReason:              getErrorReasonMachineSet(machineSet),

@@ -11,10 +11,20 @@ import (
 	. "github.com/onsi/gomega"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
 var _ = Describe("[Admin API] Get Hive Cluster Deployment action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
+
+	var adminAPICluster *admin.OpenShiftCluster
+
+	BeforeEach(func(ctx context.Context) {
+		adminAPICluster = adminGetCluster(Default, ctx, clusterResourceID)
+
+		skipIfNotHiveManagedCluster(adminAPICluster)
+	})
 
 	When("A hive managed cluster has its cluster deployment requested", func() {
 		It("is managed by hive", func(ctx context.Context) {
@@ -22,11 +32,6 @@ var _ = Describe("[Admin API] Get Hive Cluster Deployment action", func() {
 			oc := adminGetCluster(Default, ctx, clusterResourceID)
 			By("checking that we received the expected cluster")
 			Expect(oc.ID).To(Equal(clusterResourceID))
-			By("checking the cluster is managed by hive via its hiveProfile")
-			if oc.Properties.HiveProfile.Namespace == "" {
-				Skip("Cluster is not managed by hive")
-				// NOTE: if we end up with e2e creating clusters via hive we should fail here instead
-			}
 			clusterDeployment := hivev1.ClusterDeployment{}
 			By("requesting the cluster deployment cr")
 			resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/clusterdeployment", nil, true, nil, &clusterDeployment)

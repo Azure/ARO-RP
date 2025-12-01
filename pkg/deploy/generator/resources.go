@@ -4,27 +4,29 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 	return &arm.Resource{
 		Resource: mgmtinsights.ActionGroupResource{
 			ActionGroup: &mgmtinsights.ActionGroup{
-				Enabled:        to.BoolPtr(true),
+				Enabled:        pointerutils.ToPtr(true),
 				GroupShortName: &shortName,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Insights/actionGroups"),
-			Location: to.StringPtr("Global"),
+			Type:     pointerutils.ToPtr("Microsoft.Insights/actionGroups"),
+			Location: pointerutils.ToPtr("Global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 	}
@@ -35,34 +37,34 @@ func (g *generator) dnsZone(name string) *arm.Resource {
 		Resource: &mgmtdns.Zone{
 			ZoneProperties: &mgmtdns.ZoneProperties{},
 			Name:           &name,
-			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
-			Location:       to.StringPtr("global"),
+			Type:           pointerutils.ToPtr("Microsoft.Network/dnsZones"),
+			Location:       pointerutils.ToPtr("global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
 	}
 }
 
-func (g *generator) securityGroup(name string, securityRules *[]mgmtnetwork.SecurityRule, condition interface{}) *arm.Resource {
+func (g *generator) securityGroup(name string, securityRules []*armnetwork.SecurityRule, condition interface{}) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.SecurityGroup{
-			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+		Resource: &armnetwork.SecurityGroup{
+			Properties: &armnetwork.SecurityGroupPropertiesFormat{
 				SecurityRules: securityRules,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		Condition:  condition,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
-func (g *generator) securityRules(name string, properties *mgmtnetwork.SecurityRulePropertiesFormat, condition interface{}) *arm.Resource {
+func (g *generator) securityRules(name string, properties *armnetwork.SecurityRulePropertiesFormat, condition interface{}) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.SecurityRule{
-			SecurityRulePropertiesFormat: properties,
-			Name:                         &name,
-			Type:                         to.StringPtr("Microsoft.Network/networkSecurityGroups/securityRules"),
+		Resource: &armnetwork.SecurityRule{
+			Properties: properties,
+			Name:       &name,
+			Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups/securityRules"),
 		},
 		Location:   "[resourceGroup().location]",
 		Condition:  condition,
@@ -72,17 +74,17 @@ func (g *generator) securityRules(name string, properties *mgmtnetwork.SecurityR
 
 func (g *generator) publicIPAddress(name string) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.PublicIPAddress{
-			Sku: &mgmtnetwork.PublicIPAddressSku{
-				Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+		Resource: &armnetwork.PublicIPAddress{
+			SKU: &armnetwork.PublicIPAddressSKU{
+				Name: pointerutils.ToPtr(armnetwork.PublicIPAddressSKUNameStandard),
 			},
-			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: mgmtnetwork.Static,
+			Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
 			},
-			Zones:    &[]string{},
+			Zones:    []*string{},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -92,9 +94,9 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 	return &arm.Resource{
 		Resource: &mgmtstorage.Account{
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+			Type:     pointerutils.ToPtr("Microsoft.Storage/storageAccounts"),
 			Kind:     mgmtstorage.KindStorageV2,
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			Sku: &mgmtstorage.Sku{
 				Name: "Standard_LRS",
 			},
@@ -105,20 +107,32 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 	}
 }
 
-func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtnetwork.Subnet, condition interface{}, dependsOn []string) *arm.Resource {
+func (g *generator) storageAccountBlobContainer(name string, storageAccountName string, containerProperties *mgmtstorage.ContainerProperties) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				AddressSpace: &mgmtnetwork.AddressSpace{
-					AddressPrefixes: &[]string{
-						addressPrefix,
+		Resource: &mgmtstorage.BlobContainer{
+			Name:                pointerutils.ToPtr("[" + name + "]"),
+			Type:                pointerutils.ToPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+			ContainerProperties: containerProperties,
+		},
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Storage/storageAccounts', %s)]", storageAccountName)},
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
+	}
+}
+
+func (g *generator) virtualNetwork(name, addressPrefix string, subnets []*armnetwork.Subnet, condition interface{}, dependsOn []string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &armnetwork.VirtualNetwork{
+			Properties: &armnetwork.VirtualNetworkPropertiesFormat{
+				AddressSpace: &armnetwork.AddressSpace{
+					AddressPrefixes: []*string{
+						pointerutils.ToPtr(addressPrefix),
 					},
 				},
 				Subnets: subnets,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.Network/virtualNetworks"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		Condition:  condition,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
@@ -130,13 +144,13 @@ func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtne
 // configurations have to be applied for a peering to work
 func (g *generator) virtualNetworkPeering(name, vnetB string, allowGatewayTransit, useRemoteGateways bool, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetworkPeering{
-			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-				AllowVirtualNetworkAccess: to.BoolPtr(true),
-				AllowForwardedTraffic:     to.BoolPtr(true),
-				AllowGatewayTransit:       to.BoolPtr(allowGatewayTransit),
-				UseRemoteGateways:         to.BoolPtr(useRemoteGateways),
-				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+		Resource: &armnetwork.VirtualNetworkPeering{
+			Properties: &armnetwork.VirtualNetworkPeeringPropertiesFormat{
+				AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
+				AllowForwardedTraffic:     pointerutils.ToPtr(true),
+				AllowGatewayTransit:       pointerutils.ToPtr(allowGatewayTransit),
+				UseRemoteGateways:         pointerutils.ToPtr(useRemoteGateways),
+				RemoteVirtualNetwork: &armnetwork.SubResource{
 					ID: &vnetB,
 				},
 			},
@@ -153,20 +167,20 @@ func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessP
 	return &arm.Resource{
 		Resource: &mgmtkeyvault.Vault{
 			Properties: &mgmtkeyvault.VaultProperties{
-				EnableRbacAuthorization:  to.BoolPtr(enableEntraIdRbac),
-				EnablePurgeProtection:    to.BoolPtr(true),
-				EnabledForDiskEncryption: to.BoolPtr(true),
+				EnableRbacAuthorization:  pointerutils.ToPtr(enableEntraIdRbac),
+				EnablePurgeProtection:    pointerutils.ToPtr(true),
+				EnabledForDiskEncryption: pointerutils.ToPtr(true),
 				Sku: &mgmtkeyvault.Sku{
 					Name:   mgmtkeyvault.Standard,
-					Family: to.StringPtr("A"),
+					Family: pointerutils.ToPtr("A"),
 				},
 				// is later replaced by "[subscription().tenantId]"
 				TenantID:       &tenantUUIDHack,
 				AccessPolicies: accessPolicies,
 			},
 			Name:     &name,
-			Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 		Condition:  condition,

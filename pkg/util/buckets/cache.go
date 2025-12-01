@@ -4,9 +4,7 @@ package buckets
 // Licensed under the Apache License 2.0.
 
 import (
-	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -24,6 +22,7 @@ func (mon *monitor) DeleteDoc(doc *api.OpenShiftClusterDocument) {
 
 	if v != nil {
 		if v.stop != nil {
+			mon.baseLog.Debugf("deleting doc, closing worker for %s", doc.ID)
 			close(mon.docs[id].stop)
 		}
 
@@ -53,23 +52,18 @@ func (mon *monitor) FixDoc(doc *api.OpenShiftClusterDocument) {
 	id := strings.ToLower(doc.ID)
 	v := mon.docs[id]
 
-	mon.baseLog.Debugf("fixing doc %s (%s)", doc.ID, doc.Key)
-
-	// TODO: bucketing logic
-	//_, ours := mon.buckets[v.doc.Bucket]
-	ours := true
+	_, ours := mon.buckets[v.doc.Bucket]
 
 	if !ours && v.stop != nil {
-		mon.baseLog.Debugf("stopping channel for %s", doc.ID)
+		mon.baseLog.Debugf("we no longer own cluster, closing worker for %s", doc.ID)
 		close(v.stop)
 		v.stop = nil
 	} else if ours && v.stop == nil {
 		ch := make(chan struct{})
 		v.stop = ch
 
-		delay := time.Duration(rand.Intn(60)) * time.Second
-
-		go mon.worker(ch, delay, doc.Key)
+		mon.baseLog.Debugf("spawning worker for %s", doc.ID)
+		mon.worker(ch, doc.Key)
 	}
 }
 

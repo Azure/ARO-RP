@@ -6,7 +6,7 @@ package armnetwork
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // FlowLogsClientAddons contains addons to WatchersClient
@@ -16,7 +16,7 @@ type FlowLogsClientAddons interface {
 }
 
 func (c *FlowLogsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, networkWatcherName string, flowLogName string, parameters armnetwork.FlowLog, options *armnetwork.FlowLogsClientBeginCreateOrUpdateOptions) error {
-	poller, err := c.FlowLogsClient.BeginCreateOrUpdate(ctx, resourceGroupName, networkWatcherName, flowLogName, parameters, options)
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, networkWatcherName, flowLogName, parameters, options)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (c *FlowLogsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGrou
 }
 
 func (c *FlowLogsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, networkWatcherName string, flowLogName string, options *armnetwork.FlowLogsClientBeginDeleteOptions) error {
-	poller, err := c.FlowLogsClient.BeginDelete(ctx, resourceGroupName, networkWatcherName, flowLogName, options)
+	poller, err := c.BeginDelete(ctx, resourceGroupName, networkWatcherName, flowLogName, options)
 	if err != nil {
 		return err
 	}

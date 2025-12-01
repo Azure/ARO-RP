@@ -17,22 +17,22 @@ import (
 	"strings"
 	"time"
 
-	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
@@ -74,8 +74,9 @@ type ClusterConfig struct {
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
 	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
 
-	MasterVMSize string `mapstructure:"MASTER_VM_SIZE"`
-	WorkerVMSize string `mapstructure:"WORKER_VM_SIZE"`
+	MasterVMSize  string   `mapstructure:"MASTER_VM_SIZE"`
+	WorkerVMSize  string   `mapstructure:"WORKER_VM_SIZE"`
+	MasterVMSizes []string `mapstructure:"MASTER_VM_SIZES"`
 }
 
 func (cc *ClusterConfig) IsLocalDevelopmentMode() bool {
@@ -106,10 +107,15 @@ type Cluster struct {
 
 const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
-const DefaultMasterVmSize = api.VMSizeStandardD8sV5
 const DefaultWorkerVmSize = api.VMSizeStandardD4sV5
-const diskCsiRoleMissingPermission = "Microsoft.Compute/diskEncryptionSets/read"
-const diskCsiRoleName = "tmpDiskCsiAdditionalPerm"
+
+func DefaultMasterVmSizes() []string {
+	return []string{
+		api.VMSizeStandardD8sV5.String(),
+		api.VMSizeStandardD8sV4.String(),
+		api.VMSizeStandardD8sV3.String(),
+	}
+}
 
 func insecureLocalClient() *http.Client {
 	return &http.Client{
@@ -166,7 +172,10 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	}
 
 	if conf.MasterVMSize == "" {
-		conf.MasterVMSize = DefaultMasterVmSize.String()
+		conf.MasterVMSizes = DefaultMasterVmSizes()
+	}
+	if len(conf.MasterVMSizes) == 0 {
+		conf.MasterVMSizes = []string{conf.MasterVMSize}
 	}
 	if conf.WorkerVMSize == "" {
 		conf.WorkerVMSize = DefaultWorkerVmSize.String()
@@ -321,7 +330,7 @@ func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, disk
 					uuid.DefaultGenerator.Generate(),
 					mgmtauthorization.RoleAssignmentCreateParameters{
 						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
+							RoleDefinitionID: pointerutils.ToPtr("/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
 							PrincipalID:      &principalID,
 							PrincipalType:    mgmtauthorization.ServicePrincipal,
 						},
@@ -387,7 +396,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		uuid.DefaultGenerator.Generate(),
 		mgmtauthorization.RoleAssignmentCreateParameters{
 			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: to.StringPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
+				RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
 				PrincipalID:      &c.Config.MockMSIObjectID,
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
@@ -397,7 +406,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
 		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
-			Location: to.StringPtr(c.Config.Location),
+			Location: pointerutils.ToPtr(c.Config.Location),
 		}, nil)
 		if err != nil {
 			return err
@@ -423,61 +432,6 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 				ResourceID: *resp.ID,
 			}
 		}
-		// TODO ARO-15117: Remove this once builtin roles for disk-csi-driver has
-		// `Microsoft.Compute/diskEncryptionSets/read` permission
-		if wi.OperatorName == "disk-csi-driver" {
-			c.log.Infof("Adding '%s' permission to disk-csi-driver wi.", diskCsiRoleMissingPermission)
-			if err = c.workaroundDiskCsiPermissions(ctx, resp.Properties.PrincipalID); err != nil {
-				c.log.Warnf("error applying disk-csi-driver permissions workaround. Ignoring: %v", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (c *Cluster) workaroundDiskCsiPermissions(ctx context.Context, diskCsiDriverPrincipalID *string) error {
-	allRoledefs, err := c.roledefinitions.List(ctx, fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID), "")
-	if err != nil {
-		return fmt.Errorf("error getting existing roles: %w", err)
-	}
-
-	roleID := uuid.DefaultGenerator.Generate()
-	for _, rd := range allRoledefs {
-		if *rd.RoleName == diskCsiRoleName {
-			roleID = *rd.Name
-		}
-	}
-
-	workaroundRole, err := c.roledefinitions.CreateOrUpdate(ctx, fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID), roleID, mgmtauthorization.RoleDefinition{
-		RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-			RoleName:    to.StringPtr(diskCsiRoleName),
-			Description: to.StringPtr("Tmp disk csi role"),
-			Permissions: &[]mgmtauthorization.Permission{
-				{
-					Actions: &[]string{diskCsiRoleMissingPermission},
-				},
-			},
-			AssignableScopes: &[]string{fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("error creating/updating workaround role: %w", err)
-	}
-	_, err = c.roleassignments.Create(
-		ctx,
-		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, c.Config.VnetResourceGroup),
-		uuid.DefaultGenerator.Generate(),
-		mgmtauthorization.RoleAssignmentCreateParameters{
-			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: workaroundRole.ID,
-				PrincipalID:      diskCsiDriverPrincipalID,
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("error assigning workaround role to principal: %w", err)
 	}
 
 	return nil
@@ -513,7 +467,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 	if c.Config.IsCI {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, c.Config.VnetResourceGroup, mgmtfeatures.ResourceGroup{
-			Location: to.StringPtr(c.Config.Location),
+			Location: pointerutils.ToPtr(c.Config.Location),
 		})
 		if err != nil {
 			return err
@@ -559,12 +513,12 @@ func (c *Cluster) Create(ctx context.Context) error {
 		diskEncryptionSet, err := c.diskEncryptionSetsClient.Get(ctx, c.Config.VnetResourceGroup, diskEncryptionSetName)
 		if err == nil {
 			if diskEncryptionSet.EncryptionSetProperties == nil ||
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey == nil ||
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault == nil ||
-				diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID == nil {
+				diskEncryptionSet.ActiveKey == nil ||
+				diskEncryptionSet.ActiveKey.SourceVault == nil ||
+				diskEncryptionSet.ActiveKey.SourceVault.ID == nil {
 				return fmt.Errorf("no valid Key Vault found in Disk Encryption Set: %v. Delete the Disk Encryption Set and retry", diskEncryptionSet)
 			}
-			ID := *diskEncryptionSet.EncryptionSetProperties.ActiveKey.SourceVault.ID
+			ID := *diskEncryptionSet.ActiveKey.SourceVault.ID
 			var found bool
 			_, kvName, found = strings.Cut(ID, "/providers/Microsoft.KeyVault/vaults/")
 			if !found {
@@ -580,7 +534,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 				kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
 				result, err := c.vaultsClient.CheckNameAvailability(
 					ctx,
-					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")},
+					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults")},
 					nil,
 				)
 				if err != nil {
@@ -654,12 +608,9 @@ func (c *Cluster) Create(ctx context.Context) error {
 		c.log.Info("creating Classic role assignments")
 		c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, appDetails.SPId)
 	}
-	fipsMode := true
+	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
 
 	// Don't install with FIPS in a local dev, non-CI environment
-	if !c.Config.IsCI && c.Config.IsLocalDevelopmentMode() {
-		fipsMode = false
-	}
 
 	c.log.Info("creating cluster")
 	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode)
@@ -784,40 +735,90 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err != nil {
-			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
-			errs = append(errs, err)
+			if azureerrors.IsNotFoundError(err) {
+				c.log.Infof("Cluster %s not found in resource group %s, assuming already deleted", clusterName, vnetResourceGroup)
+			} else {
+				c.log.Errorf("Failed to get cluster %s in resource group %s: %v", clusterName, vnetResourceGroup, err)
+				errs = append(errs, fmt.Errorf("failed to get cluster: %w", err))
+			}
 		}
-		if oc.Properties.ServicePrincipalProfile != nil {
-			errs = append(errs,
-				c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
-			)
+		if oc != nil {
+			if oc.Properties.ServicePrincipalProfile != nil {
+				if err := c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID); err != nil {
+					c.log.Errorf("Failed to delete application: %v", err)
+					errs = append(errs, fmt.Errorf("failed to delete application: %w", err))
+				}
+			}
 		}
 
-		errs = append(errs,
-			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
-			c.deleteWI(ctx, vnetResourceGroup),
-			c.ensureResourceGroupDeleted(ctx, clusterResourceGroup),
-			c.deleteResourceGroup(ctx, vnetResourceGroup),
-		)
+		if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete cluster: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
+		}
+
+		if err := c.deleteWI(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identities: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
+		}
+
+		if err := c.ensureResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
+			c.log.Errorf("Failed to ensure resource group %s deleted: %v", clusterResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to ensure resource group %s deleted: %w", clusterResourceGroup, err))
+		}
+
+		if err := c.deleteResourceGroup(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete resource group %s: %v", vnetResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to delete resource group %s: %w", vnetResourceGroup, err))
+		}
 
 		if env.IsLocalDevelopmentMode() { //PR E2E
-			errs = append(errs,
-				c.deleteVnetPeerings(ctx, vnetResourceGroup),
-			)
+			if err := c.deleteVnetPeerings(ctx, vnetResourceGroup); err != nil {
+				c.log.Errorf("Failed to delete VNet peerings: %v", err)
+				errs = append(errs, fmt.Errorf("failed to delete VNet peerings: %w", err))
+			}
 		}
 	} else {
-		errs = append(errs,
-			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
-			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
-			c.deleteWI(ctx, vnetResourceGroup),
-			c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
-			c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
-		)
+		if err := c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete role assignments: %w", err))
+		}
+
+		if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete cluster: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
+		}
+
+		if err := c.deleteWI(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identities: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
+		}
+
+		if err := c.deleteDeployment(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete deployment: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete deployment: %w", err))
+		}
+
+		if err := c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName); err != nil {
+			c.log.Errorf("Failed to delete VNet resources: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete VNet resources: %w", err))
+		}
 	}
 
-	c.log.Info("done")
+	if len(errs) > 0 {
+		c.log.Errorf("Delete failed with %d error(s)", len(errs))
+	} else {
+		c.log.Info("Delete completed successfully")
+	}
 	return errors.Join(errs...)
 }
 
@@ -870,7 +871,6 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:              api.VMSize(c.Config.MasterVMSize),
 				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.Config.SubscriptionID, vnetResourceGroup, clusterName),
 				EncryptionAtHost:    api.EncryptionAtHostEnabled,
 				DiskEncryptionSetID: diskEncryptionSetID,
@@ -930,13 +930,42 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		if err != nil {
 			return err
 		}
+
+		if c.Config.UseWorkloadIdentity {
+			err = c.ensureDefaultRoleSetInCosmosdb(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
 		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
 		if c.Config.WorkerVMSize == DefaultWorkerVmSize.String() {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 		}
 	}
 
-	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
+	var err error
+	for _, masterVmSize := range c.Config.MasterVMSizes {
+		if err != nil {
+			// If we've already tried and failed to create the cluster, delete
+			// it before retrying. Deleting first ensures that the final failed
+			// cluster remains for diagnostic purposes.
+			err = c.openshiftclusters.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+			if err != nil {
+				return fmt.Errorf("error deleting cluster after failed creation: %w", err)
+			}
+		}
+
+		oc.Properties.MasterProfile.VMSize = api.VMSize(masterVmSize)
+		c.log.Infof("Creating cluster %s with master VM size %s and worker VM size %s",
+			clusterName, oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
+		err = c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
+		if err == nil {
+			break
+		}
+		c.log.WithError(err).Errorf("error creating cluster with master VM size %s, retrying", oc.Properties.MasterProfile.VMSize)
+	}
+	return err
 }
 
 func (c *Cluster) registerSubscription() error {
@@ -997,6 +1026,32 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 	return parsedResponse.Value, err
 }
 
+// getPlatformWIRoleSetsInCosmosDB queries the local RP admin endpoint for
+// PlatformWorkloadIdentityRoleSet documents and returns them.
+func getPlatformWIRoleSetsInCosmosDB(ctx context.Context) ([]*api.PlatformWorkloadIdentityRoleSet, error) {
+	type getRoleSetResponse struct {
+		Value []*api.PlatformWorkloadIdentityRoleSet `json:"value"`
+	}
+
+	getRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, localDefaultURL+"/admin/platformworkloadidentityrolesets", &bytes.Buffer{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating get platform WI rolesets request: %w", err)
+	}
+
+	getRequest.Header.Set("Content-Type", "application/json")
+
+	getResponse, err := insecureLocalClient().Do(getRequest)
+	if err != nil {
+		return nil, fmt.Errorf("error couldn't retrieve platform WI role sets in cosmos db: %w", err)
+	}
+
+	parsedResponse := getRoleSetResponse{}
+	decoder := json.NewDecoder(getResponse.Body)
+	err = decoder.Decode(&parsedResponse)
+
+	return parsedResponse.Value, err
+}
+
 // ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
 // cosmos DB IF it doesn't already contain an entry for the default version. It
 // is hardcoded to use the local-RP endpoint
@@ -1043,6 +1098,73 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 		return err
 	}
 
+	return resp.Body.Close()
+}
+
+// ensureDefaultRoleSetInCosmosdb puts a default PlatformWorkloadIdentityRoleSet
+// into the cosmos DB via the local RP admin endpoint IF it doesn't already
+// contain an entry for the default OpenShift version. It mirrors the behaviour
+// of ensureDefaultVersionInCosmosdb but targets the platformworkloadidentityrolesets
+// admin endpoint.
+func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
+	defaultVersion := version.DefaultInstallStream
+
+	existingRoleSets, err := getPlatformWIRoleSetsInCosmosDB(ctx)
+	if err != nil {
+		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: getPlatformWIRoleSetsInCosmosDB returned error: %v; will attempt to PUT default", err)
+	} else {
+		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existingRoleSets))
+		for i, rs := range existingRoleSets {
+			var ver string
+			if rs != nil {
+				ver = rs.Properties.OpenShiftVersion
+			}
+			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existingRoleSets[%d].OpenShiftVersion=%s", i, ver)
+			if ver == defaultVersion.Version.MinorVersion() {
+				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.MinorVersion())
+				return nil
+			}
+		}
+	}
+
+	c.log.Infof("building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
+
+	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &roleSets); err != nil {
+		return fmt.Errorf("failed to unmarshal platform workload identity role sets from config: %w", err)
+	}
+
+	var defaultRoleSetProperties *api.PlatformWorkloadIdentityRoleSetProperties
+	for i := range roleSets {
+		if roleSets[i].OpenShiftVersion == defaultVersion.Version.MinorVersion() {
+			defaultRoleSetProperties = &roleSets[i]
+			break
+		}
+	}
+	if defaultRoleSetProperties == nil {
+		return fmt.Errorf("no platform workload identity role set for version %s found", defaultVersion.Version.MinorVersion())
+	}
+
+	defaultRoleSet := api.PlatformWorkloadIdentityRoleSet{
+		Properties: *defaultRoleSetProperties,
+	}
+
+	b, err := json.Marshal(&defaultRoleSet)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := insecureLocalClient().Do(req)
+	if err != nil {
+		return err
+	}
 	return resp.Body.Close()
 }
 
@@ -1207,7 +1329,6 @@ func (c *Cluster) deleteVnetPeerings(ctx context.Context, resourceGroup string) 
 	if err != nil {
 		return fmt.Errorf("error deleting vnet peerings: %w", err)
 	}
-
 	return nil
 }
 
@@ -1254,17 +1375,17 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &c.ciParentVnet,
 		},
-		AllowVirtualNetworkAccess: to.BoolPtr(true),
-		AllowForwardedTraffic:     to.BoolPtr(true),
-		UseRemoteGateways:         to.BoolPtr(true),
+		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
+		AllowForwardedTraffic:     pointerutils.ToPtr(true),
+		UseRemoteGateways:         pointerutils.ToPtr(true),
 	}
 	rpProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &cluster,
 		},
-		AllowVirtualNetworkAccess: to.BoolPtr(true),
-		AllowForwardedTraffic:     to.BoolPtr(true),
-		AllowGatewayTransit:       to.BoolPtr(true),
+		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
+		AllowForwardedTraffic:     pointerutils.ToPtr(true),
+		AllowGatewayTransit:       pointerutils.ToPtr(true),
 	}
 
 	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: clusterProp}, nil)

@@ -9,11 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/ugorji/go/codec"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +19,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
+
 	"sigs.k8s.io/yaml"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
@@ -37,6 +39,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -50,7 +53,7 @@ var _ = Describe("ARO Operator", Label(smoke), func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			for _, pod := range pods.Items {
 				// Check the latest 10 minutes of logs.
-				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: to.Int64Ptr(600)}).DoRaw(ctx)
+				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: pointerutils.ToPtr(int64(600))}).DoRaw(ctx)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(string(body)).NotTo(ContainSubstring("level=error"))
 			}
@@ -208,18 +211,12 @@ var _ = Describe("ARO Operator - RBAC", func() {
 
 var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 	const (
-		mhcNamespace            = "openshift-machine-api"
-		mhcName                 = "aro-machinehealthcheck"
-		mhcRemediationAlertName = "mhc-remediation-alert"
+		mhcNamespace = "openshift-machine-api"
+		mhcName      = "aro-machinehealthcheck"
 	)
 
 	getMachineHealthCheck := func(g Gomega, ctx context.Context) {
 		_, err := clients.MachineAPI.MachineV1beta1().MachineHealthChecks(mhcNamespace).Get(ctx, mhcName, metav1.GetOptions{})
-		g.Expect(err).ToNot(HaveOccurred())
-	}
-
-	getMachineHealthCheckRemediationAlertName := func(g Gomega, ctx context.Context) {
-		_, err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Get(ctx, mhcRemediationAlertName, metav1.GetOptions{})
 		g.Expect(err).ToNot(HaveOccurred())
 	}
 
@@ -230,15 +227,6 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 
 		By("waiting for the machine health check to be restored")
 		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-	})
-
-	It("the alerting rule must recreated if deleted", func(ctx context.Context) {
-		By("deleting the machine health remediation alert")
-		err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Delete(ctx, mhcRemediationAlertName, metav1.DeleteOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		By("waiting for the machine health check remediation alert to be restored")
-		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 })
@@ -295,15 +283,15 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split((*oc.OpenShiftClusterProperties.MasterProfile.SubnetID))
+		vnet, masterSubnet, err := apisubnet.Split((*oc.MasterProfile.SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{
-			masterSubnet: to.StringPtr(""),
-			workerSubnet: to.StringPtr(""),
+			masterSubnet: pointerutils.ToPtr(""),
+			workerSubnet: pointerutils.ToPtr(""),
 		}
 
 		r, err := azure.ParseResourceID(vnet)
@@ -343,8 +331,8 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		By("creating an empty test NSG")
 		testNSG = armnetwork.SecurityGroup{
 			Location:   &location,
-			Name:       to.StringPtr(nsg),
-			Type:       to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+			Name:       pointerutils.ToPtr(nsg),
+			Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
 			Properties: &armnetwork.SecurityGroupPropertiesFormat{},
 		}
 		err := clients.NetworkSecurityGroups.CreateOrUpdateAndWait(ctx, resourceGroup, nsg, testNSG, nil)
@@ -417,7 +405,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				Labels:      newMachineSet.ObjectMeta.Labels,
 			}
 			newMachineSet.Name = emptyMachineSet
-			newMachineSet.Spec.Replicas = to.Int32Ptr(0)
+			newMachineSet.Spec.Replicas = pointerutils.ToPtr(int32(0))
 
 			_, err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Create(ctx, newMachineSet, metav1.CreateOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
@@ -595,7 +583,24 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mcpName,
 		},
-		Spec: mcv1.MachineConfigPoolSpec{},
+		Spec: mcv1.MachineConfigPoolSpec{
+			// OCP 4.18+ ValidatingAdmissionPolicy requires custom MCPs to inherit from worker pool
+			// Using matchExpressions to include both "worker" and custom role
+			MachineConfigSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "machineconfiguration.openshift.io/role",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"worker", mcpName},
+					},
+				},
+			},
+			NodeSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"node-role.kubernetes.io/" + mcpName: "",
+				},
+			},
+		},
 	}
 
 	getMachineConfigNames := func(g Gomega, ctx context.Context) []string {
@@ -670,7 +675,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 			if err != nil {
 				return err
 			}
-			customMachineConfig.ObjectMeta.Labels["testlabel"] = "testvalue"
+			customMachineConfig.Labels["testlabel"] = "testvalue"
 			_, err = clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Update(ctx, customMachineConfig, metav1.UpdateOptions{})
 			return err
 		})

@@ -56,18 +56,20 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        - containerPort: 8888
+          name: http-metrics
         livenessProbe:
           httpGet:
             path: /healthz/ready
             port: 8080
-        {{ if .SupportsPodSecurityAdmission }} 
+        {{ if .SupportsPodSecurityAdmission }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
-          runAsNonRoot: true  
-        {{ end }}            
+          runAsNonRoot: true
+        {{ end }}
         {{ if .UsesWorkloadIdentity }}
         volumeMounts:
         - mountPath: "{{ .TokenVolumeMountPath }}"
@@ -78,10 +80,10 @@ spec:
         node-role.kubernetes.io/master: ""
       {{ if .SupportsPodSecurityAdmission }}
       securityContext:
-        runAsNonRoot: true        
-        seccompProfile: 
+        runAsNonRoot: true
+        seccompProfile:
           type: RuntimeDefault
-      {{ end }}         
+      {{ end }}
       serviceAccountName: aro-operator-master
       serviceAccount: aro-operator-master
       priorityClassName: system-cluster-critical

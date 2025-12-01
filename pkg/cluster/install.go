@@ -15,6 +15,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -49,14 +50,10 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 }
 
 func (m *manager) adminUpdate() []steps.Step {
-	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
-	isEverything := task == api.MaintenanceTaskEverything || task == ""
-	isOperator := task == api.MaintenanceTaskOperator
-	isRenewCerts := task == api.MaintenanceTaskRenewCerts
-	isSyncClusterObject := task == api.MaintenanceTaskSyncClusterObject
-
 	stepsToRun := m.getZerothSteps()
-	if isEverything {
+
+	switch m.doc.OpenShiftCluster.Properties.MaintenanceTask {
+	case api.MaintenanceTaskEverything, "":
 		stepsToRun = utilgenerics.ConcatMultipleSlices(
 			stepsToRun, m.getGeneralFixesSteps(), m.getCertificateRenewalSteps(),
 		)
@@ -66,21 +63,21 @@ func (m *manager) adminUpdate() []steps.Step {
 		if m.adoptViaHive && !m.clusterWasCreatedByHive() {
 			stepsToRun = append(stepsToRun, m.getHiveAdoptionAndReconciliationSteps()...)
 		}
-	} else if isOperator {
+		// We don't run this on an operator-only deploy as PUCM scripts then cannot
+		// determine if the cluster has been fully admin-updated
+		// Run this last so we capture the resource provider only once the upgrade has been fully performed
+		stepsToRun = append(stepsToRun, steps.Action(m.updateProvisionedBy))
+
+	case api.MaintenanceTaskOperator:
 		if m.shouldUpdateOperator() {
 			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
 		}
-	} else if isRenewCerts {
+	case api.MaintenanceTaskRenewCerts:
 		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
-	} else if isSyncClusterObject {
+	case api.MaintenanceTaskSyncClusterObject:
 		stepsToRun = append(stepsToRun, m.getSyncClusterObjectSteps()...)
-	}
-
-	// We don't run this on an operator-only deploy as PUCM scripts then cannot
-	// determine if the cluster has been fully admin-updated
-	// Run this last so we capture the resource provider only once the upgrade has been fully performed
-	if isEverything {
-		stepsToRun = append(stepsToRun, steps.Action(m.updateProvisionedBy))
+	case api.MaintenanceTaskMigrateLoadBalancer:
+		stepsToRun = append(stepsToRun, m.getMigrateLoadBalancerSteps()...)
 	}
 
 	return stepsToRun
@@ -156,7 +153,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 }
 
 func (m *manager) getCertificateRenewalSteps() []steps.Step {
-	steps := []steps.Step{
+	s := []steps.Step{
 		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.correctCertificateIssuer),
 		steps.Action(m.fixMCSCert),
@@ -168,7 +165,14 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 
 		steps.Action(m.renewMDSDCertificate), // Dependent on initializeOperatorDeployer.
 	}
-	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s = append(s,
+			steps.Action(m.ensureClusterMsiCertificate),
+		)
+	}
+
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), s)
 }
 
 func (m *manager) getOperatorUpdateSteps() []steps.Step {
@@ -202,11 +206,18 @@ func (m *manager) getSyncClusterObjectSteps() []steps.Step {
 	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
 }
 
+func (m *manager) getMigrateLoadBalancerSteps() []steps.Step {
+	steps := []steps.Step{
+		steps.Action(m.migrateInternalLoadBalancerZones),
+		steps.Action(m.fixSSH),
+	}
+	return steps
+}
+
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
 	return []steps.Step{
 		steps.Action(m.hiveCreateNamespace),
 		steps.Action(m.hiveEnsureResources),
-		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
 		steps.Action(m.hiveResetCorrelationData),
 	}
 }
@@ -249,6 +260,7 @@ func (m *manager) Update(ctx context.Context) error {
 		s = append(s,
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
+			steps.Action(m.ensurePlatformWorkloadIdentityRBAC),
 			steps.Action(m.federateIdentityCredentials),
 		)
 	} else {
@@ -299,7 +311,6 @@ func (m *manager) Update(ctx context.Context) error {
 			// hive has the latest credentials after rotation.
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
 			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
@@ -375,7 +386,10 @@ func (m *manager) bootstrap() []steps.Step {
 		)
 	}
 
-	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
+	s = append(s,
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateZones),
+	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
@@ -411,10 +425,10 @@ func (m *manager) bootstrap() []steps.Step {
 
 	s = append(s,
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs),
-		steps.Action(m.updateAPIIPEarly),
-		steps.Action(m.createOrUpdateRouterIPEarly),
-		steps.Action(m.ensureGatewayCreate),
-		steps.Action(m.createAPIServerPrivateEndpoint),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateAPIIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createOrUpdateRouterIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
 	)
 
@@ -479,8 +493,12 @@ func (m *manager) Install(ctx context.Context) error {
 			// This issue is currently under investigation.
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.configureAPIServerCertificate),
-			steps.Condition(m.apiServersReady, 30*time.Minute, true),
+			// Use a more robust check after certificate configuration to handle race conditions
+			// where the apiserver is still processing certificate-related revisions
+			steps.Condition(m.apiServersReadyAfterCertificateConfig, 30*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
+			// Additional check after worker nodes are ready to ensure certificate revisions have fully propagated
+			steps.Condition(m.apiServersReadyAfterCertificateConfig, 30*time.Minute, true),
 			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true),
 			steps.Action(m.updateConsoleBranding),
 			steps.Condition(m.operatorConsoleReady, 20*time.Minute, true),
@@ -495,6 +513,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureDefaultStorageClass),
 			steps.Action(m.removeAzureFileCSIStorageClass),
 			steps.Action(m.disableOperatorReconciliation),
+			// Final check before finishing installation to ensure apiserver is fully stable
+			steps.Condition(m.apiServersReadyAfterCertificateConfig, 30*time.Minute, true),
 			steps.Action(m.finishInstallation),
 		},
 	}

@@ -11,16 +11,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/checkaccess-v2-go-sdk/client"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/checkaccess-v2-go-sdk/client"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -30,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
@@ -81,14 +81,13 @@ type Dynamic interface {
 	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
-	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateClusterUserAssignedIdentity(ctx context.Context, platformIdentities map[string]api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error
 	ValidatePlatformWorkloadIdentityProfile(
 		ctx context.Context,
 		oc *api.OpenShiftCluster,
-		platformWorkloadIdentityRolesByRoleName map[string]api.PlatformWorkloadIdentityRole,
+		platformWorkloadIdentityRolesByRoleName map[string][]api.PlatformWorkloadIdentityRole,
 		roleDefinitions armauthorization.RoleDefinitionsClient,
 		clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient,
 		platformWorkloadIdentities map[string]api.PlatformWorkloadIdentity,
@@ -110,7 +109,7 @@ type dynamic struct {
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
 	resourceSkusClient                    compute.ResourceSkusClient
 	spNetworkUsage                        armnetwork.UsagesClient
-	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
+	loadBalancerBackendAddressPoolsClient armnetwork.LoadBalancerBackendAddressPoolsClient
 	pdpClient                             client.RemotePDPClient
 }
 
@@ -146,6 +145,11 @@ func NewValidator(
 		return nil, err
 	}
 
+	loadBalancerBackendAddressPoolsClient, err := armnetwork.NewLoadBalancerBackendAddressPoolsClient(subscriptionID, cred, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &dynamic{
 		log:                        log,
 		appID:                      appID,
@@ -159,7 +163,7 @@ func NewValidator(
 		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClientWithAROEnvironment(azEnv, subscriptionID, authorizer),
 		resourceSkusClient:                    compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:                             pdpClient,
-		loadBalancerBackendAddressPoolsClient: network.NewLoadBalancerBackendAddressPoolsClient(azEnv, subscriptionID, authorizer),
+		loadBalancerBackendAddressPoolsClient: loadBalancerBackendAddressPoolsClient,
 	}, nil
 }
 
@@ -988,9 +992,10 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 
 	if err == wait.ErrWaitTimeout {
 		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
-		if dv.authorizerType == AuthorizerClusterServicePrincipal {
+		switch dv.authorizerType {
+		case AuthorizerClusterServicePrincipal:
 			errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
-		} else if dv.authorizerType == AuthorizerWorkloadIdentity {
+		case AuthorizerWorkloadIdentity:
 			return api.NewCloudError(
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,

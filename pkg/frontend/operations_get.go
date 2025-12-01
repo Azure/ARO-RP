@@ -15,9 +15,9 @@ import (
 
 func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
-
-	operations := f.apis[r.URL.Query().Get(api.APIVersionKey)].OperationList
-
-	b, err := json.MarshalIndent(operations, "", "    ")
+	resp := api.OperationList{
+		Operations: api.AllOperations,
+	}
+	b, err := json.MarshalIndent(resp, "", "    ")
 	reply(log, w, nil, b, err)
 }

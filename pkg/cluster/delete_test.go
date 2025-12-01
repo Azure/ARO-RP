@@ -5,34 +5,33 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
-	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"k8s.io/utils/ptr"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -46,59 +45,61 @@ func TestDeleteNic(t *testing.T) {
 	location := "eastus"
 	resourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, clusterRG, nicName)
 
-	nic := mgmtnetwork.Interface{
-		Name:                      &nicName,
-		Location:                  &location,
-		ID:                        &resourceId,
-		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{},
+	nic := armnetwork.InterfacesClientGetResponse{
+		Interface: armnetwork.Interface{
+			Name:       &nicName,
+			Location:   &location,
+			ID:         &resourceId,
+			Properties: &armnetwork.InterfacePropertiesFormat{},
+		},
 	}
 
 	tests := []struct {
 		name    string
-		mocks   func(*mock_network.MockInterfacesClient)
+		mocks   func(*mock_armnetwork.MockInterfacesClient)
 		wantErr string
 	}{
 		{
 			name: "nic is in succeeded provisioning state",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},
 		},
 		{
 			name: "nic is in failed provisioning state",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(nil)
+				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(nil)
 			},
 		},
 		{
 			name: "provisioning state is failed and CreateOrUpdateAndWait returns error",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(fmt.Errorf("Failed to update"))
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateFailed)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic.Interface, nil).Return(fmt.Errorf("Failed to update"))
 			},
 			wantErr: "Failed to update",
 		},
 		{
 			name: "nic no longer exists - do nothing",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				notFound := autorest.DetailedError{
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				notFound := azcore.ResponseError{
 					StatusCode: http.StatusNotFound,
 				}
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, notFound)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, &notFound)
 			},
 		},
 		{
 			name: "DeleteAndWait returns error",
-			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
-				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Succeeded
-				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(fmt.Errorf("Failed to delete"))
+			mocks: func(armNetworkInterfaces *mock_armnetwork.MockInterfacesClient) {
+				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				armNetworkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(nic, nil)
+				armNetworkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName, nil).Return(fmt.Errorf("Failed to delete"))
 			},
 			wantErr: "Failed to delete",
 		},
@@ -112,9 +113,9 @@ func TestDeleteNic(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
 
-			networkInterfaces := mock_network.NewMockInterfacesClient(controller)
+			armNetworkInterfaces := mock_armnetwork.NewMockInterfacesClient(controller)
 
-			tt.mocks(networkInterfaces)
+			tt.mocks(armNetworkInterfaces)
 
 			m := manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -127,7 +128,7 @@ func TestDeleteNic(t *testing.T) {
 						},
 					},
 				},
-				interfaces: networkInterfaces,
+				armInterfaces: armNetworkInterfaces,
 			}
 
 			err := m.deleteNic(ctx, nicName)
@@ -176,17 +177,17 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 		},
 		{
 			name:             "resource group not managed (empty string)",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: to.StringPtr("")},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr("")},
 			wantShouldDelete: false,
 		},
 		{
 			name:             "resource group not managed by cluster",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: to.StringPtr("/somethingelse")},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr("/somethingelse")},
 			wantShouldDelete: false,
 		},
 		{
 			name:             "resource group managed by cluster",
-			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: to.StringPtr(clusterResourceId)},
+			getResourceGroup: mgmtfeatures.ResourceGroup{Name: &managedRGName, ManagedBy: pointerutils.ToPtr(clusterResourceId)},
 			wantShouldDelete: true,
 		},
 	}
@@ -295,53 +296,80 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		mocks   func(*mock_armnetwork.MockSecurityGroupsClient, *mock_subnet.MockManager)
+		mocks   func(*mock_armnetwork.MockSecurityGroupsClient, *mock_armnetwork.MockSubnetsClient)
 		wantErr string
 	}{
 		{
 			name: "empty security group",
-			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_subnet.MockManager) {
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
-						ID: ptr.To(nsgId),
+						ID: pointerutils.ToPtr(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{},
 						},
 					},
 				}
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
-				subnets.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
 			},
 		},
 		{
-			name: "disconnects subnets",
-			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_subnet.MockManager) {
-				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
+			name: "fails to parse subnet ID",
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
+				invalidSubnetId := "invalid-subnet-id"
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
-						ID: ptr.To(nsgId),
+						ID: pointerutils.ToPtr(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{
 								{
-									ID: ptr.To(subnetId),
+									ID: pointerutils.ToPtr(invalidSubnetId),
 								},
 							},
 						},
 					},
 				}
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
-				subnets.EXPECT().Get(gomock.Any(), subnetId).Return(&mgmtnetwork.Subnet{
-					ID: ptr.To(subnetId),
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-							ID: ptr.To(nsgId),
+				// Should not call subnets.Get or CreateOrUpdateAndWait due to parse error
+				subnets.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).Times(0)
+			},
+			wantErr: "400: InvalidResourceID: invalid-subnet-id: Invalid subnet resource ID format. For more details, please refer to https://docs.microsoft.com/azure/azure-resource-manager/management/resource-name-rules",
+		},
+		{
+			name: "disconnects subnets",
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
+				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
+				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
+					SecurityGroup: armnetwork.SecurityGroup{
+						ID: pointerutils.ToPtr(nsgId),
+						Properties: &armnetwork.SecurityGroupPropertiesFormat{
+							Subnets: []*armnetwork.Subnet{
+								{
+									ID: pointerutils.ToPtr(subnetId),
+								},
+							},
+						},
+					},
+				}
+				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
+				subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						ID: pointerutils.ToPtr(subnetId),
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: pointerutils.ToPtr(nsgId),
+							},
 						},
 					},
 				}, nil).Times(1)
-				subnets.EXPECT().CreateOrUpdate(gomock.Any(), subnetId, &mgmtnetwork.Subnet{
-					ID:                     ptr.To(subnetId),
-					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
-				}).Return(nil).Times(1)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", armnetwork.Subnet{
+					ID: pointerutils.ToPtr(subnetId),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: nil,
+					},
+				}, nil).Return(nil).Times(1)
 			},
 		},
 	}
@@ -352,14 +380,14 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			defer controller.Finish()
 
 			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
-			subnets := mock_subnet.NewMockManager(controller)
+			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
 
 			tt.mocks(securityGroups, subnets)
 
 			m := manager{
 				log:               logrus.NewEntry(logrus.StandardLogger()),
 				armSecurityGroups: securityGroups,
-				subnet:            subnets,
+				armSubnets:        subnets,
 			}
 
 			ctx := context.Background()
@@ -478,28 +506,79 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 
 func TestDeleteFederatedCredentials(t *testing.T) {
 	ctx := context.Background()
+
+	// cluster vars
 	docID := "00000000-0000-0000-0000-000000000000"
 	clusterID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/fakeResourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/fakeCluster"
 	clusterResourceId, _ := azure.ParseResourceID(clusterID)
 	mockGuid := "00000000-0000-0000-0000-000000000000"
 	clusterRGName := "aro-cluster"
+	secretName := dataplane.ManagedIdentityCredentialsStoragePrefix + mockGuid
 	identityIDPrefix := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/", mockGuid, clusterRGName)
-
 	oidcIssuer := "https://fakeissuer.fakedomain/fakecluster"
 
+	// service account vars
 	ccmServiceAccountName := "system:serviceaccount:openshift-cloud-controller-manager:cloud-controller-manager"
 	ccmIdentityResourceId, _ := azure.ParseResourceID(fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"))
 	ingressServiceAccountName := "system:serviceaccount:openshift-ingress-operator:ingress-operator"
 	ingressIdentityResourceId, _ := azure.ParseResourceID(fmt.Sprintf("%s/%s", identityIDPrefix, "cio"))
 
+	// msi vars
+	miName := "aro-cluster-msi"
+	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+	placeholderString := "placeholder"
+	placeholderTime := time.Now().Format(time.RFC3339)
+	now := func() time.Time {
+		return time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
+	}
+	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
+		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
+			{
+				ClientID:                   &placeholderString,
+				ClientSecret:               &placeholderString,
+				TenantID:                   &placeholderString,
+				ResourceID:                 &miResourceId,
+				AuthenticationEndpoint:     &placeholderString,
+				CannotRenewAfter:           &placeholderTime,
+				ClientSecretURL:            &placeholderString,
+				MtlsAuthenticationEndpoint: &placeholderString,
+				NotAfter:                   &placeholderTime,
+				NotBefore:                  &placeholderTime,
+				RenewAfter:                 &placeholderTime,
+				CustomClaims: &dataplane.CustomClaims{
+					XMSAzNwperimid: []string{placeholderString},
+					XMSAzTm:        &placeholderString,
+				},
+				ObjectID: &placeholderString,
+			},
+		},
+	}
+	credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
+	if err != nil {
+		panic(err)
+	}
+	credentialsObjectString := string(credentialsObjectBuffer)
+	notEligibleForRotationResponse := azsecrets.GetSecretResponse{
+		Secret: azsecrets.Secret{
+			Value:      &credentialsObjectString,
+			Attributes: &azsecrets.SecretAttributes{},
+			Tags: map[string]*string{
+				dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+				dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+			},
+		},
+	}
+
 	tests := []struct {
-		name    string
-		doc     *api.OpenShiftClusterDocument
-		mocks   func(*mock_armmsi.MockFederatedIdentityCredentialsClient)
-		wantErr string
+		name             string
+		doc              *api.OpenShiftClusterDocument
+		mocks            func(*mock_armmsi.MockFederatedIdentityCredentialsClient)
+		kvClientMocks    func(*mock_azsecrets.MockClient)
+		msiDataplaneStub func(*mock_msidataplane.MockClient)
+		wantErr          string
 	}{
 		{
-			name: "success - cluster doc has nil PlatformWorkloadIdentities",
+			name: "success - cluster doc has nil PlatformWorkloadIdentities, exit early",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -509,32 +588,19 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
 						},
 					},
 				},
 			},
 		},
 		{
-			name: "success - cluster doc has non-nil but empty PlatformWorkloadIdentities",
-			doc: &api.OpenShiftClusterDocument{
-				ID: mockGuid,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.OpenShiftClusterProperties{
-						ClusterProfile: api.ClusterProfile{
-							Version:    "4.14.40",
-							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
-						},
-						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo:              ptr.To(api.UpgradeableTo("4.15.40")),
-							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "success - cluster doc has no oidc issuer so no actions performed",
+			name: "success - cluster doc has no oidc issuer, exit early",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -544,7 +610,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: nil,
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -554,6 +620,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 								},
 							},
 						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{},
 					},
 				},
 			},
@@ -570,7 +639,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -581,10 +650,18 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
+					},
 				},
 			},
 			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]*sdkmsi.FederatedIdentityCredential{}, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -599,7 +676,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -608,6 +685,11 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "cio"),
 								},
 							},
+						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
 						},
 					},
 				},
@@ -642,6 +724,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq(ccmFedCredName), gomock.Any())
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ingressIdentityResourceId.ResourceGroup), gomock.Eq(ingressIdentityResourceId.ResourceName), gomock.Eq(ingressFedCredName), gomock.Any())
 			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
 		},
 		{
 			name: "success - does not delete federated credentials that do not belong to the cluster",
@@ -655,12 +740,17 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
 								},
 							},
+						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
 						},
 					},
 				},
@@ -700,6 +790,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq("fedCredWithWrongAudience"), gomock.Any()).Times(0)
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq("fedCredWithWrongIssuer"), gomock.Any()).Times(0)
 			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
 		},
 		{
 			name: "error - encounter blocking error deleting a federated credential",
@@ -713,7 +806,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster",
@@ -721,9 +814,17 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
+					},
 				},
 			},
 			wantErr: "parsing failed for /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-cluster. Invalid resource Id format",
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
 		},
 		{
 			name: "success - federated identity credentials client returns error when listing credentials but deletion continues",
@@ -737,7 +838,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
@@ -745,11 +846,19 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							},
 						},
 					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
+					},
 				},
 			},
 			mocks: func(federatedIdentityCredentials *mock_armmsi.MockFederatedIdentityCredentialsClient) {
 				federatedIdentityCredentials.EXPECT().List(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Any()).
 					Return(nil, fmt.Errorf("something unexpected occurred"))
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
 			},
 		},
 		{
@@ -764,12 +873,17 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
 								},
 							},
+						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
 						},
 					},
 				},
@@ -792,6 +906,40 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				federatedIdentityCredentials.EXPECT().Delete(gomock.Any(), gomock.Eq(ccmIdentityResourceId.ResourceGroup), gomock.Eq(ccmIdentityResourceId.ResourceName), gomock.Eq(ccmFedCredName), gomock.Any()).
 					Return(sdkmsi.FederatedIdentityCredentialsClientDeleteResponse{}, fmt.Errorf("something unexpected occurred"))
 			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(notEligibleForRotationResponse, nil).Times(1)
+			},
+		},
+		{
+			name: "success - ensureClusterMsiCertificate fails but deletion continues",
+			doc: &api.OpenShiftClusterDocument{
+				ID: docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterID,
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Version:    "4.14.40",
+							OIDCIssuer: (*api.OIDCIssuer)(&oidcIssuer),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"CloudControllerManager": {
+									ResourceID: fmt.Sprintf("%s/%s", identityIDPrefix, "ccm"),
+								},
+							},
+						},
+					},
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
+						},
+					},
+				},
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(azsecrets.GetSecretResponse{}, fmt.Errorf("key vault error")).Times(1)
+			},
 		},
 	}
 
@@ -805,10 +953,25 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				tt.mocks(federatedIdentityCredentials)
 			}
 
+			mockKvClient := mock_azsecrets.NewMockClient(controller)
+			if tt.kvClientMocks != nil {
+				tt.kvClientMocks(mockKvClient)
+			}
+
+			factory := mock_msidataplane.NewMockClientFactory(controller)
+			client := mock_msidataplane.NewMockClient(controller)
+			if tt.msiDataplaneStub != nil {
+				tt.msiDataplaneStub(client)
+			}
+			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
+
 			m := manager{
 				log:                                    logrus.NewEntry(logrus.StandardLogger()),
 				doc:                                    tt.doc,
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
+				clusterMsiKeyVaultStore:                mockKvClient,
+				msiDataplane:                           factory,
+				now:                                    now,
 			}
 
 			err := m.deleteFederatedCredentials(ctx)

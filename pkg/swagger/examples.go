@@ -92,46 +92,6 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 								Name:      param.Name,
 								Parameter: g.exampleOpenShiftClusterPatchParameter(),
 							})
-						case "#/definitions/SyncSet":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleSyncSetPutParameter(),
-							})
-						case "#/definitions/SyncSetUpdate":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleSyncSetPatchParameter(),
-							})
-						case "#/definitions/MachinePool":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleMachinePoolPutParameter(),
-							})
-						case "#/definitions/MachinePoolUpdate":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleMachinePoolPatchParameter(),
-							})
-						case "#/definitions/SyncIdentityProvider":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleSyncIdentityProviderPutParameter(),
-							})
-						case "#/definitions/SyncIdentityProviderUpdate":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleSyncIdentityProviderPatchParameter(),
-							})
-						case "#/definitions/Secret":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleSecretPutParameter(),
-							})
-						case "#/definitions/SecretUpdate":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleSecretPatchParameter(),
-							})
 						}
 					}
 				}
@@ -147,22 +107,6 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 				var body interface{}
 				if response.Schema != nil {
 					switch response.Schema.Ref {
-					case "#/definitions/SyncSet":
-						body = g.exampleSyncSetResponse()
-					case "#/definitions/SyncSetList":
-						body = g.exampleSyncSetListResponse()
-					case "#/definitions/MachinePool":
-						body = g.exampleMachinePoolResponse()
-					case "#/definitions/MachinePoolList":
-						body = g.exampleMachinePoolListResponse()
-					case "#/definitions/SyncIdentityProvider":
-						body = g.exampleSyncIdentityProviderResponse()
-					case "#/definitions/SyncIdentityProviderList":
-						body = g.exampleSyncIdentityProviderListResponse()
-					case "#/definitions/Secret":
-						body = g.exampleSecretResponse()
-					case "#/definitions/SecretList":
-						body = g.exampleSecretListResponse()
 					case "#/definitions/OpenShiftCluster":
 						if g.workerProfilesStatus {
 							switch op {

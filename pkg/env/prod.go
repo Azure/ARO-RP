@@ -19,25 +19,26 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
+	"github.com/Azure/ARO-RP/pkg/util/pki"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -63,7 +64,6 @@ type prod struct {
 	miseAuthorizer        miseadapter.MISEAdapter
 
 	acrDomain string
-	vmskus    map[string]*mgmtcompute.ResourceSku
 
 	fpCertificateRefresher CertificateRefresher
 	fpClientID             string
@@ -86,7 +86,7 @@ type prod struct {
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod, error) {
 	if err := ValidateVars("AZURE_FP_CLIENT_ID", "DOMAIN_NAME"); err != nil {
 		return nil, err
 	}
@@ -105,12 +105,12 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		}
 	}
 
-	core, err := NewCore(ctx, log, component)
+	core, err := NewCore(ctx, log, service)
 	if err != nil {
 		return nil, err
 	}
 
-	dialer, err := proxy.NewDialer(core.IsLocalDevelopmentMode())
+	dialer, err := proxy.NewDialer(core.IsLocalDevelopmentMode(), log)
 	if err != nil {
 		return nil, err
 	}
@@ -143,11 +143,6 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		}
 	}
 
-	msiAuthorizer, err := p.NewMSIAuthorizer(p.Environment().ResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
 	msiCredential, err := p.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
@@ -163,12 +158,6 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
 	}
 	p.serviceKeyvault = serviceKeyvaultClient
-
-	resourceSkusClient := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), msiAuthorizer)
-	err = p.populateVMSkus(ctx, resourceSkusClient)
-	if err != nil {
-		return nil, err
-	}
 
 	p.fpCertificateRefresher = newCertificateRefresher(log, 1*time.Hour, p.serviceKeyvault, RPFirstPartySecretName)
 	err = p.fpCertificateRefresher.Start(ctx)
@@ -245,7 +234,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	p.liveConfig, err = p.Core.NewLiveConfigManager(ctx)
+	p.liveConfig, err = p.NewLiveConfigManager(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -272,9 +261,20 @@ func (p *prod) InitializeAuthorizers() error {
 		if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
 			p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
 		} else {
+			caBundle, err := os.ReadFile(ARMCABundlePath)
+			if err != nil {
+				return err
+			}
+
+			armCertPool := x509.NewCertPool()
+			ok := armCertPool.AppendCertsFromPEM(caBundle)
+			if !ok {
+				return fmt.Errorf("cannot decode CA bundle from %s", ARMCABundlePath)
+			}
+
 			armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 				p.log,
-				ARMCABundlePath,
+				armCertPool,
 				os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
 			)
 			if err != nil {
@@ -285,9 +285,39 @@ func (p *prod) InitializeAuthorizers() error {
 		}
 	}
 
+	var adminCertPool *x509.CertPool
+
+	if p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
+		caBundle, err := os.ReadFile(AdminCABundlePath)
+		if err != nil {
+			return err
+		}
+
+		adminCertPool = x509.NewCertPool()
+		ok := adminCertPool.AppendCertsFromPEM(caBundle)
+		if !ok {
+			return fmt.Errorf("cannot decode CA bundle from %s", AdminCABundlePath)
+		}
+	} else {
+		var issuerPkiUrls []string
+		for _, ca := range p.Environment().PkiCaNames {
+			issuerPkiUrls = append(issuerPkiUrls, fmt.Sprintf(p.Environment().PkiIssuerUrlTemplate, ca))
+		}
+
+		rootCAs, err := pki.FetchDataFromGetIssuerPkiUrls(issuerPkiUrls)
+		if err != nil {
+			return err
+		}
+
+		adminCertPool, err = pki.BuildCertPoolFromCAData(rootCAs)
+		if err != nil {
+			return err
+		}
+	}
+
 	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 		p.log,
-		AdminCABundlePath,
+		adminCertPool,
 		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
 	)
 	if err != nil {
@@ -295,6 +325,7 @@ func (p *prod) InitializeAuthorizers() error {
 	}
 
 	p.adminClientAuthorizer = adminClientAuthorizer
+
 	return nil
 }
 
@@ -337,23 +368,6 @@ func (p *prod) OtelAuditQueueSize() (int, error) {
 
 func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
-}
-
-func (p *prod) populateVMSkus(ctx context.Context, resourceSkusClient compute.ResourceSkusClient) error {
-	// Filtering is poorly documented, but currently (API version 2019-04-01)
-	// it seems that the API returns all SKUs without a filter and with invalid
-	// value in the filter.
-	// Filtering gives significant optimisation: at the moment of writing,
-	// we get ~1.2M response in eastus vs ~37M unfiltered (467 items vs 16618).
-	filter := fmt.Sprintf("location eq '%s'", p.Location())
-	skus, err := resourceSkusClient.List(ctx, filter)
-	if err != nil {
-		return err
-	}
-
-	p.vmskus = computeskus.FilterVMSizes(skus, p.Location())
-
-	return nil
 }
 
 func (p *prod) ClusterGenevaLoggingAccount() string {
@@ -430,14 +444,6 @@ func (p *prod) ServiceKeyvault() azsecrets.Client {
 	return p.serviceKeyvault
 }
 
-func (p *prod) VMSku(vmSize string) (*mgmtcompute.ResourceSku, error) {
-	vmsku, found := p.vmskus[vmSize]
-	if !found {
-		return nil, fmt.Errorf("sku information not found for vm size %q", vmSize)
-	}
-	return vmsku, nil
-}
-
 func (p *prod) LiveConfig() liveconfig.Manager {
 	return p.liveConfig
 }
@@ -458,8 +464,8 @@ func (p *prod) MsiRpEndpoint() string {
 	return fmt.Sprintf("https://%s", os.Getenv("MSI_RP_ENDPOINT"))
 }
 
-func (p *prod) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
-	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(p.log.WithField("client", "msi-dataplane")))
+func (p *prod) MsiDataplaneClientOptions(correlationData *api.CorrelationData) (*policy.ClientOptions, error) {
+	armClientOptions := p.Environment().ArmClientOptions(ClientDebugLoggerMiddleware(utillog.EnrichWithCorrelationData(p.log.WithField("client", "msi-dataplane"), correlationData)))
 	clientOptions := armClientOptions.ClientOptions
 
 	return &clientOptions, nil

@@ -12,11 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster"
@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -327,9 +328,9 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
 		if backendErr == nil {
-			adminUpdateError = to.StringPtr("")
+			adminUpdateError = pointerutils.ToPtr("")
 		} else {
-			adminUpdateError = to.StringPtr(backendErr.Error())
+			adminUpdateError = pointerutils.ToPtr(backendErr.Error())
 		}
 	}
 

@@ -38,6 +38,7 @@ x-aro-common-env:
 services:
   vpn:
     image: ${LOCAL_VPN_IMAGE}:${VERSION}
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile.vpn
@@ -111,6 +112,9 @@ services:
       MOCK_MSI_OBJECT_ID:
       MOCK_MSI_TENANT_ID:
       OIDC_STORAGE_ACCOUNT_NAME:
+      PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:
+      SKIP_MIWI_ROLE_ASSIGNMENT:
+      USE_WI:
     ports:
       - "8443:8443"
     healthcheck:
@@ -183,6 +187,13 @@ services:
       WORKER_VM_SIZE:
       PORTAL_HOSTNAME: "https://localhost:8444"
       RP_BASE_URL: "https://localhost:8443"
+      MOCK_MSI_CERT:
+      MOCK_MSI_CLIENT_ID:
+      MOCK_MSI_OBJECT_ID:
+      MOCK_MSI_TENANT_ID:
+      PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:
+      SKIP_MIWI_ROLE_ASSIGNMENT:
+      USE_WI:
     entrypoint: "/usr/local/bin/e2e.test"
     command:
       [
@@ -193,6 +204,23 @@ services:
         "--ginkgo.junit-report=/tmp/e2e-report.xml",
         "--ginkgo.label-filter=${E2E_LABEL}",
       ]
+
+  aro-dev-env:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev-env
+    image: aro-rp_aro-dev
+    volumes:
+      - .:/workspace:Z
+      - ~/.azure:/root/.azure:ro,Z
+      - ~/.ssh:/root/.ssh:ro,Z
+      - ./secrets:/workspace/secrets:ro,Z
+    environment:
+      KUBECONFIG: /workspace/secrets/aks.kubeconfig
+      AZURE_EXTENSION_DEV_SOURCES: /workspace/python
+      USER: ${USER}
+    network_mode: "host"
+    command: /bin/bash -c ". /workspace/env && make runlocal-rp"
 
 secrets:
   proxy-client-key:

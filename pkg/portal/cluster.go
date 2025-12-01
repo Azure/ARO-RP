@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"

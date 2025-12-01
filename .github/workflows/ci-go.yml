@@ -14,61 +14,94 @@ permissions:
 jobs:
   vendor-check:
     runs-on: ubuntu-latest
-    container:
-      image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Add GOBIN to PATH
-      run: |
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - run: |
-        make go-verify
-        hack/ci-utils/isClean.sh
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: go.mod
+      - run: |
+          make go-verify
+          hack/ci-utils/isClean.sh
+        env:
+          GO_COMPLIANCE_INFO: "0"
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'
 
   generate-check:
     runs-on: ubuntu-latest
-    container:
-      image: registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Add GOBIN to PATH
-      run: |
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Run make generate
-      run: |
-        make generate
-        hack/ci-utils/isClean.sh
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: go.mod
+      - name: Run make generate
+        run: |
+          make generate
+          hack/ci-utils/isClean.sh
+        env:
+          GO_COMPLIANCE_INFO: "0"
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'
 
   golangci:
     name: golangci-lint
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
-
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: v1.64.5
-        args: -v --timeout 15m
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: go.mod
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.2.1
+          args: -v --timeout 15m
+        env:
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'
 
   validate-go:
     name: validate-go
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
-
-    - run: make validate-go-action
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+      - name: Set up Golang
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: go.mod
+      - run: make validate-go-action
+        env:
+          GO_COMPLIANCE_INFO: "0"
+          GO111MODULE: 'auto'
+          GOFLAGS: '-mod=readonly'

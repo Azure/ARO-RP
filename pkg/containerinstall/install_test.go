@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/containers/podman/v5/libpod/define"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/bindings/secrets"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -26,7 +26,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-const TEST_PULLSPEC = "registry.access.redhat.com/ubi8/go-toolset:1.22.9-2"
+const TEST_PULLSPEC = "registry.redhat.io/ubi9/ubi-minimal:latest"
 
 var _ = Describe("Podman", Ordered, func() {
 	var err error
@@ -97,7 +97,7 @@ var _ = Describe("Podman", Ordered, func() {
 			hook.Reset()
 			err = getContainerLogs(conn, log, containerID)
 			g.Expect(err).ToNot(HaveOccurred())
-			entries := []map[string]types.GomegaMatcher{
+			entries := []testlog.ExpectedLogEntry{
 				{
 					"msg":   Equal("stdout: hello\n"),
 					"level": Equal(logrus.InfoLevel),

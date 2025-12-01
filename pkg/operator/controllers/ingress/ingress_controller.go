@@ -6,10 +6,10 @@ package ingress
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,13 +22,14 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
-	ControllerName                      = "IngressControllerARO"
-	openshiftIngressControllerNamespace = "openshift-ingress-operator"
-	openshiftIngressControllerName      = "default"
-	minimumReplicas                     = 2
+	ControllerName                            = "IngressControllerARO"
+	openshiftIngressControllerNamespace       = "openshift-ingress-operator"
+	openshiftIngressControllerName            = "default"
+	minimumReplicas                     int32 = 2
 )
 
 // Reconciler spots openshift ingress controllers has abnormal replica counts (less than 2)
@@ -68,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if ingress.Spec.Replicas != nil && *ingress.Spec.Replicas < minimumReplicas {
-		ingress.Spec.Replicas = to.Int32Ptr(minimumReplicas)
+		ingress.Spec.Replicas = pointerutils.ToPtr(minimumReplicas)
 		err := r.Client.Update(ctx, ingress)
 		if err != nil {
 			r.Log.Error(err)

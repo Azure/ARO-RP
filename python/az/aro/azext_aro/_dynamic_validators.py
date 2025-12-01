@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import collections
 import ipaddress
 import re
 from itertools import tee
@@ -13,10 +14,9 @@ from azure.cli.core.azclierror import (
     InvalidArgumentValueError,
     RequiredArgumentMissingError
 )
-from azure.core.exceptions import ResourceNotFoundError
+from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
+from azure.mgmt.core.tools import is_valid_resource_id, parse_resource_id
 from knack.log import get_logger
-from msrestazure.tools import is_valid_resource_id, parse_resource_id
-from msrestazure.azure_exceptions import CloudError
 from azext_aro._validators import validate_vnet, validate_cidr
 from azext_aro._rbac import has_role_assignment_on_resource
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
@@ -290,7 +290,7 @@ def dyn_validate_cidr_ranges():
     return _validate_cidr_ranges
 
 
-def dyn_validate_resource_permissions(service_principle_ids, resources):
+def dyn_validate_resource_permissions(service_principal_ids, resources):
     prog = get_progress_tracker("Validating resource permissions")
 
     @prog
@@ -298,7 +298,7 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                                        _namespace):
         errors = []
 
-        for sp_id in service_principle_ids:
+        for sp_id in service_principal_ids:
             for role in sorted(resources):
                 for resource in resources[role]:
                     try:
@@ -314,7 +314,7 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                                            f"Resource {parts['name']} is missing role assignment " +
                                            f"{role} for service principal {sp_id} " +
                                            "(These roles will be automatically added during cluster creation)"])
-                    except CloudError as e:
+                    except HttpResponseError as e:
                         logger.error(e.message)
                         raise
         return errors
@@ -352,15 +352,47 @@ def dyn_validate_version():
 
 def validate_cluster_create(version,
                             resources,
-                            service_principle_ids):
+                            service_principal_ids):
     error_object = []
 
     error_object.append(dyn_validate_vnet("vnet"))
     error_object.append(dyn_validate_subnet_and_route_tables("master_subnet"))
     error_object.append(dyn_validate_subnet_and_route_tables("worker_subnet"))
     error_object.append(dyn_validate_cidr_ranges())
-    error_object.append(dyn_validate_resource_permissions(service_principle_ids, resources))
+    error_object.append(dyn_validate_resource_permissions(service_principal_ids, resources))
     if version is not None:
         error_object.append(dyn_validate_version())
 
     return error_object
+
+
+def dyn_validate_managed_identity_delete_permissions():
+    prog = get_progress_tracker("Validating Managed Identity Delete Permissions")
+
+    @prog
+    def _validate_managed_identity_delete_permissions(cmd, namespace):
+        errors = []
+        managed_identities = namespace.managed_identities
+
+        for mi in managed_identities:
+            parts, auth_client = get_clients(mi, cmd)
+            validation_errors = validate_resource(auth_client, "Managed Identity", parts, [
+                "Microsoft.ManagedIdentity/userAssignedIdentities/delete"
+            ])
+            for error in validation_errors:
+                errors.append(f"{error[3]} over {mi}")
+
+        return errors
+
+    return _validate_managed_identity_delete_permissions
+
+
+def validate_cluster_delete(cmd, delete_identities, managed_identities):
+    errors = []
+
+    if delete_identities:
+        namespace = collections.namedtuple("Namespace", ["managed_identities"])(managed_identities)
+        validate_managed_identity_delete = dyn_validate_managed_identity_delete_permissions()
+        errors.extend(validate_managed_identity_delete(cmd, namespace))
+
+    return errors

@@ -12,27 +12,35 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEnsureClusterMsiCertificate(t *testing.T) {
 	ctx := context.Background()
+	now := func() time.Time {
+		return time.Date(2025, time.September, 29, 16, 0, 0, 0, time.UTC)
+	}
+
 	mockGuid := "00000000-0000-0000-0000-000000000000"
 	clusterRGName := "aro-cluster"
 	miName := "aro-cluster-msi"
+	altName := "aro-cluster-msi2"
 	miResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, miName)
+	altResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", mockGuid, clusterRGName, altName)
 	secretName := dataplane.ManagedIdentityCredentialsStoragePrefix + mockGuid
 
 	secretNotFoundError := autorest.DetailedError{
@@ -40,26 +48,32 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	}
 
 	placeholderString := "placeholder"
-	placeholderTime := time.Now().Format(time.RFC3339)
+	placeholderTime := now().Format(time.RFC3339)
 	placeholderCredentialsObject := &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientID:                   &placeholderString,
-				ClientSecret:               &placeholderString,
-				TenantID:                   &placeholderString,
-				ResourceID:                 &miResourceId,
-				AuthenticationEndpoint:     &placeholderString,
-				CannotRenewAfter:           &placeholderTime,
-				ClientSecretURL:            &placeholderString,
-				MtlsAuthenticationEndpoint: &placeholderString,
-				NotAfter:                   &placeholderTime,
-				NotBefore:                  &placeholderTime,
-				RenewAfter:                 &placeholderTime,
-				CustomClaims: &dataplane.CustomClaims{
-					XMSAzNwperimid: []string{placeholderString},
-					XMSAzTm:        &placeholderString,
-				},
-				ObjectID: &placeholderString,
+				ResourceID:       &miResourceId,
+				ClientID:         &placeholderString,
+				ClientSecret:     &placeholderString,
+				TenantID:         &placeholderString,
+				NotAfter:         &placeholderTime,
+				NotBefore:        &placeholderTime,
+				RenewAfter:       &placeholderTime,
+				CannotRenewAfter: &placeholderTime,
+			},
+		},
+	}
+	alternateCredentialsObject := &dataplane.ManagedIdentityCredentials{
+		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
+			{
+				ResourceID:       &altResourceId,
+				ClientID:         &placeholderString,
+				ClientSecret:     &placeholderString,
+				TenantID:         &placeholderString,
+				NotAfter:         &placeholderTime,
+				NotBefore:        &placeholderTime,
+				RenewAfter:       &placeholderTime,
+				CannotRenewAfter: &placeholderTime,
 			},
 		},
 	}
@@ -77,13 +91,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
@@ -99,13 +108,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
@@ -119,32 +123,60 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			wantErr: "error in msi",
 		},
 		{
-			name: "success - exit early because there is already a certificate in the key vault",
+			name: "success - refresh MSI certificate in keyvault",
 			doc: &api.OpenShiftClusterDocument{
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(placeholderCredentialsObject, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				credBytes, _ := json.Marshal(placeholderCredentialsObject)
+				credString := string(credBytes)
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Attributes: &azsecrets.SecretAttributes{},
+						Value:      &credString,
+						Tags: map[string]*string{
+							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(-1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+						},
+					},
+				}
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
+			},
+		},
+		{
+			name: "success - don't refresh MSI certificate in keyvault",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							miResourceId: {},
 						},
 					},
 				},
 			},
 			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
-				credentialsObjectBuffer, err := json.Marshal(placeholderCredentialsObject)
-				if err != nil {
-					panic(err)
-				}
-
-				credentialsObjectString := string(credentialsObjectBuffer)
+				credBytes, _ := json.Marshal(placeholderCredentialsObject)
+				credString := string(credBytes)
 				getSecretResponse := azsecrets.GetSecretResponse{
 					Secret: azsecrets.Secret{
-						Value: &credentialsObjectString,
+						Attributes: &azsecrets.SecretAttributes{},
+						Value:      &credString,
+						Tags: map[string]*string{
+							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+						},
 					},
 				}
 				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
@@ -156,13 +188,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				ID: mockGuid,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Identity: &api.ManagedServiceIdentity{
-						IdentityURL: middleware.MockIdentityURL,
-						TenantID:    mockGuid,
 						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-							miResourceId: {
-								ClientID:    mockGuid,
-								PrincipalID: mockGuid,
-							},
+							miResourceId: {},
 						},
 					},
 				},
@@ -175,6 +202,38 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
 			},
 		},
+		{
+			name: "success - successfully update cluster identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID: mockGuid,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Identity: &api.ManagedServiceIdentity{
+						UserAssignedIdentities: map[string]api.UserAssignedIdentity{
+							altResourceId: {},
+						},
+					},
+				},
+			},
+			msiDataplaneStub: func(client *mock_msidataplane.MockClient) {
+				client.EXPECT().GetUserAssignedIdentitiesCredentials(gomock.Any(), gomock.Any()).Return(alternateCredentialsObject, nil)
+			},
+			kvClientMocks: func(kvclient *mock_azsecrets.MockClient) {
+				credBytes, _ := json.Marshal(placeholderCredentialsObject)
+				credString := string(credBytes)
+				getSecretResponse := azsecrets.GetSecretResponse{
+					Secret: azsecrets.Secret{
+						Attributes: &azsecrets.SecretAttributes{},
+						Value:      &credString,
+						Tags: map[string]*string{
+							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+						},
+					},
+				}
+				kvclient.EXPECT().GetSecret(gomock.Any(), secretName, "", nil).Return(getSecretResponse, nil).Times(1)
+				kvclient.EXPECT().SetSecret(gomock.Any(), secretName, gomock.Any(), nil).Return(azsecrets.SetSecretResponse{}, nil).Times(1)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -182,29 +241,162 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				doc: tt.doc,
-			}
-
 			factory := mock_msidataplane.NewMockClientFactory(controller)
-			client := mock_msidataplane.NewMockClient(controller)
 			if tt.msiDataplaneStub != nil {
+				client := mock_msidataplane.NewMockClient(controller)
 				tt.msiDataplaneStub(client)
+				factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 			}
-			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
-
-			m.msiDataplane = factory
 
 			mockKvClient := mock_azsecrets.NewMockClient(controller)
 			if tt.kvClientMocks != nil {
 				tt.kvClientMocks(mockKvClient)
 			}
 
-			m.clusterMsiKeyVaultStore = mockKvClient
+			m := manager{
+				log:                     logrus.NewEntry(logrus.StandardLogger()),
+				doc:                     tt.doc,
+				msiDataplane:            factory,
+				clusterMsiKeyVaultStore: mockKvClient,
+				now:                     now,
+			}
 
 			err := m.ensureClusterMsiCertificate(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestNeedsRefresh(t *testing.T) {
+	now := time.Date(2025, 9, 16, 16, 0, 0, 0, time.UTC)
+
+	renewTime := now.Add(-1 * time.Hour).Format(time.RFC3339)
+	expireTime := now.Add(1 * time.Hour).Format(time.RFC3339)
+
+	testCases := []struct {
+		name        string
+		item        *azsecrets.GetSecretResponse
+		currentTime time.Time
+		wantBool    bool
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "success - needs refresh",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(renewTime),
+						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    true,
+			wantErr:     false,
+		},
+		{
+			name: "success - not yet refreshing time",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     false,
+		},
+		{
+			name: "success - too late to refresh",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(-2 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     false,
+		},
+		{
+			name:        "error - tags are nil",
+			item:        &azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Tags: nil}},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "secret tags are nil",
+		},
+		{
+			name: "error - missing renew_after tag",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "missing or invalid tag: renew_after",
+		},
+		{
+			name: "error - missing cannot_renew_after Tag",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag: pointerutils.ToPtr(renewTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "missing or invalid tag: cannot_renew_after",
+		},
+		{
+			name: "error - invalid tag time format",
+			item: &azsecrets.GetSecretResponse{
+				Secret: azsecrets.Secret{
+					Tags: map[string]*string{
+						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr("not-a-valid-time"),
+						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+					},
+				},
+			},
+			currentTime: now,
+			wantBool:    false,
+			wantErr:     true,
+			errContains: "invalid time format for tag renew_after: parsing time \"not-a-valid-time\"",
+		},
+	}
+
+	m := &manager{}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotBool, gotErr := m.needsRefresh(tc.item, tc.currentTime)
+
+			if tc.wantErr {
+				if gotErr == nil {
+					t.Errorf("expected an error, but got nil")
+				}
+				if !strings.Contains(gotErr.Error(), tc.errContains) {
+					t.Errorf("expected error to contain %q, but got %q", tc.errContains, gotErr.Error())
+				}
+			} else {
+				if gotErr != nil {
+					t.Errorf("did not expect an error, but got: %v", gotErr)
+				}
+				if gotBool != tc.wantBool {
+					t.Errorf("expected bool %v, but got %v", tc.wantBool, gotBool)
+				}
+			}
 		})
 	}
 }

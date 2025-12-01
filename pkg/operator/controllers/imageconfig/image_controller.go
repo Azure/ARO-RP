@@ -9,15 +9,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	configv1 "github.com/openshift/api/config/v1"
 
@@ -145,9 +147,9 @@ func GetCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
 	}
 
 	switch instance.Spec.AZEnvironment {
-	case azureclient.PublicCloud.Environment.Name:
+	case azureclient.PublicCloud.Name:
 		dnsSuffix = azure.PublicCloud.ContainerRegistryDNSSuffix
-	case azureclient.USGovernmentCloud.Environment.Name:
+	case azureclient.USGovernmentCloud.Name:
 		dnsSuffix = azure.USGovernmentCloud.ContainerRegistryDNSSuffix
 	default:
 		return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)

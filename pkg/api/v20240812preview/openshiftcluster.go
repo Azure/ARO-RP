@@ -130,7 +130,7 @@ type ClusterProfile struct {
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 
 	// The URL of the managed OIDC issuer in a workload identity cluster.
-	OIDCIssuer *OIDCIssuer `json:"oidcIssuer,omitempty"`
+	OIDCIssuer *OIDCIssuer `json:"oidcIssuer,omitempty" swagger:"readOnly"`
 }
 
 // ConsoleProfile represents a console profile.
@@ -340,13 +340,13 @@ type ManagedServiceIdentity struct {
 	Type ManagedServiceIdentityType `json:"type,omitempty"`
 
 	// The PrincipalID of the Identity resource.
-	PrincipalID string `json:"principalId,omitempty" swagger:"readOnly"`
+	PrincipalID string `json:"principalId,omitempty" swagger:"readOnly" mutable:"true"`
 
 	// The TenantID provided by the MSI RP
-	TenantID string `json:"tenantId,omitempty" swagger:"readOnly"`
+	TenantID string `json:"tenantId,omitempty" swagger:"readOnly" mutable:"true"`
 
 	// A map of user assigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.
-	UserAssignedIdentities map[string]UserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
+	UserAssignedIdentities map[string]UserAssignedIdentity `json:"userAssignedIdentities,omitempty" mutable:"true"`
 }
 
 // CreatedByType by defines user type, which executed the request

@@ -85,6 +85,11 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action renewMDSDCertificate]",
 	}
 
+	managedIdentityCertificateRenewalSteps := append(
+		certificateRenewalSteps,
+		"[Action ensureClusterMsiCertificate]",
+	)
+
 	operatorUpdateSteps := []string{
 		"[Action startVMs]",
 		"[Condition apiServersReady, timeout 30m0s]",
@@ -102,10 +107,14 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action syncClusterObject]",
 	}
 
+	migrateLoadBalancerSteps := []string{
+		"[Action migrateInternalLoadBalancerZones]",
+		"[Action fixSSH]",
+	}
+
 	hiveSteps := []string{
 		"[Action hiveCreateNamespace]",
 		"[Action hiveEnsureResources]",
-		"[Condition hiveClusterDeploymentReady, timeout 5m0s]",
 		"[Action hiveResetCorrelationData]",
 	}
 
@@ -222,6 +231,16 @@ func TestAdminUpdateSteps(t *testing.T) {
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, syncClusterObjectSteps),
 		},
 		{
+			name: "MigrateLoadBalancer steps",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskMigrateLoadBalancer
+				return doc, true
+			},
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothStepsServicePrincipal, migrateLoadBalancerSteps),
+		},
+		{
 			name: "adminUpdate() does not adopt Hive-created clusters",
 			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
@@ -248,7 +267,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothStepsManagedIdentity, generalFixesSteps, certificateRenewalSteps,
+				zerothStepsManagedIdentity, generalFixesSteps, managedIdentityCertificateRenewalSteps,
 				operatorUpdateSteps, updateProvisionedBySteps,
 			),
 		},
@@ -264,7 +283,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 			var stepsToRun []string
 			for _, s := range toRun {
 				// make it a little nicer when defining the steps that should run, since they're all methods
-				o := strings.Replace(s.String(), "pkg/cluster.(*manager).", "", -1)
+				o := strings.ReplaceAll(s.String(), "pkg/cluster.(*manager).", "")
 				stepsToRun = append(stepsToRun, o)
 			}
 

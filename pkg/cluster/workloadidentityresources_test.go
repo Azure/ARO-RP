@@ -16,16 +16,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
+
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
 	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
+	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_platformworkloadidentity "github.com/Azure/ARO-RP/pkg/util/mocks/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -39,7 +48,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 		name                 string
 		usesWorkloadIdentity bool
 		identities           map[string]api.PlatformWorkloadIdentity
-		roles                []api.PlatformWorkloadIdentityRole
+		roles                map[string][]api.PlatformWorkloadIdentityRole
 		want                 map[string]kruntime.Object
 		wantErr              string
 	}{
@@ -61,26 +70,32 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					ClientID: "00d00d00-0d00-0d00-0d00-d00d00d00d00",
 				},
 			},
-			roles: []api.PlatformWorkloadIdentityRole{
-				{
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"foo": {
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
-				{
-					OperatorName: "bar",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+				"bar": {
+					{
+						OperatorName: "bar",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
-				{
-					OperatorName: pkgoperator.OperatorIdentityName,
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-azure-operator",
-						Name:      "azure-cloud-credentials",
+				pkgoperator.OperatorIdentityName: {
+					{
+						OperatorName: pkgoperator.OperatorIdentityName,
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-azure-operator",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -154,6 +169,9 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
+			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
+
 			m := manager{
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -176,9 +194,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 
-				platformWorkloadIdentityRolesByVersion: mockPlatformWorkloadIdentityRolesByVersion(
-					controller, tt.roles,
-				),
+				platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 			}
 			if tt.usesWorkloadIdentity {
 				m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{
@@ -189,7 +205,7 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 
 			got, err := m.generateWorkloadIdentityResources()
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			assert.EqualValues(t, tt.want, got)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -202,7 +218,7 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		identities map[string]api.PlatformWorkloadIdentity
-		roles      []api.PlatformWorkloadIdentityRole
+		roles      map[string][]api.PlatformWorkloadIdentityRole
 		want       []*corev1.Secret
 	}{
 		{
@@ -218,26 +234,32 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00d00d00-0d00-0d00-0d00-d00d00d00d00",
 				},
 			},
-			roles: []api.PlatformWorkloadIdentityRole{
-				{
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"foo": {
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
-				{
-					OperatorName: "bar",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+				"bar": {
+					{
+						OperatorName: "bar",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
-				{
-					OperatorName: pkgoperator.OperatorIdentityName,
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-azure-operator",
-						Name:      "azure-cloud-credentials",
+				pkgoperator.OperatorIdentityName: {
+					{
+						OperatorName: pkgoperator.OperatorIdentityName,
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-azure-operator",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -311,6 +333,9 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 
 			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 
+			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
+			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
+
 			m := manager{
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -333,9 +358,7 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 
 				ch: ch,
 
-				platformWorkloadIdentityRolesByVersion: mockPlatformWorkloadIdentityRolesByVersion(
-					controller, tt.roles,
-				),
+				platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 			}
 			err := m.deployPlatformWorkloadIdentitySecrets(ctx)
 
@@ -361,7 +384,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		identities     map[string]api.PlatformWorkloadIdentity
-		roles          []api.PlatformWorkloadIdentityRole
+		roles          map[string][]api.PlatformWorkloadIdentityRole
 		wantSecrets    []*corev1.Secret
 		wantNamespaces []*corev1.Namespace
 		wantErr        string
@@ -369,7 +392,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 		{
 			name:           "no identities, no secrets",
 			identities:     map[string]api.PlatformWorkloadIdentity{},
-			roles:          []api.PlatformWorkloadIdentityRole{},
+			roles:          map[string][]api.PlatformWorkloadIdentityRole{},
 			wantSecrets:    []*corev1.Secret{},
 			wantNamespaces: []*corev1.Namespace{},
 		},
@@ -383,19 +406,23 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
-			roles: []api.PlatformWorkloadIdentityRole{
-				{
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"foo": {
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
-				{
-					OperatorName: "bar",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+				"bar": {
+					{
+						OperatorName: "bar",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -465,7 +492,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00f00f00-0f00-0f00-0f00-f00f00f00f00",
 				},
 			},
-			roles:          []api.PlatformWorkloadIdentityRole{},
+			roles:          map[string][]api.PlatformWorkloadIdentityRole{},
 			wantSecrets:    []*corev1.Secret{},
 			wantNamespaces: []*corev1.Namespace{},
 			wantErr:        fmt.Sprintf("400: %s: properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities: There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift minor version '%s'. The required platform workload identities are '[]'", api.CloudErrorCodePlatformWorkloadIdentityMismatch, "4.14"),
@@ -480,19 +507,23 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					ClientID: "00ba4ba4-0ba4-0ba4-0ba4-ba4ba4ba4ba4",
 				},
 			},
-			roles: []api.PlatformWorkloadIdentityRole{
-				{
-					OperatorName: "foo",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-foo",
-						Name:      "azure-cloud-credentials",
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"foo": {
+					{
+						OperatorName: "foo",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-foo",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
-				{
-					OperatorName: "aro-operator",
-					SecretLocation: api.SecretLocation{
-						Namespace: "openshift-bar",
-						Name:      "azure-cloud-credentials",
+				"aro-operator": {
+					{
+						OperatorName: "aro-operator",
+						SecretLocation: api.SecretLocation{
+							Namespace: "openshift-bar",
+							Name:      "azure-cloud-credentials",
+						},
 					},
 				},
 			},
@@ -533,6 +564,9 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
+			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
+
 			m := manager{
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -556,9 +590,7 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 
-				platformWorkloadIdentityRolesByVersion: mockPlatformWorkloadIdentityRolesByVersion(
-					controller, tt.roles,
-				),
+				platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 			}
 			gotSecrets, gotNamespaces, err := m.generatePlatformWorkloadIdentitySecretsAndNamespaces(true)
 
@@ -723,7 +755,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 						},
 					},
 				},
@@ -741,7 +773,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 					ID: clusterResourceID,
 					Properties: api.OpenShiftClusterProperties{
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: ptr.To(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
 						},
 					},
 				},
@@ -764,13 +796,485 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 	}
 }
 
-func mockPlatformWorkloadIdentityRolesByVersion(controller *gomock.Controller, roles []api.PlatformWorkloadIdentityRole) platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion {
-	pwiRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
-	platformWorkloadIdentityRolesByRoleName := map[string]api.PlatformWorkloadIdentityRole{}
-	for _, role := range roles {
-		platformWorkloadIdentityRolesByRoleName[role.OperatorName] = role
-	}
-	pwiRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(platformWorkloadIdentityRolesByRoleName)
+func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
+	ctx := context.Background()
+	subscriptionId := "10000000-00000000-00000000-00000000"
+	clusterRGName := "test-cluster"
+	resourceGroupID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", subscriptionId, clusterRGName)
 
-	return pwiRolesByVersion
+	objectId1 := "00000000-00000000-00000000-00000001"
+	objectId2 := "00000000-00000000-00000000-00000002"
+
+	roleName1 := "00000000-00000000-00000001-00000000"
+	roleName2 := "00000000-00000000-00000002-00000000"
+
+	roleDefinitionId1 := fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", "00000000-00000001-00000000-00000000")
+	roleDefinitionId2 := fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", "00000000-00000002-00000000-00000000")
+
+	for _, tt := range []struct {
+		name                    string
+		oc                      *api.OpenShiftCluster
+		roles                   map[string][]api.PlatformWorkloadIdentityRole
+		existingRoleAssignments []mgmtauthorization.RoleAssignment
+		wantDeleted             []mgmtauthorization.RoleAssignment
+		wantAdded               []*arm.Resource
+		wantErr                 string
+	}{
+		{
+			name: "noop",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
+					},
+				},
+			},
+		},
+		{
+			name: "all identities match existing role assignments - noop",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+							"2": {
+								ObjectID: objectId2,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+				{
+					Name: &roleName2,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						PrincipalID:      &objectId2,
+					},
+				},
+			},
+		},
+		{
+			name: "new required identity added - creates new roleassignment",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+							"2": {
+								ObjectID: objectId2,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId2),
+			},
+		},
+		{
+			name: "identity object id replaced & old object id reused for other operator using same role - doesn't delete old roleassignment and creates new roleassignment",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId2,
+							},
+							"2": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+			},
+		},
+		{
+			name: "identity object id replaced - doesn't delete old roleassignment as old object id is lost and creates new",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId2,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+			},
+		},
+		{
+			name: "identity object id replaced & old object id reused for other operator - delete old roleassignment and create new roleassignments",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId2,
+							},
+							"2": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantDeleted: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId1),
+			},
+		},
+		{
+			name: "operator with multiple role definitions - creates role assignments for all roles",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId1),
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId1),
+			},
+		},
+		{
+			name: "operator with multiple role definitions - one role already exists, creates assignment for new role only",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId1),
+			},
+		},
+		{
+			name: "operator with multiple role definitions - role2 moved from operator 1 to 2, deletes old assignment and creates new ones",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+							"1": {
+								ObjectID: objectId1,
+							},
+							"2": {
+								ObjectID: objectId2,
+							},
+						},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{
+				"1": {
+					{
+						OperatorName:     "1",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+				},
+				"2": {
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId1,
+					},
+					{
+						OperatorName:     "2",
+						RoleDefinitionID: roleDefinitionId2,
+					},
+				},
+			},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
+				{
+					Name: &roleName2,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantDeleted: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName2,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						PrincipalID:      &objectId1,
+					},
+				},
+			},
+			wantAdded: []*arm.Resource{
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId2, '/'), objectId2),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			roleAssignments := mock_authorization.NewMockRoleAssignmentsClient(controller)
+			deployments := mock_features.NewMockDeploymentsClient(controller)
+			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
+
+			roleAssignments.EXPECT().ListForResourceGroup(gomock.Eq(ctx), gomock.Eq(clusterRGName), gomock.Eq("atScope()")).Return(tt.existingRoleAssignments, nil)
+			if len(tt.wantAdded) > 0 {
+				deployments.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Eq(clusterRGName), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.Deployment) error {
+						template, ok := parameters.Properties.Template.(*arm.Template)
+						if !ok {
+							t.Errorf("failed to retrieve deployed ARM template, was unexpected type %T", parameters.Properties.Template)
+						}
+						gotResources := template.Resources
+
+						if diff := cmp.Diff(gotResources, tt.wantAdded); diff != "" {
+							t.Errorf("unexpected diff in added roleassignment resources: \ngot: %v\nwant: %v\ndiff: %s", gotResources, tt.wantAdded, diff)
+						}
+						return nil
+					},
+				)
+			}
+			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
+			for _, wantDeleted := range tt.wantDeleted {
+				roleAssignments.EXPECT().Delete(gomock.Eq(ctx), gomock.Eq(*wantDeleted.Scope), gomock.Eq(*wantDeleted.Name))
+			}
+
+			m := &manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				subscriptionDoc: &api.SubscriptionDocument{
+					ID: subscriptionId,
+				},
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: tt.oc,
+				},
+				roleAssignments:                        roleAssignments,
+				deployments:                            deployments,
+				platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
+			}
+
+			err := m.ensurePlatformWorkloadIdentityRBAC(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func workloadIdentityResourceGroupRBAC(roleID, objID string) *arm.Resource {
+	return rbac.ResourceGroupRoleAssignmentWithName(
+		roleID,
+		"'"+objID+"'",
+		"guid(resourceGroup().id, '"+roleID+"', '"+objID+"')",
+	)
 }

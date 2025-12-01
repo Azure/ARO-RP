@@ -13,7 +13,7 @@ spec:
     rules:
     - alert: UpgradeConfigValidationFailedSRE
       # Alert if the UpgradeConfig validation check metric has been set for a ten-minute average window
-      expr: avg_over_time(upgradeoperator_upgradeconfig_validation_failed[10m]) == 1
+      expr: upgradeoperator_upgradeconfig_validation_failed == 1
       for: 10m
       labels:
         severity: critical
@@ -29,8 +29,8 @@ spec:
         severity: critical
         namespace: openshift-monitoring
       annotations:
-        summary: "Controlplane upgrade timeout"
-        description: "controlplane upgrade cannot be finished in the given time period"
+        summary: "Controlplane upgrade timeout for {{`{{ $labels.version }}`}}"
+        description: "controlplane upgrade for {{`{{ $labels.version }}`}} cannot be finished in the given time period"
     - alert: UpgradeNodeUpgradeTimeoutSRE
       # Alert if the worker node upgrade timeout metric has been set for a ten-minute average window
       expr: avg_over_time(upgradeoperator_worker_timeout[10m]) == 1
@@ -39,8 +39,8 @@ spec:
         severity: critical
         namespace: openshift-monitoring
       annotations:
-        summary: "Nodes upgrade timeout"
-        description: "nodes upgrade cannot be finished after the silence expired"
+        summary: "Nodes upgrade timeout for {{`{{ $labels.version }}`}}"
+        description: "nodes upgrade for {{`{{ $labels.version }}`}} cannot be finished after the silence expired"
     - alert: UpgradeNodeDrainFailedSRE
       # Alert if the node drain failure metric has been set for a ten-minute average window
       expr: avg_over_time(upgradeoperator_node_drain_timeout[10m]) == 1
@@ -51,25 +51,3 @@ spec:
       annotations:
         summary: "Node drain failed in the given time period which is not caused by the PDB"
         description: "node drain takes too long and cannot be finished in the given time period during cluster upgrade"
-    - alert: UpgradeConfigSyncFailureOver4HrSRE
-      # Alert if MUO has been unable to successfully sync with its upgrade policy provider for a four-hour window
-      # It will also be used for detecting the connection/authentication between cluster and OCM
-      # Should be moved to OCM Agent service eventually
-      expr: absent_over_time(upgradeoperator_upgradeconfig_sync_timestamp[4h]) or time() - upgradeoperator_upgradeconfig_sync_timestamp > 14400
-      for: 2m
-      labels:
-        severity: critical
-        namespace: openshift-monitoring
-      annotations:
-        summary: "UpgradeConfig has not successfully synced in 4 hours."
-        description: "This clusters UpgradeConfig has not been synced in 4 hours and may be out of date"
-    - alert: UpgradeClusterCheckFailedSRE
-      # Alert if the cluster has set its pre/post-upgrade health check failure metric for a ten-minute average window
-      expr: avg_over_time(upgradeoperator_cluster_check_failed[10m]) == 1
-      for: 10m
-      labels:
-        severity: critical
-        namespace: openshift-monitoring
-      annotations:
-        summary: "cluster check failed"
-        description: "basic cluster checks failed on either before the upgrade or after the upgrade"

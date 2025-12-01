@@ -5,7 +5,7 @@ package v20240812preview
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 )
 
 type openShiftClusterConverter struct{}
@@ -260,6 +260,10 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 
 		for k, identity := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if pwi, exists := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; exists {
+				if pwi.ResourceID != identity.ResourceID {
+					pwi.ClientID = ""
+					pwi.ObjectID = ""
+				}
 				pwi.ResourceID = identity.ResourceID
 				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = pwi
 			} else {
@@ -375,6 +379,7 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 	for i := range oc.Properties.IngressProfiles {
 		oc.Properties.IngressProfiles[i].IP = ""
 	}
+	oc.Properties.ClusterProfile.OIDCIssuer = nil
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil {
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if entry, ok := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i]; ok {

@@ -10,9 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"

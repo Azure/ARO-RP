@@ -142,6 +142,16 @@ func EnsureDefaults(r *msgs.Record) {
 	for identityType, identities := range r.CallerIdentities {
 		if len(identities) == 0 {
 			r.CallerIdentities[identityType] = []msgs.CallerIdentityEntry{{Identity: Unknown, Description: Unknown}}
+		} else {
+			for i, identity := range identities {
+				if strings.TrimSpace(identity.Identity) == "" {
+					identities[i].Identity = Unknown
+				}
+				if strings.TrimSpace(identity.Description) == "" {
+					identities[i].Description = Unknown
+				}
+			}
+			r.CallerIdentities[identityType] = identities
 		}
 	}
 

@@ -37,6 +37,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 							Properties: api.OpenShiftVersionProperties{
 								Version:           "4.10.0",
 								Enabled:           true,
+								Default:           false,
 								OpenShiftPullspec: "a:a/b",
 							},
 						},
@@ -47,6 +48,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				Properties: admin.OpenShiftVersionProperties{
 					Version:           "4.10.0",
 					Enabled:           false,
+					Default:           false,
 					OpenShiftPullspec: "c:c/d",
 					InstallerPullspec: "d:d/e",
 				},
@@ -58,6 +60,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				Properties: admin.OpenShiftVersionProperties{
 					Version:           "4.10.0",
 					Enabled:           false,
+					Default:           false,
 					OpenShiftPullspec: "c:c/d",
 					InstallerPullspec: "d:d/e",
 				},
@@ -71,6 +74,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 						Properties: api.OpenShiftVersionProperties{
 							Version:           "4.10.0",
 							Enabled:           false,
+							Default:           false,
 							OpenShiftPullspec: "c:c/d",
 							InstallerPullspec: "d:d/e",
 						},
@@ -89,6 +93,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 							Properties: api.OpenShiftVersionProperties{
 								Version:           "4.15.0",
 								Enabled:           true,
+								Default:           false,
 								OpenShiftPullspec: "a:a/b",
 							},
 							Name: "4.15.0",
@@ -101,6 +106,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				Properties: admin.OpenShiftVersionProperties{
 					Version:           "4.15.0",
 					Enabled:           false,
+					Default:           false,
 					OpenShiftPullspec: "c:c/d",
 					InstallerPullspec: "d:d/e",
 				},
@@ -112,6 +118,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				Properties: admin.OpenShiftVersionProperties{
 					Version:           "4.15.0",
 					Enabled:           false,
+					Default:           false,
 					OpenShiftPullspec: "c:c/d",
 					InstallerPullspec: "d:d/e",
 				},
@@ -125,6 +132,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 						Properties: api.OpenShiftVersionProperties{
 							Version:           "4.15.0",
 							Enabled:           false,
+							Default:           false,
 							OpenShiftPullspec: "c:c/d",
 							InstallerPullspec: "d:d/e",
 						},
@@ -143,6 +151,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 							Properties: api.OpenShiftVersionProperties{
 								Version:           "4.10.0",
 								Enabled:           true,
+								Default:           false,
 								OpenShiftPullspec: "a:a/b",
 							},
 						},
@@ -153,6 +162,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				Properties: admin.OpenShiftVersionProperties{
 					Version:           "4.10.1",
 					Enabled:           true,
+					Default:           false,
 					OpenShiftPullspec: "f:f/g",
 					InstallerPullspec: "g:g/h",
 				},
@@ -162,6 +172,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				Properties: admin.OpenShiftVersionProperties{
 					Version:           "4.10.1",
 					Enabled:           true,
+					Default:           false,
 					OpenShiftPullspec: "f:f/g",
 					InstallerPullspec: "g:g/h",
 				},
@@ -175,6 +186,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 						Properties: api.OpenShiftVersionProperties{
 							Version:           "4.10.0",
 							Enabled:           true,
+							Default:           false,
 							OpenShiftPullspec: "a:a/b",
 						},
 					},
@@ -185,6 +197,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 						Properties: api.OpenShiftVersionProperties{
 							Version:           "4.10.1",
 							Enabled:           true,
+							Default:           false,
 							OpenShiftPullspec: "f:f/g",
 							InstallerPullspec: "g:g/h",
 						},

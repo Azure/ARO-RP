@@ -6,8 +6,6 @@ package cluster
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +13,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -112,7 +111,7 @@ func newEncryptedStorageClass(diskEncryptionSetID, encryptedStorageClassName, pr
 		},
 		Provisioner:          provisioner,
 		VolumeBindingMode:    &volumeBindingMode,
-		AllowVolumeExpansion: to.BoolPtr(true),
+		AllowVolumeExpansion: pointerutils.ToPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"kind":                "Managed",

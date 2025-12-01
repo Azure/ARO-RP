@@ -16,7 +16,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	cryptossh "golang.org/x/crypto/ssh"
@@ -34,7 +33,7 @@ import (
 // fakeClient runs a fake client on the given connection.  It validates the
 // server key, authenticates, writes a ping request, reads a pong reply, then
 // closes the connection
-func fakeClient(c net.Conn, serverKey *rsa.PublicKey, user string, password string) error {
+func fakeClient(c net.Conn, serverKey *rsa.PublicKey, user string, password string, ciphers []string, kexs []string, macs []string, hostkeys []string) error {
 	publicKey, err := cryptossh.NewPublicKey(serverKey)
 	if err != nil {
 		return err
@@ -46,6 +45,13 @@ func fakeClient(c net.Conn, serverKey *rsa.PublicKey, user string, password stri
 		Auth: []cryptossh.AuthMethod{
 			cryptossh.Password(password),
 		},
+		// Specify various algorithms to match the ssh command
+		Config: cryptossh.Config{
+			Ciphers:      ciphers,
+			KeyExchanges: kexs,
+			MACs:         macs,
+		},
+		HostKeyAlgorithms: hostkeys,
 	})
 	if err != nil {
 		return err
@@ -83,6 +89,12 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 			}
 			return nil, nil
 		},
+		Config: cryptossh.Config{
+			Ciphers:      sshCiphers(),
+			KeyExchanges: sshKexAlgorithms(),
+			MACs:         sshMACs(),
+		},
+		PublicKeyAuthAlgorithms: sshPublicKeyAlgorithms(),
 	}
 
 	key, _, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
@@ -188,6 +200,14 @@ func TestProxy(t *testing.T) {
 		}
 	}
 
+	goodCiphers := cryptossh.Algorithms{
+		KeyExchanges:   sshKexAlgorithms(),
+		Ciphers:        sshCiphers(),
+		MACs:           sshMACs(),
+		HostKeys:       sshHostKeyAlgorithms(),
+		PublicKeyAuths: sshPublicKeyAlgorithms(),
+	}
+
 	type test struct {
 		name           string
 		username       string
@@ -195,7 +215,8 @@ func TestProxy(t *testing.T) {
 		fixtureChecker func(*test, *testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient, *cosmosdb.FakePortalDocumentClient)
 		mocks          func(*mock_proxy.MockDialer)
 		wantErrPrefix  string
-		wantLogs       []map[string]types.GomegaMatcher
+		wantLogs       []testlog.ExpectedLogEntry
+		ciphers        cryptossh.Algorithms
 	}
 
 	for _, tt := range []*test{
@@ -216,7 +237,7 @@ func TestProxy(t *testing.T) {
 			mocks: func(dialer *mock_proxy.MockDialer) {
 				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
 			},
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("authentication succeeded"),
@@ -245,6 +266,7 @@ func TestProxy(t *testing.T) {
 					"username":        gomega.Equal(username),
 				},
 			},
+			ciphers: goodCiphers,
 		},
 		{
 			name:     "bad username",
@@ -256,7 +278,7 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 			},
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -264,13 +286,14 @@ func TestProxy(t *testing.T) {
 					"username":    gomega.Equal("bad"),
 				},
 			},
+			ciphers: goodCiphers,
 		},
 		{
 			name:          "bad password, not uuid",
 			username:      username,
 			password:      "bad",
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -278,13 +301,14 @@ func TestProxy(t *testing.T) {
 					"username":    gomega.Equal(username),
 				},
 			},
+			ciphers: goodCiphers,
 		},
 		{
 			name:          "bad password",
 			username:      username,
 			password:      password,
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -292,6 +316,7 @@ func TestProxy(t *testing.T) {
 					"username":    gomega.Equal(username),
 				},
 			},
+			ciphers: goodCiphers,
 		},
 		{
 			name:     "not ssh record",
@@ -304,7 +329,7 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 			},
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -312,6 +337,7 @@ func TestProxy(t *testing.T) {
 					"username":    gomega.Equal(username),
 				},
 			},
+			ciphers: goodCiphers,
 		},
 		{
 			name:     "sad openshiftClusters database",
@@ -327,7 +353,7 @@ func TestProxy(t *testing.T) {
 				openShiftClustersClient.SetError(fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "EOF",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("authentication succeeded"),
@@ -335,6 +361,7 @@ func TestProxy(t *testing.T) {
 					"username":    gomega.Equal(username),
 				},
 			},
+			ciphers: goodCiphers,
 		},
 		{
 			name:     "sad portal database",
@@ -344,7 +371,7 @@ func TestProxy(t *testing.T) {
 				portalClient.SetError(fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "ssh: handshake failed",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.WarnLevel),
 					"msg":         gomega.Equal("authentication failed"),
@@ -352,6 +379,7 @@ func TestProxy(t *testing.T) {
 					"username":    gomega.Equal(username),
 				},
 			},
+			ciphers: goodCiphers,
 		},
 		{
 			name:     "sad dialer",
@@ -371,13 +399,87 @@ func TestProxy(t *testing.T) {
 				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(nil, fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "EOF",
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("authentication succeeded"),
 					"remote_addr": gomega.Not(gomega.BeEmpty()),
 					"username":    gomega.Equal(username),
 				},
+			},
+			ciphers: goodCiphers,
+		},
+		{
+			name:     "bad ciphers",
+			username: username,
+			password: password,
+			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := goodPortalDocument(tt.password)
+				fixture.AddPortalDocuments(portalDocument)
+				checker.AddPortalDocuments(portalDocument)
+			},
+			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for client to server cipher;",
+			wantLogs:      []testlog.ExpectedLogEntry{},
+			ciphers: cryptossh.Algorithms{
+				Ciphers:      []string{cryptossh.CipherChaCha20Poly1305},
+				KeyExchanges: []string{cryptossh.KeyExchangeECDHP256},
+				MACs:         []string{cryptossh.HMACSHA256ETM},
+				HostKeys:     []string{cryptossh.KeyAlgoRSASHA512},
+			},
+		},
+		{
+			name:     "bad kex",
+			username: username,
+			password: password,
+			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := goodPortalDocument(tt.password)
+				fixture.AddPortalDocuments(portalDocument)
+				checker.AddPortalDocuments(portalDocument)
+			},
+			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for key exchange;",
+			wantLogs:      []testlog.ExpectedLogEntry{},
+			ciphers: cryptossh.Algorithms{
+				Ciphers:      []string{cryptossh.CipherAES256CTR},
+				KeyExchanges: []string{cryptossh.KeyExchangeMLKEM768X25519},
+				MACs:         []string{cryptossh.HMACSHA256ETM},
+				HostKeys:     []string{cryptossh.KeyAlgoRSASHA512},
+			},
+		},
+		// FIXME: Make this test fail properly
+		// {
+		// 	name:     "bad mac",
+		// 	username: username,
+		// 	password: password,
+		// 	fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+		// 		portalDocument := goodPortalDocument(tt.password)
+		// 		fixture.AddPortalDocuments(portalDocument)
+		// 		checker.AddPortalDocuments(portalDocument)
+		// 	},
+		// 	wantErrPrefix: "ssh: handshake failed: no common algorithm for mac;",
+		// 	wantLogs:      []testlog.ExpectedLogEntry{},
+		// 	ciphers: ciphers{
+		// 		Ciphers:           []string{cryptossh.CipherAES256CTR},
+		// 		KexAlgorithms:     []string{cryptossh.KeyExchangeMLKEM768X25519},
+		// 		MACs:              []string{cryptossh.HMACSHA256ETM}, // Set to something that is not supported by the server
+		// 		HostKeyAlgorithms: []string{cryptossh.KeyAlgoRSASHA512},
+		// 	},
+		// },
+		{
+			name:     "bad hostkey",
+			username: username,
+			password: password,
+			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := goodPortalDocument(tt.password)
+				fixture.AddPortalDocuments(portalDocument)
+				checker.AddPortalDocuments(portalDocument)
+			},
+			wantErrPrefix: "ssh: handshake failed: ssh: no common algorithm for host key;",
+			wantLogs:      []testlog.ExpectedLogEntry{},
+			ciphers: cryptossh.Algorithms{
+				Ciphers:      []string{cryptossh.CipherAES256CTR},
+				KeyExchanges: []string{cryptossh.KeyExchangeECDHP256},
+				MACs:         []string{cryptossh.HMACSHA256ETM},
+				HostKeys:     []string{cryptossh.KeyAlgoED25519},
 			},
 		},
 	} {
@@ -428,7 +530,7 @@ func TestProxy(t *testing.T) {
 				close(done)
 			}()
 
-			err = fakeClient(client, &hostKey.PublicKey, tt.username, tt.password)
+			err = fakeClient(client, &hostKey.PublicKey, tt.username, tt.password, tt.ciphers.Ciphers, tt.ciphers.KeyExchanges, tt.ciphers.MACs, tt.ciphers.HostKeys)
 			if err != nil && !strings.HasPrefix(err.Error(), tt.wantErrPrefix) ||
 				err == nil && tt.wantErrPrefix != "" {
 				t.Error(err)

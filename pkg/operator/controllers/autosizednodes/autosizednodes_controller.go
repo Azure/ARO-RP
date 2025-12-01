@@ -7,12 +7,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type Reconciler struct {
@@ -118,7 +119,7 @@ func makeConfig() mcv1.KubeletConfig {
 			Name: configName,
 		},
 		Spec: mcv1.KubeletConfigSpec{
-			AutoSizingReserved: to.BoolPtr(true),
+			AutoSizingReserved: pointerutils.ToPtr(true),
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{

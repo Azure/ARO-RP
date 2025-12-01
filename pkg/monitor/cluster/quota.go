@@ -6,7 +6,9 @@ package cluster
 import (
 	"context"
 	"regexp"
+	"time"
 
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 )
@@ -34,6 +36,10 @@ func (mon *Monitor) detectQuotaFailure(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func eventIsNew(e eventsv1.Event) bool {
+	return time.Since(e.Series.LastObservedTime.Time) < time.Second*120
 }
 
 func messageMatchesQuota(message string) bool {

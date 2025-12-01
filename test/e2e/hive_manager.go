@@ -12,10 +12,20 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
 var _ = Describe("Hive manager creates a namespace", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
+
+	var adminAPICluster *admin.OpenShiftCluster
+
+	BeforeEach(func(ctx context.Context) {
+		adminAPICluster = adminGetCluster(Default, ctx, clusterResourceID)
+
+		skipIfNotHiveManagedCluster(adminAPICluster)
+	})
 
 	var ns *corev1.Namespace
 

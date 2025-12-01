@@ -9,16 +9,14 @@ main() {
     trap "cleanup $tmpdir" EXIT
 
     # This is the commit sha that the image was built from and ensures we use the correct configs for the release
-    local -r default_commit="5d3f4d77dc"
+    local -r default_commit="8796c4f534"
     local -r hive_image_commit_hash="${1:-$default_commit}"
     log "Using hive commit: $hive_image_commit_hash"
     # shellcheck disable=SC2034
     local -r hive_operator_namespace="hive"
 
-    # For now we'll use the quay hive image, but this will change to an ACR once the quay.io -> ACR mirroring is setup
-    # Note: semi-scientific way to get the latest image: `podman search --list-tags --limit 10000 quay.io/app-sre/hive | tail -n1`
     # shellcheck disable=SC2034
-    local -r hive_image="quay.io/app-sre/hive:${hive_image_commit_hash}"
+    local -r hive_image="arointsvc.azurecr.io/redhat-services-prod/crt-redhat-acm-tenant/hive-operator/hive:${hive_image_commit_hash}"
 
 
     # shellcheck disable=SC2034

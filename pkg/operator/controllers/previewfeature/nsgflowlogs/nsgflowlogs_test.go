@@ -7,17 +7,17 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	"github.com/Azure/go-autorest/autorest/to"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+
+	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -78,7 +78,7 @@ func getValidFlowLogFeature() *armnetwork.FlowLog {
 				},
 			},
 		},
-		Location: to.StringPtr(location),
+		Location: pointerutils.ToPtr(location),
 	}
 }
 

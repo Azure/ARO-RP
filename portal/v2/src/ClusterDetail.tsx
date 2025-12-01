@@ -18,7 +18,7 @@ import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
 import { ToolIcons } from "./ToolIcons"
 import { MemoisedClusterDetailListComponent } from "./ClusterDetailList"
 import React from "react"
-import { useLinkClickHandler, useNavigate, useParams } from "react-router-dom"
+import { useLinkClickHandler, useNavigate, useParams } from "react-router"
 
 const navStyles: Partial<INavStyles> = {
   root: {
@@ -99,13 +99,14 @@ export function ClusterDetailPanel(props: {
   const navigate = useNavigate()
 
   const params = useParams()
+  const resourceID = useMemo(() => `/subscriptions/${params.subscriptionId}/resourcegroups/${params.resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/${params.resourceName}`, [params.subscriptionId, params.resourceGroupName, params.resourceName])
   const currentCluster = useMemo<IClusterCoordinates | null>(() => {
     if (params.subscriptionId && params.resourceGroupName && params.resourceName) {
       return {
         subscription: params.subscriptionId,
         resourceGroup: params.resourceGroupName,
         name: params.resourceName,
-        resourceId: `/subscriptions/${params.subscriptionId}/resourcegroups/${params.resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/${params.resourceName}`,
+        resourceId: resourceID,
       }
     }
     return null
@@ -130,55 +131,55 @@ export function ClusterDetailPanel(props: {
         {
           name: "Overview",
           key: overviewKey,
-          url: overviewKey,
+          url: `${resourceID}/${overviewKey}`,
           icon: "Info",
         },
         {
           name: "Nodes",
           key: nodesKey,
-          url: nodesKey,
+          url: `${resourceID}/${nodesKey}`,
           icon: "BranchCommit",
         },
         {
           name: "Machines",
           key: machinesKey,
-          url: machinesKey,
+          url: `${resourceID}/${machinesKey}`,
           icon: "ConnectVirtualMachine",
         },
         {
           name: "MachineSets",
           key: machineSetsKey,
-          url: machineSetsKey,
+          url: `${resourceID}/${machineSetsKey}`,
           icon: "BuildQueue",
         },
         {
           name: "APIStatistics",
           key: apiStatisticsKey,
-          url: apiStatisticsKey,
+          url: `${resourceID}/${apiStatisticsKey}`,
           icon: "BIDashboard",
         },
         {
           name: "KCMStatistics",
           key: kcmStatisticsKey,
-          url: kcmStatisticsKey,
+          url: `${resourceID}/${kcmStatisticsKey}`,
           icon: "BIDashboard",
         },
         {
           name: "DNSStatistics",
           key: dnsStatisticsKey,
-          url: dnsStatisticsKey,
+          url: `${resourceID}/${dnsStatisticsKey}`,
           icon: "BIDashboard",
         },
         {
           name: "IngressStatistics",
           key: ingressStatisticsKey,
-          url: ingressStatisticsKey,
+          url: `${resourceID}/${ingressStatisticsKey}`,
           icon: "BIDashboard",
         },
         {
           name: "ClusterOperators",
           key: clusterOperatorsKey,
-          url: clusterOperatorsKey,
+          url: `${resourceID}/${clusterOperatorsKey}`,
           icon: "Shapes",
         },
       ],

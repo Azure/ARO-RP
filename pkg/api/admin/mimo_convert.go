@@ -22,7 +22,7 @@ func (m maintenanceManifestConverter) ToExternal(d *api.MaintenanceManifestDocum
 		State:      MaintenanceManifestState(d.MaintenanceManifest.State),
 		StatusText: d.MaintenanceManifest.StatusText,
 
-		MaintenanceTaskID: d.MaintenanceManifest.MaintenanceTaskID,
+		MaintenanceTaskID: MIMOTaskID(d.MaintenanceManifest.MaintenanceTaskID),
 		Priority:          d.MaintenanceManifest.Priority,
 
 		RunAfter:  d.MaintenanceManifest.RunAfter,
@@ -47,7 +47,7 @@ func (m maintenanceManifestConverter) ToInternal(_i interface{}, out *api.Mainte
 	i := _i.(*MaintenanceManifest)
 
 	out.ID = i.ID
-	out.MaintenanceManifest.MaintenanceTaskID = i.MaintenanceTaskID
+	out.MaintenanceManifest.MaintenanceTaskID = api.MIMOTaskID(i.MaintenanceTaskID)
 	out.MaintenanceManifest.Priority = i.Priority
 	out.MaintenanceManifest.RunAfter = i.RunAfter
 	out.MaintenanceManifest.RunBefore = i.RunBefore

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -39,7 +38,7 @@ func TestPanic(t *testing.T) {
 			}
 		})).ServeHTTP(w, nil)
 
-		var expected []map[string]types.GomegaMatcher
+		var expected []testlog.ExpectedLogEntry
 		if tt.panictext == "" {
 			if w.Code != http.StatusOK {
 				t.Error(w.Code)
@@ -49,7 +48,7 @@ func TestPanic(t *testing.T) {
 				t.Error(w.Code)
 			}
 
-			expected = []map[string]types.GomegaMatcher{
+			expected = []testlog.ExpectedLogEntry{
 				{
 					"msg":   gomega.MatchRegexp(regexp.QuoteMeta(tt.panictext)),
 					"level": gomega.Equal(logrus.ErrorLevel),
@@ -61,5 +60,26 @@ func TestPanic(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+func TestPanicHttpAbort(t *testing.T) {
+	h, log := testlog.New()
+
+	w := httptest.NewRecorder()
+
+	Panic(log)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic(http.ErrAbortHandler)
+	})).ServeHTTP(w, nil)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Error(w.Code)
+	}
+
+	expected := []testlog.ExpectedLogEntry{}
+
+	err := testlog.AssertLoggingOutput(h, expected)
+	if err != nil {
+		t.Error(err)
 	}
 }

@@ -11,13 +11,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/apparentlymart/go-cidr/cidr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -122,7 +121,7 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: to.StringPtr("ipConfigurations")})
+		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: pointerutils.ToPtr("ipConfigurations")})
 		if err != nil {
 			return err
 		}
@@ -199,30 +198,25 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP != "" {
 		return nil
 	}
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-	if infraID == "" {
-		infraID = "aro"
-	}
-
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	var lbName string
-	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
-	case api.ArchitectureVersionV1:
-		lbName = infraID + "-internal-lb"
-	case api.ArchitectureVersionV2:
-		lbName = infraID + "-internal"
-	default:
-		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
-	}
-
-	lb, err := m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	lb, err := m.getInternalLoadBalancer(ctx)
 	if err != nil {
 		return err
 	}
 
+	frontendIPs := map[string]string{}
+	for _, fip := range lb.Properties.FrontendIPConfigurations {
+		if fip.Properties != nil && fip.Properties.PrivateIPAddress != nil {
+			frontendIPs[*fip.Name] = *fip.Properties.PrivateIPAddress
+		}
+	}
+
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+		// Fetch the named frontend IP if possible, otherwise fall back to the first
+		if ip, ok := frontendIPs["internal-lb-ip-v4"]; ok {
+			doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = ip
+		} else {
+			doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *lb.Properties.FrontendIPConfigurations[0].Properties.PrivateIPAddress
+		}
 		return nil
 	})
 	return err
@@ -299,8 +293,8 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 		linkIdentifier = *conn.Properties.LinkIdentifier
 
 		if !strings.EqualFold(*conn.Properties.PrivateLinkServiceConnectionState.Status, "Approved") {
-			conn.Properties.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
-			conn.Properties.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Status = pointerutils.ToPtr("Approved")
+			conn.Properties.PrivateLinkServiceConnectionState.Description = pointerutils.ToPtr("Approved")
 
 			_, err = m.armRPPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, *conn, nil)
 			if err != nil {
@@ -357,36 +351,36 @@ func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 		infraID = "aro"
 	}
 
-	err := m.fpPrivateEndpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, mgmtnetwork.PrivateEndpoint{
-		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
-			Subnet: &mgmtnetwork.Subnet{
+	err := m.armFPPrivateEndpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, armnetwork.PrivateEndpoint{
+		Properties: &armnetwork.PrivateEndpointProperties{
+			Subnet: &armnetwork.Subnet{
 				// TODO: in the future we will need multiple vnets for our PEs.
 				// It will be necessary to decide the vnet for a cluster's PE
 				// somewhere around here.
-				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+				ID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 			},
-			ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
+			ManualPrivateLinkServiceConnections: []*armnetwork.PrivateLinkServiceConnection{
 				{
-					Name: to.StringPtr("rp-plsconnection"),
-					PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
-						PrivateLinkServiceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
+					Name: pointerutils.ToPtr("rp-plsconnection"),
+					Properties: &armnetwork.PrivateLinkServiceConnectionProperties{
+						PrivateLinkServiceID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
 					},
 				},
 			},
 		},
 		Location: &m.doc.OpenShiftCluster.Location,
-	})
+	}, nil)
 	if err != nil {
 		return err
 	}
 
-	pe, err := m.fpPrivateEndpoints.Get(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, "networkInterfaces")
+	pe, err := m.armFPPrivateEndpoints.Get(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")})
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP = *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress
+		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP = *pe.Properties.NetworkInterfaces[0].Properties.IPConfigurations[0].Properties.PrivateIPAddress
 		return nil
 	})
 	return err

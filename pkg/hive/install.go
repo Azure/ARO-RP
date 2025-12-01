@@ -13,8 +13,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -32,6 +31,7 @@ const (
 	envSecretsName        = "aro-env-secret"
 	pullsecretSecretName  = "aro-pullsecret"
 	installConfigName     = "aro-installconfig"
+	imageHostedOnBehalfOf = "kubernetes.azure.com/managedby"
 	installConfigTemplate = `apiVersion: v1
 platform:
   azure:
@@ -69,7 +69,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 		return err
 	}
 
-	cd := c.clusterDeploymentForInstall(doc, version, c.env.IsLocalDevelopmentMode())
+	cd := c.clusterDeploymentForInstall(doc, version, sub, c.env.IsLocalDevelopmentMode())
 
 	// Enrich the cluster deployment with the correlation data so that logs are
 	// properly annotated
@@ -98,7 +98,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	if boundSASigningKeySecret != nil {
 		resources = append(resources, boundSASigningKeySecret)
 		cd.Spec.BoundServiceAccountSignkingKeySecretRef = &corev1.LocalObjectReference{
-			Name: boundSASigningKeySecret.ObjectMeta.Name,
+			Name: boundSASigningKeySecret.Name,
 		}
 	}
 
@@ -172,7 +172,7 @@ func azureCredentialSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscrip
 	return azureCredentialSecret, nil
 }
 
-func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, isDevelopment bool) *hivev1.ClusterDeployment {
+func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, sub *api.SubscriptionDocument, isDevelopment bool) *hivev1.ClusterDeployment {
 	var envVars = []corev1.EnvVar{
 		{
 			Name:  "ARO_UUID",
@@ -208,6 +208,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				hiveClusterPlatformLabel: "azure",
 				hiveClusterRegionLabel:   doc.OpenShiftCluster.Location,
 				createdByHiveLabelKey:    "true",
+				imageHostedOnBehalfOf:    "sub_" + sub.ID,
 			},
 			Annotations: map[string]string{
 				// https://github.com/openshift/hive/pull/2157
@@ -238,7 +239,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
-			InstallAttemptsLimit: to.Int32Ptr(1),
+			InstallAttemptsLimit: pointerutils.ToPtr(int32(1)),
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
 			},

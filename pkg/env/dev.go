@@ -9,10 +9,11 @@ import (
 	"net"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -26,7 +27,7 @@ type dev struct {
 	*prod
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
+func newDev(ctx context.Context, log *logrus.Entry, component ServiceName) (Interface, error) {
 	d := &dev{}
 
 	var err error
@@ -46,14 +47,14 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) 
 		d.features[feature] = true
 	}
 
-	d.prod.clusterGenevaLoggingAccount = version.DevClusterGenevaLoggingAccount
-	d.prod.clusterGenevaLoggingConfigVersion = version.DevClusterGenevaLoggingConfigVersion
-	d.prod.clusterGenevaLoggingEnvironment = version.DevGenevaLoggingEnvironment
-	d.prod.clusterGenevaLoggingNamespace = version.DevClusterGenevaLoggingNamespace
+	d.clusterGenevaLoggingAccount = version.DevClusterGenevaLoggingAccount
+	d.clusterGenevaLoggingConfigVersion = version.DevClusterGenevaLoggingConfigVersion
+	d.clusterGenevaLoggingEnvironment = version.DevGenevaLoggingEnvironment
+	d.clusterGenevaLoggingNamespace = version.DevClusterGenevaLoggingNamespace
 
 	// ugh: run this again after RP_MODE=development has caused the feature flag
 	// to be set.
-	d.prod.ARMHelper, err = newARMHelper(ctx, log, d)
+	d.ARMHelper, err = newARMHelper(ctx, log, d)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (d *dev) OtelAuditQueueSize() (int, error) {
 }
 
 func (d *dev) Listen() (net.Listener, error) {
-	if d.Component() == string(COMPONENT_MIMO_ACTUATOR) {
+	if d.Service() == string(SERVICE_MIMO_ACTUATOR) {
 		return net.Listen("tcp", ":8445")
 	}
 	return net.Listen("tcp", ":8443")

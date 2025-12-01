@@ -30,13 +30,14 @@ func NewFakeGatewayDocumentClient(h *codec.JsonHandle) *FakeGatewayDocumentClien
 
 // FakeGatewayDocumentClient is a FakeGatewayDocumentClient
 type FakeGatewayDocumentClient struct {
-	lock             sync.RWMutex
-	jsonHandle       *codec.JsonHandle
-	gatewayDocuments map[string]*pkg.GatewayDocument
-	triggerHandlers  map[string]fakeGatewayDocumentTriggerHandler
-	queryHandlers    map[string]fakeGatewayDocumentQueryHandler
-	sorter           func([]*pkg.GatewayDocument)
-	etag             int
+	lock                sync.RWMutex
+	jsonHandle          *codec.JsonHandle
+	gatewayDocuments    map[string]*pkg.GatewayDocument
+	triggerHandlers     map[string]fakeGatewayDocumentTriggerHandler
+	queryHandlers       map[string]fakeGatewayDocumentQueryHandler
+	sorter              func([]*pkg.GatewayDocument)
+	etag                int
+	changeFeedIterators []*fakeGatewayDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.GatewayDocument, *pkg.GatewayDocument) bool
@@ -158,6 +159,10 @@ func (c *FakeGatewayDocumentClient) apply(ctx context.Context, partitionkey stri
 
 	c.gatewayDocuments[gatewayDocument.ID] = gatewayDocument
 
+	if err = c.updateChangeFeeds(gatewayDocument); err != nil {
+		return nil, err
+	}
+
 	return c.deepCopy(gatewayDocument)
 }
 
@@ -237,7 +242,9 @@ func (c *FakeGatewayDocumentClient) Delete(ctx context.Context, partitionKey str
 	return nil
 }
 
-// ChangeFeed is unimplemented
+// ChangeFeed is a basic implementation of cosmosDB Changefeeds. Compared to the real changefeeds, its implementation is much more simplistic:
+// - Deleting a GatewayDocument does not remove it from the existing change feeds
+// - when a GatewayDocument is pushed into the changefeed, older versions that have not been retrieved won't be removed, meaning there's no guarantee that a gatewayDocument from the changefeed is actually the most recent version.
 func (c *FakeGatewayDocumentClient) ChangeFeed(*Options) GatewayDocumentIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -246,7 +253,26 @@ func (c *FakeGatewayDocumentClient) ChangeFeed(*Options) GatewayDocumentIterator
 		return NewFakeGatewayDocumentErroringRawIterator(c.err)
 	}
 
-	return NewFakeGatewayDocumentErroringRawIterator(ErrNotImplemented)
+	newIter, ok := c.List(nil).(*fakeGatewayDocumentIterator)
+	if !ok {
+		return NewFakeGatewayDocumentErroringRawIterator(fmt.Errorf("internal error"))
+	}
+
+	c.changeFeedIterators = append(c.changeFeedIterators, newIter)
+	return newIter
+}
+
+func (c *FakeGatewayDocumentClient) updateChangeFeeds(gatewayDocument *pkg.GatewayDocument) error {
+	for _, currentIterator := range c.changeFeedIterators {
+		newTpl, err := c.deepCopy(gatewayDocument)
+		if err != nil {
+			return err
+		}
+
+		currentIterator.gatewayDocuments = append(currentIterator.gatewayDocuments, newTpl)
+		currentIterator.done = false
+	}
+	return nil
 }
 
 func (c *FakeGatewayDocumentClient) processPreTriggers(ctx context.Context, gatewayDocument *pkg.GatewayDocument, options *Options) error {
@@ -321,7 +347,7 @@ func (i *fakeGatewayDocumentIterator) Next(ctx context.Context, maxItemCount int
 			max = len(i.gatewayDocuments)
 		}
 		gatewayDocuments = i.gatewayDocuments[i.continuation:max]
-		i.continuation += max
+		i.continuation = max
 		i.done = i.Continuation() == ""
 	}
 

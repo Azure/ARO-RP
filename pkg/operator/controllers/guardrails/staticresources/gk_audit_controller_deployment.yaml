@@ -20,6 +20,8 @@ spec:
         control-plane: audit-controller
         gatekeeper.sh/operation: audit
         gatekeeper.sh/system: "yes"
+      annotations: # intended deviation from upstream, specify the SCC, note only supported on version >=4.14
+        openshift.io/required-scc: "restricted-v2"
     spec:
       affinity:
         nodeAffinity:
@@ -41,6 +43,7 @@ spec:
         - --operation=audit
         - --operation=status
         - --operation=mutation-status
+        - --operation=generate
         - --log-denies=true
         - --logtostderr
         - --disable-opa-builtin={http.send}

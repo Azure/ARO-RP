@@ -12,16 +12,16 @@ import (
 	"strings"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/go-test/deep"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -48,14 +48,14 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		name           string
 		expectedOutput interface{}
 		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
-		expectedLogs   []map[string]types.GomegaMatcher
+		expectedLogs   []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "failure to fetch VMs",
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				"vm listing error: vm explod",
 			},
@@ -65,7 +65,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				"no VMs found",
 			},
@@ -75,12 +75,12 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:     to.StringPtr("somename"),
-						Location: to.StringPtr("eastus"),
+						Name:     pointerutils.ToPtr("somename"),
+						Location: pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								BootDiagnostics: &mgmtcompute.BootDiagnosticsInstanceView{
-									SerialConsoleLogBlobURI: to.StringPtr("bogusurl"),
+									SerialConsoleLogBlobURI: pointerutils.ToPtr("bogusurl"),
 								},
 							},
 						},
@@ -91,7 +91,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
 				).Times(1).Return(errors.New("explod"))
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				`vm somename: {"location":"eastus","properties":{}}`,
 				"vm boot diagnostics retrieval error for somename: explod",
@@ -102,8 +102,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -117,7 +117,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`hello`),
@@ -138,8 +138,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -153,7 +153,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`hello`),
@@ -174,8 +174,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -189,7 +189,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
@@ -199,15 +199,15 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     to.StringPtr("somename"),
-						Location:                 to.StringPtr("eastus"),
+						Name:                     pointerutils.ToPtr("somename"),
+						Location:                 pointerutils.ToPtr("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
 
 				iothing := bytes.NewBufferString("")
 				for i := 0; i < 11; i++ {
-					iothing.WriteString(fmt.Sprintf("%d", i))
+					fmt.Fprintf(iothing, "%d", i)
 					for x := 0; x < 98; x++ {
 						iothing.WriteByte('a')
 					}
@@ -221,7 +221,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`),

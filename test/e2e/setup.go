@@ -6,6 +6,7 @@ package e2e
 import (
 	"context"
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"math"
 	"net/url"
@@ -13,26 +14,30 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/jongio/azidext/go/azidext"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+	"github.com/sirupsen/logrus"
+	"github.com/tebeka/selenium"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/jongio/azidext/go/azidext"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
-	"github.com/sirupsen/logrus"
-	"github.com/tebeka/selenium"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/client-go/tools/clientcmd/api/latest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -42,9 +47,11 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
@@ -57,7 +64,6 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/util/dynamic"
-	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 const (
@@ -138,9 +144,13 @@ func skipIfMIMOActuatorNotEnabled() {
 }
 
 func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
-	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
+	if !isHiveManagedCluster(adminAPICluster) {
 		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
+}
+
+func isHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) bool {
+	return adminAPICluster.Properties.HiveProfile != (admin.HiveProfile{})
 }
 
 func SaveScreenshot(wd selenium.WebDriver, e error) {
@@ -291,77 +301,142 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	scopes := []string{_env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	configv1, err := kubeadminkubeconfig.Get(ctx, log, _env, authorizer, resourceIDFromEnv())
+	res, err := azure.ParseResourceID(resourceIDFromEnv())
 	if err != nil {
 		return nil, err
 	}
 
-	var config api.Config
-	err = latest.Scheme.Convert(configv1, &config, nil)
+	clusters := redhatopenshift20240812preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer)
+
+	r, err := clusters.ListAdminCredentials(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeconfig := clientcmd.NewDefaultClientConfig(config, &clientcmd.ConfigOverrides{})
+	kubeConfigFile, err := base64.StdEncoding.DecodeString(*r.Kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("error b64 decoding kubeconfig file: %w", err)
+	}
+
+	kubeconfig, err := clientcmd.NewClientConfigFromBytes(kubeConfigFile)
+	if err != nil {
+		return nil, fmt.Errorf("error building clientconfig from bytes: %w", err)
+	}
 
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building clientconfig: %w", err)
+	}
+
+	// In development e2e the certificate is not always created with a publicly
+	// verifiable TLS certificate.
+	if _env.IsLocalDevelopmentMode() {
+		restconfig.Insecure = true // CodeQL [SM03511] only used in local development
+	} else {
+		// In prod e2e there is sometimes a lag between cluster creation and the
+		// TLS certificate being presented by the APIServer
+		configShallowCopy := *restconfig
+
+		// Create a HTTPClient which we can
+		httpClient, err := rest.HTTPClientFor(&configShallowCopy)
+		if err != nil {
+			return nil, err
+		}
+		configShallowCopy.GroupVersion = &schema.GroupVersion{}
+		configShallowCopy.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+		configShallowCopy.UserAgent = rest.DefaultKubernetesUserAgent()
+		rawClient, err := rest.RESTClientForConfigAndClient(&configShallowCopy, httpClient)
+		if err != nil {
+			return nil, err
+		}
+
+		now := time.Now()
+		timeoutDuration := 20 * time.Minute
+		sleepAmount := 10 * time.Second
+		maxRetryCount := int(timeoutDuration) / int(sleepAmount)
+		passed := false
+
+		for i := range maxRetryCount {
+			var statusCode int
+			err = rawClient.
+				Get().
+				AbsPath("/healthz").
+				Do(ctx).
+				StatusCode(&statusCode).
+				Error()
+
+			if err != nil {
+				log.Warnf("API Server not ready (try %d/%d): %s", i+1, maxRetryCount, err.Error())
+			} else if statusCode != 200 {
+				log.Warnf("API Server not ready (try %d/%d): status code %d", i+1, maxRetryCount, statusCode)
+			} else {
+				passed = true
+				break
+			}
+
+			time.Sleep(sleepAmount)
+		}
+
+		if passed {
+			log.Infof("API Server ready after %s", time.Since(now).String())
+		} else {
+			return nil, fmt.Errorf("timed out waiting for API server to be ready after %s", timeoutDuration.String())
+		}
 	}
 
 	cli, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building kubernetes clientset: %w", err)
 	}
 
 	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building controller runtime client: %w", err)
 	}
 
 	monitoring, err := monitoringclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building monitoring client: %w", err)
 	}
 
 	machineapicli, err := machineclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building machine API client: %w", err)
 	}
 
 	mcocli, err := mcoclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building MCO client: %w", err)
 	}
 
 	projectcli, err := projectclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building project client: %w", err)
 	}
 
 	routecli, err := routeclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building route client: %w", err)
 	}
 
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building ARO k8s client: %w", err)
 	}
 
 	configcli, err := configclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building config client: %w", err)
 	}
 
 	securitycli, err := securityclient.NewForConfig(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building security client: %w", err)
 	}
 
 	dynamiccli, err := dynamic.NewDynamicClient(restconfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building dynamic k8s client: %w", err)
 	}
 
 	var hiveRestConfig *rest.Config
@@ -369,31 +444,41 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	var hiveAKS *kubernetes.Clientset
 	var hiveCM hive.ClusterManager
 
-	if _env.IsLocalDevelopmentMode() {
-		liveCfg, err := _env.NewLiveConfigManager(ctx)
-		if err != nil {
-			return nil, err
-		}
+	liveCfg, err := _env.NewLiveConfigManager(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	adoptByHive, err := liveCfg.AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	installViaHive, err := liveCfg.InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if _env.IsLocalDevelopmentMode() && (adoptByHive || installViaHive) {
 		hiveShard := 1
 		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting hive RESTConfig: %w", err)
 		}
 
 		hiveClientSet, err = client.New(hiveRestConfig, client.Options{})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive client: %w", err)
 		}
 
 		hiveAKS, err = kubernetes.NewForConfig(hiveRestConfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive AKS client: %w", err)
 		}
 
 		hiveCM, err = hive.NewFromConfigClusterManager(log, _env, hiveRestConfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error building Hive cluster manager: %w", err)
 		}
 	}
 
@@ -432,7 +517,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 	return &clientSet{
 		Operations:        redhatopenshift20240812preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClusters: redhatopenshift20240812preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClusters: clusters,
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -465,36 +550,79 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 }
 
 func setup(ctx context.Context) error {
-	err := env.ValidateVars(
+	if err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
 		"CLUSTER",
-		"LOCATION")
+		"LOCATION"); err != nil {
+		return err
+	}
 
+	// Core ARO env
+	var err error
+	_env, err = env.NewCoreForCI(ctx, log, env.SERVICE_E2E)
 	if err != nil {
 		return err
 	}
 
-	_env, err = env.NewCoreForCI(ctx, log)
-	if err != nil {
-		return err
-	}
-
+	// Read out your test config
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
 		return err
 	}
 
-	if conf.IsCI { // always create cluster in CI
+	// Build a bare‐bones Azure SDK client for OpenshiftClusters
+	credOptions := _env.Environment().EnvironmentCredentialOptions()
+	tokenCred, err := azidentity.NewEnvironmentCredential(credOptions)
+	if err != nil {
+		return err
+	}
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	authAdapter := azidext.NewTokenCredentialAdapter(tokenCred, scopes)
+	azOCClient := redhatopenshift20240812preview.NewOpenShiftClustersClient(
+		_env.Environment(), _env.SubscriptionID(), authAdapter)
+
+	// Only check for leftover clusters in local dev CI, not in release E2E
+	if conf.IsLocalDevelopmentMode() && conf.IsCI {
+		const (
+			maxRetries  = 10
+			waitBetween = 30 * time.Second
+		)
+		totalWait := time.Duration(maxRetries) * waitBetween
+
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					log.Infof("No leftover cluster found on attempt %d; proceeding", attempt)
+					break
+				}
+				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
+			}
+
+			if doc.ProvisioningState != mgmtredhatopenshift20240812preview.Deleting {
+				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
+			}
+
+			if attempt == maxRetries {
+				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
+			}
+
+			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
+			time.Sleep(waitBetween)
+		}
+		// Old cluster is gone, create the new one
+	}
+
+	// we only create a cluster when running this in CI
+	if conf.IsCI {
 		cluster, err := utilcluster.New(log, conf)
 		if err != nil {
 			return err
 		}
-
-		err = cluster.Create(ctx)
-		if err != nil {
+		if err = cluster.Create(ctx); err != nil {
 			return err
 		}
 	}
@@ -513,7 +641,7 @@ func setup(ctx context.Context) error {
 }
 
 func done(ctx context.Context) error {
-	// terminate early if delete flag is set to false
+	// Load the usual cluster config (to pick up IsCI, etc.)
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
 		return err
@@ -525,10 +653,13 @@ func done(ctx context.Context) error {
 			return err
 		}
 
-		err = cluster.Delete(ctx, cluster.Config.VnetResourceGroup, cluster.Config.ClusterName)
+		// Attempt deletion
+		err = cluster.Delete(ctx, conf.VnetResourceGroup, conf.ClusterName)
 		if err != nil {
+			log.Errorf("Cluster deletion failed with errors: %v", err)
 			return err
 		}
+		log.Info("Cluster deletion completed successfully")
 	}
 
 	return nil

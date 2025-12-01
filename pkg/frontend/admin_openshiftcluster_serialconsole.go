@@ -41,6 +41,9 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	vmName := r.URL.Query().Get("vmName")
+	if vmName == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The vmName parameter is required.")
+	}
 	err := validateAdminVMName(vmName)
 	if err != nil {
 		return err
@@ -69,6 +72,15 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
+	}
+
+	exists, err := a.ResourceGroupHasVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
+			fmt.Sprintf("The VirtualMachine '%s' under resource group '%s' was not found.", vmName, resGroupName))
 	}
 
 	return a.VMSerialConsole(ctx, log, vmName, w)

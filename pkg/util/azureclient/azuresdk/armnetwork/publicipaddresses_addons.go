@@ -6,7 +6,7 @@ package armnetwork
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // PublicIPAddressesClientAddons contains addons for PublicIPAddressesClient
@@ -35,7 +35,7 @@ func (c *publicIPAddressesClient) DeleteAndWait(ctx context.Context, resourceGro
 }
 
 func (c *publicIPAddressesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.PublicIPAddressesClientListOptions) (result []*armnetwork.PublicIPAddress, err error) {
-	pager := c.PublicIPAddressesClient.NewListPager(resourceGroupName, options)
+	pager := c.NewListPager(resourceGroupName, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)

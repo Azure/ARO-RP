@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	"sigs.k8s.io/yaml"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -244,15 +245,9 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, resour
 }
 
 func pullsecretSecret(namespace string, oc *api.OpenShiftCluster) (*corev1.Secret, error) {
-	pullSecret, err := pullsecret.Build(oc, string(oc.Properties.ClusterProfile.PullSecret))
+	pullSecret, err := pullsecret.Build(oc, "")
 	if err != nil {
 		return nil, err
-	}
-	for _, key := range []string{"cloud.openshift.com"} {
-		pullSecret, err = pullsecret.RemoveKey(pullSecret, key)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &corev1.Secret{
@@ -260,8 +255,8 @@ func pullsecretSecret(namespace string, oc *api.OpenShiftCluster) (*corev1.Secre
 			Namespace: namespace,
 			Name:      pullsecretSecretName,
 		},
-		StringData: map[string]string{
-			".dockerconfigjson": pullSecret,
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(pullSecret),
 		},
 	}, nil
 }

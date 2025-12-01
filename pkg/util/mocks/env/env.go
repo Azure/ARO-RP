@@ -16,16 +16,17 @@ import (
 	net "net"
 	reflect "reflect"
 
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
+
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
 	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
 
+	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 	azcertificates "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
@@ -240,20 +241,6 @@ func (m *MockInterface) ClusterMsiKeyVaultName() string {
 func (mr *MockInterfaceMockRecorder) ClusterMsiKeyVaultName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterMsiKeyVaultName", reflect.TypeOf((*MockInterface)(nil).ClusterMsiKeyVaultName))
-}
-
-// Component mocks base method.
-func (m *MockInterface) Component() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Component")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Component indicates an expected call of Component.
-func (mr *MockInterfaceMockRecorder) Component() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Component", reflect.TypeOf((*MockInterface)(nil).Component))
 }
 
 // DialContext mocks base method.
@@ -517,6 +504,20 @@ func (mr *MockInterfaceMockRecorder) Logger() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockInterface)(nil).Logger))
 }
 
+// LoggerForComponent mocks base method.
+func (m *MockInterface) LoggerForComponent(arg0 string) *logrus.Entry {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoggerForComponent", arg0)
+	ret0, _ := ret[0].(*logrus.Entry)
+	return ret0
+}
+
+// LoggerForComponent indicates an expected call of LoggerForComponent.
+func (mr *MockInterfaceMockRecorder) LoggerForComponent(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoggerForComponent", reflect.TypeOf((*MockInterface)(nil).LoggerForComponent), arg0)
+}
+
 // MISEAuthorizer mocks base method.
 func (m *MockInterface) MISEAuthorizer() miseadapter.MISEAdapter {
 	m.ctrl.T.Helper()
@@ -546,18 +547,18 @@ func (mr *MockInterfaceMockRecorder) MockMSIResponses(msiResourceId any) *gomock
 }
 
 // MsiDataplaneClientOptions mocks base method.
-func (m *MockInterface) MsiDataplaneClientOptions() (*policy.ClientOptions, error) {
+func (m *MockInterface) MsiDataplaneClientOptions(correlationData *api.CorrelationData) (*policy.ClientOptions, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MsiDataplaneClientOptions")
+	ret := m.ctrl.Call(m, "MsiDataplaneClientOptions", correlationData)
 	ret0, _ := ret[0].(*policy.ClientOptions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MsiDataplaneClientOptions indicates an expected call of MsiDataplaneClientOptions.
-func (mr *MockInterfaceMockRecorder) MsiDataplaneClientOptions() *gomock.Call {
+func (mr *MockInterfaceMockRecorder) MsiDataplaneClientOptions(correlationData any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiDataplaneClientOptions", reflect.TypeOf((*MockInterface)(nil).MsiDataplaneClientOptions))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MsiDataplaneClientOptions", reflect.TypeOf((*MockInterface)(nil).MsiDataplaneClientOptions), correlationData)
 }
 
 // MsiRpEndpoint mocks base method.
@@ -690,6 +691,20 @@ func (mr *MockInterfaceMockRecorder) ResourceGroup() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroup", reflect.TypeOf((*MockInterface)(nil).ResourceGroup))
 }
 
+// Service mocks base method.
+func (m *MockInterface) Service() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockInterfaceMockRecorder) Service() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockInterface)(nil).Service))
+}
+
 // ServiceKeyvault mocks base method.
 func (m *MockInterface) ServiceKeyvault() azsecrets.Client {
 	m.ctrl.T.Helper()
@@ -730,19 +745,4 @@ func (m *MockInterface) TenantID() string {
 func (mr *MockInterfaceMockRecorder) TenantID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockInterface)(nil).TenantID))
-}
-
-// VMSku mocks base method.
-func (m *MockInterface) VMSku(vmSize string) (*compute.ResourceSku, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VMSku", vmSize)
-	ret0, _ := ret[0].(*compute.ResourceSku)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// VMSku indicates an expected call of VMSku.
-func (mr *MockInterfaceMockRecorder) VMSku(vmSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSku", reflect.TypeOf((*MockInterface)(nil).VMSku), vmSize)
 }

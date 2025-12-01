@@ -1,13 +1,16 @@
 {
-  "descriptionHash": "375409869FC06AED23DD1BF5BE90B682DD45E3215C6CC1AFBE7C3DC9EFC844B9300C2CB898E5A7FA5A753E429769E52BC078C62DDAE536C9C1AD7954FE8308D2",
-  "descriptionLocation": "/home/hawkowl/code/ARO-RP/hack/graphsdk/openapi.yaml",
+  "descriptionHash": "D312506AB316816613C60AA67E561FA3FCB59912C864E1920436C4702C374E2EC68358C03B47B52AA697F0F3C8A321EA5CDF7A5B8C3084548C5C70D3E7E407C0",
+  "descriptionLocation": "../../../../hack/graphsdk/openapi.yaml",
   "lockFileVersion": "1.0.0",
-  "kiotaVersion": "1.5.1",
+  "kiotaVersion": "1.27.0",
   "clientClassName": "GraphBaseServiceClient",
+  "typeAccessModifier": "Public",
   "clientNamespaceName": "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk",
   "language": "Go",
   "usesBackingStore": true,
+  "excludeBackwardCompatible": false,
   "includeAdditionalData": false,
+  "disableSSLValidation": false,
   "serializers": [
     "Microsoft.Kiota.Serialization.Json.JsonSerializationWriterFactory",
     "Microsoft.Kiota.Serialization.Text.TextSerializationWriterFactory",
@@ -21,9 +24,9 @@
   ],
   "structuredMimeTypes": [
     "application/json",
-    "text/plain",
-    "application/x-www-form-urlencoded",
-    "multipart/form-data"
+    "text/plain;q=0.9",
+    "application/x-www-form-urlencoded;q=0.2",
+    "multipart/form-data;q=0.1"
   ],
   "includePatterns": [],
   "excludePatterns": [],

@@ -12,15 +12,21 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitDaemonsetStatuses(t *testing.T) {
 	ctx := context.Background()
 
-	cli := fake.NewSimpleClientset(
+	objects := []client.Object{
+		namespaceObject("openshift"),
+		namespaceObject("customer"),
 		&appsv1.DaemonSet{ // metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name1",
@@ -49,16 +55,26 @@ func TestEmitDaemonsetStatuses(t *testing.T) {
 				NumberAvailable:        1,
 			},
 		},
-	)
+	}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	m := mock_metrics.NewMockEmitter(controller)
 
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
 	mon := &Monitor{
-		cli: cli,
-		m:   m,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	m.EXPECT().EmitGauge("daemonset.statuses", int64(1), map[string]string{
@@ -68,9 +84,7 @@ func TestEmitDaemonsetStatuses(t *testing.T) {
 		"numberAvailable":        strconv.Itoa(1),
 	})
 
-	m.EXPECT().EmitGauge("daemonset.count", int64(3), map[string]string{})
-
-	err := mon.emitDaemonsetStatuses(ctx)
+	err = mon.emitDaemonsetStatuses(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

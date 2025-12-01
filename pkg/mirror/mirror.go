@@ -5,10 +5,8 @@ package mirror
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/containers/image/v5/copy"
@@ -73,11 +71,13 @@ func DestLastIndex(repo, reference string) string {
 	return repo + reference[strings.LastIndex(reference, "/"):]
 }
 
-func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, dstauth, srcauth *types.DockerAuthConfig) error {
-	log.Printf("reading imagestream from %s", srcrelease)
+func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, dstauth, srcauth *types.DockerAuthConfig) (int, error) {
+	log.Debugf("reading imagestream")
+	startTime := time.Now()
 	is, err := getReleaseImageStream(ctx, srcrelease, srcauth)
 	if err != nil {
-		return err
+		log.WithError(err).Errorf("failed to read imagestream")
+		return 0, err
 	}
 
 	type work struct {
@@ -89,58 +89,77 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 	}
 
 	ch := make(chan *work)
+	results := make(chan error)
+
 	wg := &sync.WaitGroup{}
-	var errorOccurred atomic.Value
-	errorOccurred.Store(false)
 
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
+			l := log.WithField("worker", i)
 			for w := range ch {
-				log.Printf("mirroring %s", w.tag)
+				l.Debugf("mirroring %s", w.tag)
 				var err error
 				for retry := 0; retry < 6; retry++ {
+					workTime := time.Now()
 					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
+					l.WithField("duration", time.Since(workTime)).WithField("tag", w.tag).WithError(err).Debug("completed")
 					if err == nil {
 						break
 					}
 					time.Sleep(10 * time.Second)
 				}
 				if err != nil {
-					log.Errorf("%s: %s\n", w.tag, err)
-					errorOccurred.Store(true)
+					l.WithField("tag", w.tag).WithError(err).Error("failed to mirror image after 6 retries")
 				}
+				results <- err
 			}
 			wg.Done()
 		}()
 	}
 
-	log.Printf("mirroring %d image(s)", len(is.Spec.Tags)+1)
-
-	ch <- &work{
-		tag:          "release",
-		dstreference: Dest(dstrepo, srcrelease),
-		srcreference: srcrelease,
-		dstauth:      dstauth,
-		srcauth:      srcauth,
-	}
-
-	for _, tag := range is.Spec.Tags {
+	go func() {
+		log.Printf("mirroring %d image(s)", len(is.Spec.Tags)+1)
 		ch <- &work{
-			tag:          tag.Name,
-			dstreference: Dest(dstrepo, tag.From.Name),
-			srcreference: tag.From.Name,
+			tag:          "release",
+			dstreference: Dest(dstrepo, srcrelease),
+			srcreference: srcrelease,
 			dstauth:      dstauth,
 			srcauth:      srcauth,
 		}
+
+		for _, tag := range is.Spec.Tags {
+			ch <- &work{
+				tag:          tag.Name,
+				dstreference: Dest(dstrepo, tag.From.Name),
+				srcreference: tag.From.Name,
+				dstauth:      dstauth,
+				srcauth:      srcauth,
+			}
+		}
+		close(ch)
+		wg.Wait()
+		close(results)
+	}()
+
+	var successful int
+	var errorOccurred bool
+	for err = range results {
+		if err != nil {
+			errorOccurred = true
+		} else {
+			successful++
+		}
+	}
+	log.WithFields(logrus.Fields{
+		"duration":   time.Since(startTime),
+		"successful": successful,
+		"total":      len(is.Spec.Tags) + 1,
+	}).Infof("mirroring completed")
+
+	if errorOccurred {
+		log.Errorf("some images failed to mirror")
 	}
 
-	close(ch)
-	wg.Wait()
-
-	if errorOccurred.Load().(bool) {
-		return fmt.Errorf("an error occurred")
-	}
-
-	return nil
+	return successful, err
 }

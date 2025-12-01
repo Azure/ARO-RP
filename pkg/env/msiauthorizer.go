@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/jongio/azidext/go/azidext"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/jongio/azidext/go/azidext"
 )
 
 type MSIContext string
@@ -20,14 +21,24 @@ const (
 	MSIContextGateway MSIContext = "GATEWAY"
 )
 
+const EnvUseWorkloadIdentity = "ARO_RP_WORKLOAD_IDENTITY"
+
 func (c *core) NewMSITokenCredential() (azcore.TokenCredential, error) {
 	if !c.IsLocalDevelopmentMode() {
+		// If ARO_RP_WORKLOAD_IDENTITY is set, use a WorkloadIdentity credential
+		// for RP authentication to FPSP keyvault instead
+		useWorkloadIdentity := os.Getenv(EnvUseWorkloadIdentity)
+		if useWorkloadIdentity != "" {
+			options := c.Environment().WorkloadIdentityCredentialOptions()
+			return azidentity.NewWorkloadIdentityCredential(options)
+		}
+
 		options := c.Environment().ManagedIdentityCredentialOptions()
 		return azidentity.NewManagedIdentityCredential(options)
 	}
 
 	var msiContext string
-	if c.component == COMPONENT_GATEWAY {
+	if c.service == SERVICE_GATEWAY {
 		msiContext = string(MSIContextGateway)
 	} else {
 		msiContext = string(MSIContextRP)

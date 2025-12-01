@@ -12,6 +12,7 @@ import (
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
@@ -51,7 +52,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	// +kubebuilder:scaffold:imports
 )
 
 func operator(ctx context.Context, log *logrus.Entry) error {
@@ -75,7 +75,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		HealthProbeBindAddress: ":8080",
-		MetricsBindAddress:     "0", // disabled
+		MetricsBindAddress:     ":8888",
 		Port:                   8443,
 	})
 	if err != nil {

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,13 +109,15 @@ func TestLogClusterDeployment(t *testing.T) {
 			_, log := testlog.New()
 
 			mockHiveManager := mock_hive.NewMockClusterManager(controller)
-			if tt.cd == nil {
-				mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc)).
-					Return(nil, fmt.Errorf(`clusterdeployments.hive.openshift.io "cluster" not found`)).
-					AnyTimes()
-			} else {
-				mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc)).
-					Return(tt.cd, nil)
+			if tt.doc != nil {
+				if tt.cd == nil {
+					mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc.OpenShiftCluster)).
+						Return(nil, fmt.Errorf(`clusterdeployments.hive.openshift.io "cluster" not found`)).
+						AnyTimes()
+				} else {
+					mockHiveManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Eq(tt.doc.OpenShiftCluster)).
+						Return(tt.cd, nil)
+				}
 			}
 
 			m := &manager{
@@ -172,7 +173,7 @@ func TestLogNodes(t *testing.T) {
 		name     string
 		objects  []kruntime.Object
 		want     interface{}
-		wantLogs []map[string]types.GomegaMatcher
+		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
 		{
@@ -182,7 +183,7 @@ func TestLogNodes(t *testing.T) {
 				master0Node.Name, corev1.ConditionTrue,
 				master1Node.Name, corev1.ConditionFalse,
 				master2Node.Name, corev1.ConditionUnknown),
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(asJson(master0Node)),
@@ -222,7 +223,7 @@ func TestLogClusterOperators(t *testing.T) {
 		name     string
 		objects  []kruntime.Object
 		want     interface{}
-		wantLogs []map[string]types.GomegaMatcher
+		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
 		{
@@ -231,7 +232,7 @@ func TestLogClusterOperators(t *testing.T) {
 			want: fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s\n%s - Available: %s, Progressing: %s, Degraded: %s",
 				aroOperator.Name, configv1.ConditionTrue, configv1.ConditionFalse, configv1.ConditionFalse,
 				machineApiOperator.Name, configv1.ConditionFalse, configv1.ConditionUnknown, configv1.ConditionTrue),
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(asJson(aroOperator)),
@@ -267,7 +268,7 @@ func TestLogIngressControllers(t *testing.T) {
 		name     string
 		objects  []kruntime.Object
 		want     interface{}
-		wantLogs []map[string]types.GomegaMatcher
+		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
 		{
@@ -275,7 +276,7 @@ func TestLogIngressControllers(t *testing.T) {
 			objects: []kruntime.Object{defaultIngressController},
 			want: fmt.Sprintf("%s - Available: %s, Progressing: %s, Degraded: %s",
 				defaultIngressController.Name, operatorv1.ConditionTrue, operatorv1.ConditionFalse, operatorv1.ConditionFalse),
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(asJson(defaultIngressController)),
@@ -307,7 +308,7 @@ func TestLogPodLogs(t *testing.T) {
 		name     string
 		objects  []kruntime.Object
 		want     interface{}
-		wantLogs []map[string]types.GomegaMatcher
+		wantLogs []testlog.ExpectedLogEntry
 		wantErr  string
 	}{
 		{
@@ -321,7 +322,7 @@ func TestLogPodLogs(t *testing.T) {
 				fmt.Sprintf("pod status %s: %v", aroOperatorMasterPod.Name, aroOperatorMasterPod.Status),
 				fmt.Sprintf("pod status %s: %v", aroOperatorWorkerPod.Name, aroOperatorWorkerPod.Status),
 			},
-			wantLogs: []map[string]types.GomegaMatcher{
+			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("fake logs"),

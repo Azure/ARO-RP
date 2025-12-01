@@ -4,6 +4,7 @@ __pycache__
 *.pyc
 gomock_reflect_*
 /.vscode
+**/__debug_bin*
 /*.crt
 /*.key
 /*kubeconfig
@@ -44,3 +45,6 @@ megalinter-reports/
 .kiota.log
 podmanlog
 .python-version
+.tool-versions
+./venv
+/CLAUDE.md

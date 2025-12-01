@@ -13,8 +13,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/test/validate"
 )
 
 type validateTest struct {
@@ -149,7 +149,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, v.resourceID)
+				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, api.ArchitectureVersionV2, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Error(err)
@@ -501,6 +501,9 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.serviceCidr: The provided service CIDR '10.0.150.0/16' is invalid, expecting: '10.0.0.0/16'.",
 		},
+	}
+
+	createOnlyCIDRTests := []*validateTest{
 		{
 			name: "podCidr invalid CIDR-1",
 			modify: func(oc *OpenShiftCluster) {
@@ -545,9 +548,59 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		},
 	}
 
+	updateOnlyCIDRTests := []*validateTest{
+		{
+			name: "existing cluster with overlapping podCidr allowed on update-1",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with overlapping podCidr allowed on update-2",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with overlapping serviceCidr allowed on update-1",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with overlapping serviceCidr allowed on update-2",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/15"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with small overlapping range allowed on update",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "169.254.128.0/18"
+			},
+			wantErr: "",
+		},
+		{
+			name: "existing cluster with service update - no network changes",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15"
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientSecret = "new-secret"
+			},
+			wantErr: "",
+		},
+	}
+
+	runTests(t, testModeCreate, createOnlyCIDRTests)
 	runTests(t, testModeCreate, commontests)
-	runTests(t, testModeUpdate, commontests)
 	runTests(t, testModeCreate, createtests)
+	runTests(t, testModeUpdate, updateOnlyCIDRTests)
+	runTests(t, testModeUpdate, commontests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
@@ -786,6 +839,20 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
+		},
+		{
+			name: "missing profiles invalid",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles = nil
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles: There should be exactly one ingress profile.",
+		},
+		{
+			name: "no profiles invalid",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles = []IngressProfile{}
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles: There should be exactly one ingress profile.",
 		},
 		{
 			name: "name invalid",

@@ -1,0 +1,37 @@
+apiVersion: admission.k8s.io/v1
+kind: AdmissionReview
+request:
+  dryRun: true
+  kind:
+    group: ""
+    kind: Node
+    version: v1
+  object: null
+  oldObject:
+    apiVersion: v1
+    kind: Node
+    metadata:
+      labels:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ""
+        node-role.kubernetes.io/master: ""
+        node.openshift.io/os_id: rhcos
+      name: jeff-aue-417-s7bmw-master-2
+    spec:
+      taints:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+  operation: DELETE
+  options: null
+  requestKind:
+    group: ""
+    kind: Node
+    version: v1
+  resource:
+    group: ""
+    resource: Node
+    version: v1
+  uid: baacf383-1b6e-4092-b8b9-d2e853f97fff
+  userInfo:
+    uid: f7c58070-9a2d-450b-aebb-8d64ff1a2109
+    username: fake-k8s-admin-review

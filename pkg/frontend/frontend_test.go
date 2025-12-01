@@ -16,7 +16,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -24,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -38,7 +36,7 @@ func TestAdminReply(t *testing.T) {
 		err            error
 		wantStatusCode int
 		wantBody       interface{}
-		wantEntries    []map[string]types.GomegaMatcher
+		wantEntries    []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "kubernetes error",
@@ -62,7 +60,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "routes.route.openshift.io/doesntexist",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`404: NotFound: routes.route.openshift.io/doesntexist: routes.route.openshift.io "doesntexist" not found`),
@@ -87,7 +85,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "thing",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`400: RequestNotAllowed: thing: You can't do that.`),
@@ -109,7 +107,7 @@ func TestAdminReply(t *testing.T) {
 					"message": "Internal server error.",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.ErrorLevel),
 					"msg":   gomega.Equal(`random error`),
@@ -252,7 +250,6 @@ func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-	_env.EXPECT().FeatureIsSet(env.FeatureEnableOCMEndpoints).AnyTimes().Return(true)
 
 	f := &frontend{
 		baseLog: logrus.NewEntry(logrus.StandardLogger()),
@@ -300,7 +297,7 @@ func routeIsAllLowercase(route chi.Route) bool {
 	}
 
 	for _, v := range route.SubRoutes.Routes() {
-		if !(pattern == strings.ToLower(pattern)) || !routeIsAllLowercase(v) {
+		if (pattern != strings.ToLower(pattern)) || !routeIsAllLowercase(v) {
 			return false
 		}
 	}

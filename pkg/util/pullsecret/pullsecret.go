@@ -150,6 +150,10 @@ func Validate(_ps string) error {
 }
 
 func Build(oc *api.OpenShiftCluster, ps string) (string, error) {
+	if ps == "" {
+		ps = "{}"
+	}
+
 	pullSecret := os.Getenv("PULL_SECRET")
 
 	pullSecret, _, err := Merge(pullSecret, ps)

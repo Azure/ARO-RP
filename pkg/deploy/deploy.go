@@ -9,24 +9,29 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -53,7 +58,7 @@ type deployer struct {
 	groups                       features.ResourceGroupsClient
 	userassignedidentities       msi.UserAssignedIdentitiesClient
 	providers                    features.ProvidersClient
-	publicipaddresses            network.PublicIPAddressesClient
+	publicipaddresses            armnetwork.PublicIPAddressesClient
 	resourceskus                 compute.ResourceSkusClient
 	roleassignments              authorization.RoleAssignmentsClient
 	vmss                         compute.VirtualMachineScaleSetsClient
@@ -62,6 +67,7 @@ type deployer struct {
 	clusterKeyvault              azsecrets.Client
 	portalKeyvault               azsecrets.Client
 	serviceKeyvault              azsecrets.Client
+	blobsClient                  azblob.BlobsClient
 
 	config      *RPConfig
 	version     string
@@ -77,7 +83,7 @@ const (
 )
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string, tokenCredential azcore.TokenCredential) (Deployer, error) {
+func New(ctx context.Context, _env env.Core, config *RPConfig, version string, tokenCredential azcore.TokenCredential) (Deployer, error) {
 	err := config.validate()
 	if err != nil {
 		return nil, err
@@ -102,8 +108,19 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		*into = client
 	}
 
+	publicIpAddressesClient, err := armnetwork.NewPublicIPAddressesClient(config.SubscriptionID, tokenCredential, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate publicipaddresses client: %w", err)
+	}
+
+	serviceUrl := fmt.Sprintf("https://%s.blob.%s", *config.Configuration.RPVersionStorageAccountName, _env.Environment().StorageEndpointSuffix)
+	blobsClient, err := azblob.NewBlobsClientUsingEntra(serviceUrl, tokenCredential, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failure to instantiate blobs client using SAS: %v", err)
+	}
+
 	return &deployer{
-		log: log,
+		log: _env.LoggerForComponent("deploy"),
 		env: _env,
 
 		globaldeployments:            features.NewDeploymentsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
@@ -117,17 +134,18 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		providers:                    features.NewProvidersClient(_env.Environment(), config.SubscriptionID, authorizer),
 		roleassignments:              authorization.NewRoleAssignmentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		resourceskus:                 compute.NewResourceSkusClient(_env.Environment(), config.SubscriptionID, authorizer),
-		publicipaddresses:            network.NewPublicIPAddressesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		publicipaddresses:            publicIpAddressesClient,
 		vmss:                         vmssClient,
 		vmssvms:                      compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		zones:                        dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
 		clusterKeyvault:              clusterKeyVault,
 		portalKeyvault:               portalKeyVault,
 		serviceKeyvault:              serviceKeyVault,
+		blobsClient:                  blobsClient,
 
 		config:      config,
 		version:     version,
-		vmssCleaner: vmsscleaner.New(log, vmssClient),
+		vmssCleaner: vmsscleaner.New(_env.LoggerForComponent("vmsscleaner"), vmssClient),
 	}, nil
 }
 
@@ -250,4 +268,62 @@ func (d *deployer) checkForKnownError(serviceErr *azure.ServiceError, deployAtte
 	}
 
 	return "", nil
+}
+
+// disableAutomaticRepairsOnVMSS disables automatic repairs on a VMSS to prevent
+// race conditions during teardown when stopping services causes health probe failures.
+// This is a best-effort operation - we log errors as warnings but don't fail the
+// teardown, allowing cleanup to proceed even if we can't disable repairs.
+func (d *deployer) disableAutomaticRepairsOnVMSS(ctx context.Context, resourceGroupName, vmssName string) error {
+	d.log.Printf("disabling automatic repairs on scaleset %s", vmssName)
+	start := time.Now()
+	err := d.vmss.UpdateAndWait(ctx, resourceGroupName, vmssName, mgmtcompute.VirtualMachineScaleSetUpdate{
+		VirtualMachineScaleSetUpdateProperties: &mgmtcompute.VirtualMachineScaleSetUpdateProperties{
+			AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
+				Enabled: pointerutils.ToPtr(false),
+			},
+		},
+	})
+	d.log.Printf("disabling automatic repairs on %s took %v", vmssName, time.Since(start))
+
+	if err != nil {
+		// Log as warning but don't fail the teardown - we want to proceed with
+		// stopping services and deleting the VMSS even if we couldn't disable repairs
+		d.log.Warnf("failed to disable automatic repairs on %s, proceeding with teardown anyway: %v", vmssName, err)
+		return nil
+	}
+	return nil
+}
+
+// runCommandWithRetry runs a command on a VMSS instance with retry logic for
+// OperationPreempted errors that can occur when Azure repair operations race
+// with our shutdown commands.
+func (d *deployer) runCommandWithRetry(ctx context.Context, resourceGroupName, vmssName, instanceID string, input mgmtcompute.RunCommandInput) error {
+	const maxRetries = 3
+	const retryDelaySecs = 10
+
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input)
+		if err == nil || !isOperationPreemptedError(err) {
+			break
+		}
+		if i == maxRetries-1 {
+			break
+		}
+		d.log.Printf("RunCommand preempted on instance %s, retrying (%d/%d)", instanceID, i+1, maxRetries)
+		timer := time.NewTimer(retryDelaySecs * time.Second)
+		select {
+		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
+			return err
+		case <-timer.C:
+		}
+	}
+	return err
 }

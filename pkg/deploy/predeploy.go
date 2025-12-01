@@ -16,13 +16,12 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
@@ -30,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -108,13 +108,19 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
-	globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
-	if err != nil {
-		return err
+	var globalDevopsMsiPrincipalId string
+
+	if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
+		globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+		if err != nil {
+			return err
+		}
+
+		globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
 	}
 
 	// deploy ACR RBAC, RP version storage account
-	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMSI.PrincipalID.String())
+	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMsiPrincipalId)
 	if err != nil {
 		return err
 	}
@@ -187,6 +193,9 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 	parameters.Parameters["globalDevopsServicePrincipalId"] = &arm.ParametersParameter{
 		Value: devopsServicePrincipalId,
 	}
+	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleID,
+	}
 
 	for i := 0; i < 2; i++ {
 		d.log.Infof("deploying %s", deploymentName)
@@ -258,12 +267,22 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+
+	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleID,
+	}
+	parameters.Parameters["tokenContributorRoleName"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.TokenContributorRoleName,
+	}
+
 	d.log.Infof("deploying %s", deploymentName)
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
-				Template: template,
-				Mode:     mgmtfeatures.Incremental,
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
 			},
 			Location: d.config.Configuration.GlobalResourceGroupLocation,
 		})
@@ -477,7 +496,7 @@ func (d *deployer) createSecret(ctx context.Context, kv azsecrets.Client, secret
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
+		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(key)),
 	}, nil)
 	return err
 }
@@ -506,7 +525,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv azsecrets.Client, sec
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: to.StringPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
+		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	}, nil)
 	return true, err
 }
@@ -548,7 +567,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 	for _, vm := range scalesetVMs {
 		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
-			CommandID: to.StringPtr("RunShellScript"),
+			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{rpRestartScript},
 		})
 
@@ -577,7 +596,7 @@ func (d *deployer) waitForReadiness(ctx context.Context, vmssName string, vmInst
 
 func (d *deployer) isVMInstanceHealthy(ctx context.Context, resourceGroupName string, vmssName string, vmInstanceID string) bool {
 	r, err := d.vmssvms.GetInstanceView(ctx, resourceGroupName, vmssName, vmInstanceID)
-	instanceUnhealthy := r.VMHealth != nil && r.VMHealth.Status != nil && r.VMHealth.Status.Code != nil && *r.VMHealth.Status.Code != "HealthState/healthy"
+	instanceUnhealthy := r.VMHealth == nil || r.VMHealth.Status == nil || r.VMHealth.Status.Code == nil || *r.VMHealth.Status.Code != "HealthState/healthy"
 	if err != nil || instanceUnhealthy {
 		d.log.Printf("instance %s is unhealthy", vmInstanceID)
 		return false

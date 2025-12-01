@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -129,6 +130,20 @@ func safeUnmarshalProviderSpec(raw []byte) (*machinev1beta1.AzureMachineProvider
 	}
 	if hasZone {
 		if err := unstructured.SetNestedField(u.Object, fmt.Sprintf("%v", zoneRaw), "zone"); err != nil {
+			return nil, err
+		}
+	}
+
+	tagsRaw, hasTags, err := unstructured.NestedMap(u.Object, "tags")
+	if err != nil {
+		return nil, err
+	}
+	if hasTags {
+		tagsAsString := map[string]any{}
+		for k, v := range tagsRaw {
+			tagsAsString[k] = fmt.Sprintf("%v", v)
+		}
+		if err := unstructured.SetNestedMap(u.Object, tagsAsString, "tags"); err != nil {
 			return nil, err
 		}
 	}

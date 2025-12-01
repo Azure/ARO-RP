@@ -6,17 +6,18 @@ package armnetwork
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 )
 
 // PrivateLinkServicesClientAddons contains addons for PrivateLinkServicesClient
 type PrivateLinkServicesClientAddons interface {
 	List(ctx context.Context, resourceGroupName string, options *armnetwork.PrivateLinkServicesClientListOptions) ([]*armnetwork.PrivateLinkService, error)
+	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, serviceName string, parameters armnetwork.PrivateLinkService, options *armnetwork.PrivateLinkServicesClientBeginCreateOrUpdateOptions) error
 	DeletePrivateEndpointConnectionAndWait(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string, options *armnetwork.PrivateLinkServicesClientBeginDeletePrivateEndpointConnectionOptions) error
 }
 
 func (c *privateLinkServicesClient) List(ctx context.Context, resourceGroupName string, options *armnetwork.PrivateLinkServicesClientListOptions) (result []*armnetwork.PrivateLinkService, err error) {
-	pager := c.PrivateLinkServicesClient.NewListPager(resourceGroupName, options)
+	pager := c.NewListPager(resourceGroupName, options)
 
 	for pager.More() {
 		page, err := pager.NextPage(ctx)
@@ -29,7 +30,16 @@ func (c *privateLinkServicesClient) List(ctx context.Context, resourceGroupName 
 }
 
 func (c *privateLinkServicesClient) DeletePrivateEndpointConnectionAndWait(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string, options *armnetwork.PrivateLinkServicesClientBeginDeletePrivateEndpointConnectionOptions) error {
-	poller, err := c.PrivateLinkServicesClient.BeginDeletePrivateEndpointConnection(ctx, resourceGroupName, serviceName, peConnectionName, options)
+	poller, err := c.BeginDeletePrivateEndpointConnection(ctx, resourceGroupName, serviceName, peConnectionName, options)
+	if err != nil {
+		return err
+	}
+	_, err = poller.PollUntilDone(ctx, nil)
+	return err
+}
+
+func (c *privateLinkServicesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, serviceName string, parameters armnetwork.PrivateLinkService, options *armnetwork.PrivateLinkServicesClientBeginCreateOrUpdateOptions) error {
+	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, serviceName, parameters, options)
 	if err != nil {
 		return err
 	}

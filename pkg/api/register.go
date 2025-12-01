@@ -2,6 +2,7 @@ package api
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+
 const APIVersionKey = "api-version"
 
 type OpenShiftClusterConverter interface {
@@ -12,11 +13,7 @@ type OpenShiftClusterConverter interface {
 }
 
 type OpenShiftClusterStaticValidator interface {
-	Static(interface{}, *OpenShiftCluster, string, string, bool, string) error
-}
-
-type ClusterManagerStaticValidator interface {
-	Static(string, string) error
+	Static(interface{}, *OpenShiftCluster, string, string, bool, ArchitectureVersion, string) error
 }
 
 type OpenShiftClusterCredentialsConverter interface {
@@ -47,30 +44,6 @@ type PlatformWorkloadIdentityRoleSetStaticValidator interface {
 	Static(interface{}, *PlatformWorkloadIdentityRoleSet) error
 }
 
-type SyncSetConverter interface {
-	ToExternal(*SyncSet) interface{}
-	ToExternalList([]*SyncSet) interface{}
-	ToInternal(interface{}, *SyncSet)
-}
-
-type MachinePoolConverter interface {
-	ToExternal(*MachinePool) interface{}
-	ToExternalList([]*MachinePool) interface{}
-	ToInternal(interface{}, *MachinePool)
-}
-
-type SyncIdentityProviderConverter interface {
-	ToExternal(*SyncIdentityProvider) interface{}
-	ToExternalList([]*SyncIdentityProvider) interface{}
-	ToInternal(interface{}, *SyncIdentityProvider)
-}
-
-type SecretConverter interface {
-	ToExternal(*Secret) interface{}
-	ToExternalList([]*Secret) interface{}
-	ToInternal(interface{}, *Secret)
-}
-
 type MaintenanceManifestConverter interface {
 	ToExternal(doc *MaintenanceManifestDocument, clusterNamespaced bool) interface{}
 	ToExternalList(docs []*MaintenanceManifestDocument, nextLink string, clusterNamespaced bool) interface{}
@@ -92,11 +65,6 @@ type Version struct {
 	PlatformWorkloadIdentityRoleSetConverter       PlatformWorkloadIdentityRoleSetConverter
 	PlatformWorkloadIdentityRoleSetStaticValidator PlatformWorkloadIdentityRoleSetStaticValidator
 	OperationList                                  OperationList
-	SyncSetConverter                               SyncSetConverter
-	MachinePoolConverter                           MachinePoolConverter
-	SyncIdentityProviderConverter                  SyncIdentityProviderConverter
-	SecretConverter                                SecretConverter
-	ClusterManagerStaticValidator                  ClusterManagerStaticValidator
 	MaintenanceManifestConverter                   MaintenanceManifestConverter
 	MaintenanceManifestStaticValidator             MaintenanceManifestStaticValidator
 }

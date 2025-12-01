@@ -13,12 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
+
+	"github.com/Azure/go-autorest/autorest/adal"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"

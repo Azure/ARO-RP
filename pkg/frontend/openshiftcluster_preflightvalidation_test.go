@@ -425,6 +425,7 @@ func TestPreflightValidation(t *testing.T) {
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(api.ExampleSubscriptionDocument())
 			},
+			ocpVersionsChangeFeed: getOCPVersionsChangeFeed(),
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
@@ -438,6 +439,7 @@ func TestPreflightValidation(t *testing.T) {
 								"properties": {
 									"clusterProfile": {
 										"domain": "%s",
+										"version": "%s",
 										"resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/resourcenameTest",
 										"fipsValidatedModules": "%s"
 									},
@@ -450,7 +452,7 @@ func TestPreflightValidation(t *testing.T) {
 							`, apiVersion, clusterId,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
-							location, defaultProfile, api.FipsValidatedModulesEnabled, mockSubID, mockSubID)),
+							location, defaultProfile, version.DefaultInstallStream.Version.String(), api.FipsValidatedModulesEnabled, mockSubID, mockSubID)),
 					},
 				}
 			},

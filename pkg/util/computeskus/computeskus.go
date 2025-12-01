@@ -42,8 +42,8 @@ func HasCapability(sku *mgmtcompute.ResourceSku, capabilityName string) bool {
 }
 
 // IsRestricted checks whether given resource SKU is restricted in a given location
-func IsRestricted(skus map[string]*mgmtcompute.ResourceSku, location, VMSize string) bool {
-	for _, restriction := range *skus[VMSize].Restrictions {
+func IsRestricted(sku *mgmtcompute.ResourceSku, location string) bool {
+	for _, restriction := range *sku.Restrictions {
 		for _, restrictedLocation := range *restriction.RestrictionInfo.Locations {
 			if restrictedLocation == location {
 				return true

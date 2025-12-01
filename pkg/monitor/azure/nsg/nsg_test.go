@@ -11,15 +11,15 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
@@ -81,6 +81,12 @@ var (
 		dimension.Vnet:             vNetName,
 		dimension.NSGResourceGroup: resourcegroupName,
 		dimension.SubscriptionID:   subscriptionID,
+	}
+
+	durationMetricDimensions = map[string]string{
+		dimension.ResourceID:     ocID,
+		dimension.Location:       ocLocation,
+		dimension.SubscriptionID: subscriptionID,
 	}
 
 	ocClusterName = "testing"
@@ -145,7 +151,7 @@ func createBaseSubnets() (armnetwork.SubnetsClientGetResponse, armnetwork.Subnet
 
 	// even somethingn nonsense should still work
 	gibberish := "JUNK"
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		resp = append(
 			resp,
 			armnetwork.SubnetsClientGetResponse{
@@ -205,6 +211,7 @@ func TestMonitor(t *testing.T) {
 					Return(workerSubnet2, &forbiddenRespErr)
 			},
 			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 				mock.EXPECT().EmitGauge(MetricSubnetAccessForbidden, int64(1), workerSubnet2MetricDimensions)
 			},
 			wantErr: forbiddenRespErr.Error(),
@@ -249,6 +256,9 @@ func TestMonitor(t *testing.T) {
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
 			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
+			},
 		},
 		{
 			name: "pass - no rules, 3 workerprofiles have the same subnetID, subnet should be retrieved once",
@@ -287,6 +297,9 @@ func TestMonitor(t *testing.T) {
 					},
 				}
 			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
+			},
 		}, {
 			name: "pass - no rules, 0 count profiles are not checked",
 			mockSubnet: func(mock *mock_armnetwork.MockSubnetsClient) {
@@ -320,6 +333,9 @@ func TestMonitor(t *testing.T) {
 					},
 				}
 			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
+			},
 		},
 		{
 			name: "pass - no rules",
@@ -346,6 +362,9 @@ func TestMonitor(t *testing.T) {
 				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
+			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 			},
 		},
 		{
@@ -414,6 +433,9 @@ func TestMonitor(t *testing.T) {
 				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
+			},
+			mockEmitter: func(mock *mock_metrics.MockEmitter) {
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 			},
 		},
 		{
@@ -508,6 +530,7 @@ func TestMonitor(t *testing.T) {
 					dimension.NSGRuleDirection:    string(armnetwork.SecurityRuleDirectionOutbound),
 					dimension.NSGRulePriority:     fmt.Sprint(priority3),
 				})
+				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 			},
 		},
 	} {
@@ -528,14 +551,12 @@ func TestMonitor(t *testing.T) {
 				tt.modOC(&oc)
 			}
 
-			var wg sync.WaitGroup
 			n := &NSGMonitor{
 				log:     logrus.NewEntry(logrus.New()),
 				emitter: emitter,
 				oc:      &oc,
 
 				subnetClient: subnetClient,
-				wg:           &wg,
 
 				dims: map[string]string{
 					dimension.ResourceID:     oc.ID,
@@ -544,27 +565,10 @@ func TestMonitor(t *testing.T) {
 				},
 			}
 
-			wg.Add(1)
 			err := n.Monitor(ctx)
-			done := make(chan any)
-
-			go wait(&wg, done)
-
-			select {
-			case <-done:
-			case <-time.After(1 * time.Second):
-				t.Error("Timeout waiting for the monitor to finish")
-			}
-			if len(err) != 0 {
-				utilerror.AssertErrorMessage(t, err[0], tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
-}
-
-func wait(wg *sync.WaitGroup, done chan<- any) {
-	wg.Wait()
-	done <- nil
 }
 
 func isOfType[T any](mon monitoring.Monitor) bool {
@@ -578,7 +582,6 @@ func TestNewMonitor(t *testing.T) {
 		dimension.SubscriptionID: subscriptionID,
 		dimension.Location:       ocLocation,
 	}
-	var wg sync.WaitGroup
 	log := logrus.NewEntry(logrus.New())
 
 	for _, tt := range []struct {
@@ -655,7 +658,7 @@ func TestNewMonitor(t *testing.T) {
 				ticking <- time.Now()
 			}
 
-			mon := NewMonitor(log, &oc, e, subscriptionID, tenantID, emitter, dims, &wg, ticking)
+			mon := NewMonitor(log, &oc, e, subscriptionID, tenantID, emitter, dims, ticking)
 			if !tt.valid(mon) {
 				t.Error("Invalid monitoring object returned")
 			}

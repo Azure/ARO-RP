@@ -5,8 +5,11 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1 "github.com/openshift/api/config/v1"
 )
@@ -38,35 +41,49 @@ var clusterOperatorConditionsExpected = map[configv1.ClusterStatusConditionType]
 }
 
 func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
-	cos, err := mon.listClusterOperators(ctx)
-	if err != nil {
-		return err
-	}
-	mon.emitGauge("clusteroperator.count", int64(len(cos.Items)), nil)
+	var cont string
+	l := &configv1.ClusterOperatorList{}
+	count := 0
 
-	for _, co := range cos.Items {
-		for _, c := range co.Status.Conditions {
-			if clusterOperatorConditionIsExpected(&co, &c) {
-				continue
-			}
+	for {
+		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
+		if err != nil {
+			return fmt.Errorf("error in ClusterOperator list operation: %w", err)
+		}
 
-			mon.emitGauge("clusteroperator.conditions", 1, map[string]string{
-				"name":   co.Name,
-				"status": string(c.Status),
-				"type":   string(c.Type),
-			})
+		for _, co := range l.Items {
+			for _, c := range co.Status.Conditions {
+				if clusterOperatorConditionIsExpected(&co, &c) {
+					continue
+				}
 
-			if mon.hourlyRun {
-				mon.log.WithFields(logrus.Fields{
-					"metric":  "clusteroperator.conditions",
-					"name":    co.Name,
-					"status":  c.Status,
-					"type":    c.Type,
-					"message": c.Message,
-				}).Print()
+				mon.emitGauge("clusteroperator.conditions", 1, map[string]string{
+					"name":   co.Name,
+					"status": string(c.Status),
+					"type":   string(c.Type),
+				})
+
+				if mon.hourlyRun {
+					mon.log.WithFields(logrus.Fields{
+						"metric":  "clusteroperator.conditions",
+						"name":    co.Name,
+						"status":  c.Status,
+						"type":    c.Type,
+						"message": c.Message,
+					}).Print()
+				}
 			}
 		}
+
+		count += len(l.Items)
+
+		cont = l.Continue
+		if cont == "" {
+			break
+		}
 	}
+
+	mon.emitGauge("clusteroperator.count", int64(count), nil)
 
 	return nil
 }
