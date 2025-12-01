@@ -37,7 +37,7 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			Identity: &ManagedServiceIdentity{
 				Type: ManagedServiceIdentityUserAssigned,
 				UserAssignedIdentities: map[string]UserAssignedIdentity{
-					"": {},
+					"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name": {},
 				},
 			},
 			Properties: OpenShiftClusterProperties{
