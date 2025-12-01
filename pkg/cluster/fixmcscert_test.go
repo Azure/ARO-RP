@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
@@ -12,6 +13,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +21,9 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+
+	configv1 "github.com/openshift/api/config/v1"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
@@ -43,6 +48,7 @@ func TestFixMCSCert(t *testing.T) {
 		name             string
 		manager          func(*gomock.Controller, *bool) (*manager, error)
 		wantDeleteCalled bool
+		want             string
 	}{
 		{
 			name: "basic",
@@ -106,6 +112,19 @@ func TestFixMCSCert(t *testing.T) {
 					},
 					graph:         graph,
 					kubernetescli: kubernetescli,
+					configcli: configfake.NewSimpleClientset(&configv1.ClusterVersion{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "version",
+						},
+						Status: configv1.ClusterVersionStatus{
+							History: []configv1.UpdateHistory{
+								{
+									State:   configv1.CompletedUpdate,
+									Version: "4.16.30",
+								},
+							},
+						},
+					}),
 				}, nil
 			},
 			wantDeleteCalled: true,
@@ -135,6 +154,19 @@ func TestFixMCSCert(t *testing.T) {
 							},
 						},
 					},
+					configcli: configfake.NewSimpleClientset(&configv1.ClusterVersion{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "version",
+						},
+						Status: configv1.ClusterVersionStatus{
+							History: []configv1.UpdateHistory{
+								{
+									State:   configv1.CompletedUpdate,
+									Version: "4.17.11",
+								},
+							},
+						},
+					}),
 					kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "machine-config-server-tls",
@@ -148,6 +180,27 @@ func TestFixMCSCert(t *testing.T) {
 				}, nil
 			},
 		},
+		{
+			name: "cluster version >= 4.19.0",
+			manager: func(controller *gomock.Controller, deleteCalled *bool) (*manager, error) {
+				return &manager{
+					configcli: configfake.NewSimpleClientset(&configv1.ClusterVersion{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "version",
+						},
+						Status: configv1.ClusterVersionStatus{
+							History: []configv1.UpdateHistory{
+								{
+									State:   configv1.CompletedUpdate,
+									Version: "4.19.1",
+								},
+							},
+						},
+					}),
+				}, nil
+			},
+			want: "Skipping FixMCSCert step for cluster version",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -159,9 +212,18 @@ func TestFixMCSCert(t *testing.T) {
 				t.Error(err)
 			}
 
+			var logBuffer bytes.Buffer
+			logger := logrus.New()
+			logger.SetOutput(&logBuffer)
+			m.log = logrus.NewEntry(logger)
+
 			err = m.fixMCSCert(ctx)
 			if err != nil {
 				t.Error(err)
+			}
+
+			if bytes.Contains(logBuffer.Bytes(), []byte(tt.want)) {
+				return
 			}
 
 			if deleteCalled != tt.wantDeleteCalled {
