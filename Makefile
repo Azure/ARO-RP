@@ -90,10 +90,9 @@ az: pyenv ## Building development az aro extension
 	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
 
-# Freeze the dependencies of the current pyenv for hoped-for reproducibility.
 # Don't depend on az as that will reinstall the requirements.txt which makes this pointless.
 .PHONY: az-freeze
-az-freeze:
+az-freeze: ## Freeze the dependencies of the current pyenv for hoped-for reproducibility.
 	. pyenv/bin/activate && \
 	pip freeze > requirements.txt
 
@@ -120,7 +119,7 @@ deploy: ## Deploy RP resources on Azure
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
-dev-config.yaml: ## Generate  dev-config.yaml file
+dev-config.yaml: ## Generate dev-config.yaml file
 	go run ./hack/gendevconfig >dev-config.yaml
 
 .PHONY: discoverycache
@@ -518,10 +517,8 @@ ci-tunnel:
 run-portal:
 	docker compose up portal
 
-# run-rp executes the RP locally as similarly as possible to production. That
-# includes the use of Hive, meaning you need a VPN connection.
 .PHONY: run-rp
-run-rp: aks.kubeconfig
+run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production, including Hive. Requires a VPN connection.
 	docker compose rm -sf rp
 	docker compose up rp
 
