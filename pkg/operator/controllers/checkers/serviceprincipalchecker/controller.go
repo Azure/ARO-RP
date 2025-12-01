@@ -148,8 +148,10 @@ func isCredentialFailure(err error) bool {
 	if azureerrors.IsInvalidSecretError(err) {
 		return true
 	}
-
 	if azureerrors.IsClientSecretKeysExpired(err) {
+		return true
+	}
+	if azureerrors.IsUnauthorizedClientError(err) {
 		return true
 	}
 	return false
