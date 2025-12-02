@@ -34,39 +34,13 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceName := chi.URLParam(r, "resourceName")
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
+	vmSize := r.URL.Query().Get("vmSize")
 
 	action, oc, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}
 
-	k, err := f.kubeActionsFactory(log, f.env, oc.OpenShiftCluster)
-	if err != nil {
-		return err
-	}
-
-	rawMachine, err := k.KubeGet(ctx, "machine", "openshift-machine-api", vmName)
-	if err != nil {
-		return err
-	}
-
-	machine := &machinev1beta1.Machine{}
-	err = codec.NewDecoderBytes(rawMachine, &codec.JsonHandle{}).Decode(machine)
-	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode machine object for %s, %s", vmName, err.Error()))
-	}
-
-	isControlPlaneMachine, err := utilmachine.IsMasterRole(machine)
-	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
-	}
-
-	if !isControlPlaneMachine {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
-			fmt.Sprintf(`"The vmName '%s' provided cannot be resized. It is not a control plane node."`, vmName))
-	}
-
-	vmSize := r.URL.Query().Get("vmSize")
 	err = validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
@@ -82,6 +56,33 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 			fmt.Sprintf(
 				`"The VirtualMachine '%s' under resource group '%s' was not found."`,
 				vmName, resourceGroupName))
+	}
+
+	k, err := f.kubeActionsFactory(log, f.env, oc.OpenShiftCluster)
+	if err != nil {
+		return err
+	}
+
+	rawMachine, err := k.KubeGet(ctx, "machine", "openshift-machine-api", vmName)
+	if err != nil {
+		return err
+	}
+
+	machine := &machinev1beta1.Machine{}
+	err = codec.NewDecoderBytes(rawMachine, &codec.JsonHandle{}).Decode(machine)
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("failed to decode machine object for %s, %s", vmName, err.Error()))
+	}
+
+	isControlPlaneMachine, err := utilmachine.IsMasterRole(machine)
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	if !isControlPlaneMachine {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
+			fmt.Sprintf(`"The vmName '%s' provided cannot be resized. It is not a control plane machine."`, vmName))
 	}
 
 	return action.VMResize(ctx, vmName, vmSize)
