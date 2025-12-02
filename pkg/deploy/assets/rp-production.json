@@ -219,6 +219,14 @@
             "type": "int",
             "defaultValue": 3
         },
+        "rpVmssIpTags": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "rpVmssIpTagsDisabledRegions": {
+            "type": "array",
+            "defaultValue": []
+        },
         "sshPublicKey": {
             "type": "string"
         },
@@ -460,7 +468,10 @@
                                                 },
                                                 "primary": true,
                                                 "publicIPAddressConfiguration": {
-                                                    "name": "rp-vmss-pip"
+                                                    "name": "rp-vmss-pip",
+                                                    "properties": {
+                                                        "ipTags": "[if(or(contains(parameters('rpVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpVmssIpTags')[0].type, 'tag', parameters('rpVmssIpTags')[0].value)))]"
+                                                    }
                                                 },
                                                 "loadBalancerBackendAddressPools": [
                                                     {

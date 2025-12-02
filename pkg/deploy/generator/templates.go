@@ -53,6 +53,16 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte(`"throughput": `+strconv.Itoa(cosmosDbGatewayProvisionedThroughputHack)), []byte(`"throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"`))
 	// pickZones doesn't work for regions that don't have zones.  We have created param nonZonalRegions in both rp and gateway and set default values to include all those regions.  It cannot be passed in-line to contains function, has to be created as an array in a parameter :(
 	b = bytes.ReplaceAll(b, []byte(`"zones": []`), []byte(`"zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"`))
+	// IP tags conditional logic: RP and Gateway VMSS each need different FirstPartyUsage tags for inbound vs outbound traffic
+	// We use the VMSS pip name as context to determine which parameter set to apply
+	// For RP VMSS (rp-vmss-pip) - applies inbound FirstPartyUsage tag
+	if bytes.Contains(b, []byte(`"name": "rp-vmss-pip"`)) {
+		b = bytes.ReplaceAll(b, []byte(`"ipTags": []`), []byte(`"ipTags": "[if(or(contains(parameters('rpVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpVmssIpTags')[0].type, 'tag', parameters('rpVmssIpTags')[0].value)))]"`))
+	}
+	// For Gateway VMSS (gateway-vmss-pip) - applies outbound FirstPartyUsage tag
+	if bytes.Contains(b, []byte(`"name": "gateway-vmss-pip"`)) {
+		b = bytes.ReplaceAll(b, []byte(`"ipTags": []`), []byte(`"ipTags": "[if(or(contains(parameters('gwyVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('gwyVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('gwyVmssIpTags')[0].type, 'tag', parameters('gwyVmssIpTags')[0].value)))]"`))
+	}
 	b = bytes.ReplaceAll(b, []byte(`"routes": []`), []byte(`"routes": "[parameters('routes')]"`))
 
 	if g.production {
