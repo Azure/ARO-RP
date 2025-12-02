@@ -39,7 +39,7 @@ configure_service_aro_gateway() {
 IPADDRESS='$ipaddress'
 ROLE='${role,,}'
 ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
+ENVIRONMENT='$ENVIRONMENT'"
 
     write_file aro_gateway_conf_filename conf_file true
     write_file aro_gateway_conf_filename add_conf_file false
@@ -69,7 +69,7 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e ARO_LOG_LEVEL \
-  -e ENVIRONMENT_TYPE \
+  -e ENVIRONMENT \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -110,7 +110,7 @@ configure_service_aro_rp() {
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
+ENVIRONMENT='$ENVIRONMENT'
 ROLE='${role,,}'
 ARO_LOG_LEVEL='$RPLOGLEVEL'"
 
@@ -162,7 +162,7 @@ ExecStart=/usr/bin/podman run \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e MISE_ADDRESS \
   -e ARO_LOG_LEVEL \
-  -e ENVIRONMENT_TYPE \
+  -e ENVIRONMENT \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -211,7 +211,7 @@ CLUSTER_MDSD_NAMESPACE='$CLUSTERMDSDNAMESPACE'
 CLUSTER_MDM_ACCOUNT='$CLUSTERMDMACCOUNT'
 CLUSTER_MDM_NAMESPACE=BBM
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
+ENVIRONMENT='$ENVIRONMENT'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
@@ -262,7 +262,7 @@ ExecStart=/usr/bin/podman run \
   -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
   -e ARO_ADOPT_BY_HIVE \
   -e ARO_LOG_LEVEL \
-  -e ENVIRONMENT_TYPE \
+  -e ENVIRONMENT \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
@@ -299,7 +299,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
+ENVIRONMENT='$ENVIRONMENT'
 OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
 RPIMAGE='$image'
 PODMAN_NETWORK='podman'
@@ -405,7 +405,7 @@ ExecStart=/usr/bin/podman run \
   -e CLUSTER_MDSD_NAMESPACE \
   -e DATABASE_ACCOUNT_NAME \
   -e DOMAIN_NAME \
-  -e ENVIRONMENT_TYPE \
+  -e ENVIRONMENT \
   -e GATEWAY_DOMAINS \
   -e GATEWAY_RESOURCEGROUP \
   -e KEYVAULT_PREFIX \
@@ -466,7 +466,7 @@ MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
 LOGININSTANCE='$LOGININSTANCE'
 PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
+ENVIRONMENT='$ENVIRONMENT'"
 
     write_file aro_mise_service_conf_filename aro_mise_service_conf_file true
 
@@ -560,7 +560,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   --rm \
-  -e ENVIRONMENT_TYPE \
+  -e ENVIRONMENT \
   ${MISEIMAGE}
 ExecStop=/usr/bin/podman stop %N
 Restart=always
@@ -590,7 +590,7 @@ configure_service_aro_otel_collector() {
 OTELIMAGE='$image'
 PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
+ENVIRONMENT='$ENVIRONMENT'"
 
     write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
 
@@ -660,7 +660,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -m 2g \
-  -e ENVIRONMENT_TYPE \
+  -e ENVIRONMENT \
   -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
   ${OTELIMAGE}
 ExecStop=/usr/bin/podman stop %N
@@ -714,7 +714,7 @@ export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE='$role'
 export MONITORING_ROLE_INSTANCE=\"$(hostname)\"
-export MONITORING_ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
+export MONITORING_ENVIRONMENT='$ENVIRONMENT'
 
 export MDSD_MSGPACK_SORT_COLUMNS=\"1\""
 
@@ -744,7 +744,7 @@ configure_service_fluentbit() {
     local -r sysconfig_filename='/etc/sysconfig/fluentbit'
     # shellcheck disable=SC2034
     local -r sysconfig_file="FLUENTBITIMAGE='$image'
-ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
+ENVIRONMENT='$ENVIRONMENT'"
 
     write_file sysconfig_filename sysconfig_file true
 
@@ -769,7 +769,7 @@ ExecStart=/usr/bin/podman run \
   --hostname %H \
   --name %N \
   --rm \
-  -e ENVIRONMENT_TYPE \
+  -e ENVIRONMENT \
   --cap-drop net_raw \
   -v /etc/fluentbit/fluentbit.conf:/etc/fluentbit/fluentbit.conf \
   -v /var/lib/fluent:/var/lib/fluent:z \
