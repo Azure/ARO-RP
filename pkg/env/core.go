@@ -101,7 +101,7 @@ func (c *core) LoggerForComponent(component string) *logrus.Entry {
 }
 
 func (c *core) EnvironmentType() string {
-	return os.Getenv("ENVIRONMENT_TYPE")
+	return os.Getenv("ENVIRONMENT")
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {

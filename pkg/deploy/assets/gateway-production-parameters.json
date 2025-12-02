@@ -17,7 +17,7 @@
         "databaseAccountName": {
             "value": ""
         },
-        "environmentType": {
+        "environment": {
             "value": ""
         },
         "fluentbitImage": {
