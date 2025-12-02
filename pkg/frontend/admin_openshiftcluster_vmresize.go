@@ -75,7 +75,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 			fmt.Sprintf("failed to decode machine object for %s, %s", vmName, err.Error()))
 	}
 
-	isControlPlaneMachine, err := utilmachine.IsMasterRole(machine)
+	isControlPlaneMachine, err := utilmachine.HasMasterRole(machine)
 	if err != nil {
 		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}

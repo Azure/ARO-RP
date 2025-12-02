@@ -84,7 +84,7 @@ func (r *Reconciler) checkMachines(ctx context.Context) (errs []error) {
 	}
 
 	for _, machine := range machines.Items {
-		isMaster, err := utilmachine.IsMasterRole(&machine)
+		isMaster, err := utilmachine.HasMasterRole(&machine)
 		if err != nil {
 			errs = append(errs, err)
 			continue

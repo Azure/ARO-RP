@@ -9,7 +9,7 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 )
 
-func IsMasterRole(m *machinev1beta1.Machine) (bool, error) {
+func HasMasterRole(m *machinev1beta1.Machine) (bool, error) {
 	role, ok := m.Labels["machine.openshift.io/cluster-api-machine-role"]
 	if !ok {
 		return false, fmt.Errorf("machine %s: cluster-api-machine-role label not found", m.Name)
