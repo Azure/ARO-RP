@@ -38,7 +38,8 @@ configure_service_aro_gateway() {
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
 ROLE='${role,,}'
-ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'"
+ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file aro_gateway_conf_filename conf_file true
     write_file aro_gateway_conf_filename add_conf_file false
@@ -68,6 +69,7 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e ARO_LOG_LEVEL \
+  -e ENVIRONMENT_TYPE \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -108,6 +110,7 @@ configure_service_aro_rp() {
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
 ROLE='${role,,}'
 ARO_LOG_LEVEL='$RPLOGLEVEL'"
 
@@ -159,6 +162,7 @@ ExecStart=/usr/bin/podman run \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e MISE_ADDRESS \
   -e ARO_LOG_LEVEL \
+  -e ENVIRONMENT_TYPE \
   -m 2g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
@@ -207,6 +211,7 @@ CLUSTER_MDSD_NAMESPACE='$CLUSTERMDSDNAMESPACE'
 CLUSTER_MDM_ACCOUNT='$CLUSTERMDMACCOUNT'
 CLUSTER_MDM_NAMESPACE=BBM
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
@@ -257,6 +262,7 @@ ExecStart=/usr/bin/podman run \
   -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
   -e ARO_ADOPT_BY_HIVE \
   -e ARO_LOG_LEVEL \
+  -e ENVIRONMENT_TYPE \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
@@ -293,6 +299,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
 OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
 RPIMAGE='$image'
 PODMAN_NETWORK='podman'
@@ -331,6 +338,7 @@ ExecStart=/usr/bin/podman run \
   -e PORTAL_HOSTNAME \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e ARO_LOG_LEVEL \
+  -e ENIVRONMETN_TYPE \
   -m 2g \
   -p 444:8444 \
   -p 2222:2222 \
@@ -397,6 +405,7 @@ ExecStart=/usr/bin/podman run \
   -e CLUSTER_MDSD_NAMESPACE \
   -e DATABASE_ACCOUNT_NAME \
   -e DOMAIN_NAME \
+  -e ENVIRONMENT_TYPE \
   -e GATEWAY_DOMAINS \
   -e GATEWAY_RESOURCEGROUP \
   -e KEYVAULT_PREFIX \
@@ -456,7 +465,8 @@ MISEVALIDAUDIENCES='$MISEVALIDAUDIENCES'
 MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
 LOGININSTANCE='$LOGININSTANCE'
 PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file aro_mise_service_conf_filename aro_mise_service_conf_file true
 
@@ -550,6 +560,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   --rm \
+  -e ENVIRONMENT_TYPE \
   ${MISEIMAGE}
 ExecStop=/usr/bin/podman stop %N
 Restart=always
@@ -578,7 +589,8 @@ configure_service_aro_otel_collector() {
     local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=1000MiB
 OTELIMAGE='$image'
 PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
 
@@ -610,6 +622,9 @@ processors:
       - key: \"host\"
         action: insert
         value: \"$(hostname)\"
+      - key: \"environmentType\"
+        action: insert
+        value: \"$ENVIRONMENTTYPE\"
 extensions:
   health_check:
     endpoint: $ipaddress:13133
@@ -648,6 +663,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -m 2g \
+  -e ENVIRONMENT_TYPE \
   -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
   ${OTELIMAGE}
 ExecStop=/usr/bin/podman stop %N
@@ -698,10 +714,10 @@ export MONITORING_GCS_AUTH_ID='$mdsd_certificate_san'
 export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
 export MONITORING_CONFIG_VERSION='$monitor_config_version'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
-
 export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE='$role'
 export MONITORING_ROLE_INSTANCE=\"$(hostname)\"
+export MONITORING_ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
 
 export MDSD_MSGPACK_SORT_COLUMNS=\"1\""
 
@@ -730,7 +746,8 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -r sysconfig_filename='/etc/sysconfig/fluentbit'
     # shellcheck disable=SC2034
-    local -r sysconfig_file="FLUENTBITIMAGE=$image"
+    local -r sysconfig_file="FLUENTBITIMAGE='$image'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'"
 
     write_file sysconfig_filename sysconfig_file true
 
@@ -755,6 +772,7 @@ ExecStart=/usr/bin/podman run \
   --hostname %H \
   --name %N \
   --rm \
+  -e ENVIRONMENT_TYPE \
   --cap-drop net_raw \
   -v /etc/fluentbit/fluentbit.conf:/etc/fluentbit/fluentbit.conf \
   -v /var/lib/fluent:/var/lib/fluent:z \
@@ -956,6 +974,7 @@ MDM_INPUT=statsd_local,otlp_grpc
 MDM_NAMESPACE='OTEL'
 MDM_ACCOUNT='AzureRedHatOpenShiftRP'
 PODMAN_NETWORK='podman'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
 IPADDRESS='$ipaddress'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
@@ -981,6 +1000,7 @@ ExecStart=/usr/bin/podman run \
   --cap-drop net_raw \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
+  -e ENVIRONMENT_TYPE \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
