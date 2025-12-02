@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
+	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -83,7 +84,7 @@ func (r *Reconciler) checkMachines(ctx context.Context) (errs []error) {
 	}
 
 	for _, machine := range machines.Items {
-		isMaster, err := isMasterRole(&machine)
+		isMaster, err := utilmachine.HasMasterRole(&machine)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -107,12 +108,4 @@ func (r *Reconciler) checkMachines(ctx context.Context) (errs []error) {
 	}
 
 	return errs
-}
-
-func isMasterRole(m *machinev1beta1.Machine) (bool, error) {
-	role, ok := m.Labels["machine.openshift.io/cluster-api-machine-role"]
-	if !ok {
-		return false, fmt.Errorf("machine %s: cluster-api-machine-role label not found", m.Name)
-	}
-	return role == "master", nil
 }
