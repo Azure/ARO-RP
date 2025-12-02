@@ -13,6 +13,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/cluster"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
@@ -33,12 +34,25 @@ func managedDomain(tc mimo.TaskContext) (string, error) {
 	return managedDomain, nil
 }
 
+func signedCertificatesDisabled(tc mimo.TaskContext) bool {
+	if tc.Environment().FeatureIsSet(env.FeatureDisableSignedCertificates) {
+		tc.SetResultMessage("signed certificates disabled")
+		return true
+	}
+	return false
+}
+
 func RotateAPIServerCertificate(ctx context.Context) error {
 	th, err := mimo.GetTaskContext(ctx)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
 
+	if signedCertificatesDisabled(th) {
+		return nil
+	}
+
+	taskEnv := th.Environment()
 	managedDomain, err := managedDomain(th)
 	if err != nil {
 		return mimo.TerminalError(err)
@@ -52,13 +66,11 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
-
-	env := th.Environment()
 	secretName := th.GetClusterUUID() + "-apiserver"
 
 	for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
 		err = cluster.EnsureTLSSecretFromKeyvault(
-			ctx, env.ClusterKeyvault(), ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
+			ctx, taskEnv.ClusterKeyvault(), ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
 		)
 		if err != nil {
 			return mimo.TransientError(err)
@@ -74,6 +86,10 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
+	if signedCertificatesDisabled(th) {
+		return nil
+	}
+
 	ch, err := th.ClientHelper()
 	if err != nil {
 		return mimo.TerminalError(err)
@@ -83,6 +99,7 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
+
 	if managedDomain == "" {
 		th.SetResultMessage("apiserver certificate is not managed")
 		return nil
