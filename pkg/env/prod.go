@@ -83,7 +83,7 @@ type prod struct {
 
 	log *logrus.Entry
 
-	environmentType string
+	environment string
 
 	features map[Feature]bool
 }
@@ -127,7 +127,7 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
 		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
 		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
-		environmentType:                   os.Getenv("ENVIRONMENT_TYPE"),
+		environment:                       os.Getenv("ENVIRONMENT"),
 
 		log: log,
 
@@ -410,7 +410,7 @@ func (p *prod) Domain() string {
 }
 
 func (p *prod) EnvironmentType() string {
-	return p.environmentType
+	return p.environment
 }
 
 func (p *prod) FeatureIsSet(f Feature) bool {
