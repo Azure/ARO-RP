@@ -47,21 +47,29 @@ func TestReconcile(t *testing.T) {
 		wantResult           reconcile.Result
 	}{
 		{
-			name:                 "no errors",
+			name:                 "Validation succeeded with no errors",
 			wantConditionStatus:  operatorv1.ConditionTrue,
-			wantConditionMessage: "service principal is valid",
+			wantConditionMessage: "Service Principal is valid",
 			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
 		},
 		{
-			name:                 "check failed with an error",
+			name:                 "Validation failure - invalid secret",
 			wantConditionStatus:  operatorv1.ConditionFalse,
-			wantConditionMessage: "fake basic error",
-			checkerReturnErr:     errors.New("fake basic error"),
-			wantErr:              "fake basic error",
+			wantConditionMessage: "AADSTS7000215: Invalid client secret provided",
+			checkerReturnErr:     errors.New("AADSTS7000215: Invalid client secret provided"),
+			wantErr:              "AADSTS7000215: Invalid client secret provided",
 			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
 		},
 		{
-			name:                "controller disabled",
+			name:                 "Validation Unavailable - Unknown condition",
+			wantConditionStatus:  operatorv1.ConditionUnknown,
+			wantConditionMessage: "Unable to validate: fake validation error",
+			checkerReturnErr:     errors.New("fake validation error"),
+			wantErr:              "fake validation error",
+			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
+		},
+		{
+			name:                "Controller is disabled",
 			controllerDisabled:  true,
 			wantConditionStatus: operatorv1.ConditionUnknown,
 			wantResult:          reconcile.Result{},
