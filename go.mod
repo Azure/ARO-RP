@@ -79,7 +79,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.14
 	github.com/vincent-petithory/dataurl v1.0.0
@@ -144,7 +144,7 @@ require (
 	github.com/containers/storage v1.59.1 // indirect
 	github.com/coreos/vcontext v0.0.0-20231102161604-685dc7299dc5 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
-	github.com/cyphar/filepath-securejoin v0.5.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
@@ -226,7 +226,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.3.3 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20250523060157-0ea5ed0382a2 // indirect
-	github.com/opencontainers/selinux v1.12.0 // indirect
+	github.com/opencontainers/selinux v1.13.0 // indirect
 	github.com/openshift/custom-resource-status v1.1.3-0.20220503160415-f2fdb4999d87 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -781,6 +781,10 @@ replace (
 
 // broken deps on 2.8.3
 replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
+
+// containers/storage@v1.59.1 requires newer filepath-securejoin with OpenInRoot and Reopen
+// v0.5.0 has deprecated wrappers in main package, v0.6+ moved them to pathrs-lite subpackage
+replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.0
 
 // ARO-RP sub-packages
 replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api
