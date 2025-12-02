@@ -105,7 +105,6 @@ require (
 )
 
 require (
-	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.2.0 // indirect
@@ -782,6 +781,10 @@ replace (
 
 // broken deps on 2.8.3
 replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/distribution v2.8.2+incompatible
+
+// containers/storage@v1.59.1 requires newer filepath-securejoin with OpenInRoot and Reopen
+// v0.5.0 has deprecated wrappers in main package, v0.6+ moved them to pathrs-lite subpackage
+replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.0
 
 // ARO-RP sub-packages
 replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api
