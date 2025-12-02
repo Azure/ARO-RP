@@ -1,7 +1,14 @@
 # Azure Red Hat OpenShift Operator
+## Overview
+* The full list of operator controllers with descriptions can be found in the README at the root of the repository.
+* The checks done by the operator can be found at: `ARO-RP/pkg/operator/controllers/checkers`.
+
+* The static pod resources can be found at `pkg/operator/deploy/staticresources`. 
+* The deploy operation kicks off two deployments in the `openshift-azure-operator` namespace: `aro-operator-master` and `aro-operator-worker`.
+  * The `aro-operator-master` deployment runs all controllers,
+  * The `aro-operator-worker` deployment runs only the internet checker in the worker subnet.
 
 ## Responsibilities
-
 ### Decentralizing service monitoring
 
 This has the advantage of moving a proportion of monitoring effort to the edge,
@@ -11,13 +18,6 @@ central monitoring as well as enabling additional and more complex monitoring
 use cases.  Note that not all monitoring can be decentralised.
 
 In all cases below the status.Conditions will be set.
-
-* periodically check for outbound internet connectivity from both the master and
-  worker nodes.
-* periodically validate the cluster Service Principal permissions.
-* [TODO] Enumerate daemonset statuses, pod statuses, etc.  We currently log
-  diagnostic information associated with these checks in service logs; moving
-  the checks to the edge will make these cluster logs, which is preferable.
 
 ### Automatic service remediation
 
@@ -29,10 +29,6 @@ Remediations in place:
 * periodically reset NSGs in the master and worker subnets to the defaults (controlled by the reconcileNSGs feature flag)
 * recreate broken/missing pull secrets
 
-### End user warnings
-
-* [TODO] see https://docs.openshift.com/container-platform/4.4/web_console/customizing-the-web-console.html#creating-custom-notification-banners_customizing-web-console
-
 ### Decentralizing ARO customization management
 
 A cluster agent provides a centralized location to handle this use case.  Many
@@ -41,70 +37,66 @@ post-install configurations should probably move here.
 * monitor and repair mdsd as needed
 * set the alertmanager webhook
 
-### Controllers and Deployment
-
-The full list of operator controllers with descriptions can be
-found in the README at the root of the repository.
-
-The static pod resources can be found at `pkg/operator/deploy/staticresources`. The
-deploy operation kicks off two deployments in the `openshift-azure-operator` namespace, one for
-master and one for worker. The `aro-operator-master` deployment runs all controllers,
-while the `aro-operator-worker` deployment runs only the internet checker in the worker subnet.
-
 ### Remediation metrics
 
 Metrics are emitted for each remediation with labels `success` and `error` to represent the outcome.
 Currently, only `pullSecret` remediation metrics are being emitted.
 
-## Developer documentation
+## Testing - Developer documentation
+There are 4 possible ways to test the operator.
+* [How to run your own operator image](#how-to-run-your-own-operator-image)
+* [How to run the operator locally (out of cluster)](#how-to-run-the-operator-locally-out-of-cluster)
+* [How to create & publish ARO Operator image to ACR/Quay](#how-to-create--publish-aro-operator-image-to-acrquay)
+* [How to run operator e2e tests](#how-to-run-operator-e2e-tests)
 
-### How to Run a pre built operator image
+### How to run your own operator image
 
-Add the following to your "env" before running the rp
-```sh
-export ARO_IMAGE=arointsvc.azurecr.io/aro:latest
+#### Pre-requisites
+* Have a local dev RP running
+* Have a local dev cluster 
+
+#### Steps
+1. Build the image with `make image-aro-multistage`
+1. Tag and push the image to your own repo
 ```
+podman tag arointsvc.azurecr.io/aro:latest quay.io/<user>/aro:latest
+podman push quay.io/<user>/aro:latest 
+```
+3. Stop the RP and update the variable value `$ARO_IMAGE` in the `env` file
+```sh
+export ARO_IMAGE=quay.io/<user>/aro:latest
+```
+4. Update the `aro-operator-master` deployment (This will run trigger a new rollout).
+```
+oc patch deployment aro-operator-master -n openshift-azure-operator --type='strategic' -p='{"spec":{"template":{"spec":{"containers":[{"name":"aro-operator","image":"quay.io/<user>/aro:latest"}]}}}}'
+```
+### How to run the operator locally (out of cluster)
 
-### How to Run the operator locally (out of cluster)
-
-Make sure KUBECONFIG is set:
+1. Set the kubeconfig.
 ```sh
 make admin.kubeconfig
 export KUBECONFIG=$(pwd)/admin.kubeconfig
 ```
-
-Alternatively you can set the KUBECONFIG by logging into your test cluster using `oc`:
-
-```sh
-oc login ${cluster-api-url} -u kubeadmin -p ${kubeadmin-password}
-```
-
-If you are using a private cluster, you need to connect to the respective VPN of your region. For example for eastus:
+* (**For Private clusters**) Connect to the respective VPN of your region. For example for eastus:
 ```sh
 sudo openvpn --config secrets/vpn-eastus.ovpn
 ```
-Scale the operator:
+2. Scale the operator:
 ```sh
 oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 ```
-
-Build the operator binary and run it locally (as if it was running a master node)
+3. Build the operator binary and run it locally (as if it was running a master node)
 ```sh
 make generate
 go run ./cmd/aro operator master
 ```
 
 ### How to create & publish ARO Operator image to ACR/Quay
-
-1. Login to AZ
-  ```bash
-  az login
-  ```
+1. Login to AZ `az login`
 
 2. Install Docker according to the steps outlined in [Prepare Your Dev Environment](../../docs/prepare-your-dev-environment.md)
 
 3. Publish Image to ACR
-
    * Pre-requisite:
      ```
      ACR created in Azure Portal with Name ${AZURE_PREFIX}aro
@@ -145,26 +137,6 @@ go run ./cmd/aro operator master
   ```bash
   make publish-image-aro-multistage
   ```
-
-### How to run a custom operator image
-
-Add the following to your "env" before running the rp
-```sh
-export ARO_IMAGE=quay.io/asalkeld/aos-init:latest #(change to yours)
-```
-
-```sh
-make publish-image-aro-multistage
-
-#Then run an update
-curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
-
-#check on the deployment
-oc -n openshift-azure-operator get all
-oc -n openshift-azure-operator get clusters.aro.openshift.io/cluster -o yaml
-oc -n openshift-azure-operator logs deployment.apps/aro-operator-master
-oc -n openshift-config get secrets/pull-secret -o template='{{index .data ".dockerconfigjson"}}' | base64 -d
-```
 
 ### How to run operator e2e tests
 
