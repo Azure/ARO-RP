@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
+	mimometrics "github.com/Azure/ARO-RP/pkg/mimo/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -82,6 +83,14 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		WithMaintenanceManifests(manifests)
 
 	go database.EmitMIMOMetrics(ctx, _env.LoggerForComponent("metrics"), manifests, m)
+
+	// Start resource usage collector for MIMO actuator
+	// Uses os.Getpid() internally since collector runs in the same process as MIMO actuator
+	resourceCollector := mimometrics.NewResourceUsageCollector(
+		_env.LoggerForComponent("resource-metrics"),
+		m,
+	)
+	go resourceCollector.Run(ctx, stop)
 
 	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), _env.LoggerForComponent("dialer"))
 	if err != nil {
