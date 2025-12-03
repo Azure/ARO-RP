@@ -18,7 +18,7 @@ import (
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
-	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
+	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -41,7 +41,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20250725.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the CredentialsRequest has been recreated")
@@ -64,7 +64,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20250725.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the aro-operator-master Deployment was restarted")
@@ -174,12 +174,12 @@ func getInfraID(ctx context.Context) (string, error) {
 	return co.Spec.InfraID, err
 }
 
-func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate {
-	return mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate{
-		OpenShiftClusterProperties: &mgmtredhatopenshift20240812preview.OpenShiftClusterProperties{
-			NetworkProfile: &mgmtredhatopenshift20240812preview.NetworkProfile{
-				LoadBalancerProfile: &mgmtredhatopenshift20240812preview.LoadBalancerProfile{
-					ManagedOutboundIps: &mgmtredhatopenshift20240812preview.ManagedOutboundIPs{
+func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20250725.OpenShiftClusterUpdate {
+	return mgmtredhatopenshift20250725.OpenShiftClusterUpdate{
+		OpenShiftClusterProperties: &mgmtredhatopenshift20250725.OpenShiftClusterProperties{
+			NetworkProfile: &mgmtredhatopenshift20250725.NetworkProfile{
+				LoadBalancerProfile: &mgmtredhatopenshift20250725.LoadBalancerProfile{
+					ManagedOutboundIps: &mgmtredhatopenshift20250725.ManagedOutboundIPs{
 						Count: pointerutils.ToPtr(managedOutboundIPCount),
 					},
 				},
