@@ -192,6 +192,19 @@ linters:
       - linters:
           - staticcheck
         path: (.+/)?bindata.go
+      # Deprecated k8s APIs that need porting to new ones piecemeal
+      - linters:
+          - staticcheck
+        text: "SA1019: wait.PollImmediateUntil is deprecated"
+      - linters:
+          - staticcheck
+        text: "SA1019: wait.Poll is deprecated"
+      - linters:
+          - staticcheck
+        text: "SA1019: wait.PollImmediate is deprecated"
+      - linters:
+          - staticcheck
+        text: "SA1019: wait.ErrWaitTimeout is deprecated"
 issues:
   max-same-issues: 0
 formatters:
