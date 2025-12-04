@@ -303,7 +303,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		}
 	}
 
-	if err == wait.ErrWaitTimeout {
+	if wait.Interrupted(err) {
 		return noPermissionsErr
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
@@ -392,7 +392,7 @@ func (dv *dynamic) validateSubnetPermissions(ctx context.Context, s Subnet) erro
 		}
 	}
 
-	if err == wait.ErrWaitTimeout {
+	if wait.Interrupted(err) {
 		return noPermissionsErr
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
@@ -471,7 +471,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 
 	operatorName, err := dv.validateActions(ctx, &rtr, actionsToValidate)
 
-	if err == wait.ErrWaitTimeout {
+	if wait.Interrupted(err) {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
 				http.StatusBadRequest,
@@ -562,7 +562,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 
 	operatorName, err := dv.validateActions(ctx, &ngr, actionsToValidate)
 
-	if err == wait.ErrWaitTimeout {
+	if wait.Interrupted(err) {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
 				http.StatusBadRequest,
@@ -1042,7 +1042,7 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 
 	operatorName, err := dv.validateActions(ctx, &nsg, actionsToValidate)
 
-	if err == wait.ErrWaitTimeout {
+	if wait.Interrupted(err) {
 		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
 		switch dv.authorizerType {
 		case AuthorizerClusterServicePrincipal:
