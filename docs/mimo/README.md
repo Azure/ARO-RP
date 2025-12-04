@@ -5,6 +5,8 @@ MIMO specifically focuses on "managed infrastructure", the parts of ARO that are
 
 MIMO consists of two main components, the [Actuator](./actuator.md) and the [Scheduler](./scheduler.md). It is primarily interfaced with via the [Admin API](./admin-api.md).
 
+For a detailed understanding of how maintenance manifests work throughout their lifecycle, see the [Maintenance Manifest Lifecycle](./maintenance-manifest-lifecycle.md) document.
+
 ## A Primer On MIMO
 
 The smallest thing that you can tell MIMO to run is a **Task** (see [`pkg/mimo/tasks/`](../../pkg/mimo/tasks/)).
