@@ -100,6 +100,7 @@ require (
 	k8s.io/kubernetes v1.33.2
 	k8s.io/metrics v0.25.16
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+	kubevirt.io/api v1.5.0
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -296,6 +297,8 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.33.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
+	kubevirt.io/containerized-data-importer-api v1.63.1 // indirect
+	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/kube-storage-version-migrator v0.0.4 // indirect
 	sigs.k8s.io/kustomize/api v0.12.1 // indirect
@@ -784,3 +787,5 @@ replace github.com/docker/distribution v2.8.3+incompatible => github.com/docker/
 
 // ARO-RP sub-packages
 replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api
+
+replace kubevirt.io/containerized-data-importer-api => kubevirt.io/containerized-data-importer-api v1.56.1
