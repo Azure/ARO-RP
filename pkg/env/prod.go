@@ -165,19 +165,14 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		return nil, err
 	}
 
-	localFPKVCredential, err := p.FPNewClientCertificateCredential(p.TenantID(), nil)
-	if err != nil {
-		return nil, err
-	}
-
 	clusterKeyvaultURI := azsecrets.URI(p, ClusterKeyvaultSuffix, keyVaultPrefix)
-	clusterKeyvaultClient, err := azsecrets.NewClient(clusterKeyvaultURI, localFPKVCredential, p.Environment().AzureClientOptions())
+	clusterKeyvaultClient, err := azsecrets.NewClient(clusterKeyvaultURI, msiCredential, p.Environment().AzureClientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("cannot create key vault secrets client: %w", err)
 	}
 	p.clusterKeyvault = clusterKeyvaultClient
 
-	clusterCertificatesClient, err := azcertificates.NewClient(clusterKeyvaultURI, localFPKVCredential, p.Environment().AzureClientOptions())
+	clusterCertificatesClient, err := azcertificates.NewClient(clusterKeyvaultURI, msiCredential, p.Environment().AzureClientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("cannot create key vault certificates client: %w", err)
 	}

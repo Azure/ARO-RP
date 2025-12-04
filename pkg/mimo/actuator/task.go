@@ -130,13 +130,13 @@ func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 	return t.oc.OpenShiftCluster.Properties
 }
 
-// localFpAuthorizer implements mimo.TaskContext.
-func (t *th) LocalFpAuthorizer() (autorest.Authorizer, error) {
-	localFPAuthorizer, err := t.env.FPAuthorizer(t.env.TenantID(), nil, t.env.Environment().ResourceManagerScope)
+// MsiAuthorizer implements mimo.TaskContext.
+func (t *th) MsiAuthorizer() (autorest.Authorizer, error) {
+	msiAuthorizer, err := t.env.NewMSIAuthorizer(t.env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
-	return localFPAuthorizer, nil
+	return msiAuthorizer, nil
 }
 
 // GetOpenshiftClusterDocument implements mimo.TaskContext.

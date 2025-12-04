@@ -70,12 +70,12 @@ type manager struct {
 	dbGateway           database.Gateway
 	dbOpenShiftVersions database.OpenShiftVersions
 
-	billing           billing.Manager
-	doc               *api.OpenShiftClusterDocument
-	subscriptionDoc   *api.SubscriptionDocument
-	fpAuthorizer      refreshable.Authorizer
-	localFpAuthorizer autorest.Authorizer
-	metricsEmitter    metrics.Emitter
+	billing         billing.Manager
+	doc             *api.OpenShiftClusterDocument
+	subscriptionDoc *api.SubscriptionDocument
+	fpAuthorizer    refreshable.Authorizer
+	rpMIAuthorizer  autorest.Authorizer
+	metricsEmitter  metrics.Emitter
 
 	spGraphClient                 *utilgraph.GraphServiceClient
 	disks                         compute.DisksClient
@@ -147,11 +147,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), nil, _env.Environment().ResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
 	// TODO: Delete once the replacement to track2 is done
 	fpAuthorizer, err := refreshable.NewAuthorizer(_env, subscriptionDoc.Subscription.Properties.TenantID)
 	if err != nil {
@@ -179,6 +174,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	msiCredential, err := _env.NewMSITokenCredential()
+	if err != nil {
+		return nil, err
+	}
+
+	msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		doc:                           doc,
 		subscriptionDoc:               subscriptionDoc,
 		fpAuthorizer:                  fpAuthorizer,
-		localFpAuthorizer:             localFPAuthorizer,
+		rpMIAuthorizer:                msiAuthorizer,
 		metricsEmitter:                metricsEmitter,
 		disks:                         compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:               compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),

@@ -1434,11 +1434,11 @@ func (g *generator) rpRBAC() []*arm.Resource {
 			"parameters('rpServicePrincipalId')",
 			"guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')",
 		),
-		rbac.ResourceGroupRoleAssignmentWithName(
-			rbac.RoleNetworkContributor,
-			"parameters('fpServicePrincipalId')",
-			"guid(resourceGroup().id, 'FP / Network Contributor')",
-		),
+		// rbac.ResourceGroupRoleAssignmentWithName(
+		// 	rbac.RoleNetworkContributor,
+		// 	"parameters('fpServicePrincipalId')",
+		// 	"guid(resourceGroup().id, 'FP / Network Contributor')",
+		// ),
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleDocumentDBAccountContributor,
 			"parameters('rpServicePrincipalId')",
@@ -1446,13 +1446,13 @@ func (g *generator) rpRBAC() []*arm.Resource {
 			"parameters('databaseAccountName')",
 			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))",
 		),
-		rbac.ResourceRoleAssignmentWithName(
-			rbac.RoleDNSZoneContributor,
-			"parameters('fpServicePrincipalId')",
-			"Microsoft.Network/dnsZones",
-			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))",
-			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))",
-		),
+		// rbac.ResourceRoleAssignmentWithName(
+		// 	rbac.RoleDNSZoneContributor,
+		// 	"parameters('fpServicePrincipalId')",
+		// 	"Microsoft.Network/dnsZones",
+		// 	"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))",
+		// 	"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))",
+		// ),
 	}
 }
 
@@ -1502,12 +1502,19 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('gatewayServicePrincipalId'), 'RP / AcrPull')))",
 		),
+		// rbac.ResourceRoleAssignmentWithName(
+		// 	"parameters('tokenContributorRoleID')",
+		// 	"parameters('fpServicePrincipalId')",
+		// 	"Microsoft.ContainerRegistry/registries",
+		// 	"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
+		// 	"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
+		// ),
 		rbac.ResourceRoleAssignmentWithName(
 			"parameters('tokenContributorRoleID')",
-			"parameters('fpServicePrincipalId')",
+			"parameters('rpServicePrincipalId')",
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
-			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
+			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'RP / ARO v4 ContainerRegistry Token Contributor')))",
 		),
 	}
 }

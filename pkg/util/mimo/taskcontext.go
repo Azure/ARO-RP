@@ -23,7 +23,7 @@ type TaskContext interface {
 	Environment() env.Interface
 	ClientHelper() (clienthelper.Interface, error)
 	Log() *logrus.Entry
-	LocalFpAuthorizer() (autorest.Authorizer, error)
+	MsiAuthorizer() (autorest.Authorizer, error)
 
 	// OpenShiftCluster
 	GetClusterUUID() string
