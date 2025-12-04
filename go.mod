@@ -62,7 +62,7 @@ require (
 	github.com/microsoftgraph/msgraph-sdk-go-core v1.3.2
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.38.0
-	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221109005544-7de84dff5081
+	github.com/open-policy-agent/frameworks/constraint v0.0.0-20240524210416-5368a3b697f2
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
@@ -95,11 +95,11 @@ require (
 	k8s.io/api v0.34.1
 	k8s.io/apiextensions-apiserver v0.33.2
 	k8s.io/apimachinery v0.34.1
-	k8s.io/cli-runtime v0.25.16
+	k8s.io/cli-runtime v0.33.2
 	k8s.io/client-go v0.33.2
-	k8s.io/kubectl v0.25.16
+	k8s.io/kubectl v0.33.2
 	k8s.io/kubernetes v1.33.2
-	k8s.io/metrics v0.25.16
+	k8s.io/metrics v0.33.2
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	kubevirt.io/api v1.5.0
 	sigs.k8s.io/controller-runtime v0.21.0
@@ -122,7 +122,7 @@ require (
 	github.com/Microsoft/hcsshim v0.13.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20220418222510-f25a4f6275ed // indirect
+	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -157,6 +157,7 @@ require (
 	github.com/elazarl/goproxy v1.7.2 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
+	github.com/evanphx/json-patch/v5 v5.8.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -175,7 +176,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.12.6 // indirect
+	github.com/google/cel-go v0.17.7 // indirect
 	github.com/google/go-containerregistry v0.20.6 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -276,7 +277,6 @@ require (
 	go.opentelemetry.io/proto/otlp v1.7.0 // indirect
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
-	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/mod v0.29.0 // indirect
@@ -722,7 +722,7 @@ exclude (
 	k8s.io/client-go v0.19.2
 	k8s.io/code-generator v0.18.0-beta.2
 	k8s.io/code-generator v0.23.3
-	k8s.io/code-generator v0.25.16
+	k8s.io/code-generator v0.29.15
 	k8s.io/gengo v0.0.0-20210813121822-485abfe95c7c
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185
 	k8s.io/klog v1.0.0
@@ -750,24 +750,25 @@ exclude (
 
 // k8s.io and sigs.k8s.io pins
 replace (
-	k8s.io/api => k8s.io/api v0.25.16
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.16
-	k8s.io/apimachinery => k8s.io/apimachinery v0.25.16
-	k8s.io/apiserver => k8s.io/apiserver v0.25.16
-	k8s.io/client-go => k8s.io/client-go v0.25.16
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.25.16 // required for k8s.io/kubernetes
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.25.16 // required for k8s.io/kubernetes
-	k8s.io/code-generator => k8s.io/code-generator v0.25.16
-	k8s.io/component-base => k8s.io/component-base v0.25.16
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.25.16 // required for k8s.io/kubernetes
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.25.16
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.25.16
+	k8s.io/api => k8s.io/api v0.29.15
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.15
+	k8s.io/apimachinery => k8s.io/apimachinery v0.29.15
+	k8s.io/apiserver => k8s.io/apiserver v0.29.15
+	k8s.io/client-go => k8s.io/client-go v0.29.15
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.29.15 // required for k8s.io/kubernetes
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.29.15 // required for k8s.io/kubernetes
+	k8s.io/code-generator => k8s.io/code-generator v0.29.15
+	k8s.io/component-base => k8s.io/component-base v0.29.15
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.29.15 // required for k8s.io/kubernetes
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.29.15
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.29.15
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.25.16
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.25.16
-	k8s.io/kubectl => k8s.io/kubectl v0.25.16
-	k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.15
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.15
+	k8s.io/kubectl => k8s.io/kubectl v0.29.15
+	k8s.io/metrics => k8s.io/metrics v0.29.15
+	k8s.io/kubernetes => k8s.io/kubernetes v1.29.15
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.17.6
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
@@ -776,10 +777,10 @@ replace (
 // OpenShift pins
 replace (
 	github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
-	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20251110182646-a010e8fb33bc
+	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
 	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
-	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
+	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20250826155958-12060d460008
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20230908201248-46b93e64dea6
 )
 
