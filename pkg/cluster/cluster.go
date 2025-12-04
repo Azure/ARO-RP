@@ -53,6 +53,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/token"
+	"github.com/jongio/azidext/go/azidext"
 )
 
 type Interface interface {
@@ -75,6 +76,7 @@ type manager struct {
 	subscriptionDoc   *api.SubscriptionDocument
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer autorest.Authorizer
+	rpMIAuthorizer    autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
 	spGraphClient                 *utilgraph.GraphServiceClient
@@ -183,6 +185,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	msiAuthorizer := azidext.NewTokenCredentialAdapter(
+		msiCredential,
+		[]string{_env.Environment().ResourceManagerScope},
+	)
+
 	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
 	if err != nil {
 		return nil, err
@@ -267,6 +274,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		doc:                           doc,
 		subscriptionDoc:               subscriptionDoc,
 		fpAuthorizer:                  fpAuthorizer,
+		rpMIAuthorizer:                msiAuthorizer,
 		localFpAuthorizer:             localFPAuthorizer,
 		metricsEmitter:                metricsEmitter,
 		disks:                         compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
