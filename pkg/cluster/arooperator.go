@@ -104,7 +104,7 @@ func (m *manager) ensureUpgradeAnnotation(ctx context.Context) error {
 }
 
 func (m *manager) renewMDSDCertificate(ctx context.Context) error {
-	return RenewMDSDCertificate(ctx, m.log, m.env, m.ch)
+	return RenewMDSDCertificate(ctx, m.log, m.env, m.kubeClientHelper)
 }
 
 func (m *manager) restartAROOperatorMaster(ctx context.Context) error {

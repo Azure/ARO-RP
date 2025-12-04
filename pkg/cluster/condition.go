@@ -171,7 +171,7 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 func (m *manager) clusterOperatorsHaveSettled(ctx context.Context) (bool, error) {
 	coList := &configv1.ClusterOperatorList{}
 
-	err := m.ch.List(ctx, coList)
+	err := m.kubeClientHelper.List(ctx, coList)
 	if err != nil {
 		// Be resilient to failures as kube-apiserver might drop connections while it's reconciling
 		m.log.Errorf("failure listing cluster operators, retrying: %s", err.Error())

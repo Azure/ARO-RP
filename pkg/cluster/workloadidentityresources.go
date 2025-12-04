@@ -77,7 +77,7 @@ func (m *manager) deployPlatformWorkloadIdentitySecrets(ctx context.Context) err
 		resources = append(resources, secret)
 	}
 
-	return m.ch.Ensure(ctx, resources...)
+	return m.kubeClientHelper.Ensure(ctx, resources...)
 }
 
 func (m *manager) generatePlatformWorkloadIdentitySecretsAndNamespaces(isCreate bool) ([]*corev1.Secret, []*corev1.Namespace, error) {
