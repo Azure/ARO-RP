@@ -366,6 +366,14 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 		},
 	}
 
+	// Set aro.environment operator flag for MONITORING_ENVIRONMENT in cluster logs
+	if cluster.Spec.OperatorFlags == nil {
+		cluster.Spec.OperatorFlags = arov1alpha1.OperatorFlags{}
+	}
+	if _, exists := cluster.Spec.OperatorFlags["aro.environment"]; !exists {
+		cluster.Spec.OperatorFlags["aro.environment"] = o.env.EnvironmentType()
+	}
+
 	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
 	} else {

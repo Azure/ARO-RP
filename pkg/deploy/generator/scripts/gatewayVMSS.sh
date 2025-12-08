@@ -89,13 +89,13 @@ main() {
 [FILTER]
 	Name modify
 	Match journald
-	Remove_wildcard _
-	Remove TIMESTAMP
+	Add ENVIRONMENT \${ENVIRONMENT}
 
 [FILTER]
 	Name modify
 	Match journald
-	Add ENVIRONMENT \${ENVIRONMENT}
+	Remove_wildcard _
+	Remove TIMESTAMP
 
 [OUTPUT]
 	Name forward
