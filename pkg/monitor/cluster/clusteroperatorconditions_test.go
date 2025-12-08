@@ -27,6 +27,52 @@ func TestEmitClusterOperatorConditions(t *testing.T) {
 	objects := []client.Object{
 		&configv1.ClusterOperator{
 			ObjectMeta: metav1.ObjectMeta{
+				Name: "baremetal",
+			},
+			Status: configv1.ClusterOperatorStatus{
+				// Ignore baremetal being disabled
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   "Disabled",
+						Status: configv1.ConditionTrue,
+					},
+				},
+			},
+		},
+		&configv1.ClusterOperator{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "insights",
+			},
+			Status: configv1.ClusterOperatorStatus{
+				// Nothing except available/degraded/etc should get through for Insights
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionTrue,
+					},
+					{
+						Type:   "Disabled",
+						Status: configv1.ConditionTrue,
+					},
+				},
+			},
+		},
+		// Customer-deployed CAPI, should be ignored
+		&configv1.ClusterOperator{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cluster-api",
+			},
+			Status: configv1.ClusterOperatorStatus{
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   "CapiInstallerControllerAvailable",
+						Status: configv1.ConditionTrue,
+					},
+				},
+			},
+		},
+		&configv1.ClusterOperator{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "apiserver",
 			},
 			Status: configv1.ClusterOperatorStatus{
@@ -105,7 +151,7 @@ func TestEmitClusterOperatorConditions(t *testing.T) {
 		queryLimit:   1,
 	}
 
-	m.EXPECT().EmitGauge("clusteroperator.count", int64(2), map[string]string{})
+	m.EXPECT().EmitGauge("clusteroperator.count", int64(5), map[string]string{})
 
 	m.EXPECT().EmitGauge("clusteroperator.conditions", int64(1), map[string]string{
 		"name":   "console",
