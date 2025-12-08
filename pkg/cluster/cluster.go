@@ -8,25 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
-	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/msi-dataplane/pkg/dataplane"
-
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -53,7 +34,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/token"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/jongio/azidext/go/azidext"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
+	"github.com/sirupsen/logrus"
+	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 )
 
 type Interface interface {
