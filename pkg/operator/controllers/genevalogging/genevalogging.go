@@ -242,6 +242,10 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 									Value: "true",
 								},
 								{
+									Name:  "MONITORING_ENVIRONMENT",
+									Value: cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", ""),
+								},
+								{
 									Name:  "MONITORING_TENANT",
 									Value: cluster.Spec.Location,
 								},
