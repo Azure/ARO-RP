@@ -66,7 +66,7 @@ func TestAdminKubernetesGetPodLogs(t *testing.T) {
 			},
 			wantStatusCode:          http.StatusInternalServerError,
 			wantResponseContentType: "application/json",
-			wantError:               "500: InternalServerError: : Internal server error.",
+			wantError:               "500: InternalServerError: : i/o timeout",
 		},
 		{
 			name:                    "customer namespace, validation should fail",

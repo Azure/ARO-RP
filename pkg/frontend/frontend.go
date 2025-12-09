@@ -459,29 +459,44 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 }
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
-	if apiErr, ok := err.(kerrors.APIStatus); ok {
-		status := apiErr.Status()
+	if err != nil {
+		switch typedError := err.(type) {
+		case kerrors.APIStatus:
+			// convert kerrors.APIStatus errors to api.CloudError
+			status := typedError.Status()
 
-		var target string
-		if status.Details != nil {
-			gk := schema.GroupKind{
-				Group: status.Details.Group,
-				Kind:  status.Details.Kind,
+			var target string
+			if status.Details != nil {
+				groupKind := schema.GroupKind{
+					Group: status.Details.Group,
+					Kind:  status.Details.Kind,
+				}
+
+				target = fmt.Sprintf("%s/%s", groupKind, status.Details.Name)
 			}
 
-			target = fmt.Sprintf("%s/%s", gk, status.Details.Name)
-		}
-
-		err = &api.CloudError{
-			StatusCode: int(status.Code),
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    string(status.Reason),
-				Message: status.Message,
-				Target:  target,
-			},
+			err = &api.CloudError{
+				StatusCode: int(status.Code),
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    string(status.Reason),
+					Message: status.Message,
+					Target:  target,
+				},
+			}
+		case *api.CloudError:
+		case statusCodeError:
+		default:
+			// convert all other errors to CloudError so the actual error msg gets forwarded to the caller
+			err = &api.CloudError{
+				StatusCode: http.StatusInternalServerError,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInternalServerError,
+					Message: err.Error(),
+					Target:  "",
+				},
+			}
 		}
 	}
-
 	reply(log, w, header, b, err)
 }
 
