@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -185,10 +184,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	msiAuthorizer := azidext.NewTokenCredentialAdapter(
-		msiCredential,
-		[]string{_env.Environment().ResourceManagerScope},
-	)
+	msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
+	if err != nil {
+		return nil, err
+	}
 
 	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
 	if err != nil {
