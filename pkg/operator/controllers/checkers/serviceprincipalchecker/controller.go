@@ -145,14 +145,5 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func isCredentialFailure(err error) bool {
-	if azureerrors.IsInvalidSecretError(err) {
-		return true
-	}
-	if azureerrors.IsClientSecretKeysExpired(err) {
-		return true
-	}
-	if azureerrors.IsUnauthorizedClientError(err) {
-		return true
-	}
-	return false
+	return azureerrors.IsInvalidSecretError(err) || azureerrors.IsClientSecretKeysExpired(err) || azureerrors.IsUnauthorizedClientError(err)
 }
