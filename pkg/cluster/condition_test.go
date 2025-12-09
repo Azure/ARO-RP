@@ -20,6 +20,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ktesting "k8s.io/client-go/testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -29,8 +32,10 @@ import (
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const errMustBeNilMsg = "err must be nil; condition is retried until timeout"
@@ -413,74 +418,229 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 	}
 }
 
-func TestApiServersReadyAfterCertificateConfig(t *testing.T) {
+func TestHaveClusterOperatorsSettled(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name                 string
-		availableCondition   configv1.ConditionStatus
-		progressingCondition configv1.ConditionStatus
-		degradedCondition    configv1.ConditionStatus
-		want                 bool
+		name                     string
+		apiserverConditions      []configv1.ClusterOperatorStatusCondition
+		kubeControllerConditions []configv1.ClusterOperatorStatusCondition
+		want                     bool
 	}{
 		{
-			name:                 "Available, not progressing, not degraded - ready",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionFalse,
-			degradedCondition:    configv1.ConditionFalse,
-			want:                 true,
+			name: "APIServer Available, not progressing, KCM OK - ready",
+			apiserverConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			kubeControllerConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			want: true,
 		},
 		{
-			name:                 "Available but still progressing - not ready",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionTrue,
-			degradedCondition:    configv1.ConditionFalse,
-			want:                 false,
+			name: "APIServer OK, KCM degraded - not ready",
+			apiserverConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			kubeControllerConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionTrue,
+				},
+			},
+			want: false,
 		},
 		{
-			name:                 "Available but degraded - not ready",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionFalse,
-			degradedCondition:    configv1.ConditionTrue,
-			want:                 false,
+			name: "APIServer Available but still progressing, KCM OK - not ready",
+			apiserverConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			kubeControllerConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			want: false,
 		},
 		{
-			name:                 "Not available - not ready",
-			availableCondition:   configv1.ConditionFalse,
-			progressingCondition: configv1.ConditionFalse,
-			degradedCondition:    configv1.ConditionFalse,
-			want:                 false,
+			name: "APIServer Available but degraded, KCM OK - not ready",
+			apiserverConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionTrue,
+				},
+			},
+			kubeControllerConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "APIServer Not available, KCM OK - not ready",
+			apiserverConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			kubeControllerConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorAvailable,
+					Status: configv1.ConditionTrue,
+				},
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+				{
+					Type:   configv1.OperatorDegraded,
+					Status: configv1.ConditionFalse,
+				},
+			},
+			want: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			configcli := configfake.NewSimpleClientset(&configv1.ClusterOperator{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "kube-apiserver",
+			objects := []client.Object{
+				&configv1.ClusterOperator{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kube-apiserver",
+					},
+					Status: configv1.ClusterOperatorStatus{
+						Conditions: tt.apiserverConditions,
+					},
 				},
-				Status: configv1.ClusterOperatorStatus{
-					Conditions: []configv1.ClusterOperatorStatusCondition{
-						{
-							Type:   configv1.OperatorAvailable,
-							Status: tt.availableCondition,
-						},
-						{
-							Type:   configv1.OperatorProgressing,
-							Status: tt.progressingCondition,
-						},
-						{
-							Type:   configv1.OperatorDegraded,
-							Status: tt.degradedCondition,
+				&configv1.ClusterOperator{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kube-controller-manager",
+					},
+					Status: configv1.ClusterOperatorStatus{
+						Conditions: tt.kubeControllerConditions,
+					},
+				},
+				// this being degraded should not affect the APIServer
+				&configv1.ClusterOperator{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kube-widget-operator",
+					},
+					Status: configv1.ClusterOperatorStatus{
+						Conditions: []configv1.ClusterOperatorStatusCondition{
+							{
+								Type:   configv1.OperatorAvailable,
+								Status: configv1.ConditionFalse,
+							},
+							{
+								Type:   configv1.OperatorProgressing,
+								Status: configv1.ConditionTrue,
+							},
+							{
+								Type:   configv1.OperatorDegraded,
+								Status: configv1.ConditionTrue,
+							},
 						},
 					},
 				},
-			})
+			}
+			_, log := testlog.New()
+			ch := clienthelper.NewWithClient(log, clientfake.
+				NewClientBuilder().
+				WithObjects(objects...).
+				Build())
 
 			m := &manager{
-				log:       logrus.NewEntry(logrus.StandardLogger()),
-				configcli: configcli,
+				log: log,
+				ch:  ch,
 			}
 
-			result, err := m.apiServersReadyAfterCertificateConfig(ctx)
+			result, err := m.clusterOperatorsHaveSettled(ctx)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
