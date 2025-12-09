@@ -1514,7 +1514,7 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"parameters('rpServicePrincipalId')",
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
-			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
+			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'RP / ARO v4 ContainerRegistry Token Contributor')))",
 		),
 	}
 }

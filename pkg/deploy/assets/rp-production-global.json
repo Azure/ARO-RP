@@ -105,7 +105,7 @@
             ]
         },
         {
-            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]",
+            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'RP / ARO v4 ContainerRegistry Token Contributor')))]",
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
