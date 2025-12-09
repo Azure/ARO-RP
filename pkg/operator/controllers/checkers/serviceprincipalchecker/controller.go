@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return r.reconcileDisabled(ctx)
 	}
 
-	r.log.Debug("Operator is enabled, checking service principal")
+	r.log.Debug("Controller is enabled, checking service principal")
 	checkErr := r.checker.Check(ctx, instance.Spec.AZEnvironment)
 	condition := r.condition(checkErr)
 
