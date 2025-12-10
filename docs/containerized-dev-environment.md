@@ -1,6 +1,6 @@
 # Containerized Development Environment
 
-This document describes how to set up and use a containerized development environment for ARO-RP using podman-compose.
+This document describes how to set up and use a containerized development environment for ARO-RP using podman compose.
 
 ## Files for this setup
 
@@ -22,10 +22,9 @@ This means any changes you make to files in your local repository are immediatel
 
 ## Prerequisites
 
-1.  Podman installed on your host system ([https://podman.io/docs/installation](https://podman.io/docs/installation)).
-2.  podman-compose installed ([https://github.com/containers/podman-compose](https://github.com/containers/podman-compose)).
-3.  Azure CLI installed on your host system.
-4.  You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
+1.  Podman 4.7+ installed on your host system ([https://podman.io/docs/installation](https://podman.io/docs/installation)).
+2.  Azure CLI installed on your host system.
+3.  You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
 
 ## Setup Steps
 
@@ -52,35 +51,35 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     Build the `aro-dev-env` container image using the Dockerfile.
 
     ```bash
-    podman-compose build aro-dev-env
+    podman compose build aro-dev-env
     ```
 
 4.  **Start the container:**
     Start the `aro-dev-env` service. The container will automatically source your environment file and start the RP on port 8443.
 
     ```bash
-    podman-compose up -d aro-dev-env
+    podman compose up -d aro-dev-env
     ```
     
     **Note:** The container runs the command `. /workspace/env && make runlocal-rp`, which sources your environment variables and starts the RP in local development mode.
     
     Verify the container is running:
     ```bash
-    podman-compose ps
+    podman compose ps
     ```
 
 5.  **View RP Logs (Optional):**
     Check the logs to see the RP startup output.
 
     ```bash
-    podman-compose logs aro-dev-env
+    podman compose logs aro-dev-env
     ```
 
 6.  **Enter the container shell:**
     To interact with the environment inside the container (e.g., run other commands, debug).
 
     ```bash
-    podman-compose exec aro-dev-env bash
+    podman compose exec aro-dev-env bash
     ```
 
 7.  **Run other development commands (Inside container shell):**
@@ -120,7 +119,7 @@ Now, when you run `az aro` commands on your local host (from the project root), 
 To stop and remove the containerized development environment:
 
 ```bash
-podman-compose down aro-dev-env
+podman compose down aro-dev-env
 ```
 
 If you also want to remove the built image:
