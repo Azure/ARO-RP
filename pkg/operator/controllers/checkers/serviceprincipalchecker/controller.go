@@ -5,6 +5,7 @@ package serviceprincipalchecker
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
@@ -60,7 +62,6 @@ func NewReconciler(log *logrus.Entry, client client.Client, role string) *Reconc
 	}
 }
 
-// Reconcile will keep checking that the cluster has a valid cluster service principal.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
@@ -73,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return r.reconcileDisabled(ctx)
 	}
 
-	r.log.Debug("running")
+	r.log.Debug("Controller is enabled, checking service principal")
 	checkErr := r.checker.Check(ctx, instance.Spec.AZEnvironment)
 	condition := r.condition(checkErr)
 
@@ -100,19 +101,29 @@ func (r *Reconciler) reconcileDisabled(ctx context.Context) (ctrl.Result, error)
 
 func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 	if checkErr != nil {
+		if isCredentialFailure(checkErr) {
+			r.log.Errorf("service principal is invalid: %v", checkErr)
+			return &operatorv1.OperatorCondition{
+				Type:    arov1alpha1.ServicePrincipalValid,
+				Status:  operatorv1.ConditionFalse,
+				Message: checkErr.Error(),
+				Reason:  "Service Principal invalid",
+			}
+		}
+
 		return &operatorv1.OperatorCondition{
 			Type:    arov1alpha1.ServicePrincipalValid,
-			Status:  operatorv1.ConditionFalse,
-			Message: checkErr.Error(),
-			Reason:  "CheckFailed",
+			Status:  operatorv1.ConditionUnknown,
+			Message: fmt.Sprintf("Unable to validate: %s", checkErr.Error()),
+			Reason:  "Validation Unavailable",
 		}
 	}
 
 	return &operatorv1.OperatorCondition{
 		Type:    arov1alpha1.ServicePrincipalValid,
 		Status:  operatorv1.ConditionTrue,
-		Message: "service principal is valid",
-		Reason:  "CheckDone",
+		Message: "Service Principal is valid",
+		Reason:  "Validation Successful",
 	}
 }
 
@@ -131,4 +142,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	return builder.Named(ControllerName).Complete(r)
+}
+
+func isCredentialFailure(err error) bool {
+	return azureerrors.IsInvalidSecretError(err) || azureerrors.IsClientSecretKeysExpired(err) || azureerrors.IsUnauthorizedClientError(err)
 }
