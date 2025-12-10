@@ -8,14 +8,17 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
+	"github.com/ugorji/go/codec"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 )
 
 func (f *frontend) postAdminOpenShiftClusterVMResize(w http.ResponseWriter, r *http.Request) {
@@ -31,13 +34,13 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceName := chi.URLParam(r, "resourceName")
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
+	vmSize := r.URL.Query().Get("vmSize")
 
-	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
+	action, oc, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}
 
-	vmSize := r.URL.Query().Get("vmSize")
 	err = validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
@@ -55,20 +58,32 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 				vmName, resourceGroupName))
 	}
 
-	if !nodeIsMaster(vmName) {
+	k, err := f.kubeActionsFactory(log, f.env, oc.OpenShiftCluster)
+	if err != nil {
+		return err
+	}
+
+	rawMachine, err := k.KubeGet(ctx, "machine", "openshift-machine-api", vmName)
+	if err != nil {
+		return err
+	}
+
+	machine := &machinev1beta1.Machine{}
+	err = codec.NewDecoderBytes(rawMachine, &codec.JsonHandle{}).Decode(machine)
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("failed to decode machine object for %s, %s", vmName, err.Error()))
+	}
+
+	isControlPlaneMachine, err := utilmachine.HasMasterRole(machine)
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	if !isControlPlaneMachine {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
-			fmt.Sprintf(
-				`"The vmName '%s' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
-				vmName))
+			fmt.Sprintf(`"The vmName '%s' provided cannot be resized. It is not a control plane machine."`, vmName))
 	}
 
 	return action.VMResize(ctx, vmName, vmSize)
-}
-
-// A bland check, to validate if the node is master by checking vmName ends with pattern "-master-[0-9]"
-// return false, when the node is either not a master node or not adhering to the standard naming convention.
-// return true, if regexp satisfies
-func nodeIsMaster(vmName string) bool {
-	r := regexp.MustCompile(`.*-master-[0-9]{1,}$`)
-	return r.MatchString(vmName)
 }
