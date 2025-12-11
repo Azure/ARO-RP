@@ -21,6 +21,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
@@ -36,6 +37,7 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 		clusterproperties api.OpenShiftClusterProperties
 		objects           []runtime.Object
 		check             func(clienthelper.Interface, Gomega) error
+		featureDisabled   bool
 		wantMsg           string
 		wantErr           string
 	}{
@@ -68,6 +70,17 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 			},
 			objects: []runtime.Object{},
 			wantErr: `TerminalError: invalid domain "something."`,
+		},
+		{
+			name: "signed certificates disabled",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects:         []runtime.Object{},
+			featureDisabled: true,
+			wantMsg:         "signed certificates disabled",
 		},
 		{
 			name: "secrets referenced",
@@ -109,6 +122,7 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 			controller := gomock.NewController(t)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().Domain().AnyTimes().Return("example.com")
+			_env.EXPECT().FeatureIsSet(env.FeatureDisableSignedCertificates).AnyTimes().Return(tt.featureDisabled)
 
 			_, log := testlog.New()
 
@@ -129,6 +143,8 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
 
+			g.Expect(tc.GetResultMessage()).To(Equal(tt.wantMsg))
+
 			if tt.check != nil {
 				g.Expect(tt.check(ch, g)).ToNot(HaveOccurred())
 			}
@@ -145,6 +161,7 @@ func TestRotateAPIServerCertificate(t *testing.T) {
 		clusterproperties api.OpenShiftClusterProperties
 		objects           []runtime.Object
 		check             func(clienthelper.Interface, Gomega) error
+		featureDisabled   bool
 		wantMsg           string
 		wantErr           string
 	}{
@@ -158,12 +175,24 @@ func TestRotateAPIServerCertificate(t *testing.T) {
 			objects: []runtime.Object{},
 			wantMsg: "apiserver certificate is not managed",
 		},
+		{
+			name: "signed certificates disabled",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			featureDisabled: true,
+			objects:         []runtime.Object{},
+			wantMsg:         "signed certificates disabled",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			controller := gomock.NewController(t)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().Domain().AnyTimes().Return("example.com")
+			_env.EXPECT().FeatureIsSet(env.FeatureDisableSignedCertificates).AnyTimes().Return(tt.featureDisabled)
 
 			_, log := testlog.New()
 
@@ -183,6 +212,8 @@ func TestRotateAPIServerCertificate(t *testing.T) {
 			} else if tt.wantErr == "" {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
+
+			g.Expect(tc.GetResultMessage()).To(Equal(tt.wantMsg))
 
 			if tt.check != nil {
 				g.Expect(tt.check(ch, g)).ToNot(HaveOccurred())
