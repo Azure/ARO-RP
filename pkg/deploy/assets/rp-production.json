@@ -392,7 +392,7 @@
                             "frontendPort": 443,
                             "loadDistribution": "Default",
                             "probe": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe-tagged')]"
                             },
                             "protocol": "Tcp"
                         }
@@ -410,7 +410,7 @@
                             "frontendPort": 443,
                             "loadDistribution": "Default",
                             "probe": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-tagged')]"
                             },
                             "protocol": "Tcp"
                         }
@@ -463,10 +463,28 @@
                         }
                     },
                     {
+                        "name": "rp-probe-tagged",
+                        "properties": {
+                            "numberOfProbes": 2,
+                            "port": 8443,
+                            "protocol": "Https",
+                            "requestPath": "/healthz/ready"
+                        }
+                    },
+                    {
                         "name": "portal-probe-https",
                         "properties": {
                             "numberOfProbes": 2,
                             "port": 444,
+                            "protocol": "Https",
+                            "requestPath": "/healthz/ready"
+                        }
+                    },
+                    {
+                        "name": "portal-probe-tagged",
+                        "properties": {
+                            "numberOfProbes": 2,
+                            "port": 8444,
                             "protocol": "Https",
                             "requestPath": "/healthz/ready"
                         }

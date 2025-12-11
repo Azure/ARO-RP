@@ -281,7 +281,7 @@ func (g *generator) rpLB() *arm.Resource {
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
 							Probe: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe-tagged')]"),
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
@@ -299,7 +299,7 @@ func (g *generator) rpLB() *arm.Resource {
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
 							Probe: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-tagged')]"),
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
@@ -358,11 +358,29 @@ func (g *generator) rpLB() *arm.Resource {
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
 							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTPS),
+							Port:           pointerutils.ToPtr(int32(8443)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
+						},
+						Name: pointerutils.ToPtr("rp-probe-tagged"),
+					},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTPS),
 							Port:           pointerutils.ToPtr(int32(444)),
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
 						},
 						Name: pointerutils.ToPtr("portal-probe-https"),
+					},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTPS),
+							Port:           pointerutils.ToPtr(int32(8444)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
+						},
+						Name: pointerutils.ToPtr("portal-probe-tagged"),
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
