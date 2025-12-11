@@ -1,4 +1,4 @@
-# Azure Red Hat OpenShift Operator
+# About Azure Red Hat OpenShift Operator
 ## Overview
 * The full list of operator controllers with descriptions can be found in the README at the root of the repository.
 * The checks done by the operator can be found at: `ARO-RP/pkg/operator/controllers/checkers`.
@@ -42,33 +42,41 @@ post-install configurations should probably move here.
 Metrics are emitted for each remediation with labels `success` and `error` to represent the outcome.
 Currently, only `pullSecret` remediation metrics are being emitted.
 
-## Testing - Developer documentation
-There are 4 possible ways to test the operator.
-* [How to run your own operator image](#how-to-run-your-own-operator-image)
-* [How to run the operator locally (out of cluster)](#how-to-run-the-operator-locally-out-of-cluster)
-* [How to create & publish ARO Operator image to ACR/Quay](#how-to-create--publish-aro-operator-image-to-acrquay)
-* [How to run operator e2e tests](#how-to-run-operator-e2e-tests)
+# ARO Operator | Developer Documentation
+## Building your own custom ARO Operator image
 
-### How to run your own operator image
-
-#### Pre-requisites
-* Have a local dev RP running
-* Have a local dev cluster 
-
-#### Steps
 1. Build the image with `make image-aro-multistage`
 1. Tag and push the image to your own repo
 ```
 podman tag arointsvc.azurecr.io/aro:latest quay.io/<user>/aro:latest
 podman push quay.io/<user>/aro:latest 
 ```
-3. Stop the RP and update the variable value `$ARO_IMAGE` in the `env` file
-```sh
-export ARO_IMAGE=quay.io/<user>/aro:latest
-```
-4. Update the `aro-operator-master` deployment (This will run trigger a new rollout).
+
+## Testing
+There are 4 possible ways to test the operator.
+* [In-cluster deployment](#in-cluster-deployment)
+* [Using the RP API](#using-the-rp-api)
+* [How to run the operator locally (out of cluster)](#how-to-run-the-operator-locally-out-of-cluster)
+* [Mimicking AdminUpdate when updating the ARO Operator](#mimicking-adminupdate-when-updating-the-aro-operator)
+* [How to create & publish ARO Operator image to ACR/Quay](#how-to-create--publish-aro-operator-image-to-acrquay)
+* [How to run operator e2e tests](#how-to-run-operator-e2e-tests)
+
+### In-cluster deployment
+Using either a local dev cluster or a prod cluster:
+
+1. Update the `aro-operator-master` deployment (This will run trigger a new rollout).
 ```
 oc patch deployment aro-operator-master -n openshift-azure-operator --type='strategic' -p='{"spec":{"template":{"spec":{"containers":[{"name":"aro-operator","image":"quay.io/<user>/aro:latest"}]}}}}'
+```
+
+### Using the RP API
+#### Pre-requisites
+* Have a local dev RP running
+* Have a local dev cluster 
+
+1. Stop the RP and update the `env` file, the variable value `$ARO_IMAGE` with the custom built image:
+```sh
+export ARO_IMAGE=quay.io/<user>/aro:latest
 ```
 ### How to run the operator locally (out of cluster)
 
@@ -89,6 +97,12 @@ oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 ```sh
 make generate
 go run ./cmd/aro operator master
+```
+
+### Mimicking AdminUpdate when updating the ARO Operator
+This is the way we would test the same PUCM workflow we would use in Prod to update the operator.
+```
+curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
 ```
 
 ### How to create & publish ARO Operator image to ACR/Quay
