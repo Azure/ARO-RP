@@ -794,7 +794,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					}).
 					Return(&invalidVnetAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
 		},
 		{
 			name:               "Fail - MIWI Cluster - missing permissions",
@@ -827,7 +827,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					}).
 					Return(&invalidVnetAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
 		},
 		{
 			name: "fail: getting an invalid token from AAD",
@@ -868,7 +868,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					}).
 					Return(nil, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -967,7 +967,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on subnet '" + masterSubnet + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on subnet '" + masterSubnet + "'.",
 		},
 		{
 			name:               "Fail - MIWI Cluster - missing permissions",
@@ -1000,7 +1000,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on subnet '" + masterSubnet + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on subnet '" + masterSubnet + "'.",
 		},
 		{
 			name: "fail: getting an invalid token from AAD",
@@ -1041,7 +1041,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					}).
 					Return(nil, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on subnet '" + masterSubnet + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on subnet '" + masterSubnet + "'.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1204,7 +1204,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
 			name:               "Fail - MIWI Cluster - permissions don't exist",
@@ -1249,7 +1249,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidRouteTablesAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "pass",
@@ -1481,7 +1481,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:               "Fail - MIWI Cluster - permissions don't exist",
@@ -1527,7 +1527,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidNatGWAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "pass",
@@ -1779,8 +1779,8 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					).AnyTimes()
 			},
 			wantErrs: []string{
-				"400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
-				"400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+				"400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+				"400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
 			},
 		},
 		{
