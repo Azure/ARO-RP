@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Alerts", Label(smoke, ring2rpdeploy), Serial, func() {
+var _ = Describe("Alerts", Label(smoke, basichealth), Serial, func() {
 	It("should not be firing", func(ctx context.Context) {
 		var host string
 		Eventually(func(g Gomega, ctx context.Context) {
