@@ -522,6 +522,15 @@ run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production,
 	docker compose rm -sf rp
 	docker compose up rp
 
+.PHONY: dev-env-start
+dev-env-start: ## Source env file and run a local containerized RP for development
+	. ./env
+	podman compose up -d aro-dev-env
+
+.PHONY: dev-env-stop
+dev-env-stop: ## Stop the containerized RP
+	podman compose down aro-dev-env
+
 .PHONY: run-selenium
 run-selenium:
 	docker compose up selenium
