@@ -51,7 +51,7 @@ flowchart TB
         NODES["Worker Nodes"]
     end
 
-    subgraph HiveCluster["🐝 Hive Cluster<br/>(Optional)"]
+    subgraph HiveCluster["🐝 Hive Cluster (Optional)"]
         HIVE["Hive Controller"]
     end
 
