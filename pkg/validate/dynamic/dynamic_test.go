@@ -634,7 +634,7 @@ var (
 			ObjectID:   dummyObjectId,
 		},
 	}
-	validVnetAuthorizationDecisions = client.AuthorizationDecisionResponse{
+	validCspVnetAuthorizationDecisions = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
@@ -647,6 +647,24 @@ var (
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/write",
 				AccessDecision: client.Allowed,
+			},
+		},
+	}
+
+	validFpspVnetAuthorizationDecisions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/read",
+				AccessDecision: client.Allowed,
+			},
+		},
+	}
+
+	invalidFpspVnetAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/read",
+				AccessDecision: client.NotAllowed,
 			},
 		},
 	}
@@ -668,7 +686,7 @@ var (
 		},
 	}
 
-	invalidVnetAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
+	invalidCspVnetAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
@@ -702,7 +720,7 @@ var (
 		},
 	}
 
-	invalidVnetAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+	invalidCspVnetAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
@@ -743,11 +761,42 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                string
+		validatingFpsp      bool
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
 		mocks               func(*mock_env.MockInterface, *mock_azcore.MockTokenCredential, *mock_checkaccess.MockRemotePDPClient, context.CancelFunc)
 		wantErr             string
 	}{
+		{
+			name:           "pass: FPSP validation for CSP cluster",
+			validatingFpsp: true,
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validFpspVnetAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:           "fail: FPSP validation for CSP cluster - missing permissions",
+			validatingFpsp: true,
+			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidFpspVnetAuthorizationDecisionsReadNotAllowed, nil)
+			},
+			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
+		},
 		{
 			name: "pass: CSP validation for CSP cluster",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
@@ -757,7 +806,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validVnetAuthorizationDecisions, nil)
+					Return(&validCspVnetAuthorizationDecisions, nil)
 			},
 		},
 		{
@@ -770,7 +819,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validVnetAuthorizationDecisions, nil)
+					Return(&validCspVnetAuthorizationDecisions, nil)
 			},
 		},
 		{
@@ -792,7 +841,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidVnetAuthorizationDecisionsReadNotAllowed, nil)
+					Return(&invalidCspVnetAuthorizationDecisionsReadNotAllowed, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
 		},
@@ -809,7 +858,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidVnetAuthorizationDecisionsReadNotAllowed, nil)
+					Return(&invalidCspVnetAuthorizationDecisionsReadNotAllowed, nil)
 			},
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
 		},
@@ -825,7 +874,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidVnetAuthorizationDecisionsMissingWrite, nil)
+					Return(&invalidCspVnetAuthorizationDecisionsMissingWrite, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
 		},
@@ -892,6 +941,10 @@ func TestValidateVnetPermissions(t *testing.T) {
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
+			}
+
+			if tt.validatingFpsp {
+				dv.authorizerType = AuthorizerFirstParty
 			}
 
 			if tt.platformIdentities != nil {
@@ -1082,7 +1135,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 }
 
 var (
-	invalidRouteTablesAuthorizationDecisionsWriteNotAllowed = client.AuthorizationDecisionResponse{
+	invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/routeTables/join/action",
@@ -1098,7 +1151,7 @@ var (
 			},
 		},
 	}
-	invalidRouteTablesAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+	invalidCspRouteTablesAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/routeTables/join/action",
@@ -1111,7 +1164,7 @@ var (
 			// deliberately missing routetables write
 		},
 	}
-	validRouteTablesAuthorizationDecisions = client.AuthorizationDecisionResponse{
+	validCspRouteTablesAuthorizationDecisions = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/routeTables/join/action",
@@ -1127,6 +1180,30 @@ var (
 			},
 		},
 	}
+	invalidFpspRouteTablesAuthorizationDecisionsJoinNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/routeTables/join/action",
+				AccessDecision: client.NotAllowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/routeTables/read",
+				AccessDecision: client.Allowed,
+			},
+		},
+	}
+	validFpspRouteTablesAuthorizationDecisions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/routeTables/join/action",
+				AccessDecision: client.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/routeTables/read",
+				AccessDecision: client.Allowed,
+			},
+		},
+	}
 )
 
 func TestValidateRouteTablesPermissions(t *testing.T) {
@@ -1134,6 +1211,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                string
+		validatingFpsp      bool
 		subnet              Subnet
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
@@ -1141,6 +1219,48 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		vnetMocks           func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErr             string
 	}{
+		{
+			name:           "pass: FPSP validation for CSP cluster",
+			validatingFpsp: true,
+			subnet:         Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validFpspRouteTablesAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:           "fail: CSP validation for CSP cluster - permissions don't exist",
+			validatingFpsp: true,
+			subnet:         Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidFpspRouteTablesAuthorizationDecisionsJoinNotAllowed, nil)
+			},
+			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider service principal does not have required permissions on route table '" + workerRtID + "'.",
+		},
 		{
 			name:   "fail: CSP validation for CSP cluster -failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
@@ -1202,7 +1322,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
+					Return(&invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
 		},
@@ -1225,7 +1345,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
+					Return(&invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
 			},
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on route table '" + workerRtID + "'.",
 		},
@@ -1247,7 +1367,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidRouteTablesAuthorizationDecisionsMissingWrite, nil)
+					Return(&invalidCspRouteTablesAuthorizationDecisionsMissingWrite, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
 		},
@@ -1266,7 +1386,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validRouteTablesAuthorizationDecisions, nil)
+					Return(&validCspRouteTablesAuthorizationDecisions, nil)
 			},
 		},
 		{
@@ -1285,7 +1405,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validRouteTablesAuthorizationDecisions, nil)
+					Return(&validCspRouteTablesAuthorizationDecisions, nil)
 			},
 		},
 		{
@@ -1348,6 +1468,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				virtualNetworks:            vnetClient,
 			}
 
+			if tt.validatingFpsp {
+				dv.authorizerType = AuthorizerFirstParty
+			}
+
 			if tt.pdpClientMocks != nil {
 				tt.pdpClientMocks(env, tokenCred, pdpClient, cancel)
 			}
@@ -1369,7 +1493,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 }
 
 var (
-	invalidNatGWAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
+	invalidCspNatGWAuthorizationDecisionsReadNotAllowed = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/natGateways/join/action",
@@ -1385,7 +1509,7 @@ var (
 			},
 		},
 	}
-	invalidNatGWAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
+	invalidCspNatGWAuthorizationDecisionsMissingWrite = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/natGateways/join/action",
@@ -1398,7 +1522,7 @@ var (
 			// deliberately missing natGateway write
 		},
 	}
-	validNatGWAuthorizationDecision = client.AuthorizationDecisionResponse{
+	validCspNatGWAuthorizationDecision = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/natGateways/join/action",
@@ -1414,6 +1538,22 @@ var (
 			},
 		},
 	}
+	invalidFpspNatGWAuthorizationDecisionsJoinNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/natGateways/join/action",
+				AccessDecision: client.NotAllowed,
+			},
+		},
+	}
+	validFpspNatGWAuthorizationDecisions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/natGateways/join/action",
+				AccessDecision: client.Allowed,
+			},
+		},
+	}
 )
 
 func TestValidateNatGatewaysPermissions(t *testing.T) {
@@ -1421,6 +1561,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                string
+		validatingFpsp      bool
 		subnet              Subnet
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
@@ -1428,6 +1569,49 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		vnetMocks           func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErr             string
 	}{
+		{
+			name:           "pass: FPSP validation for CSP cluster",
+			validatingFpsp: true,
+			subnet:         Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validFpspNatGWAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:           "fail: FPSP validation for CSP cluster - permissions don't exist",
+			validatingFpsp: true,
+			subnet:         Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
+				pdpClient.
+					EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidFpspNatGWAuthorizationDecisionsJoinNotAllowed, nil)
+			},
+			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
+		},
 		{
 			name:   "fail: CSP validation for CSP cluster - failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
@@ -1479,7 +1663,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
+					Return(&invalidCspNatGWAuthorizationDecisionsReadNotAllowed, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
@@ -1502,7 +1686,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
+					Return(&invalidCspNatGWAuthorizationDecisionsReadNotAllowed, nil)
 			},
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
@@ -1525,7 +1709,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&invalidNatGWAuthorizationDecisionsMissingWrite, nil)
+					Return(&invalidCspNatGWAuthorizationDecisionsMissingWrite, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
@@ -1544,7 +1728,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validNatGWAuthorizationDecision, nil)
+					Return(&validCspNatGWAuthorizationDecision, nil)
 			},
 		},
 		{
@@ -1562,7 +1746,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			pdpClientMocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&validNatGWAuthorizationDecision, nil)
+					Return(&validCspNatGWAuthorizationDecision, nil)
 			},
 		},
 		{
@@ -1634,6 +1818,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				checkAccessSubjectInfoCred: tokenCred,
 				pdpClient:                  pdpClient,
 				virtualNetworks:            vnetClient,
+			}
+
+			if tt.validatingFpsp {
+				dv.authorizerType = AuthorizerFirstParty
 			}
 
 			if tt.pdpClientMocks != nil {
@@ -1709,19 +1897,47 @@ func TestCheckPreconfiguredNSG(t *testing.T) {
 }
 
 var (
-	canJoinNSG = client.AuthorizationDecisionResponse{
+	validCspNsgAuthorizationDecisions = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
-				AccessDecision: client.Allowed},
+				AccessDecision: client.Allowed,
+			},
 		},
 	}
 
-	cannotJoinNSG = client.AuthorizationDecisionResponse{
+	invalidCspNsgAuthorizationDecisionsJoinNotAllowed = client.AuthorizationDecisionResponse{
 		Value: []client.AuthorizationDecision{
 			{
 				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
-				AccessDecision: client.NotAllowed},
+				AccessDecision: client.NotAllowed,
+			},
+		},
+	}
+
+	validFpspNsgAuthorizationDecisions = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
+				AccessDecision: client.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/networkSecurityGroups/read",
+				AccessDecision: client.Allowed,
+			},
+		},
+	}
+
+	invalidFpspNsgAuthorizationDecisionsJoinNotAllowed = client.AuthorizationDecisionResponse{
+		Value: []client.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
+				AccessDecision: client.NotAllowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/networkSecurityGroups/read",
+				AccessDecision: client.Allowed,
+			},
 		},
 	}
 )
@@ -1730,6 +1946,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range []struct {
 		name                string
+		validatingFpsp      bool
 		modifyOC            func(*api.OpenShiftCluster)
 		platformIdentities  map[string]api.PlatformWorkloadIdentity
 		platformIdentityMap map[string][]string
@@ -1737,6 +1954,64 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 		vnetMocks           func(*mock_armnetwork.MockVirtualNetworksClient, sdknetwork.VirtualNetworksClientGetResponse)
 		wantErrs            []string
 	}{
+		{
+			name:           "pass: FPSP validation for CSP cluster",
+			validatingFpsp: true,
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
+					AnyTimes().
+					Return(vnet, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: workerNSGv1},
+				}, nil).AnyTimes()
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(_, _ interface{}) {
+						cancel()
+					}).
+					Return(&validFpspNsgAuthorizationDecisions, nil).
+					AnyTimes()
+			},
+		},
+		{
+			name:           "fail: FPSP validation for CSP cluster - missing permissions",
+			validatingFpsp: true,
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, nil).
+					AnyTimes().
+					Return(vnet, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
+				mockTokenCredential(tokenCred)
+				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+				pdpClient.EXPECT().CreateAuthorizationRequest(
+					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{
+					Resource: client.ResourceInfo{Id: workerNSGv1},
+				}, nil).AnyTimes()
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(_, _ interface{}) {
+						cancel()
+					}).
+					Return(&invalidFpspNsgAuthorizationDecisionsJoinNotAllowed, nil).
+					AnyTimes()
+			},
+			wantErrs: []string{
+				"400: InvalidResourceProviderPermissions: : The resource provider service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+				"400: InvalidResourceProviderPermissions: : The resource provider service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+			},
+		},
 		{
 			name: "pass: skip when preconfiguredNSG is not enabled",
 			modifyOC: func(oc *api.OpenShiftCluster) {
@@ -1770,11 +2045,11 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 						cancel() // wait.PollImmediateUntil will always be invoked at least once
 						switch authReq.Resource.Id {
 						case masterNSGv1:
-							return &canJoinNSG, nil
+							return &validCspNsgAuthorizationDecisions, nil
 						case workerNSGv1:
-							return &cannotJoinNSG, nil
+							return &invalidCspNsgAuthorizationDecisionsJoinNotAllowed, nil
 						}
-						return &cannotJoinNSG, nil
+						return &invalidCspNsgAuthorizationDecisionsJoinNotAllowed, nil
 					},
 					).AnyTimes()
 			},
@@ -1800,11 +2075,11 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 						cancel() // wait.PollImmediateUntil will always be invoked at least once
 						switch authReq.Resource.Id {
 						case masterNSGv1:
-							return &canJoinNSG, nil
+							return &validCspNsgAuthorizationDecisions, nil
 						case workerNSGv1:
-							return &cannotJoinNSG, nil
+							return &invalidCspNsgAuthorizationDecisionsJoinNotAllowed, nil
 						}
-						return &cannotJoinNSG, nil
+						return &invalidCspNsgAuthorizationDecisionsJoinNotAllowed, nil
 					},
 					).AnyTimes()
 			},
@@ -1839,7 +2114,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Do(func(_, _ interface{}) {
 						cancel()
 					}).
-					Return(&canJoinNSG, nil).
+					Return(&validCspNsgAuthorizationDecisions, nil).
 					AnyTimes()
 			},
 		},
@@ -1859,7 +2134,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Do(func(_, _ interface{}) {
 						cancel()
 					}).
-					Return(&canJoinNSG, nil).
+					Return(&validCspNsgAuthorizationDecisions, nil).
 					AnyTimes()
 			},
 			platformIdentities: platformIdentities,
@@ -1883,7 +2158,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Do(func(_, _ interface{}) {
 						cancel()
 					}).
-					Return(&canJoinNSG, nil).
+					Return(&validCspNsgAuthorizationDecisions, nil).
 					AnyTimes()
 			},
 			platformIdentities: platformIdentities,
@@ -1960,6 +2235,10 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			if tt.validatingFpsp {
+				dv.authorizerType = AuthorizerFirstParty
 			}
 
 			subnets := []Subnet{
