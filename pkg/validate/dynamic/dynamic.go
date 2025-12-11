@@ -255,11 +255,21 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	operatorName, err := dv.validateActions(ctx, &vnet, []string{
-		"Microsoft.Network/virtualNetworks/join/action",
-		"Microsoft.Network/virtualNetworks/read",
-		"Microsoft.Network/virtualNetworks/write",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/virtualNetworks/read",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/virtualNetworks/join/action",
+			"Microsoft.Network/virtualNetworks/read",
+			"Microsoft.Network/virtualNetworks/write",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &vnet, actionsToValidate)
 
 	var noPermissionsErr *api.CloudError
 	if err != nil {
@@ -438,11 +448,23 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	operatorName, err := dv.validateActions(ctx, &rtr, []string{
-		"Microsoft.Network/routeTables/join/action",
-		"Microsoft.Network/routeTables/read",
-		"Microsoft.Network/routeTables/write",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/routeTables/join/action",
+			"Microsoft.Network/routeTables/read",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/routeTables/join/action",
+			"Microsoft.Network/routeTables/read",
+			"Microsoft.Network/routeTables/write",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &rtr, actionsToValidate)
+
 	if err == wait.ErrWaitTimeout {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
@@ -517,11 +539,22 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	operatorName, err := dv.validateActions(ctx, &ngr, []string{
-		"Microsoft.Network/natGateways/join/action",
-		"Microsoft.Network/natGateways/read",
-		"Microsoft.Network/natGateways/write",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/natGateways/join/action",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/natGateways/join/action",
+			"Microsoft.Network/natGateways/read",
+			"Microsoft.Network/natGateways/write",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &ngr, actionsToValidate)
+
 	if err == wait.ErrWaitTimeout {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
@@ -986,9 +1019,20 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 		return err
 	}
 
-	operatorName, err := dv.validateActions(ctx, &nsg, []string{
-		"Microsoft.Network/networkSecurityGroups/join/action",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/networkSecurityGroups/join/action",
+			"Microsoft.Network/networkSecurityGroups/read",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/networkSecurityGroups/join/action",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &nsg, actionsToValidate)
 
 	if err == wait.ErrWaitTimeout {
 		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
