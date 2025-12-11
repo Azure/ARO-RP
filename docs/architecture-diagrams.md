@@ -78,10 +78,10 @@ flowchart TB
     BE -->|"Provision<br/>Infrastructure"| Azure
 
     %% Styling
-    classDef azure fill:#0078D4,stroke:#005A9E,color:white
-    classDef aro fill:#EE0000,stroke:#CC0000,color:white
-    classDef external fill:#4A4A4A,stroke:#333,color:white
-    classDef cluster fill:#DB212E,stroke:#A31621,color:white
+    classDef azure fill:#E3F2FD,stroke:#1976D2,color:#000
+    classDef aro fill:#FFF3E0,stroke:#F57C00,color:#000
+    classDef external fill:#F5F5F5,stroke:#616161,color:#000
+    classDef cluster fill:#FFEBEE,stroke:#C62828,color:#000
 
     class ARM,CLI,SRE external
     class FE,BE,MON,GW,PORTAL,MIMO aro
@@ -210,12 +210,12 @@ flowchart TB
     STEPS -->|"Deploy"| Checkers
 
     %% Styling
-    classDef frontend fill:#4169E1,stroke:#2E4A8C,color:white
-    classDef backend fill:#228B22,stroke:#1A6B1A,color:white
-    classDef db fill:#FF8C00,stroke:#CC7000,color:white
-    classDef operator fill:#DB212E,stroke:#A31621,color:white
-    classDef monitor fill:#9370DB,stroke:#7050B0,color:white
-    classDef mimo fill:#20B2AA,stroke:#188A85,color:white
+    classDef frontend fill:#E3F2FD,stroke:#1976D2,color:#000
+    classDef backend fill:#E8F5E9,stroke:#388E3C,color:#000
+    classDef db fill:#FFF3E0,stroke:#F57C00,color:#000
+    classDef operator fill:#FFEBEE,stroke:#C62828,color:#000
+    classDef monitor fill:#F3E5F5,stroke:#7B1FA2,color:#000
+    classDef mimo fill:#E0F2F1,stroke:#00695C,color:#000
 
     class AUTH,ROUTES,VALID,CHANGEFEED frontend
     class OCBACKEND,SUBBACKEND,BILLING,INSTALL,UPDATE,ADMIN,STEPS backend
