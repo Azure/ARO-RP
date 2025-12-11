@@ -749,7 +749,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 		wantErr             string
 	}{
 		{
-			name: "pass",
+			name: "pass: CSP validation for CSP cluster",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -761,7 +761,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "pass - MIWI Cluster",
+			name:               "pass - WI validation for MIWI Cluster",
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
@@ -774,14 +774,14 @@ func TestValidateVnetPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "Success - MIWI Cluster - No intersecting VNET Actions",
+			name:               "Success - WI validation for MIWI Cluster - No intersecting VNET Actions",
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActionsNoIntersect,
 			},
 		},
 		{
-			name: "fail: missing permissions",
+			name: "fail: CSP validation for CSP cluster - missing permissions",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -797,7 +797,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
 		},
 		{
-			name:               "Fail - MIWI Cluster - missing permissions",
+			name:               "Fail - WI validation forMIWI Cluster - missing permissions",
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
@@ -814,7 +814,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
 		},
 		{
-			name: "fail: CheckAccess Return less entries than requested",
+			name: "fail: CSP validation for CSP cluster - CheckAccess Return less entries than requested",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -830,7 +830,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on vnet '" + vnetID + "'.",
 		},
 		{
-			name: "fail: getting an invalid token from AAD",
+			name: "fail: CSP validation for CSP cluster - getting an invalid token from AAD",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, _ *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
@@ -839,7 +839,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			wantErr: "token contains an invalid number of segments",
 		},
 		{
-			name: "fail: getting an error when calling CheckAccessV2",
+			name: "fail: CSP validation for CSP cluster - getting an error when calling CheckAccessV2",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -855,7 +855,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			wantErr: "Unexpected failure calling CheckAccessV2",
 		},
 		{
-			name: "fail: getting a nil response from CheckAccessV2",
+			name: "fail: CSP validation for CSP cluster - getting a nil response from CheckAccessV2",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -922,7 +922,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 		wantErr             string
 	}{
 		{
-			name: "pass",
+			name: "pass: CSP validation for CSP cluster",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -934,7 +934,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "pass - MIWI Cluster",
+			name:               "pass - WI validation for MIWI Cluster",
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
@@ -947,14 +947,14 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			name:               "Success - WI validation for MIWI Cluster - No intersecting Subnet Actions",
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActionsNoIntersect,
 			},
 		},
 		{
-			name: "fail: missing permissions",
+			name: "fail: CSP validation for CSP cluster - missing permissions",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -970,7 +970,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on subnet '" + masterSubnet + "'.",
 		},
 		{
-			name:               "Fail - MIWI Cluster - missing permissions",
+			name:               "Fail - WI validation for MIWI Cluster - missing permissions",
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
 				"Dummy": platformIdentity1SubnetActions,
@@ -987,7 +987,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on subnet '" + masterSubnet + "'.",
 		},
 		{
-			name: "fail: CheckAccess Return less entries than requested",
+			name: "fail: CSP validation for CSP cluster - CheckAccess Return less entries than requested",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -1003,7 +1003,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on subnet '" + masterSubnet + "'.",
 		},
 		{
-			name: "fail: getting an invalid token from AAD",
+			name: "fail: CSP validation for CSP cluster - getting an invalid token from AAD",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, _ *mock_checkaccess.MockRemotePDPClient, _ context.CancelFunc) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
@@ -1012,7 +1012,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			wantErr: "token contains an invalid number of segments",
 		},
 		{
-			name: "fail: getting an error when calling CheckAccessV2",
+			name: "fail: CSP validation for CSP cluster - getting an error when calling CheckAccessV2",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -1028,7 +1028,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			wantErr: "Unexpected failure calling CheckAccessV2",
 		},
 		{
-			name: "fail: getting a nil response from CheckAccessV2",
+			name: "fail: CSP validation for CSP cluster - getting a nil response from CheckAccessV2",
 			mocks: func(env *mock_env.MockInterface, tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_checkaccess.MockRemotePDPClient, cancel context.CancelFunc) {
 				mockTokenCredential(tokenCred)
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -1142,7 +1142,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		wantErr             string
 	}{
 		{
-			name:   "fail: failed to get vnet",
+			name:   "fail: CSP validation for CSP cluster -failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1152,7 +1152,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "failed to get vnet",
 		},
 		{
-			name:   "fail: master subnet doesn't exist",
+			name:   "fail: CSP validation for CSP cluster - master subnet doesn't exist",
 			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnet.Properties.Subnets = nil
@@ -1163,7 +1163,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
-			name:   "fail: worker subnet ID doesn't exist",
+			name:   "fail: CSP validation for CSP cluster - worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
@@ -1174,7 +1174,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
 		},
 		{
-			name:   "pass: no route table to check",
+			name:   "pass: CSP validation for CSP cluster - no route table to check",
 			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnet.Properties.Subnets[0].Properties.RouteTable = nil
@@ -1185,7 +1185,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:   "fail: permissions don't exist",
+			name:   "fail: CSP validation for CSP cluster - permissions don't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1207,7 +1207,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
-			name:               "Fail - MIWI Cluster - permissions don't exist",
+			name:               "Fail - WI validation for MIWI Cluster - permissions don't exist",
 			subnet:             Subnet{ID: workerSubnet},
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
@@ -1230,7 +1230,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
-			name:   "fail: CheckAccessV2 doesn't return all the entries",
+			name:   "fail: CSP validation for CSP cluster - CheckAccessV2 doesn't return all the entries",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1252,7 +1252,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
-			name:   "pass",
+			name:   "pass: CSP validation for CSP cluster",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1270,7 +1270,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "pass - MIWI Cluster",
+			name:               "pass - WI validation for MIWI Cluster",
 			subnet:             Subnet{ID: workerSubnet},
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
@@ -1289,7 +1289,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			name:               "Success - WI validation for MIWI Cluster - No intersecting Subnet Actions",
 			subnet:             Subnet{ID: workerSubnet},
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
@@ -1429,7 +1429,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		wantErr             string
 	}{
 		{
-			name:   "fail: failed to get vnet",
+			name:   "fail: CSP validation for CSP cluster - failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1439,7 +1439,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			wantErr: "failed to get vnet",
 		},
 		{
-			name:   "fail: master subnet doesn't exist",
+			name:   "fail: CSP validation for CSP cluster - master subnet doesn't exist",
 			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnet.Properties.Subnets = nil
@@ -1450,7 +1450,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
-			name:   "fail: worker subnet ID doesn't exist",
+			name:   "fail: CSP validation for CSP cluster - worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
@@ -1461,7 +1461,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
 		},
 		{
-			name:   "fail: permissions don't exist",
+			name:   "fail: CSP validation for CSP cluster - permissions don't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1484,7 +1484,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
-			name:               "Fail - MIWI Cluster - permissions don't exist",
+			name:               "Fail - WI validation for MIWI Cluster - permissions don't exist",
 			subnet:             Subnet{ID: workerSubnet},
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
@@ -1507,7 +1507,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			wantErr: "400: InvalidWorkloadIdentityPermissions: : The Dummy platform managed identity does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
-			name:   "fail: CheckAccessV2 doesn't return all permissions",
+			name:   "fail: CSP validation for CSP cluster - CheckAccessV2 doesn't return all permissions",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1530,7 +1530,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
-			name:   "pass",
+			name:   "pass: CSP validation for CSP cluster",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
 				vnetClient.EXPECT().
@@ -1548,7 +1548,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "pass - MIWI Cluster",
+			name:               "pass - WI validation for MIWI Cluster",
 			subnet:             Subnet{ID: workerSubnet},
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
@@ -1566,7 +1566,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			},
 		},
 		{
-			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			name:               "Success - WI validation for MIWI Cluster - No intersecting Subnet Actions",
 			subnet:             Subnet{ID: workerSubnet},
 			platformIdentities: platformIdentities,
 			platformIdentityMap: map[string][]string{
@@ -1744,7 +1744,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "fail: sp doesn't have the permission on all NSGs",
+			name: "fail: CSP validation for CSP cluster - doesn't have the permission on all NSGs",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
@@ -1784,7 +1784,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "Fail - MIWI Cluster - permissions don't exist on all nsg",
+			name: "Fail - WI validation for MIWI Cluster - permissions don't exist on all nsg",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
@@ -1818,7 +1818,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "pass: sp has the required permission on the NSG",
+			name: "pass: CSP validation for CSP cluster",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
@@ -1844,7 +1844,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "pass - MIWI Cluster",
+			name: "pass - WI validation for MIWI Cluster",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
@@ -1868,7 +1868,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - MIWI Cluster - No intersecting Subnet Actions",
+			name: "Success - WI validation for MIWI Cluster - No intersecting Subnet Actions",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
