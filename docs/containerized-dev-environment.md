@@ -47,14 +47,25 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     # Ensure the secrets are placed in the ./secrets directory
     ```
 
-3.  **Build the container image:**
+3.  **Enable the Podman socket** (required when not using Hive for cluster deployment):
+
+    ```bash
+    systemctl --user enable --now podman.socket
+    ```
+    
+    Verify the socket is running:
+    ```bash
+    systemctl --user status podman.socket
+    ```
+
+4.  **Build the container image:**
     Build the `aro-dev-env` container image using the Dockerfile.
 
     ```bash
     podman compose build aro-dev-env
     ```
 
-4.  **Start the container:**
+5.  **Start the container:**
     Start the `aro-dev-env` service. The container will automatically source your environment file and start the RP on port 8443.
 
     ```bash
@@ -68,21 +79,21 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     podman compose ps
     ```
 
-5.  **View RP Logs (Optional):**
+6.  **View RP Logs (Optional):**
     Check the logs to see the RP startup output.
 
     ```bash
     podman compose logs aro-dev-env
     ```
 
-6.  **Enter the container shell:**
+7.  **Enter the container shell:**
     To interact with the environment inside the container (e.g., run other commands, debug).
 
     ```bash
     podman compose exec aro-dev-env bash
     ```
 
-7.  **Run other development commands (Inside container shell):**
+8.  **Run other development commands (Inside container shell):**
     From inside the container, you can run project-specific `make` commands or scripts that expect the Go environment to be set up.
 
     ```bash
