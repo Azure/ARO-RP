@@ -32,11 +32,10 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 			countByPhase[phase]++
 		}
 
-		for _, c := range machine.Status.Conditions {
-			mon.emitGauge("machine.conditions", 1, map[string]string{
+		if machine.Status.Phase != nil {
+			mon.emitGauge("machine.phase", 1, map[string]string{
 				"machineName":  machine.Name,
-				"status":       string(c.Status),
-				"type":         string(c.Type),
+				"phase":        *machine.Status.Phase,
 				"spotInstance": strconv.FormatBool(isSpot),
 				"role":         role,
 				"machineset":   machineset,
@@ -44,30 +43,19 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 
 			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
-					"metric":       "machine.conditions",
+					"metric":       "machine.phase",
 					"machineName":  machine.Name,
-					"status":       c.Status,
-					"type":         c.Type,
-					"message":      c.Message,
+					"phase":        *machine.Status.Phase,
 					"spotInstance": isSpot,
 					"role":         role,
 					"machineset":   machineset,
 				}).Print()
 			}
 		}
-
 		count += 1
 	}
 
 	mon.emitGauge("machine.count", int64(count), nil)
-
-	// Emit count by phase for visibility
-	for phase, phaseCount := range countByPhase {
-		mon.emitGauge("machine.count.phase", int64(phaseCount), map[string]string{
-			"phase": phase,
-		})
-	}
-
 	return nil
 }
 
