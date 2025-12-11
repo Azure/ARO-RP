@@ -22,6 +22,8 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Azure/go-autorest/autorest"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -93,6 +95,23 @@ func TestAdminReply(t *testing.T) {
 			},
 		},
 		{
+			name:           "Autorest error",
+			err:            autorest.NewError("compute.VirtualMachinesClient", "CreateOrUpdate", "Error resizing VM"),
+			wantStatusCode: http.StatusInternalServerError,
+			wantBody: map[string]interface{}{
+				"error": map[string]interface{}{
+					"code":    api.CloudErrorCodeInternalServerError,
+					"message": "compute.VirtualMachinesClient#CreateOrUpdate: Error resizing VM: StatusCode=0",
+				},
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`500: InternalServerError: : compute.VirtualMachinesClient#CreateOrUpdate: Error resizing VM: StatusCode=0`),
+				},
+			},
+		},
+		{
 			name:           "status code error",
 			err:            statusCodeError(http.StatusTeapot),
 			wantStatusCode: http.StatusTeapot,
@@ -104,13 +123,13 @@ func TestAdminReply(t *testing.T) {
 			wantBody: map[string]interface{}{
 				"error": map[string]interface{}{
 					"code":    api.CloudErrorCodeInternalServerError,
-					"message": "Internal server error.",
+					"message": "random error",
 				},
 			},
 			wantEntries: []testlog.ExpectedLogEntry{
 				{
-					"level": gomega.Equal(logrus.ErrorLevel),
-					"msg":   gomega.Equal(`random error`),
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`500: InternalServerError: : random error`),
 				},
 			},
 		},
@@ -139,11 +158,11 @@ func TestAdminReply(t *testing.T) {
 			resp := w.Result()
 
 			if resp.StatusCode != tt.wantStatusCode {
-				t.Error(resp.StatusCode)
+				t.Errorf("Unexpected StatusCode: want: %v, got: %v", tt.wantStatusCode, resp.StatusCode)
 			}
 
 			if !reflect.DeepEqual(resp.Header, tt.header) {
-				t.Error(resp.Header)
+				t.Errorf("Unexpected Headers: want: %v, got: %v", tt.header, resp.Header)
 			}
 
 			if tt.wantBody != nil {
@@ -154,11 +173,12 @@ func TestAdminReply(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(body, tt.wantBody) {
-					t.Error(w.Body.String())
+					t.Errorf("Unexpected Body: want: %v, got: %v", tt.wantBody, w.Body.String())
 				}
 			} else {
 				if w.Body.Len() > 0 {
 					t.Error(w.Body.String())
+					t.Errorf("Unexpected Body: want: %v, got: %v", tt.wantBody, w.Body.String())
 				}
 			}
 
