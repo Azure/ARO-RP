@@ -72,6 +72,10 @@ const (
 	// break before we go to release, but doesn't need to be validated in every
 	// PR.
 	regressiontest = "regressiontest"
+	// basichealth is for tests that validate basic system health. These tests
+	// in ring 2 regions. These tests focus on health checks rather than
+	// functionality testing.
+	basichealth = "basichealth"
 )
 
 //go:embed static_resources
