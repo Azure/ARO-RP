@@ -206,6 +206,7 @@ services:
       ]
 
   aro-dev-env:
+    platform: ${PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: Dockerfile.dev-env
@@ -224,6 +225,8 @@ services:
       - label=disable
     network_mode: "host"
     command: /bin/bash -c ". /workspace/env && make runlocal-rp"
+    x-podman:
+      in_pod: false
 
 secrets:
   proxy-client-key:
