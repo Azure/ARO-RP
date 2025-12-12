@@ -1,5 +1,5 @@
-FROM arointsvc.azurecr.io/fedora:42
-
+# FROM arointsvc.azurecr.io/fedora:42
+FROM fedora:42
 # Install system dependencies
 RUN dnf update -y && dnf install -y \
     gpgme-devel \
@@ -37,9 +37,9 @@ COPY go.mod /tmp/go.mod
 RUN GO_VERSION=$(awk '/^go / {print $2}' /tmp/go.mod) && \
     ARCH=$(uname -m) && \
     case "$ARCH" in \
-        x86_64) GO_ARCH=amd64 ;; \
-        aarch64) GO_ARCH=arm64 ;; \
-        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    x86_64) GO_ARCH=amd64 ;; \
+    aarch64) GO_ARCH=arm64 ;; \
+    *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
     esac && \
     wget -q "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -O /tmp/go.tar.gz && \
     rm -rf /usr/local/go && \
@@ -52,10 +52,7 @@ ENV GO_ARCH=${GO_ARCH}
 # Install bingo and Go tools
 RUN /usr/local/go/bin/go install github.com/bwplotka/bingo@latest
 COPY .bingo/ /workspace/.bingo/
+WORKDIR /workspace
 RUN export PATH="/usr/local/go/bin:/root/go/bin:$PATH" && \
-    cd /workspace && \
     /root/go/bin/bingo get
 ENV PATH="/workspace/.bingo/bin:${PATH}"
-
-# Set up working directory
-WORKDIR /workspace
