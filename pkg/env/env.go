@@ -119,6 +119,7 @@ type Interface interface {
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 	ClusterCertificates() azcertificates.Client
+	EnvironmentType() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceName) (Interface, error) {
