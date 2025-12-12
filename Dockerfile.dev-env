@@ -1,4 +1,3 @@
-# Use Fedora as base image since the project documentation mentions Fedora/RHEL dependencies
 FROM arointsvc.azurecr.io/fedora:42
 
 # Install system dependencies
@@ -48,6 +47,7 @@ RUN GO_VERSION=$(awk '/^go / {print $2}' /tmp/go.mod) && \
     rm /tmp/go.tar.gz && \
     rm /tmp/go.mod
 ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GO_ARCH=${GO_ARCH}
 
 # Install bingo and Go tools
 RUN /usr/local/go/bin/go install github.com/bwplotka/bingo@latest
