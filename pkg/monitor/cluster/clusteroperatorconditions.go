@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,30 +15,52 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 )
 
+type clusterOperatorConditionsIgnoreRegexStruct struct {
+	Name   *regexp.Regexp
+	Type   *regexp.Regexp
+	Status *regexp.Regexp
+}
 type clusterOperatorConditionsIgnoreStruct struct {
 	Name   string
 	Type   configv1.ClusterStatusConditionType
 	Status configv1.ConditionStatus
 }
 
-// clusterOperatorConditionsIgnore contains list of failures we know we can
-// ignore for now
+// clusterOperatorConditionsIgnore contains list of statuses that we don't want to scrape
 var clusterOperatorConditionsIgnore = map[clusterOperatorConditionsIgnoreStruct]struct{}{
-	{"insights", "Disabled", configv1.ConditionFalse}:                                                    {},
-	{"insights", "Disabled", configv1.ConditionTrue}:                                                     {},
-	{"openshift-controller-manager", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:            {},
-	{"service-ca", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:                              {},
-	{"service-catalog-apiserver", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:               {},
+
 	{"cloud-controller-manager", "TrustedCABundleControllerControllerDegraded", configv1.ConditionFalse}: {},
 	{"cloud-controller-manager", "TrustedCABundleControllerControllerAvailable", configv1.ConditionTrue}: {},
 	{"cloud-controller-manager", "CloudConfigControllerDegraded", configv1.ConditionFalse}:               {},
+	{"cloud-controller-manager", "CloudConfigControllerUpgradeable", configv1.ConditionTrue}:             {},
+	{"cloud-controller-manager", "CloudControllerOwner", configv1.ConditionTrue}:                         {},
+
+	{"baremetal", "Disabled", configv1.ConditionTrue}:               {},
+	{"network", "ManagementStateDegraded", configv1.ConditionFalse}: {},
+}
+
+// clusterOperatorConditionsIgnoreRegexes contains more complex checks
+var clusterOperatorConditionsIgnoreRegexes = []clusterOperatorConditionsIgnoreRegexStruct{
+	// Ignore all the Unknowns that we don't care about
+	{regexp.MustCompile(".*"), regexp.MustCompile("(EvaluationConditionsDetected|Upgradeable)"), regexp.MustCompile(string(configv1.ConditionUnknown))},
+
+	// Ignore all RecentBackup metrics
+	{regexp.MustCompile("etcd"), regexp.MustCompile("RecentBackup"), regexp.MustCompile(".*")},
+
+	// Ignore all Insights metrics (Available/Degraded gets caught before this check happens)
+	{regexp.MustCompile("insights"), regexp.MustCompile(".*"), regexp.MustCompile(".*")},
+
+	// Ignore cluster-api metrics that are almost certainly user-deployed and
+	// won't be an OpenShift component
+	{regexp.MustCompile("cluster-api"), regexp.MustCompile("(CapiInstaller|SecretSync|InfraCluster)ControllerAvailable"), regexp.MustCompile(".*")},
 }
 
 var clusterOperatorConditionsExpected = map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
-	configv1.OperatorAvailable:   configv1.ConditionTrue,
-	configv1.OperatorDegraded:    configv1.ConditionFalse,
-	configv1.OperatorProgressing: configv1.ConditionFalse,
-	configv1.OperatorUpgradeable: configv1.ConditionTrue,
+	configv1.OperatorAvailable:            configv1.ConditionTrue,
+	configv1.OperatorDegraded:             configv1.ConditionFalse,
+	configv1.OperatorProgressing:          configv1.ConditionFalse,
+	configv1.OperatorUpgradeable:          configv1.ConditionTrue,
+	configv1.EvaluationConditionsDetected: configv1.ConditionFalse,
 }
 
 func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
@@ -89,13 +112,26 @@ func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
 }
 
 func clusterOperatorConditionIsExpected(co *configv1.ClusterOperator, c *configv1.ClusterOperatorStatusCondition) bool {
-	if _, ok := clusterOperatorConditionsIgnore[clusterOperatorConditionsIgnoreStruct{
-		Name:   co.Name,
-		Type:   c.Type,
-		Status: c.Status,
-	}]; ok {
-		return true
+	// This ordering is so that the majority of conditions are simple lookups --
+	// first we check for a known-expected value for all operators (e.g.
+	// Available=True) first, then known-expected value for specific operators
+	// (e.g. something=True for operator XYZ), and then check the regex filters.
+	expected, ok := clusterOperatorConditionsExpected[c.Type]
+	if !ok {
+		if _, ok := clusterOperatorConditionsIgnore[clusterOperatorConditionsIgnoreStruct{
+			Name:   co.Name,
+			Type:   c.Type,
+			Status: c.Status,
+		}]; ok {
+			return true
+		}
+
+		for _, i := range clusterOperatorConditionsIgnoreRegexes {
+			if i.Status.MatchString(string(c.Status)) && i.Name.MatchString(co.Name) && i.Type.MatchString(string(c.Type)) {
+				return true
+			}
+		}
 	}
 
-	return c.Status == clusterOperatorConditionsExpected[c.Type]
+	return expected == c.Status
 }
