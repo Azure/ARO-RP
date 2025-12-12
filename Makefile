@@ -256,17 +256,19 @@ pyenv:
 
 .PHONY: secrets
 secrets:
-	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	rm -rf secrets
-	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	tar -xzf secrets.tar.gz
+	. ./env && \
+	[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 ) && \
+	rm -rf secrets && \
+	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null && \
+	tar -xzf secrets.tar.gz && \
 	rm secrets.tar.gz
 
 .PHONY: secrets-update
 secrets-update:
-	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	tar -czf secrets.tar.gz secrets
-	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	. ./env && \
+	[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 ) && \
+	tar -czf secrets.tar.gz secrets && \
+	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null && \
 	rm secrets.tar.gz
 
 .PHONY: tunnel
@@ -456,6 +458,14 @@ LOCAL_E2E_IMAGE ?= e2e
 LOCAL_ARO_AZEXT_IMAGE ?= azext-aro
 LOCAL_TUNNEL_IMAGE ?= aro-tunnel
 
+ARCH := $(shell uname -m)
+ifeq ($(ARCH),arm64)
+    PLATFORM_VAL := linux/arm64
+else ifeq ($(ARCH),aarch64)
+    PLATFORM_VAL := linux/arm64
+else
+    PLATFORM_VAL := linux/amd64
+endif
 ###############################################################################
 # Targets
 ###############################################################################
@@ -523,9 +533,9 @@ run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production,
 	docker compose up rp
 
 .PHONY: dev-env-start
-dev-env-start: ## Source env file and run a local containerized RP for development
-	. ./env
-	podman compose up -d aro-dev-env
+dev-env-start: secrets ## Source env file and run a local containerized RP for development
+	@echo "Detected architecture: $(ARCH). Platform: $(PLATFORM_VAL)"
+	PLATFORM=$(PLATFORM_VAL) podman compose up --build -d aro-dev-env
 
 .PHONY: dev-env-stop
 dev-env-stop: ## Stop the containerized RP
