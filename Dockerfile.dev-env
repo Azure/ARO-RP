@@ -1,4 +1,3 @@
-# Use Fedora as base image since the project documentation mentions Fedora/RHEL dependencies
 FROM arointsvc.azurecr.io/fedora:42
 
 # Install system dependencies
