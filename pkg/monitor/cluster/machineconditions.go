@@ -18,21 +18,15 @@ import (
 )
 
 func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
-	count := 0
-	countByPhase := make(map[string]int)
 	machines := mon.getMachines(ctx)
 
 	for _, machine := range machines {
 		isSpot := isSpotInstance(machine)
 		role := machine.Labels[machineRoleLabelKey]
 		machineset := machine.Labels[machinesetLabelKey]
-		phase := ""
-		if machine.Status.Phase != nil {
-			phase = *machine.Status.Phase
-			countByPhase[phase]++
-		}
 
 		if machine.Status.Phase != nil {
+
 			mon.emitGauge("machine.phase", 1, map[string]string{
 				"machineName":  machine.Name,
 				"phase":        *machine.Status.Phase,
@@ -52,10 +46,9 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 				}).Print()
 			}
 		}
-		count += 1
 	}
 
-	mon.emitGauge("machine.count", int64(count), nil)
+	mon.emitGauge("machine.count", int64(len(machines)), nil)
 	return nil
 }
 
