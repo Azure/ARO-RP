@@ -26,6 +26,7 @@ func (mon *Monitor) emitMachineConditions(ctx context.Context) error {
 		machineset := machine.Labels[machinesetLabelKey]
 
 		if machine.Status.Phase != nil {
+
 			mon.emitGauge("machine.phase", 1, map[string]string{
 				"machineName":  machine.Name,
 				"phase":        *machine.Status.Phase,
