@@ -392,7 +392,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 		By("creating an empty MachineSet to force a reconcile")
 		Eventually(func(g Gomega, ctx context.Context) {
-			machineSets, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(ctx, metav1.ListOptions{})
+			machineSets, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(ctx, metav1.ListOptions{
+				LabelSelector: "machine.openshift.io/cluster-api-machine-role=worker",
+			})
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(machineSets.Items).To(Not(BeEmpty()))
 
