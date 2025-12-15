@@ -207,6 +207,7 @@ func TestEmitCNVVirtualMachineInstanceStatuses(t *testing.T) {
 				m:            m,
 				log:          log,
 				queryLimit:   tt.queryLimit,
+				dims:         map[string]string{}, // Initialize to match production behavior
 			}
 
 			for _, expectedLabels := range tt.expectedCalls {
