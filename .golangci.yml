@@ -24,12 +24,7 @@ linters:
     depguard:
       rules:
         deprecatedutillibs:
-          files:
-            # Allow autorest client generation to use autorest/to
-            - "!${config-path}/pkg/client/services/redhatopenshift/mgmt/*/redhatopenshift/*.go"
           deny:
-            - pkg: "github.com/Azure/go-autorest/autorest/to"
-              desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
             - pkg: "k8s.io/utils/ptr"
               desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
     importas:
