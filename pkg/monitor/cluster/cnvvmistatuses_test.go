@@ -11,6 +11,7 @@ import (
 	k6tv1 "kubevirt.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -197,8 +198,13 @@ func TestEmitCNVVirtualMachineInstanceStatuses(t *testing.T) {
 			m := mock_metrics.NewMockEmitter(controller)
 
 			_, log := testlog.New()
+
+			scheme := kruntime.NewScheme()
+			_ = k6tv1.AddToScheme(scheme)
+
 			ocpclientset := clienthelper.NewWithClient(log, fake.
 				NewClientBuilder().
+				WithScheme(scheme).
 				WithObjects(tt.objects...).
 				Build())
 
