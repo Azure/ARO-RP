@@ -14,8 +14,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/go-autorest/autorest/date"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
@@ -36,6 +34,10 @@ const (
 
 func TestEnsureACRToken(t *testing.T) {
 	ctx := context.Background()
+
+	startOf20204 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	hundredDaysInThePast := time.Now().UTC().AddDate(0, 0, -100)
+	fiftyDaysInThePast := time.Now().UTC().AddDate(0, 0, -50)
 
 	for _, tt := range []struct {
 		name     string
@@ -81,12 +83,12 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      publicACR,
 								Username:  user,
-								IssueDate: &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+								IssueDate: &startOf20204,
 							},
 							{
 								Name:      intACR,
 								Username:  user,
-								IssueDate: &date.Time{Time: time.Now().UTC().AddDate(0, 0, -100)},
+								IssueDate: &hundredDaysInThePast,
 							},
 						},
 					},
@@ -104,12 +106,12 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      publicACR,
 								Username:  user,
-								IssueDate: &date.Time{Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+								IssueDate: &startOf20204,
 							},
 							{
 								Name:      intACR,
 								Username:  user,
-								IssueDate: &date.Time{Time: time.Now().UTC().AddDate(0, 0, -50)},
+								IssueDate: &fiftyDaysInThePast,
 							},
 						},
 					},

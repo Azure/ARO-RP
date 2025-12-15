@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/go-autorest/autorest/date"
 )
 
 // OpenShiftCluster represents an OpenShift cluster
@@ -889,7 +888,7 @@ type RegistryProfile struct {
 	Username string       `json:"username,omitempty"`
 	Password SecureString `json:"password,omitempty"`
 	// IssueDate is when the username/password for the registry was last updated.
-	IssueDate *date.Time `json:"issueDate,omitempty"`
+	IssueDate *time.Time `json:"issueDate,omitempty"`
 }
 
 // Install represents an install process

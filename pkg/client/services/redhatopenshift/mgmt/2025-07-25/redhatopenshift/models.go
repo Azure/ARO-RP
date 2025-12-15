@@ -21,10 +21,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/gofrs/uuid"
@@ -1665,13 +1665,13 @@ type SystemData struct {
 	// CreatedByType - The type of identity that created the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
 	CreatedByType CreatedByType `json:"createdByType,omitempty"`
 	// CreatedAt - The timestamp of resource creation (UTC).
-	CreatedAt *date.Time `json:"createdAt,omitempty"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
 	// LastModifiedBy - The identity that last modified the resource.
 	LastModifiedBy *string `json:"lastModifiedBy,omitempty"`
 	// LastModifiedByType - The type of identity that last modified the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
 	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
 	// LastModifiedAt - The timestamp of resource last modification (UTC)
-	LastModifiedAt *date.Time `json:"lastModifiedAt,omitempty"`
+	LastModifiedAt *time.Time `json:"lastModifiedAt,omitempty"`
 }
 
 // TrackedResource the resource model definition for an Azure Resource Manager tracked top level resource
