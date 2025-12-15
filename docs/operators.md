@@ -69,15 +69,6 @@ Using either a local dev cluster or a prod cluster:
 oc patch deployment aro-operator-master -n openshift-azure-operator --type='strategic' -p='{"spec":{"template":{"spec":{"containers":[{"name":"aro-operator","image":"quay.io/<user>/aro:latest"}]}}}}'
 ```
 
-### Using the RP API
-#### Pre-requisites
-* Have a local dev RP running
-* Have a local dev cluster 
-
-1. Stop the RP and update the `env` file, the variable value `$ARO_IMAGE` with the custom built image:
-```sh
-export ARO_IMAGE=quay.io/<user>/aro:latest
-```
 ### How to run the operator locally (out of cluster)
 
 1. Set the kubeconfig.
@@ -98,8 +89,19 @@ oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 make generate
 go run ./cmd/aro operator master
 ```
+### Using the RP API
+#### Pre-requisites
+* Have a local dev RP running
+* Have a local dev cluster 
 
-### Mimicking AdminUpdate when updating the ARO Operator
+#### Steps
+1. Stop the RP and update the `env` file, the variable value `$ARO_IMAGE` with the custom built image:
+```sh
+export ARO_IMAGE=quay.io/<user>/aro:latest
+```
+2. Start the RP
+
+- We can mimick the AdminUpdate when updating the ARO Operator
 This is the way we would test the same PUCM workflow we would use in Prod to update the operator.
 ```
 curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
