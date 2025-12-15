@@ -24,7 +24,6 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.30
 	github.com/Azure/go-autorest/autorest/adal v0.9.24
 	github.com/Azure/go-autorest/autorest/date v0.3.1
-	github.com/Azure/go-autorest/autorest/to v0.4.1
 	github.com/Azure/go-autorest/autorest/validation v0.3.2
 	github.com/Azure/go-autorest/tracing v0.6.1
 	github.com/Azure/msi-dataplane v0.4.3
@@ -112,6 +111,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.2.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
+	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/Azure/go-autorest/logger v0.2.2 // indirect
 	github.com/Azure/retry v0.0.0-20250701224816-85c6a88f883d // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
