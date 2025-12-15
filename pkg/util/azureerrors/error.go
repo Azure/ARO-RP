@@ -24,6 +24,20 @@ const (
 	CODE_INVALIDTEMPL     = "InvalidTemplateDeployment"
 	CODE_LINKEDAUTHFAILED = "LinkedAuthorizationFailed"
 	CODE_RGNOTFOUND       = "ResourceGroupNotFound"
+
+	// VM SKU availability error codes
+	CODE_INVALIDPARAM          = "InvalidParameter"
+	CODE_NOTAVAILABLEFORSUBSCR = "NotAvailableForSubscription"
+	CODE_SKUNOTAVAILABLE       = "SkuNotAvailable"
+)
+
+// VMProfileType identifies which VM profile (master or worker) is affected by an error.
+type VMProfileType int
+
+const (
+	VMProfileUnknown VMProfileType = iota
+	VMProfileMaster
+	VMProfileWorker
 )
 
 // HasAuthorizationFailedError returns true it the error is, or contains, an
@@ -201,4 +215,74 @@ func Is4xxError(err error) bool {
 	}
 
 	return false
+}
+
+// IsVMSKUError checks if the error is a VM SKU availability error and returns
+// which profile (master/worker) is affected.
+// Azure Resource Manager error codes: https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-sku-not-available
+func IsVMSKUError(err error) (bool, VMProfileType) {
+	if err == nil {
+		return false, VMProfileUnknown
+	}
+
+	// Check azcore SDK errors (new SDK)
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.ErrorCode == CODE_SKUNOTAVAILABLE ||
+			responseError.ErrorCode == CODE_NOTAVAILABLEFORSUBSCR {
+			return true, detectVMProfile(err.Error())
+		}
+		// ARO RP validation error
+		if responseError.ErrorCode == CODE_INVALIDPARAM && strings.Contains(err.Error(), "SKU") {
+			return true, detectVMProfile(err.Error())
+		}
+	}
+
+	// Check go-autorest SDK errors (old SDK)
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
+			if serviceErr.Code == CODE_SKUNOTAVAILABLE ||
+				serviceErr.Code == CODE_NOTAVAILABLEFORSUBSCR {
+				return true, detectVMProfile(err.Error())
+			}
+			// ARO RP validation error
+			if serviceErr.Code == CODE_INVALIDPARAM && strings.Contains(serviceErr.Message, "SKU") {
+				return true, detectVMProfile(err.Error())
+			}
+		}
+		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+			requestErr.ServiceError != nil {
+			if requestErr.ServiceError.Code == CODE_SKUNOTAVAILABLE ||
+				requestErr.ServiceError.Code == CODE_NOTAVAILABLEFORSUBSCR {
+				return true, detectVMProfile(err.Error())
+			}
+			if requestErr.ServiceError.Code == CODE_INVALIDPARAM && strings.Contains(requestErr.ServiceError.Message, "SKU") {
+				return true, detectVMProfile(err.Error())
+			}
+		}
+	}
+
+	errStr := err.Error()
+	if strings.Contains(errStr, CODE_SKUNOTAVAILABLE) ||
+		strings.Contains(errStr, CODE_NOTAVAILABLEFORSUBSCR) {
+		return true, detectVMProfile(errStr)
+	}
+	if strings.Contains(errStr, CODE_INVALIDPARAM) && strings.Contains(errStr, "SKU") {
+		return true, detectVMProfile(errStr)
+	}
+	if strings.Contains(errStr, "not available in location") && strings.Contains(errStr, "size") {
+		return true, detectVMProfile(errStr)
+	}
+
+	return false, VMProfileUnknown
+}
+
+func detectVMProfile(errStr string) VMProfileType {
+	if strings.Contains(errStr, "workerProfiles") || strings.Contains(errStr, "WorkerProfiles") {
+		return VMProfileWorker
+	}
+	if strings.Contains(errStr, "masterProfile") || strings.Contains(errStr, "MasterProfile") {
+		return VMProfileMaster
+	}
+	return VMProfileUnknown
 }
