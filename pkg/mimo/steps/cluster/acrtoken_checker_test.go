@@ -106,7 +106,7 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      publicACR,
 								Username:  user,
-								IssueDate: &startOf20204,
+								IssueDate: &startOf2024,
 							},
 							{
 								Name:      intACR,
