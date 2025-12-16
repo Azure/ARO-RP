@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"go.uber.org/mock/gomock"
@@ -223,6 +224,79 @@ func TestEmitCNVVirtualMachineInstanceStatuses(t *testing.T) {
 			err := mon.emitCNVVirtualMachineInstanceStatuses(ctx)
 			if err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestEmitCNVVirtualMachineInstanceStatuses_NoCRD(t *testing.T) {
+	ctx := context.Background()
+
+	controller := gomock.NewController(t)
+	m := mock_metrics.NewMockEmitter(controller)
+
+	_, log := testlog.New()
+
+	// Create a fake client WITHOUT the KubeVirt scheme registered
+	// This simulates a cluster where CNV is not installed
+	scheme := kruntime.NewScheme()
+	// Intentionally NOT calling k6tv1.AddToScheme(scheme)
+
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithScheme(scheme).
+		Build())
+
+	mon := &Monitor{
+		ocpclientset: ocpclientset,
+		m:            m,
+		log:          log,
+		queryLimit:   10,
+		dims:         map[string]string{},
+	}
+
+	// No metrics should be emitted when CRD doesn't exist
+	// The function should return nil (success)
+
+	err := mon.emitCNVVirtualMachineInstanceStatuses(ctx)
+	if err != nil {
+		t.Fatalf("expected no error when CRD doesn't exist, got: %v", err)
+	}
+}
+
+func TestIsCRDNotFoundError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "scheme not registered error",
+			err:      fmt.Errorf("no kind is registered for the type v1.VirtualMachineInstanceList"),
+			expected: true,
+		},
+		{
+			name:     "no matches for kind error",
+			err:      fmt.Errorf("no matches for kind \"VirtualMachineInstance\" in version \"kubevirt.io/v1\""),
+			expected: true,
+		},
+		{
+			name:     "other error",
+			err:      fmt.Errorf("connection refused"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isCRDNotFoundError(tt.err)
+			if result != tt.expected {
+				t.Errorf("isCRDNotFoundError(%v) = %v, want %v", tt.err, result, tt.expected)
 			}
 		})
 	}
