@@ -7,8 +7,9 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/api/meta"
 	k6tv1 "kubevirt.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
