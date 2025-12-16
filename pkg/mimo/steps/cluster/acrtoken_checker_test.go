@@ -35,7 +35,7 @@ const (
 func TestEnsureACRToken(t *testing.T) {
 	ctx := context.Background()
 
-	startOf20204 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	startOf2024 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	hundredDaysInThePast := time.Now().UTC().AddDate(0, 0, -100)
 	fiftyDaysInThePast := time.Now().UTC().AddDate(0, 0, -50)
 
