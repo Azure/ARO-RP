@@ -84,7 +84,7 @@ func (m *manager) NewRegistryProfile() *api.RegistryProfile {
 	return &api.RegistryProfile{
 		Name:      m.env.ACRDomain(),
 		Username:  "token-" + m.uuid.Generate(),
-		IssueDate: &now,
+		IssueDate: &currentTime,
 	}
 }
 
