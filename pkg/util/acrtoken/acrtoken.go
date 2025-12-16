@@ -80,7 +80,7 @@ func (m *manager) GetRegistryProfileFromSlice(registryProfiles []*api.RegistryPr
 }
 
 func (m *manager) NewRegistryProfile() *api.RegistryProfile {
-	now := m.now().UTC()
+	currentTime := m.now().UTC()
 	return &api.RegistryProfile{
 		Name:      m.env.ACRDomain(),
 		Username:  "token-" + m.uuid.Generate(),
