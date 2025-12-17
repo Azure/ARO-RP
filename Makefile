@@ -37,15 +37,19 @@ endif
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
 	BUILDER_REGISTRY = arointsvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
 	BUILDER_REGISTRY = arosvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY ?= registry.access.redhat.com
 	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
+	FEDORA_REGISTRY ?= registry.fedoraproject.org
 else
 	REGISTRY = $(RP_IMAGE_ACR)
 	BUILDER_REGISTRY = quay.io/openshift-release-dev
+	FEDORA_REGISTRY = $(REGISTRY)
 endif
 
 # prod images
@@ -192,37 +196,6 @@ image-proxy:
 .PHONY: image-gatekeeper
 image-gatekeeper:
 	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
-
-.PHONY: update-fedora-image
-update-fedora-image: ## Build updated Fedora:42 image for both amd64 and arm64
-	@echo "Building updated Fedora:42 image for amd64..."
-	podman build \
-		--platform linux/amd64 \
-		--file Dockerfile.fedora \
-		--tag arointsvc.azurecr.io/fedora:42-amd64-tmp \
-		--no-cache \
-		.
-	@echo "Building updated Fedora:42 image for arm64..."
-	podman build \
-		--platform linux/arm64 \
-		--file Dockerfile.fedora \
-		--tag arointsvc.azurecr.io/fedora:42-arm64-tmp \
-		--no-cache \
-		.
-	@echo "Creating multi-arch manifest list..."
-	@podman manifest rm arointsvc.azurecr.io/fedora:42 2>/dev/null || true
-	@podman rmi arointsvc.azurecr.io/fedora:42 2>/dev/null || true
-	podman manifest create arointsvc.azurecr.io/fedora:42
-	podman manifest add arointsvc.azurecr.io/fedora:42 arointsvc.azurecr.io/fedora:42-amd64-tmp
-	podman manifest add arointsvc.azurecr.io/fedora:42 arointsvc.azurecr.io/fedora:42-arm64-tmp
-	@echo "Pushing multi-arch manifest (this will push all architecture-specific images)..."
-	podman manifest push --all arointsvc.azurecr.io/fedora:42 arointsvc.azurecr.io/fedora:42
-	@echo "Cleaning up temporary tags..."
-	podman rmi arointsvc.azurecr.io/fedora:42-amd64-tmp arointsvc.azurecr.io/fedora:42-arm64-tmp 2>/dev/null || true
-
-.PHONY: publish-update-fedora-image
-publish-update-fedora-image: update-fedora-image ## Publish updated Fedora:42 image (alias for update-fedora-image)
-	@echo "Fedora:42 image has been built and pushed to arointsvc.azurecr.io/fedora:42"
 
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
@@ -506,7 +479,7 @@ else ifeq ($(ARCH),aarch64)
 else
     PLATFORM_VAL := linux/amd64
 endif
-###############################################################################
+##############################################################################
 # Targets
 ###############################################################################
 .PHONY: ci-azext-aro
@@ -575,7 +548,7 @@ run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production,
 .PHONY: dev-env-start
 dev-env-start: secrets ## Source env file and run a local containerized RP for development
 	@echo "Detected architecture: $(ARCH). Platform: $(PLATFORM_VAL)"
-	PLATFORM=$(PLATFORM_VAL) podman compose up --build -d aro-dev-env
+	PLATFORM=$(PLATFORM_VAL) FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose up --build -d aro-dev-env
 
 .PHONY: dev-env-stop
 dev-env-stop: ## Stop the containerized RP
