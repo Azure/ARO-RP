@@ -28,6 +28,7 @@ const (
 	// VM SKU availability error codes
 	CODE_INVALIDPARAM          = "InvalidParameter"
 	CODE_NOTAVAILABLEFORSUBSCR = "NotAvailableForSubscription"
+	CODE_QUOTAEXCEEDED         = "QuotaExceeded"
 	CODE_SKUNOTAVAILABLE       = "SkuNotAvailable"
 )
 
@@ -229,7 +230,8 @@ func IsVMSKUError(err error) (bool, VMProfileType) {
 	var responseError *azcore.ResponseError
 	if errors.As(err, &responseError) {
 		if responseError.ErrorCode == CODE_SKUNOTAVAILABLE ||
-			responseError.ErrorCode == CODE_NOTAVAILABLEFORSUBSCR {
+			responseError.ErrorCode == CODE_NOTAVAILABLEFORSUBSCR ||
+			responseError.ErrorCode == CODE_QUOTAEXCEEDED {
 			return true, detectVMProfile(err.Error())
 		}
 		// ARO RP validation error
@@ -242,7 +244,8 @@ func IsVMSKUError(err error) (bool, VMProfileType) {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
 			if serviceErr.Code == CODE_SKUNOTAVAILABLE ||
-				serviceErr.Code == CODE_NOTAVAILABLEFORSUBSCR {
+				serviceErr.Code == CODE_NOTAVAILABLEFORSUBSCR ||
+				serviceErr.Code == CODE_QUOTAEXCEEDED {
 				return true, detectVMProfile(err.Error())
 			}
 			// ARO RP validation error
@@ -253,7 +256,8 @@ func IsVMSKUError(err error) (bool, VMProfileType) {
 		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
 			requestErr.ServiceError != nil {
 			if requestErr.ServiceError.Code == CODE_SKUNOTAVAILABLE ||
-				requestErr.ServiceError.Code == CODE_NOTAVAILABLEFORSUBSCR {
+				requestErr.ServiceError.Code == CODE_NOTAVAILABLEFORSUBSCR ||
+				requestErr.ServiceError.Code == CODE_QUOTAEXCEEDED {
 				return true, detectVMProfile(err.Error())
 			}
 			if requestErr.ServiceError.Code == CODE_INVALIDPARAM && strings.Contains(requestErr.ServiceError.Message, "SKU") {
@@ -264,7 +268,8 @@ func IsVMSKUError(err error) (bool, VMProfileType) {
 
 	errStr := err.Error()
 	if strings.Contains(errStr, CODE_SKUNOTAVAILABLE) ||
-		strings.Contains(errStr, CODE_NOTAVAILABLEFORSUBSCR) {
+		strings.Contains(errStr, CODE_NOTAVAILABLEFORSUBSCR) ||
+		strings.Contains(errStr, CODE_QUOTAEXCEEDED) {
 		return true, detectVMProfile(errStr)
 	}
 	if strings.Contains(errStr, CODE_INVALIDPARAM) && strings.Contains(errStr, "SKU") {

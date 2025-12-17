@@ -300,6 +300,37 @@ func TestIsVMSKUError(t *testing.T) {
 			wantIsVMError:   true,
 			wantProfileType: VMProfileWorker,
 		},
+		{
+			name:            "QuotaExceeded error - string contains",
+			err:             errors.New("Code=\"QuotaExceeded\" Message=\"Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "QuotaExceeded error - master profile",
+			err:             errors.New("Code=\"QuotaExceeded\" Message=\"Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota\" Target=\"properties.masterProfile.VMSize\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileMaster,
+		},
+		{
+			name: "azcore ResponseError with QuotaExceeded",
+			err: &azcore.ResponseError{
+				ErrorCode: CODE_QUOTAEXCEEDED,
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with QuotaExceeded ServiceError",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_QUOTAEXCEEDED,
+					Message: "Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota",
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			gotIsVMError, gotProfileType := IsVMSKUError(tt.err)
