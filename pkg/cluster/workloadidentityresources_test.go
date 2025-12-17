@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -1239,6 +1240,16 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 							t.Errorf("failed to retrieve deployed ARM template, was unexpected type %T", parameters.Properties.Template)
 						}
 						gotResources := template.Resources
+
+						sortResources := func(resources []*arm.Resource) {
+							sort.Slice(resources, func(i, j int) bool {
+								ri := resources[i].Resource.(mgmtauthorization.RoleAssignment)
+								rj := resources[j].Resource.(mgmtauthorization.RoleAssignment)
+								return *ri.Name < *rj.Name
+							})
+						}
+						sortResources(gotResources)
+						sortResources(tt.wantAdded)
 
 						if diff := cmp.Diff(gotResources, tt.wantAdded); diff != "" {
 							t.Errorf("unexpected diff in added roleassignment resources: \ngot: %v\nwant: %v\ndiff: %s", gotResources, tt.wantAdded, diff)
