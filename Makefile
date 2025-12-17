@@ -193,6 +193,37 @@ image-proxy:
 image-gatekeeper:
 	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
 
+.PHONY: update-fedora-image
+update-fedora-image: ## Build updated Fedora:42 image for both amd64 and arm64
+	@echo "Building updated Fedora:42 image for amd64..."
+	podman build \
+		--platform linux/amd64 \
+		--file Dockerfile.fedora \
+		--tag arointsvc.azurecr.io/fedora:42-amd64-tmp \
+		--no-cache \
+		.
+	@echo "Building updated Fedora:42 image for arm64..."
+	podman build \
+		--platform linux/arm64 \
+		--file Dockerfile.fedora \
+		--tag arointsvc.azurecr.io/fedora:42-arm64-tmp \
+		--no-cache \
+		.
+	@echo "Creating multi-arch manifest list..."
+	@podman manifest rm arointsvc.azurecr.io/fedora:42 2>/dev/null || true
+	@podman rmi arointsvc.azurecr.io/fedora:42 2>/dev/null || true
+	podman manifest create arointsvc.azurecr.io/fedora:42
+	podman manifest add arointsvc.azurecr.io/fedora:42 arointsvc.azurecr.io/fedora:42-amd64-tmp
+	podman manifest add arointsvc.azurecr.io/fedora:42 arointsvc.azurecr.io/fedora:42-arm64-tmp
+	@echo "Pushing multi-arch manifest (this will push all architecture-specific images)..."
+	podman manifest push --all arointsvc.azurecr.io/fedora:42 arointsvc.azurecr.io/fedora:42
+	@echo "Cleaning up temporary tags..."
+	podman rmi arointsvc.azurecr.io/fedora:42-amd64-tmp arointsvc.azurecr.io/fedora:42-arm64-tmp 2>/dev/null || true
+
+.PHONY: publish-update-fedora-image
+publish-update-fedora-image: update-fedora-image ## Publish updated Fedora:42 image (alias for update-fedora-image)
+	@echo "Fedora:42 image has been built and pushed to arointsvc.azurecr.io/fedora:42"
+
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)

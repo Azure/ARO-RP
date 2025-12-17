@@ -1,5 +1,4 @@
-# FROM arointsvc.azurecr.io/fedora:42
-FROM fedora:42
+FROM arointsvc.azurecr.io/fedora:42
 # Install system dependencies
 RUN dnf update -y && dnf install -y \
     gpgme-devel \
