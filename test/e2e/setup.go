@@ -76,6 +76,10 @@ const (
 	// in ring 2 regions. These tests focus on health checks rather than
 	// functionality testing.
 	basichealth = "basichealth"
+	// ocpupgrade is for tests that validate cluster health after an OCP
+	// installer version update. These tests focus on core OCP health,
+	// ARO-specific customizations, and Azure integration.
+	ocpupgrade = "ocpupgrade"
 )
 
 //go:embed static_resources
