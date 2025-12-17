@@ -50,10 +50,10 @@ var (
 	errMsgSPHasNoRequiredPermissionsOnVNet   = "The %s service principal (Application ID: %s) does not have required permissions on vnet '%s'."
 	errMsgWIHasNoRequiredPermissionsOnVNet   = "The %s platform managed identity does not have required permissions on vnet '%s'."
 	errMsgVnetNotFound                       = "The vnet '%s' could not be found."
-	errMsgSPHasNoRequiredPermissionsOnRT     = "The %s service principal does not have required permissions on route table '%s'."
+	errMsgSPHasNoRequiredPermissionsOnRT     = "The %s service principal (Application ID: %s) does not have required permissions on route table '%s'."
 	errMsgWIHasNoRequiredPermissionsOnRT     = "The %s platform managed identity does not have required permissions on route table '%s'."
 	errMsgRTNotFound                         = "The route table '%s' could not be found."
-	errMsgSPHasNoRequiredPermissionsOnNatGW  = "The %s service principal does not have required permissions on nat gateway '%s'."
+	errMsgSPHasNoRequiredPermissionsOnNatGW  = "The %s service principal (Application ID: %s) does not have required permissions on nat gateway '%s'."
 	errMsgWIHasNoRequiredPermissionsOnNatGW  = "The %s platform managed identity does not have required permissions on nat gateway '%s'."
 	errMsgNatGWNotFound                      = "The nat gateway '%s' could not be found."
 	errMsgCIDROverlaps                       = "The provided CIDRs must not overlap: '%s'."
@@ -484,6 +484,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 			fmt.Sprintf(
 				errMsgSPHasNoRequiredPermissionsOnRT,
 				dv.authorizerType,
+				*dv.appID,
 				rtID,
 			))
 	}
@@ -574,6 +575,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 			fmt.Sprintf(
 				errMsgSPHasNoRequiredPermissionsOnNatGW,
 				dv.authorizerType,
+				*dv.appID,
 				ngID,
 			))
 	}

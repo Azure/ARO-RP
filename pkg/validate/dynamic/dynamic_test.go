@@ -1259,7 +1259,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidFpspRouteTablesAuthorizationDecisionsJoinNotAllowed, nil)
 			},
-			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider service principal does not have required permissions on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "fail: CSP validation for CSP cluster -failed to get vnet",
@@ -1324,7 +1324,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
 			name:               "Fail - WI validation for MIWI Cluster - permissions don't exist",
@@ -1369,7 +1369,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "pass: CSP validation for CSP cluster",
@@ -1610,7 +1610,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidFpspNatGWAuthorizationDecisionsJoinNotAllowed, nil)
 			},
-			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "fail: CSP validation for CSP cluster - failed to get vnet",
@@ -1665,7 +1665,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:               "Fail - WI validation for MIWI Cluster - permissions don't exist",
@@ -1711,7 +1711,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have required permissions on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "pass: CSP validation for CSP cluster",
