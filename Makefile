@@ -287,7 +287,12 @@ pyenv:
 
 .PHONY: secrets
 secrets:
-	. ./env && \
+	## if SECRET_SA_ACCOUNT_NAME is not set, try to source it from the env file
+	@if [ -z "$${SECRET_SA_ACCOUNT_NAME}" ] && [ -f ./env ]; then \
+		set +e; \
+		. ./env 2>/dev/null; \
+		set -e; \
+	fi && \
 	[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 ) && \
 	rm -rf secrets && \
 	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null && \
@@ -296,7 +301,11 @@ secrets:
 
 .PHONY: secrets-update
 secrets-update:
-	. ./env && \
+	@if [ -z "$${SECRET_SA_ACCOUNT_NAME}" ] && [ -f ./env ]; then \
+		set +e; \
+		. ./env 2>/dev/null; \
+		set -e; \
+	fi && \
 	[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 ) && \
 	tar -czf secrets.tar.gz secrets && \
 	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null && \
