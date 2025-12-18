@@ -260,17 +260,19 @@ pyenv:
 
 .PHONY: secrets
 secrets:
-	## if SECRET_SA_ACCOUNT_NAME is not set, try to source it from the env file
-	@if [ -z "$${SECRET_SA_ACCOUNT_NAME}" ] && [ -f ./env ]; then \
-		set +e; \
-		. ./env 2>/dev/null; \
-		set -e; \
-	fi && \
-	[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 ) && \
-	rm -rf secrets && \
-	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null && \
-	tar -xzf secrets.tar.gz && \
-	rm secrets.tar.gz
+	@{ \
+		SA_NAME=$${SECRET_SA_ACCOUNT_NAME:-rharosecretsdev}; \
+		if [ ! -d secrets ]; then \
+			echo "Downloading secrets from account: $${SA_NAME}"; \
+			az storage blob download \
+				-n secrets.tar.gz \
+				-c secrets \
+				-f secrets.tar.gz \
+				--account-name "$${SA_NAME}" >/dev/null; \
+			tar -xzf secrets.tar.gz; \
+			rm secrets.tar.gz; \
+		fi \
+	}
 
 .PHONY: secrets-update
 secrets-update:
@@ -548,7 +550,7 @@ run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production,
 .PHONY: dev-env-start
 dev-env-start: secrets ## Source env file and run a local containerized RP for development
 	@echo "Detected architecture: $(ARCH). Platform: $(PLATFORM_VAL)"
-	PLATFORM=$(PLATFORM_VAL) FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose up --build -d aro-dev-env
+	PLATFORM=$(PLATFORM_VAL) FEDORA_REGISTRY=$(FEDORA_REGISTRY) USERID=$(shell id -u) podman compose up --build -d aro-dev-env
 
 .PHONY: dev-env-stop
 dev-env-stop: ## Stop the containerized RP
