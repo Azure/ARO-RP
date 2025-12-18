@@ -1,7 +1,0 @@
-FROM fedora:42
-
-# Update all packages to latest versions
-RUN dnf update -y && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf /var/log/dnf*
-
