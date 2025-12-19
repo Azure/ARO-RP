@@ -7,8 +7,8 @@ on:
     branches: [master]
 
 permissions:
-  contents: write # To push the badge to the orphan branch
-  pull-requests: write # To comment on the PR
+  contents: write # REQUIRED: To push the badge to the orphan branch
+  pull-requests: write # REQUIRED: To comment on the PR
 
 jobs:
   coverage:
@@ -17,26 +17,21 @@ jobs:
       LOCAL_ARO_RP_IMAGE: aro
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Important for git operations
 
       - name: Calculate Version
         id: vars
         run: |
-          # Replicating Makefile logic: COMMIT = $(shell git rev-parse --short=7 HEAD)
           COMMIT=$(git rev-parse --short=7 HEAD)
           echo "VERSION=$COMMIT" >> $GITHUB_ENV
-          echo "Calculated VERSION: $COMMIT"
 
       - name: Run CI Build & Test
-        run: |
-          # Run the existing Makefile target.
-          make ci-rp
+        run: make ci-rp
 
       - name: Extract Cover Profile
         run: |
-          # The Makefile extracts XMLs but we need the raw cover.out for the badge.
-          # We attach to the image built in the previous step: aro:$(VERSION)
-
           docker create --name extract_raw_cover ${{ env.LOCAL_ARO_RP_IMAGE }}:${{ env.VERSION }}
           docker cp extract_raw_cover:/app/cover.out ./cover.out
           docker rm extract_raw_cover
@@ -44,25 +39,19 @@ jobs:
       - name: Calculate Total Coverage
         id: calc_cov
         run: |
-          # Use Go to parse the profile we just extracted
           TOTAL_COVERAGE=$(go tool cover -func=cover.out | grep total | grep -oE '[0-9]+\.[0-9]+')
           echo "TOTAL_COVERAGE=$TOTAL_COVERAGE" >> $GITHUB_ENV
-          echo "Current Coverage: $TOTAL_COVERAGE%"
 
       - name: Check Coverage Delta (PR Only)
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
-          # 1. Fetch existing badge from the 'badges' branch
+          # Fetch existing badge from the 'badges' branch
+          # We use curl with || echo 0 to handle 404s if branch/file doesn't exist
           OLD_BADGE=$(curl -s https://raw.githubusercontent.com/${{ github.repository }}/badges/coverage.svg || echo "")
-
-          # 2. Extract percentage from SVG
           OLD_COVERAGE=$(echo "$OLD_BADGE" | grep -oE '[0-9]+\.[0-9]+' | head -1 || echo "0")
 
-          echo "Old: $OLD_COVERAGE%"
-          echo "New: ${{ env.TOTAL_COVERAGE }}%"
-
-          # 3. Compare
+          # Compare using bc
           if (( $(echo "${{ env.TOTAL_COVERAGE }} < $OLD_COVERAGE" | bc -l) )); then
             echo "STATUS_MSG=⚠️ Coverage **decreased** from $OLD_COVERAGE% to ${{ env.TOTAL_COVERAGE }}%" >> $GITHUB_ENV
           elif (( $(echo "${{ env.TOTAL_COVERAGE }} > $OLD_COVERAGE" | bc -l) )); then
@@ -73,7 +62,7 @@ jobs:
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           script: |
             github.rest.issues.createComment({
@@ -83,22 +72,35 @@ jobs:
               body: process.env.STATUS_MSG
             })
 
-      - name: Generate Coverage Badge (Master Only)
+      - name: Generate Badge File
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: tj-actions/coverage-badge-go@v2
-        with:
-          filename: cover.out
+        run: |
+          # Use our new bash script to generate the SVG
+          chmod +x hack/gen-badge.sh
+          ./hack/gen-badge.sh ${{ env.TOTAL_COVERAGE }} > coverage.svg
 
-      - name: Verify Changed files
+      - name: Push Badge to Orphan Branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: tj-actions/verify-changed-files@v17
-        id: verify-changed-files
-        with:
-          files: coverage.svg
+        run: |
+          # 1. Configure Git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Push Badge to Branch
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.verify-changed-files.outputs.files_changed == 'true'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ github.token }}
-          branch: ${{ github.head_ref }}
+          # 2. Stash the generated badge so it survives the checkout
+          cp coverage.svg /tmp/coverage.svg
+
+          # 3. Checkout 'badges' branch (create if doesn't exist)
+          git fetch origin badges || true
+          git checkout badges || git checkout --orphan badges
+
+          # 4. Copy the badge back
+          cp /tmp/coverage.svg coverage.svg
+
+          # 5. Commit and Push ONLY if changed
+          if [[ -n $(git status --porcelain coverage.svg) ]]; then
+            git add coverage.svg
+            git commit -m "Update coverage badge: ${{ env.TOTAL_COVERAGE }}%"
+            git push origin badges
+          else
+            echo "No change in coverage, skipping push."
+          fi
