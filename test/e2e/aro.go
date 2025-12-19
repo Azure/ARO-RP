@@ -21,7 +21,7 @@ import (
 // The high level idea of these tests is to definitively say that
 // a cluster is an ARO cluster. This should help us catch regressions
 // when migrating between installers (e.g. vendored one vs CLI one run by Hive)
-var _ = Describe("ARO Cluster", Label(ocpupgrade), func() {
+var _ = Describe("ARO Cluster", Label(install), func() {
 	It("must have ARO-specific machine configs", func(ctx context.Context) {
 		expectedMachineConfigs := []string{
 			"90-aro-worker-registries",

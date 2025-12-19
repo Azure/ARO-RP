@@ -47,7 +47,7 @@ const (
 	aroOperatorNamespace = "openshift-azure-operator"
 )
 
-var _ = Describe("ARO Operator", Label(smoke, ocpupgrade), func() {
+var _ = Describe("ARO Operator", Label(smoke, install), func() {
 	It("should have no errors in the operator logs", Serial, func(ctx context.Context) {
 		pods := ListK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List, metav1.ListOptions{})
 		Eventually(func(g Gomega, ctx context.Context) {

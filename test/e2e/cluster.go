@@ -243,7 +243,7 @@ var _ = Describe("Cluster", Serial, func() {
 
 	// mainly we want to test the gateway/egress functionality - this request for the image will travel from
 	// node > gateway > storage account of the registry.
-	It("can access and use the internal container registry", Label(basichealth, ocpupgrade), func(ctx context.Context) {
+	It("can access and use the internal container registry", Label(basichealth, install), func(ctx context.Context) {
 		deployName := "internal-registry-deploy"
 
 		By("creating a test deployment from an internal container registry")
