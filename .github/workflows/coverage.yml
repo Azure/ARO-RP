@@ -1,0 +1,104 @@
+name: CI Coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: write # To push the badge to the orphan branch
+  pull-requests: write # To comment on the PR
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      LOCAL_ARO_RP_IMAGE: aro
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.1
+
+      - name: Calculate Version
+        id: vars
+        run: |
+          # Replicating Makefile logic: COMMIT = $(shell git rev-parse --short=7 HEAD)
+          COMMIT=$(git rev-parse --short=7 HEAD)
+          echo "VERSION=$COMMIT" >> $GITHUB_ENV
+          echo "Calculated VERSION: $COMMIT"
+
+      - name: Run CI Build & Test
+        run: |
+          # Run the existing Makefile target.
+          make ci-rp
+
+      - name: Extract Cover Profile
+        run: |
+          # The Makefile extracts XMLs but we need the raw cover.out for the badge.
+          # We attach to the image built in the previous step: aro:$(VERSION)
+
+          docker create --name extract_raw_cover ${{ env.LOCAL_ARO_RP_IMAGE }}:${{ env.VERSION }}
+          docker cp extract_raw_cover:/app/cover.out ./cover.out
+          docker rm extract_raw_cover
+
+      - name: Calculate Total Coverage
+        id: calc_cov
+        run: |
+          # Use Go to parse the profile we just extracted
+          TOTAL_COVERAGE=$(go tool cover -func=cover.out | grep total | grep -oE '[0-9]+\.[0-9]+')
+          echo "TOTAL_COVERAGE=$TOTAL_COVERAGE" >> $GITHUB_ENV
+          echo "Current Coverage: $TOTAL_COVERAGE%"
+
+      - name: Check Coverage Delta (PR Only)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          # 1. Fetch existing badge from the 'badges' branch
+          OLD_BADGE=$(curl -s https://raw.githubusercontent.com/${{ github.repository }}/badges/coverage.svg || echo "")
+
+          # 2. Extract percentage from SVG
+          OLD_COVERAGE=$(echo "$OLD_BADGE" | grep -oE '[0-9]+\.[0-9]+' | head -1 || echo "0")
+
+          echo "Old: $OLD_COVERAGE%"
+          echo "New: ${{ env.TOTAL_COVERAGE }}%"
+
+          # 3. Compare
+          if (( $(echo "${{ env.TOTAL_COVERAGE }} < $OLD_COVERAGE" | bc -l) )); then
+            echo "STATUS_MSG=⚠️ Coverage **decreased** from $OLD_COVERAGE% to ${{ env.TOTAL_COVERAGE }}%" >> $GITHUB_ENV
+          elif (( $(echo "${{ env.TOTAL_COVERAGE }} > $OLD_COVERAGE" | bc -l) )); then
+            echo "STATUS_MSG=✅ Coverage **increased** from $OLD_COVERAGE% to ${{ env.TOTAL_COVERAGE }}%" >> $GITHUB_ENV
+          else
+            echo "STATUS_MSG=Coverage remained stable at ${{ env.TOTAL_COVERAGE }}%" >> $GITHUB_ENV
+          fi
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: process.env.STATUS_MSG
+            })
+
+      - name: Generate Coverage Badge (Master Only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: tj-actions/coverage-badge-go@v2
+        with:
+          filename: cover.out
+
+      - name: Verify Changed files
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: tj-actions/verify-changed-files@v17
+        id: verify-changed-files
+        with:
+          files: coverage.svg
+
+      - name: Push Badge to Branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.verify-changed-files.outputs.files_changed == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ github.token }}
+          branch: ${{ github.head_ref }}
