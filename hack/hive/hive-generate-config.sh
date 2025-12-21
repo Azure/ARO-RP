@@ -9,14 +9,17 @@ main() {
     trap "cleanup $tmpdir" EXIT
 
     # This is the commit sha that the image was built from and ensures we use the correct configs for the release
-    local -r default_commit="8796c4f534"
+    local -r default_commit="f84d11f6765b20de5a6c66998f2114b6855e94e0"
     local -r hive_image_commit_hash="${1:-$default_commit}"
     log "Using hive commit: $hive_image_commit_hash"
     # shellcheck disable=SC2034
     local -r hive_operator_namespace="hive"
 
+    # Hive images pulled from ACR via artifact cache rules
+    # Override with HIVE_ACR_REGISTRY (e.g., arosvcdev.azurecr.io for E2E)
     # shellcheck disable=SC2034
-    local -r hive_image="arointsvc.azurecr.io/redhat-services-prod/crt-redhat-acm-tenant/hive-operator/hive:${hive_image_commit_hash}"
+    local -r acr_registry="${HIVE_ACR_REGISTRY:-arolocaldeveastus.azurecr.io}"
+    local -r hive_image="${acr_registry}/redhat-services-prod/crt-redhat-acm-tenant/hive-operator/hive:${hive_image_commit_hash}"
 
 
     # shellcheck disable=SC2034
