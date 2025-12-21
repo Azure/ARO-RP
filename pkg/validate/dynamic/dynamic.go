@@ -40,20 +40,20 @@ var (
 	errMsgOriginalNSGNotAttached             = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
 	errMsgNSGNotAttached                     = "The provided subnet '%s' is invalid: must have a network security group attached."
 	errMsgNSGNotProperlyAttached             = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
-	errMsgSPHasNoRequiredPermissionsOnNSG    = "The %s service principal (Application ID: %s) does not have Network Contributor role on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
+	errMsgSPHasNoRequiredPermissionsOnNSG    = "The %s service principal (Application ID: %s) does not have required permissions on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
 	errMsgWIHasNoRequiredPermissionsOnNSG    = "The %s platform managed identity does not have required permissions on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
 	errMsgSubnetNotFound                     = "The provided subnet '%s' could not be found."
-	errMsgSPHasNoRequiredPermissionsOnSubnet = "The %s service principal (Application ID: %s) does not have Network Contributor role on subnet '%s'."
+	errMsgSPHasNoRequiredPermissionsOnSubnet = "The %s service principal (Application ID: %s) does not have required permissions on subnet '%s'."
 	errMsgWIHasNoRequiredPermissionsOnSubnet = "The %s platform managed identity does not have required permissions on subnet '%s'."
 	errMsgSubnetNotInSucceededState          = "The provided subnet '%s' is not in a Succeeded state"
 	errMsgSubnetInvalidSize                  = "The provided subnet '%s' is invalid: must be /27 or larger."
-	errMsgSPHasNoRequiredPermissionsOnVNet   = "The %s service principal (Application ID: %s) does not have Network Contributor role on vnet '%s'."
+	errMsgSPHasNoRequiredPermissionsOnVNet   = "The %s service principal (Application ID: %s) does not have required permissions on vnet '%s'."
 	errMsgWIHasNoRequiredPermissionsOnVNet   = "The %s platform managed identity does not have required permissions on vnet '%s'."
 	errMsgVnetNotFound                       = "The vnet '%s' could not be found."
-	errMsgSPHasNoRequiredPermissionsOnRT     = "The %s service principal does not have Network Contributor role on route table '%s'."
+	errMsgSPHasNoRequiredPermissionsOnRT     = "The %s service principal (Application ID: %s) does not have required permissions on route table '%s'."
 	errMsgWIHasNoRequiredPermissionsOnRT     = "The %s platform managed identity does not have required permissions on route table '%s'."
 	errMsgRTNotFound                         = "The route table '%s' could not be found."
-	errMsgSPHasNoRequiredPermissionsOnNatGW  = "The %s service principal does not have Network Contributor role on nat gateway '%s'."
+	errMsgSPHasNoRequiredPermissionsOnNatGW  = "The %s service principal (Application ID: %s) does not have required permissions on nat gateway '%s'."
 	errMsgWIHasNoRequiredPermissionsOnNatGW  = "The %s platform managed identity does not have required permissions on nat gateway '%s'."
 	errMsgNatGWNotFound                      = "The nat gateway '%s' could not be found."
 	errMsgCIDROverlaps                       = "The provided CIDRs must not overlap: '%s'."
@@ -255,11 +255,21 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	operatorName, err := dv.validateActions(ctx, &vnet, []string{
-		"Microsoft.Network/virtualNetworks/join/action",
-		"Microsoft.Network/virtualNetworks/read",
-		"Microsoft.Network/virtualNetworks/write",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/virtualNetworks/read",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/virtualNetworks/join/action",
+			"Microsoft.Network/virtualNetworks/read",
+			"Microsoft.Network/virtualNetworks/write",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &vnet, actionsToValidate)
 
 	var noPermissionsErr *api.CloudError
 	if err != nil {
@@ -438,11 +448,23 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	operatorName, err := dv.validateActions(ctx, &rtr, []string{
-		"Microsoft.Network/routeTables/join/action",
-		"Microsoft.Network/routeTables/read",
-		"Microsoft.Network/routeTables/write",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/routeTables/join/action",
+			"Microsoft.Network/routeTables/read",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/routeTables/join/action",
+			"Microsoft.Network/routeTables/read",
+			"Microsoft.Network/routeTables/write",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &rtr, actionsToValidate)
+
 	if err == wait.ErrWaitTimeout {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
@@ -462,6 +484,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 			fmt.Sprintf(
 				errMsgSPHasNoRequiredPermissionsOnRT,
 				dv.authorizerType,
+				*dv.appID,
 				rtID,
 			))
 	}
@@ -517,11 +540,22 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	operatorName, err := dv.validateActions(ctx, &ngr, []string{
-		"Microsoft.Network/natGateways/join/action",
-		"Microsoft.Network/natGateways/read",
-		"Microsoft.Network/natGateways/write",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/natGateways/join/action",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/natGateways/join/action",
+			"Microsoft.Network/natGateways/read",
+			"Microsoft.Network/natGateways/write",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &ngr, actionsToValidate)
+
 	if err == wait.ErrWaitTimeout {
 		if dv.authorizerType == AuthorizerWorkloadIdentity {
 			return api.NewCloudError(
@@ -541,6 +575,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 			fmt.Sprintf(
 				errMsgSPHasNoRequiredPermissionsOnNatGW,
 				dv.authorizerType,
+				*dv.appID,
 				ngID,
 			))
 	}
@@ -986,9 +1021,20 @@ func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) err
 		return err
 	}
 
-	operatorName, err := dv.validateActions(ctx, &nsg, []string{
-		"Microsoft.Network/networkSecurityGroups/join/action",
-	})
+	var actionsToValidate []string
+
+	if dv.authorizerType == AuthorizerFirstParty {
+		actionsToValidate = []string{
+			"Microsoft.Network/networkSecurityGroups/join/action",
+			"Microsoft.Network/networkSecurityGroups/read",
+		}
+	} else {
+		actionsToValidate = []string{
+			"Microsoft.Network/networkSecurityGroups/join/action",
+		}
+	}
+
+	operatorName, err := dv.validateActions(ctx, &nsg, actionsToValidate)
 
 	if err == wait.ErrWaitTimeout {
 		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
