@@ -151,6 +151,9 @@ func (g *generator) gatewayPredeployTemplate() *arm.Template {
 		g.gatewaySecurityGroup(),
 		g.gatewayVnet(),
 		g.gatewayKeyvault(),
+		g.gatewayNetworkSecurityPerimeter(),
+		g.gatewayNetworkSecurityPerimeterProfile(),
+		g.gatewayKeyvaultPerimeterAssociation(),
 	)
 
 	return t
