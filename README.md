@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/Azure/ARO-RP)](https://goreportcard.com/report/github.com/Azure/ARO-RP)
+
 # Azure Red Hat OpenShift Resource Provider
 
 ## Welcome!
