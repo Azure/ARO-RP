@@ -71,8 +71,8 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		registries: registries,
 		tokens:     tokens,
 	}
-
-	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, IssueDate: &date.Time{Time: time.Now().AddDate(0, 0, -50)}})
+	fiftyDaysInThePast := time.Now().UTC().AddDate(0, 0, -50)
+	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: tokenName, IssueDate: &fiftyDaysInThePast})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,13 +322,15 @@ func TestNewAndPutRegistryProfile(t *testing.T) {
 	a.Len(ocWithProfile.Properties.RegistryProfiles, 2)
 
 	// Check that it has been replaced
+	aLongTimeAgo := time.UnixMilli(1000)
+
 	for _, err := range deep.Equal(
 		ocWithProfile.Properties.RegistryProfiles,
 		[]*api.RegistryProfile{
 			{
 				Name:      "arointsvc.example.com",
 				Username:  "token-22222222-2222-2222-2222-222222220001",
-				IssueDate: &date.Time{Time: time.UnixMilli(1000)},
+				IssueDate: &aLongTimeAgo,
 			},
 			{
 				Name:     "notwanted.example.com",

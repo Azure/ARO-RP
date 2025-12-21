@@ -5,8 +5,6 @@ package admin
 
 import (
 	"time"
-
-	"github.com/Azure/go-autorest/autorest/date"
 )
 
 // OpenShiftClusterList represents a list of OpenShift clusters.
@@ -554,7 +552,7 @@ type RegistryProfile struct {
 	Name     string `json:"name,omitempty"`
 	Username string `json:"username,omitempty"`
 	// IssueDate is when the username/password for the registry was last updated.
-	IssueDate *date.Time `json:"issueDate,omitempty"`
+	IssueDate *time.Time `json:"issueDate,omitempty"`
 }
 
 // ArchitectureVersion represents an architecture version
