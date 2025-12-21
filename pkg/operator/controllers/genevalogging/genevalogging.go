@@ -158,6 +158,12 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								"-c",
 								"/etc/td-agent-bit/fluent.conf",
 							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENVIRONMENT",
+									Value: cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", ""),
+								},
+							},
 							// TODO: specify requests/limits
 							SecurityContext: &corev1.SecurityContext{
 								Privileged: pointerutils.ToPtr(true),
@@ -231,6 +237,10 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								{
 									Name:  "MONITORING_USE_GENEVA_CONFIG_SERVICE",
 									Value: "true",
+								},
+								{
+									Name:  "MONITORING_ENVIRONMENT",
+									Value: cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", ""),
 								},
 								{
 									Name:  "MONITORING_TENANT",
