@@ -101,6 +101,8 @@ type Configuration struct {
 	SubscriptionResourceGroupLocation  *string                `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string                `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool                  `json:"vmssCleanupEnabled,omitempty"`
+	VmssIpTags                         []IPTag                `json:"vmssIpTags,omitempty"`
+	VmssIpTagsDisabledRegions          []string               `json:"vmssIpTagsDisabledRegions,omitempty"`
 	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
 	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
 	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`
@@ -125,6 +127,12 @@ type CosmosDBConfiguration struct {
 	StandardProvisionedThroughput int `json:"standardProvisionedThroughput,omitempty"`
 	PortalProvisionedThroughput   int `json:"portalProvisionedThroughput,omitempty"`
 	GatewayProvisionedThroughput  int `json:"gatewayProvisionedThroughput,omitempty"`
+}
+
+// IPTag represents an IP tag configuration for Azure resources
+type IPTag struct {
+	Type  string `json:"type,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
