@@ -529,3 +529,11 @@ run-selenium:
 .PHONY: validate-roledef
 validate-roledef:
 	go run ./hack/role -verified-version "$(OCP_VERSION)" -oc-bin=$(OC)
+
+.PHONY: badge
+badge: ## Generate coverage badge locally
+	@$(MAKE) unit-test-go
+	@COVERAGE=$$(go tool cover -func=cover.out | grep total | grep -oE '[0-9]+\.[0-9]+'); \
+	./hack/gen-badge.sh $$COVERAGE > coverage.svg; \
+	echo "Generated coverage.svg: $$COVERAGE%"
+
