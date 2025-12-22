@@ -640,7 +640,10 @@ func (c *Cluster) Create(ctx context.Context) error {
 		c.log.Info("creating FPSP role assignments")
 	}
 
-	c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, principalIds)
+	err = c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, principalIds)
+	if err != nil {
+		return err
+	}
 
 	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
 
