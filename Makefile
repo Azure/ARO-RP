@@ -529,3 +529,166 @@ run-selenium:
 .PHONY: validate-roledef
 validate-roledef:
 	go run ./hack/role -verified-version "$(OCP_VERSION)" -oc-bin=$(OC)
+
+###############################################################################
+# pprof Profiling Targets
+###############################################################################
+
+# pprof configuration
+PPROF_HOST ?= 127.0.0.1
+PPROF_PORT ?= 6060
+PPROF_URL = http://$(PPROF_HOST):$(PPROF_PORT)
+PPROF_OUTPUT_DIR ?= ./pprof-data
+PPROF_DURATION ?= 30s
+
+# Load test configuration
+LOADTEST_URL ?= https://localhost:8443/healthz/ready
+LOADTEST_DURATION ?= 30s
+LOADTEST_RATE ?= 100
+
+.PHONY: pprof-check
+pprof-check: ## Check if pprof server is running
+	@echo "Checking pprof server at $(PPROF_URL)..."
+	@curl -s -o /dev/null -w "%{http_code}" $(PPROF_URL)/debug/pprof/ | grep -q "200" && \
+		echo "✓ pprof server is running" || \
+		(echo "✗ pprof server is not running. Start it with: make runlocal-rp" && exit 1)
+
+.PHONY: pprof-collect-all
+pprof-collect-all: ## Collect all pprof profiles (CPU, heap, goroutine, etc.)
+	@mkdir -p $(PPROF_OUTPUT_DIR)
+	@echo "Collecting pprof profiles from $(PPROF_URL)..."
+	@echo "Output directory: $(PPROF_OUTPUT_DIR)"
+	@echo ""
+	@echo "Collecting CPU profile ($(PPROF_DURATION))..."
+	@curl -s "$(PPROF_URL)/debug/pprof/profile?seconds=$$(echo $(PPROF_DURATION) | sed 's/s//')" -o $(PPROF_OUTPUT_DIR)/cpu.prof && \
+		echo "  ✓ CPU profile saved to $(PPROF_OUTPUT_DIR)/cpu.prof" || \
+		echo "  ✗ Failed to collect CPU profile"
+	@echo "Collecting heap profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/heap" -o $(PPROF_OUTPUT_DIR)/heap.prof && \
+		echo "  ✓ Heap profile saved to $(PPROF_OUTPUT_DIR)/heap.prof" || \
+		echo "  ✗ Failed to collect heap profile"
+	@echo "Collecting allocs profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/allocs" -o $(PPROF_OUTPUT_DIR)/allocs.prof && \
+		echo "  ✓ Allocs profile saved to $(PPROF_OUTPUT_DIR)/allocs.prof" || \
+		echo "  ✗ Failed to collect allocs profile"
+	@echo "Collecting goroutine profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/goroutine" -o $(PPROF_OUTPUT_DIR)/goroutine.prof && \
+		echo "  ✓ Goroutine profile saved to $(PPROF_OUTPUT_DIR)/goroutine.prof" || \
+		echo "  ✗ Failed to collect goroutine profile"
+	@echo "Collecting threadcreate profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/threadcreate" -o $(PPROF_OUTPUT_DIR)/threadcreate.prof && \
+		echo "  ✓ Threadcreate profile saved to $(PPROF_OUTPUT_DIR)/threadcreate.prof" || \
+		echo "  ✗ Failed to collect threadcreate profile"
+	@echo "Collecting block profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/block" -o $(PPROF_OUTPUT_DIR)/block.prof && \
+		echo "  ✓ Block profile saved to $(PPROF_OUTPUT_DIR)/block.prof" || \
+		echo "  ✗ Failed to collect block profile"
+	@echo "Collecting mutex profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/mutex" -o $(PPROF_OUTPUT_DIR)/mutex.prof && \
+		echo "  ✓ Mutex profile saved to $(PPROF_OUTPUT_DIR)/mutex.prof" || \
+		echo "  ✗ Failed to collect mutex profile"
+	@echo "Collecting trace (5s)..."
+	@curl -s "$(PPROF_URL)/debug/pprof/trace?seconds=5" -o $(PPROF_OUTPUT_DIR)/trace.out && \
+		echo "  ✓ Trace saved to $(PPROF_OUTPUT_DIR)/trace.out" || \
+		echo "  ✗ Failed to collect trace"
+	@echo ""
+	@echo "Profile collection complete!"
+	@echo ""
+	@echo "To view profiles, use:"
+	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/cpu.prof"
+	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/heap.prof"
+	@echo "  go tool trace $(PPROF_OUTPUT_DIR)/trace.out"
+
+.PHONY: pprof-cpu
+pprof-cpu: ## Collect and open CPU profile in browser
+	@echo "Collecting CPU profile for $(PPROF_DURATION)..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/profile?seconds=$$(echo $(PPROF_DURATION) | sed 's/s//')"
+
+.PHONY: pprof-heap
+pprof-heap: ## Collect and open heap profile in browser
+	@echo "Opening heap profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/heap"
+
+.PHONY: pprof-goroutine
+pprof-goroutine: ## Collect and open goroutine profile in browser
+	@echo "Opening goroutine profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/goroutine"
+
+.PHONY: pprof-allocs
+pprof-allocs: ## Collect and open allocs profile in browser
+	@echo "Opening allocs profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/allocs"
+
+.PHONY: pprof-block
+pprof-block: ## Collect and open block profile in browser
+	@echo "Opening block profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/block"
+
+.PHONY: pprof-mutex
+pprof-mutex: ## Collect and open mutex profile in browser
+	@echo "Opening mutex profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/mutex"
+
+.PHONY: pprof-trace
+pprof-trace: ## Collect and open execution trace in browser
+	@mkdir -p $(PPROF_OUTPUT_DIR)
+	@echo "Collecting trace for 5 seconds..."
+	@curl -s "$(PPROF_URL)/debug/pprof/trace?seconds=5" -o $(PPROF_OUTPUT_DIR)/trace.out
+	@echo "Opening trace viewer..."
+	go tool trace $(PPROF_OUTPUT_DIR)/trace.out
+
+.PHONY: loadtest-hey
+loadtest-hey: ## Run load test using hey (install: go install github.com/rakyll/hey@latest)
+	@command -v hey >/dev/null 2>&1 || { echo "hey not found. Install with: go install github.com/rakyll/hey@latest"; exit 1; }
+	@echo "Running load test with hey..."
+	@echo "  URL: $(LOADTEST_URL)"
+	@echo "  Duration: $(LOADTEST_DURATION)"
+	@echo "  Rate: $(LOADTEST_RATE) req/s"
+	hey -z $(LOADTEST_DURATION) -q $(LOADTEST_RATE) -disable-keepalive $(LOADTEST_URL)
+
+.PHONY: loadtest-vegeta
+loadtest-vegeta: ## Run load test using vegeta (install: go install github.com/tsenart/vegeta@latest)
+	@command -v vegeta >/dev/null 2>&1 || { echo "vegeta not found. Install with: go install github.com/tsenart/vegeta@latest"; exit 1; }
+	@mkdir -p $(PPROF_OUTPUT_DIR)
+	@echo "Running load test with vegeta..."
+	@echo "  URL: $(LOADTEST_URL)"
+	@echo "  Duration: $(LOADTEST_DURATION)"
+	@echo "  Rate: $(LOADTEST_RATE) req/s"
+	@echo "GET $(LOADTEST_URL)" | vegeta attack -duration=$(LOADTEST_DURATION) -rate=$(LOADTEST_RATE) -insecure | \
+		tee $(PPROF_OUTPUT_DIR)/vegeta-results.bin | vegeta report
+	@echo ""
+	@echo "Results saved to $(PPROF_OUTPUT_DIR)/vegeta-results.bin"
+	@echo "Generate HTML report: vegeta report -type=html $(PPROF_OUTPUT_DIR)/vegeta-results.bin > $(PPROF_OUTPUT_DIR)/vegeta-report.html"
+
+.PHONY: pprof-loadtest
+pprof-loadtest: ## Run load test and collect pprof profiles simultaneously
+	@command -v hey >/dev/null 2>&1 || { echo "hey not found. Install with: go install github.com/rakyll/hey@latest"; exit 1; }
+	@mkdir -p $(PPROF_OUTPUT_DIR)
+	@echo "Starting load test and profile collection..."
+	@echo ""
+	@echo "Step 1: Starting CPU profile collection in background ($(PPROF_DURATION))..."
+	@(curl -s "$(PPROF_URL)/debug/pprof/profile?seconds=$$(echo $(PPROF_DURATION) | sed 's/s//')" -o $(PPROF_OUTPUT_DIR)/loadtest-cpu.prof && \
+		echo "CPU profile saved to $(PPROF_OUTPUT_DIR)/loadtest-cpu.prof") &
+	@sleep 2
+	@echo "Step 2: Running load test..."
+	hey -z $(LOADTEST_DURATION) -q $(LOADTEST_RATE) -disable-keepalive $(LOADTEST_URL) || true
+	@echo ""
+	@echo "Step 3: Collecting heap profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/heap" -o $(PPROF_OUTPUT_DIR)/loadtest-heap.prof
+	@echo "Heap profile saved to $(PPROF_OUTPUT_DIR)/loadtest-heap.prof"
+	@echo ""
+	@echo "Step 4: Collecting goroutine profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/goroutine" -o $(PPROF_OUTPUT_DIR)/loadtest-goroutine.prof
+	@echo "Goroutine profile saved to $(PPROF_OUTPUT_DIR)/loadtest-goroutine.prof"
+	@echo ""
+	@echo "Load test and profiling complete!"
+	@echo ""
+	@echo "View profiles with:"
+	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/loadtest-cpu.prof"
+	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/loadtest-heap.prof"
+	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/loadtest-goroutine.prof"
+
+.PHONY: pprof-clean
+pprof-clean: ## Clean up pprof output directory
+	rm -rf $(PPROF_OUTPUT_DIR)
+	@echo "Cleaned up $(PPROF_OUTPUT_DIR)"

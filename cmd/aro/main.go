@@ -7,11 +7,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
-
-	_ "net/http/pprof"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -42,9 +39,20 @@ func main() {
 	serviceName := serviceForCommand(flag.Arg(0))
 	log := env.LoggerForService(serviceName, utillog.GetLogger())
 
-	go func() {
-		log.Warn(http.ListenAndServe("localhost:6060", nil))
-	}()
+	// Start pprof server if enabled
+	pprofSrv, pprofErr := newPprofServer(log)
+	if pprofErr != nil {
+		log.Warnf("failed to create pprof server: %v", pprofErr)
+	} else if pprofSrv != nil {
+		if startErr := pprofSrv.Start(ctx); startErr != nil {
+			log.Warnf("failed to start pprof server: %v", startErr)
+		}
+		defer func() {
+			if stopErr := pprofSrv.Stop(ctx); stopErr != nil {
+				log.Warnf("failed to stop pprof server: %v", stopErr)
+			}
+		}()
+	}
 
 	log.Printf("starting, git commit %s", version.GitCommit)
 	log.Printf("command line: '%s'", strings.Join(os.Args, " "))

@@ -29,6 +29,7 @@ gomock_reflect_*
 /coverage.*
 /report.xml
 /e2e-report.xml
+/pprof-data/
 /deploy/config.yaml
 **/*.swp
 /portal/v2/node_modules/

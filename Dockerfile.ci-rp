@@ -59,7 +59,10 @@ RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${A
 
 RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
-# Additional tests
+# Additional tests with pprof enabled
+# PPROF_ENABLED=true enables profiling during test runs
+ENV PPROF_ENABLED=true
+ENV PPROF_PORT=6060
 RUN gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... \
     && gocov convert cover.out | gocov-xml > coverage.xml
 
