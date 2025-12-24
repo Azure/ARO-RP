@@ -40,112 +40,107 @@ type Display struct {
 }
 
 // Common operations defined which can be used within the registration of the APIs
-var OperationResultsRead = Operation{
-	Name: "Microsoft.RedHatOpenShift/locations/operationresults/read",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "locations/operationresults",
-		Operation: "Read operation results",
+// NOTE: The set of operations specified in the response payload must not vary with each API version of the operations API.
+// The Resource Provider service should always return all the operations that are supported across all the API versions of its resource types.
+// https://github.com/cloud-and-ai-microsoft/resource-provider-contract/blob/master/v1.0/proxy-api-reference.md#exposing-available-operations
+var AllOperations = []Operation{
+	{
+		Name: "Microsoft.RedHatOpenShift/locations/operationresults/read",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "locations/operationresults",
+			Operation: "Read operation results",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationStatusRead = Operation{
-	Name: "Microsoft.RedHatOpenShift/locations/operationsstatus/read",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "locations/operationsstatus",
-		Operation: "Read operations status",
+	{
+		Name: "Microsoft.RedHatOpenShift/locations/operationsstatus/read",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "locations/operationsstatus",
+			Operation: "Read operations status",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationRead = Operation{
-	Name: "Microsoft.RedHatOpenShift/operations/read",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "operations",
-		Operation: "Read operations",
+	{
+		Name: "Microsoft.RedHatOpenShift/operations/read",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "operations",
+			Operation: "Read operations",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationOpenShiftClusterRead = Operation{
-	Name: "Microsoft.RedHatOpenShift/openShiftClusters/read",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "openShiftClusters",
-		Operation: "Read OpenShift cluster",
+	{
+		Name: "Microsoft.RedHatOpenShift/openShiftClusters/read",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "openShiftClusters",
+			Operation: "Read OpenShift cluster",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationOpenShiftClusterWrite = Operation{
-	Name: "Microsoft.RedHatOpenShift/openShiftClusters/write",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "openShiftClusters",
-		Operation: "Write OpenShift cluster",
+	{
+		Name: "Microsoft.RedHatOpenShift/openShiftClusters/write",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "openShiftClusters",
+			Operation: "Write OpenShift cluster",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationOpenShiftClusterDelete = Operation{
-	Name: "Microsoft.RedHatOpenShift/openShiftClusters/delete",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "openShiftClusters",
-		Operation: "Delete OpenShift cluster",
+	{
+		Name: "Microsoft.RedHatOpenShift/openShiftClusters/delete",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "openShiftClusters",
+			Operation: "Delete OpenShift cluster",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationOpenShiftClusterListCredentials = Operation{
-	Name: "Microsoft.RedHatOpenShift/openShiftClusters/listCredentials/action",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "openShiftClusters",
-		Operation: "List credentials of an OpenShift cluster",
+	{
+		Name: "Microsoft.RedHatOpenShift/openShiftClusters/listCredentials/action",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "openShiftClusters",
+			Operation: "List credentials of an OpenShift cluster",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationOpenShiftClusterListAdminCredentials = Operation{
-	Name: "Microsoft.RedHatOpenShift/openShiftClusters/listAdminCredentials/action",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "openShiftClusters",
-		Operation: "List Admin Kubeconfig of an OpenShift cluster",
+	{
+		Name: "Microsoft.RedHatOpenShift/openShiftClusters/listAdminCredentials/action",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "openShiftClusters",
+			Operation: "List Admin Kubeconfig of an OpenShift cluster",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationOpenShiftClusterGetDetectors = Operation{
-	Name: "Microsoft.RedHatOpenShift/openShiftClusters/detectors/read",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "openShiftClusters",
-		Operation: "Get OpenShift Cluster Detector",
+	{
+		Name: "Microsoft.RedHatOpenShift/openShiftClusters/detectors/read",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "openShiftClusters",
+			Operation: "Get OpenShift Cluster Detector",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationListInstallVersions = Operation{
-	Name: "Microsoft.RedHatOpenShift/locations/listInstallVersions/read",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "listInstallVersions",
-		Operation: "Lists all OpenShift versions available to install in the specified location",
+	{
+		Name: "Microsoft.RedHatOpenShift/locations/listPlatformWorkloadIdentityRoleSets/read",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "listPlatformWorkloadIdentityRoleSets",
+			Operation: "Lists all PlatformWorkloadIdentityRoleSets available in the specified location",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
-}
-
-var OperationListPlatformWorkloadIdentityRoleSets = Operation{
-	Name: "Microsoft.RedHatOpenShift/locations/listPlatformWorkloadIdentityRoleSets/read",
-	Display: Display{
-		Provider:  "Azure Red Hat OpenShift",
-		Resource:  "listPlatformWorkloadIdentityRoleSets",
-		Operation: "Lists all PlatformWorkloadIdentityRoleSets available in the specified location",
+	{
+		Name: "Microsoft.RedHatOpenShift/locations/openshiftVersions/read",
+		Display: Display{
+			Provider:  "Azure Red Hat OpenShift",
+			Resource:  "openshiftVersions",
+			Operation: "Lists all OpenShift versions available to install in the specified location",
+		},
+		Origin: "user,system",
 	},
-	Origin: "user,system",
 }

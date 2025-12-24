@@ -12,10 +12,20 @@ import (
 type VirtualMachineScaleSetsClientAddons interface {
 	List(ctx context.Context, resourceGroupName string) ([]mgmtcompute.VirtualMachineScaleSet, error)
 	DeleteAndWait(ctx context.Context, resourceGroupName, vmScaleSetName string) error
+	UpdateAndWait(ctx context.Context, resourceGroupName, vmScaleSetName string, parameters mgmtcompute.VirtualMachineScaleSetUpdate) error
 }
 
 func (c *virtualMachineScaleSetsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, vmScaleSetName string) error {
 	future, err := c.Delete(ctx, resourceGroupName, vmScaleSetName)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
+}
+
+func (c *virtualMachineScaleSetsClient) UpdateAndWait(ctx context.Context, resourceGroupName string, vmScaleSetName string, parameters mgmtcompute.VirtualMachineScaleSetUpdate) error {
+	future, err := c.Update(ctx, resourceGroupName, vmScaleSetName, parameters)
 	if err != nil {
 		return err
 	}

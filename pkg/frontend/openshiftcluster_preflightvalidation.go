@@ -123,19 +123,21 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	}
 	if isCreate {
 		converter.ToInternal(ext, oc)
-		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, resourceID); err != nil {
-			return api.ValidationResult{
-				Status: api.ValidationStatusFailed,
-				Error: &api.CloudErrorBody{
-					Message: err.Error(),
-				},
-			}
-		}
 		if err := f.validateInstallVersion(ctx, oc); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{
 					Code:    api.CloudErrorCodeInvalidParameter,
+					Message: err.Error(),
+				},
+			}
+		}
+		ext := converter.ToExternal(oc)
+
+		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, resourceID); err != nil {
+			return api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.CloudErrorBody{
 					Message: err.Error(),
 				},
 			}

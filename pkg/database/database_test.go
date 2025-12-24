@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
@@ -23,12 +22,12 @@ func TestGetDatabaseKey(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		wantData    string
-		wantEntries []map[string]types.GomegaMatcher
+		wantEntries []testlog.ExpectedLogEntry
 	}{
 		{
 			name:     "Use correct CosmosDB Key",
 			wantData: secondaryMasterKeyName,
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.ContainSubstring(secondaryMasterKeyName),

@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -11,7 +12,13 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/ugorji/go/codec"
 	"go.uber.org/mock/gomock"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -26,16 +33,44 @@ func TestAdminVMResize(t *testing.T) {
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
 
+	addClusterDoc := func(f *testdatabase.Fixture) {
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+					},
+				},
+			},
+		})
+	}
+
+	addSubscriptionDoc := func(f *testdatabase.Fixture) {
+		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+			ID: mockSubID,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: mockTenantID,
+				},
+			},
+		})
+	}
+
 	type test struct {
-		name           string
-		resourceID     string
-		vmName         string
-		vmSize         string
-		fixture        func(f *testdatabase.Fixture)
-		mocks          func(*test, *mock_adminactions.MockAzureActions)
-		wantStatusCode int
-		wantResponse   []byte
-		wantError      string
+		name               string
+		resourceID         string
+		vmName             string
+		vmSize             string
+		fixture            func(f *testdatabase.Fixture)
+		azureActionsMocks  func(*test, *mock_adminactions.MockAzureActions)
+		kubeActionsMocks   func(*test, *mock_adminactions.MockKubeActions)
+		wantStatusCode     int
+		wantResponse       []byte
+		wantError          string
+		kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 	}
 
 	for _, tt := range []*test{
@@ -45,30 +80,16 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
 			},
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
 				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(nil)
+			},
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().KubeGet(gomock.Any(), "machine", "openshift-machine-api", tt.vmName).
+					Return(encodeMachine(t, mockMachine(tt.vmName, true, true)), nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -78,19 +99,12 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addSubscriptionDoc(f)
 			},
-			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			wantStatusCode: http.StatusNotFound,
-			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			kubeActionsMocks:  func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode:    http.StatusNotFound,
+			wantError:         `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
 		},
 		{
 			name:       "subscription doc not found",
@@ -98,21 +112,12 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
+				addClusterDoc(f)
 			},
-			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      fmt.Sprintf(`400: InvalidSubscriptionState: : Request is not allowed in unregistered subscription '%s'.`, mockSubID),
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			kubeActionsMocks:  func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         fmt.Sprintf(`400: InvalidSubscriptionState: : Request is not allowed in unregistered subscription '%s'.`, mockSubID),
 		},
 		{
 			name:       "master node not found",
@@ -120,74 +125,34 @@ func TestAdminVMResize(t *testing.T) {
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
 			},
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(false, nil)
 			},
-			wantStatusCode: http.StatusNotFound,
-			wantError:      `404: NotFound: : "The VirtualMachine 'aro-fake-node-master-0' under resource group 'resourcegroup' was not found."`,
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode:   http.StatusNotFound,
+			wantError:        `404: NotFound: : "The VirtualMachine 'aro-fake-node-master-0' under resource group 'resourcegroup' was not found."`,
 		},
 		{
-			name:       "node is not master, has not master keyword in it",
+			name:       "not a control plane machine",
 			vmName:     "aro-fake-node-0",
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
 			},
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
 			},
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().KubeGet(gomock.Any(), "machine", "openshift-machine-api", tt.vmName).
+					Return(encodeMachine(t, mockMachine(tt.vmName, false, true)), nil)
+			},
 			wantStatusCode: http.StatusForbidden,
-			wantError:      `403: Forbidden: : "The vmName 'aro-fake-node-0' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
-		},
-		{
-			name:           "invalid vmname",
-			vmName:         "%26&ampersandvmname",
-			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			vmSize:         "Standard_D8s_v3",
-			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : The provided vmName '&' is invalid.`,
+			wantError:      `403: Forbidden: : "The vmName 'aro-fake-node-0' provided cannot be resized. It is not a control plane machine."`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -195,17 +160,41 @@ func TestAdminVMResize(t *testing.T) {
 			defer ti.done()
 
 			a := mock_adminactions.NewMockAzureActions(ti.controller)
-			tt.mocks(tt, a)
+			tt.azureActionsMocks(tt, a)
 
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil,
+			k := mock_adminactions.NewMockKubeActions(ti.controller)
+			tt.kubeActionsMocks(tt, k)
+
+			kubeActionsFactory := func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
+				return k, nil
+			}
+			if tt.kubeActionsFactory != nil {
+				kubeActionsFactory = tt.kubeActionsFactory
+			}
+
+			f, err := NewFrontend(ctx,
+				ti.auditLog,
+				ti.log,
+				ti.otelAudit,
+				ti.env,
+				ti.dbGroup,
+				api.APIs,
+				&noop.Noop{},
+				&noop.Noop{},
+				nil,
+				nil,
+				nil,
+				kubeActionsFactory,
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 					return a, nil
-				}, nil, nil)
+				},
+				nil,
+				nil)
 
 			if err != nil {
 				t.Fatal(err)
@@ -225,5 +214,41 @@ func TestAdminVMResize(t *testing.T) {
 				t.Error(err)
 			}
 		})
+	}
+}
+
+func encodeMachine(t *testing.T, machine *machinev1beta1.Machine) []byte {
+	buf := &bytes.Buffer{}
+	err := codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(machine)
+	if err != nil {
+		t.Fatalf("%s failed to encode machine, %s", t.Name(), err.Error())
+	}
+	return buf.Bytes()
+}
+
+func mockMachine(name string, isMaster bool, hasRole bool) *machinev1beta1.Machine {
+	labels := map[string]string{}
+	if hasRole {
+		labels = map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"}
+		if isMaster {
+			labels = map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"}
+		}
+	}
+
+	return &machinev1beta1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "openshift-machine-api",
+			Labels:    labels,
+		},
+		Spec: machinev1beta1.MachineSpec{
+			ProviderSpec: machinev1beta1.ProviderSpec{
+				Value: &kruntime.RawExtension{
+					Raw: []byte(`{
+"apiVersion": "machine.openshift.io/v1beta1",
+"kind": "AzureMachineProviderSpec",
+}`)},
+			},
+		},
 	}
 }

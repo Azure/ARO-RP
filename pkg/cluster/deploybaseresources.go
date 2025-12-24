@@ -519,12 +519,12 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 			return err
 		}
 
-		platformWIRole, exists := platformWIRolesByRoleName[name]
+		platformWIRoles, exists := platformWIRolesByRoleName[name]
 		if !exists {
 			return platformworkloadidentity.GetPlatformWorkloadIdentityMismatchError(m.doc.OpenShiftCluster, platformWIRolesByRoleName)
 		}
 
-		for _, sa := range platformWIRole.ServiceAccounts {
+		for _, sa := range platformWIRoles[0].ServiceAccounts {
 			federatedIdentityCredentialResourceName, err := m.getPlatformWorkloadIdentityFederatedCredName(sa, identity)
 			if err != nil {
 				return err

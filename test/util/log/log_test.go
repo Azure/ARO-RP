@@ -8,20 +8,19 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 )
 
 func TestAssertLoggingOutput(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
-		expectedLogs   []map[string]types.GomegaMatcher
+		expectedLogs   []ExpectedLogEntry
 		performLogging func(*logrus.Entry)
 		wantErr        string
 	}{
 		{
 			name: "Single log matches",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("Bar!"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -33,7 +32,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "Single log regex matches",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.MatchRegexp("B.*"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -45,7 +44,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "Multiple log matches",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("Bar!"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -62,7 +61,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "Log length miscount returns error",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("Bar!"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -76,7 +75,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "Log level mismatch returns error",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("Bar!"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -94,7 +93,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "Log text mismatch returns error",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("Bar!"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -112,7 +111,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "Regex mismatch returns error",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.Equal("Bar!"),
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -130,7 +129,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "Bad regex returns error",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"msg":   gomega.MatchRegexp("["),
 					"level": gomega.Equal(logrus.ErrorLevel),
@@ -143,7 +142,7 @@ func TestAssertLoggingOutput(t *testing.T) {
 		},
 		{
 			name: "ExpectedLogEntry with no message returns an error",
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},

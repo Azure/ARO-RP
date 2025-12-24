@@ -173,9 +173,9 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitDeploymentStatuses,
 		mon.emitMachineConfigPoolConditions,
 		mon.emitMachineConfigPoolUnmanagedNodeCounts,
+		mon.emitMachineConditions,
 		mon.emitNodeConditions,
 		mon.emitPodConditions,
-		mon.emitDebugPodsCount,
 		mon.detectQuotaFailure,
 		mon.emitReplicasetStatuses,
 		mon.emitStatefulsetStatuses,
@@ -189,6 +189,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 		mon.emitCWPStatus,
 		mon.emitClusterAuthenticationType,
+		mon.emitNetworkMTU,
 	}
 
 	return mon, nil

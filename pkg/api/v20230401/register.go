@@ -22,19 +22,5 @@ func init() {
 		OpenShiftClusterCredentialsConverter:     openShiftClusterCredentialsConverter{},
 		OpenShiftClusterAdminKubeconfigConverter: openShiftClusterAdminKubeconfigConverter{},
 		OpenShiftVersionConverter:                openShiftVersionConverter{},
-		OperationList: api.OperationList{
-			Operations: []api.Operation{
-				api.OperationResultsRead,
-				api.OperationStatusRead,
-				api.OperationRead,
-				api.OperationOpenShiftClusterRead,
-				api.OperationOpenShiftClusterWrite,
-				api.OperationOpenShiftClusterDelete,
-				api.OperationOpenShiftClusterListCredentials,
-				api.OperationOpenShiftClusterListAdminCredentials,
-				api.OperationListInstallVersions,
-				api.OperationOpenShiftClusterGetDetectors,
-			},
-		},
 	}
 }

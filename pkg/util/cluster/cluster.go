@@ -735,40 +735,90 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err != nil {
-			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
-			errs = append(errs, err)
+			if azureerrors.IsNotFoundError(err) {
+				c.log.Infof("Cluster %s not found in resource group %s, assuming already deleted", clusterName, vnetResourceGroup)
+			} else {
+				c.log.Errorf("Failed to get cluster %s in resource group %s: %v", clusterName, vnetResourceGroup, err)
+				errs = append(errs, fmt.Errorf("failed to get cluster: %w", err))
+			}
 		}
-		if oc.Properties.ServicePrincipalProfile != nil {
-			errs = append(errs,
-				c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID),
-			)
+		if oc != nil {
+			if oc.Properties.ServicePrincipalProfile != nil {
+				if err := c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID); err != nil {
+					c.log.Errorf("Failed to delete application: %v", err)
+					errs = append(errs, fmt.Errorf("failed to delete application: %w", err))
+				}
+			}
 		}
 
-		errs = append(errs,
-			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
-			c.deleteWI(ctx, vnetResourceGroup),
-			c.ensureResourceGroupDeleted(ctx, clusterResourceGroup),
-			c.deleteResourceGroup(ctx, vnetResourceGroup),
-		)
+		if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete cluster: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
+		}
+
+		if err := c.deleteWI(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identities: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
+		}
+
+		if err := c.ensureResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
+			c.log.Errorf("Failed to ensure resource group %s deleted: %v", clusterResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to ensure resource group %s deleted: %w", clusterResourceGroup, err))
+		}
+
+		if err := c.deleteResourceGroup(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete resource group %s: %v", vnetResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to delete resource group %s: %w", vnetResourceGroup, err))
+		}
 
 		if env.IsLocalDevelopmentMode() { //PR E2E
-			errs = append(errs,
-				c.deleteVnetPeerings(ctx, vnetResourceGroup),
-			)
+			if err := c.deleteVnetPeerings(ctx, vnetResourceGroup); err != nil {
+				c.log.Errorf("Failed to delete VNet peerings: %v", err)
+				errs = append(errs, fmt.Errorf("failed to delete VNet peerings: %w", err))
+			}
 		}
 	} else {
-		errs = append(errs,
-			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
-			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteWimiRoleAssignments(ctx, vnetResourceGroup),
-			c.deleteWI(ctx, vnetResourceGroup),
-			c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
-			c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
-		)
+		if err := c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete role assignments: %w", err))
+		}
+
+		if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete cluster: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
+		}
+
+		if err := c.deleteWI(ctx, vnetResourceGroup); err != nil {
+			c.log.Errorf("Failed to delete workload identities: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
+		}
+
+		if err := c.deleteDeployment(ctx, vnetResourceGroup, clusterName); err != nil {
+			c.log.Errorf("Failed to delete deployment: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete deployment: %w", err))
+		}
+
+		if err := c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName); err != nil {
+			c.log.Errorf("Failed to delete VNet resources: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete VNet resources: %w", err))
+		}
 	}
 
-	c.log.Info("done")
+	if len(errs) > 0 {
+		c.log.Errorf("Delete failed with %d error(s)", len(errs))
+	} else {
+		c.log.Info("Delete completed successfully")
+	}
 	return errors.Join(errs...)
 }
 
@@ -880,6 +930,14 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		if err != nil {
 			return err
 		}
+
+		if c.Config.UseWorkloadIdentity {
+			err = c.ensureDefaultRoleSetInCosmosdb(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
 		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
 		if c.Config.WorkerVMSize == DefaultWorkerVmSize.String() {
 			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
@@ -968,6 +1026,32 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 	return parsedResponse.Value, err
 }
 
+// getPlatformWIRoleSetsInCosmosDB queries the local RP admin endpoint for
+// PlatformWorkloadIdentityRoleSet documents and returns them.
+func getPlatformWIRoleSetsInCosmosDB(ctx context.Context) ([]*api.PlatformWorkloadIdentityRoleSet, error) {
+	type getRoleSetResponse struct {
+		Value []*api.PlatformWorkloadIdentityRoleSet `json:"value"`
+	}
+
+	getRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, localDefaultURL+"/admin/platformworkloadidentityrolesets", &bytes.Buffer{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating get platform WI rolesets request: %w", err)
+	}
+
+	getRequest.Header.Set("Content-Type", "application/json")
+
+	getResponse, err := insecureLocalClient().Do(getRequest)
+	if err != nil {
+		return nil, fmt.Errorf("error couldn't retrieve platform WI role sets in cosmos db: %w", err)
+	}
+
+	parsedResponse := getRoleSetResponse{}
+	decoder := json.NewDecoder(getResponse.Body)
+	err = decoder.Decode(&parsedResponse)
+
+	return parsedResponse.Value, err
+}
+
 // ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
 // cosmos DB IF it doesn't already contain an entry for the default version. It
 // is hardcoded to use the local-RP endpoint
@@ -1014,6 +1098,73 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 		return err
 	}
 
+	return resp.Body.Close()
+}
+
+// ensureDefaultRoleSetInCosmosdb puts a default PlatformWorkloadIdentityRoleSet
+// into the cosmos DB via the local RP admin endpoint IF it doesn't already
+// contain an entry for the default OpenShift version. It mirrors the behaviour
+// of ensureDefaultVersionInCosmosdb but targets the platformworkloadidentityrolesets
+// admin endpoint.
+func (c *Cluster) ensureDefaultRoleSetInCosmosdb(ctx context.Context) error {
+	defaultVersion := version.DefaultInstallStream
+
+	existingRoleSets, err := getPlatformWIRoleSetsInCosmosDB(ctx)
+	if err != nil {
+		c.log.Warnf("ensureDefaultRoleSetInCosmosdb: getPlatformWIRoleSetsInCosmosDB returned error: %v; will attempt to PUT default", err)
+	} else {
+		c.log.Infof("ensureDefaultRoleSetInCosmosdb: got %d existing platform WI role sets from local RP", len(existingRoleSets))
+		for i, rs := range existingRoleSets {
+			var ver string
+			if rs != nil {
+				ver = rs.Properties.OpenShiftVersion
+			}
+			c.log.Debugf("ensureDefaultRoleSetInCosmosdb: existingRoleSets[%d].OpenShiftVersion=%s", i, ver)
+			if ver == defaultVersion.Version.MinorVersion() {
+				c.log.Infof("ensureDefaultRoleSetInCosmosdb: PlatformWorkloadIdentityRoleSet for version %s already in DB; skipping PUT", defaultVersion.Version.MinorVersion())
+				return nil
+			}
+		}
+	}
+
+	c.log.Infof("building default payload for OpenShift version %s", defaultVersion.Version.MinorVersion())
+
+	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
+	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &roleSets); err != nil {
+		return fmt.Errorf("failed to unmarshal platform workload identity role sets from config: %w", err)
+	}
+
+	var defaultRoleSetProperties *api.PlatformWorkloadIdentityRoleSetProperties
+	for i := range roleSets {
+		if roleSets[i].OpenShiftVersion == defaultVersion.Version.MinorVersion() {
+			defaultRoleSetProperties = &roleSets[i]
+			break
+		}
+	}
+	if defaultRoleSetProperties == nil {
+		return fmt.Errorf("no platform workload identity role set for version %s found", defaultVersion.Version.MinorVersion())
+	}
+
+	defaultRoleSet := api.PlatformWorkloadIdentityRoleSet{
+		Properties: *defaultRoleSetProperties,
+	}
+
+	b, err := json.Marshal(&defaultRoleSet)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/platformworkloadidentityrolesets", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := insecureLocalClient().Do(req)
+	if err != nil {
+		return err
+	}
 	return resp.Body.Close()
 }
 
@@ -1178,7 +1329,6 @@ func (c *Cluster) deleteVnetPeerings(ctx context.Context, resourceGroup string) 
 	if err != nil {
 		return fmt.Errorf("error deleting vnet peerings: %w", err)
 	}
-
 	return nil
 }
 

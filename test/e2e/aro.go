@@ -45,7 +45,7 @@ var _ = Describe("ARO Cluster", func() {
 
 	It("must have ARO-specific custom resource", func(ctx context.Context) {
 		// acrDomainList should contain acrDomain verifier
-		acrDomainList := []string{"arointsvc.azurecr.io", "arointsvc.azurecr.us", "arosvc.azurecr.io", "arosvc.azurecr.us"}
+		acrDomainList := []string{"arointsvc.azurecr.io", "arostgsvc.azurecr.io", "arointsvc.azurecr.us", "arosvc.azurecr.io", "arostgsvc.azurecr.us", "arosvc.azurecr.us"}
 		azEnvironmentList := []string{azureclient.PublicCloud.Environment.Name, azureclient.USGovernmentCloud.Environment.Name}
 
 		By("getting an ARO operator cluster resource")

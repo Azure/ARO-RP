@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -49,14 +48,14 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		name           string
 		expectedOutput interface{}
 		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
-		expectedLogs   []map[string]types.GomegaMatcher
+		expectedLogs   []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "failure to fetch VMs",
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				"vm listing error: vm explod",
 			},
@@ -66,7 +65,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				"no VMs found",
 			},
@@ -92,7 +91,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
 				).Times(1).Return(errors.New("explod"))
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				`vm somename: {"location":"eastus","properties":{}}`,
 				"vm boot diagnostics retrieval error for somename: explod",
@@ -118,7 +117,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`hello`),
@@ -154,7 +153,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`hello`),
@@ -190,7 +189,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
+			expectedLogs: []testlog.ExpectedLogEntry{},
 			expectedOutput: []interface{}{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
@@ -222,7 +221,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					return err
 				})
 			},
-			expectedLogs: []map[string]types.GomegaMatcher{
+			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level":              gomega.Equal(logrus.InfoLevel),
 					"msg":                gomega.Equal(`1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`),

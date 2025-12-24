@@ -31,48 +31,25 @@ var (
 // function will request and persist a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
-	needsNewCert := false
 
-	if existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil); err == nil {
-		if existingMsiCertificate.Attributes != nil {
-			// if the secret's value is empty or the secret is for a different
-			// identity, we need to issue a new certificate
-			if existingMsiCertificate.Value == nil {
-				// MSI cert is empty for some reason, create a new cert
-				needsNewCert = true
-			} else {
-				keyvaultCredentials := &dataplane.ManagedIdentityCredentials{}
-				err := json.Unmarshal([]byte(*existingMsiCertificate.Value), keyvaultCredentials)
-				if err != nil {
-					return err
-				}
-
-				clusterIdentityResourceID := ""
-				for k := range m.doc.OpenShiftCluster.Identity.UserAssignedIdentities {
-					clusterIdentityResourceID = k
-				}
-				if *keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterIdentityResourceID {
-					// cluster update - identity updated, re-request and replace the MSI cert
-					needsNewCert = true
-				}
-			}
-
-			if m.isEligibleForRenewal(existingMsiCertificate) {
-				// cluster update - MSI cert is eligible for refresh
-				needsNewCert = true
-			}
-		}
-	} else if azureerrors.IsNotFoundError(err) {
-		// cluster create - request and persist MSI cert
-		needsNewCert = true
-	} else {
-		// ie: when there is an error in the dataplane
+	existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil)
+	if err != nil && !azureerrors.IsNotFoundError(err) {
 		return err
 	}
 
-	if !needsNewCert {
-		return nil
+	// If the secret exists, we need to decide if it should be replaced.
+	if err == nil {
+		replace, err := m.shouldReplaceMSICertificate(&existingMsiCertificate, m.now())
+		if err != nil {
+			return err
+		}
+		if !replace {
+			// The existing certificate is valid, so we're done.
+			return nil
+		}
 	}
+	// If we reach this point, it's because the secret was not found, or it was found but is invalid/expired.
+	// In either case, we need to create a new one.
 
 	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
 	if err != nil {
@@ -102,11 +79,69 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	return err
 }
 
+func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
+	if cert.Attributes == nil || cert.Value == nil {
+		return true, nil
+	}
+
+	var keyvaultCredentials dataplane.ManagedIdentityCredentials
+	if err := json.Unmarshal([]byte(*cert.Value), &keyvaultCredentials); err != nil {
+		return false, err
+	}
+
+	if len(keyvaultCredentials.ExplicitIdentities) == 0 {
+		return true, nil
+	}
+
+	// Check if the secret is for a different identity (e.g., after a cluster update).
+	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	if err != nil {
+		return false, err
+	}
+	if keyvaultCredentials.ExplicitIdentities[0].ResourceID == nil ||
+		*keyvaultCredentials.ExplicitIdentities[0].ResourceID != clusterMsiResourceId.String() {
+		return true, nil
+	}
+
+	// Check if the certificate is within its renewal window.
+	// In the future, certificate refreshing will be handled by the Certificate Refresher. For now, handle it here.
+	return m.needsRefresh(cert, now)
+}
+
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
 // The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days
-func (m *manager) isEligibleForRenewal(secret azsecrets.GetSecretResponse) bool {
-	renewAfter := time.Time.AddDate(*secret.Attributes.NotBefore, 0, 0, 46)
-	return time.Now().After(renewAfter)
+// This is subject to change and docs can be untrustworthy, so use the keyvault tags to determine validity
+func (m *manager) needsRefresh(item *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
+	if item.Tags == nil {
+		return false, fmt.Errorf("secret tags are nil")
+	}
+
+	var renewAfter, cannotRenewAfter time.Time
+
+	tagsToParse := map[string]*time.Time{
+		dataplane.RenewAfterKeyVaultTag:       &renewAfter,
+		dataplane.CannotRenewAfterKeyVaultTag: &cannotRenewAfter,
+	}
+
+	for tagKey, timeVarPtr := range tagsToParse {
+		valuePtr, ok := item.Tags[tagKey]
+		if !ok || valuePtr == nil {
+			return false, fmt.Errorf("missing or invalid tag: %s", tagKey)
+		}
+
+		parsedTime, err := time.Parse(time.RFC3339, *valuePtr)
+		if err != nil {
+			return false, fmt.Errorf("invalid time format for tag %s: %w", tagKey, err)
+		}
+
+		*timeVarPtr = parsedTime
+	}
+
+	// We renew if we are within the renewal window (either after or before). We won't renew if we are exactly
+	// at either, but this should never happen.
+	inRenewalWindow := now.After(renewAfter) && now.Before(cannotRenewAfter)
+
+	return inRenewalWindow, nil
 }
 
 // initializeClusterMsiClients intializes any Azure clients that use the cluster

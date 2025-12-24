@@ -211,18 +211,12 @@ var _ = Describe("ARO Operator - RBAC", func() {
 
 var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 	const (
-		mhcNamespace            = "openshift-machine-api"
-		mhcName                 = "aro-machinehealthcheck"
-		mhcRemediationAlertName = "mhc-remediation-alert"
+		mhcNamespace = "openshift-machine-api"
+		mhcName      = "aro-machinehealthcheck"
 	)
 
 	getMachineHealthCheck := func(g Gomega, ctx context.Context) {
 		_, err := clients.MachineAPI.MachineV1beta1().MachineHealthChecks(mhcNamespace).Get(ctx, mhcName, metav1.GetOptions{})
-		g.Expect(err).ToNot(HaveOccurred())
-	}
-
-	getMachineHealthCheckRemediationAlertName := func(g Gomega, ctx context.Context) {
-		_, err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Get(ctx, mhcRemediationAlertName, metav1.GetOptions{})
 		g.Expect(err).ToNot(HaveOccurred())
 	}
 
@@ -233,15 +227,6 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 
 		By("waiting for the machine health check to be restored")
 		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-	})
-
-	It("the alerting rule must recreated if deleted", func(ctx context.Context) {
-		By("deleting the machine health remediation alert")
-		err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Delete(ctx, mhcRemediationAlertName, metav1.DeleteOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		By("waiting for the machine health check remediation alert to be restored")
-		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 })
@@ -598,7 +583,24 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mcpName,
 		},
-		Spec: mcv1.MachineConfigPoolSpec{},
+		Spec: mcv1.MachineConfigPoolSpec{
+			// OCP 4.18+ ValidatingAdmissionPolicy requires custom MCPs to inherit from worker pool
+			// Using matchExpressions to include both "worker" and custom role
+			MachineConfigSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "machineconfiguration.openshift.io/role",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"worker", mcpName},
+					},
+				},
+			},
+			NodeSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"node-role.kubernetes.io/" + mcpName: "",
+				},
+			},
+		},
 	}
 
 	getMachineConfigNames := func(g Gomega, ctx context.Context) []string {

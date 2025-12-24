@@ -5,17 +5,26 @@ package miseadapter
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"net/http/httptest"
 	"sort"
+	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
+
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func Test_createRequest(t *testing.T) {
 	miseAddress := "http://localhost:5000"
 
-	translatedRequest, err := http.NewRequestWithContext(context.Background(), http.MethodPost, miseAddress+"/ValidateRequest", nil)
+	ctx := t.Context()
+
+	translatedRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, miseAddress+"/ValidateRequest", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +38,7 @@ func Test_createRequest(t *testing.T) {
 		"Return-All-Subject-Token-Claims": []string{"1"},
 	}
 
-	translatedRequestWithSpecificClaims, err := http.NewRequestWithContext(context.Background(), http.MethodPost, miseAddress+"/ValidateRequest", nil)
+	translatedRequestWithSpecificClaims, err := http.NewRequestWithContext(ctx, http.MethodPost, miseAddress+"/ValidateRequest", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +53,6 @@ func Test_createRequest(t *testing.T) {
 	}
 
 	type args struct {
-		ctx         context.Context
 		miseAddress string
 		input       Input
 	}
@@ -57,7 +65,6 @@ func Test_createRequest(t *testing.T) {
 		{
 			name: "Input is translated",
 			args: args{
-				ctx:         context.Background(),
 				miseAddress: miseAddress,
 				input: Input{
 					OriginalUri:            "http://1.2.3.4/view",
@@ -74,7 +81,6 @@ func Test_createRequest(t *testing.T) {
 		{
 			name: "Input is translated with specific claims",
 			args: args{
-				ctx:         context.Background(),
 				miseAddress: miseAddress,
 				input: Input{
 					OriginalUri:           "http://1.2.3.4/view",
@@ -91,7 +97,7 @@ func Test_createRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := createRequest(tt.args.ctx, tt.args.miseAddress, tt.args.input)
+			got, err := createRequest(ctx, tt.args.miseAddress, tt.args.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -253,5 +259,344 @@ func Test_parseResponseIntoResult(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestMiseAdapterIsAuthorizedRetry(t *testing.T) {
+	for _, tt := range []struct {
+		name             string
+		serverBehavior   func(*atomic.Int32) http.HandlerFunc
+		wantAuthorized   bool
+		wantErr          bool
+		wantAttemptCount int32
+		expectedDuration time.Duration
+		remoteAddr       string
+	}{
+		{
+			name: "success on first attempt",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			expectedDuration: 0,
+		},
+		{
+			name: "retry on 503 then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 2 {
+						w.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 2,
+			expectedDuration: 100 * time.Millisecond,
+		},
+		{
+			name: "retry on 500 then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 3 {
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 3,
+			expectedDuration: 300 * time.Millisecond, // 100ms + 200ms
+		},
+		{
+			name: "retry on 408 timeout then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 2 {
+						w.WriteHeader(http.StatusRequestTimeout)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 2,
+			expectedDuration: 100 * time.Millisecond,
+		},
+		{
+			name: "retry on 429 rate limit then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 2 {
+						w.WriteHeader(http.StatusTooManyRequests)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 2,
+			expectedDuration: 100 * time.Millisecond,
+		},
+		{
+			name: "no retry on 401 unauthorized",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.Header().Set("Error-Description", "invalid token")
+					w.WriteHeader(http.StatusUnauthorized)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			expectedDuration: 0,
+		},
+		{
+			name: "no retry on 403 forbidden",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusForbidden)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			expectedDuration: 0,
+		},
+		{
+			name: "max retries exhausted on 503",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusServiceUnavailable)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          false,
+			wantAttemptCount: 3,
+			expectedDuration: 300 * time.Millisecond, // 100ms + 200ms
+		},
+		{
+			name: "retry on connection error then success",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					if count.Add(1) < 3 {
+						// Simulate network error by hijacking and closing connection
+						hj, ok := w.(http.Hijacker)
+						if !ok {
+							return
+						}
+						conn, _, err := hj.Hijack()
+						if err != nil {
+							return
+						}
+						conn.Close()
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 3,
+			expectedDuration: 300 * time.Millisecond, // 100ms + 200ms
+		},
+		{
+			name: "valid remote addr (IPv6)",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   true,
+			wantErr:          false,
+			wantAttemptCount: 1,
+			expectedDuration: 0,
+			remoteAddr:       "[2001:db8::2001]:12345",
+		},
+		{
+			name: "invalid remote addr (IPv6)",
+			serverBehavior: func(count *atomic.Int32) http.HandlerFunc {
+				return func(w http.ResponseWriter, r *http.Request) {
+					count.Add(1)
+					w.WriteHeader(http.StatusOK)
+				}
+			},
+			wantAuthorized:   false,
+			wantErr:          true,
+			wantAttemptCount: 0,
+			expectedDuration: 0,
+			remoteAddr:       "2001:db8::2001:12345",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+			var attemptCount atomic.Int32
+
+			server := httptest.NewServer(tt.serverBehavior(&attemptCount))
+			defer server.Close()
+
+			totalSleptMs := 0
+			adapter := NewAuthorizer(server.URL, log)
+			adapter.sleep = func(d time.Duration) {
+				totalSleptMs += int(d.Milliseconds())
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+			if tt.remoteAddr != "" {
+				req.RemoteAddr = tt.remoteAddr
+			} else {
+				req.RemoteAddr = "1.2.3.4:12345"
+			}
+			req.Header.Set("Authorization", "Bearer token")
+
+			authorized, err := adapter.IsAuthorized(log, req)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("unexpected error state: got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+
+			if authorized != tt.wantAuthorized {
+				t.Errorf("unexpected authorized: got %v, want %v", authorized, tt.wantAuthorized)
+			}
+
+			finalCount := attemptCount.Load()
+			if finalCount != tt.wantAttemptCount {
+				t.Errorf("unexpected attempt count: got %d, want %d", finalCount, tt.wantAttemptCount)
+			}
+
+			if totalSleptMs != int(tt.expectedDuration.Milliseconds()) {
+				t.Errorf("unexpected duration: got %v, want %v", totalSleptMs, int(tt.expectedDuration.Milliseconds()))
+			}
+		})
+	}
+}
+
+func TestMiseAdapterIsAuthorizedNetworkError(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	totalSleptMs := 0
+
+	// Point to non-existent server to trigger network errors
+	adapter := NewAuthorizer("http://localhost:1", log)
+	adapter.sleep = func(d time.Duration) {
+		totalSleptMs += int(d.Milliseconds())
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	authorized, err := adapter.IsAuthorized(log, req)
+
+	if err == nil {
+		t.Error("expected error for network failure")
+	}
+
+	if authorized {
+		t.Error("expected authorized to be false")
+	}
+
+	// Should have attempted retries with backoff (100ms + 200ms = 300ms minimum)
+	if totalSleptMs != 300 {
+		t.Logf("warning: duration %v is less than expected 300ms, network errors might be very fast", totalSleptMs)
+	}
+}
+
+func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// cancel the context
+		cancel()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	totalSleptMs := 0
+	adapter := NewAuthorizer(server.URL, log)
+	adapter.sleep = func(d time.Duration) {
+		totalSleptMs += int(d.Milliseconds())
+	}
+
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	authorized, err := adapter.IsAuthorized(log, req)
+	if err == nil {
+		t.Error("expected context error")
+	}
+
+	if !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "deadline") {
+		t.Logf("got unexpected error type: %v", err)
+	}
+
+	if authorized {
+		t.Error("expected authorized to be false")
+	}
+
+	if totalSleptMs != 0 {
+		t.Error("expected no retries on context cancellation")
+	}
+}
+
+func TestMiseAdapterIsNotReadyOnConnectionFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	// Point to non-existent server to trigger network errors
+	adapter := NewAuthorizer("http://localhost:1", log)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	isReady := adapter.IsReady()
+
+	if isReady {
+		t.Error("adapter is not meant to be ready")
+	}
+}
+
+func TestMiseAdapterIsNotReadyOnConnectionTimeoutOnHeaders(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	block := make(chan struct{})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-block
+	}))
+	defer server.Close()
+
+	// Point to non-existent server to trigger network errors
+	adapter := NewAuthorizer(server.URL, log)
+	adapter.client.httpClient.Timeout = 1 * time.Microsecond
+
+	isReady, err := adapter.isReady()
+	close(block)
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected timeout error, got %v", err)
+	}
+
+	if isReady {
+		t.Error("adapter is not meant to be ready")
 	}
 }

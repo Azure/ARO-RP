@@ -14,6 +14,13 @@ func IsOperatorAvailable(operator *configv1.ClusterOperator) bool {
 	for _, cond := range operator.Status.Conditions {
 		m[cond.Type] = cond.Status
 	}
+
+	// check the degraded status if it's available
+	degradedStatus, ok := m[configv1.OperatorDegraded]
+	if ok {
+		return m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse && degradedStatus == configv1.ConditionFalse
+	}
+
 	return m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse
 }
 

@@ -16,12 +16,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -37,7 +38,7 @@ func TestAdminReply(t *testing.T) {
 		err            error
 		wantStatusCode int
 		wantBody       interface{}
-		wantEntries    []map[string]types.GomegaMatcher
+		wantEntries    []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "kubernetes error",
@@ -61,7 +62,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "routes.route.openshift.io/doesntexist",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`404: NotFound: routes.route.openshift.io/doesntexist: routes.route.openshift.io "doesntexist" not found`),
@@ -86,10 +87,27 @@ func TestAdminReply(t *testing.T) {
 					"target":  "thing",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`400: RequestNotAllowed: thing: You can't do that.`),
+				},
+			},
+		},
+		{
+			name:           "Autorest error",
+			err:            autorest.NewError("compute.VirtualMachinesClient", "CreateOrUpdate", "Error resizing VM"),
+			wantStatusCode: http.StatusInternalServerError,
+			wantBody: map[string]interface{}{
+				"error": map[string]interface{}{
+					"code":    api.CloudErrorCodeInternalServerError,
+					"message": "compute.VirtualMachinesClient#CreateOrUpdate: Error resizing VM: StatusCode=0",
+				},
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`500: InternalServerError: : compute.VirtualMachinesClient#CreateOrUpdate: Error resizing VM: StatusCode=0`),
 				},
 			},
 		},
@@ -105,13 +123,13 @@ func TestAdminReply(t *testing.T) {
 			wantBody: map[string]interface{}{
 				"error": map[string]interface{}{
 					"code":    api.CloudErrorCodeInternalServerError,
-					"message": "Internal server error.",
+					"message": "random error",
 				},
 			},
-			wantEntries: []map[string]types.GomegaMatcher{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
-					"level": gomega.Equal(logrus.ErrorLevel),
-					"msg":   gomega.Equal(`random error`),
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`500: InternalServerError: : random error`),
 				},
 			},
 		},
@@ -140,11 +158,11 @@ func TestAdminReply(t *testing.T) {
 			resp := w.Result()
 
 			if resp.StatusCode != tt.wantStatusCode {
-				t.Error(resp.StatusCode)
+				t.Errorf("Unexpected StatusCode: want: %v, got: %v", tt.wantStatusCode, resp.StatusCode)
 			}
 
 			if !reflect.DeepEqual(resp.Header, tt.header) {
-				t.Error(resp.Header)
+				t.Errorf("Unexpected Headers: want: %v, got: %v", tt.header, resp.Header)
 			}
 
 			if tt.wantBody != nil {
@@ -155,11 +173,12 @@ func TestAdminReply(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(body, tt.wantBody) {
-					t.Error(w.Body.String())
+					t.Errorf("Unexpected Body: want: %v, got: %v", tt.wantBody, w.Body.String())
 				}
 			} else {
 				if w.Body.Len() > 0 {
 					t.Error(w.Body.String())
+					t.Errorf("Unexpected Body: want: %v, got: %v", tt.wantBody, w.Body.String())
 				}
 			}
 

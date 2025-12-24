@@ -23,6 +23,10 @@ const (
 	DevGatewayGenevaLoggingConfigVersion = "4.3"
 )
 
+// OCP versions - declared as major, minor, z
+var OCPv4190 = NewVersion(4, 19, 0)
+var OCPv440 = NewVersion(4, 4, 0)
+
 var GitCommit = "unknown"
 
 type Stream struct {
@@ -34,7 +38,7 @@ type Stream struct {
 // This default is left here ONLY for use by local development mode,
 // until we can come up with a better solution.
 var DefaultInstallStream = Stream{
-	Version:  NewVersion(4, 16, 30),
+	Version:  NewVersion(4, 16, 54),
 	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:7aacace57ab6ec468dd98b0b3e0f3fc440b29afce21b90bd716fed0db487e9e9",
 }
 
