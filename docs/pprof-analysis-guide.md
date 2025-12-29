@@ -45,6 +45,8 @@ This guide explains how to analyze the collected pprof profiles and create featu
 ## Analyzing a Profile
 
 ### Expected Endpoint errors
+> For profiling custom data flows, configure your resources, then use `make pprof-profile-endpoint ENDPOINT=/api/v1/yourEndpoint`
+
   The 400/404 responses are expected validation errors from the server, not script issues:
   400 for /openShiftVersions/{openShiftVersion}: Version "4.14.0" is not in the enabled versions cache. The server validates that the version exists before returning it.
 
@@ -57,7 +59,6 @@ This guide explains how to analyze the collected pprof profiles and create featu
   400 for POST /listCredentials//listAdminCredentials: Expected - InvalidSubscriptionState means the test subscription is not registered in the environment.
   
   These errors indicate the server is processing requests and returning appropriate validation responses. Profiling still captures server behavior under load, which is the goal.
-  The script is working correctly - it's making the requests with the proper HTTP methods, and the server is responding with validation errors as expected for test data.
 
 
 ### Step 1: View the Profile in Browser
