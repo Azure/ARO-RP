@@ -542,8 +542,8 @@ PPROF_OUTPUT_DIR ?= ./pprof-data
 PPROF_DURATION ?= 30s
 
 # Load test configuration
-LOADTEST_URL ?= https://localhost:8443/healthz/ready
-LOADTEST_DURATION ?= 30s
+LOADTEST_BASE_URL ?= https://localhost:8443
+LOADTEST_DURATION ?= 20s
 LOADTEST_RATE ?= 100
 
 .PHONY: pprof-check
@@ -554,7 +554,7 @@ pprof-check: ## Check if pprof server is running
 		(echo "✗ pprof server is not running. Start it with: make runlocal-rp" && exit 1)
 
 .PHONY: pprof-collect-all
-pprof-collect-all: ## Collect all pprof profiles (CPU, heap, goroutine, etc.)
+pprof-collect-all: ## Collect all pprof profile types (CPU, heap, goroutine, etc.) from the running server. Does NOT profile endpoints under load - use pprof-profile-endpoint for that.
 	@mkdir -p $(PPROF_OUTPUT_DIR)
 	@echo "Collecting pprof profiles from $(PPROF_URL)..."
 	@echo "Output directory: $(PPROF_OUTPUT_DIR)"
@@ -637,56 +637,57 @@ pprof-trace: ## Collect and open execution trace in browser
 	@echo "Opening trace viewer..."
 	go tool trace $(PPROF_OUTPUT_DIR)/trace.out
 
-.PHONY: loadtest-hey
-loadtest-hey: ## Run load test using hey (install: go install github.com/rakyll/hey@latest)
-	@command -v hey >/dev/null 2>&1 || { echo "hey not found. Install with: go install github.com/rakyll/hey@latest"; exit 1; }
-	@echo "Running load test with hey..."
-	@echo "  URL: $(LOADTEST_URL)"
-	@echo "  Duration: $(LOADTEST_DURATION)"
-	@echo "  Rate: $(LOADTEST_RATE) req/s"
-	hey -z $(LOADTEST_DURATION) -q $(LOADTEST_RATE) -disable-keepalive $(LOADTEST_URL)
-
 .PHONY: loadtest-vegeta
-loadtest-vegeta: ## Run load test using vegeta (install: go install github.com/tsenart/vegeta@latest)
+loadtest-vegeta: ## Run load test using vegeta. Usage: make loadtest-vegeta ENDPOINT=/api/v1/clusters DURATION=20s RATE=100
+	@if [ -z "$(ENDPOINT)" ]; then \
+		echo "Error: ENDPOINT is required. Example: make loadtest-vegeta ENDPOINT=/api/v1/clusters"; \
+		exit 1; \
+	fi
 	@command -v vegeta >/dev/null 2>&1 || { echo "vegeta not found. Install with: go install github.com/tsenart/vegeta@latest"; exit 1; }
-	@mkdir -p $(PPROF_OUTPUT_DIR)
-	@echo "Running load test with vegeta..."
-	@echo "  URL: $(LOADTEST_URL)"
-	@echo "  Duration: $(LOADTEST_DURATION)"
-	@echo "  Rate: $(LOADTEST_RATE) req/s"
-	@echo "GET $(LOADTEST_URL)" | vegeta attack -duration=$(LOADTEST_DURATION) -rate=$(LOADTEST_RATE) -insecure | \
-		tee $(PPROF_OUTPUT_DIR)/vegeta-results.bin | vegeta report
-	@echo ""
-	@echo "Results saved to $(PPROF_OUTPUT_DIR)/vegeta-results.bin"
-	@echo "Generate HTML report: vegeta report -type=html $(PPROF_OUTPUT_DIR)/vegeta-results.bin > $(PPROF_OUTPUT_DIR)/vegeta-report.html"
+	@ENDPOINT_NAME=$$(echo "$(ENDPOINT)" | sed 's|^/||' | sed 's|/|-|g' | sed 's|[^a-zA-Z0-9-]|_|g' | tr '[:upper:]' '[:lower:]'); \
+	if [ -z "$$ENDPOINT_NAME" ]; then ENDPOINT_NAME="endpoint"; fi; \
+	TEST_URL="$(LOADTEST_BASE_URL)$(ENDPOINT)"; \
+	if [ -n "$(DURATION)" ]; then TEST_DURATION="$(DURATION)"; else TEST_DURATION="$(LOADTEST_DURATION)"; fi; \
+	if [ -n "$(RATE)" ]; then TEST_RATE="$(RATE)"; else TEST_RATE="$(LOADTEST_RATE)"; fi; \
+	mkdir -p $(PPROF_OUTPUT_DIR); \
+	echo "Running load test with vegeta..."; \
+	echo "  URL: $$TEST_URL"; \
+	echo "  Duration: $$TEST_DURATION"; \
+	echo "  Rate: $$TEST_RATE req/s"; \
+	echo "GET $$TEST_URL" | vegeta attack -duration=$$TEST_DURATION -rate=$$TEST_RATE -insecure | \
+		tee $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.bin | vegeta report; \
+	echo ""; \
+	echo "Results saved to $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.bin"; \
+	echo "Generate HTML report: vegeta report -type=html $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.bin > $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.html"
 
-.PHONY: pprof-loadtest
-pprof-loadtest: ## Run load test and collect pprof profiles simultaneously
-	@command -v hey >/dev/null 2>&1 || { echo "hey not found. Install with: go install github.com/rakyll/hey@latest"; exit 1; }
-	@mkdir -p $(PPROF_OUTPUT_DIR)
-	@echo "Starting load test and profile collection..."
+.PHONY: pprof-profile-endpoint
+pprof-profile-endpoint: ## Profile app under load for specific endpoint(s). Usage: make pprof-profile-endpoint ENDPOINT=/api/v1/clusters DURATION=20s RATE=100. Use ENDPOINT=all to profile ALL endpoints from swagger (runs load test + collects profiles for each endpoint individually).
+	@echo "Note: Ensure the RP is running with pprof enabled:"
+	@echo "  Terminal 1: make runlocal-rp"
+	@echo "  (pprof is enabled by default in development mode)"
 	@echo ""
-	@echo "Step 1: Starting CPU profile collection in background ($(PPROF_DURATION))..."
-	@(curl -s "$(PPROF_URL)/debug/pprof/profile?seconds=$$(echo $(PPROF_DURATION) | sed 's/s//')" -o $(PPROF_OUTPUT_DIR)/loadtest-cpu.prof && \
-		echo "CPU profile saved to $(PPROF_OUTPUT_DIR)/loadtest-cpu.prof") &
-	@sleep 2
-	@echo "Step 2: Running load test..."
-	hey -z $(LOADTEST_DURATION) -q $(LOADTEST_RATE) -disable-keepalive $(LOADTEST_URL) || true
-	@echo ""
-	@echo "Step 3: Collecting heap profile..."
-	@curl -s "$(PPROF_URL)/debug/pprof/heap" -o $(PPROF_OUTPUT_DIR)/loadtest-heap.prof
-	@echo "Heap profile saved to $(PPROF_OUTPUT_DIR)/loadtest-heap.prof"
-	@echo ""
-	@echo "Step 4: Collecting goroutine profile..."
-	@curl -s "$(PPROF_URL)/debug/pprof/goroutine" -o $(PPROF_OUTPUT_DIR)/loadtest-goroutine.prof
-	@echo "Goroutine profile saved to $(PPROF_OUTPUT_DIR)/loadtest-goroutine.prof"
-	@echo ""
-	@echo "Load test and profiling complete!"
-	@echo ""
-	@echo "View profiles with:"
-	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/loadtest-cpu.prof"
-	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/loadtest-heap.prof"
-	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/loadtest-goroutine.prof"
+	@if [ -z "$(ENDPOINT)" ]; then \
+		echo "Error: ENDPOINT is required. Example: make pprof-profile-endpoint ENDPOINT=/api/v1/clusters"; \
+		echo "       Or use ENDPOINT=all to profile all endpoints from swagger"; \
+		exit 1; \
+	fi
+	@TEST_DURATION="$(DURATION)"; \
+	if [ -z "$$TEST_DURATION" ]; then TEST_DURATION="$(LOADTEST_DURATION)"; fi; \
+	TEST_RATE="$(RATE)"; \
+	if [ -z "$$TEST_RATE" ]; then TEST_RATE="$(LOADTEST_RATE)"; fi; \
+	hack/pprof-profile-endpoint.sh ENDPOINT="$(ENDPOINT)" DURATION="$$TEST_DURATION" RATE="$$TEST_RATE"
+
+.PHONY: pprof-analyze
+pprof-analyze: ## Analyze a pprof profile and generate improvement suggestions. Usage: make pprof-analyze PROFILE=pprof-data/endpoint-cpu.prof
+	@if [ -z "$(PROFILE)" ]; then \
+		echo "Error: PROFILE is required"; \
+		echo "Usage: make pprof-analyze PROFILE=pprof-data/providers-microsoft-redhatopenshift-operations-cpu.prof"; \
+		echo ""; \
+		echo "Available profiles:"; \
+		ls -1 $(PPROF_OUTPUT_DIR)/*.prof 2>/dev/null | sed 's|^|  |' || echo "  No profiles found in $(PPROF_OUTPUT_DIR)"; \
+		exit 1; \
+	fi
+	@hack/pprof-analyze.sh "$(PROFILE)"
 
 .PHONY: pprof-clean
 pprof-clean: ## Clean up pprof output directory
