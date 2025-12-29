@@ -24,29 +24,37 @@ service, please see the following links:
 
 ## Contributing
 
-This project welcomes contributions and suggestions. Most contributions require
-you to agree to a Contributor License Agreement (CLA) declaring that you have
-the right to, and actually do, grant us the rights to use your contribution. For
-details, visit https://cla.microsoft.com.
+Azure Red Hat OpenShift (ARO) is a jointly engineered, managed, and supported service from Microsoft and Red Hat, delivered as an Azure service with shared responsibilities between Microsoft, Red Hat, and customers. The shared responsibility model is documented in the [Azure Red Hat OpenShift responsibility assignment matrix](https://learn.microsoft.com/azure/openshift/responsibility-matrix).
 
-Before you start development, please set up your local git hooks to conform to our
-development standards:
-
-```bash
-make init-contrib
-```
-
-When you submit a pull request, a CLA-bot will automatically determine whether
-you need to provide a CLA and decorate the PR appropriately (e.g., label,
-comment). Simply follow the instructions provided by the bot. You will only need
-to do this once across all repositories using our CLA.
+This repository is the public home for the ARO resource provider code, but product development is primarily driven by Microsoft and Red Hat engineering teams and is not run as a traditional community‑driven open source project. Pull requests are usually created and reviewed in internal systems, then synchronized and published here, rather than being accepted directly from the public.
 
 This project has adopted the [Microsoft Open Source Code of
 Conduct](https://opensource.microsoft.com/codeofconduct/). For more information
 see the [Code of Conduct
 FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact
-[opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional
-questions or comments.
+[opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+### Development
+
+- The main development workflow, CI/CD, and release management are operated by Microsoft and Red Hat employees.
+- Changes are authored, reviewed, and tested internally, then mirrored to this repository as pull requests and commits.
+
+### Support and feedback
+
+For customers and partners, the preferred way to request help is through official support channels, not via pull requests on this repository.
+
+Recommended options:
+
+- **Azure portal**: In the Azure portal, use **Help + support** → **Create a support request** for issues related to your ARO resources.
+- **Red Hat Customer Portal**: If applicable, you can also open a case via the Red Hat Customer Portal, where Microsoft and Red Hat jointly handle ARO support.
+
+For non‑urgent questions or suggestions, you may open an issue in this repository or use your existing Microsoft or Red Hat account channels.
+
+### References:
+
+-  https://learn.microsoft.com/en-us/azure/openshift/openshift-service-definitions
+-  https://azure.microsoft.com/en-us/support/create-ticket
+
 
 
 ## Repository map
@@ -203,3 +211,4 @@ questions or comments.
 * https://docs.microsoft.com/en-gb/rest/api/cosmos-db
 
 * https://github.com/jewzaam/go-cosmosdb
+*  https://www.redhat.com/en/technologies/cloud-computing/openshift/azure
