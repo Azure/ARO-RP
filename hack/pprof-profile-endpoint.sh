@@ -123,12 +123,13 @@ profile_endpoint() {
     # Normalize method to uppercase
     http_method=$(tr '[:lower:]' '[:upper:]' <<< "$http_method")
     
-    local endpoint_name
-    endpoint_name=$(sanitize_endpoint "$endpoint")
-    [ -z "$endpoint_name" ] && endpoint_name="endpoint"
-    
     local substituted_path
     substituted_path=$(substitute_path_params "$endpoint")
+    
+    # Sanitize the substituted path for use as filename (not the original with placeholders)
+    local endpoint_name
+    endpoint_name=$(sanitize_endpoint "$substituted_path")
+    [ -z "$endpoint_name" ] && endpoint_name="endpoint"
     
     # Add api-version query parameter (required by ARM API)
     local test_url
