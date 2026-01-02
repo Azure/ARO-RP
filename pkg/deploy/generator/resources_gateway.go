@@ -413,44 +413,6 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 	}
 }
 
-func (g *generator) gatewayKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
-	return []mgmtkeyvault.AccessPolicyEntry{
-		{
-			TenantID: &tenantUUIDHack,
-			ObjectID: pointerutils.ToPtr("[parameters('gatewayServicePrincipalId')]"),
-			Permissions: &mgmtkeyvault.Permissions{
-				Secrets: &[]mgmtkeyvault.SecretPermissions{
-					mgmtkeyvault.SecretPermissionsGet,
-				},
-			},
-		},
-	}
-}
-
-func (g *generator) gatewayKeyvault() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtkeyvault.Vault{
-			Properties: &mgmtkeyvault.VaultProperties{
-				EnableSoftDelete: pointerutils.ToPtr(true),
-				TenantID:         &tenantUUIDHack,
-				Sku: &mgmtkeyvault.Sku{
-					Name:   mgmtkeyvault.Standard,
-					Family: pointerutils.ToPtr("A"),
-				},
-				AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
-					{
-						ObjectID: pointerutils.ToPtr(gatewayAccessPolicyHack),
-					},
-				},
-			},
-			Name:     pointerutils.ToPtr("[concat(parameters('keyvaultPrefix'), '" + env.GatewayKeyvaultSuffix + "')]"),
-			Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
-	}
-}
-
 func (g *generator) gatewayRBAC() []*arm.Resource {
 	return []*arm.Resource{
 		rbac.ResourceRoleAssignment(
