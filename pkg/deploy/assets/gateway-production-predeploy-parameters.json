@@ -5,9 +5,6 @@
         "deployNSGs": {
             "value": false
         },
-        "extraGatewayKeyvaultAccessPolicies": {
-            "value": []
-        },
         "gatewayServicePrincipalId": {
             "value": ""
         },
