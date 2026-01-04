@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 const MISE_CONNECTION_TIMEOUT = time.Second * 5
@@ -52,11 +54,18 @@ func (m *miseAdapter) IsAuthorized(log *logrus.Entry, r *http.Request) (bool, er
 		return false, fmt.Errorf("invalid remote address %q: %w", r.RemoteAddr, err)
 	}
 
+	correlationData := api.GetCorrelationDataFromCtx(ctx)
+	correlationID := ""
+	if correlationData != nil {
+		correlationID = correlationData.CorrelationID
+	}
+
 	i := Input{
 		OriginalUri:         fmt.Sprintf("http://%s%s", r.Host, r.URL.Path),
 		OriginalMethod:      r.Method,
 		OriginalIPAddress:   remoteAddr,
 		AuthorizationHeader: r.Header.Get("Authorization"),
+		CorrelationID:       correlationID,
 	}
 
 	var result Result

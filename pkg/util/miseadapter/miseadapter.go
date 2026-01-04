@@ -40,6 +40,9 @@ type (
 		// AuthorizationHeader is the authorization header of the original request being validated.
 		AuthorizationHeader string
 
+		// CorrelationID is the correlation ID from the original request for end-to-end tracing.
+		CorrelationID string
+
 		// ReturnAllActorClaims specifies whether to return all claims from the actor token.
 		ReturnAllActorClaims bool
 
@@ -108,6 +111,10 @@ func createRequest(ctx context.Context, miseAddress string, input Input) (*http.
 	req.Header.Add("Original-Uri", input.OriginalUri)
 	req.Header.Add("Original-Method", input.OriginalMethod)
 	req.Header.Add("X-Forwarded-For", input.OriginalIPAddress)
+
+	if input.CorrelationID != "" {
+		req.Header.Add("X-Correlation-ID", input.CorrelationID)
+	}
 
 	if input.ReturnAllActorClaims {
 		req.Header.Add("Return-All-Actor-Token-Claims", "1")

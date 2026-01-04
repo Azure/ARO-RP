@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-test/deep"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -50,6 +51,19 @@ func Test_createRequest(t *testing.T) {
 		"Authorization":                  []string{"Bearer token"},
 		"Return-Actor-Token-Claim-Tid":   []string{"1"},
 		"Return-Subject-Token-Claim-Tid": []string{"1"},
+	}
+
+	translatedRequestWithCorrelationID, err := http.NewRequestWithContext(ctx, http.MethodPost, miseAddress+"/ValidateRequest", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	translatedRequestWithCorrelationID.Header = http.Header{
+		"Original-Uri":      []string{"http://1.2.3.4/view"},
+		"Original-Method":   []string{http.MethodGet},
+		"X-Forwarded-For":   []string{"http://2.3.4.5"},
+		"Authorization":     []string{"Bearer token"},
+		"X-Correlation-Id":  []string{"test-correlation-id-12345"},
 	}
 
 	type args struct {
@@ -92,6 +106,21 @@ func Test_createRequest(t *testing.T) {
 				},
 			},
 			want:    translatedRequestWithSpecificClaims,
+			wantErr: false,
+		},
+		{
+			name: "Input is translated with correlation ID",
+			args: args{
+				miseAddress: miseAddress,
+				input: Input{
+					OriginalUri:         "http://1.2.3.4/view",
+					OriginalMethod:      http.MethodGet,
+					OriginalIPAddress:   "http://2.3.4.5",
+					AuthorizationHeader: "Bearer token",
+					CorrelationID:       "test-correlation-id-12345",
+				},
+			},
+			want:    translatedRequestWithCorrelationID,
 			wantErr: false,
 		},
 	}
@@ -598,5 +627,82 @@ func TestMiseAdapterIsNotReadyOnConnectionTimeoutOnHeaders(t *testing.T) {
 
 	if isReady {
 		t.Error("adapter is not meant to be ready")
+	}
+}
+
+func TestMiseAdapterPassesCorrelationIDFromContext(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	expectedCorrelationID := "test-correlation-id-12345"
+	var receivedCorrelationID string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedCorrelationID = r.Header.Get("X-Correlation-ID")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	adapter := NewAuthorizer(server.URL, log)
+
+	// Create a request with correlation data in the context
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	// Add correlation data to the context
+	correlationData := &api.CorrelationData{
+		CorrelationID:   expectedCorrelationID,
+		ClientRequestID: "client-request-id",
+		RequestID:       "request-id",
+	}
+	ctx := api.CtxWithCorrelationData(req.Context(), correlationData)
+	req = req.WithContext(ctx)
+
+	authorized, err := adapter.IsAuthorized(log, req)
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if !authorized {
+		t.Error("expected authorized to be true")
+	}
+
+	if receivedCorrelationID != expectedCorrelationID {
+		t.Errorf("expected correlation ID %q, got %q", expectedCorrelationID, receivedCorrelationID)
+	}
+}
+
+func TestMiseAdapterHandlesMissingCorrelationData(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	var receivedCorrelationID string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedCorrelationID = r.Header.Get("X-Correlation-ID")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	adapter := NewAuthorizer(server.URL, log)
+
+	// Create a request WITHOUT correlation data in the context
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	req.RemoteAddr = "1.2.3.4:12345"
+	req.Header.Set("Authorization", "Bearer token")
+
+	authorized, err := adapter.IsAuthorized(log, req)
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if !authorized {
+		t.Error("expected authorized to be true")
+	}
+
+	// When there's no correlation data, the header should not be set
+	if receivedCorrelationID != "" {
+		t.Errorf("expected empty correlation ID when no context data, got %q", receivedCorrelationID)
 	}
 }
