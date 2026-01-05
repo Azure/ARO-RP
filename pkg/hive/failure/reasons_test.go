@@ -126,6 +126,33 @@ level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code"
 			[{"code":"ZonalAllocationFailed", "message": "Allocation failed. We do not have sufficient capacity for the requested VM size in this zone. Read more about improving likelihood of allocation success at http://aka.ms/allocation-guidance"}]}}"}],"innererror":null,"additionalInfo":null}`,
 			want: AzureZonalAllocationFailed,
 		},
+		{
+			name: "KeyBasedAuthenticationNotPermitted",
+			installLog: `level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS)
+level=info msg=InstanceMetadata: running on AzurePublicCloud
+level=info msg=running step [Action github.com/openshift/installer-aro-wrapper/pkg/installer.(*manager).Manifests.func1]
+level=info msg=running step [Action github.com/openshift/installer-aro-wrapper/pkg/installer.(*manager).Manifests.func2]
+level=info msg=resolving graph
+level=info msg=running step [Action github.com/openshift/installer-aro-wrapper/pkg/installer.(*manager).Manifests.func3]
+level=info msg=checking if graph exists
+level=error msg=step [Action github.com/openshift/installer-aro-wrapper/pkg/installer.(*manager).Manifests.func3] encountered error: HEAD https://cluster0123456789.blob.core.windows.net/aro/graph
+level=error msg=--------------------------------------------------------------------------------
+level=error msg=RESPONSE 403: 403 Key based authentication is not permitted on this storage account.
+level=error msg=ERROR CODE: KeyBasedAuthenticationNotPermitted
+level=error msg=--------------------------------------------------------------------------------
+level=error msg=Response contained no body
+level=error msg=--------------------------------------------------------------------------------
+level=error
+level=error msg=HEAD https://cluster0123456789.blob.core.windows.net/aro/graph
+level=error msg=--------------------------------------------------------------------------------
+level=error msg=RESPONSE 403: 403 Key based authentication is not permitted on this storage account.
+level=error msg=ERROR CODE: KeyBasedAuthenticationNotPermitted
+level=error msg=--------------------------------------------------------------------------------
+level=error msg=Response contained no body
+level=error msg=--------------------------------------------------------------------------------
+level=error`,
+			want: AzureKeyBasedAuthenticationNotPermitted,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// This test uses a "mock" version of Hive's real implementation for matching install logs against regex patterns.

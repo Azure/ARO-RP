@@ -1,6 +1,12 @@
 apiVersion: v1
 data:
   regexes: |
+    - installFailingMessage: Deployment failed with KeyBasedAuthenticationNotPermitted
+        error. Please see details for more information.
+      installFailingReason: AzureKeyBasedAuthenticationNotPermitted
+      name: AzureKeyBasedAuthenticationNotPermitted
+      searchRegexStrings:
+      - (?s)cluster([a-z0-9]){10}.*KeyBasedAuthenticationNotPermitted
     - installFailingMessage: Deployment failed due to RequestDisallowedByPolicy. Please
         see details for more information.
       installFailingReason: AzureRequestDisallowedByPolicy
