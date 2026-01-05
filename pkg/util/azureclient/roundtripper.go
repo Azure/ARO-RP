@@ -5,6 +5,9 @@ package azureclient
 
 import (
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -21,10 +24,11 @@ const (
 	// https://docs.google.com/document/d/1RbnKKPNjw7kJZeR-2me4eu
 	outboundRequests = "outboundRequests"
 
-	responseCode         = "response_status_code"
-	contentLength        = "content_length"
-	durationMilliseconds = "duration_milliseconds"
-	correlationIdHeader  = "X-Ms-Correlation-Request-Id"
+	responseCode              = "response_status_code"
+	contentLength             = "content_length"
+	durationMilliseconds      = "duration_milliseconds"
+	correlationIdHeader       = "X-Ms-Correlation-Request-Id"
+	enableOutboundHTTPLogging = "ARO_ENABLE_OUTBOUND_HTTP_LOGGING"
 )
 
 type PolicyFunc func(req *policy.Request) (*http.Response, error)
@@ -36,6 +40,11 @@ func (p PolicyFunc) Do(req *policy.Request) (*http.Response, error) {
 var _ policy.Policy = PolicyFunc(nil)
 
 func NewLoggingPolicy() policy.Policy {
+	if !outboundHTTPLoggingEnabled() {
+		return PolicyFunc(func(req *policy.Request) (*http.Response, error) {
+			return req.Next()
+		})
+	}
 	return PolicyFunc(func(req *policy.Request) (*http.Response, error) {
 		return loggingRoundTripper(req.Raw(), req.Next)
 	})
@@ -92,4 +101,20 @@ func updateCorrelationDataAndEnrichLogWithResponse(correlationData *api.Correlat
 		contentLength:        res.ContentLength,
 		durationMilliseconds: time.Since(requestTime).Milliseconds(),
 	})
+}
+
+func outboundHTTPLoggingEnabled() bool {
+	isDevMode := strings.EqualFold(os.Getenv("RP_MODE"), "development")
+	if !isDevMode {
+		return true
+	}
+
+	// In development: check env var override, default to disabled.
+	if envValue, ok := os.LookupEnv(enableOutboundHTTPLogging); ok && envValue != "" {
+		if enabled, err := strconv.ParseBool(envValue); err == nil {
+			return enabled
+		}
+	}
+
+	return false
 }

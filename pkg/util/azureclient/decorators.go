@@ -12,6 +12,9 @@ import (
 // DecorateSenderWithLogging decorates a sender in order to intercept HTTP calls using a custom RoundTripper
 // and log low level HTTP request's information.
 func DecorateSenderWithLogging(sender autorest.Sender) autorest.Sender {
+	if !outboundHTTPLoggingEnabled() {
+		return autorest.DecorateSender(sender, autorest.DoCloseIfError())
+	}
 	loggingDecorator := loggingDecorator()
 	return autorest.DecorateSender(sender, loggingDecorator, autorest.DoCloseIfError())
 }
