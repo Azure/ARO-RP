@@ -62,6 +62,7 @@
                 "addressPrefixes": [
                     "[parameters('masterAddressPrefix')]"
                 ],
+                "defaultOutboundAccess": false,
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
                 }
@@ -78,6 +79,7 @@
             "name": "[concat('dev-vnet/', parameters('clusterName'), '-worker')]",
             "properties": {
                 "addressPrefix": "[parameters('workerAddressPrefix')]",
+                "defaultOutboundAccess": false,
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
                 }

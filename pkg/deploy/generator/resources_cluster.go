@@ -50,6 +50,7 @@ func (g *generator) clusterMasterSubnet() *arm.Resource {
 				RouteTable: &armnetwork.RouteTable{
 					ID: pointerutils.ToPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},
+				DefaultOutboundAccess: pointerutils.ToPtr(false),
 			},
 			Name: pointerutils.ToPtr("[concat('dev-vnet/', parameters('clusterName'), '-master')]"),
 		},
@@ -71,6 +72,7 @@ func (g *generator) clusterWorkerSubnet() *arm.Resource {
 				RouteTable: &armnetwork.RouteTable{
 					ID: pointerutils.ToPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},
+				DefaultOutboundAccess: pointerutils.ToPtr(false),
 			},
 			Name: pointerutils.ToPtr("[concat('dev-vnet/', parameters('clusterName'), '-worker')]"),
 		},
