@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
 
@@ -720,9 +721,12 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 	const (
 		guardrailsEnabledFlag         = operator.GuardrailsEnabled
 		guardrailsDeployManagedFlag   = operator.GuardrailsDeployManaged
+		guardrailsMachineDenyManaged  = operator.GuardrailsPolicyMachineDenyManaged
 		guardrailsNamespace           = "openshift-azure-guardrails"
 		gkControllerManagerDeployment = "gatekeeper-controller-manager"
 		gkAuditDeployment             = "gatekeeper-audit"
+		gkConstraintTemplateName      = "arodenylabels"
+		gkMachineDenyConstraintName   = "aro-machines-deny"
 	)
 
 	It("Controller Manager must be restored if deleted", func(ctx context.Context) {
@@ -767,6 +771,119 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
 		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+	})
+
+	It("ConstraintTemplate must be restored if deleted", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
+			Skip("Guardrails Controller is not enabled, skipping test")
+		}
+
+		By("creating an unstructured object for ConstraintTemplate")
+		constraintTemplate := &unstructured.Unstructured{}
+		constraintTemplate.SetAPIVersion("templates.gatekeeper.sh/v1beta1")
+		constraintTemplate.SetKind("ConstraintTemplate")
+		constraintTemplate.SetName(gkConstraintTemplateName)
+
+		By("getting the dynamic client for ConstraintTemplate")
+		client, err := clients.Dynamic.GetClient(constraintTemplate)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the ConstraintTemplate to make sure it exists")
+		original := GetK8sObjectWithRetry(ctx, client.Get, gkConstraintTemplateName, metav1.GetOptions{})
+		originalUID := original.GetUID()
+
+		By("deleting the ConstraintTemplate")
+		DeleteK8sObjectWithRetry(ctx, client.Delete, gkConstraintTemplateName, metav1.DeleteOptions{})
+
+		By("waiting for the ConstraintTemplate to actually be deleted")
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := client.Get(ctx, gkConstraintTemplateName, metav1.GetOptions{})
+			g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("waiting for the ConstraintTemplate to be restored")
+		Eventually(func(g Gomega, ctx context.Context) {
+			restored, err := client.Get(ctx, gkConstraintTemplateName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			// Ensure this is a recreated object, not the pre-delete instance lingering during termination.
+			g.Expect(restored.GetUID()).NotTo(Equal(originalUID))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	})
+
+	It("Managed policy creates the expected constraint when enabled", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
+			Skip("Guardrails Controller is not enabled, skipping test")
+		}
+
+		originalFlagValue, hadOriginalFlag := instance.Spec.OperatorFlags[guardrailsMachineDenyManaged]
+
+		setPolicyManagedFlag := func(ctx context.Context, value *string) error {
+			return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				latest, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				if latest.Spec.OperatorFlags == nil {
+					latest.Spec.OperatorFlags = arov1alpha1.OperatorFlags{}
+				}
+
+				if value == nil {
+					delete(latest.Spec.OperatorFlags, guardrailsMachineDenyManaged)
+				} else {
+					latest.Spec.OperatorFlags[guardrailsMachineDenyManaged] = *value
+				}
+
+				_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, latest, metav1.UpdateOptions{})
+				return err
+			})
+		}
+
+		DeferCleanup(func(ctx context.Context) {
+			if hadOriginalFlag {
+				err := setPolicyManagedFlag(ctx, &originalFlagValue)
+				Expect(err).NotTo(HaveOccurred())
+			} else {
+				err := setPolicyManagedFlag(ctx, nil)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
+		By("creating an unstructured object for the policy constraint")
+		constraint := &unstructured.Unstructured{}
+		constraint.SetAPIVersion("constraints.gatekeeper.sh/v1beta1")
+		constraint.SetKind("ARODenyLabels")
+		constraint.SetName(gkMachineDenyConstraintName)
+
+		By("getting the dynamic client for the policy constraint")
+		client, err := clients.Dynamic.GetClient(constraint)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("disabling the managed policy")
+		falseValue := operator.FlagFalse
+		err = setPolicyManagedFlag(ctx, &falseValue)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the policy constraint to be removed")
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := client.Get(ctx, gkMachineDenyConstraintName, metav1.GetOptions{})
+			g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("enabling the managed policy")
+		trueValue := operator.FlagTrue
+		err = setPolicyManagedFlag(ctx, &trueValue)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the policy constraint to be created")
+		GetK8sObjectWithRetry(ctx, client.Get, gkMachineDenyConstraintName, metav1.GetOptions{})
 	})
 
 })
