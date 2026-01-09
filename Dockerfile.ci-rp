@@ -24,7 +24,7 @@ RUN npm run lint && npm run build
 ###############################################################################
 # Stage 2: Compile the Golang RP code
 ###############################################################################
-FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20 AS builder
+FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21 AS builder
 ARG ARO_VERSION
 LABEL aro-builder=true
 USER root
