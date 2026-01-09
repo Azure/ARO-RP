@@ -8,20 +8,29 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
-var _ = Describe("[Admin API] Get billing document action", func() {
+// Billing documents are created by the RP when clusters are provisioned.
+// This test runs after cluster creation to ensure billing documents exist.
+var _ = Describe("[Admin API] Billing documents", Serial, Ordered, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("must return a billing document if it exists", func(ctx context.Context) {
+	It("must return a specific billing document", func(ctx context.Context) {
+		var oc = &admin.OpenShiftCluster{}
+
+		// Wait for the cluster to be in a succeeded state before continuing
+		Eventually(func(g Gomega, ctx context.Context) {
+			oc = adminGetCluster(g, ctx, clusterResourceID)
+			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
 		By("listing billing documents to get an ID")
-		// Note: Billing documents are created by the RP when clusters are provisioned.
-		// This test assumes billing documents exist from actual cluster operations in the database.
 		docs := adminListBillingDocuments(Default, ctx, "/admin/providers/Microsoft.RedHatOpenShift/billingDocuments")
 
-		if len(docs) == 0 {
-			Skip("No billing documents exist in the database")
-		}
+		By("ensuring billing documents exist")
+		Expect(docs).ToNot(BeEmpty(), "expected billing documents to exist from previous test")
 
 		billingDocID := docs[0].ID
 
@@ -31,6 +40,7 @@ var _ = Describe("[Admin API] Get billing document action", func() {
 		By("checking the billing document has expected fields")
 		Expect(doc).ToNot(BeNil())
 		Expect(doc.ID).To(Equal(billingDocID))
+		Expect(doc.ClusterResourceGroupIDKey).ToNot(BeEmpty())
 		Expect(doc.Billing).ToNot(BeNil())
 		Expect(doc.Billing.TenantID).ToNot(BeEmpty())
 		Expect(doc.Billing.Location).ToNot(BeEmpty())
