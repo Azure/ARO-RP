@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -69,7 +70,7 @@ func TestMUOReconciler(t *testing.T) {
 			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec: "acrtest.example.com/app-sre/managed-upgrade-operator:v0.1.1202-g118c178",
+					Pullspec: "acrtest.example.com/app-sre/managed-upgrade-operator:" + version.MUOImageTag,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
