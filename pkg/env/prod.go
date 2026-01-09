@@ -67,6 +67,7 @@ type prod struct {
 
 	fpCertificateRefresher CertificateRefresher
 	fpClientID             string
+	fpAuthTenantID         string
 
 	clusterKeyvault     azsecrets.Client
 	clusterCertificates azcertificates.Client
@@ -119,7 +120,8 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		Core:   core,
 		Dialer: dialer,
 
-		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
+		fpClientID:     os.Getenv("AZURE_FP_CLIENT_ID"),
+		fpAuthTenantID: os.Getenv("AZURE_FP_AUTH_TENANT_ID"),
 
 		clusterGenevaLoggingAccount:       os.Getenv("CLUSTER_MDSD_ACCOUNT"),
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
@@ -451,8 +453,14 @@ func (p *prod) LiveConfig() liveconfig.Manager {
 func (p *prod) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (*azidentity.ClientCertificateCredential, error) {
 	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
 
+	// For RP-tenant first-party calls, force auth to Red Hat tenant.
+	authTenantID := tenantID
+	if p.fpAuthTenantID != "" && tenantID == p.TenantID() {
+		authTenantID = p.fpAuthTenantID
+	}
+
 	options := p.Environment().ClientCertificateCredentialOptions(additionalTenants)
-	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, options)
+	credential, err := azidentity.NewClientCertificateCredential(authTenantID, p.fpClientID, fpCertificates, fpPrivateKey, options)
 	if err != nil {
 		return nil, err
 	}
