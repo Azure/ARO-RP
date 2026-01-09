@@ -6,6 +6,7 @@ package env
 import (
 	"context"
 	"crypto/fips140"
+	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -51,6 +52,7 @@ type Core interface {
 	Service() string
 	Logger() *logrus.Entry
 	LoggerForComponent(string) *logrus.Entry
+	EnvironmentType() string
 }
 
 type core struct {
@@ -86,6 +88,10 @@ func (c *core) Logger() *logrus.Entry {
 // database or serving components such as the frontend.
 func (c *core) LoggerForComponent(component string) *logrus.Entry {
 	return c.serviceLog.WithField("component", component)
+}
+
+func (c *core) EnvironmentType() string {
+	return os.Getenv("ENVIRONMENT")
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
