@@ -5,6 +5,9 @@ package azureclient
 
 import (
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -21,10 +24,11 @@ const (
 	// https://docs.google.com/document/d/1RbnKKPNjw7kJZeR-2me4eu
 	outboundRequests = "outboundRequests"
 
-	responseCode         = "response_status_code"
-	contentLength        = "content_length"
-	durationMilliseconds = "duration_milliseconds"
-	correlationIdHeader  = "X-Ms-Correlation-Request-Id"
+	responseCode              = "response_status_code"
+	contentLength             = "content_length"
+	durationMilliseconds      = "duration_milliseconds"
+	correlationIdHeader       = "X-Ms-Correlation-Request-Id"
+	enableOutboundHTTPLogging = "ARO_ENABLE_OUTBOUND_HTTP_LOGGING"
 )
 
 type PolicyFunc func(req *policy.Request) (*http.Response, error)
@@ -50,14 +54,23 @@ func loggingRoundTripper(req *http.Request, next func() (*http.Response, error))
 	}
 
 	requestTime := time.Now()
-	l := updateCorrelationDataAndEnrichLogWithRequest(correlationData, utillog.GetLogger(), requestTime, req)
+	correlationData.RequestTime = requestTime
 
-	l.Info("HttpRequestStart")
+	loggingEnabled := outboundHTTPLoggingEnabled()
+	var l *logrus.Entry
 
+	if loggingEnabled {
+		l = updateCorrelationDataAndEnrichLogWithRequest(correlationData, l, requestTime, req)
+		l.Info("HttpRequestStart")
+	}
 	res, err := next()
 
-	l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
-	l.Info("HttpRequestEnd")
+	if loggingEnabled {
+		l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
+		l.Info("HttpRequestEnd")
+	}
+
+	logOutboundFailureIfNeeded(correlationData, req, res, err)
 
 	return res, err
 }
@@ -92,4 +105,49 @@ func updateCorrelationDataAndEnrichLogWithResponse(correlationData *api.Correlat
 		contentLength:        res.ContentLength,
 		durationMilliseconds: time.Since(requestTime).Milliseconds(),
 	})
+}
+
+func logOutboundFailureIfNeeded(correlationData *api.CorrelationData, req *http.Request, res *http.Response, err error) {
+	statusCode := 0
+	errorMessage := "OutboundRequestFailed"
+	if res != nil {
+		statusCode = res.StatusCode
+	}
+
+	if statusCode == http.StatusConflict {
+		errorMessage = "OutboundRequestConflict"
+	}
+
+	if err == nil && statusCode < 400 {
+		return
+	}
+
+	l := utillog.EnrichWithCorrelationData(utillog.GetLogger(), correlationData)
+	l = l.WithFields(logrus.Fields{
+		"request_host":   req.URL.Host,
+		"request_method": req.Method,
+		responseCode:     statusCode,
+	})
+
+	if err != nil {
+		l = l.WithError(err)
+	}
+
+	l.Warn(errorMessage)
+}
+
+func outboundHTTPLoggingEnabled() bool {
+	isLocalDevelopmentMode := strings.EqualFold(os.Getenv("RP_MODE"), "development")
+	if !isLocalDevelopmentMode {
+		return true
+	}
+
+	// In development: check env var override, default to disabled.
+	if envValue, ok := os.LookupEnv(enableOutboundHTTPLogging); ok && envValue != "" {
+		if enabled, err := strconv.ParseBool(envValue); err == nil {
+			return enabled
+		}
+	}
+
+	return false
 }
