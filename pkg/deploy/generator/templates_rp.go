@@ -304,14 +304,6 @@ func (g *generator) rpParameters() *arm.Parameters {
 func (g *generator) rpPredeployTemplate() *arm.Template {
 	t := templateStanza()
 
-	if g.production {
-		t.Variables = map[string]interface{}{
-			"clusterKeyvaultAccessPolicies": g.rpClusterKeyvaultAccessPolicies(),
-			"portalKeyvaultAccessPolicies":  g.rpPortalKeyvaultAccessPolicies(),
-			"serviceKeyvaultAccessPolicies": g.rpServiceKeyvaultAccessPolicies(),
-		}
-	}
-
 	params := []string{
 		"keyvaultPrefix",
 		"rpServicePrincipalId",
@@ -321,9 +313,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 	if g.production {
 		params = append(params,
 			"deployNSGs",
-			"extraClusterKeyvaultAccessPolicies",
-			"extraPortalKeyvaultAccessPolicies",
-			"extraServiceKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
 			"rpNsgPortalSourceAddressPrefixes",
 		)
@@ -339,11 +328,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		case "deployNSGs":
 			p.Type = "bool"
 			p.DefaultValue = false
-		case "extraClusterKeyvaultAccessPolicies",
-			"extraPortalKeyvaultAccessPolicies",
-			"extraServiceKeyvaultAccessPolicies":
-			p.Type = "array"
-			p.DefaultValue = []interface{}{}
 		case "rpNsgPortalSourceAddressPrefixes":
 			p.Type = "array"
 			p.DefaultValue = []string{}
@@ -358,10 +342,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpPESecurityGroup(),
 		g.rpVnet(),
 		g.rpPEVnet(),
-		g.rpClusterKeyvault(),
-		g.rpPortalKeyvault(),
-		g.rpServiceKeyvault(),
-		g.rpServiceKeyvaultDynamic(),
 	)
 
 	if g.production {
