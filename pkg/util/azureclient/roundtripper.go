@@ -40,11 +40,6 @@ func (p PolicyFunc) Do(req *policy.Request) (*http.Response, error) {
 var _ policy.Policy = PolicyFunc(nil)
 
 func NewLoggingPolicy() policy.Policy {
-	if !outboundHTTPLoggingEnabled() {
-		return PolicyFunc(func(req *policy.Request) (*http.Response, error) {
-			return req.Next()
-		})
-	}
 	return PolicyFunc(func(req *policy.Request) (*http.Response, error) {
 		return loggingRoundTripper(req.Raw(), req.Next)
 	})
@@ -59,14 +54,23 @@ func loggingRoundTripper(req *http.Request, next func() (*http.Response, error))
 	}
 
 	requestTime := time.Now()
-	l := updateCorrelationDataAndEnrichLogWithRequest(correlationData, utillog.GetLogger(), requestTime, req)
+	correlationData.RequestTime = requestTime
 
-	l.Info("HttpRequestStart")
+	loggingEnabled := outboundHTTPLoggingEnabled()
+	var l *logrus.Entry
 
+	if loggingEnabled {
+		l = updateCorrelationDataAndEnrichLogWithRequest(correlationData, l, requestTime, req)
+		l.Info("HttpRequestStart")
+	}
 	res, err := next()
 
-	l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
-	l.Info("HttpRequestEnd")
+	if loggingEnabled {
+		l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
+		l.Info("HttpRequestEnd")
+	}
+
+	logOutboundFailureIfNeeded(correlationData, req, res, err)
 
 	return res, err
 }
@@ -103,9 +107,38 @@ func updateCorrelationDataAndEnrichLogWithResponse(correlationData *api.Correlat
 	})
 }
 
+func logOutboundFailureIfNeeded(correlationData *api.CorrelationData, req *http.Request, res *http.Response, err error) {
+	statusCode := 0
+	errorMessage := "OutboundRequestFailed"
+	if res != nil {
+		statusCode = res.StatusCode
+	}
+
+	if statusCode == http.StatusConflict {
+		errorMessage = "OutboundRequestConflict"
+	}
+
+	if err == nil && statusCode < 400 {
+		return
+	}
+
+	l := utillog.EnrichWithCorrelationData(utillog.GetLogger(), correlationData)
+	l = l.WithFields(logrus.Fields{
+		"request_host":   req.URL.Host,
+		"request_method": req.Method,
+		responseCode:     statusCode,
+	})
+
+	if err != nil {
+		l = l.WithError(err)
+	}
+
+	l.Warn(errorMessage)
+}
+
 func outboundHTTPLoggingEnabled() bool {
-	isDevMode := strings.EqualFold(os.Getenv("RP_MODE"), "development")
-	if !isDevMode {
+	isLocalDevelopmentMode := strings.EqualFold(os.Getenv("RP_MODE"), "development")
+	if !isLocalDevelopmentMode {
 		return true
 	}
 
