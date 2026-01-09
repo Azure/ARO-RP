@@ -37,15 +37,19 @@ endif
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
 	BUILDER_REGISTRY = arointsvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
 	BUILDER_REGISTRY = arosvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY ?= registry.access.redhat.com
 	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
+	FEDORA_REGISTRY ?= registry.fedoraproject.org
 else
 	REGISTRY = $(RP_IMAGE_ACR)
 	BUILDER_REGISTRY = quay.io/openshift-release-dev
+	FEDORA_REGISTRY = $(REGISTRY)
 endif
 
 # prod images
@@ -256,17 +260,30 @@ pyenv:
 
 .PHONY: secrets
 secrets:
-	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	rm -rf secrets
-	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	tar -xzf secrets.tar.gz
-	rm secrets.tar.gz
+	@{ \
+		SA_NAME=$${SECRET_SA_ACCOUNT_NAME:-rharosecretsdev}; \
+		if [ ! -d secrets ]; then \
+			echo "Downloading secrets from account: $${SA_NAME}"; \
+			az storage blob download \
+				-n secrets.tar.gz \
+				-c secrets \
+				-f secrets.tar.gz \
+				--account-name "$${SA_NAME}" >/dev/null; \
+			tar -xzf secrets.tar.gz; \
+			rm secrets.tar.gz; \
+		fi \
+	}
 
 .PHONY: secrets-update
 secrets-update:
-	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	tar -czf secrets.tar.gz secrets
-	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	@if [ -z "$${SECRET_SA_ACCOUNT_NAME}" ] && [ -f ./env ]; then \
+		set +e; \
+		. ./env 2>/dev/null; \
+		set -e; \
+	fi && \
+	[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 ) && \
+	tar -czf secrets.tar.gz secrets && \
+	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null && \
 	rm secrets.tar.gz
 
 .PHONY: tunnel
@@ -456,7 +473,15 @@ LOCAL_E2E_IMAGE ?= e2e
 LOCAL_ARO_AZEXT_IMAGE ?= azext-aro
 LOCAL_TUNNEL_IMAGE ?= aro-tunnel
 
-###############################################################################
+ARCH := $(shell uname -m)
+ifeq ($(ARCH),arm64)
+    PLATFORM_VAL := linux/arm64
+else ifeq ($(ARCH),aarch64)
+    PLATFORM_VAL := linux/arm64
+else
+    PLATFORM_VAL := linux/amd64
+endif
+##############################################################################
 # Targets
 ###############################################################################
 .PHONY: ci-azext-aro
@@ -521,6 +546,15 @@ run-portal:
 run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production, including Hive. Requires a VPN connection.
 	docker compose rm -sf rp
 	docker compose up rp
+
+.PHONY: dev-env-start
+dev-env-start: secrets ## Source env file and run a local containerized RP for development
+	@echo "Detected architecture: $(ARCH). Platform: $(PLATFORM_VAL)"
+	PLATFORM=$(PLATFORM_VAL) FEDORA_REGISTRY=$(FEDORA_REGISTRY) USERID=$(shell id -u) podman compose up --build -d aro-dev-env
+
+.PHONY: dev-env-stop
+dev-env-stop: ## Stop the containerized RP
+	podman compose down aro-dev-env
 
 .PHONY: run-selenium
 run-selenium:
