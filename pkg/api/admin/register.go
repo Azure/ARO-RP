@@ -20,5 +20,6 @@ func init() {
 		PlatformWorkloadIdentityRoleSetStaticValidator: platformWorkloadIdentityRoleSetStaticValidator{},
 		MaintenanceManifestConverter:                   maintenanceManifestConverter{},
 		MaintenanceManifestStaticValidator:             maintenanceManifestStaticValidator{},
+		BillingDocumentConverter:                       billingDocumentConverter{},
 	}
 }
