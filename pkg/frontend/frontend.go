@@ -55,6 +55,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithBilling
 }
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
@@ -383,7 +384,11 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		// Operations
 		r.Route("/providers/{resourceProviderNamespace}", func(r chi.Router) {
-			r.Get("/{resourceType}", f.getAdminOpenShiftClusters)
+			r.Get("/openshiftclusters", f.getAdminOpenShiftClusters)
+			r.Route("/billingdocuments", func(r chi.Router) {
+				r.Get("/", f.getAdminBillingDocuments)
+				r.Get("/{billingDocId}", f.getAdminBillingDocument)
+			})
 		})
 	})
 
