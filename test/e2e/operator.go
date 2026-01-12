@@ -595,15 +595,23 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		return names
 	}
 
-	AfterEach(func(ctx context.Context) {
-		// delete the MCP after, just in case
+	// cleanupMCPAndWaitForMC deletes the MCP and waits for the associated MachineConfig to be garbage collected
+	cleanupMCPAndWaitForMC := func(ctx context.Context) {
 		err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			Expect(err).ToNot(HaveOccurred())
 		}
 
-		// reset the force reconciliation flag
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Wait for the MachineConfig to be fully deleted before proceeding
+		Eventually(func(g Gomega, _ctx context.Context) {
+			machineConfigs := getMachineConfigNames(g, _ctx)
+			g.Expect(machineConfigs).NotTo(ContainElement(mcName))
+		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
+	}
+
+	// resetForceReconciliationFlag ensures the forceReconciliation flag is set to false
+	resetForceReconciliationFlag := func(ctx context.Context) {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 			if err != nil {
 				return err
@@ -613,6 +621,19 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 			return err
 		})
 		Expect(err).NotTo(HaveOccurred())
+	}
+
+	BeforeEach(func(ctx context.Context) {
+		// Clean up any leftover resources from crashed previous test runs
+		cleanupMCPAndWaitForMC(ctx)
+	})
+
+	AfterEach(func(ctx context.Context) {
+		// Clean up MCP and wait for MC to be fully deleted
+		cleanupMCPAndWaitForMC(ctx)
+
+		// Reset the force reconciliation flag
+		resetForceReconciliationFlag(ctx)
 	})
 
 	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
@@ -641,6 +662,11 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 	})
 
 	It("must respect the forceReconciliation flag and not update MachineConfigs by default", func(ctx context.Context) {
+		By("Cleaning up any leftover state from previous retry attempts")
+		// This cleanup is necessary because Ginkgo retries don't run BeforeEach/AfterEach
+		cleanupMCPAndWaitForMC(ctx)
+		resetForceReconciliationFlag(ctx)
+
 		By("Create custom MachineConfigPool")
 		_, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Create(ctx, &customMcp, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -687,12 +713,15 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking the machineconfig labels, we can see if our flag has been removed")
+		// Use a longer timeout here - the operator's reconciliation loop may take time to process
+		// the forceReconciliation flag change, especially under load
+		reconcileTimeout := 3 * time.Minute
 		Eventually(func(g Gomega, _ctx context.Context) map[string]string {
 			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			return config.Labels
-		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).Should(Equal(map[string]string{
+		}).WithContext(ctx).WithPolling(polling).WithTimeout(reconcileTimeout).Should(Equal(map[string]string{
 			"machineconfiguration.openshift.io/role": mcpName,
 		}))
 	})
