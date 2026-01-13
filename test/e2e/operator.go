@@ -624,15 +624,11 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 	}
 
 	BeforeEach(func(ctx context.Context) {
-		// Clean up any leftover resources from crashed previous test runs
 		cleanupMCPAndWaitForMC(ctx)
 	})
 
 	AfterEach(func(ctx context.Context) {
-		// Clean up MCP and wait for MC to be fully deleted
 		cleanupMCPAndWaitForMC(ctx)
-
-		// Reset the force reconciliation flag
 		resetForceReconciliationFlag(ctx)
 	})
 
@@ -662,11 +658,6 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 	})
 
 	It("must respect the forceReconciliation flag and not update MachineConfigs by default", func(ctx context.Context) {
-		By("Cleaning up any leftover state from previous retry attempts")
-		// This cleanup is necessary because Ginkgo retries don't run BeforeEach/AfterEach
-		cleanupMCPAndWaitForMC(ctx)
-		resetForceReconciliationFlag(ctx)
-
 		By("Create custom MachineConfigPool")
 		_, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Create(ctx, &customMcp, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -691,8 +682,8 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 
 		By("checking the machineconfig labels, we can see if it has reconciled")
 		Eventually(func(g Gomega, _ctx context.Context) map[string]string {
-			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(_ctx, mcName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
 
 			return config.Labels
 		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).MustPassRepeatedly(3).Should(Equal(map[string]string{
@@ -717,8 +708,8 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		// the forceReconciliation flag change, especially under load
 		reconcileTimeout := 3 * time.Minute
 		Eventually(func(g Gomega, _ctx context.Context) map[string]string {
-			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(_ctx, mcName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
 
 			return config.Labels
 		}).WithContext(ctx).WithPolling(polling).WithTimeout(reconcileTimeout).Should(Equal(map[string]string{
