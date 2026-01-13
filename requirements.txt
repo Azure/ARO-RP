@@ -7,8 +7,8 @@ astroid==3.3.11
 azdev==0.2.7
 azure-appconfiguration==1.7.1
 azure-batch==15.0.0b2
-azure-cli==2.78.0
-azure-cli-core==2.78.0
+azure-cli==2.82.0
+azure-cli-core==2.82.0
 azure-cli-diff-tool==0.1.1
 azure-cli-telemetry==1.1.0
 azure-cli-testsdk @ git+https://github.com/Azure/azure-cli@a55543015da9e2f554a6a09816794b5315e3ce8b#subdirectory=src/azure-cli-testsdk
