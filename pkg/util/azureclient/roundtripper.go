@@ -62,6 +62,8 @@ func loggingRoundTripper(req *http.Request, next func() (*http.Response, error))
 	l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
 	l.Info("HttpRequestEnd")
 
+	logOutboundFailureIfNeeded(correlationData, req, res, err)
+
 	return res, err
 }
 
