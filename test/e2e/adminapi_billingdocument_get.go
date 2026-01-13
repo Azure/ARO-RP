@@ -27,7 +27,7 @@ var _ = Describe("[Admin API] Billing documents", Serial, Ordered, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("listing billing documents to get an ID")
-		docs := adminListBillingDocuments(Default, ctx, "/admin/providers/Microsoft.RedHatOpenShift/billingDocuments")
+		docs := adminListBillingDocuments(Default, ctx, "/admin/billingDocuments")
 
 		By("ensuring billing documents exist")
 		Expect(docs).ToNot(BeEmpty(), "expected billing documents to exist from previous test")
@@ -35,7 +35,7 @@ var _ = Describe("[Admin API] Billing documents", Serial, Ordered, func() {
 		billingDocID := docs[0].ID
 
 		By("getting a specific billing document via RP admin API")
-		doc := adminGetBillingDocument(Default, ctx, "/admin/providers/Microsoft.RedHatOpenShift/billingDocuments/"+billingDocID)
+		doc := adminGetBillingDocument(Default, ctx, "/admin/billingDocuments/"+billingDocID)
 
 		By("checking the billing document has expected fields")
 		Expect(doc).ToNot(BeNil())

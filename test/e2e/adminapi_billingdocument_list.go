@@ -27,7 +27,7 @@ var _ = Describe("[Admin API] Billing documents", Serial, Ordered, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("listing the billing documents via RP admin API")
-		docs := adminListBillingDocuments(Default, ctx, "/admin/providers/Microsoft.RedHatOpenShift/billingDocuments")
+		docs := adminListBillingDocuments(Default, ctx, "/admin/billingDocuments")
 
 		By("checking that we received a list")
 		Expect(docs).ToNot(BeNil())

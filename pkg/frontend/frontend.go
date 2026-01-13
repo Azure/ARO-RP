@@ -318,6 +318,11 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			r.Get("/syncsetname/{syncsetname}", f.getAdminHiveSyncSet)
 		})
 
+		r.Route("/billingdocuments", func(r chi.Router) {
+			r.Get("/", f.getAdminBillingDocuments)
+			r.Get("/{billingDocId}", f.getAdminBillingDocument)
+		})
+
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
 				// Top pods metrics endpoint
@@ -384,11 +389,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		// Operations
 		r.Route("/providers/{resourceProviderNamespace}", func(r chi.Router) {
-			r.Get("/openshiftclusters", f.getAdminOpenShiftClusters)
-			r.Route("/billingdocuments", func(r chi.Router) {
-				r.Get("/", f.getAdminBillingDocuments)
-				r.Get("/{billingDocId}", f.getAdminBillingDocument)
-			})
+			r.Get("/{resourceType}", f.getAdminOpenShiftClusters)
 		})
 	})
 

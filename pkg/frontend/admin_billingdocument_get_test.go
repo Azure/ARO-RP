@@ -117,7 +117,7 @@ func TestAdminGetBillingDocument(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(http.MethodGet,
-				"https://server/admin/providers/Microsoft.RedHatOpenShift/billingDocuments/"+tt.billingDocId,
+				"https://server/admin/billingDocuments/"+tt.billingDocId,
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)

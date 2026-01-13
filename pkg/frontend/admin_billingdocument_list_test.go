@@ -126,7 +126,7 @@ func TestAdminListBillingDocuments(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(http.MethodGet,
-				"https://server/admin/providers/Microsoft.RedHatOpenShift/billingDocuments",
+				"https://server/admin/billingDocuments",
 				http.Header{
 					"Referer": []string{"https://mockrefererhost/"},
 				}, nil)
