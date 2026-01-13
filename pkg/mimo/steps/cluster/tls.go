@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 
+	"github.com/hashicorp/go-multierror"
+
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
@@ -75,6 +77,68 @@ func RotateAPIServerCertificate(ctx context.Context) error {
 		if err != nil {
 			return mimo.TransientError(err)
 		}
+	}
+
+	return nil
+}
+
+func RotateManagedCertificates(ctx context.Context) error {
+	th, err := mimo.GetTaskContext(ctx)
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	if signedCertificatesDisabled(th) {
+		return nil
+	}
+
+	taskEnv := th.Environment()
+	managedDomain, err := managedDomain(th)
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+	if managedDomain == "" {
+		th.SetResultMessage("cluster certificates are not managed")
+		return nil
+	}
+
+	ch, err := th.ClientHelper()
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	var errs error
+
+	// Attempt both certificates -- one failing should not stop the other, but
+	// it will still return a TransientError
+	for _, cert := range []struct {
+		secretName      string
+		targetNamespace string
+	}{
+		{secretName: th.GetClusterUUID() + "-apiserver", targetNamespace: "openshift-config"},
+		{secretName: th.GetClusterUUID() + "-ingress", targetNamespace: "openshift-ingress"},
+	} {
+		secrets, err := cluster.TLSSecretsFromKeyVault(
+			ctx, taskEnv.ClusterKeyvault(), []types.NamespacedName{
+				{Namespace: cert.targetNamespace, Name: cert.secretName},
+				{Namespace: "openshift-azure-operator", Name: cert.secretName},
+			}, cert.secretName,
+		)
+		if err != nil {
+			th.Log().Errorf("failed to load %s from keyvault: %s", cert.secretName, err)
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		err = ch.Ensure(ctx, secrets...)
+		if err != nil {
+			th.Log().Errorf("failed to save %s: %s", cert.secretName, err)
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	if errs != nil {
+		return mimo.TransientError(errs)
 	}
 
 	return nil
