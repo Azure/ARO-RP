@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -165,7 +166,127 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 	}
 }
 
-func TestRotateAPIServerCertificate(t *testing.T) {
+func TestConfigureIngressCertificate(t *testing.T) {
+	ctx := context.Background()
+	clusterUUID := "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
+
+	for _, tt := range []struct {
+		name              string
+		clusterproperties api.OpenShiftClusterProperties
+		objects           []runtime.Object
+		check             func(clienthelper.Interface, Gomega) error
+		featureDisabled   bool
+		wantMsg           string
+		wantErr           string
+	}{
+		{
+			name: "not found",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects: []runtime.Object{},
+			wantErr: `TerminalError: ingresscontrollers.operator.openshift.io "default" not found`,
+		},
+		{
+			name: "not managed",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something.unmanaged",
+				},
+			},
+			objects: []runtime.Object{},
+			wantMsg: "cluster certificate is not managed",
+		},
+		{
+			name: "invalid domain",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something.",
+				},
+			},
+			objects: []runtime.Object{},
+			wantErr: `TerminalError: invalid domain "something."`,
+		},
+		{
+			name: "signed certificates disabled",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects:         []runtime.Object{},
+			featureDisabled: true,
+			wantMsg:         "signed certificates disabled",
+		},
+		{
+			name: "secrets referenced",
+			clusterproperties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: "something",
+				},
+			},
+			objects: []runtime.Object{
+				&operatorv1.IngressController{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "openshift-ingress-operator",
+						Name:      "default",
+					},
+					Spec: operatorv1.IngressControllerSpec{},
+				},
+			},
+			check: func(i clienthelper.Interface, g Gomega) error {
+				ic := &operatorv1.IngressController{}
+				err := i.GetOne(ctx, types.NamespacedName{Namespace: "openshift-ingress-operator", Name: "default"}, ic)
+				if err != nil {
+					return err
+				}
+
+				g.Expect(ic.Spec.DefaultCertificate).To(Equal(&corev1.LocalObjectReference{
+					Name: "512a50c8-2a43-4c2a-8fd9-a5539475df2a-ingress",
+				}))
+
+				return nil
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			controller := gomock.NewController(t)
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Domain().AnyTimes().Return("example.com")
+			_env.EXPECT().FeatureIsSet(env.FeatureDisableSignedCertificates).AnyTimes().Return(tt.featureDisabled)
+
+			_, log := testlog.New()
+
+			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.objects...)
+			ch := clienthelper.NewWithClient(log, builder.Build())
+			tc := testtasks.NewFakeTestContext(
+				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
+				testtasks.WithClientHelper(ch),
+				testtasks.WithOpenShiftClusterProperties(clusterUUID, tt.clusterproperties),
+			)
+
+			err := EnsureIngressServingCertificateConfiguration(tc)
+			if tt.wantErr != "" && err != nil {
+				g.Expect(err).To(MatchError(tt.wantErr))
+			} else if tt.wantErr != "" && err == nil {
+				t.Errorf("wanted error %s", tt.wantErr)
+			} else if tt.wantErr == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			g.Expect(tc.GetResultMessage()).To(Equal(tt.wantMsg))
+
+			if tt.check != nil {
+				g.Expect(tt.check(ch, g)).ToNot(HaveOccurred())
+			}
+		})
+	}
+}
+
+func TestRotateClusterCertificates(t *testing.T) {
 	ctx := context.Background()
 	clusterUUID := "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
 

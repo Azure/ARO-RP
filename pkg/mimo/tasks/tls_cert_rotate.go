@@ -16,6 +16,7 @@ func TLSCertRotation(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, o
 
 		steps.Action(cluster.RotateManagedCertificates),
 		steps.Action(cluster.EnsureAPIServerServingCertificateConfiguration),
+		steps.Action(cluster.EnsureIngressServingCertificateConfiguration),
 	}
 
 	return run(t, s)

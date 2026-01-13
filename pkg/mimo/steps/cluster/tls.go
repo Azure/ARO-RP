@@ -8,17 +8,27 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
+
+func ingressCertName(th mimo.TaskContext) string {
+	return th.GetClusterUUID() + "-ingress"
+}
+
+func apiserverCertName(th mimo.TaskContext) string {
+	return th.GetClusterUUID() + "-apiserver"
+}
 
 func managedDomain(tc mimo.TaskContext) (string, error) {
 	env := tc.Environment()
@@ -42,44 +52,6 @@ func signedCertificatesDisabled(tc mimo.TaskContext) bool {
 		return true
 	}
 	return false
-}
-
-func RotateAPIServerCertificate(ctx context.Context) error {
-	th, err := mimo.GetTaskContext(ctx)
-	if err != nil {
-		return mimo.TerminalError(err)
-	}
-
-	if signedCertificatesDisabled(th) {
-		return nil
-	}
-
-	taskEnv := th.Environment()
-	managedDomain, err := managedDomain(th)
-	if err != nil {
-		return mimo.TerminalError(err)
-	}
-	if managedDomain == "" {
-		th.SetResultMessage("apiserver certificate is not managed")
-		return nil
-	}
-
-	ch, err := th.ClientHelper()
-	if err != nil {
-		return mimo.TerminalError(err)
-	}
-	secretName := th.GetClusterUUID() + "-apiserver"
-
-	for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
-		err = cluster.EnsureTLSSecretFromKeyvault(
-			ctx, taskEnv.ClusterKeyvault(), ch, types.NamespacedName{Namespace: namespace, Name: secretName}, secretName,
-		)
-		if err != nil {
-			return mimo.TransientError(err)
-		}
-	}
-
-	return nil
 }
 
 func RotateManagedCertificates(ctx context.Context) error {
@@ -115,8 +87,8 @@ func RotateManagedCertificates(ctx context.Context) error {
 		secretName      string
 		targetNamespace string
 	}{
-		{secretName: th.GetClusterUUID() + "-apiserver", targetNamespace: "openshift-config"},
-		{secretName: th.GetClusterUUID() + "-ingress", targetNamespace: "openshift-ingress"},
+		{secretName: apiserverCertName(th), targetNamespace: "openshift-config"},
+		{secretName: ingressCertName(th), targetNamespace: "openshift-ingress"},
 	} {
 		secrets, err := cluster.TLSSecretsFromKeyVault(
 			ctx, taskEnv.ClusterKeyvault(), []types.NamespacedName{
@@ -187,7 +159,7 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 					"api." + managedDomain,
 				},
 				ServingCertificate: configv1.SecretNameReference{
-					Name: th.GetClusterUUID() + "-apiserver",
+					Name: apiserverCertName(th),
 				},
 			},
 		}
@@ -202,4 +174,55 @@ func EnsureAPIServerServingCertificateConfiguration(ctx context.Context) error {
 		}
 		return nil
 	})
+}
+
+func EnsureIngressServingCertificateConfiguration(ctx context.Context) error {
+	th, err := mimo.GetTaskContext(ctx)
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	if signedCertificatesDisabled(th) {
+		return nil
+	}
+
+	ch, err := th.ClientHelper()
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	managedDomain, err := managedDomain(th)
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	if managedDomain == "" {
+		th.SetResultMessage("cluster certificate is not managed")
+		return nil
+	}
+
+	outerErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ic := &operatorv1.IngressController{}
+
+		err := ch.GetOne(ctx, types.NamespacedName{Namespace: "openshift-ingress-operator", Name: "default"}, ic)
+		ic.Spec.DefaultCertificate = &corev1.LocalObjectReference{
+			Name: ingressCertName(th),
+		}
+		if err != nil {
+			return err
+		}
+
+		return ch.Update(ctx, ic)
+	})
+
+	if outerErr != nil {
+		if kerrors.IsNotFound(outerErr) {
+			// apiserver not being found is probably unrecoverable
+			return mimo.TerminalError(outerErr)
+		} else {
+			return mimo.TransientError(outerErr)
+		}
+	}
+
+	return nil
 }
