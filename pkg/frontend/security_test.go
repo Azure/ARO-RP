@@ -90,7 +90,7 @@ func TestSecurity(t *testing.T) {
 
 	auditHook, auditEntry := testlog.NewAudit()
 	otelAudit := testlog.NewOtelAuditClient()
-	f, err := NewFrontend(ctx, auditEntry, log, otelAudit, _env, database.NewDBGroup(), api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+	f, err := NewFrontend(ctx, auditEntry, log, otelAudit, _env, database.NewDBGroup(), api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
