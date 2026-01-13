@@ -40,39 +40,53 @@ func (p PolicyFunc) Do(req *policy.Request) (*http.Response, error) {
 var _ policy.Policy = PolicyFunc(nil)
 
 func NewLoggingPolicy() policy.Policy {
+	if outboundHTTPLoggingEnabled() {
+		return PolicyFunc(func(req *policy.Request) (*http.Response, error) {
+			return loggingRoundTripper(req.Raw(), req.Next)
+		})
+	}
 	return PolicyFunc(func(req *policy.Request) (*http.Response, error) {
-		return loggingRoundTripper(req.Raw(), req.Next)
+		return errorOnlyLoggingRoundTripper(req.Raw(), req.Next)
 	})
 }
 
 func loggingRoundTripper(req *http.Request, next func() (*http.Response, error)) (*http.Response, error) {
+	correlationData := getOrCreateCorrelationData(req)
+	requestTime := time.Now()
+
+	l := updateCorrelationDataAndEnrichLogWithRequest(correlationData, utillog.GetLogger(), requestTime, req)
+	l.Info("HttpRequestStart")
+
+	res, err := next()
+
+	l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
+	l.Info("HttpRequestEnd")
+
+	return res, err
+}
+
+func errorOnlyLoggingRoundTripper(req *http.Request, next func() (*http.Response, error)) (*http.Response, error) {
+	correlationData := getOrCreateCorrelationData(req)
+	correlationData.RequestTime = time.Now()
+
+	res, err := next()
+
+	logOutboundFailureIfNeeded(correlationData, req, res, err)
+
+	return res, err
+}
+
+// getOrCreateCorrelationData retrieves correlation data from the request context,
+// or creates it from request headers. If correlation data exists with a CorrelationID,
+// it propagates the header to the outbound request.
+func getOrCreateCorrelationData(req *http.Request) *api.CorrelationData {
 	correlationData := api.GetCorrelationDataFromCtx(req.Context())
 	if correlationData == nil {
 		correlationData = api.CreateCorrelationDataFromReq(req)
 	} else if correlationData.CorrelationID != "" {
 		req.Header.Set(correlationIdHeader, correlationData.CorrelationID)
 	}
-
-	requestTime := time.Now()
-	correlationData.RequestTime = requestTime
-
-	loggingEnabled := outboundHTTPLoggingEnabled()
-	var l *logrus.Entry
-
-	if loggingEnabled {
-		l = updateCorrelationDataAndEnrichLogWithRequest(correlationData, l, requestTime, req)
-		l.Info("HttpRequestStart")
-	}
-	res, err := next()
-
-	if loggingEnabled {
-		l = updateCorrelationDataAndEnrichLogWithResponse(correlationData, l, res, requestTime)
-		l.Info("HttpRequestEnd")
-	}
-
-	logOutboundFailureIfNeeded(correlationData, req, res, err)
-
-	return res, err
+	return correlationData
 }
 
 // updateCorrelationDataAndEnrichLogWithRequest receives a non nil correlationData and updates the request time.
