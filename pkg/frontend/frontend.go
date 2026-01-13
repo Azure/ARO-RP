@@ -90,6 +90,7 @@ type frontend struct {
 
 	hiveClusterManager    hive.ClusterManager
 	hiveSyncSetManager    hive.SyncSetManager
+	hiveK8sObjectManager  HiveK8sObjectManager
 	kubeActionsFactory    kubeActionsFactory
 	azureActionsFactory   azureActionsFactory
 	appLensActionsFactory appLensActionsFactory
@@ -134,6 +135,7 @@ func NewFrontend(ctx context.Context,
 	aead encryption.AEAD,
 	hiveClusterManager hive.ClusterManager,
 	hiveSyncSetManager hive.SyncSetManager,
+	hiveK8sObjectManager HiveK8sObjectManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
 	appLensActionsFactory appLensActionsFactory,
@@ -173,6 +175,7 @@ func NewFrontend(ctx context.Context,
 		aead:                  aead,
 		hiveClusterManager:    hiveClusterManager,
 		hiveSyncSetManager:    hiveSyncSetManager,
+		hiveK8sObjectManager:  hiveK8sObjectManager,
 		kubeActionsFactory:    kubeActionsFactory,
 		azureActionsFactory:   azureActionsFactory,
 		appLensActionsFactory: appLensActionsFactory,
@@ -315,6 +318,9 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		r.Route("/hivesyncset", func(r chi.Router) {
 			r.Get("/", f.listAdminHiveSyncSet)
 			r.Get("/syncsetname/{syncsetname}", f.getAdminHiveSyncSet)
+		})
+		r.Route("/hive", func(r chi.Router) {
+			r.Get("/aks/{region}/k8s/{resource}", f.adminHiveK8sObjectsList)
 		})
 
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {

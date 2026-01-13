@@ -200,7 +200,7 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, auditLog, _env.LoggerForComponent("frontend"), outelAuditClient, _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+	f, err := frontend.NewFrontend(ctx, auditLog, _env.LoggerForComponent("frontend"), outelAuditClient, _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, hiveSyncSetManager, nil, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}

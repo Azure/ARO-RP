@@ -204,7 +204,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 
 					aead := testdatabase.NewFakeAEAD()
 
-					f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, aead, nil, nil, nil, nil, nil, ti.enricher)
+					f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, aead, nil, nil, nil, nil, nil, nil, ti.enricher)
 					if err != nil {
 						t.Fatal(err)
 					}
