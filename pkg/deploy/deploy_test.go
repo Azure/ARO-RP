@@ -291,7 +291,6 @@ func TestCheckForKnownError(t *testing.T) {
 func TestGetParameters(t *testing.T) {
 	databaseAccountName := pointerutils.ToPtr("databaseAccountName")
 	adminApiCaBundle := pointerutils.ToPtr("adminApiCaBundle")
-	extraClusterKeyVaultAccessPolicies := []interface{}{"a", "b", 1}
 	for _, tt := range []struct {
 		name   string
 		ps     map[string]interface{}
@@ -309,20 +308,15 @@ func TestGetParameters(t *testing.T) {
 			ps: map[string]interface{}{
 				"adminApiCaBundle":                   nil,
 				"databaseAccountName":                nil,
-				"extraClusterKeyvaultAccessPolicies": nil,
 			},
 			config: Configuration{
 				DatabaseAccountName:                databaseAccountName,
 				AdminAPICABundle:                   adminApiCaBundle,
-				ExtraClusterKeyvaultAccessPolicies: extraClusterKeyVaultAccessPolicies,
 			},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{
 					"databaseAccountName": {
 						Value: databaseAccountName,
-					},
-					"extraClusterKeyvaultAccessPolicies": {
-						Value: extraClusterKeyVaultAccessPolicies,
 					},
 					"adminApiCaBundle": {
 						Value: adminApiCaBundle,
@@ -335,7 +329,6 @@ func TestGetParameters(t *testing.T) {
 			ps: map[string]interface{}{
 				"adminApiCaBundle":                   nil,
 				"databaseAccountName":                nil,
-				"extraClusterKeyvaultAccessPolicies": nil,
 			},
 			config: Configuration{
 				DatabaseAccountName: databaseAccountName,
@@ -350,9 +343,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name: "when nil slice parameter is present it is skipped",
-			ps: map[string]interface{}{
-				"extraClusterKeyvaultAccessPolicies": nil,
-			},
+			ps: map[string]interface{}{},
 			config: Configuration{},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{},

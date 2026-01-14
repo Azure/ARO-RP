@@ -58,11 +58,7 @@ type Configuration struct {
 	DatabaseAccountName                *string                `json:"databaseAccountName,omitempty" value:"required"`
 	CosmosDB                           *CosmosDBConfiguration `json:"cosmosDB,omitempty"`
 	DisableCosmosDBFirewall            *bool                  `json:"disableCosmosDBFirewall,omitempty"`
-	ExtraClusterKeyvaultAccessPolicies []interface{}          `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraCosmosDBIPs                   []string               `json:"extraCosmosDBIPs,omitempty"`
-	ExtraGatewayKeyvaultAccessPolicies []interface{}          `json:"extraGatewayKeyvaultAccessPolicies,omitempty" value:"required"`
-	ExtraPortalKeyvaultAccessPolicies  []interface{}          `json:"extraPortalKeyvaultAccessPolicies,omitempty" value:"required"`
-	ExtraServiceKeyvaultAccessPolicies []interface{}          `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
 	FluentbitImage                     *string                `json:"fluentbitImage,omitempty" value:"required"`
 	FPClientID                         *string                `json:"fpClientId,omitempty" value:"required"`
 	FPTenantID                         *string                `json:"fpTenantId,omitempty" value:"required"`
