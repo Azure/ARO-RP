@@ -198,7 +198,7 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP != "" {
 		return nil
 	}
-	lb, err := m.getInternalLoadBalancer(ctx)
+	lb, err := GetInternalLoadBalancer(ctx, m.armLoadBalancers, m.doc.OpenShiftCluster.Properties)
 	if err != nil {
 		return err
 	}

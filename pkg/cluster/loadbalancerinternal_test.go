@@ -18,6 +18,7 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -172,7 +173,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 				sku.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{}, errTestSKUFetchError)
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			wantErrs:     []error{errListVMResourceSKUs, errTestSKUFetchError},
+			wantErrs:     []error{computeskus.ErrListVMResourceSKUs, errTestSKUFetchError},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -183,6 +184,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 
 			env := mock_env.NewMockInterface(ctrl)
 			env.EXPECT().FeatureIsSet(gomock.Any()).AnyTimes().Return(false)
+			env.EXPECT().Now().AnyTimes().Return(time.Unix(1756868836, 0))
 
 			hook, entry := testlog.New()
 
@@ -229,7 +231,6 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 				armClusterPrivateLinkServices: plses,
 				resourceSkus:                  skus,
 				env:                           env,
-				now:                           func() time.Time { return time.Unix(1756868836, 0) },
 			}
 
 			err = manager.migrateInternalLoadBalancerZones(ctx)
@@ -341,6 +342,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 
 			env := mock_env.NewMockInterface(ctrl)
 			env.EXPECT().FeatureIsSet(gomock.Any()).AnyTimes().Return(false)
+			env.EXPECT().Now().AnyTimes().Return(time.Unix(1756868836, 0))
 
 			lbs.EXPECT().Get(gomock.Any(), rgName, tt.internalLBName, nil).Return(
 				armnetwork.LoadBalancersClientGetResponse{
@@ -590,7 +592,6 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				armClusterPrivateLinkServices: plses,
 				resourceSkus:                  skus,
 				env:                           env,
-				now:                           func() time.Time { return time.Unix(1756868836, 0) },
 			}
 
 			err = manager.migrateInternalLoadBalancerZones(ctx)
