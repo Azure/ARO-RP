@@ -38,70 +38,70 @@ type RPConfig struct {
 
 // Configuration represents configuration structure
 type Configuration struct {
-	ACRLocationOverride                *string                `json:"acrLocationOverride,omitempty"`
-	ACRResourceID                      *string                `json:"acrResourceId,omitempty" value:"required"`
-	AzureCloudName                     *string                `json:"azureCloudName,omitempty" value:"required"`
-	AzureSecPackQualysUrl              *string                `json:"azureSecPackQualysUrl,omitempty"`
-	AzureSecPackVSATenantId            *string                `json:"azureSecPackVSATenantId,omitempty"`
-	RPVersionStorageAccountName        *string                `json:"rpVersionStorageAccountName,omitempty" value:"required"`
-	ACRReplicaDisabled                 *bool                  `json:"acrReplicaDisabled,omitempty"`
-	AdminAPICABundle                   *string                `json:"adminApiCaBundle,omitempty"`
-	AdminAPIClientCertCommonName       *string                `json:"adminApiClientCertCommonName,omitempty" value:"required"`
-	ARMAPICABundle                     *string                `json:"armApiCaBundle,omitempty"`
-	ARMAPIClientCertCommonName         *string                `json:"armApiClientCertCommonName,omitempty"`
-	ARMClientID                        *string                `json:"armClientId,omitempty"`
-	ClusterMDMAccount                  *string                `json:"clusterMdmAccount,omitempty" value:"required"`
-	ClusterMDSDAccount                 *string                `json:"clusterMdsdAccount,omitempty" value:"required"`
-	ClusterMDSDConfigVersion           *string                `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
-	ClusterMDSDNamespace               *string                `json:"clusterMdsdNamespace,omitempty" value:"required"`
-	ClusterParentDomainName            *string                `json:"clusterParentDomainName,omitempty" value:"required"`
-	DatabaseAccountName                *string                `json:"databaseAccountName,omitempty" value:"required"`
-	CosmosDB                           *CosmosDBConfiguration `json:"cosmosDB,omitempty"`
-	DisableCosmosDBFirewall            *bool                  `json:"disableCosmosDBFirewall,omitempty"`
-	ExtraCosmosDBIPs                   []string               `json:"extraCosmosDBIPs,omitempty"`
-	FluentbitImage                     *string                `json:"fluentbitImage,omitempty" value:"required"`
-	FPClientID                         *string                `json:"fpClientId,omitempty" value:"required"`
-	FPTenantID                         *string                `json:"fpTenantId,omitempty" value:"required"`
-	FPServerCertCommonName             *string                `json:"fpServerCertCommonName,omitempty"`
-	FPServicePrincipalID               *string                `json:"fpServicePrincipalId,omitempty" value:"required"`
-	GatewayDomains                     []string               `json:"gatewayDomains,omitempty"`
-	GatewayFeatures                    []string               `json:"gatewayFeatures,omitempty"`
-	GatewayMDSDConfigVersion           *string                `json:"gatewayMdsdConfigVersion,omitempty" value:"required"`
-	GatewayVMSize                      *string                `json:"gatewayVmSize,omitempty"`
-	GatewayVMSSCapacity                *int                   `json:"gatewayVmssCapacity,omitempty"`
-	GlobalResourceGroupName            *string                `json:"globalResourceGroupName,omitempty" value:"required"`
-	GlobalResourceGroupLocation        *string                `json:"globalResourceGroupLocation,omitempty" value:"required"`
-	GlobalSubscriptionID               *string                `json:"globalSubscriptionId,omitempty" value:"required"`
-	GlobalDevopsManagedIdentity        *string                `json:"globalDevopsManagedIdentity,omitempty"`
-	KeyvaultDNSSuffix                  *string                `json:"keyvaultDNSSuffix,omitempty" value:"required"`
-	KeyvaultPrefix                     *string                `json:"keyvaultPrefix,omitempty" value:"required"`
-	MDMFrontendURL                     *string                `json:"mdmFrontendUrl,omitempty" value:"required"`
-	MDSDEnvironment                    *string                `json:"mdsdEnvironment,omitempty" value:"required"`
-	MiseValidAudiences                 []string               `json:"miseValidAudiences,omitempty"`
-	MiseValidAppIDs                    []string               `json:"miseValidAppIDs,omitempty"`
-	NonZonalRegions                    []string               `json:"nonZonalRegions,omitempty"`
-	PortalAccessGroupIDs               []string               `json:"portalAccessGroupIds,omitempty" value:"required"`
-	PortalClientID                     *string                `json:"portalClientId,omitempty" value:"required"`
-	PortalElevatedGroupIDs             []string               `json:"portalElevatedGroupIds,omitempty" value:"required"`
-	RPFeatures                         []string               `json:"rpFeatures,omitempty"`
-	RPImagePrefix                      *string                `json:"rpImagePrefix,omitempty" value:"required"`
-	RPMDMAccount                       *string                `json:"rpMdmAccount,omitempty" value:"required"`
-	RPMDSDAccount                      *string                `json:"rpMdsdAccount,omitempty" value:"required"`
-	RPMDSDConfigVersion                *string                `json:"rpMdsdConfigVersion,omitempty" value:"required"`
-	RPMDSDNamespace                    *string                `json:"rpMdsdNamespace,omitempty" value:"required"`
-	RPNSGPortalSourceAddressPrefixes   []string               `json:"rpNsgPortalSourceAddressPrefixes,omitempty"`
-	RPParentDomainName                 *string                `json:"rpParentDomainName,omitempty" value:"required"`
-	RPVMSSCapacity                     *int                   `json:"rpVmssCapacity,omitempty"`
-	SSHPublicKey                       *string                `json:"sshPublicKey,omitempty"`
-	SubscriptionResourceGroupName      *string                `json:"subscriptionResourceGroupName,omitempty" value:"required"`
-	SubscriptionResourceGroupLocation  *string                `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
-	VMSize                             *string                `json:"vmSize,omitempty" value:"required"`
-	VMSSCleanupEnabled                 *bool                  `json:"vmssCleanupEnabled,omitempty"`
-	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
-	OtelAuditQueueSize                 *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
-	MsiRpEndpoint                      *string                `json:"msiRpEndpoint,omitempty" value:"required"`
-	TokenContributorRoleID             *string                `json:"tokenContributorRoleID,omitempty" value:"required"`
-	TokenContributorRoleName           *string                `json:"tokenContributorRoleName,omitempty" value:"required"`
+	ACRLocationOverride               *string                `json:"acrLocationOverride,omitempty"`
+	ACRResourceID                     *string                `json:"acrResourceId,omitempty" value:"required"`
+	AzureCloudName                    *string                `json:"azureCloudName,omitempty" value:"required"`
+	AzureSecPackQualysUrl             *string                `json:"azureSecPackQualysUrl,omitempty"`
+	AzureSecPackVSATenantId           *string                `json:"azureSecPackVSATenantId,omitempty"`
+	RPVersionStorageAccountName       *string                `json:"rpVersionStorageAccountName,omitempty" value:"required"`
+	ACRReplicaDisabled                *bool                  `json:"acrReplicaDisabled,omitempty"`
+	AdminAPICABundle                  *string                `json:"adminApiCaBundle,omitempty"`
+	AdminAPIClientCertCommonName      *string                `json:"adminApiClientCertCommonName,omitempty" value:"required"`
+	ARMAPICABundle                    *string                `json:"armApiCaBundle,omitempty"`
+	ARMAPIClientCertCommonName        *string                `json:"armApiClientCertCommonName,omitempty"`
+	ARMClientID                       *string                `json:"armClientId,omitempty"`
+	ClusterMDMAccount                 *string                `json:"clusterMdmAccount,omitempty" value:"required"`
+	ClusterMDSDAccount                *string                `json:"clusterMdsdAccount,omitempty" value:"required"`
+	ClusterMDSDConfigVersion          *string                `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
+	ClusterMDSDNamespace              *string                `json:"clusterMdsdNamespace,omitempty" value:"required"`
+	ClusterParentDomainName           *string                `json:"clusterParentDomainName,omitempty" value:"required"`
+	DatabaseAccountName               *string                `json:"databaseAccountName,omitempty" value:"required"`
+	CosmosDB                          *CosmosDBConfiguration `json:"cosmosDB,omitempty"`
+	DisableCosmosDBFirewall           *bool                  `json:"disableCosmosDBFirewall,omitempty"`
+	ExtraCosmosDBIPs                  []string               `json:"extraCosmosDBIPs,omitempty"`
+	FluentbitImage                    *string                `json:"fluentbitImage,omitempty" value:"required"`
+	FPClientID                        *string                `json:"fpClientId,omitempty" value:"required"`
+	FPTenantID                        *string                `json:"fpTenantId,omitempty" value:"required"`
+	FPServerCertCommonName            *string                `json:"fpServerCertCommonName,omitempty"`
+	FPServicePrincipalID              *string                `json:"fpServicePrincipalId,omitempty" value:"required"`
+	GatewayDomains                    []string               `json:"gatewayDomains,omitempty"`
+	GatewayFeatures                   []string               `json:"gatewayFeatures,omitempty"`
+	GatewayMDSDConfigVersion          *string                `json:"gatewayMdsdConfigVersion,omitempty" value:"required"`
+	GatewayVMSize                     *string                `json:"gatewayVmSize,omitempty"`
+	GatewayVMSSCapacity               *int                   `json:"gatewayVmssCapacity,omitempty"`
+	GlobalResourceGroupName           *string                `json:"globalResourceGroupName,omitempty" value:"required"`
+	GlobalResourceGroupLocation       *string                `json:"globalResourceGroupLocation,omitempty" value:"required"`
+	GlobalSubscriptionID              *string                `json:"globalSubscriptionId,omitempty" value:"required"`
+	GlobalDevopsManagedIdentity       *string                `json:"globalDevopsManagedIdentity,omitempty"`
+	KeyvaultDNSSuffix                 *string                `json:"keyvaultDNSSuffix,omitempty" value:"required"`
+	KeyvaultPrefix                    *string                `json:"keyvaultPrefix,omitempty" value:"required"`
+	MDMFrontendURL                    *string                `json:"mdmFrontendUrl,omitempty" value:"required"`
+	MDSDEnvironment                   *string                `json:"mdsdEnvironment,omitempty" value:"required"`
+	MiseValidAudiences                []string               `json:"miseValidAudiences,omitempty"`
+	MiseValidAppIDs                   []string               `json:"miseValidAppIDs,omitempty"`
+	NonZonalRegions                   []string               `json:"nonZonalRegions,omitempty"`
+	PortalAccessGroupIDs              []string               `json:"portalAccessGroupIds,omitempty" value:"required"`
+	PortalClientID                    *string                `json:"portalClientId,omitempty" value:"required"`
+	PortalElevatedGroupIDs            []string               `json:"portalElevatedGroupIds,omitempty" value:"required"`
+	RPFeatures                        []string               `json:"rpFeatures,omitempty"`
+	RPImagePrefix                     *string                `json:"rpImagePrefix,omitempty" value:"required"`
+	RPMDMAccount                      *string                `json:"rpMdmAccount,omitempty" value:"required"`
+	RPMDSDAccount                     *string                `json:"rpMdsdAccount,omitempty" value:"required"`
+	RPMDSDConfigVersion               *string                `json:"rpMdsdConfigVersion,omitempty" value:"required"`
+	RPMDSDNamespace                   *string                `json:"rpMdsdNamespace,omitempty" value:"required"`
+	RPNSGPortalSourceAddressPrefixes  []string               `json:"rpNsgPortalSourceAddressPrefixes,omitempty"`
+	RPParentDomainName                *string                `json:"rpParentDomainName,omitempty" value:"required"`
+	RPVMSSCapacity                    *int                   `json:"rpVmssCapacity,omitempty"`
+	SSHPublicKey                      *string                `json:"sshPublicKey,omitempty"`
+	SubscriptionResourceGroupName     *string                `json:"subscriptionResourceGroupName,omitempty" value:"required"`
+	SubscriptionResourceGroupLocation *string                `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
+	VMSize                            *string                `json:"vmSize,omitempty" value:"required"`
+	VMSSCleanupEnabled                *bool                  `json:"vmssCleanupEnabled,omitempty"`
+	OIDCStorageAccountName            *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
+	OtelAuditQueueSize                *string                `json:"otelAuditQueueSize,omitempty" value:"required"`
+	MsiRpEndpoint                     *string                `json:"msiRpEndpoint,omitempty" value:"required"`
+	TokenContributorRoleID            *string                `json:"tokenContributorRoleID,omitempty" value:"required"`
+	TokenContributorRoleName          *string                `json:"tokenContributorRoleName,omitempty" value:"required"`
 
 	// Log levels for ARO services running on the VMSSes
 	RPLogLevel           *string `json:"rpLogLevel,omitempty"`

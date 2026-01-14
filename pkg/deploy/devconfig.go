@@ -13,48 +13,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func adminKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
-	return map[string]interface{}{
-		"objectId": os.Getenv("ADMIN_OBJECT_ID"),
-		"permissions": map[string]interface{}{
-			"certificates": []interface{}{
-				"Get",
-				"List",
-				"Update",
-				"Create",
-				"Import",
-				"Delete",
-				"Recover",
-				"Backup",
-				"Restore",
-				"ManageContacts",
-				"ManageIssuers",
-				"GetIssuers",
-				"ListIssuers",
-			},
-			"secrets": []interface{}{
-				"Get",
-				"List",
-			},
-		},
-		"tenantId": _env.TenantID(),
-	}
-}
-
-func deployKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
-	return map[string]interface{}{
-		"objectId": os.Getenv("AZURE_SERVICE_PRINCIPAL_ID"),
-		"permissions": map[string]interface{}{
-			"secrets": []interface{}{
-				"Get",
-				"List",
-				"Set",
-			},
-		},
-		"tenantId": _env.TenantID(),
-	}
-}
-
 func DevConfig(_env env.Core) (*Config, error) {
 	ca, err := os.ReadFile("secrets/dev-ca.crt")
 	if err != nil {
@@ -134,10 +92,10 @@ func DevConfig(_env env.Core) (*Config, error) {
 				GatewayProvisionedThroughput:  400,
 			},
 			DisableCosmosDBFirewall: pointerutils.ToPtr(true),
-			FluentbitImage:       pointerutils.ToPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
-			FPClientID:           pointerutils.ToPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
-			FPServicePrincipalID: pointerutils.ToPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
-			FPTenantID:           pointerutils.ToPtr(os.Getenv("AZURE_TENANT_ID")),
+			FluentbitImage:          pointerutils.ToPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
+			FPClientID:              pointerutils.ToPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
+			FPServicePrincipalID:    pointerutils.ToPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
+			FPTenantID:              pointerutils.ToPtr(os.Getenv("AZURE_TENANT_ID")),
 			GatewayDomains: []string{
 				"eastus-shared.ppe.warm.ingest.monitor.core.windows.net",
 				"gcs.ppe.monitoring.core.windows.net",

@@ -306,12 +306,12 @@ func TestGetParameters(t *testing.T) {
 		{
 			name: "when all parameters present, everything is copied",
 			ps: map[string]interface{}{
-				"adminApiCaBundle":                   nil,
-				"databaseAccountName":                nil,
+				"adminApiCaBundle":    nil,
+				"databaseAccountName": nil,
 			},
 			config: Configuration{
-				DatabaseAccountName:                databaseAccountName,
-				AdminAPICABundle:                   adminApiCaBundle,
+				DatabaseAccountName: databaseAccountName,
+				AdminAPICABundle:    adminApiCaBundle,
 			},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{
@@ -327,8 +327,8 @@ func TestGetParameters(t *testing.T) {
 		{
 			name: "when parameters with nil config are present, they are not returned",
 			ps: map[string]interface{}{
-				"adminApiCaBundle":                   nil,
-				"databaseAccountName":                nil,
+				"adminApiCaBundle":    nil,
+				"databaseAccountName": nil,
 			},
 			config: Configuration{
 				DatabaseAccountName: databaseAccountName,
@@ -342,8 +342,8 @@ func TestGetParameters(t *testing.T) {
 			},
 		},
 		{
-			name: "when nil slice parameter is present it is skipped",
-			ps: map[string]interface{}{},
+			name:   "when nil slice parameter is present it is skipped",
+			ps:     map[string]interface{}{},
 			config: Configuration{},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{},
