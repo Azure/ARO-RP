@@ -16,6 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -134,7 +135,7 @@ func TestValidateZones(t *testing.T) {
 			resourceSkusClientErr: errTestSKUFetchError,
 			controlPlaneSkuZones:  []string{"1", "2"},
 			workerSkuZones:        []string{"1", "2", "3"},
-			wantErrs:              []error{errListVMResourceSKUs, errTestSKUFetchError},
+			wantErrs:              []error{computeskus.ErrListVMResourceSKUs, errTestSKUFetchError},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

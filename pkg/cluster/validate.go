@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -19,8 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/validate"
 )
 
-var errListVMResourceSKUs = errors.New("failure listing resource SKUs")
-
 func (m *manager) validateResources(ctx context.Context) error {
 	var clusterMSICredential azcore.TokenCredential
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
@@ -31,22 +28,11 @@ func (m *manager) validateResources(ctx context.Context) error {
 	).Dynamic(ctx)
 }
 
-func (m *manager) getVMSKUsForCurrentRegion(ctx context.Context) (map[string]*mgmtcompute.ResourceSku, error) {
-	location := m.doc.OpenShiftCluster.Location
-	filter := fmt.Sprintf("location eq %s", location)
-	skus, err := m.resourceSkus.List(ctx, filter)
-	if err != nil {
-		return nil, errors.Join(errListVMResourceSKUs, err)
-	}
-
-	return computeskus.FilterVMSizes(skus, location), nil
-}
-
 // validateZones validates the SKU availability and zones of the cluster being
 // created. This function is only to be called during cluster bootstrap!
 func (m *manager) validateZones(ctx context.Context) error {
 	location := m.doc.OpenShiftCluster.Location
-	filteredSkus, err := m.getVMSKUsForCurrentRegion(ctx)
+	filteredSkus, err := computeskus.GetVMSkusForCurrentRegion(ctx, m.resourceSkus, location)
 	if err != nil {
 		return err
 	}
