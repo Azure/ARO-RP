@@ -39,7 +39,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 
 	// If the secret exists, we need to decide if it should be replaced.
 	if err == nil {
-		replace, err := m.shouldReplaceMSICertificate(&existingMsiCertificate, m.now())
+		replace, err := m.shouldReplaceMSICertificate(&existingMsiCertificate, m.env.Now())
 		if err != nil {
 			return err
 		}

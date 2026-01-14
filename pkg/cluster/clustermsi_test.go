@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -253,12 +254,15 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 				tt.kvClientMocks(mockKvClient)
 			}
 
+			mockEnv := mock_env.NewMockInterface(controller)
+			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(now)
+
 			m := manager{
 				log:                     logrus.NewEntry(logrus.StandardLogger()),
 				doc:                     tt.doc,
 				msiDataplane:            factory,
 				clusterMsiKeyVaultStore: mockKvClient,
-				now:                     now,
+				env:                     mockEnv,
 			}
 
 			err := m.ensureClusterMsiCertificate(ctx)
