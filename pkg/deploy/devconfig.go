@@ -134,20 +134,6 @@ func DevConfig(_env env.Core) (*Config, error) {
 				GatewayProvisionedThroughput:  400,
 			},
 			DisableCosmosDBFirewall: pointerutils.ToPtr(true),
-			ExtraClusterKeyvaultAccessPolicies: []interface{}{
-				adminKeyvaultAccessPolicy(_env),
-			},
-			ExtraGatewayKeyvaultAccessPolicies: []interface{}{
-				adminKeyvaultAccessPolicy(_env),
-			},
-			ExtraPortalKeyvaultAccessPolicies: []interface{}{
-				adminKeyvaultAccessPolicy(_env),
-				deployKeyvaultAccessPolicy(_env),
-			},
-			ExtraServiceKeyvaultAccessPolicies: []interface{}{
-				adminKeyvaultAccessPolicy(_env),
-				deployKeyvaultAccessPolicy(_env),
-			},
 			FluentbitImage:       pointerutils.ToPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
 			FPClientID:           pointerutils.ToPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
 			FPServicePrincipalID: pointerutils.ToPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
