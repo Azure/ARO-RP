@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/fips140"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -51,6 +52,9 @@ type Core interface {
 	Service() string
 	Logger() *logrus.Entry
 	LoggerForComponent(string) *logrus.Entry
+
+	// for ease of faking, load time in a consistent place everywhere
+	Now() time.Time
 }
 
 type core struct {
@@ -63,6 +67,8 @@ type core struct {
 	serviceLog *logrus.Entry
 
 	msiAuthorizers map[string]autorest.Authorizer
+
+	now func() time.Time
 }
 
 func (c *core) IsLocalDevelopmentMode() bool {
@@ -79,6 +85,10 @@ func (c *core) Service() string {
 
 func (c *core) Logger() *logrus.Entry {
 	return c.serviceLog
+}
+
+func (c *core) Now() time.Time {
+	return c.now()
 }
 
 // LoggerForComponent creates a logger with the "component" field set. This
@@ -139,6 +149,7 @@ func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core
 		service:                service,
 		serviceLog:             log,
 		msiAuthorizers:         map[string]autorest.Authorizer{},
+		now:                    time.Now,
 	}, nil
 }
 
@@ -167,5 +178,6 @@ func NewCoreForCI(ctx context.Context, _log *logrus.Entry, service ServiceName) 
 		msiAuthorizers:         map[string]autorest.Authorizer{},
 		service:                service,
 		serviceLog:             log,
+		now:                    time.Now,
 	}, nil
 }
