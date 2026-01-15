@@ -6,6 +6,7 @@ package purge
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -73,11 +74,9 @@ func TestDetermineResourceGroupName(t *testing.T) {
 		},
 	}
 
-	rc := &ResourceCleaner{}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := rc.determineResourceGroupName(tt.displayName)
+			got := determineResourceGroupName(tt.displayName)
 			if got != tt.want {
 				t.Errorf("determineResourceGroupName() = %v, want %v", got, tt.want)
 			}
@@ -133,7 +132,7 @@ func TestBuildIDPattern(t *testing.T) {
 	}
 }
 
-func TestShouldKeepServicePrincipal(t *testing.T) {
+func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 	ctx := context.Background()
 	log := logrus.NewEntry(logrus.New())
 	ttl := 48 * time.Hour
@@ -158,7 +157,7 @@ func TestShouldKeepServicePrincipal(t *testing.T) {
 					Return(mgmtfeatures.ResourceGroup{}, notFoundErr)
 			},
 			wantKeep:   false,
-			wantReason: "Resource group does not exist",
+			wantReason: "Resource group 'v4-e2e-V123456789-eastus' does not exist",
 		},
 		{
 			name:              "resource group has persist tag - should keep SP",
@@ -250,7 +249,7 @@ func TestShouldKeepServicePrincipal(t *testing.T) {
 					Return(mgmtfeatures.ResourceGroup{}, serviceErr)
 			},
 			wantKeep:   true,
-			wantReason: "Error checking resource group:",
+			wantReason: "Error checking resource group 'v4-e2e-V123456789-eastus':",
 		},
 		{
 			name:              "azure error without status code - should keep SP",
@@ -265,7 +264,7 @@ func TestShouldKeepServicePrincipal(t *testing.T) {
 					Return(mgmtfeatures.ResourceGroup{}, azureErr)
 			},
 			wantKeep:   true,
-			wantReason: "Error checking resource group:",
+			wantReason: "Error checking resource group 'v4-e2e-V123456789-eastus':",
 		},
 	}
 
@@ -282,17 +281,18 @@ func TestShouldKeepServicePrincipal(t *testing.T) {
 				resourcegroupscli: mockRGClient,
 			}
 
-			gotKeep, gotReason := rc.shouldKeepServicePrincipal(ctx, tt.resourceGroupName, ttl)
+			gotKeep, gotReason := rc.checkSPNeededBasedOnRGStatus(ctx, tt.resourceGroupName, ttl)
 
 			if gotKeep != tt.wantKeep {
-				t.Errorf("shouldKeepServicePrincipal() keep = %v, want %v", gotKeep, tt.wantKeep)
+				t.Errorf("checkSPNeededBasedOnRGStatus() keep = %v, want %v", gotKeep, tt.wantKeep)
 			}
 
-			// For reason, we use prefix matching for error messages since they contain detailed error info
 			if tt.wantReason != "" {
-				// Check if the reason starts with the expected prefix
 				if len(gotReason) < len(tt.wantReason) || gotReason[:len(tt.wantReason)] != tt.wantReason {
-					t.Errorf("shouldKeepServicePrincipal() reason = %q, want prefix %q", gotReason, tt.wantReason)
+					t.Errorf("checkSPNeededBasedOnRGStatus() reason = %q, want prefix %q", gotReason, tt.wantReason)
+				}
+				if !strings.Contains(gotReason, tt.resourceGroupName) {
+					t.Errorf("checkSPNeededBasedOnRGStatus() reason = %q does not contain resource group name %q", gotReason, tt.resourceGroupName)
 				}
 			}
 		})

@@ -108,8 +108,7 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		return err
 	}
 
-	// Clean orphaned service principals from e2e test runs
-	err = rc.CleanOrphanedServicePrincipals(ctx, settings.ttl)
+	err = rc.CleanOrphanedE2EServicePrincipals(ctx, settings.ttl)
 	if err != nil {
 		log.Errorf("Error cleaning orphaned service principals: %v", err)
 	}

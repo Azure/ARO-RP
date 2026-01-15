@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
+	msgraph_models "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
 )
 
 const (
@@ -25,7 +26,17 @@ var (
 	buildIDPattern = regexp.MustCompile(`V\d{9,}`)
 )
 
-func (rc *ResourceCleaner) CleanOrphanedServicePrincipals(ctx context.Context, ttl time.Duration) error {
+// CleanOrphanedE2EServicePrincipals removes orphaned service principals
+// created during e2e test runs. It processes three types of identities:
+//   - Cluster service principals (aro-v4-e2e-*)
+//   - Disk encryption set  (v4-e2e-*-disk-encryption-set)
+//   - Mock MSI service principals for MIWI tests (mock-msi-*)
+//
+// Safety mechanisms prevent deletion of:
+//   - Service principals without V{BUILDID} pattern
+//   - Service principals whose resource groups have the 'persist' tag
+//   - Service principals younger than the TTL
+func (rc *ResourceCleaner) CleanOrphanedE2EServicePrincipals(ctx context.Context, ttl time.Duration) error {
 	rc.log.Info("Starting orphaned service principal cleanup")
 
 	prefixes := []struct {
@@ -47,8 +58,7 @@ func (rc *ResourceCleaner) CleanOrphanedServicePrincipals(ctx context.Context, t
 	return nil
 }
 
-func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, prefix string, ttl time.Duration) error {
-	// List all applications with the specified prefix
+func (rc *ResourceCleaner) listApplicationsByPrefix(ctx context.Context, prefix string) ([]msgraph_models.Applicationable, error) {
 	filter := fmt.Sprintf("startswith(displayName, '%s')", prefix)
 	requestConfig := &msgraph_apps.ApplicationsRequestBuilderGetRequestConfiguration{
 		QueryParameters: &msgraph_apps.ApplicationsRequestBuilderGetQueryParameters{
@@ -59,10 +69,18 @@ func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, p
 
 	result, err := rc.graphClient.Applications().Get(ctx, requestConfig)
 	if err != nil {
-		return fmt.Errorf("failed to list applications: %w", err)
+		return nil, fmt.Errorf("failed to list applications: %w", err)
 	}
 
-	apps := result.GetValue()
+	return result.GetValue(), nil
+}
+
+func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, prefix string, ttl time.Duration) error {
+	apps, err := rc.listApplicationsByPrefix(ctx, prefix)
+	if err != nil {
+		return err
+	}
+
 	if len(apps) == 0 {
 		rc.log.Debugf("No applications found with prefix '%s'", prefix)
 		return nil
@@ -86,17 +104,13 @@ func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, p
 			objectID = *app.GetId()
 		}
 
-		// mock-msi service principals don't have build IDs or associated resource groups
 		isMockMSI := strings.HasPrefix(displayName, "mock-msi-")
-
-		// For non-mock-msi SPs, verify this is from an e2e test run by checking for V{BUILDID} pattern
-		if !isMockMSI && !buildIDPattern.MatchString(displayName) {
-			rc.log.Infof("SKIP '%s': No V{BUILDID} pattern - likely infrastructure", displayName)
-			continue
-		}
-
 		createdDateTime := app.GetCreatedDateTime()
-		if createdDateTime == nil {
+
+		if !isMockMSI && !buildIDPattern.MatchString(displayName) {
+			rc.log.Infof("SKIP '%s': No V{BUILDID} pattern", displayName)
+			continue
+		} else if createdDateTime == nil {
 			rc.log.Warnf("SKIP '%s': No createdDateTime", displayName)
 			continue
 		}
@@ -106,13 +120,10 @@ func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, p
 		if age < ttl {
 			rc.log.Debugf("SKIP '%s': Age %v < TTL %v", displayName, age.Round(time.Hour), ttl)
 			continue
-		}
+		} else if !isMockMSI {
+			resourceGroupName := determineResourceGroupName(displayName)
 
-		// mock-msi SPs don't have associated resource groups, so skip RG check for them
-		if !isMockMSI {
-			resourceGroupName := rc.determineResourceGroupName(displayName)
-
-			shouldKeep, reason := rc.shouldKeepServicePrincipal(ctx, resourceGroupName, ttl)
+			shouldKeep, reason := rc.checkSPNeededBasedOnRGStatus(ctx, resourceGroupName, ttl)
 			if shouldKeep {
 				rc.log.Infof("SKIP '%s': %s", displayName, reason)
 				continue
@@ -135,7 +146,7 @@ func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, p
 	return nil
 }
 
-func (rc *ResourceCleaner) determineResourceGroupName(displayName string) string {
+func determineResourceGroupName(displayName string) string {
 	// For service principals: aro-v4-e2e-V{BUILDID}-{LOCATION}[-miwi][-prod-csp][-prod-miwi]
 	// Resource group is: v4-e2e-V{BUILDID}-{LOCATION}[-miwi][-prod-csp][-prod-miwi]
 	if strings.HasPrefix(displayName, "aro-") {
@@ -150,17 +161,16 @@ func (rc *ResourceCleaner) determineResourceGroupName(displayName string) string
 	return displayName
 }
 
-// shouldKeepServicePrincipal checks if the service principal should be kept based on resource group status
-func (rc *ResourceCleaner) shouldKeepServicePrincipal(ctx context.Context, resourceGroupName string, ttl time.Duration) (bool, string) {
+func (rc *ResourceCleaner) checkSPNeededBasedOnRGStatus(ctx context.Context, resourceGroupName string, ttl time.Duration) (bool, string) {
 	group, err := rc.resourcegroupscli.Get(ctx, resourceGroupName)
 	if err != nil {
 		if detailedErr, ok := err.(autorest.DetailedError); ok {
 			if detailedErr.StatusCode == http.StatusNotFound {
-				return false, "Resource group does not exist"
+				return false, fmt.Sprintf("Resource group '%s' does not exist", resourceGroupName)
 			}
 		}
 		rc.log.Warnf("Error checking resource group '%s': %v", resourceGroupName, err)
-		return true, fmt.Sprintf("Error checking resource group: %v", err)
+		return true, fmt.Sprintf("Error checking resource group '%s': %v", resourceGroupName, err)
 	}
 
 	if group.Tags != nil {
