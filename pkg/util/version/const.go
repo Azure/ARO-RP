@@ -40,7 +40,7 @@ type Stream struct {
 // This default is left here ONLY for use by local development mode,
 // until we can come up with a better solution.
 var DefaultInstallStream = Stream{
-	Version:  NewVersion(4, 17, 44),
+	Version:  NewVersion(4, 17, 45),
 	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:e3d5a7ccc804f95867a4fa9b9802739898be8814a429368521b12d7822de51a0",
 }
 
