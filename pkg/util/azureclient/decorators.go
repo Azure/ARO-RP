@@ -20,9 +20,18 @@ func DecorateSenderWithLogging(sender autorest.Sender) autorest.Sender {
 // Azure Clients will have the sender wrapped by that function
 // in order to intercept http calls using our custom RoundTripper (through the adapter).
 func loggingDecorator() autorest.SendDecorator {
+	if outboundHTTPLoggingEnabled() {
+		return func(s autorest.Sender) autorest.Sender {
+			return autorest.SenderFunc(func(req *http.Request) (*http.Response, error) {
+				return loggingRoundTripper(req, func() (*http.Response, error) {
+					return s.Do(req)
+				})
+			})
+		}
+	}
 	return func(s autorest.Sender) autorest.Sender {
 		return autorest.SenderFunc(func(req *http.Request) (*http.Response, error) {
-			return loggingRoundTripper(req, func() (*http.Response, error) {
+			return errorOnlyLoggingRoundTripper(req, func() (*http.Response, error) {
 				return s.Do(req)
 			})
 		})
