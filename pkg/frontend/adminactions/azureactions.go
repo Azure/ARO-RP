@@ -11,11 +11,13 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	sdkcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -32,7 +34,7 @@ type AzureActions interface {
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMStartAndWait(ctx context.Context, vmName string) error
 	VMStopAndWait(ctx context.Context, vmName string, deallocateVM bool) error
-	VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error)
+	VMSizeList(ctx context.Context) ([]*sdkcompute.ResourceSKU, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
@@ -49,7 +51,7 @@ type azureActions struct {
 	diskEncryptionSets compute.DiskEncryptionSetsClient
 	loadBalancers      armnetwork.LoadBalancersClient
 	resources          features.ResourcesClient
-	resourceSkus       compute.ResourceSkusClient
+	resourceSkus       armcompute.ResourceSKUsClient
 	routeTables        armnetwork.RouteTablesClient
 	securityGroups     armnetwork.SecurityGroupsClient
 	storageAccounts    storage.AccountsClient
@@ -98,6 +100,11 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	armResourceSKUsClient, err := armcompute.NewResourceSKUsClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -107,7 +114,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
 		loadBalancers:      loadBalancers,
 		resources:          features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		resourceSkus:       compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		resourceSkus:       armResourceSKUsClient,
 		routeTables:        routeTables,
 		securityGroups:     securityGroups,
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
@@ -139,9 +146,9 @@ func (a *azureActions) VMStopAndWait(ctx context.Context, vmName string, dealloc
 	return a.virtualMachines.StopAndWait(ctx, clusterRGName, vmName, deallocateVM)
 }
 
-func (a *azureActions) VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error) {
+func (a *azureActions) VMSizeList(ctx context.Context) ([]*sdkcompute.ResourceSKU, error) {
 	filter := fmt.Sprintf("location eq '%s'", a.env.Location())
-	return a.resourceSkus.List(ctx, filter)
+	return a.resourceSkus.List(ctx, filter, false)
 }
 
 func (a *azureActions) VMResize(ctx context.Context, vmName string, size string) error {

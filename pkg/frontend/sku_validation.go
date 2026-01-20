@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"net/http"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	sdkcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
@@ -24,22 +24,26 @@ type SkuValidator interface {
 type skuValidator struct{}
 
 func (s skuValidator) ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
-	fpAuthorizer, err := environment.FPAuthorizer(tenantID, nil, environment.Environment().ResourceManagerScope)
+	fpCredClusterTenant, err := environment.FPNewClientCertificateCredential(tenantID, nil)
 	if err != nil {
 		return err
 	}
-	resourceSkusClient := compute.NewResourceSkusClient(azEnv, subscriptionID, fpAuthorizer)
 
-	return validateVMSku(ctx, oc, resourceSkusClient)
+	armResourceSKUsClient, err := armcompute.NewResourceSKUsClient(subscriptionID, fpCredClusterTenant, environment.Environment().ArmClientOptions())
+	if err != nil {
+		return err
+	}
+
+	return validateVMSku(ctx, oc, armResourceSKUsClient)
 }
 
 // validateVMSku uses resourceSkusClient to ensure that the VM sizes listed in the cluster document are available for use in the target region.
-func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusClient compute.ResourceSkusClient) error {
+func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusClient armcompute.ResourceSKUsClient) error {
 	// Get a list of available worker SKUs, filtering by location. We initialized a new resourceSkusClient
 	// so that we can determine SKU availability within target cluster subscription instead of within RP subscription.
 	location := oc.Location
 	filter := fmt.Sprintf("location eq %s", location)
-	skus, err := resourceSkusClient.List(ctx, filter)
+	skus, err := resourceSkusClient.List(ctx, filter, false)
 	if err != nil {
 		return err
 	}
@@ -92,7 +96,7 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 	return nil
 }
 
-func checkSKUAvailability(skus map[string]*mgmtcompute.ResourceSku, location, path, vmsize string) (*mgmtcompute.ResourceSku, error) {
+func checkSKUAvailability(skus map[string]*sdkcompute.ResourceSKU, location, path, vmsize string) (*sdkcompute.ResourceSKU, error) {
 	// Ensure desired sku exists in target region
 	sku, ok := skus[vmsize]
 	if !ok {
@@ -101,7 +105,7 @@ func checkSKUAvailability(skus map[string]*mgmtcompute.ResourceSku, location, pa
 	return sku, nil
 }
 
-func checkSKURestriction(sku *mgmtcompute.ResourceSku, location, path string) error {
+func checkSKURestriction(sku *sdkcompute.ResourceSKU, location, path string) error {
 	// Fail if sku is available, but restricted within the subscription. Restrictions are subscription-specific.
 	// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/error-sku-not-available
 	if computeskus.IsRestricted(sku, location) {
@@ -110,7 +114,7 @@ func checkSKURestriction(sku *mgmtcompute.ResourceSku, location, path string) er
 	return nil
 }
 
-func checkSKUEncryptionAtHostSupport(sku *mgmtcompute.ResourceSku, path string) error {
+func checkSKUEncryptionAtHostSupport(sku *sdkcompute.ResourceSKU, path string) error {
 	if !computeskus.HasCapability(sku, "EncryptionAtHostSupported") {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The selected SKU '%v' does not support encryption at host.", *sku.Name))
 	}
