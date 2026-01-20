@@ -48,4 +48,5 @@ podmanlog
 .tool-versions
 ./venv
 /CLAUDE.md
+.DS_Store
 Session.vim
