@@ -1502,13 +1502,13 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('gatewayServicePrincipalId'), 'RP / AcrPull')))",
 		),
-		rbac.ResourceRoleAssignmentWithName(
-			"parameters('tokenContributorRoleID')",
-			"parameters('fpServicePrincipalId')",
-			"Microsoft.ContainerRegistry/registries",
-			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
-			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
-		),
+		// rbac.ResourceRoleAssignmentWithName(
+		// 	"parameters('tokenContributorRoleID')",
+		// 	"parameters('fpServicePrincipalId')",
+		// 	"Microsoft.ContainerRegistry/registries",
+		// 	"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
+		// 	"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
+		// ),
 		rbac.ResourceRoleAssignmentWithName(
 			"parameters('tokenContributorRoleID')",
 			"parameters('rpServicePrincipalId')",

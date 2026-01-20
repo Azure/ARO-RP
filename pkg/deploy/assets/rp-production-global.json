@@ -91,20 +91,6 @@
             ]
         },
         {
-            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]",
-            "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
-            "properties": {
-                "scope": "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('tokenContributorRoleID'))]",
-                "principalId": "[parameters('fpServicePrincipalId')]",
-                "principalType": "ServicePrincipal"
-            },
-            "apiVersion": "2018-09-01-preview",
-            "dependsOn": [
-                "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]"
-            ]
-        },
-        {
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'RP / ARO v4 ContainerRegistry Token Contributor')))]",
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
             "properties": {
