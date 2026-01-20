@@ -15,8 +15,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azurezones"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -29,7 +29,7 @@ var errFetchInternalLBs = errors.New("error fetching internal load balancer")
 var errVMAvailability = errors.New("error determining the VM SKU availability")
 
 func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
-	doc, err := MigrateInternalLoadBalancerZones(ctx, m.env, m.log, m.db, m.armLoadBalancers, m.armClusterPrivateLinkServices, m.resourceSkus, m.doc)
+	doc, err := MigrateInternalLoadBalancerZones(ctx, m.env, m.log, m.db, m.armLoadBalancers, m.armClusterPrivateLinkServices, m.armResourceSKUs, m.doc)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 
 func MigrateInternalLoadBalancerZones(
 	ctx context.Context,
-	_env env.Interface, log *logrus.Entry, db database.OpenShiftClusters, armLoadBalancersClient armnetwork.LoadBalancersClient, armClusterPrivateLinkServices armnetwork.PrivateLinkServicesClient, resourceSkusClient compute.ResourceSkusClient, doc *api.OpenShiftClusterDocument,
+	_env env.Interface, log *logrus.Entry, db database.OpenShiftClusters, armLoadBalancersClient armnetwork.LoadBalancersClient, armClusterPrivateLinkServices armnetwork.PrivateLinkServicesClient, resourceSkusClient armcompute.ResourceSKUsClient, doc *api.OpenShiftClusterDocument,
 ) (*api.OpenShiftClusterDocument, error) {
 	location := doc.OpenShiftCluster.Location
 	resourceGroupName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')

@@ -94,7 +94,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
 					{
 						Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
 						Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
@@ -136,7 +136,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
 					{
 						Name:         pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
 						Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
@@ -170,7 +170,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{}, errTestSKUFetchError)
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{}, errTestSKUFetchError)
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
 			wantErrs:     []error{computeskus.ErrListVMResourceSKUs, errTestSKUFetchError},
@@ -380,7 +380,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				}, nil,
 			)
 
-			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{
+			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
 				{
 					Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
 					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
