@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -67,7 +67,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 }
 
 // see pkg/frontend/sku_validation.go
-func checkSKUAvailability(skus map[string]*mgmtcompute.ResourceSku, location, path, vmsize string) (*mgmtcompute.ResourceSku, error) {
+func checkSKUAvailability(skus map[string]*armcompute.ResourceSKU, location, path, vmsize string) (*armcompute.ResourceSKU, error) {
 	// Ensure desired sku exists in target region
 	sku, ok := skus[vmsize]
 	if !ok {

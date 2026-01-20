@@ -14,13 +14,13 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
+	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -41,14 +41,14 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		architectureVersion api.ArchitectureVersion
-		mocks               func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient)
+		mocks               func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_armcompute.MockResourceSKUsClient, plses *mock_armnetwork.MockPrivateLinkServicesClient)
 		wantErrs            []error
 		expectedLogs        []testlog.ExpectedLogEntry
 	}{
 		{
 			name:                "noop -- already zone redundant",
 			architectureVersion: api.ArchitectureVersionV2,
-			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
+			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_armcompute.MockResourceSKUsClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
@@ -76,7 +76,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 		{
 			name:                "noop -- non-zonal",
 			architectureVersion: api.ArchitectureVersionV2,
-			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
+			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_armcompute.MockResourceSKUsClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
@@ -94,16 +94,16 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{
 					{
 						Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
-						Locations: &[]string{"eastus"},
-						LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
+						Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+						LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
 							{
-								Zones: pointerutils.ToPtr([]string{}),
+								Zones: []*string{},
 							},
-						},
-						Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
+						}),
+						Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 						ResourceType: pointerutils.ToPtr("virtualMachines"),
 					},
 				}, nil)
@@ -118,7 +118,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 		{
 			name:                "noop -- missing VM SKU",
 			architectureVersion: api.ArchitectureVersionV2,
-			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
+			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_armcompute.MockResourceSKUsClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
@@ -136,12 +136,12 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{
 					{
 						Name:         pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
-						Locations:    &[]string{"eastus"},
-						LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{},
-						Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
+						Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+						LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{}),
+						Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 						ResourceType: pointerutils.ToPtr("virtualMachines"),
 					},
 				}, nil)
@@ -152,7 +152,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 		{
 			name:                "noop -- error fetching SKU",
 			architectureVersion: api.ArchitectureVersionV2,
-			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
+			mocks: func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_armcompute.MockResourceSKUsClient, plses *mock_armnetwork.MockPrivateLinkServicesClient) {
 				lbs.EXPECT().Get(gomock.Any(), rgName, infraID+"-internal", nil).Return(
 					armnetwork.LoadBalancersClientGetResponse{
 						LoadBalancer: armnetwork.LoadBalancer{
@@ -170,7 +170,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{}, errTestSKUFetchError)
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{}, errTestSKUFetchError)
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
 			wantErrs:     []error{computeskus.ErrListVMResourceSKUs, errTestSKUFetchError},
@@ -179,7 +179,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(ctrl)
-			skus := mock_compute.NewMockResourceSkusClient(ctrl)
+			skus := mock_armcompute.NewMockResourceSKUsClient(ctrl)
 			plses := mock_armnetwork.NewMockPrivateLinkServicesClient(ctrl)
 
 			env := mock_env.NewMockInterface(ctrl)
@@ -229,7 +229,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 				log:                           entry,
 				armLoadBalancers:              loadBalancers,
 				armClusterPrivateLinkServices: plses,
-				resourceSkus:                  skus,
+				armResourceSKUs:               skus,
 				env:                           env,
 			}
 
@@ -257,7 +257,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 		architectureVersion api.ArchitectureVersion
 		internalLBName      string
 		backendPoolName     string
-		mocks               func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_compute.MockResourceSkusClient, plses *mock_armnetwork.MockPrivateLinkServicesClient)
+		mocks               func(lbs *mock_armnetwork.MockLoadBalancersClient, sku *mock_armcompute.MockResourceSKUsClient, plses *mock_armnetwork.MockPrivateLinkServicesClient)
 		wantErr             error
 		expectedLogs        []testlog.ExpectedLogEntry
 	}{
@@ -337,7 +337,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			lbs := mock_armnetwork.NewMockLoadBalancersClient(ctrl)
-			skus := mock_compute.NewMockResourceSkusClient(ctrl)
+			skus := mock_armcompute.NewMockResourceSKUsClient(ctrl)
 			plses := mock_armnetwork.NewMockPrivateLinkServicesClient(ctrl)
 
 			env := mock_env.NewMockInterface(ctrl)
@@ -380,14 +380,14 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				}, nil,
 			)
 
-			skus.EXPECT().List(gomock.Any(), "location eq eastus").Return([]mgmtcompute.ResourceSku{
+			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]armcompute.ResourceSKU{
 				{
 					Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
-					Locations: &[]string{"eastus"},
-					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-						{Zones: &[]string{"1", "2", "3"}},
-					},
-					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
+					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+						{Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"})},
+					}),
+					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 			}, nil)
@@ -590,7 +590,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				log:                           entry,
 				armLoadBalancers:              lbs,
 				armClusterPrivateLinkServices: plses,
-				resourceSkus:                  skus,
+				armResourceSKUs:               skus,
 				env:                           env,
 			}
 

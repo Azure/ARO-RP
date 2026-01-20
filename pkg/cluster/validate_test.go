@@ -12,12 +12,12 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
-	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -142,23 +142,23 @@ func TestValidateZones(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
 
-			skus := []mgmtcompute.ResourceSku{
+			skus := []*armcompute.ResourceSKU{
 				{
-					Name:      &workerProfileSku,
-					Locations: &[]string{"eastus"},
-					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-						{Zones: &tt.workerSkuZones},
-					},
-					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
+					Name:      pointerutils.ToPtr(workerProfileSku),
+					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+						{Zones: pointerutils.ToSlicePtr(tt.workerSkuZones)},
+					}),
+					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 				{
 					Name:      &controlPlaneSku,
-					Locations: &[]string{"eastus"},
-					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-						{Zones: &tt.controlPlaneSkuZones},
-					},
-					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
+					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+						{Zones: pointerutils.ToSlicePtr(tt.controlPlaneSkuZones)},
+					}),
+					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 			}
@@ -178,9 +178,9 @@ func TestValidateZones(t *testing.T) {
 				OpenShiftCluster: &tt.doc,
 			})
 
-			resourceSkusClient := mock_compute.NewMockResourceSkusClient(controller)
+			resourceSkusClient := mock_armcompute.NewMockResourceSKUsClient(controller)
 			resourceSkusClient.EXPECT().
-				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus")).
+				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus"), false).
 				Return(skus, tt.resourceSkusClientErr)
 
 			m := &manager{
@@ -202,8 +202,8 @@ func TestValidateZones(t *testing.T) {
 						},
 					},
 				},
-				resourceSkus: resourceSkusClient,
-				db:           openShiftClustersDatabase,
+				armResourceSKUs: resourceSkusClient,
+				db:              openShiftClustersDatabase,
 			}
 
 			fixture.AddOpenShiftClusterDocuments(m.doc)
