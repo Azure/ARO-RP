@@ -27,6 +27,7 @@ const (
 )
 
 type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
+type OpenShiftClusterDocumentMutatorRunner func(context.Context, OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
 
 type openShiftClusters struct {
 	c             cosmosdb.OpenShiftClusterDocumentClient
