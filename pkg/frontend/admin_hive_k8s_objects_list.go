@@ -20,6 +20,7 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 	region := chi.URLParam(r, "region")
 	resource := chi.URLParam(r, "resource")
 	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
 
 	// Validate required params
 	if region == "" || resource == "" {
@@ -56,6 +57,12 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Delegate to manager
+	if name != "" {
+		b, err := f.hiveK8sObjectManager.Get(ctx, region, namespace, resource, name)
+		adminReply(log, w, nil, b, err)
+		return
+	}
+
 	b, err := f.hiveK8sObjectManager.List(ctx, region, namespace, resource)
 	adminReply(log, w, nil, b, err)
 }
