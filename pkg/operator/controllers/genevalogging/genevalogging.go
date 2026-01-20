@@ -158,7 +158,16 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								"-c",
 								"/etc/td-agent-bit/fluent.conf",
 							},
-							// TODO: specify requests/limits
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("200m"),
+									corev1.ResourceMemory: resource.MustParse("300Mi"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("5m"),
+									corev1.ResourceMemory: resource.MustParse("35Mi"),
+								},
+							},
 							SecurityContext: &corev1.SecurityContext{
 								Privileged: pointerutils.ToPtr(true),
 								RunAsUser:  pointerutils.ToPtr(int64(0)),
@@ -249,9 +258,13 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 										},
 									},
 								},
+								{
+									Name:  "MDSD_BACKPRESSURE_MONITOR_MEMORY_THRESHOLD_IN_MB",
+									Value: "800",
+								},
 								{ // https://stackoverflow.microsoft.com/questions/249827/251179#251179
 									Name:  "MDSD_MSGPACK_ARRAY_SIZE_ITEMS",
-									Value: "2048",
+									Value: "12048",
 								},
 								{
 									Name:  "RESOURCE_ID",
@@ -277,7 +290,7 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								},
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
+									corev1.ResourceMemory: resource.MustParse("250Mi"),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
