@@ -956,6 +956,7 @@ MDM_INPUT=statsd_local,otlp_grpc
 MDM_NAMESPACE='OTEL'
 MDM_ACCOUNT='AzureRedHatOpenShiftRP'
 PODMAN_NETWORK='podman'
+ENVIRONMENT_TYPE='$ENVIRONMENTTYPE'
 IPADDRESS='$ipaddress'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
@@ -981,6 +982,7 @@ ExecStart=/usr/bin/podman run \
   --cap-drop net_raw \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
+  -e ENVIRONMENT_TYPE \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
