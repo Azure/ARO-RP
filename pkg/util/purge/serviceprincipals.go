@@ -36,23 +36,26 @@ var (
 //   - Service principals without V{BUILDID} pattern
 //   - Service principals whose resource groups have the 'persist' tag
 //   - Service principals younger than the TTL
+//
+// This function only processes the first page of results (~100 items per prefix)
+// from Microsoft Graph API. Since the cleanup runs on a schedule, orphaned resources
+// will eventually be cleaned across multiple runs.
 func (rc *ResourceCleaner) CleanOrphanedE2EServicePrincipals(ctx context.Context, ttl time.Duration) error {
 	rc.log.Info("Starting orphaned service principal cleanup")
 
-	prefixes := []struct {
-		prefix      string
-		description string
-	}{
-		{"aro-v4-e2e-", "Cluster service principals"},
-		{"v4-e2e-", "Disk encryption set managed identities"},
-		{"mock-msi-", "Mock MSI service principals (MIWI e2e tests)"},
+	rc.log.Info("Cleaning cluster service principals (prefix: aro-v4-e2e-)")
+	if err := rc.cleanServicePrincipals(ctx, "aro-v4-e2e-", "", ttl); err != nil {
+		rc.log.Errorf("Error cleaning cluster service principals: %v", err)
 	}
 
-	for _, p := range prefixes {
-		rc.log.Infof("Cleaning %s (prefix: %s)", p.description, p.prefix)
-		if err := rc.cleanServicePrincipalsByPrefix(ctx, p.prefix, ttl); err != nil {
-			rc.log.Errorf("Error cleaning prefix '%s': %v", p.prefix, err)
-		}
+	rc.log.Info("Cleaning disk encryption set managed identities (prefix: v4-e2e-, suffix: -disk-encryption-set)")
+	if err := rc.cleanServicePrincipals(ctx, "v4-e2e-", "-disk-encryption-set", ttl); err != nil {
+		rc.log.Errorf("Error cleaning disk encryption set identities: %v", err)
+	}
+
+	rc.log.Info("Cleaning mock MSI service principals (prefix: mock-msi-)")
+	if err := rc.cleanServicePrincipals(ctx, "mock-msi-", "", ttl); err != nil {
+		rc.log.Errorf("Error cleaning mock MSI service principals: %v", err)
 	}
 
 	return nil
@@ -75,7 +78,7 @@ func (rc *ResourceCleaner) listApplicationsByPrefix(ctx context.Context, prefix 
 	return result.GetValue(), nil
 }
 
-func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, prefix string, ttl time.Duration) error {
+func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix string, suffix string, ttl time.Duration) error {
 	apps, err := rc.listApplicationsByPrefix(ctx, prefix)
 	if err != nil {
 		return err
@@ -102,6 +105,11 @@ func (rc *ResourceCleaner) cleanServicePrincipalsByPrefix(ctx context.Context, p
 		objectID := ""
 		if app.GetId() != nil {
 			objectID = *app.GetId()
+		}
+
+		if suffix != "" && !strings.HasSuffix(displayName, suffix) {
+			rc.log.Debugf("SKIP '%s': Does not have suffix '%s'", displayName, suffix)
+			continue
 		}
 
 		isMockMSI := strings.HasPrefix(displayName, "mock-msi-")
