@@ -320,7 +320,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			r.Get("/syncsetname/{syncsetname}", f.getAdminHiveSyncSet)
 		})
 		r.Route("/hive", func(r chi.Router) {
-			r.Get("/aks/{region}/k8s/{resource}", f.adminHiveK8sObjectsList)
+			r.Get("/aks/{region}/kubernetesobjects", f.adminHiveK8sObjectsList)
 		})
 
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
