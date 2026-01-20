@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
@@ -59,7 +60,7 @@ type deployer struct {
 	userassignedidentities       msi.UserAssignedIdentitiesClient
 	providers                    features.ProvidersClient
 	publicipaddresses            armnetwork.PublicIPAddressesClient
-	resourceskus                 compute.ResourceSkusClient
+	resourceskus                 armcompute.ResourceSKUsClient
 	roleassignments              authorization.RoleAssignmentsClient
 	vmss                         compute.VirtualMachineScaleSetsClient
 	vmssvms                      compute.VirtualMachineScaleSetVMsClient
@@ -113,6 +114,11 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 		return nil, fmt.Errorf("failed to instantiate publicipaddresses client: %w", err)
 	}
 
+	resourceSKUsClient, err := armcompute.NewResourceSKUsClient(config.SubscriptionID, tokenCredential, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate resourceSKUs client: %w", err)
+	}
+
 	serviceUrl := fmt.Sprintf("https://%s.blob.%s", *config.Configuration.RPVersionStorageAccountName, _env.Environment().StorageEndpointSuffix)
 	blobsClient, err := azblob.NewBlobsClientUsingEntra(serviceUrl, tokenCredential, _env.Environment().ArmClientOptions())
 	if err != nil {
@@ -133,7 +139,7 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 		userassignedidentities:       msi.NewUserAssignedIdentitiesClient(_env.Environment(), config.SubscriptionID, authorizer),
 		providers:                    features.NewProvidersClient(_env.Environment(), config.SubscriptionID, authorizer),
 		roleassignments:              authorization.NewRoleAssignmentsClient(_env.Environment(), config.SubscriptionID, authorizer),
-		resourceskus:                 compute.NewResourceSkusClient(_env.Environment(), config.SubscriptionID, authorizer),
+		resourceskus:                 resourceSKUsClient,
 		publicipaddresses:            publicIpAddressesClient,
 		vmss:                         vmssClient,
 		vmssvms:                      compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
