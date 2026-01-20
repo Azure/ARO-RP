@@ -533,7 +533,7 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 	var err error
 	if metricsTopic != "" {
 		var stepsTimeRun map[string]int64
-		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.now)
+		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.env.Now)
 		if err == nil {
 			var totalInstallTime int64
 			for stepName, duration := range stepsTimeRun {

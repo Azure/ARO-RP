@@ -15,6 +15,7 @@ import (
 	x509 "crypto/x509"
 	net "net"
 	reflect "reflect"
+	time "time"
 
 	logrus "github.com/sirupsen/logrus"
 	gomock "go.uber.org/mock/gomock"
@@ -618,6 +619,20 @@ func (m *MockInterface) NewMSITokenCredential() (azcore.TokenCredential, error) 
 func (mr *MockInterfaceMockRecorder) NewMSITokenCredential() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockInterface)(nil).NewMSITokenCredential))
+}
+
+// Now mocks base method.
+func (m *MockInterface) Now() time.Time {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Now")
+	ret0, _ := ret[0].(time.Time)
+	return ret0
+}
+
+// Now indicates an expected call of Now.
+func (mr *MockInterfaceMockRecorder) Now() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Now", reflect.TypeOf((*MockInterface)(nil).Now))
 }
 
 // OIDCEndpoint mocks base method.
