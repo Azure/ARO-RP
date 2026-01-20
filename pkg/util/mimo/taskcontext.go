@@ -12,7 +12,10 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
@@ -29,9 +32,20 @@ type TaskContext interface {
 	GetClusterUUID() string
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
 	GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument
+	// PatchOpenShiftClusterDocument requires an active lease, and only works for the present document
+	PatchOpenShiftClusterDocument(context.Context, database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
+
+	// Subscription
+	GetTenantID() string
 
 	SetResultMessage(string)
 	GetResultMessage() string
+}
+
+type TaskContextWithAzureClients interface {
+	LoadBalancersClient() armnetwork.LoadBalancersClient
+	PrivateLinkServicesClient() armnetwork.PrivateLinkServicesClient
+	ResourceSkusClient() ResourceSkusClient
 }
 
 func GetTaskContext(c context.Context) (TaskContext, error) {
