@@ -50,3 +50,4 @@ podmanlog
 /CLAUDE.md
 Session.vim
 .cache
+.DS_Store
