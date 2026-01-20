@@ -79,6 +79,11 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
 		subscriptions, subscriptionsClient = testdatabase.NewFakeSubscriptions()
 
+		dbs := database.NewDBGroup().
+			WithMaintenanceManifests(manifests).
+			WithSubscriptions(subscriptions).
+			WithOpenShiftClusters(clusters)
+
 		hook, log = testlog.New()
 
 		a = &actuator{
@@ -87,12 +92,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 			clusterResourceID: strings.ToLower(clusterResourceID),
 
-			mmf: manifests,
-			oc:  clusters,
-			sub: subscriptions,
+			dbs: dbs,
 
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
-			now:   now,
 
 			taskRunTimeout:           time.Second,
 			manifestQueryBatchLength: -1,
@@ -146,6 +148,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		errs = checker.CheckOpenShiftClusters(clustersClient)
 		Expect(errs).To(BeNil(), "OpenShiftClusters don't match")
+
+		errs = checker.CheckSubscriptions(subscriptionsClient)
+		Expect(errs).To(BeNil(), "Subscriptions don't match")
 	}
 
 	When("old manifest", func() {
