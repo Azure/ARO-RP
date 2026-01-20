@@ -20,7 +20,7 @@ var _ ResourceSKUsClient = &resourceSKUsClient{}
 
 // NewDefaultResourceSKUsClient creates a new ResourceSKUsClient with default options
 func NewDefaultResourceSKUsClient(environment *azureclient.AROEnvironment, subscriptionId string, credential azcore.TokenCredential) (ResourceSKUsClient, error) {
-	options := arm.ClientOptions{
+	options := &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: environment.Cloud,
 		},
@@ -30,8 +30,8 @@ func NewDefaultResourceSKUsClient(environment *azureclient.AROEnvironment, subsc
 }
 
 // NewResourceSKUsClient creates a new ResourceSKUsClient
-func NewResourceSKUsClient(subscriptionId string, credential azcore.TokenCredential, options arm.ClientOptions) (ResourceSKUsClient, error) {
-	clientFactory, err := armcompute.NewClientFactory(subscriptionId, credential, &options)
+func NewResourceSKUsClient(subscriptionId string, credential azcore.TokenCredential, options *arm.ClientOptions) (ResourceSKUsClient, error) {
+	clientFactory, err := armcompute.NewClientFactory(subscriptionId, credential, options)
 	if err != nil {
 		return nil, err
 	}
