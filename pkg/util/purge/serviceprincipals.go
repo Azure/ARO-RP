@@ -15,6 +15,7 @@ import (
 
 	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
 	msgraph_models "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
+	msgraph_sps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/serviceprincipals"
 )
 
 const (
@@ -61,8 +62,30 @@ func (rc *ResourceCleaner) CleanOrphanedE2EServicePrincipals(ctx context.Context
 	return nil
 }
 
-func (rc *ResourceCleaner) listApplicationsByPrefix(ctx context.Context, prefix string) ([]msgraph_models.Applicationable, error) {
+func (rc *ResourceCleaner) listByPrefix(ctx context.Context, prefix string, isServicePrincipal bool) ([]interface{}, error) {
 	filter := fmt.Sprintf("startswith(displayName, '%s')", prefix)
+
+	if isServicePrincipal {
+		requestConfig := &msgraph_sps.ServicePrincipalsRequestBuilderGetRequestConfiguration{
+			QueryParameters: &msgraph_sps.ServicePrincipalsRequestBuilderGetQueryParameters{
+				Filter: &filter,
+				Select: []string{"id", "appId", "displayName", "createdDateTime"},
+			},
+		}
+
+		result, err := rc.graphClient.ServicePrincipals().Get(ctx, requestConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list service principals: %w", err)
+		}
+
+		sps := result.GetValue()
+		items := make([]interface{}, len(sps))
+		for i, sp := range sps {
+			items[i] = sp
+		}
+		return items, nil
+	}
+
 	requestConfig := &msgraph_apps.ApplicationsRequestBuilderGetRequestConfiguration{
 		QueryParameters: &msgraph_apps.ApplicationsRequestBuilderGetQueryParameters{
 			Filter: &filter,
@@ -75,36 +98,72 @@ func (rc *ResourceCleaner) listApplicationsByPrefix(ctx context.Context, prefix 
 		return nil, fmt.Errorf("failed to list applications: %w", err)
 	}
 
-	return result.GetValue(), nil
+	apps := result.GetValue()
+	items := make([]interface{}, len(apps))
+	for i, app := range apps {
+		items[i] = app
+	}
+	return items, nil
 }
 
 func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix string, suffix string, ttl time.Duration) error {
-	apps, err := rc.listApplicationsByPrefix(ctx, prefix)
+	// Disk encryption sets are service principals, not applications
+	isServicePrincipal := suffix != ""
+
+	items, err := rc.listByPrefix(ctx, prefix, isServicePrincipal)
 	if err != nil {
 		return err
 	}
 
-	if len(apps) == 0 {
-		rc.log.Debugf("No applications found with prefix '%s'", prefix)
+	if len(items) == 0 {
+		rc.log.Debugf("No items found with prefix '%s'", prefix)
 		return nil
 	}
 
-	rc.log.Infof("Found %d applications with prefix '%s'", len(apps), prefix)
+	rc.log.Infof("Found %d items with prefix '%s'", len(items), prefix)
 
-	for _, app := range apps {
-		displayName := ""
-		if app.GetDisplayName() != nil {
-			displayName = *app.GetDisplayName()
-		}
+	for _, item := range items {
+		var displayName, appID, objectID string
+		var createdDateTime *time.Time
 
-		appID := ""
-		if app.GetAppId() != nil {
-			appID = *app.GetAppId()
-		}
+		if isServicePrincipal {
+			sp := item.(msgraph_models.ServicePrincipalable)
 
-		objectID := ""
-		if app.GetId() != nil {
-			objectID = *app.GetId()
+			if val, err := sp.GetBackingStore().Get("displayName"); err == nil && val != nil {
+				if strVal, ok := val.(*string); ok && strVal != nil {
+					displayName = *strVal
+				}
+			}
+
+			if sp.GetAppId() != nil {
+				appID = *sp.GetAppId()
+			}
+
+			if sp.GetId() != nil {
+				objectID = *sp.GetId()
+			}
+
+			if val, err := sp.GetBackingStore().Get("createdDateTime"); err == nil && val != nil {
+				if timeVal, ok := val.(*time.Time); ok {
+					createdDateTime = timeVal
+				}
+			}
+		} else {
+			app := item.(msgraph_models.Applicationable)
+
+			if app.GetDisplayName() != nil {
+				displayName = *app.GetDisplayName()
+			}
+
+			if app.GetAppId() != nil {
+				appID = *app.GetAppId()
+			}
+
+			if app.GetId() != nil {
+				objectID = *app.GetId()
+			}
+
+			createdDateTime = app.GetCreatedDateTime()
 		}
 
 		if suffix != "" && !strings.HasSuffix(displayName, suffix) {
@@ -113,7 +172,6 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 		}
 
 		isMockMSI := strings.HasPrefix(displayName, "mock-msi-")
-		createdDateTime := app.GetCreatedDateTime()
 
 		if !isMockMSI && !buildIDPattern.MatchString(displayName) {
 			rc.log.Infof("SKIP '%s': No V{BUILDID} pattern", displayName)
@@ -142,7 +200,14 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 			rc.log.Infof("DRY-RUN: Would delete '%s' (appId: %s, age: %v)", displayName, appID, age.Round(time.Hour))
 		} else {
 			rc.log.Infof("DELETING '%s' (appId: %s, age: %v)", displayName, appID, age.Round(time.Hour))
-			err := rc.graphClient.Applications().ByApplicationId(objectID).Delete(ctx, nil)
+
+			var err error
+			if isServicePrincipal {
+				err = rc.graphClient.ServicePrincipals().ByServicePrincipalId(objectID).Delete(ctx, nil)
+			} else {
+				err = rc.graphClient.Applications().ByApplicationId(objectID).Delete(ctx, nil)
+			}
+
 			if err != nil {
 				rc.log.Errorf("ERROR deleting '%s': %v", displayName, err)
 				continue
