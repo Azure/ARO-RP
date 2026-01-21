@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -45,7 +46,7 @@ type TaskContext interface {
 type TaskContextWithAzureClients interface {
 	LoadBalancersClient() armnetwork.LoadBalancersClient
 	PrivateLinkServicesClient() armnetwork.PrivateLinkServicesClient
-	ResourceSkusClient() ResourceSkusClient
+	ResourceSkusClient() armcompute.ResourceSKUsClient
 }
 
 func GetTaskContext(c context.Context) (TaskContext, error) {
