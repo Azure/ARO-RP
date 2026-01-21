@@ -17,7 +17,7 @@ import (
 	logrus "github.com/sirupsen/logrus"
 	gomock "go.uber.org/mock/gomock"
 
-	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 )
 
@@ -175,10 +175,10 @@ func (mr *MockAzureActionsMockRecorder) VMSerialConsole(ctx, log, vmName, target
 }
 
 // VMSizeList mocks base method.
-func (m *MockAzureActions) VMSizeList(ctx context.Context) ([]compute.ResourceSku, error) {
+func (m *MockAzureActions) VMSizeList(ctx context.Context) ([]*armcompute.ResourceSKU, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VMSizeList", ctx)
-	ret0, _ := ret[0].([]compute.ResourceSku)
+	ret0, _ := ret[0].([]*armcompute.ResourceSKU)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

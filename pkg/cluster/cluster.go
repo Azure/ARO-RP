@@ -35,6 +35,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
@@ -79,7 +80,7 @@ type manager struct {
 	spGraphClient                 *utilgraph.GraphServiceClient
 	disks                         compute.DisksClient
 	virtualMachines               compute.VirtualMachinesClient
-	resourceSkus                  compute.ResourceSkusClient
+	armResourceSKUs               armcompute.ResourceSKUsClient
 	armInterfaces                 armnetwork.InterfacesClient
 	armPublicIPAddresses          armnetwork.PublicIPAddressesClient
 	armLoadBalancers              armnetwork.LoadBalancersClient
@@ -252,6 +253,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armResourceSKUsClient, err := armcompute.NewResourceSKUsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
 
 	m := &manager{
@@ -268,7 +274,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		metricsEmitter:                metricsEmitter,
 		disks:                         compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:               compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		resourceSkus:                  compute.NewResourceSkusClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armResourceSKUs:               armResourceSKUsClient,
 		armInterfaces:                 armInterfacesClient,
 		armPublicIPAddresses:          armPublicIPAddressesClient,
 		armLoadBalancers:              armLoadBalancersClient,
