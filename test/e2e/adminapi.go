@@ -173,3 +173,31 @@ func nextParams(g Gomega, nextLink string) url.Values {
 
 	return url.Query()
 }
+
+func adminGetBillingDocument(g Gomega, ctx context.Context, path string) *admin.BillingDocument {
+	var doc admin.BillingDocument
+	resp, err := adminRequest(ctx, http.MethodGet, path, nil, true, nil, &doc)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	return &doc
+}
+
+func adminListBillingDocuments(g Gomega, ctx context.Context, path string) []*admin.BillingDocument {
+	docs := make([]*admin.BillingDocument, 0)
+	params := url.Values{}
+	for {
+		var list admin.BillingDocumentList
+		resp, err := adminRequest(ctx, http.MethodGet, path, params, true, nil, &list)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		docs = append(docs, list.BillingDocuments...)
+
+		if list.NextLink == "" {
+			break
+		}
+
+		params = nextParams(g, list.NextLink)
+	}
+	return docs
+}

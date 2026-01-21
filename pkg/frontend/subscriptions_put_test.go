@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -24,6 +27,7 @@ func TestPutSubscription(t *testing.T) {
 		name           string
 		request        func(*api.Subscription)
 		fixture        func(*testdatabase.Fixture)
+		compareOption  cmp.Option
 		dbError        error
 		wantDbDoc      *api.SubscriptionDocument
 		wantStatusCode int
@@ -36,6 +40,7 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateRegistered
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -49,6 +54,7 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateWarned
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -62,6 +68,7 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateSuspended
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -75,6 +82,7 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateUnregistered
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -88,6 +96,7 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateDeleted
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID:       mockSubID,
 				Deleting: true,
@@ -103,6 +112,7 @@ func TestPutSubscription(t *testing.T) {
 				sub.State = api.SubscriptionStateRegistered
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed", AccountOwner: &api.AccountOwnerProfile{Email: "email@example.com"}}
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -126,6 +136,7 @@ func TestPutSubscription(t *testing.T) {
 					},
 				})
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -149,6 +160,7 @@ func TestPutSubscription(t *testing.T) {
 					},
 				})
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -172,6 +184,7 @@ func TestPutSubscription(t *testing.T) {
 					},
 				})
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID:       mockSubID,
 				Deleting: true,
@@ -196,6 +209,7 @@ func TestPutSubscription(t *testing.T) {
 					},
 				})
 			},
+			compareOption: cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -275,7 +289,7 @@ func TestPutSubscription(t *testing.T) {
 				}
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse)
+			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse, tt.compareOption)
 			if err != nil {
 				t.Error(err)
 			}

@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -28,6 +31,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 	type test struct {
 		name           string
 		fixture        func(*testdatabase.Fixture)
+		compareOption  cmp.Option
 		dbError        error
 		wantStatusCode int
 		wantResponse   *api.AsyncOperation
@@ -55,6 +59,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 					},
 				})
 			},
+			compareOption:  cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantStatusCode: http.StatusOK,
 			wantResponse: &api.AsyncOperation{
 				ID:                "fakeoppath",
@@ -93,6 +98,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 					AsyncOperationID: mockOpID,
 				})
 			},
+			compareOption:  cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantStatusCode: http.StatusOK,
 			wantResponse: &api.AsyncOperation{
 				ID:                "fakeoppath",
@@ -126,6 +132,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 					},
 				})
 			},
+			compareOption:  cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantStatusCode: http.StatusOK,
 			wantResponse: &api.AsyncOperation{
 				ID:                "fakeoppath",
@@ -159,6 +166,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 					},
 				})
 			},
+			compareOption:  cmpopts.IgnoreUnexported(api.MissingFields{}),
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: NotFound: : The entity was not found.`,
 		},
@@ -197,7 +205,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
+			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse, tt.compareOption)
 			if err != nil {
 				t.Error(err)
 			}

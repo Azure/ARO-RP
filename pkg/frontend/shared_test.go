@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -270,7 +270,7 @@ func (ti *testInfra) request(method, url string, header http.Header, in interfac
 	return resp, b, nil
 }
 
-func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse interface{}) error {
+func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse interface{}, opts ...cmp.Option) error {
 	if resp.StatusCode != wantStatusCode {
 		return fmt.Errorf("unexpected status code %d, wanted %d: %s", resp.StatusCode, wantStatusCode, string(b))
 	}
@@ -282,8 +282,8 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 			return err
 		}
 
-		if diff := deep.Equal(cloudErr.Error(), wantError); diff != nil {
-			return fmt.Errorf("unexpected error %s, wanted %s (%s)", cloudErr.Error(), wantError, diff)
+		if diff := cmp.Diff(cloudErr.Error(), wantError, opts...); diff != "" {
+			return fmt.Errorf("unexpected error (-want +got):\n%s", diff)
 		}
 
 		return nil
@@ -309,8 +309,8 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 		return err
 	}
 
-	if diff := deep.Equal(v, wantResponse); diff != nil {
-		return fmt.Errorf("unexpected response %s, wanted to match %#v (%s)", string(b), wantResponse, diff)
+	if diff := cmp.Diff(v, wantResponse, opts...); diff != "" {
+		return fmt.Errorf("unexpected response (-want +got):\n%s", diff)
 	}
 
 	return nil
