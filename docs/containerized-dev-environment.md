@@ -38,13 +38,19 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     # Edit the newly created 'env' file with your settings
     ```
 
-2.  **Get the required secrets:**
-    Use the project's Makefile to fetch necessary secrets, which are typically saved into the `./secrets` directory.
+2.  **Get the required secrets and source your environment:**
+    Use the project's Makefile to fetch necessary secrets from Azure storage. The secrets will be downloaded and extracted to the `./secrets` directory.
 
     ```bash
     SECRET_SA_ACCOUNT_NAME=<secrets_storage_account_name> make secrets
-    # Replace <secrets_storage_account_name> with the actual storage account name
-    # Ensure the secrets are placed in the ./secrets directory
+    ```
+    
+    Replace `<secrets_storage_account_name>` with the actual storage account name for your environment.
+    
+    Then source your environment file to load the configuration (including secrets):
+    
+    ```bash
+    . ./env
     ```
 
 3.  **Enable the Podman socket** (required when not using Hive for cluster deployment):

@@ -45,9 +45,6 @@ The containerized development environment requires only these locally installed 
 > [!NOTE]
 > Instructions for installing these tools are provided in the sections below. Refer to the [Podman](#install-podman-and-podman-docker) section for setup details specific to your operating system.
 
-> [!IMPORTANT]
-> With the above tools installed, follow the [Getting Started](#getting-started) section to clone the repository, then see [Containerized Development Environment](containerized-dev-environment.md) to run the RP.
-
 ---
 
 ## Local RP Dependencies
