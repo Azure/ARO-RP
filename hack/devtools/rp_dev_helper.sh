@@ -34,6 +34,26 @@ get_digest_tag() {
     echo "$IMAGE_TAG"
 }
 
+# Function to login to ACR using PULL_SECRET - (ACR_NAME)
+acr_login() {
+    local ACR_NAME=${1:-arointsvc}
+    local REGISTRY="$ACR_NAME.azurecr.io"
+    
+    if podman login --get-login "$REGISTRY" &>/dev/null; then
+        echo ">> Already logged into $REGISTRY"
+        return 0
+    fi
+    
+    if [ -z "$PULL_SECRET" ]; then
+        echo ">> PULL_SECRET not set, cannot login to $REGISTRY, please run 'make pull-secrets' and source the env file"
+        return 1
+    fi
+    
+    local AUTH=$(echo "$PULL_SECRET" | jq -r '.auths["'$REGISTRY'"].auth' | base64 -d)
+    podman login "$REGISTRY" -u "${AUTH%%:*}" -p "${AUTH#*:}"
+}
+
 # Example usage
 # get_digest_tag "FluentbitImage"
 # copy_digest_tag "<PULL_SECRET>" "src_acr_name" "dst_acr_name" "$(get_digest_tag FluentbitImage)"
+# acr_login "arointsvc"

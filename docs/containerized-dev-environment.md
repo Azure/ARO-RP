@@ -65,17 +65,15 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     ```
 
 4.  **Build the container image:**
-    Build the `aro-dev-env` container image using the Dockerfile.
 
     ```bash
-    podman compose build aro-dev-env
+    make dev-env-build
     ```
 
 5.  **Start the container:**
-    Start the `aro-dev-env` service. The container will automatically source your environment file and start the RP on port 8443.
 
     ```bash
-    podman compose up -d aro-dev-env
+    make dev-env-start
     ```
     
     **Note:** The container runs the command `. /workspace/env && make runlocal-rp`, which sources your environment variables and starts the RP in local development mode.
@@ -136,7 +134,7 @@ Now, when you run `az aro` commands on your local host (from the project root), 
 To stop and remove the containerized development environment:
 
 ```bash
-podman compose down aro-dev-env
+make dev-env-stop
 ```
 
 If you also want to remove the built image:

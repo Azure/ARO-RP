@@ -522,9 +522,16 @@ run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production,
 	docker compose rm -sf rp
 	docker compose up rp
 
+.PHONY: acr-login
+acr-login: ## Login to arointsvc ACR using PULL_SECRET
+	@. hack/devtools/rp_dev_helper.sh && acr_login
+
+.PHONY: dev-env-build
+dev-env-build: acr-login ## Build the dev environment container image
+	podman compose build aro-dev-env
+
 .PHONY: dev-env-start
-dev-env-start: ## Source env file and run a local containerized RP for development
-	. ./env
+dev-env-start: acr-login ## Start the dev environment RP container
 	podman compose up -d aro-dev-env
 
 .PHONY: dev-env-stop
