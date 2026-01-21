@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/date"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
@@ -23,6 +21,8 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
 		id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 	)
+	now := time.Now()
+	aMonthFromNow := time.Now().UTC().Add(time.Hour * 24 * 30)
 
 	tests := []struct {
 		name    string
@@ -647,7 +647,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: toDate(time.Now())}},
+						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: &now}},
 					},
 				}
 			},
@@ -661,12 +661,12 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: toDate(time.Now())}},
+						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser", IssueDate: &now}},
 					},
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.RegistryProfiles[0].IssueDate = toDate(time.Now().UTC().Add(time.Hour * 24 * 30))
+				oc.Properties.RegistryProfiles[0].IssueDate = &aMonthFromNow
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
 		},
@@ -813,6 +813,6 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 	}
 }
 
-func toDate(t time.Time) *date.Time {
-	return &date.Time{Time: t}
-}
+// func toDate(t time.Time) *date.Time {
+// 	return &date.Time{Time: t}
+// }

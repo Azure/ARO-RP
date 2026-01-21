@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-var _ = Describe("FIPS Mode", func() {
+var _ = Describe("FIPS Mode", Label(install), func() {
 	It("must be set correctly", func(ctx context.Context) {
 		expectedFIPSMachineConfigs := []string{"99-worker-fips", "99-master-fips"}
 

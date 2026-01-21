@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Router", Label(smoke), Ordered, func() {
+var _ = Describe("Router", Label(smoke, install), Ordered, func() {
 	BeforeAll(func(ctx context.Context) {
 		By("creating a load balancer")
 		f, err := staticResources.Open("static_resources/route.yaml")

@@ -32,6 +32,21 @@ func HandleProvisionFailed(ctx context.Context, cd *hivev1.ClusterDeployment, co
 	}
 
 	switch cond.Reason {
+	case AzureKeyBasedAuthenticationNotPermitted.Reason:
+		// Construct the error directly since this error appears in install logs as an HTTP error response
+		// rather than a more easily parsable ARM error.
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeDeploymentFailed,
+				Message: AzureKeyBasedAuthenticationNotPermitted.Message,
+				Details: []api.CloudErrorBody{
+					{
+						Message: "Cluster creation failed because key based authentication has been disabled on the ARO cluster storage account, most likely by an Azure Policy modify effect. Please ensure that any policies in your Azure subscription do not mutate this property on the storage accounts provisioned during ARO cluster deployment. See https://learn.microsoft.com/en-us/azure/governance/policy/concepts/effect-modify for more details.",
+					},
+				},
+			},
+		}
 	case AzureRequestDisallowedByPolicy.Reason:
 		armError, err := parseDeploymentFailedJson(*installLog)
 		if err != nil {

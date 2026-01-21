@@ -475,24 +475,33 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 	It("Should display the action icons on cluster detail page", func() {
 		wd.Get(host + resourceIDFromEnv())
-		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
+		err := wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*30)
+		Expect(err).ToNot(HaveOccurred())
 
 		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(detailPanel.IsDisplayed()).To(BeTrue())
 
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']"))
+		Expect(err).ToNot(HaveOccurred())
 		resourceButton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(resourceButton.IsDisplayed()).To(BeTrue())
 
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "a[aria-label='Prometheus']"))
+		Expect(err).ToNot(HaveOccurred())
 		prometheusButton, err := wd.FindElement(selenium.ByCSSSelector, "a[aria-label='Prometheus']")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(prometheusButton.IsDisplayed()).To(BeTrue())
 
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='SSH']"))
+		Expect(err).ToNot(HaveOccurred())
 		sshbutton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='SSH']")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(sshbutton.IsDisplayed()).To(BeTrue())
 
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='Download Kubeconfig']"))
+		Expect(err).ToNot(HaveOccurred())
 		kubeconfigButton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='Download Kubeconfig']")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(kubeconfigButton.IsDisplayed()).To(BeTrue())

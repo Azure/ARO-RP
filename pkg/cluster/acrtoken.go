@@ -15,8 +15,6 @@ import (
 	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/go-autorest/autorest/date"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
@@ -57,9 +55,9 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
+		currentTime := time.Now().UTC()
 		rp.Password = api.SecureString(password)
-		rp.IssueDate = &date.Time{Time: time.Now().UTC()}
+		rp.IssueDate = &currentTime
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			token.PutRegistryProfile(doc.OpenShiftCluster, rp)

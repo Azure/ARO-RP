@@ -18,7 +18,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 )
 
-var _ = Describe("Cluster Operators", Label(smoke), func() {
+var _ = Describe("Cluster Operators", Label(smoke, basichealth, install), func() {
 	It("should be all available", func(ctx context.Context) {
 		By("checking that all cluster operators are available")
 		cos, err := clients.ConfigClient.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
@@ -37,7 +37,7 @@ var _ = Describe("Cluster Operators", Label(smoke), func() {
 	})
 })
 
-var _ = Describe("ARO Operator", Label(smoke), func() {
+var _ = Describe("ARO Operator", Label(smoke, basichealth, install), func() {
 	It("should meet all conditions", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
@@ -60,7 +60,7 @@ var _ = Describe("ARO Operator", Label(smoke), func() {
 	})
 })
 
-var _ = Describe("Node Ready", Label(smoke), func() {
+var _ = Describe("Node Ready", Label(smoke, install), func() {
 	It("should be ready", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
 			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(ctx, metav1.ListOptions{})

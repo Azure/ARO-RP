@@ -47,7 +47,7 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 			return mimo.TerminalError(errors.New("no issue date detected, please rotate token"))
 		}
 
-		daysInterval := int32(now.Sub(issueDate.Time).Hours() / 24)
+		daysInterval := int32(now.Sub(*issueDate).Hours() / 24)
 
 		switch {
 		case daysInterval > daysValid:

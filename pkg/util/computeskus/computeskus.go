@@ -4,9 +4,14 @@ package computeskus
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
 const (
@@ -14,6 +19,8 @@ const (
 	premiumDisk           = "Premium_LRS"
 	premiumDiskCapability = "PremiumIO"
 )
+
+var ErrListVMResourceSKUs = errors.New("failure listing resource SKUs")
 
 // Zones returns zone information for the resource SKU
 func Zones(sku *mgmtcompute.ResourceSku) []string {
@@ -90,4 +97,14 @@ func SupportedOSDisk(vmSku *mgmtcompute.ResourceSku) string {
 		return premiumDisk
 	}
 	return standardDisk
+}
+
+func GetVMSkusForCurrentRegion(ctx context.Context, resourceSkusClient compute.ResourceSkusClient, location string) (map[string]*mgmtcompute.ResourceSku, error) {
+	filter := fmt.Sprintf("location eq %s", location)
+	skus, err := resourceSkusClient.List(ctx, filter)
+	if err != nil {
+		return nil, errors.Join(ErrListVMResourceSKUs, err)
+	}
+
+	return FilterVMSizes(skus, location), nil
 }

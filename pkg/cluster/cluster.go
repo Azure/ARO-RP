@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -129,8 +128,6 @@ type manager struct {
 	msiDataplane                           dataplane.ClientFactory
 	clusterMsiKeyVaultStore                azsecrets.Client
 	clusterMsiFederatedIdentityCredentials armmsi.FederatedIdentityCredentialsClient
-
-	now func() time.Time
 
 	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
 
@@ -298,7 +295,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		installViaHive:                         installViaHive,
 		adoptViaHive:                           adoptByHive,
 		hiveClusterManager:                     hiveClusterManager,
-		now:                                    func() time.Time { return time.Now() },
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 		fpServicePrincipalID:                   fpspID,

@@ -111,8 +111,8 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 		{
 			name:           "internal error while iterating list",
 			wantStatusCode: http.StatusInternalServerError,
-			throwsError:    &cosmosdb.Error{Code: "500", Message: "random error"},
-			wantError:      `500: InternalServerError: : Internal server error.`,
+			throwsError:    &cosmosdb.Error{StatusCode: 500, Code: "ERR500", Message: "random error"},
+			wantError:      `500: InternalServerError: : 500 ERR500: random error`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

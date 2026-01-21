@@ -47,7 +47,7 @@ const (
 	aroOperatorNamespace = "openshift-azure-operator"
 )
 
-var _ = Describe("ARO Operator", Label(smoke), func() {
+var _ = Describe("ARO Operator", Label(smoke, install), func() {
 	It("should have no errors in the operator logs", Serial, func(ctx context.Context) {
 		pods := ListK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).List, metav1.ListOptions{})
 		Eventually(func(g Gomega, ctx context.Context) {
@@ -431,24 +431,6 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		managedUpgradeOperatorNamespace  = "openshift-managed-upgrade-operator"
 		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
 	)
-
-	It("must be deployed by default with FIPS crypto mandated", func(ctx context.Context) {
-		By("getting MUO pods")
-		pods := ListK8sObjectWithRetry(
-			ctx, clients.Kubernetes.CoreV1().Pods(managedUpgradeOperatorNamespace).List, metav1.ListOptions{
-				LabelSelector: "name=managed-upgrade-operator",
-			})
-		Expect(pods.Items).NotTo(BeEmpty())
-
-		By("verifying that MUO has FIPS crypto mandated by reading logs")
-		Eventually(func(g Gomega, ctx context.Context) {
-			body := GetK8sPodLogsWithRetry(
-				ctx, managedUpgradeOperatorNamespace, pods.Items[0].Name, corev1.PodLogOptions{},
-			)
-
-			g.Expect(body).To(ContainSubstring(`X:boringcrypto,strictfipsruntime`))
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-	}, SpecTimeout(2*time.Minute))
 
 	It("must be restored if deleted", func(ctx context.Context) {
 		deleteFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Delete

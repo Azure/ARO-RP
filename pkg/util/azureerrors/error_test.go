@@ -181,3 +181,166 @@ func TestIsDeploymentMissingPermissionsError(t *testing.T) {
 		})
 	}
 }
+
+// TestIsVMSKUError tests detection of VM SKU availability errors.
+// Azure Resource Manager error codes: https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-sku-not-available
+// ARO RP validation uses InvalidParameter with SKU in the message.
+func TestIsVMSKUError(t *testing.T) {
+	for _, tt := range []struct {
+		name            string
+		err             error
+		wantIsVMError   bool
+		wantProfileType VMProfileType
+	}{
+		{
+			name:            "nil error",
+			err:             nil,
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "non-VM error",
+			err:             errors.New("some random error"),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "InvalidParameter without SKU",
+			err:             errors.New("Code=\"InvalidParameter\" Message=\"Some other parameter issue\""),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "InvalidParameter SKU error - worker profile",
+			err:             errors.New("Code=\"InvalidParameter\" Message=\"The selected SKU 'Standard_D4s_v5' is restricted\" Target=\"properties.workerProfiles[0].VMSize\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileWorker,
+		},
+		{
+			name:            "InvalidParameter SKU error - master profile lowercase",
+			err:             errors.New("Code=\"InvalidParameter\" Message=\"The selected SKU 'Standard_D8s_v5' is restricted\" Target=\"properties.masterProfile.VMSize\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileMaster,
+		},
+		{
+			name:            "InvalidParameter SKU error - master profile uppercase",
+			err:             errors.New("Code=\"InvalidParameter\" Message=\"The selected SKU 'Standard_D8s_v5' is restricted\" Target=\"properties.MasterProfile.VMSize\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileMaster,
+		},
+		{
+			name:            "InvalidParameter SKU error - no profile info",
+			err:             errors.New("Code=\"InvalidParameter\" Message=\"The selected SKU is restricted in this region\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "SkuNotAvailable error",
+			err:             errors.New("Code=\"SkuNotAvailable\" Message=\"The requested size for resource is currently not available\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "SkuNotAvailable error - worker profile",
+			err:             errors.New("Code=\"SkuNotAvailable\" Target=\"properties.workerProfiles[0].VMSize\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileWorker,
+		},
+		{
+			name:            "NotAvailableForSubscription error",
+			err:             errors.New("Restrictions: NotAvailableForSubscription, type: Zone, locations: westeurope"),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "size not available in location",
+			err:             errors.New("The requested size for resource is currently not available in location 'westeurope'"),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "generic deployment error - not a SKU error",
+			err:             errors.New("Code=\"DeploymentFailed\" Message=\"Deployment failed\""),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "authorization error - not a SKU error",
+			err:             errors.New("Code=\"AuthorizationFailed\" Message=\"The client does not have authorization\""),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "azcore ResponseError with SkuNotAvailable",
+			err: &azcore.ResponseError{
+				ErrorCode: CODE_SKUNOTAVAILABLE,
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with SkuNotAvailable ServiceError",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_SKUNOTAVAILABLE,
+					Message: "The requested size for resource is currently not available in location 'eastus'",
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with InvalidParameter SKU ServiceError - worker",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_INVALIDPARAM,
+					Message: "The selected SKU 'Standard_D4s_v5' is restricted for workerProfiles[0].VMSize",
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileWorker,
+		},
+		{
+			name:            "QuotaExceeded error - string contains",
+			err:             errors.New("Code=\"QuotaExceeded\" Message=\"Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "QuotaExceeded error - master profile",
+			err:             errors.New("Code=\"QuotaExceeded\" Message=\"Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota\" Target=\"properties.masterProfile.VMSize\""),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileMaster,
+		},
+		{
+			name: "azcore ResponseError with QuotaExceeded",
+			err: &azcore.ResponseError{
+				ErrorCode: CODE_QUOTAEXCEEDED,
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with QuotaExceeded ServiceError",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_QUOTAEXCEEDED,
+					Message: "Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota",
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotIsVMError, gotProfileType := IsVMSKUError(tt.err)
+
+			if gotIsVMError != tt.wantIsVMError {
+				t.Errorf("IsVMSKUError() isVMError = %v, want %v", gotIsVMError, tt.wantIsVMError)
+			}
+			if gotProfileType != tt.wantProfileType {
+				t.Errorf("IsVMSKUError() profileType = %v, want %v", gotProfileType, tt.wantProfileType)
+			}
+		})
+	}
+}

@@ -116,6 +116,33 @@ impact CI pipelines.
 Additional instructions for merging changes upstream are contained in internal
 documentation.
 
+## Updating Azure CLI version
+
+When upstream azure-cli releases a new version that we need to adopt, follow these steps to regenerate `requirements.txt`:
+
+```bash
+# 1. Remove existing pyenv
+rm -rf pyenv
+
+# 2. Create fresh virtual environment
+python3 -m venv pyenv
+
+# 3. Install new azure-cli version + azdev
+. pyenv/bin/activate
+pip install -U pip
+pip install azure-cli==<NEW_VERSION> azdev
+
+# 4. Setup azdev with the extension repo
+azdev setup -r .
+
+# 5. Freeze dependencies to regenerate requirements.txt
+pip freeze > requirements.txt
+```
+
+Also update `Dockerfile.ci-azext-aro` to match the new CLI version (both the pip install line and the base image).
+
+This lets pip resolve all SDK dependencies automatically rather than manually editing individual packages.
+
 ## Caveats
 
 * `azure-cli` CI is not entirely isolated.  Test runs may pass or fail depending

@@ -12,6 +12,7 @@ package mock_env
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	logrus "github.com/sirupsen/logrus"
 	gomock "go.uber.org/mock/gomock"
@@ -188,6 +189,20 @@ func (m *MockCore) NewMSITokenCredential() (azcore.TokenCredential, error) {
 func (mr *MockCoreMockRecorder) NewMSITokenCredential() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockCore)(nil).NewMSITokenCredential))
+}
+
+// Now mocks base method.
+func (m *MockCore) Now() time.Time {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Now")
+	ret0, _ := ret[0].(time.Time)
+	return ret0
+}
+
+// Now indicates an expected call of Now.
+func (mr *MockCoreMockRecorder) Now() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Now", reflect.TypeOf((*MockCore)(nil).Now))
 }
 
 // ResourceGroup mocks base method.

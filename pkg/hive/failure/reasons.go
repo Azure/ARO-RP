@@ -15,9 +15,21 @@ type InstallFailingReason struct {
 var Reasons = []InstallFailingReason{
 	// Order within this array determines precedence. Earlier entries will take
 	// priority over later ones.
+	AzureKeyBasedAuthenticationNotPermitted,
 	AzureRequestDisallowedByPolicy,
 	AzureInvalidTemplateDeployment,
 	AzureZonalAllocationFailed,
+}
+
+var AzureKeyBasedAuthenticationNotPermitted = InstallFailingReason{
+	Name:    "AzureKeyBasedAuthenticationNotPermitted",
+	Reason:  "AzureKeyBasedAuthenticationNotPermitted",
+	Message: "Deployment failed with KeyBasedAuthenticationNotPermitted error. Please see details for more information.",
+	SearchRegexes: []*regexp.Regexp{
+		// Thinking ahead in case Hive ever makes requests to other storage accounts, this regex
+		// only matches requests to the cluster storage account.
+		regexp.MustCompile(`(?s)cluster([a-z0-9]){10}.*KeyBasedAuthenticationNotPermitted`),
+	},
 }
 
 var AzureRequestDisallowedByPolicy = InstallFailingReason{

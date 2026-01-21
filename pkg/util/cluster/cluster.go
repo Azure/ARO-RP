@@ -77,6 +77,7 @@ type ClusterConfig struct {
 	MasterVMSize  string   `mapstructure:"MASTER_VM_SIZE"`
 	WorkerVMSize  string   `mapstructure:"WORKER_VM_SIZE"`
 	MasterVMSizes []string `mapstructure:"MASTER_VM_SIZES"`
+	WorkerVMSizes []string `mapstructure:"WORKER_VM_SIZES"`
 }
 
 func (cc *ClusterConfig) IsLocalDevelopmentMode() bool {
@@ -107,13 +108,20 @@ type Cluster struct {
 
 const GenerateSubnetMaxTries = 100
 const localDefaultURL string = "https://localhost:8443"
-const DefaultWorkerVmSize = api.VMSizeStandardD4sV5
 
 func DefaultMasterVmSizes() []string {
 	return []string{
 		api.VMSizeStandardD8sV5.String(),
 		api.VMSizeStandardD8sV4.String(),
 		api.VMSizeStandardD8sV3.String(),
+	}
+}
+
+func DefaultWorkerVmSizes() []string {
+	return []string{
+		api.VMSizeStandardD4sV5.String(),
+		api.VMSizeStandardD4sV4.String(),
+		api.VMSizeStandardD4sV3.String(),
 	}
 }
 
@@ -171,14 +179,29 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 		conf.AzureEnvironment = "AZUREPUBLICCLOUD"
 	}
 
-	if conf.MasterVMSize == "" {
-		conf.MasterVMSizes = DefaultMasterVmSizes()
-	}
+	// Set VM size defaults only if user hasn't provided any values
 	if len(conf.MasterVMSizes) == 0 {
-		conf.MasterVMSizes = []string{conf.MasterVMSize}
+		if conf.MasterVMSize == "" {
+			conf.MasterVMSizes = DefaultMasterVmSizes()
+		} else {
+			conf.MasterVMSizes = []string{conf.MasterVMSize}
+		}
 	}
-	if conf.WorkerVMSize == "" {
-		conf.WorkerVMSize = DefaultWorkerVmSize.String()
+	if len(conf.WorkerVMSizes) == 0 {
+		if conf.WorkerVMSize == "" {
+			// No explicit worker VM size set - use defaults.
+			// In local dev mode, prepend a smaller size for cost savings.
+			if conf.IsLocalDevelopmentMode() {
+				conf.WorkerVMSizes = append(
+					[]string{api.VMSizeStandardD2sV3.String()},
+					DefaultWorkerVmSizes()...,
+				)
+			} else {
+				conf.WorkerVMSizes = DefaultWorkerVmSizes()
+			}
+		} else {
+			conf.WorkerVMSizes = []string{conf.WorkerVMSize}
+		}
 	}
 
 	return &conf, nil
@@ -878,7 +901,6 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			WorkerProfiles: []api.WorkerProfile{
 				{
 					Name:                "worker",
-					VMSize:              api.VMSize(c.Config.WorkerVMSize),
 					DiskSizeGB:          128,
 					SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.Config.SubscriptionID, vnetResourceGroup, clusterName),
 					Count:               3,
@@ -937,15 +959,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				return err
 			}
 		}
-
-		// If we're in local dev mode and the user has not overridden the default VM size, use a smaller size for cost-saving purposes
-		if c.Config.WorkerVMSize == DefaultWorkerVmSize.String() {
-			oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
-		}
 	}
 
+	masterIdx := 0
+	workerIdx := 0
 	var err error
-	for _, masterVmSize := range c.Config.MasterVMSizes {
+
+	for {
 		if err != nil {
 			// If we've already tried and failed to create the cluster, delete
 			// it before retrying. Deleting first ensures that the final failed
@@ -956,16 +976,50 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			}
 		}
 
-		oc.Properties.MasterProfile.VMSize = api.VMSize(masterVmSize)
+		oc.Properties.MasterProfile.VMSize = api.VMSize(c.Config.MasterVMSizes[masterIdx])
+		oc.Properties.WorkerProfiles[0].VMSize = api.VMSize(c.Config.WorkerVMSizes[workerIdx])
 		c.log.Infof("Creating cluster %s with master VM size %s and worker VM size %s",
 			clusterName, oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
 		err = c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
 		if err == nil {
 			break
 		}
-		c.log.WithError(err).Errorf("error creating cluster with master VM size %s, retrying", oc.Properties.MasterProfile.VMSize)
+
+		// Check if this is a VM SKU availability error and determine which profile failed
+		isVMError, profile := azureerrors.IsVMSKUError(err)
+		if !isVMError {
+			return err
+		}
+
+		switch profile {
+		case azureerrors.VMProfileWorker:
+			c.log.WithError(err).Errorf("error creating cluster with worker VM size %s, trying next size", oc.Properties.WorkerProfiles[0].VMSize)
+			workerIdx++
+			if workerIdx >= len(c.Config.WorkerVMSizes) {
+				return fmt.Errorf("exhausted all worker VM sizes: %w", err)
+			}
+		case azureerrors.VMProfileMaster:
+			c.log.WithError(err).Errorf("error creating cluster with master VM size %s, trying next size", oc.Properties.MasterProfile.VMSize)
+			masterIdx++
+			if masterIdx >= len(c.Config.MasterVMSizes) {
+				return fmt.Errorf("exhausted all master VM sizes: %w", err)
+			}
+		default:
+			// VM size error but can't determine which profile - try next worker size first
+			// (more commonly the issue in local dev mode), then cycle through masters.
+			c.log.WithError(err).Errorf("error creating cluster with VM sizes (master: %s, worker: %s), cannot determine failing profile",
+				oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
+			workerIdx++
+			if workerIdx >= len(c.Config.WorkerVMSizes) {
+				workerIdx = 0
+				masterIdx++
+				if masterIdx >= len(c.Config.MasterVMSizes) {
+					return fmt.Errorf("exhausted all VM size combinations: %w", err)
+				}
+			}
+		}
 	}
-	return err
+	return nil
 }
 
 func (c *Cluster) registerSubscription() error {

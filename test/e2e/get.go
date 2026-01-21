@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Get cluster", func() {
+var _ = Describe("Get cluster", Label(basichealth, install), func() {
 	It("must be possible get a cluster and retrieve some (enriched) fields", func(ctx context.Context) {
 		By("getting the cluster resource")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)

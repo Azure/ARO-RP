@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-var _ = Describe("Load Balancer", Label(smoke), Ordered, func() {
+var _ = Describe("Load Balancer", Label(smoke, install), Ordered, func() {
 	var objs []unstructured.Unstructured
 	BeforeAll(func(ctx context.Context) {
 		// Initialize objs to avoid objs being counted multiple times when retrying.

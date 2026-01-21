@@ -21,6 +21,8 @@ const (
 	DevRPGenevaMetricsAccount            = "AzureRedHatOpenShiftRP"
 
 	DevGatewayGenevaLoggingConfigVersion = "4.3"
+
+	MUOImageTag = "v0.1.1297-ge922e64"
 )
 
 // OCP versions - declared as major, minor, z
@@ -38,8 +40,8 @@ type Stream struct {
 // This default is left here ONLY for use by local development mode,
 // until we can come up with a better solution.
 var DefaultInstallStream = Stream{
-	Version:  NewVersion(4, 16, 30),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:7aacace57ab6ec468dd98b0b3e0f3fc440b29afce21b90bd716fed0db487e9e9",
+	Version:  NewVersion(4, 17, 44),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:e3d5a7ccc804f95867a4fa9b9802739898be8814a429368521b12d7822de51a0",
 }
 
 // FluentbitImage contains the location of the Fluentbit container image
@@ -62,7 +64,7 @@ func MdsdImage(acrDomain string) string {
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
 func MUOImage(acrDomain string) string {
-	return acrDomain + "/app-sre/managed-upgrade-operator:v0.1.1202-g118c178"
+	return acrDomain + "/app-sre/managed-upgrade-operator:" + MUOImageTag
 }
 
 // GateKeeperImage contains the location of the GateKeeper container image
