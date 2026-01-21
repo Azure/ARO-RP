@@ -114,9 +114,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
 		defer cancel()
 
-		err = wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+		err = wait.PollUntilContextCancel(timeoutCtx, r.readinessPollTime, true, func(pollCtx context.Context) (bool, error) {
 			return r.deployer.IsReady(ctx, "openshift-managed-upgrade-operator", "managed-upgrade-operator")
-		}, timeoutCtx.Done())
+		})
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("managed Upgrade Operator deployment timed out on Ready: %w", err)
 		}
