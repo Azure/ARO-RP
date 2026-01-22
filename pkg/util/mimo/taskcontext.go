@@ -44,13 +44,24 @@ type TaskContext interface {
 }
 
 type TaskContextWithAzureClients interface {
-	LoadBalancersClient() armnetwork.LoadBalancersClient
-	PrivateLinkServicesClient() armnetwork.PrivateLinkServicesClient
-	ResourceSkusClient() armcompute.ResourceSKUsClient
+	TaskContext
+
+	LoadBalancersClient() (armnetwork.LoadBalancersClient, error)
+	PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, error)
+	ResourceSKUsClient() (armcompute.ResourceSKUsClient, error)
 }
 
 func GetTaskContext(c context.Context) (TaskContext, error) {
 	r, ok := c.(TaskContext)
+	if !ok {
+		return nil, fmt.Errorf("cannot convert %v", r)
+	}
+
+	return r, nil
+}
+
+func GetTaskContextWithAzureClients(c context.Context) (TaskContextWithAzureClients, error) {
+	r, ok := c.(TaskContextWithAzureClients)
 	if !ok {
 		return nil, fmt.Errorf("cannot convert %v", r)
 	}
