@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
@@ -34,6 +33,7 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -172,6 +172,12 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 	switch old.(type) {
 	case *corev1.Namespace:
 		old, new := old.(*corev1.Namespace), new.(*corev1.Namespace)
+
+		if new.Labels == nil {
+			new.Labels = map[string]string{}
+		}
+		new.Labels[corev1.LabelMetadataName] = old.Name
+
 		for _, name := range []string{
 			"openshift.io/sa.scc.mcs",
 			"openshift.io/sa.scc.supplemental-groups",
@@ -261,19 +267,28 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 			copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "openshift.io/owning-component")
 		}
 
+		if len(new.Data) == 0 {
+			new.Data = map[string]string{}
+		}
+		if len(old.Data) == 0 {
+			old.Data = map[string]string{}
+		}
+
 	case *machinev1beta1.MachineHealthCheck:
 		old, new := old.(*machinev1beta1.MachineHealthCheck), new.(*machinev1beta1.MachineHealthCheck)
 		new.Status = old.Status
 	}
 
+	diffContent := strings.TrimSpace(cmp.Diff(old, new))
+
 	var diff string
 	if _, ok := old.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
-		diff = strings.Join(deep.Equal(old, new), "\n")
+		diff = diffContent
 	} else {
 		diff = "<scrubbed>"
 	}
 
-	return new, !reflect.DeepEqual(old, new), diff, nil
+	return new, len(diffContent) > 0, diff, nil
 }
 
 func copyAnnotation(dst, src *metav1.ObjectMeta, name string) {

@@ -27,10 +27,6 @@ import (
 func TestSystemreservedEnsure(t *testing.T) {
 	kubeletConfig := func(resourceVersion string) *mcv1.KubeletConfig {
 		return &mcv1.KubeletConfig{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KubeletConfig",
-				APIVersion: "machineconfiguration.openshift.io/v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "aro-limits",
 				Labels: map[string]string{
@@ -149,6 +145,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if !reflect.DeepEqual(kc, tt.wantKubeletConfig) {
 				t.Error(cmp.Diff(kc, tt.wantKubeletConfig))
 			}
