@@ -4,7 +4,7 @@ go 1.25.3
 
 require (
 	github.com/Azure/ARO-RP/pkg/api v0.0.0-00010101000000-000000000000
-	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.0
 	github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry v0.2.3
@@ -43,7 +43,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.2
-	github.com/google/gnostic v0.5.7-v3refs
+	github.com/google/gnostic-models v0.6.9
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/csrf v1.7.3
@@ -175,7 +175,6 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.17.7 // indirect
-	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-containerregistry v0.20.6 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
