@@ -118,7 +118,15 @@ services:
     ports:
       - "8443:8443"
     healthcheck:
-      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8443/healthz/ready"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-k",
+          "-sS",
+          "-f",
+          "https://localhost:8443/healthz/ready",
+        ]
       interval: 90s
       timeout: 30s
       retries: 3
@@ -149,7 +157,15 @@ services:
     command: ["portal"]
     restart: on-failure:3
     healthcheck:
-      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8444/healthz/ready"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-k",
+          "-sS",
+          "-f",
+          "https://localhost:8444/healthz/ready",
+        ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -206,19 +222,27 @@ services:
       ]
 
   aro-dev-env:
+    platform: ${PLATFORM:-linux/amd64}
     build:
+      args:
+        - FEDORA_REGISTRY=${FEDORA_REGISTRY}
+        - USERID=${USERID}
       context: .
       dockerfile: Dockerfile.dev-env
     image: aro-rp_aro-dev
+    # userns_mode: keep-id  # Docker on Linux/macOS handles file bind mount permissions transparently, so this flag is invalid
     volumes:
       - .:/workspace:Z
       - ~/.azure:/root/.azure:ro,Z
       - ~/.ssh:/root/.ssh:ro,Z
       - ./secrets:/workspace/secrets:ro,Z
+      # - ${XDG_RUNTIME_DIR}/podman/podman.sock:/podman/podman.sock:z   # For Linux
+      - /var/run/docker.sock:/podman/podman.sock:z # For MacOS
     environment:
-      KUBECONFIG: /workspace/secrets/aks.kubeconfig
       AZURE_EXTENSION_DEV_SOURCES: /workspace/python
       USER: ${USER}
+    security_opt:
+      - label=disable
     network_mode: "host"
     command: /bin/bash -c ". /workspace/env && make runlocal-rp"
 
