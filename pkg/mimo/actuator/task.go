@@ -36,6 +36,8 @@ type th struct {
 	dbs actuatorDBs
 
 	_ch clienthelper.Interface
+
+	az *azClients
 }
 
 // force interface checking
