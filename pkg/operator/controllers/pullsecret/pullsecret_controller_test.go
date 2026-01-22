@@ -330,7 +330,7 @@ func TestPullSecretReconciler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
+			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).WithStatusSubresource(tt.instance).Build()
 			assert.NotNil(t, clientFake)
 
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
