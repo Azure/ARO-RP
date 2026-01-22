@@ -19,7 +19,6 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 
 	region := chi.URLParam(r, "region")
 	resource := chi.URLParam(r, "resource")
-	namespace := r.URL.Query().Get("namespace")
 	name := r.URL.Query().Get("name")
 
 	// Validate required params
@@ -39,7 +38,7 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Ensure manager is wired
+	// Manager must be wired (tests mock this)
 	if f.hiveK8sObjectManager == nil {
 		adminReply(
 			log,
@@ -47,7 +46,7 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 			nil,
 			nil,
 			api.NewCloudError(
-				http.StatusInternalServerError,
+				http.StatusNotImplemented,
 				api.CloudErrorCodeInternalServerError,
 				"",
 				"hive k8s object manager not configured",
@@ -56,13 +55,17 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	var (
+		b   []byte
+		err error
+	)
+
 	// Delegate to manager
 	if name != "" {
-		b, err := f.hiveK8sObjectManager.Get(ctx, region, namespace, resource, name)
-		adminReply(log, w, nil, b, err)
-		return
+		b, err = f.hiveK8sObjectManager.Get(ctx, region, resource, name)
+	} else {
+		b, err = f.hiveK8sObjectManager.List(ctx, region, resource)
 	}
 
-	b, err := f.hiveK8sObjectManager.List(ctx, region, namespace, resource)
 	adminReply(log, w, nil, b, err)
 }
