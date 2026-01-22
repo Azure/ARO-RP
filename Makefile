@@ -529,3 +529,167 @@ run-selenium:
 .PHONY: validate-roledef
 validate-roledef:
 	go run ./hack/role -verified-version "$(OCP_VERSION)" -oc-bin=$(OC)
+
+###############################################################################
+# pprof Profiling Targets
+###############################################################################
+
+# pprof configuration
+PPROF_HOST ?= 127.0.0.1
+PPROF_PORT ?= 6060
+PPROF_URL = http://$(PPROF_HOST):$(PPROF_PORT)
+PPROF_OUTPUT_DIR ?= ./pprof-data
+PPROF_DURATION ?= 30s
+
+# Load test configuration
+LOADTEST_BASE_URL ?= https://localhost:8443
+LOADTEST_DURATION ?= 20s
+LOADTEST_RATE ?= 100
+
+.PHONY: pprof-check
+pprof-check: ## Check if pprof server is running
+	@echo "Checking pprof server at $(PPROF_URL)..."
+	@curl -s -o /dev/null -w "%{http_code}" $(PPROF_URL)/debug/pprof/ | grep -q "200" && \
+		echo "✓ pprof server is running" || \
+		(echo "✗ pprof server is not running. Start it with: make runlocal-rp" && exit 1)
+
+.PHONY: pprof-collect-all
+pprof-collect-all: ## Collect all pprof profile types (CPU, heap, goroutine, etc.) from the running server. Does NOT profile endpoints under load - use pprof-profile-endpoint for that.
+	@mkdir -p $(PPROF_OUTPUT_DIR)
+	@echo "Collecting pprof profiles from $(PPROF_URL)..."
+	@echo "Output directory: $(PPROF_OUTPUT_DIR)"
+	@echo ""
+	@echo "Collecting CPU profile ($(PPROF_DURATION))..."
+	@curl -s "$(PPROF_URL)/debug/pprof/profile?seconds=$$(echo $(PPROF_DURATION) | sed 's/s//')" -o $(PPROF_OUTPUT_DIR)/cpu.prof && \
+		echo "  ✓ CPU profile saved to $(PPROF_OUTPUT_DIR)/cpu.prof" || \
+		echo "  ✗ Failed to collect CPU profile"
+	@echo "Collecting heap profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/heap" -o $(PPROF_OUTPUT_DIR)/heap.prof && \
+		echo "  ✓ Heap profile saved to $(PPROF_OUTPUT_DIR)/heap.prof" || \
+		echo "  ✗ Failed to collect heap profile"
+	@echo "Collecting allocs profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/allocs" -o $(PPROF_OUTPUT_DIR)/allocs.prof && \
+		echo "  ✓ Allocs profile saved to $(PPROF_OUTPUT_DIR)/allocs.prof" || \
+		echo "  ✗ Failed to collect allocs profile"
+	@echo "Collecting goroutine profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/goroutine" -o $(PPROF_OUTPUT_DIR)/goroutine.prof && \
+		echo "  ✓ Goroutine profile saved to $(PPROF_OUTPUT_DIR)/goroutine.prof" || \
+		echo "  ✗ Failed to collect goroutine profile"
+	@echo "Collecting threadcreate profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/threadcreate" -o $(PPROF_OUTPUT_DIR)/threadcreate.prof && \
+		echo "  ✓ Threadcreate profile saved to $(PPROF_OUTPUT_DIR)/threadcreate.prof" || \
+		echo "  ✗ Failed to collect threadcreate profile"
+	@echo "Collecting block profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/block" -o $(PPROF_OUTPUT_DIR)/block.prof && \
+		echo "  ✓ Block profile saved to $(PPROF_OUTPUT_DIR)/block.prof" || \
+		echo "  ✗ Failed to collect block profile"
+	@echo "Collecting mutex profile..."
+	@curl -s "$(PPROF_URL)/debug/pprof/mutex" -o $(PPROF_OUTPUT_DIR)/mutex.prof && \
+		echo "  ✓ Mutex profile saved to $(PPROF_OUTPUT_DIR)/mutex.prof" || \
+		echo "  ✗ Failed to collect mutex profile"
+	@echo "Collecting trace (5s)..."
+	@curl -s "$(PPROF_URL)/debug/pprof/trace?seconds=5" -o $(PPROF_OUTPUT_DIR)/trace.out && \
+		echo "  ✓ Trace saved to $(PPROF_OUTPUT_DIR)/trace.out" || \
+		echo "  ✗ Failed to collect trace"
+	@echo ""
+	@echo "Profile collection complete!"
+	@echo ""
+	@echo "To view profiles, use:"
+	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/cpu.prof"
+	@echo "  go tool pprof -http=:8888 $(PPROF_OUTPUT_DIR)/heap.prof"
+	@echo "  go tool trace $(PPROF_OUTPUT_DIR)/trace.out"
+
+.PHONY: pprof-cpu
+pprof-cpu: ## Collect and open CPU profile in browser
+	@echo "Collecting CPU profile for $(PPROF_DURATION)..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/profile?seconds=$$(echo $(PPROF_DURATION) | sed 's/s//')"
+
+.PHONY: pprof-heap
+pprof-heap: ## Collect and open heap profile in browser
+	@echo "Opening heap profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/heap"
+
+.PHONY: pprof-goroutine
+pprof-goroutine: ## Collect and open goroutine profile in browser
+	@echo "Opening goroutine profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/goroutine"
+
+.PHONY: pprof-allocs
+pprof-allocs: ## Collect and open allocs profile in browser
+	@echo "Opening allocs profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/allocs"
+
+.PHONY: pprof-block
+pprof-block: ## Collect and open block profile in browser
+	@echo "Opening block profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/block"
+
+.PHONY: pprof-mutex
+pprof-mutex: ## Collect and open mutex profile in browser
+	@echo "Opening mutex profile..."
+	go tool pprof -http=:8888 "$(PPROF_URL)/debug/pprof/mutex"
+
+.PHONY: pprof-trace
+pprof-trace: ## Collect and open execution trace in browser
+	@mkdir -p $(PPROF_OUTPUT_DIR)
+	@echo "Collecting trace for 5 seconds..."
+	@curl -s "$(PPROF_URL)/debug/pprof/trace?seconds=5" -o $(PPROF_OUTPUT_DIR)/trace.out
+	@echo "Opening trace viewer..."
+	go tool trace $(PPROF_OUTPUT_DIR)/trace.out
+
+.PHONY: loadtest-vegeta
+loadtest-vegeta: ## Run load test using vegeta. Usage: make loadtest-vegeta ENDPOINT=/api/v1/clusters DURATION=20s RATE=100
+	@if [ -z "$(ENDPOINT)" ]; then \
+		echo "Error: ENDPOINT is required. Example: make loadtest-vegeta ENDPOINT=/api/v1/clusters"; \
+		exit 1; \
+	fi
+	@command -v vegeta >/dev/null 2>&1 || { echo "vegeta not found. Install with: go install github.com/tsenart/vegeta@latest"; exit 1; }
+	@ENDPOINT_NAME=$$(echo "$(ENDPOINT)" | sed 's|^/||' | sed 's|/|-|g' | sed 's|[^a-zA-Z0-9-]|_|g' | tr '[:upper:]' '[:lower:]'); \
+	if [ -z "$$ENDPOINT_NAME" ]; then ENDPOINT_NAME="endpoint"; fi; \
+	TEST_URL="$(LOADTEST_BASE_URL)$(ENDPOINT)"; \
+	if [ -n "$(DURATION)" ]; then TEST_DURATION="$(DURATION)"; else TEST_DURATION="$(LOADTEST_DURATION)"; fi; \
+	if [ -n "$(RATE)" ]; then TEST_RATE="$(RATE)"; else TEST_RATE="$(LOADTEST_RATE)"; fi; \
+	mkdir -p $(PPROF_OUTPUT_DIR); \
+	echo "Running load test with vegeta..."; \
+	echo "  URL: $$TEST_URL"; \
+	echo "  Duration: $$TEST_DURATION"; \
+	echo "  Rate: $$TEST_RATE req/s"; \
+	echo "GET $$TEST_URL" | vegeta attack -duration=$$TEST_DURATION -rate=$$TEST_RATE -insecure | \
+		tee $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.bin | vegeta report; \
+	echo ""; \
+	echo "Results saved to $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.bin"; \
+	echo "Generate HTML report: vegeta report -type=html $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.bin > $(PPROF_OUTPUT_DIR)/$$ENDPOINT_NAME-vegeta.html"
+
+.PHONY: pprof-profile-endpoint
+pprof-profile-endpoint: ## Profile app under load for specific endpoint(s). Usage: make pprof-profile-endpoint ENDPOINT=/api/v1/clusters DURATION=20s RATE=100. Use ENDPOINT=all to profile ALL endpoints from swagger (runs load test + collects profiles for each endpoint individually).
+	@echo "Note: Ensure the RP is running with pprof enabled:"
+	@echo "  Terminal 1: make runlocal-rp"
+	@echo "  (pprof is enabled by default in development mode)"
+	@echo ""
+	@if [ -z "$(ENDPOINT)" ]; then \
+		echo "Error: ENDPOINT is required. Example: make pprof-profile-endpoint ENDPOINT=/api/v1/clusters"; \
+		echo "       Or use ENDPOINT=all to profile all endpoints from swagger"; \
+		exit 1; \
+	fi
+	@TEST_DURATION="$(DURATION)"; \
+	if [ -z "$$TEST_DURATION" ]; then TEST_DURATION="$(LOADTEST_DURATION)"; fi; \
+	TEST_RATE="$(RATE)"; \
+	if [ -z "$$TEST_RATE" ]; then TEST_RATE="$(LOADTEST_RATE)"; fi; \
+	hack/pprof-profile-endpoint.sh ENDPOINT="$(ENDPOINT)" DURATION="$$TEST_DURATION" RATE="$$TEST_RATE"
+
+.PHONY: pprof-analyze
+pprof-analyze: ## Analyze a pprof profile and generate improvement suggestions. Usage: make pprof-analyze PROFILE=pprof-data/endpoint-cpu.prof
+	@if [ -z "$(PROFILE)" ]; then \
+		echo "Error: PROFILE is required"; \
+		echo "Usage: make pprof-analyze PROFILE=pprof-data/providers-microsoft-redhatopenshift-operations-cpu.prof"; \
+		echo ""; \
+		echo "Available profiles:"; \
+		ls -1 $(PPROF_OUTPUT_DIR)/*.prof 2>/dev/null | sed 's|^|  |' || echo "  No profiles found in $(PPROF_OUTPUT_DIR)"; \
+		exit 1; \
+	fi
+	@hack/pprof-analyze.sh "$(PROFILE)"
+
+.PHONY: pprof-clean
+pprof-clean: ## Clean up pprof output directory
+	rm -rf $(PPROF_OUTPUT_DIR)
+	@echo "Cleaned up $(PPROF_OUTPUT_DIR)"
