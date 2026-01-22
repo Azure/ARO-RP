@@ -62,14 +62,19 @@ func (rc *ResourceCleaner) CleanOrphanedE2EServicePrincipals(ctx context.Context
 	return nil
 }
 
-func (rc *ResourceCleaner) listByPrefix(ctx context.Context, prefix string, isServicePrincipal bool) ([]interface{}, error) {
-	filter := fmt.Sprintf("startswith(displayName, '%s')", prefix)
+func (rc *ResourceCleaner) listByDisplayName(ctx context.Context, prefix string, suffix string, isServicePrincipal bool) ([]interface{}, error) {
+	var filter string
+	if suffix != "" {
+		filter = fmt.Sprintf("startswith(displayName, '%s') and endswith(displayName, '%s')", prefix, suffix)
+	} else {
+		filter = fmt.Sprintf("startswith(displayName, '%s')", prefix)
+	}
 
 	if isServicePrincipal {
 		requestConfig := &msgraph_sps.ServicePrincipalsRequestBuilderGetRequestConfiguration{
 			QueryParameters: &msgraph_sps.ServicePrincipalsRequestBuilderGetQueryParameters{
 				Filter: &filter,
-				Select: []string{"id", "appId", "displayName", "createdDateTime"},
+				Select: []string{"id", "appId"},
 			},
 		}
 
@@ -110,7 +115,7 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 	// Disk encryption sets are service principals, not applications
 	isServicePrincipal := suffix != ""
 
-	items, err := rc.listByPrefix(ctx, prefix, isServicePrincipal)
+	items, err := rc.listByDisplayName(ctx, prefix, suffix, isServicePrincipal)
 	if err != nil {
 		return err
 	}
@@ -129,12 +134,6 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 		if isServicePrincipal {
 			sp := item.(msgraph_models.ServicePrincipalable)
 
-			if val, err := sp.GetBackingStore().Get("displayName"); err == nil && val != nil {
-				if strVal, ok := val.(*string); ok && strVal != nil {
-					displayName = *strVal
-				}
-			}
-
 			if sp.GetAppId() != nil {
 				appID = *sp.GetAppId()
 			}
@@ -143,10 +142,30 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 				objectID = *sp.GetId()
 			}
 
-			if val, err := sp.GetBackingStore().Get("createdDateTime"); err == nil && val != nil {
+			spDetails, err := rc.graphClient.ServicePrincipals().ByServicePrincipalId(objectID).Get(ctx, nil)
+			if err != nil {
+				rc.log.Warnf("SKIP service principal (objectID: %s): Failed to get details: %v", objectID, err)
+				continue
+			}
+
+			if val, err := spDetails.GetBackingStore().Get("displayName"); err == nil && val != nil {
+				if strVal, ok := val.(*string); ok && strVal != nil {
+					displayName = *strVal
+				} else {
+					rc.log.Debugf("Service principal (objectID: %s): displayName type assertion failed", objectID)
+				}
+			} else {
+				rc.log.Debugf("Service principal (objectID: %s): Failed to get displayName from BackingStore: %v", objectID, err)
+			}
+
+			if val, err := spDetails.GetBackingStore().Get("createdDateTime"); err == nil && val != nil {
 				if timeVal, ok := val.(*time.Time); ok {
 					createdDateTime = timeVal
+				} else {
+					rc.log.Debugf("Service principal (objectID: %s): createdDateTime type assertion failed", objectID)
 				}
+			} else {
+				rc.log.Debugf("Service principal (objectID: %s): Failed to get createdDateTime from BackingStore: %v", objectID, err)
 			}
 		} else {
 			app := item.(msgraph_models.Applicationable)
@@ -166,18 +185,13 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 			createdDateTime = app.GetCreatedDateTime()
 		}
 
-		if suffix != "" && !strings.HasSuffix(displayName, suffix) {
-			rc.log.Debugf("SKIP '%s': Does not have suffix '%s'", displayName, suffix)
-			continue
-		}
-
 		isMockMSI := strings.HasPrefix(displayName, "mock-msi-")
 
 		if !isMockMSI && !buildIDPattern.MatchString(displayName) {
 			rc.log.Infof("SKIP '%s': No V{BUILDID} pattern", displayName)
 			continue
 		} else if createdDateTime == nil {
-			rc.log.Warnf("SKIP '%s': No createdDateTime", displayName)
+			rc.log.Warnf("SKIP '%s' (objectID: %s): No createdDateTime", displayName, objectID)
 			continue
 		}
 
