@@ -362,6 +362,11 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
 		g.rpServiceKeyvaultDynamic(),
+		g.rpKeyvaultNSP(),
+		g.rpKeyvaultNSPProfile(),
+	)
+	t.Resources = append(t.Resources,
+		g.rpKeyvaultNSPAssociations()...,
 	)
 
 	if g.production {
