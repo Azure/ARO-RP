@@ -27,7 +27,7 @@ var apiVersions = map[string]string{
 	"microsoft.keyvault":                       "2019-09-01",
 	"microsoft.keyvault/vaults/accesspolicies": "2021-10-01",
 	"microsoft.managedidentity":                "2018-11-30",
-	"microsoft.network":                        "2020-08-01",
+	"microsoft.network":                        "2021-05-01",
 	"microsoft.network/dnszones":               "2018-05-01",
 	"microsoft.network/privatednszones":        "2018-09-01",
 	"microsoft.storage":                        "2021-09-01",

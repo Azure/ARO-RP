@@ -245,7 +245,7 @@
     },
     "resources": [
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-05-01",
             "location": "[resourceGroup().location]",
             "name": "rp-pip",
             "properties": {
@@ -258,7 +258,7 @@
             "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
         },
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-05-01",
             "location": "[resourceGroup().location]",
             "name": "portal-pip",
             "properties": {
@@ -271,7 +271,7 @@
             "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
         },
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-05-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
@@ -665,7 +665,7 @@
             "apiVersion": "2018-05-01"
         },
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-05-01",
             "location": "[resourceGroup().location]",
             "name": "rp-vnet/peering-rp-pe-vnet-001",
             "properties": {
@@ -680,7 +680,7 @@
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings"
         },
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-05-01",
             "location": "[resourceGroup().location]",
             "name": "rp-pe-vnet-001/peering-rp-vnet",
             "properties": {
