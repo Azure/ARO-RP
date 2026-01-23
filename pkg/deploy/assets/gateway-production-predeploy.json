@@ -1,27 +1,10 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "variables": {
-        "gatewayKeyvaultAccessPolicies": [
-            {
-                "tenantId": "[subscription().tenantId]",
-                "objectId": "[parameters('gatewayServicePrincipalId')]",
-                "permissions": {
-                    "secrets": [
-                        "get"
-                    ]
-                }
-            }
-        ]
-    },
     "parameters": {
         "deployNSGs": {
             "type": "bool",
             "defaultValue": false
-        },
-        "extraGatewayKeyvaultAccessPolicies": {
-            "type": "array",
-            "defaultValue": []
         },
         "gatewayServicePrincipalId": {
             "type": "string"
@@ -99,21 +82,6 @@
                 ]
             },
             "type": "Microsoft.Network/virtualNetworks"
-        },
-        {
-            "name": "[concat(parameters('keyvaultPrefix'), '-gwy')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "tenantId": "[subscription().tenantId]",
-                "sku": {
-                    "family": "A",
-                    "name": "standard"
-                },
-                "accessPolicies": "[concat(variables('gatewayKeyvaultAccessPolicies'), parameters('extraGatewayKeyvaultAccessPolicies'))]",
-                "enableSoftDelete": true
-            },
-            "apiVersion": "2019-09-01"
         }
     ]
 }

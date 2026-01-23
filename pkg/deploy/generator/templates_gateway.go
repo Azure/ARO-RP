@@ -119,15 +119,8 @@ func (g *generator) gatewayParameters() *arm.Parameters {
 func (g *generator) gatewayPredeployTemplate() *arm.Template {
 	t := templateStanza()
 
-	if g.production {
-		t.Variables = map[string]interface{}{
-			"gatewayKeyvaultAccessPolicies": g.gatewayKeyvaultAccessPolicies(),
-		}
-	}
-
 	params := []string{
 		"deployNSGs",
-		"extraGatewayKeyvaultAccessPolicies",
 		"gatewayServicePrincipalId",
 		"keyvaultPrefix",
 	}
@@ -138,9 +131,6 @@ func (g *generator) gatewayPredeployTemplate() *arm.Template {
 		case "deployNSGs":
 			p.Type = "bool"
 			p.DefaultValue = false
-		case "extraGatewayKeyvaultAccessPolicies":
-			p.Type = "array"
-			p.DefaultValue = []interface{}{}
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - len(env.GatewayKeyvaultSuffix)
 		}
@@ -150,7 +140,6 @@ func (g *generator) gatewayPredeployTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.gatewaySecurityGroup(),
 		g.gatewayVnet(),
-		g.gatewayKeyvault(),
 	)
 
 	return t
