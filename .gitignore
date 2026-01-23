@@ -24,7 +24,7 @@ gomock_reflect_*
 /secrets*
 /mdm_statsd.socket
 /uts.txt
-/cover.out
+/cover*.out
 /cover_coverpkg.out
 /coverage.*
 /report.xml

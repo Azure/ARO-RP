@@ -328,7 +328,7 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundI
 
 func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile, version string) error {
 	if !validate.VMSizeIsValidForVersion(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true, version) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid for version '%s", mp.VMSize, version))
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid for version '%s'.", mp.VMSize, version))
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", fmt.Sprintf("The provided master VM subnet '%s' is invalid.", mp.SubnetID))
