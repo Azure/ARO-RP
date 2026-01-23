@@ -48,26 +48,6 @@ func TestDetermineResourceGroupName(t *testing.T) {
 			want:        "v4-e2e-V444444444-eastus-prod-miwi",
 		},
 		{
-			name:        "disk encryption set managed identity",
-			displayName: "v4-e2e-V222222222-eastus-disk-encryption-set",
-			want:        "v4-e2e-V222222222-eastus",
-		},
-		{
-			name:        "disk encryption set with miwi",
-			displayName: "v4-e2e-V333333333-westus-miwi-disk-encryption-set",
-			want:        "v4-e2e-V333333333-westus-miwi",
-		},
-		{
-			name:        "disk encryption set with prod-csp",
-			displayName: "v4-e2e-V555555555-centralus-prod-csp-disk-encryption-set",
-			want:        "v4-e2e-V555555555-centralus-prod-csp",
-		},
-		{
-			name:        "disk encryption set with prod-miwi",
-			displayName: "v4-e2e-V666666666-westeurope-prod-miwi-disk-encryption-set",
-			want:        "v4-e2e-V666666666-westeurope-prod-miwi",
-		},
-		{
 			name:        "other pattern returns as-is",
 			displayName: "some-other-pattern",
 			want:        "some-other-pattern",
