@@ -32,20 +32,24 @@ else
 	VERSION = $(TAG)
 endif
 
-# REGISTRY and BUILDER_REGISTRY are set conditionally below based on RP_IMAGE_ACR
+# REGISTRY, BUILDER_REGISTRY, and FEDORA_REGISTRY are set conditionally below based on RP_IMAGE_ACR
 # default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
 	BUILDER_REGISTRY = arointsvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
 	BUILDER_REGISTRY = arosvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY ?= registry.access.redhat.com
 	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
+	FEDORA_REGISTRY ?= arointsvc.azurecr.io
 else
 	REGISTRY = $(RP_IMAGE_ACR)
 	BUILDER_REGISTRY = quay.io/openshift-release-dev
+	FEDORA_REGISTRY = $(REGISTRY)
 endif
 
 # prod images
@@ -521,6 +525,22 @@ run-portal:
 run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production, including Hive. Requires a VPN connection.
 	docker compose rm -sf rp
 	docker compose up rp
+
+.PHONY: acr-login
+acr-login: ## Login to arointsvc ACR using PULL_SECRET
+	@. hack/devtools/rp_dev_helper.sh && acr_login
+
+.PHONY: dev-env-build
+dev-env-build: acr-login ## Build the dev environment container image
+	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose build aro-dev-env
+
+.PHONY: dev-env-start
+dev-env-start: acr-login ## Start the dev environment RP container
+	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose up -d aro-dev-env
+
+.PHONY: dev-env-stop
+dev-env-stop: ## Stop the containerized RP
+	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose down aro-dev-env
 
 .PHONY: run-selenium
 run-selenium:

@@ -8,7 +8,8 @@ extract_image_tag() {
     echo "$return_line" | sed 's/.*"\(.*\)@sha256.*/\1/'
 }
 
-# Function to copy image using skopeo -(PULL_SECRET, SRC_ACR_NAME, DST_ACR_NAME, IMAGE_TAG)
+# Function to copy image using skopeo
+# Usage: copy_digest_tag "$PULL_SECRET" "src_acr" "dst_acr" "$(get_digest_tag FluentbitImage)"
 copy_digest_tag() {
     local PULL_SECRET=$1
     local SRC_ACR_NAME=$2
@@ -27,6 +28,7 @@ copy_digest_tag() {
 
 VERSION_CONST_FILE="pkg/util/version/const.go"
 # Function to get image name and tag
+# Usage: get_digest_tag "FluentbitImage"
 get_digest_tag() {
     local IMAGE_NAME=$1
     local IMAGE_TAG=$(extract_image_tag "$IMAGE_NAME" "$VERSION_CONST_FILE")
@@ -34,6 +36,22 @@ get_digest_tag() {
     echo "$IMAGE_TAG"
 }
 
-# Example usage
-# get_digest_tag "FluentbitImage"
-# copy_digest_tag "<PULL_SECRET>" "src_acr_name" "dst_acr_name" "$(get_digest_tag FluentbitImage)"
+# Function to login to ACR using PULL_SECRET
+# Usage: acr_login "arointsvc"
+acr_login() {
+    local ACR_NAME=${1:-arointsvc}
+    local REGISTRY="$ACR_NAME.azurecr.io"
+    
+    if podman login --get-login "$REGISTRY" &>/dev/null; then
+        echo ">> Already logged into $REGISTRY"
+        return 0
+    fi
+    
+    if [ -z "$PULL_SECRET" ]; then
+        echo ">> PULL_SECRET not set, cannot login to $REGISTRY, please run 'make pull-secrets' and source the env file"
+        return 1
+    fi
+    
+    local AUTH=$(echo "$PULL_SECRET" | jq -r '.auths["'$REGISTRY'"].auth' | base64 -d)
+    echo "${AUTH#*:}" | podman login "$REGISTRY" -u "${AUTH%%:*}" --password-stdin
+}

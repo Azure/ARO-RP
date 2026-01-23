@@ -1,5 +1,5 @@
-# Use Fedora as base image since the project documentation mentions Fedora/RHEL dependencies
-FROM arointsvc.azurecr.io/fedora:42
+ARG FEDORA_REGISTRY
+FROM ${FEDORA_REGISTRY}/fedora:42
 
 # Install system dependencies
 RUN dnf update -y && dnf install -y \
@@ -33,29 +33,22 @@ RUN dnf update -y && dnf install -y \
     binutils-gold \
     && dnf clean all
 
-# Extract Go version and install it
-COPY go.mod /tmp/go.mod
-RUN GO_VERSION=$(awk '/^go / {print $2}' /tmp/go.mod) && \
+WORKDIR /workspace
+
+COPY go.mod go.mod
+RUN GO_VERSION=$(awk '/^go / {print $2}' go.mod) && \
     ARCH=$(uname -m) && \
     case "$ARCH" in \
         x86_64) GO_ARCH=amd64 ;; \
         aarch64) GO_ARCH=arm64 ;; \
         *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
     esac && \
-    wget -q "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -O /tmp/go.tar.gz && \
-    rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf /tmp/go.tar.gz && \
-    rm /tmp/go.tar.gz && \
-    rm /tmp/go.mod
+    wget -q "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -O go.tar.gz && \
+    tar -C /usr/local -xzf go.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install bingo and Go tools
 RUN /usr/local/go/bin/go install github.com/bwplotka/bingo@latest
-COPY .bingo/ /workspace/.bingo/
+COPY .bingo/ .bingo/
 RUN export PATH="/usr/local/go/bin:/root/go/bin:$PATH" && \
-    cd /workspace && \
     /root/go/bin/bingo get
 ENV PATH="/workspace/.bingo/bin:${PATH}"
-
-# Set up working directory
-WORKDIR /workspace
