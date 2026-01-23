@@ -91,6 +91,12 @@
         "vmssCleanupEnabled": {
             "value": true
         },
+        "vmssIpTags": {
+            "value": []
+        },
+        "vmssIpTagsDisabledRegions": {
+            "value": []
+        },
         "vmssName": {
             "value": ""
         }

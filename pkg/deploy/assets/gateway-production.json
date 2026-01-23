@@ -98,6 +98,14 @@
             "type": "bool",
             "defaultValue": true
         },
+        "vmssIpTags": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "vmssIpTagsDisabledRegions": {
+            "type": "array",
+            "defaultValue": []
+        },
         "vmssName": {
             "type": "string"
         }
@@ -275,7 +283,10 @@
                                                 },
                                                 "primary": true,
                                                 "publicIPAddressConfiguration": {
-                                                    "name": "gateway-vmss-pip"
+                                                    "name": "gateway-vmss-pip",
+                                                    "properties": {
+                                                        "ipTags": "[if(or(contains(parameters('vmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('vmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('vmssIpTags')[0].type, 'tag', parameters('vmssIpTags')[0].value)))]"
+                                                    }
                                                 },
                                                 "loadBalancerBackendAddressPools": [
                                                     {
