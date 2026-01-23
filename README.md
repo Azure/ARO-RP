@@ -1,4 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/Azure/ARO-RP)](https://goreportcard.com/report/github.com/Azure/ARO-RP)
+[![Coverage Status](https://coveralls.io/repos/github/Azure/ARO-RP/badge.svg?branch=master)](https://coveralls.io/github/Azure/ARO-RP?branch=master)
 
 # Azure Red Hat OpenShift Resource Provider
 
