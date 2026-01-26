@@ -3,7 +3,7 @@
 
 import argparse
 
-from azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2024_08_12_preview.models import PlatformWorkloadIdentity
+from azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2025_07_25.models import PlatformWorkloadIdentity
 from azure.cli.core.azclierror import CLIError
 
 
