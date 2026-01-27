@@ -5,13 +5,22 @@ package clienthelper
 
 import (
 	"errors"
+	"strings"
+	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 // TallyCounts will update tally with the Kubernetes Kinds that pass through
@@ -67,4 +76,30 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 	} else {
 		return nil, nil
 	}
+}
+
+// Compare two objects. Calls t.Error() with a diff if they do not match.
+func CompareObjects(t *testing.T, got, want runtime.Object) {
+	ourGot := got.DeepCopyObject().(client.Object)
+	ourWant := want.DeepCopyObject().(client.Object)
+
+	// Don't test for the resourceversion
+	ourGot.SetResourceVersion("")
+	ourWant.SetResourceVersion("")
+	// Don't test for the typemeta
+	ourGot.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
+	ourWant.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
+
+	diff := strings.SplitSeq(cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty()), "\n")
+	for i := range diff {
+		if i != "" {
+			t.Error(i)
+		}
+	}
+}
+
+// Create a new fake client which automatically adds arov1alpha1.Cluster{} as
+// something with a status subresource.
+func NewAROFakeClientBuilder(objects ...client.Object) *ctrlfake.ClientBuilder {
+	return ctrlfake.NewClientBuilder().WithObjects(objects...).WithStatusSubresource(&arov1alpha1.Cluster{})
 }
