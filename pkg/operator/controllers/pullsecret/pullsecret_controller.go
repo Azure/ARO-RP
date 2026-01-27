@@ -131,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.Client.Update(ctx, instance)
+	err = r.Client.Status().Update(ctx, instance)
 	if err == nil {
 		r.ClearConditions(ctx)
 	} else {
