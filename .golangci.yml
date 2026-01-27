@@ -32,6 +32,12 @@ linters:
               desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
             - pkg: "k8s.io/utils/ptr"
               desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
+        incorrectfakeclient:
+          files:
+            - "${config-path}/pkg/operator/**.go"
+          deny:
+            - pkg: "sigs.k8s.io/controller-runtime/pkg/client/fake"
+              desc: "use test/util/clienthelper's NewAROFakeClientBuilder for new clients to ensure that arov1alpha1.Cluster is registered as having a status subresource"
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
