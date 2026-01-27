@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -25,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -232,9 +232,7 @@ func TestConditions(t *testing.T) {
 					Conditions: tt.controllerConditions,
 				},
 			}
-			clientFake := ctrlfake.NewClientBuilder().
-				WithObjects(cluster).
-				Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(cluster).Build()
 
 			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 

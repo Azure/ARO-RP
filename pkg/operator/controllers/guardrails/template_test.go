@@ -17,12 +17,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
@@ -36,7 +35,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		},
 	}
 
-	clientFake := ctrlfake.NewClientBuilder().Build()
+	clientFake := testclienthelper.NewAROFakeClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 
 	// When the DynamicHelper is called, count the number of objects it creates

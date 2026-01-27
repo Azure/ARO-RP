@@ -17,8 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 
@@ -29,6 +27,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -226,7 +225,7 @@ func TestGenevaLoggingNamespaceLabels(t *testing.T) {
 	cv := clusterVersion("4.11.0")
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(&cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(&cv).Build(),
 		},
 	}
 
@@ -256,7 +255,7 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
 		},
 	}
 
@@ -436,7 +435,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
 		},
 	}
 
@@ -489,7 +488,7 @@ func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.
 
 	r := &Reconciler{
 		AROController: base.AROController{
-			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+			Client: testclienthelper.NewAROFakeClientBuilder(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
 		},
 	}
 
@@ -510,7 +509,7 @@ func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
 	}
 
-	r := &Reconciler{AROController: base.AROController{Client: ctrlfake.NewClientBuilder().WithObjects(master, worker).Build()}}
+	r := &Reconciler{AROController: base.AROController{Client: testclienthelper.NewAROFakeClientBuilder(master, worker).Build()}}
 	if err := r.clearOTelDaemonSetNodeSelectors(ctx); err != nil {
 		t.Fatal(err)
 	}

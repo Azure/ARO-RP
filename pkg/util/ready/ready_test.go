@@ -567,7 +567,7 @@ func TestCheckDeploymentIsReadyError(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 	builder := clientfake.NewClientBuilder()
 	hc := testclienthelper.NewHookingClient(builder.Build())
-	hc.WithPreGetHook(func(key client.ObjectKey, obj client.Object) error {
+	hc.WithPreGetHook(func(key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 		return errors.New("error getting deployment")
 	})
 	ch := clienthelper.NewWithClient(log, hc)
