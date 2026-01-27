@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	configv1 "github.com/openshift/api/config/v1"
+
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
@@ -101,5 +103,5 @@ func CompareObjects(t *testing.T, got, want runtime.Object) {
 // Create a new fake client which automatically adds arov1alpha1.Cluster{} as
 // something with a status subresource.
 func NewAROFakeClientBuilder(objects ...client.Object) *ctrlfake.ClientBuilder {
-	return ctrlfake.NewClientBuilder().WithObjects(objects...).WithStatusSubresource(&arov1alpha1.Cluster{})
+	return ctrlfake.NewClientBuilder().WithObjects(objects...).WithStatusSubresource(&arov1alpha1.Cluster{}, &configv1.ClusterOperator{})
 }
