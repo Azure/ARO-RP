@@ -5,11 +5,13 @@ package clienthelper
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/onsi/gomega/format"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -80,10 +82,9 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 	}
 }
 
-// Compare two objects. Calls t.Error() with a diff if they do not match.
-func CompareObjects(t *testing.T, got, want runtime.Object) {
-	ourGot := got.DeepCopyObject().(client.Object)
-	ourWant := want.DeepCopyObject().(client.Object)
+func copyForComparison(got, want any) (client.Object, client.Object) {
+	ourGot := got.(runtime.Object).DeepCopyObject().(client.Object)
+	ourWant := want.(runtime.Object).DeepCopyObject().(client.Object)
 
 	// Don't test for the resourceversion
 	ourGot.SetResourceVersion("")
@@ -92,12 +93,45 @@ func CompareObjects(t *testing.T, got, want runtime.Object) {
 	ourGot.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
 	ourWant.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
 
+	return ourGot, ourWant
+}
+
+// Compare two objects. Calls t.Error() with a diff if they do not match.
+func CompareObjects(t *testing.T, got, want runtime.Object) {
+	ourGot, ourWant := copyForComparison(got, want)
+
 	diff := strings.SplitSeq(cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty()), "\n")
 	for i := range diff {
 		if i != "" {
 			t.Error(i)
 		}
 	}
+}
+
+type beEqualKubernetesObjects struct {
+	Expected any
+}
+
+func (m *beEqualKubernetesObjects) Match(actual any) (success bool, err error) {
+	ourGot, ourWant := copyForComparison(actual, m.Expected)
+
+	return reflect.DeepEqual(ourGot, ourWant), nil
+}
+
+func (m *beEqualKubernetesObjects) FailureMessage(actual any) (message string) {
+	ourGot, ourWant := copyForComparison(actual, m.Expected)
+
+	return "expected objects to equal:\n" + cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty())
+}
+
+func (m *beEqualKubernetesObjects) NegatedFailureMessage(actual any) (message string) {
+	ourGot, ourWant := copyForComparison(actual, m.Expected)
+
+	return format.Message(ourGot, "not to equal", ourWant)
+}
+
+func BeEqualToKubernetesObject(obj runtime.Object) *beEqualKubernetesObjects {
+	return &beEqualKubernetesObjects{Expected: obj}
 }
 
 // Create a new fake client which automatically adds arov1alpha1.Cluster{} as
