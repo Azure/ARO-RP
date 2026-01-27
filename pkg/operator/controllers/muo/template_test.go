@@ -18,13 +18,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 //go:embed test_files/local.yaml
@@ -41,7 +41,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		},
 	}
 
-	clientFake := ctrlfake.NewClientBuilder().Build()
+	clientFake := testclienthelper.NewAROFakeClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 
 	// When the DynamicHelper is called, count the number of objects it creates
@@ -120,7 +120,7 @@ func TestDeployConfig(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		clientFake := ctrlfake.NewClientBuilder().Build()
+		clientFake := testclienthelper.NewAROFakeClientBuilder().Build()
 		dh := mock_dynamichelper.NewMockInterface(controller)
 
 		// When the DynamicHelper is called, capture configmaps to inspect them

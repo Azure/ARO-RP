@@ -22,7 +22,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -35,6 +34,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -104,7 +104,7 @@ func TestGenevaLoggingNamespaceLabels(t *testing.T) {
 		r := &Reconciler{
 			AROController: base.AROController{
 				Log:    logrus.NewEntry(logrus.StandardLogger()),
-				Client: ctrlfake.NewClientBuilder().WithObjects(&tt.cv).Build(),
+				Client: testclienthelper.NewAROFakeClientBuilder(&tt.cv).Build(),
 				Name:   ControllerName,
 			},
 			dh: mockDh,
@@ -341,7 +341,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			r := &Reconciler{
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: ctrlfake.NewClientBuilder().WithObjects(resources...).Build(),
+					Client: testclienthelper.NewAROFakeClientBuilder(resources...).Build(),
 					Name:   ControllerName,
 				},
 				dh: mockDh,
@@ -427,7 +427,7 @@ func TestGenevaConfigMapResources(t *testing.T) {
 			r := &Reconciler{
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: ctrlfake.NewClientBuilder().WithObjects(instance, scc, &cv).Build(),
+					Client: testclienthelper.NewAROFakeClientBuilder(instance, scc, &cv).Build(),
 					Name:   ControllerName,
 				},
 			}

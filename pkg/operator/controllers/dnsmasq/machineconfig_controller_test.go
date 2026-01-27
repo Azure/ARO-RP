@@ -15,7 +15,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -106,8 +105,7 @@ func TestMachineConfigReconciler(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				Build())
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
@@ -273,8 +271,7 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				WithObjects(&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
@@ -463,6 +460,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "custom",
 						DeletionTimestamp: &transitionTime,
+						Finalizers:        []string{"somefinalizer"},
 					},
 					Status: mcv1.MachineConfigPoolStatus{},
 					Spec:   mcv1.MachineConfigPoolSpec{},
@@ -486,8 +484,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				WithObjects(&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",

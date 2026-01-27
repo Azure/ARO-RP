@@ -17,12 +17,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 var (
@@ -113,7 +113,7 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 			},
 		}
 
-		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+		clientBuilder := testclienthelper.NewAROFakeClientBuilder(instance)
 		if tt.configMap != nil {
 			clientBuilder.WithObjects(tt.configMap)
 		}

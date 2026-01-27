@@ -155,12 +155,25 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 	// 1. Set defaults on new.  This gets rid of many false positive diffs.
 	scheme.Scheme.Default(new)
 
+	// Set schema, which is not always set depending on how we got the object
+	gvks, _, err := scheme.Scheme.ObjectKinds(new)
+	if err != nil {
+		return nil, false, "", fmt.Errorf("unable to find the object kind in schema: %w", err)
+	}
+
+	for _, gvk := range gvks {
+		if len(gvk.Kind) == 0 {
+			continue
+		}
+		if len(gvk.Version) == 0 || gvk.Version == kruntime.APIVersionInternal {
+			continue
+		}
+		new.GetObjectKind().SetGroupVersionKind(gvk)
+		old.GetObjectKind().SetGroupVersionKind(gvk)
+		break
+	}
+
 	// 2. Copy immutable fields from old to new to avoid false positives.
-	oldtypemeta := old.GetObjectKind()
-	newtypemeta := new.GetObjectKind()
-
-	newtypemeta.SetGroupVersionKind(oldtypemeta.GroupVersionKind())
-
 	new.SetSelfLink(old.GetSelfLink())
 	new.SetUID(old.GetUID())
 	new.SetResourceVersion(old.GetResourceVersion())

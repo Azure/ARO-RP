@@ -35,7 +35,6 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
@@ -848,12 +847,8 @@ func TestMerge(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			errdiff := strings.SplitSeq(cmp.Diff(got, tt.want), "\n")
-			for i := range errdiff {
-				if i != "" {
-					t.Error(i)
-				}
-			}
+			testclienthelper.CompareObjects(t, got, tt.want)
+
 			if changed != tt.wantChanged {
 				t.Error(changed)
 				changediff := strings.SplitSeq(diff, "\n")
@@ -1614,15 +1609,8 @@ func TestMergeApply(t *testing.T) {
 				t.Error(err)
 			}
 
-			// Don't test for the resourceversion
-			gotObj.SetResourceVersion("")
+			testclienthelper.CompareObjects(t, gotObj, tt.want)
 
-			diff := strings.SplitSeq(cmp.Diff(got, tt.want), "\n")
-			for i := range diff {
-				if i != "" {
-					t.Error(i)
-				}
-			}
 			if beenChanged != tt.wantChanged {
 				t.Errorf("changed: %t, want: %t", beenChanged, tt.wantChanged)
 			}

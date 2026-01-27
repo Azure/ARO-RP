@@ -17,7 +17,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -27,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 var (
@@ -352,7 +352,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 		}
 		var hook = logtest.NewLocal(logger)
 
-		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(tt.objects...)
+		clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
 
 		r := &EtcHostsClusterReconciler{
 			AROController: base.AROController{

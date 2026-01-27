@@ -15,11 +15,11 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func TestReconcileEtcHostsMachineConfig(t *testing.T) {
@@ -171,7 +171,7 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 		}
 		var hook = logtest.NewLocal(logger)
 
-		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(tt.objects...)
+		clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
 
 		r := &EtcHostsMachineConfigReconciler{
 			AROController: base.AROController{
