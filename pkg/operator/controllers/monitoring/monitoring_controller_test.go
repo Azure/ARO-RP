@@ -204,7 +204,6 @@ func TestReconcilePVC(t *testing.T) {
 	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
 	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
-	volumeMode := corev1.PersistentVolumeFilesystem
 	tests := []struct {
 		name           string
 		pvcs           []client.Object
@@ -272,12 +271,8 @@ func TestReconcilePVC(t *testing.T) {
 						},
 						ResourceVersion: "1",
 					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						VolumeMode: &volumeMode,
-					},
-					Status: corev1.PersistentVolumeClaimStatus{
-						Phase: corev1.ClaimPending,
-					},
+					Spec:   corev1.PersistentVolumeClaimSpec{},
+					Status: corev1.PersistentVolumeClaimStatus{},
 				},
 			},
 			wantConditions: defaultConditions,
