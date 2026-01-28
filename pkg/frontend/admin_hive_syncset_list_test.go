@@ -140,9 +140,9 @@ func Test_listAdminHiveSyncSet(t *testing.T) {
 			if tt.hiveEnabled {
 				s := mock_hive.NewMockSyncSetManager(ti.controller)
 				tt.mocks(tt, s)
-				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, s, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, s, nil, nil, nil, nil, nil)
 			} else {
-				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil, nil)
 			}
 			if err != nil {
 				t.Fatal(err)
