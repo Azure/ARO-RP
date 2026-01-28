@@ -357,7 +357,7 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 
-				ch: ch,
+				kubeClientHelper: ch,
 
 				platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 			}
