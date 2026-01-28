@@ -6,9 +6,10 @@ package subnets
 import (
 	"context"
 	"net/http"
-	"reflect"
 	"strconv"
 	"testing"
+
+	. "github.com/onsi/gomega"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
@@ -47,6 +48,9 @@ var (
 	subnetResourceIdMaster        = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 	subnetResourceIdWorker        = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 	subnetResourceIdWorkerInvalid = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker + "-invalid"
+
+	dummyAnnotationKey   = "dummy-key"
+	dummyAnnotationValue = "dummy-value"
 )
 
 func getValidClusterInstance(operatorFlagEnabled bool, operatorFlagNSG bool, operatorFlagServiceEndpoint bool) *arov1alpha1.Cluster {
@@ -123,6 +127,9 @@ func TestReconcileManager(t *testing.T) {
 				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
 			},
+			instance: func(instance *arov1alpha1.Cluster) {
+				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV1)
+			},
 		},
 		{
 			name:                        "Architecture V1 - no change",
@@ -147,6 +154,9 @@ func TestReconcileManager(t *testing.T) {
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorker}, nil).MaxTimes(2)
+			},
+			instance: func(instance *arov1alpha1.Cluster) {
+				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV1)
 			},
 		},
 		{
@@ -182,6 +192,10 @@ func TestReconcileManager(t *testing.T) {
 				subnetObjectWorkerUpdate := getValidSubnet()
 				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
+			},
+			instance: func(instance *arov1alpha1.Cluster) {
+				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV1)
+				instance.SetAnnotations(map[string]string{dummyAnnotationKey: dummyAnnotationValue})
 			},
 		},
 		{
@@ -229,6 +243,10 @@ func TestReconcileManager(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorkerInvalid, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: *subnetObjectWorkerUpdate}, notFoundErr).AnyTimes()
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorkerInvalid, nil, gomock.Any()).Times(0)
 			},
+			instance: func(instance *arov1alpha1.Cluster) {
+				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV1)
+				instance.SetAnnotations(map[string]string{dummyAnnotationKey: dummyAnnotationValue})
+			},
 		},
 		{
 			name:                        "Architecture V1 - node only fixup",
@@ -259,6 +277,10 @@ func TestReconcileManager(t *testing.T) {
 				subnetObjectWorkerUpdate.Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr(nsgv1NodeResourceId)
 				mock.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameWorker, *subnetObjectWorkerUpdate, nil).Return(nil)
 			},
+			instance: func(instance *arov1alpha1.Cluster) {
+				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV1)
+				instance.SetAnnotations(map[string]string{dummyAnnotationKey: dummyAnnotationValue})
+			},
 		},
 		{
 			name:                        "Architecture V2 - no fixups",
@@ -288,6 +310,7 @@ func TestReconcileManager(t *testing.T) {
 			},
 			instance: func(instance *arov1alpha1.Cluster) {
 				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
+				instance.SetAnnotations(map[string]string{dummyAnnotationKey: dummyAnnotationValue})
 			},
 		},
 		{
@@ -326,6 +349,7 @@ func TestReconcileManager(t *testing.T) {
 			},
 			instance: func(instance *arov1alpha1.Cluster) {
 				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
+				instance.SetAnnotations(map[string]string{dummyAnnotationKey: dummyAnnotationValue})
 			},
 		},
 		{
@@ -375,6 +399,7 @@ func TestReconcileManager(t *testing.T) {
 			},
 			instance: func(instance *arov1alpha1.Cluster) {
 				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
+				instance.SetAnnotations(map[string]string{dummyAnnotationKey: dummyAnnotationValue})
 			},
 		},
 		{
@@ -500,10 +525,12 @@ func TestReconcileManager(t *testing.T) {
 			},
 			instance: func(instance *arov1alpha1.Cluster) {
 				instance.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
+				instance.SetAnnotations(map[string]string{dummyAnnotationKey: dummyAnnotationValue})
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -528,7 +555,6 @@ func TestReconcileManager(t *testing.T) {
 				kubeSubnets:    kubeSubnets,
 			}
 
-			instanceCopy := *r.instance
 			err := r.reconcileSubnets(context.Background())
 			if err != nil {
 				if tt.wantErr == nil {
@@ -538,9 +564,9 @@ func TestReconcileManager(t *testing.T) {
 					t.Errorf("Expected Error %s, got %s when processing %s testcase", tt.wantErr.Error(), err.Error(), tt.name)
 				}
 			}
-
-			if tt.wantAnnotationsUpdated && reflect.DeepEqual(instanceCopy, *r.instance) {
-				t.Errorf("Expected annotations to be updated")
+			if tt.wantAnnotationsUpdated {
+				g.Expect(AnnotationTimestamp).Should(BeKeyOf(r.instance.Annotations))
+				g.Expect(dummyAnnotationKey).Should(BeKeyOf(r.instance.Annotations))
 			}
 		})
 	}
