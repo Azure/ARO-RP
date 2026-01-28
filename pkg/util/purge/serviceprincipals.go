@@ -72,22 +72,12 @@ func (rc *ResourceCleaner) getApplicationsByPrefix(ctx context.Context, prefix s
 	return result.GetValue(), nil
 }
 
-func (rc *ResourceCleaner) shouldDeleteServicePrincipal(
-	ctx context.Context,
-	app models.Applicationable,
-	ttl time.Duration,
-) bool {
+func (rc *ResourceCleaner) shouldDeleteServicePrincipal(ctx context.Context, app models.Applicationable, ttl time.Duration) bool {
 	displayName := *app.GetDisplayName()
 	createdDateTime := app.GetCreatedDateTime()
 
-	if createdDateTime == nil {
-		rc.log.Warnf("SKIP '%s': No createdDateTime", displayName)
-		return false
-	}
-
-	age := time.Since(*createdDateTime)
-	if age < ttl {
-		rc.log.Debugf("SKIP '%s': Age %v < TTL %v", displayName, age.Round(time.Hour), ttl)
+	if createdDateTime == nil || time.Since(*createdDateTime) < ttl {
+		rc.log.Infof("SKIP '%s': No createdDateTime or age < TTL", displayName)
 		return false
 	}
 
