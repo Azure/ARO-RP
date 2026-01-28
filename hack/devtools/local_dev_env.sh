@@ -8,10 +8,17 @@ set -o pipefail
 # The steps here are the ones defined in docs/deploy-development-rp.md
 # We recommend to use this script after you understand the steps of the process, not before.
 
+# Load platform workload identity role sets from YAML and convert to JSON
+# Requires yq: https://github.com/mikefarah/yq
+if ! command -v yq &> /dev/null; then
+  echo "ERROR: yq is required but not installed. Install with: brew install yq"
+  exit 1
+fi
+
 if [[ "${BASH_SOURCE[0]}" == "" ]]; then
-  PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(cat "$(dirname "$0")/platform_workload_identity_role_sets.json")"
+  PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(yq eval -o=json '.versions' "$(dirname "$0")/platform_workload_identity_role_sets.yaml")"
 else
-  PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(cat "$(dirname -- "${BASH_SOURCE[0]}")/platform_workload_identity_role_sets.json")"
+  PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS="$(yq eval -o=json '.versions' "$(dirname -- "${BASH_SOURCE[0]}")/platform_workload_identity_role_sets.yaml")"
 fi
 
 build_development_az_aro_extension() {
