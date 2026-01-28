@@ -5,12 +5,11 @@ package swagger
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-
-	"k8s.io/utils/strings/slices"
 )
 
 // populateParameters populates a parameters block.  Always expect an

@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-
-	"k8s.io/utils/strings/slices"
+	"slices"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
