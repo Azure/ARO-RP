@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -22,6 +21,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -168,7 +168,7 @@ func TestReconciler(t *testing.T) {
 				clusterMock.Status.Conditions = append(clusterMock.Status.Conditions, tt.startConditions...)
 			}
 
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(clusterMock)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(clusterMock)
 			if tt.ingressController != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.ingressController)
 			}

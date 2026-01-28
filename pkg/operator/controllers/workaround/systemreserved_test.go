@@ -15,22 +15,17 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func TestSystemreservedEnsure(t *testing.T) {
 	kubeletConfig := func(resourceVersion string) *mcv1.KubeletConfig {
 		return &mcv1.KubeletConfig{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KubeletConfig",
-				APIVersion: "machineconfiguration.openshift.io/v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "aro-limits",
 				Labels: map[string]string{
@@ -115,7 +110,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			clientBuilder := ctrlfake.NewClientBuilder()
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.mcp != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.mcp)
 			}
@@ -149,6 +144,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if !reflect.DeepEqual(kc, tt.wantKubeletConfig) {
 				t.Error(cmp.Diff(kc, tt.wantKubeletConfig))
 			}
@@ -216,7 +212,7 @@ func TestSystemreservedRemove(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			clientBuilder := ctrlfake.NewClientBuilder()
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.mcp != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.mcp)
 			}

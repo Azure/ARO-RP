@@ -15,8 +15,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -28,6 +26,7 @@ import (
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 var (
@@ -518,7 +517,7 @@ func TestReconcileManager(t *testing.T) {
 				tt.instance(instance)
 			}
 
-			clientFake := fake.NewClientBuilder().WithObjects(instance).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(instance).Build()
 			r := reconcileManager{
 				log:            log,
 				client:         clientFake,

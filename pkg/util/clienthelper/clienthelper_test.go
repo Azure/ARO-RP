@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,7 +35,6 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
@@ -222,6 +222,7 @@ func TestMerge(t *testing.T) {
 			name: "Namespace no changes",
 			old: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "testobj",
 					Annotations: map[string]string{
 						"openshift.io/sa.scc.mcs":                 "mcs",
 						"openshift.io/sa.scc.supplemental-groups": "groups",
@@ -229,6 +230,7 @@ func TestMerge(t *testing.T) {
 					},
 					Labels: map[string]string{
 						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -240,9 +242,10 @@ func TestMerge(t *testing.T) {
 					Phase: corev1.NamespaceActive,
 				},
 			},
-			new: &corev1.Namespace{},
+			new: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "testobj"}},
 			want: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "testobj",
 					Annotations: map[string]string{
 						"openshift.io/sa.scc.mcs":                 "mcs",
 						"openshift.io/sa.scc.supplemental-groups": "groups",
@@ -250,6 +253,7 @@ func TestMerge(t *testing.T) {
 					},
 					Labels: map[string]string{
 						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -355,7 +359,6 @@ func TestMerge(t *testing.T) {
 						"config.openshift.io/inject-trusted-cabundle": "",
 					},
 				},
-				Data: map[string]string{},
 			},
 			want: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -844,11 +847,16 @@ func TestMerge(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Error(cmp.Diff(got, tt.want))
-			}
+			testclienthelper.CompareObjects(t, got, tt.want)
+
 			if changed != tt.wantChanged {
 				t.Error(changed)
+				changediff := strings.SplitSeq(diff, "\n")
+				for i := range changediff {
+					if i != "" {
+						t.Error(i)
+					}
+				}
 			}
 			if diff == "" != tt.wantEmptyDiff {
 				t.Error(diff)
@@ -956,6 +964,7 @@ func TestMergeApply(t *testing.T) {
 					},
 					Labels: map[string]string{
 						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+						"kubernetes.io/metadata.name":        "testobj",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -1105,7 +1114,8 @@ func TestMergeApply(t *testing.T) {
 						"config.openshift.io/inject-trusted-cabundle": "",
 					},
 				},
-				Data: map[string]string{},
+				// In the round trip, this becomes nil
+				Data: nil,
 			},
 			wantEmptyDiff: true,
 		},
@@ -1599,14 +1609,8 @@ func TestMergeApply(t *testing.T) {
 				t.Error(err)
 			}
 
-			// Don't test for the resourceversion
-			gotObj.SetResourceVersion("")
+			testclienthelper.CompareObjects(t, gotObj, tt.want)
 
-			if !reflect.DeepEqual(got, tt.want) {
-				for _, r := range deep.Equal(got, tt.want) {
-					t.Error(r)
-				}
-			}
 			if beenChanged != tt.wantChanged {
 				t.Errorf("changed: %t, want: %t", beenChanged, tt.wantChanged)
 			}
@@ -1627,6 +1631,10 @@ func TestGetOne(t *testing.T) {
 			query: types.NamespacedName{Name: "funobj", Namespace: "somewhere"},
 			existing: []runtime.Object{
 				&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Secret",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            "funobj",
 						Namespace:       "somewhere",

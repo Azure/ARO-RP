@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	consolev1 "github.com/openshift/api/console/v1"
 
@@ -22,6 +21,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -151,7 +151,7 @@ func TestBannerReconcile(t *testing.T) {
 				},
 			}
 
-			clientFake := fake.NewClientBuilder().WithObjects(&instance, &tt.oldCN).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(&instance, &tt.oldCN).Build()
 
 			r := Reconciler{
 				log:    utillog.GetLogger(),

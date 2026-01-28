@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -132,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.Client.Update(ctx, instance)
+	err = r.Client.Status().Update(ctx, instance)
 	if err == nil {
 		r.ClearConditions(ctx)
 	} else {
@@ -148,7 +147,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.Secret{})., but can't call For multiple times on one builder
 		Watches(
-			&source.Kind{Type: &corev1.Secret{}},
+			&corev1.Secret{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.Or(predicates.PullSecret, predicates.BackupPullSecret)),
 		).

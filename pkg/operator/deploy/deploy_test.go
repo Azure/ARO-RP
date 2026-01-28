@@ -18,7 +18,6 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -30,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -275,7 +275,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			o := operator{
 				oc:     oc,
 				env:    env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
+				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), testclienthelper.NewAROFakeClientBuilder(cv).Build()),
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)
@@ -348,7 +348,7 @@ func TestOperatorVersion(t *testing.T) {
 			o := &operator{
 				oc:     &api.OpenShiftCluster{Properties: *oc},
 				env:    _env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
+				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), testclienthelper.NewAROFakeClientBuilder(cv).Build()),
 			}
 
 			staticResources, err := o.createObjects(ctx)

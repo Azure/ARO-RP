@@ -14,13 +14,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	machinev1 "github.com/openshift/api/machine/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -95,8 +95,7 @@ func TestReconcile(t *testing.T) {
 				},
 			}
 
-			clientBuilder := ctrlfake.NewClientBuilder().
-				WithObjects(instance)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(instance)
 
 			if tt.cpms != nil {
 				clientBuilder.WithObjects(tt.cpms)

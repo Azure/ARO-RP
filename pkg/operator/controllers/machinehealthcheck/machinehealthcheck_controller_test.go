@@ -16,7 +16,6 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -26,6 +25,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -257,7 +257,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 
 			tt.mocks(mdh)
 
-			clientBuilder := ctrlfake.NewClientBuilder()
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.instance != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.instance)
 			}

@@ -58,6 +58,23 @@ func Condition(f conditionFunction, timeout time.Duration, fail bool) Step {
 	}
 }
 
+type internalTimeoutError struct {
+	internalError error
+}
+
+func (i *internalTimeoutError) Error() string {
+	return fmt.Sprintf("condition encountered internal timeout: %s", i.internalError)
+}
+
+func (i *internalTimeoutError) Unwrap() error {
+	return i.internalError
+}
+
+func (i *internalTimeoutError) Is(tgt error) bool {
+	_, ok := tgt.(*internalTimeoutError)
+	return ok
+}
+
 type conditionStep struct {
 	f            conditionFunction
 	fail         bool
@@ -80,26 +97,26 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 	// Run the condition function immediately, and then every
 	// runner.pollInterval, until the condition returns true or timeoutCtx's
 	// timeout fires. Errors from `f` are returned directly unless the error
-	// is ErrWaitTimeout. Internal ErrWaitTimeout errors are wrapped to avoid
-	// confusion with wait.PollImmediateUntil's own behavior of returning
-	// ErrWaitTimeout when the condition is not met.
-	err := wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+	// is a timeout. Internal timeout errors are wrapped to avoid
+	// confusion with the external PollUntilContextCancel.
+	err := wait.PollUntilContextCancel(timeoutCtx, pollInterval, true, func(_ context.Context) (bool, error) {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
 		cnd, cndErr := c.f(ctx)
-		if errors.Is(cndErr, wait.ErrWaitTimeout) {
-			return cnd, fmt.Errorf("condition encountered internal timeout: %w", cndErr)
+		if wait.Interrupted(cndErr) {
+			return cnd, &internalTimeoutError{internalError: cndErr}
 		}
 
 		return cnd, cndErr
-	}, timeoutCtx.Done())
+	})
 
 	if err != nil && !c.fail {
 		log.Warnf("step %s failed but has configured 'fail=%t'. Continuing. Error: %s", c, c.fail, err.Error())
 		return nil
 	}
-	if errors.Is(err, wait.ErrWaitTimeout) {
+	// external timeouts are enriched
+	if err != nil && wait.Interrupted(err) && !errors.Is(err, &internalTimeoutError{}) {
 		return enrichConditionTimeoutError(c.f, err)
 	}
 	return err
