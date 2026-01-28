@@ -28,6 +28,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -619,6 +620,13 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 	}
 }
 
+func toObjectSlice(seq []hivev1.SyncSet) (out []kruntime.Object) {
+	for _, v := range seq {
+		out = append(out, v.DeepCopyObject())
+	}
+	return out
+}
+
 func TestListSyncSet(t *testing.T) {
 	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	syncsetTest := &hivev1.SyncSetList{
@@ -662,8 +670,8 @@ func TestListSyncSet(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if result != nil && reflect.DeepEqual(result, syncsetTest) {
-				t.Fatal("Unexpected syncset list returned", result)
+			if result != nil {
+				testclienthelper.CompareObjectList(t, toObjectSlice(result.(*hivev1.SyncSetList).Items), toObjectSlice(syncsetTest.Items))
 			}
 		})
 	}
@@ -703,8 +711,8 @@ func TestGetSyncSet(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if result != nil && reflect.DeepEqual(result, syncsetTest) {
-				t.Fatal("Unexpected syncset is returned", result)
+			if result != nil {
+				testclienthelper.CompareObjects(t, result.(kruntime.Object), syncsetTest)
 			}
 		})
 	}
