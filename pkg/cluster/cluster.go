@@ -75,6 +75,7 @@ type manager struct {
 	subscriptionDoc   *api.SubscriptionDocument
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer autorest.Authorizer
+	rpMIAuthorizer    autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
 	spGraphClient                 *utilgraph.GraphServiceClient
@@ -181,6 +182,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
+	if err != nil {
+		return nil, err
+	}
+
 	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
 	if err != nil {
 		return nil, err
@@ -270,6 +276,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		doc:                           doc,
 		subscriptionDoc:               subscriptionDoc,
 		fpAuthorizer:                  fpAuthorizer,
+		rpMIAuthorizer:                msiAuthorizer,
 		localFpAuthorizer:             localFPAuthorizer,
 		metricsEmitter:                metricsEmitter,
 		disks:                         compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),

@@ -28,7 +28,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		return nil
 	}
 
-	token, err := acrtoken.NewManager(m.env, m.localFpAuthorizer)
+	token, err := acrtoken.NewManager(m.env, m.rpMIAuthorizer)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return nil
 	}
 
-	token, err := acrtoken.NewManager(m.env, m.localFpAuthorizer)
+	token, err := acrtoken.NewManager(m.env, m.rpMIAuthorizer)
 	if err != nil {
 		return err
 	}
