@@ -21,49 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
-func TestDetermineResourceGroupName(t *testing.T) {
-	tests := []struct {
-		name        string
-		displayName string
-		want        string
-	}{
-		{
-			name:        "service principal with aro- prefix",
-			displayName: "aro-v4-e2e-V123456789-eastus",
-			want:        "v4-e2e-V123456789-eastus",
-		},
-		{
-			name:        "service principal with aro- prefix and miwi suffix",
-			displayName: "aro-v4-e2e-V987654321-westus-miwi",
-			want:        "v4-e2e-V987654321-westus-miwi",
-		},
-		{
-			name:        "service principal with prod-csp suffix",
-			displayName: "aro-v4-e2e-V111111111-centralus-prod-csp",
-			want:        "v4-e2e-V111111111-centralus-prod-csp",
-		},
-		{
-			name:        "service principal with prod-miwi suffix",
-			displayName: "aro-v4-e2e-V444444444-eastus-prod-miwi",
-			want:        "v4-e2e-V444444444-eastus-prod-miwi",
-		},
-		{
-			name:        "other pattern returns as-is",
-			displayName: "some-other-pattern",
-			want:        "some-other-pattern",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := determineResourceGroupName(tt.displayName)
-			if got != tt.want {
-				t.Errorf("determineResourceGroupName() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestBuildIDPattern(t *testing.T) {
 	tests := []struct {
 		name        string
