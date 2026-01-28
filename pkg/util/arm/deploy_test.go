@@ -74,7 +74,7 @@ func TestDeployARMTemplate(t *testing.T) {
 					Return(activeErr)
 				dc.EXPECT().
 					Wait(ctx, resourceGroup, deploymentName).
-					Return(wait.ErrWaitTimeout)
+					Return(wait.ErrorInterrupted(context.DeadlineExceeded))
 			},
 			wantErr: "timed out waiting for the condition",
 		},
