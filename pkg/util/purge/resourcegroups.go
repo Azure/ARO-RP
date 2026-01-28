@@ -39,6 +39,11 @@ func (rc *ResourceCleaner) CleanResourceGroups(ctx context.Context) error {
 //   - deletes resource group
 func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
 	if rc.shouldDelete(resourceGroup, rc.log) {
+		if rc.dryRun {
+			rc.log.Printf("DRY-RUN: Would delete ResourceGroup: %s", *resourceGroup.Name)
+			return nil
+		}
+
 		rc.log.Printf("Deleting ResourceGroup: %s", *resourceGroup.Name)
 		err := rc.cleanNetworking(ctx, resourceGroup)
 		if err != nil {
@@ -50,12 +55,11 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 			return err
 		}
 
-		if !rc.dryRun {
-			_, err := rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
-			if err != nil {
-				return err
-			}
+		_, err = rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
+		if err != nil {
+			return err
 		}
+		rc.log.Printf("Deleted ResourceGroup: %s", *resourceGroup.Name)
 	}
 
 	return nil
