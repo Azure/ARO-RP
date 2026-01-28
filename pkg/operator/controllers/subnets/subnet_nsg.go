@@ -5,12 +5,15 @@ package subnets
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -73,5 +76,15 @@ func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) 
 		r.instance.Annotations = make(map[string]string)
 	}
 	r.instance.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
-	return r.client.Update(ctx, r.instance)
+	r.client.Update(ctx, r.instance)
+
+	payload := map[string]interface{}{
+		"annotations": []map[string]interface{}{
+			{
+				AnnotationTimestamp: time.Now().Format(time.RFC1123),
+			},
+		},
+	}
+	payloadBytes, _ := json.Marshal(payload)
+	return r.client.Patch(ctx, r.instance, client.RawPatch(types.StrategicMergePatchType, payloadBytes))
 }
