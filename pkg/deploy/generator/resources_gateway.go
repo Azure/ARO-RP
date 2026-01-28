@@ -10,10 +10,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
-	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -410,44 +408,6 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/loadBalancers', 'gateway-lb-internal')]",
 		},
-	}
-}
-
-func (g *generator) gatewayKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
-	return []mgmtkeyvault.AccessPolicyEntry{
-		{
-			TenantID: &tenantUUIDHack,
-			ObjectID: pointerutils.ToPtr("[parameters('gatewayServicePrincipalId')]"),
-			Permissions: &mgmtkeyvault.Permissions{
-				Secrets: &[]mgmtkeyvault.SecretPermissions{
-					mgmtkeyvault.SecretPermissionsGet,
-				},
-			},
-		},
-	}
-}
-
-func (g *generator) gatewayKeyvault() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtkeyvault.Vault{
-			Properties: &mgmtkeyvault.VaultProperties{
-				EnableSoftDelete: pointerutils.ToPtr(true),
-				TenantID:         &tenantUUIDHack,
-				Sku: &mgmtkeyvault.Sku{
-					Name:   mgmtkeyvault.Standard,
-					Family: pointerutils.ToPtr("A"),
-				},
-				AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
-					{
-						ObjectID: pointerutils.ToPtr(gatewayAccessPolicyHack),
-					},
-				},
-			},
-			Name:     pointerutils.ToPtr("[concat(parameters('keyvaultPrefix'), '" + env.GatewayKeyvaultSuffix + "')]"),
-			Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 	}
 }
 

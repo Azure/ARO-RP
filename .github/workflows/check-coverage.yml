@@ -1,0 +1,83 @@
+name: "Test coverage"
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  unit_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: cmd
+            pattern: ./cmd/...
+            workdir: .
+          - name: pkg-api
+            pattern: ./...
+            workdir: ./pkg/api  # Separate Go module, must run from its directory
+          - name: pkg-frontend
+            pattern: ./pkg/frontend/...
+            workdir: .
+          - name: pkg-operator
+            pattern: ./pkg/operator/...
+            workdir: .
+          - name: pkg-util
+            pattern: ./pkg/util/...
+            workdir: .
+          - name: pkg-other
+            pattern: ""  # Computed dynamically to catch all remaining packages
+            workdir: .
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
+      - name: Run unit tests (${{ matrix.name }})
+        env:
+          GOFLAGS: "-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
+          MATRIX_PATTERN: ${{ matrix.pattern }}
+          MATRIX_WORKDIR: ${{ matrix.workdir }}
+        run: |
+          cd "$MATRIX_WORKDIR"
+          if [ -z "$MATRIX_PATTERN" ]; then
+            # pkg-other: find all pkg/* packages except those covered by other matrix jobs
+            PATTERN=$(go list ./pkg/... | grep -v -E '/pkg/(api|frontend|operator|util)(/|$)' | tr '\n' ' ')
+          else
+            PATTERN="$MATRIX_PATTERN"
+          fi
+          gotestsum --format pkgname --junitfile "$GITHUB_WORKSPACE/report-${{ matrix.name }}.xml" \
+            -- -coverprofile="$GITHUB_WORKSPACE/cover-${{ matrix.name }}.out" $PATTERN
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel: true
+          flag-name: ${{ matrix.name }}
+          format: golang
+          file: cover-${{ matrix.name }}.out
+
+  finish:
+    needs: [unit_tests]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
+          carryforward: "cmd,pkg-api,pkg-frontend,pkg-operator,pkg-util,pkg-other"

@@ -1,6 +1,6 @@
 # Containerized Development Environment
 
-This document describes how to set up and use a containerized development environment for ARO-RP using Docker Compose.
+This document describes how to set up and use a containerized development environment for ARO-RP using podman compose.
 
 ## Files for this setup
 
@@ -22,10 +22,9 @@ This means any changes you make to files in your local repository are immediatel
 
 ## Prerequisites
 
-1.  Docker installed on your host system ([https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)).
-2.  Docker Compose plugin installed.
-3.  Azure CLI installed on your host system.
-4. You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
+1.  Podman 4.7+ installed on your host system ([https://podman.io/docs/installation](https://podman.io/docs/installation)).
+2.  Azure CLI installed on your host system.
+3.  You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
 
 ## Setup Steps
 
@@ -39,51 +38,66 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     # Edit the newly created 'env' file with your settings
     ```
 
-2.  **Get the required secrets:**
-    Use the project's Makefile to fetch necessary secrets, which are typically saved into the `./secrets` directory.
+2.  **Get the required secrets and source your environment:**
+    Use the project's Makefile to fetch necessary secrets from Azure storage. The secrets will be downloaded and extracted to the `./secrets` directory.
 
     ```bash
     SECRET_SA_ACCOUNT_NAME=<secrets_storage_account_name> make secrets
-    # Replace <secrets_storage_account_name> with the actual storage account name
-    # Ensure the secrets are placed in the ./secrets directory
+    ```
+    
+    Replace `<secrets_storage_account_name>` with the actual storage account name for your environment.
+    
+    Then source your environment file to load the configuration (including secrets):
+    
+    ```bash
+    . ./env
     ```
 
-3.  **Build the container image:**
-    Build the `aro-dev-env` container image using the Dockerfile.
+3.  **Enable the Podman socket** (required when not using Hive for cluster deployment):
 
     ```bash
-    docker compose build aro-dev-env
+    systemctl --user enable --now podman.socket
+    ```
+    
+    Verify the socket is running:
+    ```bash
+    systemctl --user status podman.socket
     ```
 
-4.  **Start the container:**
-    Start the `aro-dev-env` service. The container will automatically source your environment file and start the RP on port 8443.
+4.  **Build the container image:**
 
     ```bash
-    docker compose up -d aro-dev-env
+    make dev-env-build
+    ```
+
+5.  **Start the container:**
+
+    ```bash
+    make dev-env-start
     ```
     
     **Note:** The container runs the command `. /workspace/env && make runlocal-rp`, which sources your environment variables and starts the RP in local development mode.
     
     Verify the container is running:
     ```bash
-    docker compose ps
+    podman compose ps
     ```
 
-5.  **View RP Logs (Optional):**
+6.  **View RP Logs (Optional):**
     Check the logs to see the RP startup output.
 
     ```bash
-    docker compose logs aro-dev-env
+    podman compose logs aro-dev-env
     ```
 
-6.  **Enter the container shell:**
+7.  **Enter the container shell:**
     To interact with the environment inside the container (e.g., run other commands, debug).
 
     ```bash
-    docker compose exec aro-dev-env bash
+    podman compose exec aro-dev-env bash
     ```
 
-7.  **Run other development commands (Inside container shell):**
+8.  **Run other development commands (Inside container shell):**
     From inside the container, you can run project-specific `make` commands or scripts that expect the Go environment to be set up.
 
     ```bash
@@ -120,11 +134,11 @@ Now, when you run `az aro` commands on your local host (from the project root), 
 To stop and remove the containerized development environment:
 
 ```bash
-docker compose down aro-dev-env
+make dev-env-stop
 ```
 
 If you also want to remove the built image:
 
 ```bash
-docker rmi aro-rp_aro-dev
+podman rmi aro-rp_aro-dev
 ```

@@ -35,8 +35,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
-	mgmtredhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
+	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -47,7 +47,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	redhatopenshift20240812preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2024-08-12-preview/redhatopenshift"
+	redhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -269,9 +269,9 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		return nil, err
 	}
 
-	clusterClient := &internalClient[mgmtredhatopenshift20240812preview.OpenShiftCluster, v20240812preview.OpenShiftCluster]{
-		externalClient: redhatopenshift20240812preview.NewOpenShiftClustersClient(&azEnvironment, conf.SubscriptionID, authorizer),
-		converter:      api.APIs[v20240812preview.APIVersion].OpenShiftClusterConverter,
+	clusterClient := &internalClient[mgmtredhatopenshift20250725.OpenShiftCluster, v20250725.OpenShiftCluster]{
+		externalClient: redhatopenshift20250725.NewOpenShiftClustersClient(&azEnvironment, conf.SubscriptionID, authorizer),
+		converter:      api.APIs[v20250725.APIVersion].OpenShiftClusterConverter,
 	}
 
 	c := &Cluster{
@@ -337,7 +337,7 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	return appDetails{appID, appSecret, spID}, nil
 }
 
-func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, diskEncryptionSetID string, clusterServicePrincipalID string) error {
+func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, diskEncryptionSetID string, principalIDs []string) error {
 	c.log.Info("creating role assignments")
 
 	for _, scope := range []struct{ resource, role string }{
@@ -345,7 +345,7 @@ func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, disk
 		{"/subscriptions/" + c.Config.SubscriptionID + "/resourceGroups/" + c.Config.VnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + c.Config.ClusterName + "-rt", rbac.RoleNetworkContributor},
 		{diskEncryptionSetID, rbac.RoleReader},
 	} {
-		for _, principalID := range []string{clusterServicePrincipalID, c.Config.FPServicePrincipalID} {
+		for _, principalID := range principalIDs {
 			for i := 0; i < 5; i++ {
 				_, err := c.roleassignments.Create(
 					ctx,
@@ -627,10 +627,24 @@ func (c *Cluster) Create(ctx context.Context) error {
 		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup); err != nil {
 			return fmt.Errorf("error setting up Workload Identity Roles: %w", err)
 		}
-	} else {
-		c.log.Info("creating Classic role assignments")
-		c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, appDetails.SPId)
 	}
+
+	principalIds := []string{
+		c.Config.FPServicePrincipalID,
+	}
+
+	if !c.Config.UseWorkloadIdentity {
+		c.log.Info("creating cluster service principal and FPSP role assignments")
+		principalIds = append(principalIds, appDetails.SPId)
+	} else {
+		c.log.Info("creating FPSP role assignments")
+	}
+
+	err = c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, principalIds)
+	if err != nil {
+		return err
+	}
+
 	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
 
 	// Don't install with FIPS in a local dev, non-CI environment

@@ -5,15 +5,6 @@
         "deployNSGs": {
             "value": false
         },
-        "extraClusterKeyvaultAccessPolicies": {
-            "value": []
-        },
-        "extraPortalKeyvaultAccessPolicies": {
-            "value": []
-        },
-        "extraServiceKeyvaultAccessPolicies": {
-            "value": []
-        },
         "fpServicePrincipalId": {
             "value": ""
         },

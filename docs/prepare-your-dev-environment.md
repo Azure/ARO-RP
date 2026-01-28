@@ -31,20 +31,19 @@
 ## Containerized RP Software Required
 
 > [!TIP]
-> For a minimal development environment, the recommended approach is to use the containerized setup, which requires only the locally installed binaries listed below.
+> For a minimal development environment, the recommended approach is to use the containerized setup. This runs the RP inside a container with your local workspace mounted, facilitating debugging and quick code changes.
+>
+> **See [Containerized Development Environment](containerized-dev-environment.md) for a complete setup guide.**
+
+The containerized development environment requires only these locally installed tools:
 
 * az
 * make
 * podman
-* openvpn
+* openvpn (Optional for Hive cluster deployments)
 
 > [!NOTE]
-> Instructions for these binaries are provided below. Refer to the [Podman](#install-podman-and-podman-docker) section for setup details specific to your operating system (Linux or macOS with Podman Machine).
-
-> [!IMPORTANT]
-> With the local binaries installed you can then refer to the [Getting Started](#getting-started) section below to obtain the source code before deploying a development RP.
->
-> Instead of running `make runlocal-rp`, use `make run-rp` to run a containerized version of the application without requiring additional local binaries.
+> Instructions for installing these tools are provided in the sections below. Refer to the [Podman](#install-podman-and-podman-docker) section for setup details specific to your operating system.
 
 ---
 

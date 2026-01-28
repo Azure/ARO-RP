@@ -209,16 +209,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev-env
+      args:
+        - FEDORA_REGISTRY=${FEDORA_REGISTRY}
     image: aro-rp_aro-dev
+    userns_mode: keep-id
     volumes:
       - .:/workspace:Z
       - ~/.azure:/root/.azure:ro,Z
       - ~/.ssh:/root/.ssh:ro,Z
       - ./secrets:/workspace/secrets:ro,Z
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/podman/podman.sock:z
     environment:
-      KUBECONFIG: /workspace/secrets/aks.kubeconfig
       AZURE_EXTENSION_DEV_SOURCES: /workspace/python
       USER: ${USER}
+    security_opt:
+      - label=disable
     network_mode: "host"
     command: /bin/bash -c ". /workspace/env && make runlocal-rp"
 
