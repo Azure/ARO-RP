@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
+	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
 )
 
 const (
@@ -54,7 +55,7 @@ func (rc *ResourceCleaner) CleanOrphanedE2EServicePrincipals(ctx context.Context
 	return nil
 }
 
-func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix string, ttl time.Duration) error {
+func (rc *ResourceCleaner) getApplicationsByPrefix(ctx context.Context, prefix string) ([]models.Applicationable, error) {
 	filter := fmt.Sprintf("startswith(displayName, '%s')", prefix)
 	requestConfig := &msgraph_apps.ApplicationsRequestBuilderGetRequestConfiguration{
 		QueryParameters: &msgraph_apps.ApplicationsRequestBuilderGetQueryParameters{
@@ -65,10 +66,57 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 
 	result, err := rc.graphClient.Applications().Get(ctx, requestConfig)
 	if err != nil {
-		return fmt.Errorf("failed to list applications: %w", err)
+		return nil, fmt.Errorf("failed to list applications: %w", err)
 	}
 
-	apps := result.GetValue()
+	return result.GetValue(), nil
+}
+
+func (rc *ResourceCleaner) shouldDeleteServicePrincipal(
+	ctx context.Context,
+	app models.Applicationable,
+	ttl time.Duration,
+) bool {
+	displayName := *app.GetDisplayName()
+	createdDateTime := app.GetCreatedDateTime()
+
+	if createdDateTime == nil {
+		rc.log.Warnf("SKIP '%s': No createdDateTime", displayName)
+		return false
+	}
+
+	age := time.Since(*createdDateTime)
+	if age < ttl {
+		rc.log.Debugf("SKIP '%s': Age %v < TTL %v", displayName, age.Round(time.Hour), ttl)
+		return false
+	}
+
+	isE2eClusterServicePrincipal := strings.HasPrefix(displayName, "aro-v4-e2e-")
+
+	if isE2eClusterServicePrincipal && !buildIDPattern.MatchString(displayName) {
+		rc.log.Infof("SKIP '%s': No V{BUILDID} pattern", displayName)
+		return false
+	}
+
+	if isE2eClusterServicePrincipal {
+		resourceGroupName := strings.TrimPrefix(displayName, "aro-")
+
+		shouldKeep, reason := rc.checkSPNeededBasedOnRGStatus(ctx, resourceGroupName, ttl)
+		if shouldKeep {
+			rc.log.Infof("SKIP '%s': %s", displayName, reason)
+			return false
+		}
+	}
+
+	return true
+}
+
+func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix string, ttl time.Duration) error {
+	apps, err := rc.getApplicationsByPrefix(ctx, prefix)
+	if err != nil {
+		return err
+	}
+
 	if len(apps) == 0 {
 		rc.log.Debugf("No applications found with prefix '%s'", prefix)
 		return nil
@@ -77,72 +125,34 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 	rc.log.Infof("Found %d applications with prefix '%s'", len(apps), prefix)
 
 	for _, app := range apps {
-		var displayName, appID, objectID string
-		var createdDateTime *time.Time
-
-		if app.GetDisplayName() != nil {
-			displayName = *app.GetDisplayName()
-		}
-
-		if app.GetAppId() != nil {
-			appID = *app.GetAppId()
-		}
-
-		if app.GetId() != nil {
-			objectID = *app.GetId()
-		}
-
-		createdDateTime = app.GetCreatedDateTime()
-
-		isMockMSI := strings.HasPrefix(displayName, "mock-msi-")
-
-		if !isMockMSI && !buildIDPattern.MatchString(displayName) {
-			rc.log.Infof("SKIP '%s': No V{BUILDID} pattern", displayName)
-			continue
-		} else if createdDateTime == nil {
-			rc.log.Warnf("SKIP '%s' (objectID: %s): No createdDateTime", displayName, objectID)
+		if app.GetDisplayName() == nil || app.GetAppId() == nil || app.GetId() == nil {
+			rc.log.Warnf("SKIP: Application missing required fields")
 			continue
 		}
 
-		age := time.Since(*createdDateTime)
-
-		if age < ttl {
-			rc.log.Debugf("SKIP '%s': Age %v < TTL %v", displayName, age.Round(time.Hour), ttl)
+		if !rc.shouldDeleteServicePrincipal(ctx, app, ttl) {
 			continue
-		} else if !isMockMSI {
-			resourceGroupName := determineResourceGroupName(displayName)
-
-			shouldKeep, reason := rc.checkSPNeededBasedOnRGStatus(ctx, resourceGroupName, ttl)
-			if shouldKeep {
-				rc.log.Infof("SKIP '%s': %s", displayName, reason)
-				continue
-			}
 		}
+
+		displayName := *app.GetDisplayName()
+		appID := *app.GetAppId()
+		objectID := *app.GetId()
 
 		if rc.dryRun {
-			rc.log.Infof("DRY-RUN: Would delete '%s' (appId: %s, age: %v)", displayName, appID, age.Round(time.Hour))
+			rc.log.Infof("DRY-RUN: Would delete '%s' (appId: %s)", displayName, appID)
 		} else {
-			rc.log.Infof("DELETING '%s' (appId: %s, age: %v)", displayName, appID, age.Round(time.Hour))
+			rc.log.Infof("DELETING '%s' (appId: %s)", displayName, appID)
 
 			err = rc.graphClient.Applications().ByApplicationId(objectID).Delete(ctx, nil)
 			if err != nil {
 				rc.log.Errorf("ERROR deleting '%s': %v", displayName, err)
 				continue
 			}
-			rc.log.Infof("SUCCESS: Deleted '%s'", displayName)
+			rc.log.Infof("Deleted '%s'", displayName)
 		}
 	}
 
 	return nil
-}
-
-func determineResourceGroupName(displayName string) string {
-	// For service principals: aro-v4-e2e-V{BUILDID}-{LOCATION}[-miwi][-prod-csp][-prod-miwi]
-	// Resource group is: v4-e2e-V{BUILDID}-{LOCATION}[-miwi][-prod-csp][-prod-miwi]
-	if strings.HasPrefix(displayName, "aro-") {
-		return strings.TrimPrefix(displayName, "aro-")
-	}
-	return displayName
 }
 
 func (rc *ResourceCleaner) checkSPNeededBasedOnRGStatus(ctx context.Context, resourceGroupName string, ttl time.Duration) (bool, string) {
