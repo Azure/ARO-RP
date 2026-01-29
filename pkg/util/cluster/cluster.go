@@ -1359,7 +1359,9 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	defer cancel()
 
 	var lastErr error
-	err := wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
+	// https://www.backoff.dev/?base=1000&factor=2&retries=6&strategy=equal
+	var backoff = wait.Backoff{Steps: 6, Duration: time.Second, Factor: 2}
+	err := wait.ExponentialBackoff(backoff, func() (bool, error) {
 		err := c.openshiftclusters.DeleteAndWait(timeoutCtx, resourceGroup, clusterName)
 		if err == nil {
 			return true, nil
@@ -1370,7 +1372,7 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 			return false, nil
 		}
 		return false, err
-	}, timeoutCtx.Done())
+	})
 
 	if err != nil {
 		if err == wait.ErrWaitTimeout && lastErr != nil {
