@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,15 +79,14 @@ func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) 
 		r.instance.Annotations = make(map[string]string)
 	}
 	r.instance.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
-	r.client.Update(ctx, r.instance)
 
-	payload := map[string]interface{}{
-		"annotations": []map[string]interface{}{
-			{
+	patchPayload := &metav1.PartialObjectMetadata{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
 				AnnotationTimestamp: time.Now().Format(time.RFC1123),
 			},
 		},
 	}
-	payloadBytes, _ := json.Marshal(payload)
+	payloadBytes, _ := json.Marshal(patchPayload)
 	return r.client.Patch(ctx, r.instance, client.RawPatch(types.StrategicMergePatchType, payloadBytes))
 }
