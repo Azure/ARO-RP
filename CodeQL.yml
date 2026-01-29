@@ -1,0 +1,3 @@
+path_classifiers:
+  tests:
+    - "test/util/http/server/server_mock.go"
