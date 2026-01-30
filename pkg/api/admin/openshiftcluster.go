@@ -177,15 +177,6 @@ const (
 	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
 )
 
-// MTUSize represents the MTU size of a cluster (Maximum transmission unit)
-type MTUSize int
-
-// MTUSize constants
-const (
-	MTU1500 MTUSize = 1500
-	MTU3900 MTUSize = 3900
-)
-
 // The outbound routing strategy used to provide your cluster egress to the internet.
 type OutboundType string
 
@@ -237,7 +228,6 @@ type NetworkProfile struct {
 
 	PodCIDR      string       `json:"podCidr,omitempty"`
 	ServiceCIDR  string       `json:"serviceCidr,omitempty"`
-	MTUSize      MTUSize      `json:"mtuSize,omitempty"`
 	OutboundType OutboundType `json:"outboundType,omitempty" mutable:"true"`
 
 	APIServerPrivateEndpointIP string               `json:"privateEndpointIp,omitempty"`
