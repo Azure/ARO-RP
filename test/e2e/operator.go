@@ -417,11 +417,16 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(*s.Properties.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
-
-				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			By("checking that the cluster document annotations have been patched")
+			Eventually(func(g Gomega, ctx context.Context) {
+				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
+				// Using 2 seconds because the cluster doc should be patched very quickly after the subnet itself is patched.
+				// The small eventually avoids any unfortunate timing
+			}).WithContext(ctx).WithTimeout(time.Second * 2).Should(Succeed())
 		}
 	})
 })
