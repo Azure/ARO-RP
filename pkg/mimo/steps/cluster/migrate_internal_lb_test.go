@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/onsi/gomega"
-	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -24,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -335,8 +333,6 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				},
 			}, nil).Return(nil).After(newRulesCreation)
 
-			hook, entry := testlog.New()
-
 			doc := &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(key),
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -361,10 +357,8 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 					},
 				},
 			}
-			g := NewWithT(t)
-			controller := gomock.NewController(t)
-			_env := mock_env.NewMockInterface(controller)
-			_, log := testlog.New()
+			g := gomega.NewWithT(t)
+			hook, entry := testlog.New()
 
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
@@ -375,32 +369,23 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 			}
 
 			tc := testtasks.NewFakeTestContext(
-				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
-				nil,
+				ctx, env, entry, func() time.Time { return time.Unix(100, 0) },
+				testtasks.WithOpenShiftDatabase(openShiftClustersDatabase),
+				testtasks.WithOpenShiftClusterDocument(doc),
+				testtasks.WithLoadBalancersClient(lbs),
+				testtasks.WithPrivateLinkServicesClient(plses),
+				testtasks.WithResourceSKUsClient(skus),
 			)
 
 			err = MigrateInternalLoadBalancerZonesStep(tc)
 
-			if tt.wantErr != "" && err != nil {
-				g.Expect(err).To(MatchError(tt.wantErr))
-			} else if tt.wantErr != "" && err == nil {
+			if tt.wantErr != nil && err != nil {
+				g.Expect(err).To(gomega.MatchError(tt.wantErr))
+			} else if tt.wantErr != nil && err == nil {
 				t.Errorf("wanted error %s", tt.wantErr)
-			} else if tt.wantErr == "" {
-				g.Expect(err).ToNot(HaveOccurred())
+			} else if tt.wantErr == nil {
+				g.Expect(err).ToNot(gomega.HaveOccurred())
 			}
-
-			manager := manager{
-				doc:                           doc,
-				db:                            openShiftClustersDatabase,
-				log:                           entry,
-				armLoadBalancers:              lbs,
-				armClusterPrivateLinkServices: plses,
-				armResourceSKUs:               skus,
-				env:                           env,
-			}
-
-			err = manager.migrateInternalLoadBalancerZones(ctx)
-			utilerror.AssertErrorIs(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)
 			if err != nil {

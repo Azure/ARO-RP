@@ -1,11 +1,15 @@
 package actuator
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 )
 
 type azClients struct {

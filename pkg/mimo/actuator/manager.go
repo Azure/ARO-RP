@@ -13,11 +13,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 const maxDequeueCount = 5
