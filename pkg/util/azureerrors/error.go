@@ -291,3 +291,28 @@ func detectVMProfile(errStr string) VMProfileType {
 	}
 	return VMProfileUnknown
 }
+
+// IsRetryableError returns true if the error is a transient/retryable error
+// such as 429 Too Many Requests or contains RetryableError code
+func IsRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.StatusCode == http.StatusTooManyRequests {
+			return true
+		}
+	}
+
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		if detailedErr.StatusCode == http.StatusTooManyRequests {
+			return true
+		}
+	}
+
+	// Check for RetryableError in error message (nested Azure errors)
+	return strings.Contains(err.Error(), "RetryableError")
+}

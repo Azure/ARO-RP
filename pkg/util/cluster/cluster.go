@@ -1354,7 +1354,29 @@ func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGro
 
 func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName string) error {
 	c.log.Printf("deleting cluster %s", clusterName)
-	if err := c.openshiftclusters.DeleteAndWait(ctx, resourceGroup, clusterName); err != nil {
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+	defer cancel()
+
+	var lastErr error
+	backoff := wait.Backoff{Steps: 20, Duration: 5 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
+	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func() (bool, error) {
+		err := c.openshiftclusters.DeleteAndWait(timeoutCtx, resourceGroup, clusterName)
+		if err == nil {
+			return true, nil
+		}
+		if azureerrors.IsRetryableError(err) {
+			c.log.Warnf("retryable error deleting cluster %s, will retry: %v", clusterName, err)
+			lastErr = err
+			return false, nil
+		}
+		return false, err
+	})
+
+	if err != nil {
+		if err == wait.ErrWaitTimeout && lastErr != nil {
+			return fmt.Errorf("error deleting cluster %s: %w", clusterName, lastErr)
+		}
 		return fmt.Errorf("error deleting cluster %s: %w", clusterName, err)
 	}
 	return nil
@@ -1365,14 +1387,35 @@ func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupN
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
-		_, err := c.groups.Get(ctx, resourceGroupName)
+	var lastErr error
+	err := wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+		_, err := c.groups.Get(timeoutCtx, resourceGroupName)
 		if azureerrors.ResourceGroupNotFound(err) {
 			c.log.Infof("finished deleting resource group %s", resourceGroupName)
 			return true, nil
 		}
-		return false, fmt.Errorf("failed to delete resource group %s with %s", resourceGroupName, err)
+		if err != nil {
+			if !azureerrors.IsRetryableError(err) {
+				return false, fmt.Errorf("non-retryable error checking resource group %s: %w", resourceGroupName, err)
+			}
+			lastErr = err
+			c.log.Warnf("retryable error checking resource group %s, will retry: %v", resourceGroupName, err)
+		} else {
+			c.log.Infof("resource group %s still exists, waiting for deletion", resourceGroupName)
+		}
+		return false, nil
 	}, timeoutCtx.Done())
+
+	if err != nil {
+		if err == wait.ErrWaitTimeout && lastErr != nil {
+			return fmt.Errorf("timed out waiting for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
+		}
+		if err == wait.ErrWaitTimeout {
+			return fmt.Errorf("timed out waiting for resource group %s to be deleted", resourceGroupName)
+		}
+		return err
+	}
+	return nil
 }
 
 func (c *Cluster) deleteResourceGroup(ctx context.Context, resourceGroup string) error {
