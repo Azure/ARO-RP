@@ -33,8 +33,44 @@ const (
 	tagKeyExemptPublicBlob   = "Az.Sec.AnonymousBlobAccessEnforcement::Skip"
 	tagValueExemptPublicBlob = "PublicRelease"
 
-	renewLeaseTriggerFunction                  = "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}"
-	retryLaterTriggerFunction                  = "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 600;\n\t\t\t\trequest.setBody(body);\n\t\t\t}"
-	setCreationBillingTimeStampTriggerFunction = "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tvar now = Math.floor(date.getTime() / 1000);\n\t\t\t\tvar billingBody = body[\"billing\"];\n\t\t\t\tif (!billingBody[\"creationTime\"]) {\n\t\t\t\t\tbillingBody[\"creationTime\"] = now;\n\t\t\t\t}\n\t\t\t\trequest.setBody(body);\n\t\t\t}"
-	setDeletionBillingTimeStampTriggerFunction = "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tvar now = Math.floor(date.getTime() / 1000);\n\t\t\t\tvar billingBody = body[\"billing\"];\n\t\t\t\tif (!billingBody[\"creationTime\"]) {\n\t\t\t\t\tbillingBody[\"creationTime\"] = now;\n\t\t\t\t}\n\t\t\t\trequest.setBody(body);\n\t\t\t}"
+	// CosmosDB Trigger Functions
+	renewLeaseTriggerFunction = `function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
+				request.setBody(body);
+			}`
+
+	retryLaterTriggerFunction = `function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 600;
+				request.setBody(body);
+			}`
+
+	setCreationBillingTimeStampTriggerFunction = `function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				var now = Math.floor(date.getTime() / 1000);
+				var billingBody = body["billing"];
+				if (!billingBody["creationTime"]) {
+					billingBody["creationTime"] = now;
+				}
+				request.setBody(body);
+			}`
+
+	setDeletionBillingTimeStampTriggerFunction = `function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				var now = Math.floor(date.getTime() / 1000);
+				var billingBody = body["billing"];
+				if (!billingBody["deletionTime"]) {
+					billingBody["deletionTime"] = now;
+				}
+				request.setBody(body);
+			}`
 )
