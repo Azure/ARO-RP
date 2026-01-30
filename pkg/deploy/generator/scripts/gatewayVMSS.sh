@@ -92,6 +92,11 @@ main() {
 [FILTER]
 	Name modify
 	Match journald
+	Add ENVIRONMENT \${ENVIRONMENT}
+
+[FILTER]
+	Name modify
+	Match journald
 	Remove_wildcard _
 	Remove TIMESTAMP
 
@@ -107,7 +112,8 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE='${role_gateway^}'
 GATEWAY_DOMAINS='$GATEWAYDOMAINS'
 GATEWAY_FEATURES='$GATEWAYFEATURES'
-RPIMAGE='$rpimage'"
+RPIMAGE='$rpimage'
+ENVIRONMENT='$ENVIRONMENT'"
 
     # shellcheck disable=SC2034
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
