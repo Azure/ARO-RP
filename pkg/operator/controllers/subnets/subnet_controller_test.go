@@ -16,6 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -565,8 +566,10 @@ func TestReconcileManager(t *testing.T) {
 				}
 			}
 			if tt.wantAnnotationsUpdated {
-				g.Expect(AnnotationTimestamp).Should(BeKeyOf(r.instance.Annotations))
-				g.Expect(dummyAnnotationKey).Should(BeKeyOf(r.instance.Annotations))
+				updatedCluster := &arov1alpha1.Cluster{}
+				g.Expect(clientFake.Get(context.Background(), client.ObjectKeyFromObject(instance), updatedCluster)).To(Succeed())
+				g.Expect(AnnotationTimestamp).Should(BeKeyOf(updatedCluster.Annotations))
+				g.Expect(dummyAnnotationKey).Should(BeKeyOf(updatedCluster.Annotations))
 			}
 		})
 	}
