@@ -140,7 +140,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				},
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "master"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
@@ -280,7 +279,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				},
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
@@ -347,7 +345,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				},
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
