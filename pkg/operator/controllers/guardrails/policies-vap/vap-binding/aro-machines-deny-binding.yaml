@@ -1,0 +1,14 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: aro-machines-deny-binding
+spec:
+  policyName: aro-machines-deny
+  validationActions:
+  - Deny  # Can be changed to Warn or Audit for rollout
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values: ["openshift-machine-api"]

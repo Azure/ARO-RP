@@ -1,0 +1,76 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: aro-privileged-namespace-deny
+spec:
+  failurePolicy: Ignore #TODO: how to change this to eg, Fail? via old patch or allow change this field directly?
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["pods", "secrets", "services", "serviceaccounts", "replicationcontrollers", "resourcequotas", "namespaces"]
+    - apiGroups: ["apps"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    - apiGroups: ["batch"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["jobs", "cronjobs"]
+    - apiGroups: ["rbac.authorization.k8s.io"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["roles", "rolebindings"]
+    - apiGroups: ["policy"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["poddisruptionbudgets"]
+  variables:
+  - name: privilegedNamespaces
+    expression: |
+      [
+        "kube-node-lease", "kube-public", "kube-system",
+        "openshift-azure-logging", "openshift-azure-operator",
+        "openshift-managed-upgrade-operator", "openshift-azure-guardrails",
+        "openshift", "openshift-apiserver", "openshift-apiserver-operator",
+        "openshift-authentication-operator", "openshift-cloud-controller-manager",
+        "openshift-cloud-controller-manager-operator", "openshift-cloud-credential-operator",
+        "openshift-cluster-machine-approver", "openshift-cluster-storage-operator",
+        "openshift-cluster-version", "openshift-config-managed", "openshift-config-operator",
+        "openshift-console", "openshift-console-operator", "openshift-controller-manager",
+        "openshift-controller-manager-operator", "openshift-dns", "openshift-dns-operator",
+        "openshift-etcd", "openshift-etcd-operator", "openshift-host-network",
+        "openshift-image-registry", "openshift-ingress", "openshift-ingress-operator",
+        "openshift-kube-apiserver", "openshift-kube-apiserver-operator",
+        "openshift-kube-controller-manager", "openshift-kube-controller-manager-operator",
+        "openshift-kube-scheduler", "openshift-kube-scheduler-operator",
+        "openshift-machine-api", "openshift-machine-config-operator", "openshift-monitoring",
+        "openshift-multus", "openshift-network-operator", "openshift-oauth-apiserver",
+        "openshift-operator-lifecycle-manager", "openshift-ovn-kubernetes", "openshift-sdn",
+        "openshift-service-ca", "openshift-service-ca-operator"
+      ]
+  - name: exemptedUsers
+    expression: |
+      ["system:kube-controller-manager", "system:kube-scheduler", "system:admin", "system:aro-service"]
+  - name: targetNamespace
+    expression: |
+      !has(object.metadata) ? "" :
+      (request.kind.kind == "Namespace" ? object.metadata.name : 
+       (has(object.metadata.namespace) ? object.metadata.namespace : ""))
+  - name: isExempted
+    expression: |
+      !has(request.userInfo) ||
+      !has(request.userInfo.username) ||
+      request.userInfo.username in variables.exemptedUsers ||
+      (has(request.userInfo.groups) && request.userInfo.groups.exists(g,
+        g.contains("system:node") || g.contains("system:serviceaccount") || g.contains("system:masters")
+      ))
+  validations:
+  - expression: |
+      !(variables.targetNamespace in variables.privilegedNamespaces) || variables.isExempted
+    message: "Operation not allowed in privileged namespace"
+    messageExpression: |
+      request.kind.kind == "Namespace" 
+        ? "user " + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + " not allowed to " + request.operation + " namespace " + (has(object.metadata) ? object.metadata.name : "unknown")
+        : "user " + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + " not allowed to " + request.operation + " " + (has(object.metadata) ? object.metadata.name : "unknown") + " in namespace " + (has(object.metadata) && has(object.metadata.namespace) ? object.metadata.namespace : "unknown")

@@ -1,0 +1,62 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: aro-machine-config-deny
+spec:
+  failurePolicy: Ignore
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["machineconfiguration.openshift.io"]
+      apiVersions: ["*"]
+      operations: ["CREATE", "UPDATE", "DELETE"]
+      resources: ["machineconfigs"]
+  variables:
+  - name: protectedMachineConfigs
+    expression: |
+      [
+        "00-master",
+        "00-worker",
+        "01-master-container-runtime",
+        "01-master-kubelet",
+        "01-worker-container-runtime",
+        "01-worker-kubelet",
+        "90-aro-worker-registries",
+        "97-master-generated-kubelet",
+        "97-worker-generated-kubelet",
+        "98-master-generated-kubelet",
+        "98-worker-generated-kubelet",
+        "99-master-aro-dns",
+        "99-master-aro-etc-hosts-gateway-domains",
+        "99-master-generated-kubelet",
+        "99-master-generated-registries",
+        "99-master-ssh",
+        "99-worker-aro-dns",
+        "99-worker-aro-etc-hosts-gateway-domains",
+        "99-worker-generated-kubelet",
+        "99-worker-generated-registries",
+        "99-worker-ssh"
+      ]
+  - name: exemptedUsers
+    expression: |
+      ["system:kube-controller-manager", "system:kube-scheduler", "system:admin", "system:aro-service"]
+  - name: mcName
+    expression: |
+      has(object.metadata) && has(object.metadata.name) ? object.metadata.name : ""
+  - name: isProtectedMC
+    expression: |
+      variables.mcName in variables.protectedMachineConfigs ||
+      variables.mcName.matches("^rendered-(master|worker)-.+$")
+  - name: isExempted
+    expression: |
+      !has(request.userInfo) ||
+      !has(request.userInfo.username) ||
+      request.userInfo.username in variables.exemptedUsers ||
+      (has(request.userInfo.groups) && request.userInfo.groups.exists(g,
+        g.contains("system:node") || g.contains("system:serviceaccount") || g.contains("system:masters")
+      ))
+  validations:
+  - expression: |
+      !variables.isProtectedMC || variables.isExempted
+    message: "Operation not allowed on protected MachineConfig"
+    messageExpression: |
+      "user " + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + " not allowed to " + request.operation + " machine config " + variables.mcName

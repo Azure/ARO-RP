@@ -1,0 +1,8 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: aro-machine-config-deny-binding
+spec:
+  policyName: aro-machine-config-deny
+  validationActions:
+  - Deny  #TODO: changable, can be Warn or Audit.
