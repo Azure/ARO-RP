@@ -88,5 +88,5 @@ func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) 
 		},
 	}
 	payloadBytes, _ := json.Marshal(patchPayload)
-	return r.client.Patch(ctx, r.instance, client.RawPatch(types.StrategicMergePatchType, payloadBytes))
+	return r.client.Patch(ctx, r.instance, client.RawPatch(types.MergePatchType, payloadBytes))
 }
