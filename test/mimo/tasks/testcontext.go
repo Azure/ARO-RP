@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
@@ -28,6 +29,8 @@ type fakeTestContext struct {
 
 	doc    *api.OpenShiftClusterDocument
 	subDoc *api.SubscriptionDocument
+
+	ocDb database.OpenShiftClusters
 
 	interfacesClient          *armnetwork.InterfacesClient
 	loadBalancerClient        *armnetwork.LoadBalancersClient
@@ -94,6 +97,12 @@ func WithTokensClient(c armcontainerregistry.TokensClient) Option {
 func WithRegistriesClient(c armcontainerregistry.RegistriesClient) Option {
 	return func(ftc *fakeTestContext) {
 		ftc.registriesClient = &c
+	}
+}
+
+func WithOpenShiftDatabase(d database.OpenShiftClusters) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.ocDb = d
 	}
 }
 

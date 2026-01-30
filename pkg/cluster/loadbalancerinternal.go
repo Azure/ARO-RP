@@ -31,7 +31,6 @@ var (
 )
 
 func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
-
 	updateFunc := func(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
 		return m.db.PatchWithLease(ctx, m.doc.Key, f)
 	}
