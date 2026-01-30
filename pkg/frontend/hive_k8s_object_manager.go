@@ -2,57 +2,77 @@ package frontend
 
 import (
 	"context"
-	"encoding/json"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
+// HiveK8sObjectManager defines LIST / GET behavior for Hive-managed AKS clusters
 type HiveK8sObjectManager interface {
-	List(ctx context.Context, region, resource string) ([]byte, error)
-	Get(ctx context.Context, region, resource, name string) ([]byte, error)
+	List(ctx context.Context, resource, namespace string) ([]byte, error)
+	Get(ctx context.Context, resource, namespace, name string) ([]byte, error)
 }
 
 type hiveK8sObjectManager struct {
-	env env.Interface
+	env                env.Interface
+	kubeActionsFactory kubeActionsFactory
 }
 
+// constructor used by frontend
+func newHiveK8sObjectManager(
+	env env.Interface,
+	kubeActionsFactory kubeActionsFactory,
+) HiveK8sObjectManager {
+	return &hiveK8sObjectManager{
+		env:                env,
+		kubeActionsFactory: kubeActionsFactory,
+	}
+}
+
+// List Kubernetes objects in a Hive-managed AKS cluster
+func (m *hiveK8sObjectManager) List(
+	ctx context.Context,
+	resource string,
+	namespace string,
+) ([]byte, error) {
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	// Reuse existing kube actions (same as other admin actions)
+	k, err := m.kubeActionsFactory(log, m.env, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Borrow existing GVR resolution behavior
+	_, err = k.ResolveGVR(resource, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Delegate to existing list behavior
+	return k.KubeList(ctx, resource, namespace)
+}
+
+// Get a single Kubernetes object in a Hive-managed AKS cluster
 func (m *hiveK8sObjectManager) Get(
 	ctx context.Context,
-	region string,
 	resource string,
+	namespace string,
 	name string,
 ) ([]byte, error) {
+	log := logrus.NewEntry(logrus.StandardLogger())
 
-	// 1. Get Hive REST config
-	restConfig, err := m.env.LiveConfig().HiveRestConfig(ctx, 1)
+	k, err := m.kubeActionsFactory(log, m.env, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Create dynamic client
-	dyn, err := dynamic.NewForConfig(restConfig)
+	// Borrow existing GVR resolution behavior
+	_, err = k.ResolveGVR(resource, "")
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Resolve GVR (same logic as List)
-	gvr := schema.GroupVersionResource{
-		Group:    "",   // fill correctly
-		Version:  "v1", // fill correctly
-		Resource: resource,
-	}
-
-	// 4. Get object
-	u, err := dyn.Resource(gvr).
-		Namespace("default"). // or namespace param if supported
-		Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(u)
+	return k.KubeGet(ctx, resource, namespace, name)
 }
