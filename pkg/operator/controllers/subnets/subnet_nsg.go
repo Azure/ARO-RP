@@ -29,6 +29,9 @@ const (
 	AnnotationTimestamp = "aro.openshift.io/lastSubnetReconcileTimestamp"
 )
 
+// ensureSubnetNSG verifies the subnet has the correct Network Security Group assigned.
+// If the NSG is missing or incorrect, it updates the subnet with the correct NSG
+// and records the reconciliation timestamp on the Cluster resource.
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
 	architectureVersion := api.ArchitectureVersion(r.instance.Spec.ArchitectureVersion)
 
@@ -76,6 +79,9 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	return r.updateReconcileSubnetAnnotation(ctx)
 }
 
+// updateReconcileSubnetAnnotation updates the Cluster resource with a timestamp annotation
+// indicating when the last subnet reconciliation occurred. It uses retry-on-conflict to
+// handle concurrent modifications to the Cluster resource.
 func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cluster := &arov1alpha1.Cluster{}
