@@ -82,9 +82,7 @@ func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) 
 
 	patchPayload := &metav1.PartialObjectMetadata{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				AnnotationTimestamp: time.Now().Format(time.RFC1123),
-			},
+			Annotations: r.instance.Annotations,
 		},
 	}
 	payloadBytes, _ := json.Marshal(patchPayload)
