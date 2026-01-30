@@ -12,12 +12,11 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
 
@@ -54,7 +53,7 @@ type TaskContextWithAzureClients interface {
 func GetTaskContext(c context.Context) (TaskContext, error) {
 	r, ok := c.(TaskContext)
 	if !ok {
-		return nil, fmt.Errorf("cannot convert %v", r)
+		return nil, fmt.Errorf("cannot convert %v to TaskContext", c)
 	}
 
 	return r, nil
@@ -63,7 +62,7 @@ func GetTaskContext(c context.Context) (TaskContext, error) {
 func GetTaskContextWithAzureClients(c context.Context) (TaskContextWithAzureClients, error) {
 	r, ok := c.(TaskContextWithAzureClients)
 	if !ok {
-		return nil, fmt.Errorf("cannot convert %v", r)
+		return nil, fmt.Errorf("cannot convert %v to TaskContextWithAzureClients", c)
 	}
 
 	return r, nil
