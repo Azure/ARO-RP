@@ -43,6 +43,9 @@ func TestEmitNodeConditions(t *testing.T) {
 						Annotations: map[string]string{
 							machineAnnotationKey: "openshift-machine-api/aro-master-0",
 						},
+						Labels: map[string]string{
+							masterRoleLabel: "",
+						},
 					},
 					Status: corev1.NodeStatus{
 						Conditions: []corev1.NodeCondition{
@@ -61,6 +64,9 @@ func TestEmitNodeConditions(t *testing.T) {
 						Annotations: map[string]string{
 							machineAnnotationKey: "openshift-machine-api/aro-master-1",
 						},
+						Labels: map[string]string{
+							masterRoleLabel: "",
+						},
 					},
 					Status: corev1.NodeStatus{
 						Conditions: []corev1.NodeCondition{
@@ -78,6 +84,9 @@ func TestEmitNodeConditions(t *testing.T) {
 						Name: "aro-master-2",
 						Annotations: map[string]string{
 							machineAnnotationKey: "openshift-machine-api/aro-master-2",
+						},
+						Labels: map[string]string{
+							masterRoleLabel: "",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -132,6 +141,8 @@ func TestEmitNodeConditions(t *testing.T) {
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{})
+				m.EXPECT().EmitGauge("node.count.master", int64(3), map[string]string{})
+				m.EXPECT().EmitGauge("node.count.workerinfra", int64(0), map[string]string{})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-0",
 					"status":       "False",
@@ -175,6 +186,9 @@ func TestEmitNodeConditions(t *testing.T) {
 						Annotations: map[string]string{
 							machineAnnotationKey: "openshift-machine-api/aro-worker",
 						},
+						Labels: map[string]string{
+							workerRoleLabel: "",
+						},
 					},
 					Status: corev1.NodeStatus{
 						Conditions: []corev1.NodeCondition{
@@ -191,6 +205,9 @@ func TestEmitNodeConditions(t *testing.T) {
 						Annotations: map[string]string{
 							machineAnnotationKey: "openshift-machine-api/aro-worker-spot",
 						},
+						Labels: map[string]string{
+							workerRoleLabel: "",
+						},
 					},
 					Status: corev1.NodeStatus{
 						Conditions: []corev1.NodeCondition{
@@ -206,6 +223,9 @@ func TestEmitNodeConditions(t *testing.T) {
 						Name: "aro-infra",
 						Annotations: map[string]string{
 							machineAnnotationKey: "openshift-machine-api/aro-infra",
+						},
+						Labels: map[string]string{
+							infraRoleLabel: "",
 						},
 					},
 					Status: corev1.NodeStatus{
@@ -261,6 +281,8 @@ func TestEmitNodeConditions(t *testing.T) {
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{})
+				m.EXPECT().EmitGauge("node.count.master", int64(0), map[string]string{})
+				m.EXPECT().EmitGauge("node.count.workerinfra", int64(3), map[string]string{})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker",
 					"status":       "False",
@@ -310,6 +332,9 @@ func TestEmitNodeConditions(t *testing.T) {
 						Annotations: map[string]string{
 							machineAnnotationKey: "openshift-machine-api/aro-impossible-node",
 						},
+						Labels: map[string]string{
+							workerRoleLabel: "",
+						},
 					},
 					Status: corev1.NodeStatus{
 						Conditions: []corev1.NodeCondition{
@@ -323,6 +348,8 @@ func TestEmitNodeConditions(t *testing.T) {
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{})
+				m.EXPECT().EmitGauge("node.count.master", int64(0), map[string]string{})
+				m.EXPECT().EmitGauge("node.count.workerinfra", int64(1), map[string]string{})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-impossible-node",
 					"status":       "False",

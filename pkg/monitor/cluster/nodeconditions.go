@@ -30,6 +30,8 @@ var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	count := 0
+	masterCount := 0
+	workerinfraCount := 0
 	machines := mon.getMachines(ctx)
 
 	err := mon.iterateOverNodes(ctx, func(n *corev1.Node) {
@@ -81,14 +83,24 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 			"kubeletVersion": n.Status.NodeInfo.KubeletVersion,
 		})
 
-		count += 1
+		if _, ok := n.Labels[masterRoleLabel]; ok {
+			masterCount++
+		}
+		if _, ok := n.Labels[workerRoleLabel]; ok {
+			workerinfraCount++
+		} else if _, ok := n.Labels[infraRoleLabel]; ok {
+			workerinfraCount++
+		}
+
+		count++
 	})
 	if err != nil {
 		return err
 	}
 
 	mon.emitGauge("node.count", int64(count), nil)
-
+	mon.emitGauge("node.count.master", int64(masterCount), nil)
+	mon.emitGauge("node.count.workerinfra", int64(workerinfraCount), nil)
 	return nil
 }
 
