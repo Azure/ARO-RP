@@ -12,6 +12,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
@@ -75,16 +77,23 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 }
 
 func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) error {
-	if r.instance.Annotations == nil {
-		r.instance.Annotations = make(map[string]string)
-	}
-	r.instance.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cluster := &arov1alpha1.Cluster{}
+		if err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster); err != nil {
+			return err
+		}
 
-	patchPayload := &metav1.PartialObjectMetadata{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: r.instance.Annotations,
-		},
-	}
-	payloadBytes, _ := json.Marshal(patchPayload)
-	return r.client.Patch(ctx, r.instance, client.RawPatch(types.MergePatchType, payloadBytes))
+		if cluster.Annotations == nil {
+			cluster.Annotations = make(map[string]string)
+		}
+		cluster.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
+
+		patchPayload := &metav1.PartialObjectMetadata{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: cluster.Annotations,
+			},
+		}
+		payloadBytes, _ := json.Marshal(patchPayload)
+		return r.client.Patch(ctx, cluster, client.RawPatch(types.MergePatchType, payloadBytes))
+	})
 }
