@@ -32,6 +32,8 @@ type ResourceCleaner struct {
 	resourcegroupscli      features.ResourceGroupsClient
 	privatelinkservicescli armnetwork.PrivateLinkServicesClient
 	securitygroupscli      armnetwork.SecurityGroupsClient
+	vnetcli                armnetwork.VirtualNetworksClient
+	rtcli                  armnetwork.RouteTablesClient
 
 	subnet armnetwork.SubnetsClient
 
@@ -72,6 +74,16 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		return nil, err
 	}
 
+	vnetClient, err := armnetwork.NewVirtualNetworksClient(env.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	rtClient, err := armnetwork.NewRouteTablesClient(env.SubscriptionID(), spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ResourceCleaner{
 		log:    log,
 		dryRun: dryRun,
@@ -79,6 +91,8 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		resourcegroupscli:      features.NewResourceGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
 		privatelinkservicescli: privateLinkServiceClient,
 		securitygroupscli:      securityGroupsClient,
+		vnetcli:                vnetClient,
+		rtcli:                  rtClient,
 		subnet:                 subnetGroupsClient,
 
 		// ShouldDelete decides whether the resource group gets deleted
