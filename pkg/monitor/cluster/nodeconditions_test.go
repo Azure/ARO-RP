@@ -140,9 +140,9 @@ func TestEmitNodeConditions(t *testing.T) {
 				},
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{})
-				m.EXPECT().EmitGauge("node.count.master", int64(3), map[string]string{})
-				m.EXPECT().EmitGauge("node.count.workerinfra", int64(0), map[string]string{})
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-0",
 					"status":       "False",
@@ -280,9 +280,9 @@ func TestEmitNodeConditions(t *testing.T) {
 				},
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{})
-				m.EXPECT().EmitGauge("node.count.master", int64(0), map[string]string{})
-				m.EXPECT().EmitGauge("node.count.workerinfra", int64(3), map[string]string{})
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker",
 					"status":       "False",
@@ -347,9 +347,9 @@ func TestEmitNodeConditions(t *testing.T) {
 				},
 			},
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
-				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{})
-				m.EXPECT().EmitGauge("node.count.master", int64(0), map[string]string{})
-				m.EXPECT().EmitGauge("node.count.workerinfra", int64(1), map[string]string{})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-impossible-node",
 					"status":       "False",
