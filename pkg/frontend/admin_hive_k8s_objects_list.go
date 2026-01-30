@@ -17,34 +17,39 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	region := chi.URLParam(r, "region")
 	resource := chi.URLParam(r, "resource")
+	namespace := r.URL.Query().Get("namespace")
 	name := r.URL.Query().Get("name")
 
-	// Validate required params
-	if region == "" || resource == "" {
+	if resource == "" {
 		adminReply(
-			log,
-			w,
-			nil,
-			nil,
+			log, w, nil, nil,
 			api.NewCloudError(
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidRequestContent,
 				"",
-				"region and resource are required",
+				"resource is required",
 			),
 		)
 		return
 	}
 
-	// Manager must be wired (tests mock this)
+	if namespace == "" {
+		adminReply(
+			log, w, nil, nil,
+			api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidRequestContent,
+				"",
+				"namespace is required",
+			),
+		)
+		return
+	}
+
 	if f.hiveK8sObjectManager == nil {
 		adminReply(
-			log,
-			w,
-			nil,
-			nil,
+			log, w, nil, nil,
 			api.NewCloudError(
 				http.StatusNotImplemented,
 				api.CloudErrorCodeInternalServerError,
@@ -60,11 +65,12 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 		err error
 	)
 
-	// Delegate to manager
 	if name != "" {
-		b, err = f.hiveK8sObjectManager.Get(ctx, region, resource, name)
+		// GET path
+		b, err = f.hiveK8sObjectManager.Get(ctx, resource, namespace, name)
 	} else {
-		b, err = f.hiveK8sObjectManager.List(ctx, region, resource)
+		// LIST path — namespace is handled inside kubeActions
+		b, err = f.hiveK8sObjectManager.List(ctx, resource, namespace)
 	}
 
 	adminReply(log, w, nil, b, err)
