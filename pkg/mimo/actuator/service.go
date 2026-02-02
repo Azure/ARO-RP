@@ -51,7 +51,7 @@ type service struct {
 	workers        *atomic.Int32
 	workerRoutines sync.WaitGroup
 
-	b buckets.BucketWorker
+	b buckets.BucketWorker[*api.OpenShiftClusterDocument]
 
 	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
@@ -93,7 +93,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 	}
 
 	s.cond = sync.NewCond(&s.mu)
-	s.b = buckets.NewBucketWorker(log, s.spawnWorker, &s.mu)
+	s.b = buckets.NewBucketWorker[*api.OpenShiftClusterDocument](log, s.spawnWorker, &s.mu)
 	s.b.SetBuckets(ownedBuckets)
 
 	return s
