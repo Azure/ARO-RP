@@ -50,3 +50,15 @@ type OpenShiftClusterDocument struct {
 func (c *OpenShiftClusterDocument) String() string {
 	return encodeJSON(c)
 }
+
+func (c *OpenShiftClusterDocument) GetID() string {
+	return c.ID
+}
+
+func (c *OpenShiftClusterDocument) GetKey() string {
+	return c.Key
+}
+
+func (c *OpenShiftClusterDocument) GetBucket() int {
+	return c.Bucket
+}
