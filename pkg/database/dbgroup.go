@@ -41,6 +41,10 @@ type DatabaseGroupWithMaintenanceManifests interface {
 	MaintenanceManifests() (MaintenanceManifests, error)
 }
 
+type DatabaseGroupWithMaintenanceSchedules interface {
+	MaintenanceSchedules() (MaintenanceSchedules, error)
+}
+
 type DatabaseGroup interface {
 	DatabaseGroupWithOpenShiftClusters
 	DatabaseGroupWithSubscriptions
@@ -51,6 +55,7 @@ type DatabaseGroup interface {
 	DatabaseGroupWithBilling
 	DatabaseGroupWithPortal
 	DatabaseGroupWithMaintenanceManifests
+	DatabaseGroupWithMaintenanceSchedules
 
 	WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup
 	WithSubscriptions(db Subscriptions) DatabaseGroup
@@ -61,6 +66,7 @@ type DatabaseGroup interface {
 	WithBilling(db Billing) DatabaseGroup
 	WithPortal(db Portal) DatabaseGroup
 	WithMaintenanceManifests(db MaintenanceManifests) DatabaseGroup
+	WithMaintenanceSchedules(db MaintenanceSchedules) DatabaseGroup
 }
 
 type dbGroup struct {
@@ -73,6 +79,7 @@ type dbGroup struct {
 	billing                          Billing
 	portal                           Portal
 	maintenanceManifests             MaintenanceManifests
+	maintenanceSchedules             MaintenanceSchedules
 }
 
 func (d *dbGroup) OpenShiftClusters() (OpenShiftClusters, error) {
@@ -180,6 +187,18 @@ func (d *dbGroup) MaintenanceManifests() (MaintenanceManifests, error) {
 
 func (d *dbGroup) WithMaintenanceManifests(db MaintenanceManifests) DatabaseGroup {
 	d.maintenanceManifests = db
+	return d
+}
+
+func (d *dbGroup) MaintenanceSchedules() (MaintenanceSchedules, error) {
+	if d.maintenanceSchedules == nil {
+		return nil, errors.New("no MaintenanceSchedules database client set")
+	}
+	return d.maintenanceSchedules, nil
+}
+
+func (d *dbGroup) WithMaintenanceSchedules(db MaintenanceSchedules) DatabaseGroup {
+	d.maintenanceSchedules = db
 	return d
 }
 

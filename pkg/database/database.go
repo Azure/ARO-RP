@@ -36,6 +36,7 @@ const (
 	collPortal                          = "Portal"
 	collSubscriptions                   = "Subscriptions"
 	collMaintenanceManifests            = "MaintenanceManifests"
+	collMaintenanceSchedules            = "MaintenanceSchedules"
 )
 
 func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD, databaseAccountName string) (cosmosdb.DatabaseClient, error) {
