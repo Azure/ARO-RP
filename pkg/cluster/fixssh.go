@@ -10,9 +10,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/sirupsen/logrus"
+
+	armnetwork_sdk "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -20,34 +23,38 @@ import (
 var (
 	masterNICRegex               = regexp.MustCompile(`.*(master).*([0-2])-nic`)
 	sshBackendPoolRegex          = regexp.MustCompile(`ssh-([0-2])`)
-	interfacesCreateOrUpdateOpts = &armnetwork.InterfacesClientBeginCreateOrUpdateOptions{ResumeToken: ""}
+	interfacesCreateOrUpdateOpts = &armnetwork_sdk.InterfacesClientBeginCreateOrUpdateOptions{ResumeToken: ""}
 )
 
 func (m *manager) fixSSH(ctx context.Context) error {
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+	return FixSSH(ctx, m.log, m.armLoadBalancers, m.armInterfaces, m.doc.OpenShiftCluster)
+}
+
+func FixSSH(ctx context.Context, log *logrus.Entry, lbClient armnetwork.LoadBalancersClient, interfacesClient armnetwork.InterfacesClient, oc *api.OpenShiftCluster) error {
+	infraID := oc.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro"
 	}
 
 	var lbName string
-	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
+	switch oc.Properties.ArchitectureVersion {
 	case api.ArchitectureVersionV1:
 		lbName = infraID + "-internal-lb"
 	case api.ArchitectureVersionV2:
 		lbName = infraID + "-internal"
 	default:
-		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
+		return fmt.Errorf("unknown architecture version %d", oc.Properties.ArchitectureVersion)
 	}
 
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	lb, err := m.checkAndUpdateLB(ctx, resourceGroup, lbName)
+	lb, err := checkAndUpdateLB(ctx, log, lbClient, resourceGroup, lbName)
 	if err != nil {
-		m.log.Errorf("Failed checking and Updating Load Balancer with error: %s", err)
+		log.Errorf("Failed checking and Updating Load Balancer with error: %s", err)
 		return err
 	}
 
-	err = m.checkAndUpdateNICsInResourceGroup(ctx, resourceGroup, infraID, lb)
+	err = checkAndUpdateNICsInResourceGroup(ctx, log, lbClient, interfacesClient, oc, infraID, lb)
 	if err != nil {
 		return err
 	}
@@ -55,11 +62,15 @@ func (m *manager) fixSSH(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) checkAndUpdateNICsInResourceGroup(ctx context.Context, resourceGroup string, infraID string, lb *armnetwork.LoadBalancer) (err error) {
-	masterSubnetID := m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
-	interfaces, err := m.armInterfaces.List(ctx, resourceGroup, &armnetwork.InterfacesClientListOptions{})
+func checkAndUpdateNICsInResourceGroup(
+	ctx context.Context, log *logrus.Entry, lbClient armnetwork.LoadBalancersClient, interfacesClient armnetwork.InterfacesClient, oc *api.OpenShiftCluster, infraID string, lb *armnetwork_sdk.LoadBalancer,
+) (err error) {
+	masterSubnetID := oc.Properties.MasterProfile.SubnetID
+	resourceGroup := stringutils.LastTokenByte(oc.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	interfaces, err := interfacesClient.List(ctx, resourceGroup, &armnetwork_sdk.InterfacesClientListOptions{})
 	if err != nil {
-		m.log.Errorf("Error getting network interfaces for resource group %s: %v", resourceGroup, err)
+		log.Errorf("Error getting network interfaces for resource group %s: %v", resourceGroup, err)
 		return err
 	} else if len(interfaces) == 0 {
 		return fmt.Errorf("interfaces list call for resource group %s returned an empty result", resourceGroup)
@@ -67,16 +78,16 @@ func (m *manager) checkAndUpdateNICsInResourceGroup(ctx context.Context, resourc
 
 NICs:
 	for _, nic := range interfaces {
-		m.log.Infof("Checking NIC %s", *nic.Name)
+		log.Infof("Checking NIC %s", *nic.Name)
 		// Filter out any NICs not associated with a control plane machine, ie workers / NIC for the private link service
 		// Not great filtering based on name, but quickest way to skip processing NICs unnecessarily, tags would be better
 		if !masterNICRegex.MatchString(*nic.Name) {
-			m.log.Infof("Skipping NIC %s, not associated with a control plane machine.", *nic.Name)
+			log.Infof("Skipping NIC %s, not associated with a control plane machine.", *nic.Name)
 			continue NICs
 		}
 		//Check for orphaned NICs
 		if nic.Properties.VirtualMachine == nil {
-			err := m.deleteOrphanedNIC(ctx, nic, resourceGroup, masterSubnetID)
+			err := deleteOrphanedNIC(ctx, log, interfacesClient, nic, resourceGroup, masterSubnetID)
 			if err != nil {
 				return err
 			}
@@ -90,18 +101,18 @@ NICs:
 		for _, ipc := range nic.Properties.IPConfigurations {
 			// Skip any NICs that are not in the master subnet
 			if ipc.Properties.Subnet != nil && ipc.Properties.Subnet.ID != nil && *ipc.Properties.Subnet.ID != masterSubnetID {
-				m.log.Infof("Skipping NIC %s, NIC not in master subnet.", *nic.Name)
+				log.Infof("Skipping NIC %s, NIC not in master subnet.", *nic.Name)
 				continue NICs
 			}
 
-			ilbBackendPoolsUpdated = m.updateILBBackendPools(*ipc, infraID, *nic.Name, *lb.ID)
+			ilbBackendPoolsUpdated = updateILBBackendPools(log, oc, *ipc, infraID, *nic.Name, *lb.ID)
 
 			// Check if UserDefinedRouting is enabled for this cluster
 			// UDR clusters don't have an external load balancer so stop executing here and continue to next NIC
-			if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+			if oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
 				if ilbBackendPoolsUpdated {
-					m.log.Infof("Updating UDR Cluster Network Interface %s", *nic.Name)
-					err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+					log.Infof("Updating UDR Cluster Network Interface %s", *nic.Name)
+					err := interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
 					if err != nil {
 						return err
 					}
@@ -110,21 +121,21 @@ NICs:
 			}
 
 			elbName := infraID
-			if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+			if oc.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 				elbName = infraID + "-public-lb"
 			}
 
-			elb, err := m.armLoadBalancers.Get(ctx, resourceGroup, elbName, nil)
+			elb, err := lbClient.Get(ctx, resourceGroup, elbName, nil)
 			if err != nil {
 				return err
 			}
 
-			elbBackendPoolsUpdated = m.updateELBBackendPools(*ipc, infraID, *nic.Name, *elb.ID)
+			elbBackendPoolsUpdated = updateELBBackendPools(log, oc, *ipc, infraID, *nic.Name, *elb.ID)
 		}
 
 		if ilbBackendPoolsUpdated || elbBackendPoolsUpdated {
-			m.log.Infof("Updating Network Interface %s", *nic.Name)
-			err = m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+			log.Infof("Updating Network Interface %s", *nic.Name)
+			err = interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
 			if err != nil {
 				return err
 			}
@@ -134,39 +145,39 @@ NICs:
 	return nil
 }
 
-func (m *manager) updateILBBackendPools(ipc armnetwork.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
+func updateILBBackendPools(log *logrus.Entry, oc *api.OpenShiftCluster, ipc armnetwork_sdk.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
 	updated := false
 	ilbBackendPoolID := infraID
-	if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+	if oc.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 		ilbBackendPoolID = infraID + "-internal-controlplane-v4"
 	}
 
 	ilbBackendPoolID = fmt.Sprintf("%s/backendAddressPools/%s", lbID, ilbBackendPoolID)
-	ilbBackendPool := &armnetwork.BackendAddressPool{ID: &ilbBackendPoolID}
-	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
+	ilbBackendPool := &armnetwork_sdk.BackendAddressPool{ID: &ilbBackendPoolID}
+	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork_sdk.BackendAddressPool) bool {
 		return *backendPool.ID == *ilbBackendPool.ID
 	}) {
-		m.log.Infof("Adding NIC %s to Internal Load Balancer API Address Pool %s", nicName, ilbBackendPoolID)
+		log.Infof("Adding NIC %s to Internal Load Balancer API Address Pool %s", nicName, ilbBackendPoolID)
 		ipc.Properties.LoadBalancerBackendAddressPools = append(ipc.Properties.LoadBalancerBackendAddressPools, ilbBackendPool)
 		updated = true
 	}
 	sshBackendPoolID := fmt.Sprintf("%s/backendAddressPools/ssh-%s", lbID, masterNICRegex.FindStringSubmatch(nicName)[2])
-	sshBackendPool := &armnetwork.BackendAddressPool{ID: &sshBackendPoolID}
+	sshBackendPool := &armnetwork_sdk.BackendAddressPool{ID: &sshBackendPoolID}
 	// Check for NICs that are in the wrong SSH backend pool and remove them.
 	// This covers the case for the bad NIC backend pool placements for CPMS updates to a private cluster
-	ipc.Properties.LoadBalancerBackendAddressPools = slices.DeleteFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
+	ipc.Properties.LoadBalancerBackendAddressPools = slices.DeleteFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork_sdk.BackendAddressPool) bool {
 		remove := *backendPool.ID != *sshBackendPool.ID && sshBackendPoolRegex.MatchString(*backendPool.ID)
 		if remove {
-			m.log.Infof("Removing NIC %s from Internal Load Balancer API Address Pool %s", nicName, *backendPool.ID)
+			log.Infof("Removing NIC %s from Internal Load Balancer API Address Pool %s", nicName, *backendPool.ID)
 			updated = true
 		}
 		return remove
 	})
 
-	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
+	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork_sdk.BackendAddressPool) bool {
 		return *backendPool.ID == *sshBackendPool.ID
 	}) {
-		m.log.Infof("Adding NIC %s to Internal Load Balancer SSH Address Pool %s", nicName, sshBackendPoolID)
+		log.Infof("Adding NIC %s to Internal Load Balancer SSH Address Pool %s", nicName, sshBackendPoolID)
 		ipc.Properties.LoadBalancerBackendAddressPools = append(ipc.Properties.LoadBalancerBackendAddressPools, sshBackendPool)
 		updated = true
 	}
@@ -174,18 +185,18 @@ func (m *manager) updateILBBackendPools(ipc armnetwork.InterfaceIPConfiguration,
 	return updated
 }
 
-func (m *manager) updateELBBackendPools(ipc armnetwork.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
+func updateELBBackendPools(log *logrus.Entry, oc *api.OpenShiftCluster, ipc armnetwork_sdk.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
 	updated := false
 	elbBackendPoolID := infraID
-	if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+	if oc.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 		elbBackendPoolID = infraID + "-public-lb-control-plane-v4"
 	}
 	elbBackendPoolID = fmt.Sprintf("%s/backendAddressPools/%s", lbID, elbBackendPoolID)
-	elbBackendPool := &armnetwork.BackendAddressPool{ID: &elbBackendPoolID}
-	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork.BackendAddressPool) bool {
+	elbBackendPool := &armnetwork_sdk.BackendAddressPool{ID: &elbBackendPoolID}
+	if !slices.ContainsFunc(ipc.Properties.LoadBalancerBackendAddressPools, func(backendPool *armnetwork_sdk.BackendAddressPool) bool {
 		return *backendPool.ID == *elbBackendPool.ID
 	}) {
-		m.log.Infof("Adding NIC %s to Public Load Balancer API Address Pool %s", nicName, elbBackendPoolID)
+		log.Infof("Adding NIC %s to Public Load Balancer API Address Pool %s", nicName, elbBackendPoolID)
 		ipc.Properties.LoadBalancerBackendAddressPools = append(ipc.Properties.LoadBalancerBackendAddressPools, elbBackendPool)
 		updated = true
 	}
@@ -193,17 +204,17 @@ func (m *manager) updateELBBackendPools(ipc armnetwork.InterfaceIPConfiguration,
 	return updated
 }
 
-func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lbName string) (lb *armnetwork.LoadBalancer, err error) {
-	_lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, lbName, nil)
+func checkAndUpdateLB(ctx context.Context, log *logrus.Entry, lbClient armnetwork.LoadBalancersClient, resourceGroup string, lbName string) (lb *armnetwork_sdk.LoadBalancer, err error) {
+	_lb, err := lbClient.Get(ctx, resourceGroup, lbName, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	lb = &_lb.LoadBalancer
 
-	if m.updateLB(lb, lbName) {
-		m.log.Infof("Updating Load Balancer %s", lbName)
-		err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, *lb, nil)
+	if updateLB(log, lb, lbName) {
+		log.Infof("Updating Load Balancer %s", lbName)
+		err = lbClient.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, *lb, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +222,7 @@ func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lb
 	return lb, nil
 }
 
-func (m *manager) updateLB(lb *armnetwork.LoadBalancer, lbName string) (changed bool) {
+func updateLB(log *logrus.Entry, lb *armnetwork_sdk.LoadBalancer, lbName string) (changed bool) {
 backendAddressPools:
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("ssh-%d", i)
@@ -222,8 +233,8 @@ backendAddressPools:
 		}
 
 		changed = true
-		m.log.Infof("Adding SSH Backend Address Pool %s to Internal Load Balancer %s", name, lbName)
-		lb.Properties.BackendAddressPools = append(lb.Properties.BackendAddressPools, &armnetwork.BackendAddressPool{
+		log.Infof("Adding SSH Backend Address Pool %s to Internal Load Balancer %s", name, lbName)
+		lb.Properties.BackendAddressPools = append(lb.Properties.BackendAddressPools, &armnetwork_sdk.BackendAddressPool{
 			Name: &name,
 		})
 	}
@@ -238,20 +249,20 @@ loadBalancingRules:
 		}
 
 		changed = true
-		m.log.Infof("Adding SSH Load Balancing Rule for %s to Internal Load Balancer %s", name, lbName)
-		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &armnetwork.LoadBalancingRule{
-			Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-				FrontendIPConfiguration: &armnetwork.SubResource{
+		log.Infof("Adding SSH Load Balancing Rule for %s to Internal Load Balancer %s", name, lbName)
+		lb.Properties.LoadBalancingRules = append(lb.Properties.LoadBalancingRules, &armnetwork_sdk.LoadBalancingRule{
+			Properties: &armnetwork_sdk.LoadBalancingRulePropertiesFormat{
+				FrontendIPConfiguration: &armnetwork_sdk.SubResource{
 					ID: lb.Properties.FrontendIPConfigurations[0].ID,
 				},
-				BackendAddressPool: &armnetwork.SubResource{
+				BackendAddressPool: &armnetwork_sdk.SubResource{
 					ID: pointerutils.ToPtr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
 				},
-				Probe: &armnetwork.SubResource{
+				Probe: &armnetwork_sdk.SubResource{
 					ID: pointerutils.ToPtr(*lb.ID + "/probes/ssh"),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+				Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
+				LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
 				FrontendPort:         pointerutils.ToPtr(int32(2200) + int32(i)),
 				BackendPort:          pointerutils.ToPtr(int32(22)),
 				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
@@ -268,10 +279,10 @@ loadBalancingRules:
 	}
 
 	changed = true
-	m.log.Infof("Adding ssh Health Probe to Internal Load Balancer %s", lbName)
-	lb.Properties.Probes = append(lb.Properties.Probes, &armnetwork.Probe{
-		Properties: &armnetwork.ProbePropertiesFormat{
-			Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
+	log.Infof("Adding ssh Health Probe to Internal Load Balancer %s", lbName)
+	lb.Properties.Probes = append(lb.Properties.Probes, &armnetwork_sdk.Probe{
+		Properties: &armnetwork_sdk.ProbePropertiesFormat{
+			Protocol:          pointerutils.ToPtr(armnetwork_sdk.ProbeProtocolTCP),
 			Port:              pointerutils.ToPtr(int32(22)),
 			IntervalInSeconds: pointerutils.ToPtr(int32(5)),
 			NumberOfProbes:    pointerutils.ToPtr(int32(2)),
@@ -282,22 +293,22 @@ loadBalancingRules:
 	return changed
 }
 
-func (m *manager) deleteOrphanedNIC(ctx context.Context, nic *armnetwork.Interface, resourceGroup string, masterSubnetID string) error {
+func deleteOrphanedNIC(ctx context.Context, log *logrus.Entry, interfacesClient armnetwork.InterfacesClient, nic *armnetwork_sdk.Interface, resourceGroup string, masterSubnetID string) error {
 	// Delete any IPConfigurations and update the NIC
-	nic.Properties.IPConfigurations = []*armnetwork.InterfaceIPConfiguration{{
+	nic.Properties.IPConfigurations = []*armnetwork_sdk.InterfaceIPConfiguration{{
 		Name: pointerutils.ToPtr(*nic.Name),
-		Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-			Subnet: &armnetwork.Subnet{ID: pointerutils.ToPtr(masterSubnetID)}}}}
-	err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+		Properties: &armnetwork_sdk.InterfaceIPConfigurationPropertiesFormat{
+			Subnet: &armnetwork_sdk.Subnet{ID: pointerutils.ToPtr(masterSubnetID)}}}}
+	err := interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
 	if err != nil {
-		m.log.Errorf("Removing IPConfigurations from NIC %s has failed with err %s", *nic.Name, err)
+		log.Errorf("Removing IPConfigurations from NIC %s has failed with err %s", *nic.Name, err)
 		return err
 	}
 	// Delete orphaned NIC (no VM associated and at this point we know it's a master NIC that's been removed from all backend pools)
-	m.log.Infof("Deleting orphaned control plane machine NIC %s, not associated with any VM.", *nic.Name)
-	err = m.armInterfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
+	log.Infof("Deleting orphaned control plane machine NIC %s, not associated with any VM.", *nic.Name)
+	err = interfacesClient.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
 	if err != nil {
-		m.log.Errorf("Failed to delete orphaned NIC %s", *nic.Name)
+		log.Errorf("Failed to delete orphaned NIC %s", *nic.Name)
 		return err
 	}
 
