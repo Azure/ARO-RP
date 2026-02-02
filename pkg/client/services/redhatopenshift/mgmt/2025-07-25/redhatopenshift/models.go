@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/gofrs/uuid"
 )
@@ -487,7 +488,7 @@ func (oscl OpenShiftClusterList) openShiftClusterListPreparer(ctx context.Contex
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
 		autorest.AsJSON(),
 		autorest.AsGet(),
-		autorest.WithBaseURL(*oscl.NextLink))
+		autorest.WithBaseURL(to.String(oscl.NextLink)))
 }
 
 // OpenShiftClusterListPage contains a page of OpenShiftCluster values.
@@ -982,7 +983,7 @@ func (osvl OpenShiftVersionList) openShiftVersionListPreparer(ctx context.Contex
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
 		autorest.AsJSON(),
 		autorest.AsGet(),
-		autorest.WithBaseURL(*osvl.NextLink))
+		autorest.WithBaseURL(to.String(osvl.NextLink)))
 }
 
 // OpenShiftVersionListPage contains a page of OpenShiftVersion values.
@@ -1157,7 +1158,7 @@ func (ol OperationList) operationListPreparer(ctx context.Context) (*http.Reques
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
 		autorest.AsJSON(),
 		autorest.AsGet(),
-		autorest.WithBaseURL(*ol.NextLink))
+		autorest.WithBaseURL(to.String(ol.NextLink)))
 }
 
 // OperationListPage contains a page of Operation values.
@@ -1467,7 +1468,7 @@ func (pwirsl PlatformWorkloadIdentityRoleSetList) platformWorkloadIdentityRoleSe
 	return autorest.Prepare((&http.Request{}).WithContext(ctx),
 		autorest.AsJSON(),
 		autorest.AsGet(),
-		autorest.WithBaseURL(*pwirsl.NextLink))
+		autorest.WithBaseURL(to.String(pwirsl.NextLink)))
 }
 
 // PlatformWorkloadIdentityRoleSetListPage contains a page of PlatformWorkloadIdentityRoleSet values.
