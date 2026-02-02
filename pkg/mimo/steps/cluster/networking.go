@@ -38,3 +38,27 @@ func MigrateInternalLoadBalancerZonesStep(ctx context.Context) error {
 
 	return nil
 }
+
+func FixSSHStep(ctx context.Context) error {
+	th, err := mimo.GetTaskContextWithAzureClients(ctx)
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	lbc, err := th.LoadBalancersClient()
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	ifc, err := th.InterfacesClient()
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	err = cluster.FixSSH(ctx, th.Log(), lbc, ifc, th.GetOpenshiftClusterDocument().OpenShiftCluster)
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	return nil
+}
