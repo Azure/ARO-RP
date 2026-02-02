@@ -200,8 +200,9 @@ stages:
               azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
           - bash: |
-              az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              az account set -s "$AZURE_SUBSCRIPTION_ID"
             displayName: Fetch secrets
 
           - bash: |
@@ -325,8 +326,9 @@ stages:
               azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
           - bash: |
-              az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              . secrets/env
+              az account set -s "$AZURE_SUBSCRIPTION_ID"
             displayName: Fetch secrets
 
           - bash: |
