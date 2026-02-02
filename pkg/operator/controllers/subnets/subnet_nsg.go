@@ -5,15 +5,23 @@ package subnets
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
@@ -21,6 +29,9 @@ const (
 	AnnotationTimestamp = "aro.openshift.io/lastSubnetReconcileTimestamp"
 )
 
+// ensureSubnetNSG verifies the subnet has the correct Network Security Group assigned.
+// If the NSG is missing or incorrect, it updates the subnet with the correct NSG
+// and records the reconciliation timestamp on the Cluster resource.
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
 	architectureVersion := api.ArchitectureVersion(r.instance.Spec.ArchitectureVersion)
 
@@ -68,10 +79,27 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	return r.updateReconcileSubnetAnnotation(ctx)
 }
 
+// updateReconcileSubnetAnnotation updates the Cluster resource with a timestamp annotation
+// indicating when the last subnet reconciliation occurred. It uses retry-on-conflict to
+// handle concurrent modifications to the Cluster resource.
 func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) error {
-	if r.instance.Annotations == nil {
-		r.instance.Annotations = make(map[string]string)
-	}
-	r.instance.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
-	return r.client.Update(ctx, r.instance)
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cluster := &arov1alpha1.Cluster{}
+		if err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster); err != nil {
+			return err
+		}
+
+		if cluster.Annotations == nil {
+			cluster.Annotations = make(map[string]string)
+		}
+		cluster.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
+
+		patchPayload := &metav1.PartialObjectMetadata{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: cluster.Annotations,
+			},
+		}
+		payloadBytes, _ := json.Marshal(patchPayload)
+		return r.client.Patch(ctx, cluster, client.RawPatch(types.MergePatchType, payloadBytes))
+	})
 }
