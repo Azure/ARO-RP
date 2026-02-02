@@ -99,7 +99,10 @@ func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) 
 				Annotations: cluster.Annotations,
 			},
 		}
-		payloadBytes, _ := json.Marshal(patchPayload)
+		payloadBytes, err := json.Marshal(patchPayload)
+		if err != nil {
+			return err
+		}
 		return r.client.Patch(ctx, cluster, client.RawPatch(types.MergePatchType, payloadBytes))
 	})
 }
