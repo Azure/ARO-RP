@@ -15,6 +15,7 @@ import (
 type azClients struct {
 	fpCred *azidentity.ClientCertificateCredential
 
+	interfacesClient          *armnetwork.InterfacesClient
 	loadBalancerClient        *armnetwork.LoadBalancersClient
 	resourceSKUsClient        *armcompute.ResourceSKUsClient
 	privateLinkServicesClient *armnetwork.PrivateLinkServicesClient
@@ -85,4 +86,22 @@ func (t *th) PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, 
 	}
 
 	return *t.az.privateLinkServicesClient, nil
+}
+
+func (t *th) InterfacesClient() (armnetwork.InterfacesClient, error) {
+	err := t.setupAzureClients()
+	if err != nil {
+		return nil, err
+	}
+
+	if t.az.interfacesClient != nil {
+		interfacesClient, err := armnetwork.NewInterfacesClient(t.sub.ID, t.az.fpCred, t.env.Environment().ArmClientOptions())
+		if err != nil {
+			return nil, fmt.Errorf("failure creating client: %w", err)
+		}
+
+		t.az.interfacesClient = &interfacesClient
+	}
+
+	return *t.az.interfacesClient, nil
 }

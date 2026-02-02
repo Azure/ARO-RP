@@ -45,6 +45,7 @@ type TaskContext interface {
 type TaskContextWithAzureClients interface {
 	TaskContext
 
+	InterfacesClient() (armnetwork.InterfacesClient, error)
 	LoadBalancersClient() (armnetwork.LoadBalancersClient, error)
 	PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, error)
 	ResourceSKUsClient() (armcompute.ResourceSKUsClient, error)

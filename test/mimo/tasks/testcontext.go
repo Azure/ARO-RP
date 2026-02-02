@@ -36,6 +36,7 @@ type fakeTestContext struct {
 	properties        api.OpenShiftClusterProperties
 	doc               *api.OpenShiftClusterDocument
 
+	interfacesClient          armnetwork.InterfacesClient
 	loadBalancerClient        armnetwork.LoadBalancersClient
 	resourceSKUsClient        armcompute.ResourceSKUsClient
 	privateLinkServicesClient armnetwork.PrivateLinkServicesClient
@@ -90,6 +91,12 @@ func WithResourceSKUsClient(c armcompute.ResourceSKUsClient) Option {
 func WithPrivateLinkServicesClient(c armnetwork.PrivateLinkServicesClient) Option {
 	return func(ftc *fakeTestContext) {
 		ftc.privateLinkServicesClient = c
+	}
+}
+
+func WithInterfacesClient(c armnetwork.InterfacesClient) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.interfacesClient = c
 	}
 }
 
@@ -197,4 +204,12 @@ func (t *fakeTestContext) PrivateLinkServicesClient() (armnetwork.PrivateLinkSer
 	}
 
 	return t.privateLinkServicesClient, nil
+}
+
+func (t *fakeTestContext) InterfacesClient() (armnetwork.InterfacesClient, error) {
+	if t.interfacesClient == nil {
+		return nil, fmt.Errorf("no armnetwork.InterfacesClient provided")
+	}
+
+	return t.interfacesClient, nil
 }
