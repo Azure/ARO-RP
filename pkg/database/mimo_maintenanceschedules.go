@@ -14,6 +14,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
+const (
+	MaintenanceScheduleQueryValid = `SELECT * FROM MaintenanceSchedules doc WHERE doc.maintenanceSchedule.state IN ("Enabled", "Processing")`
+)
+
 type MaintenanceScheduleDocumentMutator func(*api.MaintenanceScheduleDocument) error
 
 type maintenanceSchedules struct {
@@ -24,6 +28,7 @@ type maintenanceSchedules struct {
 }
 
 type MaintenanceSchedules interface {
+	GetValid(context.Context, string) (cosmosdb.MaintenanceScheduleDocumentIterator, error)
 	Create(context.Context, *api.MaintenanceScheduleDocument) (*api.MaintenanceScheduleDocument, error)
 	Patch(context.Context, string, string, MaintenanceScheduleDocumentMutator) (*api.MaintenanceScheduleDocument, error)
 	PatchWithLease(context.Context, string, string, MaintenanceScheduleDocumentMutator) (*api.MaintenanceScheduleDocument, error)
@@ -53,6 +58,12 @@ func NewMaintenanceSchedulesWithProvidedClient(client cosmosdb.MaintenanceSchedu
 
 func (c *maintenanceSchedules) NewUUID() string {
 	return c.uuidGenerator.Generate()
+}
+
+func (c *maintenanceSchedules) GetValid(ctx context.Context, continuation string) (cosmosdb.MaintenanceScheduleDocumentIterator, error) {
+	return c.c.Query("", &cosmosdb.Query{
+		Query: MaintenanceScheduleQueryValid,
+	}, &cosmosdb.Options{Continuation: continuation}), nil
 }
 
 func (c *maintenanceSchedules) Create(ctx context.Context, doc *api.MaintenanceScheduleDocument) (*api.MaintenanceScheduleDocument, error) {
