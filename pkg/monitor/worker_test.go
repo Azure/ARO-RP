@@ -59,7 +59,7 @@ func TestChangefeedOperations(t *testing.T) {
 	mon := env.CreateTestMonitor("changefeed")
 
 	// Start changefeed
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 
 	stopChan := make(chan struct{})
@@ -70,7 +70,7 @@ func TestChangefeedOperations(t *testing.T) {
 		close(stopChan)
 	}()
 
-	mon.changefeedInterval = time.Second / 2
+	mon.changefeedInterval = time.Second / 100
 	go func() {
 		// Running changefeed loop every second
 		mon.startChangefeeds(ctx, stopChan)
@@ -149,7 +149,7 @@ func TestChangefeedOperations(t *testing.T) {
 			}
 
 			// Wait for changefeed to process
-			time.Sleep(2 * time.Second)
+			time.Sleep(200 * time.Millisecond)
 
 			// Validate expected results
 			if len(mon.docs) != op.expectDocs {
