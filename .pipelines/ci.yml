@@ -270,7 +270,7 @@ stages:
               # The script calls ./db <resource-id> which connects to the CosmosDB to fetch cluster details.
               # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
-              SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+              SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-$(az account show --query id -o tsv)}"
               go build ./hack/db
               ./hack/get-admin-kubeconfig.sh /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=$(pwd)/admin.kubeconfig
@@ -413,7 +413,7 @@ stages:
               # The script calls ./db <resource-id> which connects to the CosmosDB to fetch cluster details.
               # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
-              SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+              SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-$(az account show --query id -o tsv)}"
               go build ./hack/db
               ./hack/get-admin-kubeconfig.sh /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=$(pwd)/admin.kubeconfig
