@@ -102,7 +102,7 @@ var _ = Describe("MIMO Scheduler Service", Ordered, func() {
 
 		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters)
 
-		svc = NewService(_env, log, nil, dbg, m, []int{1})
+		svc = NewService(_env, log, dbg, m, []int{1})
 		svc.now = now
 		svc.workerDelay = func() time.Duration { return 0 * time.Second }
 		svc.serveHealthz = false
