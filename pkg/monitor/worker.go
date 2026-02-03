@@ -93,48 +93,6 @@ func (c *clusterChangeFeedResponder) OnAllPendingProcessed() {
 	c.mon.lastClusterChangefeed.Store(time.Now())
 }
 
-type subscriptionsChangeFeedResponder struct {
-	mon *monitor
-}
-
-func (c *subscriptionsChangeFeedResponder) Lock() {
-	c.mon.mu.Lock()
-}
-func (c *subscriptionsChangeFeedResponder) Unlock() {
-	c.mon.mu.Unlock()
-}
-
-// the changefeed tracks the OpenShiftClusters change feed and keeps mon.docs
-// up-to-date.  We don't monitor clusters in Creating state, hence we don't add
-// them to mon.docs.  We also don't monitor clusters in Deleting state; when
-// this state is reached we delete from mon.docs
-func (r *subscriptionsChangeFeedResponder) OnDoc(sub *api.SubscriptionDocument) {
-	id := strings.ToLower(sub.ID)
-
-	// Don't keep subscriptions that are restricted, warned, or are
-	// being deleted from our db
-	if sub.Subscription.State == api.SubscriptionStateSuspended ||
-		sub.Subscription.State == api.SubscriptionStateWarned ||
-		sub.Subscription.State == api.SubscriptionStateDeleted {
-		// delete is a no-op if it doesn't exist
-		delete(r.mon.subs, id)
-		return
-	}
-	c, ok := r.mon.subs[id]
-	if ok {
-		// update this as subscription might have moved tenants
-		c.TenantID = strings.ToLower(sub.Subscription.Properties.TenantID)
-	} else {
-		r.mon.subs[id] = &subscriptionInfo{
-			TenantID: strings.ToLower(sub.Subscription.Properties.TenantID),
-		}
-	}
-}
-
-func (c *subscriptionsChangeFeedResponder) OnAllPendingProcessed() {
-	c.mon.lastSubscriptionChangefeed.Store(time.Now())
-}
-
 // changefeedMetrics emits metrics tracking the size of the changefeed caches.
 func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
 	defer recover.Panic(mon.baseLog)
@@ -143,7 +101,7 @@ func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
 	defer t.Stop()
 	for {
 		mon.m.EmitGauge("monitor.cache.size", int64(len(mon.docs)), map[string]string{"cache": "openshiftclusters"})
-		mon.m.EmitGauge("monitor.cache.size", int64(len(mon.subs)), map[string]string{"cache": "subscriptions"})
+		mon.m.EmitGauge("monitor.cache.size", int64(mon.subs.GetCacheSize()), map[string]string{"cache": "subscriptions"})
 
 		select {
 		case <-t.C:
@@ -197,7 +155,7 @@ out:
 		mon.mu.RLock()
 		v := mon.docs[id]
 		subID := strings.ToLower(r.SubscriptionID)
-		sub := mon.subs[subID]
+		sub, subok := mon.subs.GetSubscription(subID)
 		mon.mu.RUnlock()
 
 		if v == nil {
@@ -209,7 +167,7 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if sub != nil {
+		if subok {
 			mon.workOne(context.Background(), log, v.doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
 		}
 
@@ -218,7 +176,7 @@ out:
 			select {
 			case <-subscriptionStateLoggingTicker.C:
 				// The changefeed filters out subscriptions in invalid states
-				if sub == nil {
+				if !subok {
 					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
 				}
 			default:

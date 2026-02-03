@@ -52,7 +52,7 @@ type monitor struct {
 	clusterm metrics.Emitter
 	mu       sync.RWMutex
 	docs     map[string]*cacheDoc
-	subs     map[string]*subscriptionInfo
+	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
 	isMaster    bool
@@ -75,12 +75,6 @@ type monitor struct {
 	changefeedInterval time.Duration // Interval between changefeed runs (updates to cluster docs)
 }
 
-// subscriptionInfo stores TenantID for a given subscription. We don't store the
-// state as we filter out unwanted states in the changefeed.
-type subscriptionInfo struct {
-	TenantID string
-}
-
 type Runnable interface {
 	Run(context.Context) error
 }
@@ -95,7 +89,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		m:        m,
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
-		subs:     map[string]*subscriptionInfo{},
+		subs:     changefeed.NewSubscriptionsChangefeedCache(),
 		env:      e,
 
 		bucketCount: bucket.Buckets,
@@ -203,12 +197,11 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 	)
 
 	// fill the cache from the database change feed
-	subResponder := &subscriptionsChangeFeedResponder{mon: mon}
 	var subChangefeed changefeed.Changefeed[*api.SubscriptionDocuments] = dbSubscriptions.ChangeFeed()
 	go changefeed.NewChangefeed[*api.SubscriptionDocument](
 		ctx, mon.baseLog.WithField("component", "changefeed"), subChangefeed,
 		mon.changefeedInterval,
-		changefeedBatchSize, subResponder, stop,
+		changefeedBatchSize, mon.subs, stop,
 	)
 
 	return nil

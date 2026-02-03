@@ -155,8 +155,8 @@ func TestChangefeedOperations(t *testing.T) {
 			if len(mon.docs) != op.expectDocs {
 				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, len(mon.docs))
 			}
-			if len(mon.subs) != op.expectSubs {
-				t.Errorf("%s: expected %d subscriptions in cache, got %d", op.name, op.expectSubs, len(mon.subs))
+			if mon.subs.GetCacheSize() != op.expectSubs {
+				t.Errorf("%s: expected %d subscriptions in cache, got %d", op.name, op.expectSubs, mon.subs.GetCacheSize())
 			}
 		})
 	}
