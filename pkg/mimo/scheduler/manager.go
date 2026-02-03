@@ -5,17 +5,17 @@ package scheduler
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 )
+
+type getCachedDoc func() (*api.MaintenanceScheduleDocument, bool)
 
 type Scheduler interface {
 	Process(context.Context) (bool, error)
@@ -27,31 +27,28 @@ type scheduler struct {
 	log *logrus.Entry
 	now func() time.Time
 
-	clusterResourceID string
+	cachedDoc getCachedDoc
 
-	oc  database.OpenShiftClusters
-	mmf database.MaintenanceManifests
+	dbs schedulerDBs
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 }
 
 var _ Scheduler = (*scheduler)(nil)
 
-func NewScheduler(
+func NewSchedulerForSchedule(
 	ctx context.Context,
 	_env env.Interface,
 	log *logrus.Entry,
-	clusterResourceID string,
-	oc database.OpenShiftClusters,
-	mmf database.MaintenanceManifests,
+	cachedDoc getCachedDoc,
+	dbs schedulerDBs,
 	now func() time.Time) (Scheduler, error) {
 	a := &scheduler{
-		env:               _env,
-		log:               log,
-		clusterResourceID: strings.ToLower(clusterResourceID),
-		oc:                oc,
-		mmf:               mmf,
-		tasks:             make(map[api.MIMOTaskID]tasks.MaintenanceTask),
+		env:       _env,
+		log:       log,
+		cachedDoc: cachedDoc,
+		dbs:       dbs,
+		tasks:     make(map[api.MIMOTaskID]tasks.MaintenanceTask),
 
 		now: now,
 	}
