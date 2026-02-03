@@ -39,7 +39,7 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 
 	var uuidGeneratorManifests uuid.Generator
 
-	var a Scheduler
+	var a *scheduler
 
 	var ctx context.Context
 	var cancel context.CancelFunc
@@ -85,14 +85,13 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 		schedules, schedulesClient = testdatabase.NewFakeMaintenanceSchedules(now)
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
 
+		dbs := database.NewDBGroup().WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
+
 		a = &scheduler{
 			log: log,
 			env: _env,
 
-			clusterResourceID: strings.ToLower(clusterResourceID),
-
-			mmf: manifests,
-			oc:  clusters,
+			dbs: dbs,
 
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
 			now:   now,
@@ -148,26 +147,21 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 
 	When("active schedule", func() {
 		var manifestScheduleID string
+		var schedule *api.MaintenanceScheduleDocument
 
 		BeforeEach(func() {
 			manifestScheduleID = schedules.NewUUID()
-
-			fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
+			schedule = &api.MaintenanceScheduleDocument{
 				ID: manifestScheduleID,
 				MaintenanceSchedule: api.MaintenanceSchedule{
 					State:             api.MaintenanceScheduleStateEnabled,
 					MaintenanceTaskID: api.MIMOTaskID("0"),
 				},
-			})
+			}
+			fixtures.AddMaintenanceScheduleDocuments(schedule)
 
 			// Schedule is unchanged
-			checker.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
-				ID: manifestScheduleID,
-				MaintenanceSchedule: api.MaintenanceSchedule{
-					State:             api.MaintenanceScheduleStateEnabled,
-					MaintenanceTaskID: api.MIMOTaskID("0"),
-				},
-			})
+			checker.AddMaintenanceScheduleDocuments(schedule)
 
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID: uuidGeneratorManifests.Generate(),
@@ -180,6 +174,8 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 					return nil
 				},
 			})
+
+			a.cachedDoc = func() (*api.MaintenanceScheduleDocument, bool) { return schedule, true }
 
 			didWork, err := a.Process(ctx)
 			Expect(err).ToNot(HaveOccurred())

@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -266,31 +265,21 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	defer s.workerRoutines.Done()
 
 	delay := s.workerDelay()
-	log := utillog.EnrichWithResourceID(s.baseLog, id)
+	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
 	// Wait for a randomised delay before starting
 	time.Sleep(delay)
 
-	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
+	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
+
+	a, err := NewSchedulerForSchedule(context.Background(), s.env, log, getDoc, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	dbMaintenanceManifests, err := s.dbGroup.MaintenanceManifests()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	a, err := NewScheduler(context.Background(), s.env, log, id, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	// load in the tasks for the Actuator from the controller
+	// load in valid tasks
 	a.AddMaintenanceTasks(s.tasks)
 
 	t := time.NewTicker(s.pollTime)
