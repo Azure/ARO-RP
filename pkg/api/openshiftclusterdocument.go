@@ -15,6 +15,16 @@ func (c *OpenShiftClusterDocuments) String() string {
 	return encodeJSON(c)
 }
 
+func (c *OpenShiftClusterDocuments) GetCount() int {
+	if c == nil {
+		return 0
+	}
+	return c.Count
+}
+func (c *OpenShiftClusterDocuments) Docs() []*OpenShiftClusterDocument {
+	return c.OpenShiftClusterDocuments
+}
+
 // OpenShiftClusterDocument represents an OpenShift cluster document.
 // pkg/database/cosmosdb requires its definition.
 type OpenShiftClusterDocument struct {

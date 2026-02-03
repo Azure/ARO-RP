@@ -61,121 +61,78 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 	return err
 }
 
-// changefeed tracks the OpenShiftClusters change feed and keeps mon.docs
+type clusterChangeFeedResponder struct {
+	mon *monitor
+}
+
+func (c *clusterChangeFeedResponder) Lock() {
+	c.mon.mu.Lock()
+}
+func (c *clusterChangeFeedResponder) Unlock() {
+	c.mon.mu.Unlock()
+}
+
+func (c *clusterChangeFeedResponder) OnDoc(doc *api.OpenShiftClusterDocument) {
+	ps := doc.OpenShiftCluster.Properties.ProvisioningState
+	fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
+
+	switch {
+	case ps == api.ProvisioningStateCreating,
+		ps == api.ProvisioningStateDeleting,
+		ps == api.ProvisioningStateFailed &&
+			(fps == api.ProvisioningStateCreating ||
+				fps == api.ProvisioningStateDeleting):
+		c.mon.deleteDoc(doc)
+	default:
+		// TODO: improve memory usage by storing a subset of doc in mon.docs
+		c.mon.upsertDoc(doc)
+	}
+}
+
+func (c *clusterChangeFeedResponder) OnAllPendingProcessed() {
+	c.mon.lastClusterChangefeed.Store(time.Now())
+}
+
+type subscriptionsChangeFeedResponder struct {
+	mon *monitor
+}
+
+func (c *subscriptionsChangeFeedResponder) Lock() {
+	c.mon.mu.Lock()
+}
+func (c *subscriptionsChangeFeedResponder) Unlock() {
+	c.mon.mu.Unlock()
+}
+
+// the changefeed tracks the OpenShiftClusters change feed and keeps mon.docs
 // up-to-date.  We don't monitor clusters in Creating state, hence we don't add
 // them to mon.docs.  We also don't monitor clusters in Deleting state; when
 // this state is reached we delete from mon.docs
-func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}) {
-	defer recover.Panic(baseLog)
+func (r *subscriptionsChangeFeedResponder) OnDoc(sub *api.SubscriptionDocument) {
+	id := strings.ToLower(sub.ID)
 
-	dbOpenShiftClusters, err := mon.dbGroup.OpenShiftClusters()
-	if err != nil {
-		baseLog.Error(err)
-		panic(err)
+	// Don't keep subscriptions that are restricted, warned, or are
+	// being deleted from our db
+	if sub.Subscription.State == api.SubscriptionStateSuspended ||
+		sub.Subscription.State == api.SubscriptionStateWarned ||
+		sub.Subscription.State == api.SubscriptionStateDeleted {
+		// delete is a no-op if it doesn't exist
+		delete(r.mon.subs, id)
+		return
 	}
-
-	dbSubscriptions, err := mon.dbGroup.Subscriptions()
-	if err != nil {
-		baseLog.Error(err)
-		panic(err)
-	}
-
-	clustersIterator := dbOpenShiftClusters.ChangeFeed()
-	subscriptionsIterator := dbSubscriptions.ChangeFeed()
-
-	// Align this time with the deletion mechanism.
-	// Go to docs/monitoring.md for the details.
-	t := time.NewTicker(mon.changefeedInterval)
-	defer t.Stop()
-
-	for {
-		successful := true
-		for {
-			docs, err := clustersIterator.Next(ctx, changefeedBatchSize)
-			if err != nil {
-				successful = false
-				baseLog.Error(err)
-				break
-			}
-			if docs == nil {
-				break
-			}
-
-			baseLog.Debugf("openshiftclusters changefeed page was %d docs", docs.Count)
-
-			mon.mu.Lock()
-
-			for _, doc := range docs.OpenShiftClusterDocuments {
-				ps := doc.OpenShiftCluster.Properties.ProvisioningState
-				fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
-
-				switch {
-				case ps == api.ProvisioningStateCreating,
-					ps == api.ProvisioningStateDeleting,
-					ps == api.ProvisioningStateFailed &&
-						(fps == api.ProvisioningStateCreating ||
-							fps == api.ProvisioningStateDeleting):
-					mon.deleteDoc(doc)
-				default:
-					// TODO: improve memory usage by storing a subset of doc in mon.docs
-					mon.upsertDoc(doc)
-				}
-			}
-
-			mon.mu.Unlock()
-		}
-
-		for {
-			subs, err := subscriptionsIterator.Next(ctx, changefeedBatchSize)
-			if err != nil {
-				successful = false
-				baseLog.Error(err)
-				break
-			}
-			if subs == nil {
-				break
-			}
-
-			baseLog.Debugf("subscriptions changefeed page was %d docs", subs.Count)
-
-			mon.mu.Lock()
-
-			for _, sub := range subs.SubscriptionDocuments {
-				id := strings.ToLower(sub.ID)
-
-				// Don't keep subscriptions that are restricted, warned, or are
-				// being deleted from our db
-				if sub.Subscription.State == api.SubscriptionStateSuspended ||
-					sub.Subscription.State == api.SubscriptionStateWarned ||
-					sub.Subscription.State == api.SubscriptionStateDeleted {
-					// delete is a no-op if it doesn't exist
-					delete(mon.subs, id)
-					continue
-				}
-				c, ok := mon.subs[id]
-				if ok {
-					// update this as subscription might have moved tenants
-					c.TenantID = strings.ToLower(sub.Subscription.Properties.TenantID)
-				} else {
-					mon.subs[id] = &subscriptionInfo{
-						TenantID: strings.ToLower(sub.Subscription.Properties.TenantID),
-					}
-				}
-			}
-
-			mon.mu.Unlock()
-		}
-
-		if successful {
-			mon.lastChangefeed.Store(time.Now())
-		}
-
-		select {
-		case <-t.C:
-		case <-stop:
-			return
+	c, ok := r.mon.subs[id]
+	if ok {
+		// update this as subscription might have moved tenants
+		c.TenantID = strings.ToLower(sub.Subscription.Properties.TenantID)
+	} else {
+		r.mon.subs[id] = &subscriptionInfo{
+			TenantID: strings.ToLower(sub.Subscription.Properties.TenantID),
 		}
 	}
+}
+
+func (c *subscriptionsChangeFeedResponder) OnAllPendingProcessed() {
+	c.mon.lastSubscriptionChangefeed.Store(time.Now())
 }
 
 // changefeedMetrics emits metrics tracking the size of the changefeed caches.

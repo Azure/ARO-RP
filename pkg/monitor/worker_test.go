@@ -73,7 +73,7 @@ func TestChangefeedOperations(t *testing.T) {
 	mon.changefeedInterval = time.Second / 2
 	go func() {
 		// Running changefeed loop every second
-		mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), stopChan)
+		mon.startChangefeeds(ctx, stopChan)
 		wg.Done()
 	}()
 
