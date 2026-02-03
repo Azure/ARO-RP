@@ -803,6 +803,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
 		}
 
+		// Why do we have 2 fucntions to delete a RG? Couldn't we call the same one twice?
 		if err := c.ensureResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
 			c.log.Errorf("Failed to ensure resource group %s deleted: %v", clusterResourceGroup, err)
 			errs = append(errs, fmt.Errorf("failed to ensure resource group %s deleted: %w", clusterResourceGroup, err))
