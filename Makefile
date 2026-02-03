@@ -305,7 +305,7 @@ validate-go: validate-imports
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action: validate-imports validate-lint-go-fix
+validate-go-action: validate-imports validate-lint-go-fix validate-gh-actions
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -341,6 +341,16 @@ validate-lint-go-fix: lint-go-fix
 		echo "You need to run 'make lint-go-fix' to update the codebase and commit the changes"; \
 		exit 1; \
 	fi
+
+.PHONY: validate-gh-actions
+validate-gh-actions: ## Validate GitHub Actions are pinned to SHA
+	@echo "Checking that all GitHub Actions are pinned to SHA..."
+	@if grep -rE 'uses:\s+[^@]+@(v[0-9]|master|main|releases/)' .github/workflows/*.yml 2>/dev/null | grep -v '#'; then \
+		echo "Error: Found unpinned GitHub Actions (must use SHA with version comment)"; \
+		echo "Run 'npx pin-github-action .github/workflows/' to fix"; \
+		exit 1; \
+	fi
+	@echo "All GitHub Actions are properly pinned to SHA"
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
