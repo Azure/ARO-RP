@@ -19,7 +19,7 @@ jobs:
       image: registry.access.redhat.com/ubi9/python-311:latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: validate
         run: |
           make test-python
