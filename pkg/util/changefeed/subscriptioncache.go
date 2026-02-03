@@ -12,6 +12,7 @@ import (
 // subscriptionInfo stores TenantID for a given subscription. We don't store the
 // state as we filter out unwanted states in the changefeed.
 type subscriptionInfo struct {
+	State    api.SubscriptionState
 	TenantID string
 }
 
@@ -22,13 +23,17 @@ type SubscriptionsCache interface {
 	GetSubscription(string) (*subscriptionInfo, bool)
 }
 
-func NewSubscriptionsChangefeedCache() *subscriptionsChangeFeedResponder {
+func NewSubscriptionsChangefeedCache(onlyValidSubscriptions bool) *subscriptionsChangeFeedResponder {
 	return &subscriptionsChangeFeedResponder{
-		subs: map[string]*subscriptionInfo{},
+		onlyValidSubscriptions: onlyValidSubscriptions,
+		subs:                   map[string]*subscriptionInfo{},
 	}
 }
 
 type subscriptionsChangeFeedResponder struct {
+	// Do we want to only include valid (i.e. not suspended) subscriptions?
+	onlyValidSubscriptions bool
+
 	mu                      sync.RWMutex
 	lastChangefeedProcessed atomic.Value // time.Time
 
@@ -63,11 +68,11 @@ func (c *subscriptionsChangeFeedResponder) Unlock() {
 func (r *subscriptionsChangeFeedResponder) OnDoc(sub *api.SubscriptionDocument) {
 	id := strings.ToLower(sub.ID)
 
-	// Don't keep subscriptions that are restricted, warned, or are
-	// being deleted from our db
-	if sub.Subscription.State == api.SubscriptionStateSuspended ||
-		sub.Subscription.State == api.SubscriptionStateWarned ||
-		sub.Subscription.State == api.SubscriptionStateDeleted {
+	// Don't keep subscriptions that are being deleted from our db
+	if sub.Subscription.State == api.SubscriptionStateDeleted ||
+		// Filter out restricted/warned subscriptions, if set
+		((sub.Subscription.State == api.SubscriptionStateSuspended ||
+			sub.Subscription.State == api.SubscriptionStateWarned) && r.onlyValidSubscriptions) {
 		// delete is a no-op if it doesn't exist
 		delete(r.subs, id)
 		return

@@ -89,7 +89,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		m:        m,
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
-		subs:     changefeed.NewSubscriptionsChangefeedCache(),
+		subs:     changefeed.NewSubscriptionsChangefeedCache(true),
 		env:      e,
 
 		bucketCount: bucket.Buckets,
@@ -188,7 +188,7 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 	// fill the cache from the database change feed
 	clusterResponder := &clusterChangeFeedResponder{mon: mon}
 	var clusterChangefeed changefeed.Changefeed[*api.OpenShiftClusterDocuments] = dbOpenShiftClusters.ChangeFeed()
-	go changefeed.NewChangefeed[*api.OpenShiftClusterDocument](
+	go changefeed.NewChangefeed(
 		ctx, mon.baseLog.WithField("component", "changefeed"), clusterChangefeed,
 		// Align this time with the deletion mechanism.
 		// Go to docs/monitoring.md for the details.
@@ -198,7 +198,7 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 
 	// fill the cache from the database change feed
 	var subChangefeed changefeed.Changefeed[*api.SubscriptionDocuments] = dbSubscriptions.ChangeFeed()
-	go changefeed.NewChangefeed[*api.SubscriptionDocument](
+	go changefeed.NewChangefeed(
 		ctx, mon.baseLog.WithField("component", "changefeed"), subChangefeed,
 		mon.changefeedInterval,
 		changefeedBatchSize, mon.subs, stop,
