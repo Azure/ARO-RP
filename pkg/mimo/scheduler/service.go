@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
@@ -35,7 +34,6 @@ type Runnable interface {
 }
 
 type service struct {
-	dialer  proxy.Dialer
 	baseLog *logrus.Entry
 	env     env.Interface
 
@@ -71,11 +69,10 @@ type schedulerDBs interface {
 	database.DatabaseGroupWithMaintenanceSchedules
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg schedulerDBs, m metrics.Emitter, ownedBuckets []int) *service {
+func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metrics.Emitter, ownedBuckets []int) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
-		dialer:  dialer,
 
 		dbGroup: dbg,
 
