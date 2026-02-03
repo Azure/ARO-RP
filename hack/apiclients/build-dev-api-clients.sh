@@ -33,7 +33,6 @@ function generate_golang() {
   docker run \
     --platform=linux/amd64 \
     --rm \
-    --user $(id -u):$(id -g) \
     -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
     --entrypoint sed \
     "${AUTOREST_IMAGE}" \
