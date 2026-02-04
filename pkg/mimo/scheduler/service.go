@@ -99,9 +99,7 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		serveHealthz: true,
 	}
 
-	s.clusters = &openShiftClusterCache{
-		subCache: s.subs,
-	}
+	s.clusters = newOpenShiftClusterCache(log, s.subs)
 
 	s.cond = sync.NewCond(&s.mu)
 	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
@@ -154,6 +152,45 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
+	t := time.NewTicker(10 * time.Second)
+	defer t.Stop()
+
+	if stop != nil {
+		go func() {
+			defer recover.Panic(s.baseLog)
+
+			<-stop
+			s.baseLog.Print("stopping")
+			s.stopping.Store(true)
+			s.cond.Signal()
+		}()
+	}
+
+	s.startChangefeeds(ctx, stop)
+
+	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+
+	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
+	for !s.stopping.Load() {
+		old, err := s.poll(ctx, lastGotDocs)
+		if err != nil {
+			s.baseLog.Error(err)
+		} else {
+			lastGotDocs = old
+		}
+
+		<-t.C
+	}
+
+	if !s.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
+		s.waitForWorkerCompletion()
+	}
+	s.baseLog.Print("exiting")
+	close(done)
+	return nil
+}
+
+func (s *service) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
 	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
 	if err != nil {
 		return err
@@ -180,38 +217,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		s.changefeedBatchSize, s.clusters, stop,
 	)
 
-	t := time.NewTicker(10 * time.Second)
-	defer t.Stop()
-
-	if stop != nil {
-		go func() {
-			defer recover.Panic(s.baseLog)
-
-			<-stop
-			s.baseLog.Print("stopping")
-			s.stopping.Store(true)
-			s.cond.Signal()
-		}()
-	}
-	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
-
-	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
-	for !s.stopping.Load() {
-		old, err := s.poll(ctx, lastGotDocs)
-		if err != nil {
-			s.baseLog.Error(err)
-		} else {
-			lastGotDocs = old
-		}
-
-		<-t.C
-	}
-
-	if !s.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
-		s.waitForWorkerCompletion()
-	}
-	s.baseLog.Print("exiting")
-	close(done)
 	return nil
 }
 
@@ -323,7 +328,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 
 	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
 
-	a, err := NewSchedulerForSchedule(context.Background(), s.env, log, getDoc, s.dbGroup, s.now)
+	a, err := NewSchedulerForSchedule(context.Background(), s.env, log, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return

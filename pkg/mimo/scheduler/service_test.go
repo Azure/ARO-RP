@@ -64,6 +64,7 @@ var _ = Describe("MIMO Scheduler Service", Ordered, func() {
 	var _env env.Interface
 
 	var controller *gomock.Controller
+	var stopChan chan struct{}
 
 	AfterAll(func() {
 		if cancel != nil {
@@ -111,6 +112,10 @@ var _ = Describe("MIMO Scheduler Service", Ordered, func() {
 	JustBeforeEach(func() {
 		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).Create()
 		Expect(err).ToNot(HaveOccurred())
+
+		stopChan = make(chan struct{})
+		DeferCleanup(func() { close(stopChan) })
+		svc.startChangefeeds(ctx, stopChan)
 	})
 
 	When("schedules are polled", func() {
