@@ -4,11 +4,14 @@ package scheduler
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
+	"iter"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -22,18 +25,28 @@ type openShiftClusterCache struct {
 
 	subCache changefeed.SubscriptionsCache
 
-	clusters       map[string]*selectorData
-	lastChangefeed atomic.Value //time.Time
-
-	mu sync.RWMutex
+	clusters                   *xsync.Map[string, selectorData]
+	lastChangefeed             atomic.Value //time.Time
+	initialPopulationWaitGroup *sync.WaitGroup
 }
 
+func newOpenShiftClusterCache(log *logrus.Entry, subCache changefeed.SubscriptionsCache) *openShiftClusterCache {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	return &openShiftClusterCache{
+		log:                        log,
+		subCache:                   subCache,
+		clusters:                   xsync.NewMap[string, selectorData](),
+		initialPopulationWaitGroup: wg,
+	}
+}
+
+// before we accept any, ensure that the subcache is populated by waiting on its
+// WaitGroup
 func (c *openShiftClusterCache) Lock() {
-	c.mu.Lock()
+	c.subCache.WaitForInitialPopulation().Wait()
 }
-func (c *openShiftClusterCache) Unlock() {
-	c.mu.Unlock()
-}
+func (c *openShiftClusterCache) Unlock() {}
 
 func (c *openShiftClusterCache) GetLastProcessed() (time.Time, bool) {
 	t, ok := c.lastChangefeed.Load().(time.Time)
@@ -52,40 +65,63 @@ func (c *openShiftClusterCache) OnDoc(doc *api.OpenShiftClusterDocument) {
 			(fps == api.ProvisioningStateCreating ||
 				fps == api.ProvisioningStateDeleting):
 
-		delete(c.clusters, id)
+		c.clusters.Delete(id)
 
 	default:
 		// Update the selector cache with the cluster data
-		data, ok := c.clusters[id]
-		if !ok {
-			data = &selectorData{}
-		}
+		c.clusters.Compute(
+			id, func(oldValue selectorData, loaded bool) (selectorData, xsync.ComputeOp) {
+				new, updated, err := c.toSelectorData(doc, oldValue)
+				if err != nil {
+					c.log.Errorf("failed creating selector data for %s: %s", id, err.Error())
+					return selectorData{}, xsync.CancelOp
+				}
 
-		err := c.toSelectorData(doc, data)
-		if err != nil {
-			c.log.Errorf("failed creating selector data for %s: %s", id, err.Error())
-			return
-		}
-		c.clusters[id] = data
+				if updated {
+					return *new, xsync.UpdateOp
+				} else {
+					return selectorData{}, xsync.CancelOp
+				}
+			})
 	}
 }
 
 func (c *openShiftClusterCache) OnAllPendingProcessed() {
-	c.lastChangefeed.Store(time.Now())
+	old := c.lastChangefeed.Swap(time.Now())
+	// we've done one rotation, unlock the waitgroup
+	if old == nil {
+		c.initialPopulationWaitGroup.Done()
+	}
 }
 
-func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, selectorData *selectorData) error {
+func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, old selectorData) (*selectorData, bool, error) {
+	new := &selectorData{}
+
 	resourceID := strings.ToLower(doc.OpenShiftCluster.ID)
 
 	r, err := azure.ParseResourceID(resourceID)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
 
-	selectorData.ResourceID = resourceID
-	selectorData.SubscriptionID = r.SubscriptionID
+	new.ResourceID = resourceID
+	new.SubscriptionID = r.SubscriptionID
 
 	subCacheData, hasSubCacheData := c.subCache.GetSubscription(r.SubscriptionID)
+	if hasSubCacheData {
+		new.SubscriptionState = subCacheData.State
+	} else {
+		return nil, false, fmt.Errorf("no matching subscription %s", r.SubscriptionID)
+	}
 
-	return nil
+	if new.ResourceID == old.ResourceID && new.SubscriptionID == old.SubscriptionID && new.SubscriptionState == old.SubscriptionState {
+		return nil, false, nil
+	}
+
+	return new, true, nil
+}
+
+func (c *openShiftClusterCache) GetClusters() iter.Seq2[string, selectorData] {
+	c.initialPopulationWaitGroup.Wait()
+	return c.clusters.All()
 }

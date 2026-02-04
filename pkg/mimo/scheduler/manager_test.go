@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -30,6 +31,7 @@ import (
 var _ = Describe("MIMO Scheduler", Ordered, func() {
 	var fixtures *testdatabase.Fixture
 	var checker *testdatabase.Checker
+	var subscriptions database.Subscriptions
 	var schedules database.MaintenanceSchedules
 	var schedulesClient *cosmosdb.FakeMaintenanceScheduleDocumentClient
 	var manifests database.MaintenanceManifests
@@ -43,6 +45,10 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 
 	var ctx context.Context
 	var cancel context.CancelFunc
+	var stop chan struct{}
+
+	var subsCache changefeed.SubscriptionsCache
+	var clusterCache *openShiftClusterCache
 
 	var log *logrus.Entry
 	var _env env.Interface
@@ -50,6 +56,7 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 	var controller *gomock.Controller
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockTenantID := "00001111-0000-0000-0000-000000000000"
 	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
 
 	AfterAll(func() {
@@ -84,14 +91,21 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		schedules, schedulesClient = testdatabase.NewFakeMaintenanceSchedules(now)
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
+		subscriptions, _ = testdatabase.NewFakeSubscriptions()
 
 		dbs := database.NewDBGroup().WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
+
+		subsCache = changefeed.NewSubscriptionsChangefeedCache(false)
+		clusterCache = newOpenShiftClusterCache(log, subsCache)
+		stop = make(chan struct{})
+		DeferCleanup(func() { close(stop) })
 
 		a = &scheduler{
 			log: log,
 			env: _env,
 
-			dbs: dbs,
+			dbs:         dbs,
+			getClusters: clusterCache.GetClusters,
 
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
 			now:   now,
@@ -114,10 +128,19 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 				},
 			},
 		})
+		fixtures.AddSubscriptionDocuments(&api.SubscriptionDocument{
+			ID: mockSubID,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: mockTenantID,
+				},
+			},
+		})
 
 		// After the the fixtures are created in each test's BeforeEach, load
 		// them into the database
-		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).Create()
+		err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).Create()
 		Expect(err).ToNot(HaveOccurred())
 
 		checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -130,6 +153,21 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 				},
 			},
 		})
+
+		// fire up the changefeeds
+
+		go changefeed.NewChangefeed(
+			ctx, log.WithField("component", "subchangefeed"), subscriptions.ChangeFeed(),
+			10*time.Millisecond,
+			10, subsCache, stop,
+		)
+
+		// start cluster changefeed
+		go changefeed.NewChangefeed(
+			ctx, log.WithField("component", "clusterchangefeed"), clusters.ChangeFeed(),
+			10*time.Millisecond,
+			10, clusterCache, stop,
+		)
 	})
 
 	verifyDatabaseState := func() {
