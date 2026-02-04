@@ -30,7 +30,7 @@ var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	masterCount := 0
-	workerinfraCount := 0
+	workerInfraCount := 0
 	machines := mon.getMachines(ctx)
 
 	err := mon.iterateOverNodes(ctx, func(n *corev1.Node) {
