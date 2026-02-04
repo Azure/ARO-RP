@@ -690,10 +690,6 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
-
-	// The Background shouldn't get cancelled but it does:
-	//  Future#WaitForCompletion: context has been cancelled: StatusCode=200 -- Original Error: context deadline exceeded
-	//  REF: https://msazure.visualstudio.com/AzureRedHatOpenShift/_build/results?buildId=151689161&view=logs&j=a5843bde-d5e8-58fa-49ee-1eddd236493e&t=2c089743-578b-5275-4a10-68ef91b7a4f1
 	if err := cleanupE2EInfrastructure(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
