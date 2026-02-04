@@ -1356,7 +1356,7 @@ func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGro
 func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName string) error {
 	c.log.Printf("deleting cluster %s", clusterName)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 
 	var lastErr error
