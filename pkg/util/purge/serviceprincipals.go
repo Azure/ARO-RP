@@ -21,10 +21,8 @@ const (
 	defaultKeepTag = "persist"
 )
 
-var (
-	// Pattern to match V{BUILDID} which identifies e2e test runs
-	buildIDPattern = regexp.MustCompile(`V\d{9,}`)
-)
+// Pattern to match V{BUILDID} which identifies e2e test runs
+var buildIDPattern = regexp.MustCompile(`V\d{9,}`)
 
 // CleanOrphanedE2EServicePrincipals removes orphaned service principals
 // created during e2e test runs. It processes two types of identities:

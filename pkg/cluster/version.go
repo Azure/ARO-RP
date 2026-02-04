@@ -16,7 +16,6 @@ import (
 
 // openShiftClusterDocumentVersioner is the interface that validates and obtains the version from an OpenShiftClusterDocument.
 type openShiftClusterDocumentVersioner interface {
-
 	// Get validates and obtains the OpenShift version of the OpenShiftClusterDocument doc using dbOpenShiftVersions, env and installViaHive parameters.
 	Get(ctx context.Context, doc *api.OpenShiftClusterDocument, dbOpenShiftVersions database.OpenShiftVersions, env env.Interface, installViaHive bool) (*api.OpenShiftVersion, error)
 }

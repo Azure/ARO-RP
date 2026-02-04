@@ -40,7 +40,7 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	registryProfiles := th.GetOpenShiftClusterProperties().RegistryProfiles
 	rp := manager.GetRegistryProfileFromSlice(registryProfiles)
 	if rp != nil {
-		var now = time.Now().UTC()
+		now := time.Now().UTC()
 		issueDate := rp.IssueDate
 
 		if issueDate == nil {

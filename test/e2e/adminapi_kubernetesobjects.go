@@ -60,7 +60,6 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 		const namespace = "e2e-test-namespace"
 
 		When("and using the restricted endpoint", func() {
-
 			It("should not be able to create, get, list, update, or delete objects", func(ctx context.Context) {
 				By("creating a test customer namespace via Kubernetes API")
 				createNamespaceFunc := clients.Kubernetes.CoreV1().Namespaces().Create
@@ -91,7 +90,6 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 		})
 
 		When("and using the unrestricted endpoint", func() {
-
 			It("should be able to list or get objects", func(ctx context.Context) {
 				By("creating a test customer namespace via Kubernetes API")
 				createNamespaceFunc := clients.Kubernetes.CoreV1().Namespaces().Create

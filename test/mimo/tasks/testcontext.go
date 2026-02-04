@@ -71,6 +71,7 @@ func (t *fakeTestContext) LocalFpAuthorizer() (autorest.Authorizer, error) {
 	myAuthorizer := autorest.NullAuthorizer{}
 	return myAuthorizer, nil
 }
+
 func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
 	myCD := &api.OpenShiftClusterDocument{}
 	return myCD

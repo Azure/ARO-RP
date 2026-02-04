@@ -255,7 +255,8 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 "offer": "%v"
 },
 "vmSize": "%v"
-}`, apiVersion, diskSize, imagePublisher, offer, vmSize))},
+}`, apiVersion, diskSize, imagePublisher, offer, vmSize)),
+				},
 			},
 		},
 	}

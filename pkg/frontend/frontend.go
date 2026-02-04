@@ -60,8 +60,10 @@ type frontendDBs interface {
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 
-type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
-type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
+type (
+	azureActionsFactory   func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
+	appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
+)
 
 type frontend struct {
 	auditLog *logrus.Entry
@@ -82,7 +84,7 @@ type frontend struct {
 	availablePlatformWorkloadIdentityRoleSets map[string]*api.PlatformWorkloadIdentityRoleSet
 	apis                                      map[string]*api.Version
 
-	lastOcpVersionsChangefeed                      atomic.Value //time.Time
+	lastOcpVersionsChangefeed                      atomic.Value // time.Time
 	lastPlatformWorkloadIdentityRoleSetsChangefeed atomic.Value
 	ocpVersionsMu                                  sync.RWMutex
 	platformWorkloadIdentityRoleSetsMu             sync.RWMutex
@@ -297,7 +299,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		})
 	})
 
-	//Admin Actions
+	// Admin Actions
 
 	r.Route("/admin", func(r chi.Router) {
 		r.Route("/versions", func(r chi.Router) {

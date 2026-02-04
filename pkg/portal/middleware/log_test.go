@@ -138,7 +138,7 @@ func TestAuditTargetResourceData(t *testing.T) {
 		testResource      = "test-resource"
 	)
 
-	var testCases = []struct {
+	testCases := []struct {
 		url          string
 		expectedType string
 		expectedName string

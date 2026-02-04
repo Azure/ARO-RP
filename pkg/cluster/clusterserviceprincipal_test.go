@@ -70,7 +70,6 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 		mocksAuthz        func(*mock_authorization.MockRoleAssignmentsClient, *mock_authorization.MockRoleDefinitionsClient, interface{})
 	}{
 		{
-
 			name: "noop",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
@@ -88,7 +87,6 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			},
 		},
 		{
-
 			name: "needs create",
 			mocksDeployment: func(client *mock_features.MockDeploymentsClient) {
 				var parameters map[string]interface{}
@@ -110,7 +108,6 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			},
 		},
 		{
-
 			name: "needs delete & create",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{

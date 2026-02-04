@@ -44,7 +44,7 @@ func NewDynamicClient(kubeConfig *rest.Config) (Client, error) {
 }
 
 func (d *client) getMapping(obj *unstructured.Unstructured) (*meta.RESTMapping, error) {
-	var gvk = obj.GroupVersionKind()
+	gvk := obj.GroupVersionKind()
 	return d.mapping.RESTMapping(gvk.GroupKind(), gvk.Version)
 }
 

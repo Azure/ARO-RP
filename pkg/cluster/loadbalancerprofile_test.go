@@ -67,7 +67,8 @@ func TestReconcileOutboundIPs(t *testing.T) {
 			uuids: []string{"uuid2"},
 			mocks: func(
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(1), nil)
@@ -102,7 +103,8 @@ func TestReconcileOutboundIPs(t *testing.T) {
 			uuids: []string{},
 			mocks: func(
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(2), nil)
@@ -177,7 +179,8 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 			mocks: func(
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(1), nil)
@@ -217,7 +220,8 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 			mocks: func(
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(1), nil)
@@ -640,7 +644,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			mocks: func(
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(0), nil)
@@ -705,7 +710,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			mocks: func(
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(1), nil)
@@ -773,7 +779,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			mocks: func(
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(0), nil)
@@ -797,7 +804,6 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 				},
 				EffectiveOutboundIPs: []api.EffectiveOutboundIP{
 					{
-
 						ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4",
 					},
 					{
@@ -849,7 +855,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			mocks: func(
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(1), nil)
@@ -918,7 +925,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			mocks: func(
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(0), nil)
@@ -994,7 +1002,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			mocks: func(
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(2), nil)
@@ -1063,7 +1072,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			mocks: func(
 				loadBalancersClient *mock_armnetwork.MockLoadBalancersClient,
 				publicIPAddressClient *mock_armnetwork.MockPublicIPAddressesClient,
-				ctx context.Context) {
+				ctx context.Context,
+			) {
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName, nil).
 					Return(getFakePublicIPList(0), nil)

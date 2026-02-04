@@ -73,7 +73,8 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 				},
 			},
 			mocks: func(spNetworkUsage *mock_armnetwork.MockUsagesClient,
-				loadBalancerBackendAddressPoolsClient *mock_armnetwork.MockLoadBalancerBackendAddressPoolsClient) {
+				loadBalancerBackendAddressPoolsClient *mock_armnetwork.MockLoadBalancerBackendAddressPoolsClient,
+			) {
 				spNetworkUsage.EXPECT().
 					List(gomock.Any(), location, nil).
 					Return([]*sdknetwork.Usage{
@@ -361,7 +362,8 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 				},
 			},
 			mocks: func(
-				loadBalancerBackendAddressPoolsClient *mock_armnetwork.MockLoadBalancerBackendAddressPoolsClient) {
+				loadBalancerBackendAddressPoolsClient *mock_armnetwork.MockLoadBalancerBackendAddressPoolsClient,
+			) {
 				loadBalancerBackendAddressPoolsClient.EXPECT().
 					Get(gomock.Any(), clusterRGName, infraID, infraID, nil).
 					Return(sdknetwork.LoadBalancerBackendAddressPoolsClientGetResponse{
@@ -402,7 +404,8 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: Insufficient frontend ports to support the backend instance count.  Total frontend ports: 63992, Required frontend ports: 64512, Total backend instances: 63",
 			mocks: func(
-				loadBalancerBackendAddressPoolsClient *mock_armnetwork.MockLoadBalancerBackendAddressPoolsClient) {
+				loadBalancerBackendAddressPoolsClient *mock_armnetwork.MockLoadBalancerBackendAddressPoolsClient,
+			) {
 				loadBalancerBackendAddressPoolsClient.EXPECT().
 					Get(gomock.Any(), clusterRGName, infraID, infraID, nil).
 					Return(sdknetwork.LoadBalancerBackendAddressPoolsClientGetResponse{

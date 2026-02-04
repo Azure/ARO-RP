@@ -26,8 +26,10 @@ const (
 )
 
 // OCP versions - declared as major, minor, z
-var OCPv4190 = NewVersion(4, 19, 0)
-var OCPv440 = NewVersion(4, 4, 0)
+var (
+	OCPv4190 = NewVersion(4, 19, 0)
+	OCPv440  = NewVersion(4, 4, 0)
+)
 
 var GitCommit = "unknown"
 

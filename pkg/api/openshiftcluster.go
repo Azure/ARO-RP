@@ -26,7 +26,7 @@ type OpenShiftCluster struct {
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 	Identity   *ManagedServiceIdentity    `json:"managedServiceIdentity,omitempty"`
 
-	//this property is used in the enrichers. Should not be marshalled
+	// this property is used in the enrichers. Should not be marshalled
 	Lock sync.Mutex `json:"-"`
 }
 
@@ -785,9 +785,9 @@ var (
 	VMSizeStandardD64ldsV6Struct = VMSizeStruct{CoreCount: 64, Family: standardDLDSv6}
 	VMSizeStandardD96ldsV6Struct = VMSizeStruct{CoreCount: 96, Family: standardDLDSv6}
 
-	//Struct GPU nodes
-	//Struct the formatting of the ncasv3_t4 family is different.  This can be seen through a
-	//Struct az vm list-usage -l eastus
+	// Struct GPU nodes
+	// Struct the formatting of the ncasv3_t4 family is different.  This can be seen through a
+	// Struct az vm list-usage -l eastus
 	VMSizeStandardNC4asT4V3Struct  = VMSizeStruct{CoreCount: 4, Family: standardNCAS}
 	VMSizeStandardNC8asT4V3Struct  = VMSizeStruct{CoreCount: 8, Family: standardNCAS}
 	VMSizeStandardNC16asT4V3Struct = VMSizeStruct{CoreCount: 16, Family: standardNCAS}

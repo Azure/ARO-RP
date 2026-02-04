@@ -195,7 +195,6 @@ func TestAdminVMResize(t *testing.T) {
 				},
 				nil,
 				nil)
-
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -247,7 +246,8 @@ func mockMachine(name string, isMaster bool, hasRole bool) *machinev1beta1.Machi
 					Raw: []byte(`{
 "apiVersion": "machine.openshift.io/v1beta1",
 "kind": "AzureMachineProviderSpec",
-}`)},
+}`),
+				},
 			},
 		},
 	}

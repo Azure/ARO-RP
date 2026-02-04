@@ -49,7 +49,6 @@ func deploy(ctx context.Context, _log *logrus.Entry) error {
 			"AZURE_CLIENT_SECRET",
 			"AZURE_SUBSCRIPTION_ID",
 			"AZURE_TENANT_ID")
-
 		if err != nil {
 			return err
 		}

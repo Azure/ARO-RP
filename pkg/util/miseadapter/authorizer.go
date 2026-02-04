@@ -14,9 +14,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const MISE_CONNECTION_TIMEOUT = time.Second * 5
-const MISE_RETRY_DELAY = time.Millisecond * 100
-const MISE_RETRY_COUNT = 3
+const (
+	MISE_CONNECTION_TIMEOUT = time.Second * 5
+	MISE_RETRY_DELAY        = time.Millisecond * 100
+	MISE_RETRY_COUNT        = 3
+)
 
 type MISEAdapter interface {
 	IsAuthorized(log *logrus.Entry, r *http.Request) (bool, error)

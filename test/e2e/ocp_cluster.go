@@ -43,7 +43,7 @@ var _ = Describe("ARO Operator", Label(smoke, basichealth, install), func() {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
-			var skipConditions = []string{
+			skipConditions := []string{
 				"DefaultIngressCertificate", // This is not enabled in dev clusters and clusters with custom domains.
 			}
 

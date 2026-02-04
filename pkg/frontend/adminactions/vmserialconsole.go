@@ -13,7 +13,8 @@ import (
 )
 
 func (a *azureActions) VMSerialConsole(ctx context.Context,
-	log *logrus.Entry, vmName string, target io.Writer) error {
+	log *logrus.Entry, vmName string, target io.Writer,
+) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	return a.virtualMachines.GetSerialConsoleForVM(ctx, clusterRGName, vmName, target)

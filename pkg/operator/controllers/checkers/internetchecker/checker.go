@@ -48,6 +48,7 @@ func newInternetChecker() *checker {
 		},
 	}
 }
+
 func (r *checker) Check(URLs []string) error {
 	ch := make(chan error)
 	checkCount := 0

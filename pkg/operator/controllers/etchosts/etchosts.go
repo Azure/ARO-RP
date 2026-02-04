@@ -175,7 +175,7 @@ func EtcHostsIgnitionConfig(clusterDomain string, apiIntIP string, gatewayDomain
 						Contents: ign3types.Resource{
 							Source: pointerutils.ToPtr(dataurl.EncodeBytes(aroconf)),
 						},
-						Mode: pointerutils.ToPtr(0644),
+						Mode: pointerutils.ToPtr(0o644),
 					},
 				},
 				{
@@ -190,7 +190,7 @@ func EtcHostsIgnitionConfig(clusterDomain string, apiIntIP string, gatewayDomain
 						Contents: ign3types.Resource{
 							Source: pointerutils.ToPtr(dataurl.EncodeBytes(aroscript)),
 						},
-						Mode: pointerutils.ToPtr(0744),
+						Mode: pointerutils.ToPtr(0o744),
 					},
 				},
 			},

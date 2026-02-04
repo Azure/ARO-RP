@@ -60,7 +60,6 @@ func (f *frontend) _listAdminHiveSyncSet(ctx context.Context, namespace string, 
 	}
 
 	ss, err := f.hiveSyncSetManager.List(ctx, namespace, label, ssType)
-
 	if err != nil {
 		return nil, err
 	}

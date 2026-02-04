@@ -38,6 +38,7 @@ func NewMonitors(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string
 		uuid: uuid.DefaultGenerator.Generate(),
 	}, nil
 }
+
 func NewMonitorsWithProvidedClient(client cosmosdb.MonitorDocumentClient, uuid string) Monitors {
 	return &monitors{
 		c:    client,

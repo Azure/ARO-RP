@@ -106,6 +106,7 @@ func DeleteOidcFolder(ctx context.Context, directory string, blobsClient azblob.
 func DocumentKey(directory string, blobKey string) string {
 	return fmt.Sprintf("%s/%s", directory, blobKey)
 }
+
 func GetBlobName(tenantID string, docID string) string {
 	return fmt.Sprintf("%s/%s", tenantID, docID)
 }

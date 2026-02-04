@@ -33,11 +33,13 @@ var (
 	PollingInterval = 250 * time.Millisecond
 )
 
-type K8sGetFunc[T kruntime.Object] func(ctx context.Context, name string, options metav1.GetOptions) (T, error)
-type K8sListFunc[T kruntime.Object] func(ctx context.Context, options metav1.ListOptions) (T, error)
-type K8sCreateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.CreateOptions) (T, error)
-type K8sUpdateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.UpdateOptions) (T, error)
-type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteOptions) error
+type (
+	K8sGetFunc[T kruntime.Object]    func(ctx context.Context, name string, options metav1.GetOptions) (T, error)
+	K8sListFunc[T kruntime.Object]   func(ctx context.Context, options metav1.ListOptions) (T, error)
+	K8sCreateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.CreateOptions) (T, error)
+	K8sUpdateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.UpdateOptions) (T, error)
+	K8sDeleteFunc                    func(ctx context.Context, name string, options metav1.DeleteOptions) error
+)
 
 // GetK8sObjectWithRetry takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
 // and the parameters for it. It then makes the call with some retry logic and returns the result after

@@ -58,7 +58,7 @@ type gateway struct {
 	accessLog *logrus.Entry
 
 	ready          atomic.Value
-	lastChangefeed atomic.Value //time.Time
+	lastChangefeed atomic.Value // time.Time
 	mu             sync.RWMutex
 	gateways       map[string]*api.Gateway
 

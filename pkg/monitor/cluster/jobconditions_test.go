@@ -33,7 +33,7 @@ func TestEmitJobConditions(t *testing.T) {
 				Namespace: "openshift",
 			},
 			Status: batchv1.JobStatus{
-				Active: 1, //1 pod active -> job is running
+				Active: 1, // 1 pod active -> job is running
 				Conditions: []batchv1.JobCondition{
 					{
 						Type:   batchv1.JobFailed,

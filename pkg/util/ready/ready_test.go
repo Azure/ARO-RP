@@ -49,7 +49,8 @@ func TestNodeIsReady(t *testing.T) {
 							Status: corev1.ConditionFalse,
 						},
 					},
-				}},
+				},
+			},
 			want: false,
 		},
 		{
@@ -74,14 +75,16 @@ func TestNodeIsReady(t *testing.T) {
 							Status: corev1.ConditionFalse,
 						},
 					},
-				}},
+				},
+			},
 			want: true,
 		},
 		{
 			name: "node-with-no-status",
 			node: &corev1.Node{},
 			want: false,
-		}} {
+		},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NodeIsReady(tt.node); tt.want != got {
 				t.Fatalf("error with NodeIsReady: got %v wanted: %v", got, tt.want)
@@ -430,7 +433,6 @@ func TestCheckDaemonSetIsRunning(t *testing.T) {
 		t.Fatalf("error creating daemonset: %v", err)
 	}
 	_, err = CheckDaemonSetIsReady(ctx, clientset.AppsV1().DaemonSets("default"), ds.Name)()
-
 	if err != nil {
 		t.Fatalf("check daemonset is not running: %v", err)
 	}
@@ -532,7 +534,6 @@ func TestCheckDeploymentIsReady(t *testing.T) {
 		t.Fatalf("error creating deployment: %v", err)
 	}
 	_, err = CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.Name)()
-
 	if err != nil {
 		t.Fatalf("check deployement is not ready: %v", err)
 	}
@@ -582,7 +583,6 @@ func TestCheckMachineConfigPoolIsReady(t *testing.T) {
 		t.Fatalf("error creating machineconfigpool: %v", err)
 	}
 	_, err = CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), machineconfigpool.Name)()
-
 	if err != nil {
 		t.Fatalf("check machineconfigpool is not ready: %v", err)
 	}
@@ -623,14 +623,16 @@ func TestCheckPodsAreRunning(t *testing.T) {
 	labels["app"] = "running"
 	clientset := fake.NewSimpleClientset()
 	clientset.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return false, &corev1.PodList{Items: []corev1.Pod{
-			{ObjectMeta: metav1.ObjectMeta{
-				Name:      "one-pod",
-				Namespace: "default",
-				Labels:    map[string]string{"app": "running"},
+		return false, &corev1.PodList{
+			Items: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "one-pod",
+						Namespace: "default",
+						Labels:    map[string]string{"app": "running"},
+					},
+				},
 			},
-			},
-		},
 		}, errors.New("error listing pods")
 	})
 	ok, _ := CheckPodsAreRunning(ctx, clientset.CoreV1().Pods("default"), labels)()
@@ -638,6 +640,7 @@ func TestCheckPodsAreRunning(t *testing.T) {
 		t.Fatalf("check pods are not running: %v", ok)
 	}
 }
+
 func TestCheckPodsAreReadyError(t *testing.T) {
 	ctx := context.Background()
 

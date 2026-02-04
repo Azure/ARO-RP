@@ -13,9 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type getFunc func(key client.ObjectKey, obj client.Object) error
-type listFunc func(obj client.ObjectList, opts *client.ListOptions) error
-type hookFunc func(obj client.Object) error
+type (
+	getFunc  func(key client.ObjectKey, obj client.Object) error
+	listFunc func(obj client.ObjectList, opts *client.ListOptions) error
+	hookFunc func(obj client.Object) error
+)
 
 type HookingClient struct {
 	f client.WithWatch
@@ -110,6 +112,7 @@ func (c *HookingClient) WithPreCreateHook(f hookFunc) *HookingClient {
 	c.preCreateHook = append(c.preCreateHook, f)
 	return c
 }
+
 func (c *HookingClient) WithPreUpdateHook(f hookFunc) *HookingClient {
 	c.preUpdateHook = append(c.preUpdateHook, f)
 	return c

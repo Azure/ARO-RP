@@ -41,7 +41,8 @@ func TestEmitAROOperatorConditions(t *testing.T) {
 				{
 					Type:   "DnsmasqClusterControllerProgressing",
 					Status: operatorv1.ConditionFalse,
-				}, {
+				},
+				{
 					Type:   "DnsmasqClusterControllerAvailable",
 					Status: operatorv1.ConditionTrue,
 				},
@@ -61,7 +62,8 @@ func TestEmitAROOperatorConditions(t *testing.T) {
 				{
 					Type:   "DnsmasqClusterControllerProgressing",
 					Status: operatorv1.ConditionTrue,
-				}, {
+				},
+				{
 					Type:   "DnsmasqClusterControllerAvailable",
 					Status: operatorv1.ConditionFalse,
 				},

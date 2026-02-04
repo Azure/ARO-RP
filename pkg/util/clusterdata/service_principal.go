@@ -18,8 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-type clusterServicePrincipalEnricher struct {
-}
+type clusterServicePrincipalEnricher struct{}
 
 func (ce clusterServicePrincipalEnricher) Enrich(
 	ctx context.Context,

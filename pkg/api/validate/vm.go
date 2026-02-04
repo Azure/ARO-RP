@@ -14,8 +14,10 @@ import (
 // To add new instance types, needs Project Management's involvement and instructions are below.,
 // https://github.com/Azure/ARO-RP/blob/master/docs/adding-new-instance-types.md
 
-const VMRoleMaster string = "master"
-const VMRoleWorker string = "worker"
+const (
+	VMRoleMaster string = "master"
+	VMRoleWorker string = "worker"
+)
 
 var supportedVMSizesByRoleMap = map[string]map[api.VMSize]api.VMSizeStruct{
 	VMRoleMaster: supportedMasterVmSizes,
@@ -406,7 +408,7 @@ func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool
 }
 
 func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
-	//this is for development purposes only
+	// this is for development purposes only
 	switch vmSize {
 	case api.VMSizeStandardD2sV3:
 		return api.VMSizeStandardD2sV3Struct, true

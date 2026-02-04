@@ -26,6 +26,7 @@ func failingFunc(context.Context) error    { return errors.New("oh no!") }
 func failingAzureError(context.Context) error {
 	return errors.New("Status=403 Code=\"AuthorizationFailed\"")
 }
+
 func failingODataError(context.Context) error {
 	mainError := odataerrors.NewMainError()
 	mainError.SetCode(pointerutils.ToPtr("Authorization_IdentityNotFound"))
@@ -40,6 +41,7 @@ func timingOutCondition(ctx context.Context) (bool, error) {
 	time.Sleep(60 * time.Millisecond)
 	return false, nil
 }
+
 func internalTimeoutCondition(ctx context.Context) (bool, error) {
 	return false, wait.ErrWaitTimeout
 }

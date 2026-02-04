@@ -544,7 +544,6 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				},
 				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
 			)
-
 			if err != nil {
 				return err
 			}

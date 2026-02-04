@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/api/admin"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
 // Tests the kubeconfig ability to get and manipulate the cluster
@@ -76,6 +77,5 @@ var _ = Describe("AKS cluster present", Pending, func() {
 		Eventually(func() error {
 			return clients.HiveAKS.CoreV1().Namespaces().Delete(ctx, testNamespaceName, metav1.DeleteOptions{})
 		}).WithTimeout(20 * time.Second).WithPolling(1 * time.Second).Should(Succeed())
-
 	})
 })

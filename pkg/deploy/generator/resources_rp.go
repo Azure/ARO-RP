@@ -673,8 +673,8 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 			BackupPolicy: &sdkcosmos.PeriodicModeBackupPolicy{
 				Type: &backupPolicy,
 				PeriodicModeProperties: &sdkcosmos.PeriodicModeProperties{
-					BackupIntervalInMinutes:        pointerutils.ToPtr(int32(240)), //4 hours
-					BackupRetentionIntervalInHours: pointerutils.ToPtr(int32(720)), //30 days
+					BackupIntervalInMinutes:        pointerutils.ToPtr(int32(240)), // 4 hours
+					BackupRetentionIntervalInHours: pointerutils.ToPtr(int32(720)), // 30 days
 				},
 			},
 			MinimalTLSVersion: &minTLSVersion,

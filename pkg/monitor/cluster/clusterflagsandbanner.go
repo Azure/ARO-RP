@@ -30,7 +30,7 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 				defaultFlags := operator.DefaultOperatorFlags()
 				nonStandardOperatorFlagDims := make(map[string]string, len(defaultFlags))
 
-				//check if the current set flags matches the default ones
+				// check if the current set flags matches the default ones
 				for defaulFlagName, defaultFlagValue := range defaultFlags {
 					currentFlagValue, ok := cluster.Spec.OperatorFlags[defaulFlagName]
 					if !ok {
@@ -46,7 +46,7 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 				}
 			}
 
-			//check if the contact support banner is activated
+			// check if the contact support banner is activated
 			if cluster.Spec.Banner.Content == arov1alpha1.BannerContactSupport {
 				mon.emitGauge(supportBannerMetricsTopic, 1, map[string]string{"msg": "contact support"})
 			}

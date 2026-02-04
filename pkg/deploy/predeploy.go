@@ -570,7 +570,6 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{rpRestartScript},
 		})
-
 		if err != nil {
 			return err
 		}

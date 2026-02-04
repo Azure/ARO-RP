@@ -108,7 +108,7 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 }
 
 func TestFilterClusterDeploymentConditions(t *testing.T) {
-	var testConditionList = map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
+	testConditionList := map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
 		hivev1.ClusterReadyCondition: corev1.ConditionTrue,
 		hivev1.UnreachableCondition:  corev1.ConditionFalse,
 	}
@@ -137,15 +137,15 @@ func TestFilterClusterDeploymentConditions(t *testing.T) {
 			cd: &hivev1.ClusterDeployment{
 				Status: hivev1.ClusterDeploymentStatus{
 					Conditions: []hivev1.ClusterDeploymentCondition{
-						{ //should be ignored
+						{ // should be ignored
 							Type:   hivev1.ClusterHibernatingCondition,
 							Status: corev1.ConditionTrue,
 						},
-						{ //should be ignored
+						{ // should be ignored
 							Type:   hivev1.UnreachableCondition,
 							Status: corev1.ConditionFalse,
 						},
-						{ //should be returned
+						{ // should be returned
 							Type:   hivev1.ClusterReadyCondition,
 							Status: corev1.ConditionFalse,
 						},

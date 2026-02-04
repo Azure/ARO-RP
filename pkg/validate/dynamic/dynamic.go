@@ -645,7 +645,7 @@ func (c closure) usingCheckAccessV2() (result bool, err error) {
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
 	var authReq *client.AuthorizationRequest
-	//ensure token and oid is available during retries
+	// ensure token and oid is available during retries
 	if c.dv.authorizerType != AuthorizerWorkloadIdentity {
 		if c.jwtToken == nil || c.oid == nil {
 			if err = c.checkAccessAuthReqToken(); err != nil {

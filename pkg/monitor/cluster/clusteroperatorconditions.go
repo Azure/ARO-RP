@@ -28,7 +28,6 @@ type clusterOperatorConditionsIgnoreStruct struct {
 
 // clusterOperatorConditionsIgnore contains list of statuses that we don't want to scrape
 var clusterOperatorConditionsIgnore = map[clusterOperatorConditionsIgnoreStruct]struct{}{
-
 	{"cloud-controller-manager", "TrustedCABundleControllerControllerDegraded", configv1.ConditionFalse}: {},
 	{"cloud-controller-manager", "TrustedCABundleControllerControllerAvailable", configv1.ConditionTrue}: {},
 	{"cloud-controller-manager", "CloudConfigControllerDegraded", configv1.ConditionFalse}:               {},

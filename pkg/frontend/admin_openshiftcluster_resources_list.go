@@ -32,7 +32,8 @@ func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *
 }
 
 func (f *frontend) _listAdminOpenShiftClusterResources(
-	ctx context.Context, r *http.Request, writer io.WriteCloser, log *logrus.Entry) error {
+	ctx context.Context, r *http.Request, writer io.WriteCloser, log *logrus.Entry,
+) error {
 	a, err := f.newStreamAzureAction(ctx, r, log)
 	if err != nil {
 		return err

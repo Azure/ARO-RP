@@ -38,7 +38,6 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
 			"PORTAL_HOSTNAME")
-
 		if err != nil {
 			return err
 		}
@@ -49,7 +48,6 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
 		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
 	)
-
 	if err != nil {
 		return err
 	}

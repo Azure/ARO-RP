@@ -146,7 +146,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 })
 
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
-
 	BeforeEach(func(ctx context.Context) {
 		By("checking if monitoring ConfigMap controller is enabled")
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
@@ -228,7 +227,6 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 		By("waiting for the machine health check to be restored")
 		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
-
 })
 
 var _ = Describe("ARO Operator - Conditions", func() {
@@ -775,7 +773,6 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
 		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
 	})
-
 })
 
 var _ = Describe("ARO Operator - Cloud Provider Config ConfigMap", func() {
@@ -900,5 +897,4 @@ var _ = Describe("ARO Operator - etchosts", func() {
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithPolling(PollingInterval).Should(Succeed())
 		}
 	})
-
 })

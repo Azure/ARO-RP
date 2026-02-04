@@ -29,7 +29,7 @@ func (mm MetricsMiddleware) Metrics(h http.Handler) http.Handler {
 
 		h.ServeHTTP(w, r)
 
-		//get the route pattern that matched
+		// get the route pattern that matched
 		rctx := chi.RouteContext(r.Context())
 		routePattern := strings.Join(rctx.RoutePatterns, "")
 		mm.EmitGauge("frontend.count", 1, map[string]string{

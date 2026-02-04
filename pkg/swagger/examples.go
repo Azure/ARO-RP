@@ -16,7 +16,7 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 		return err
 	}
 
-	err = os.MkdirAll(outputDir+"/examples", 0777)
+	err = os.MkdirAll(outputDir+"/examples", 0o777)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 
 			b = append(b, '\n')
 
-			err = os.WriteFile(outputDir+"/examples/"+op.OperationID+".json", b, 0666)
+			err = os.WriteFile(outputDir+"/examples/"+op.OperationID+".json", b, 0o666)
 			if err != nil {
 				return err
 			}

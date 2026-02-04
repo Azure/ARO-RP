@@ -51,7 +51,6 @@ func (c *Client) Endpoint() string {
 // options - Optional AppLens client options.  Pass nil to accept default values.
 func NewClient(endpoint string, issuerUrlTemplate string, caNames []string, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
 	pipeline, err := newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caNames)
-
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +107,8 @@ func newPipeline(authPolicy []policy.Policy, initialClientOptions *ClientOptions
 // o - Options for Read operation.
 func (c *Client) ListDetectors(
 	ctx context.Context,
-	o *ListDetectorsOptions) (*ResponseMessageCollectionEnvelope, error) {
+	o *ListDetectorsOptions,
+) (*ResponseMessageCollectionEnvelope, error) {
 	if o == nil {
 		o = &ListDetectorsOptions{}
 	}
@@ -124,7 +124,6 @@ func (c *Client) ListDetectors(
 	defer azResponse.Body.Close()
 
 	bodyJson, err := io.ReadAll(azResponse.Body)
-
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,8 @@ func (c *Client) ListDetectors(
 // o - Options for Read operation.
 func (c *Client) GetDetector(
 	ctx context.Context,
-	o *GetDetectorOptions) (*ResponseMessageEnvelope, error) {
+	o *GetDetectorOptions,
+) (*ResponseMessageEnvelope, error) {
 	if o == nil {
 		o = &GetDetectorOptions{}
 	}
@@ -153,7 +153,6 @@ func (c *Client) GetDetector(
 	defer azResponse.Body.Close()
 
 	detectorJson, err := io.ReadAll(azResponse.Body)
-
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +163,8 @@ func (c *Client) GetDetector(
 func (c *Client) sendPostRequest(
 	ctx context.Context,
 	requestOptions appLensRequestOptions,
-	requestEnricher func(*policy.Request)) (*http.Response, error) {
+	requestEnricher func(*policy.Request),
+) (*http.Response, error) {
 	req, err := c.createRequest(ctx, http.MethodPost, requestOptions, requestEnricher)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,8 @@ func (c *Client) createRequest(
 	ctx context.Context,
 	method string,
 	requestOptions appLensRequestOptions,
-	requestEnricher func(*policy.Request)) (*policy.Request, error) {
+	requestEnricher func(*policy.Request),
+) (*policy.Request, error) {
 	if requestOptions != nil {
 		header := requestOptions.toHeader()
 		ctx = runtime.WithHTTPHeader(ctx, header)
@@ -212,7 +213,6 @@ func (c *Client) executeAndEnsureSuccessResponse(request *policy.Request) (*http
 func newResponseMessageCollectionEnvelope(valueJson []byte, resourceID, location string) (*ResponseMessageCollectionEnvelope, error) {
 	var results []interface{}
 	err := json.Unmarshal(valueJson, &results)
-
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,6 @@ func getDetectorID(detector interface{}) string {
 func newResponseMessageEnvelope(resourceID, name, location string, propertiesJson []byte) (*ResponseMessageEnvelope, error) {
 	var converted interface{}
 	err := json.Unmarshal(propertiesJson, &converted)
-
 	if err != nil {
 		return nil, err
 	}

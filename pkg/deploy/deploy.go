@@ -248,20 +248,17 @@ func (d *deployer) checkForKnownError(serviceErr *azure.ServiceError, deployAtte
 
 	outerErr := azure.ServiceError{}
 	jsonEncoded, err := json.Marshal(serviceErr.Details[0])
-
 	if err != nil {
 		return "", err
 	}
 
 	err = json.Unmarshal(jsonEncoded, &outerErr)
-
 	if err != nil {
 		return "", err
 	}
 
 	innerErr := azure.ServiceError{}
 	err = json.Unmarshal([]byte(outerErr.Message), &innerErr)
-
 	if err != nil {
 		return "", err
 	}

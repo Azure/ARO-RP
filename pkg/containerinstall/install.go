@@ -24,21 +24,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
-var (
-	devEnvVars = []string{
-		"AZURE_FP_CLIENT_ID",
-		"AZURE_RP_CLIENT_ID",
-		"AZURE_RP_CLIENT_SECRET",
-		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
-		"DOMAIN_NAME",
-		"KEYVAULT_PREFIX",
-		"LOCATION",
-		"PROXY_HOSTNAME",
-		"PULL_SECRET",
-		"RESOURCEGROUP",
-	}
-)
+var devEnvVars = []string{
+	"AZURE_FP_CLIENT_ID",
+	"AZURE_RP_CLIENT_ID",
+	"AZURE_RP_CLIENT_SECRET",
+	"AZURE_SUBSCRIPTION_ID",
+	"AZURE_TENANT_ID",
+	"DOMAIN_NAME",
+	"KEYVAULT_PREFIX",
+	"LOCATION",
+	"PROXY_HOSTNAME",
+	"PULL_SECRET",
+	"RESOURCEGROUP",
+}
 
 func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
 	pullPolicy := os.Getenv("ARO_PODMAN_PULL_POLICY")
