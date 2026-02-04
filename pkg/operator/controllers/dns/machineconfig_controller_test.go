@@ -1,4 +1,4 @@
-package dnsmasq
+package dns
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -29,11 +29,11 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func TestMachineConfigPoolReconciler(t *testing.T) {
+func TestMachineConfigReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigPoolControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigPoolControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigPoolControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	tests := []struct {
@@ -64,8 +64,9 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					},
 				},
 			},
-			request:    ctrl.Request{},
-			wantErrMsg: "",
+			request:        ctrl.Request{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "missing a clusterversion fails",
@@ -82,24 +83,16 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					},
 				},
 				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "custom",
-						Finalizers: []string{MachineConfigPoolControllerName},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 			},
-			request: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "",
-					Name:      "custom",
-				},
-			},
+			request:    ctrl.Request{},
 			wantErrMsg: `error getting the ClusterVersion: clusterversions.config.openshift.io "version" not found`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
-					Type:               MachineConfigPoolControllerName + "ControllerDegraded",
+					Type:               MachineConfigControllerName + "ControllerDegraded",
 					Status:             "True",
 					Message:            `error getting the ClusterVersion: clusterversions.config.openshift.io "version" not found`,
 					LastTransitionTime: transitionTime,
@@ -107,6 +100,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			createTally := make(map[string]int)
@@ -121,8 +115,8 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			log := logrus.NewEntry(logrus.StandardLogger())
 			ch := clienthelper.NewWithClient(log, client)
 
-			r := NewMachineConfigPoolReconciler(
-				log,
+			r := NewMachineConfigReconciler(
+				logrus.NewEntry(logrus.StandardLogger()),
 				client,
 				ch,
 			)
@@ -151,95 +145,23 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 	}
 }
 
-func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
-	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigPoolControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigPoolControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigPoolControllerName)
+func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	tests := []struct {
 		name           string
 		objects        []client.Object
-		request        ctrl.Request
 		wantCreated    map[string]int
 		wantUpdated    map[string]int
+		request        ctrl.Request
 		wantErrMsg     string
 		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
-			name: "no MachineConfigPool does nothing",
-			objects: []client.Object{
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status: arov1alpha1.ClusterStatus{
-						Conditions: []operatorv1.OperatorCondition{
-							defaultAvailable,
-							defaultProgressing,
-							{
-								Type:               MachineConfigPoolControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-								Status:             operatorv1.ConditionTrue,
-								LastTransitionTime: transitionTime,
-							},
-						},
-					},
-					Spec: arov1alpha1.ClusterSpec{
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
-						},
-					},
-				},
-			},
-			wantCreated: map[string]int{},
-			wantUpdated: map[string]int{},
-			request: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "",
-					Name:      "custom",
-				},
-			},
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "Deleted MachineConfigPool does nothing",
-			objects: []client.Object{
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster",
-					},
-					Status: arov1alpha1.ClusterStatus{
-						Conditions: defaultConditions,
-					},
-					Spec: arov1alpha1.ClusterSpec{
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
-						},
-					},
-				},
-				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "custom",
-						Finalizers:        []string{MachineConfigPoolControllerName},
-						DeletionTimestamp: &transitionTime,
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
-				},
-			},
-			wantCreated: map[string]int{},
-			wantUpdated: map[string]int{},
-			request: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "",
-					Name:      "custom",
-				},
-			},
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "MachineConfigPool reconciliation create missing DNS MachineConfigs, even when cluster not upgrading",
+			name: "valid MachineConfigPool for MachineConfig creates MachineConfig, even if cluster not updating",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
@@ -253,12 +175,9 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 					},
 				},
 				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "custom",
-						Finalizers: []string{MachineConfigPoolControllerName},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					ObjectMeta: metav1.ObjectMeta{Name: "custom"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{
@@ -268,14 +187,14 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",
-					Name:      "custom",
+					Name:      "99-custom-aro-dns",
 				},
 			},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
 		},
 		{
-			name: "MachineConfigPool reconciliation does not existing DNS MachineConfigs when not updating",
+			name: "valid MachineConfigPool for MachineConfig does not update existing MachineConfig while cluster not upgrading",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
@@ -289,12 +208,9 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 					},
 				},
 				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "custom",
-						Finalizers: []string{MachineConfigPoolControllerName},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					ObjectMeta: metav1.ObjectMeta{Name: "custom"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 				&mcv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-custom-aro-dns"},
@@ -306,14 +222,14 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",
-					Name:      "custom",
+					Name:      "99-custom-aro-dns",
 				},
 			},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
 		},
 		{
-			name: "MachineConfigPool reconciliation updates existing DNS MachineConfigs when force enabled",
+			name: "valid MachineConfigPool for MachineConfig updates existing MachineConfig  when reconciliation forced",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
@@ -328,12 +244,9 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 					},
 				},
 				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "custom",
-						Finalizers: []string{MachineConfigPoolControllerName},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					ObjectMeta: metav1.ObjectMeta{Name: "custom"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 				&mcv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-custom-aro-dns"},
@@ -347,13 +260,14 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",
-					Name:      "custom",
+					Name:      "99-custom-aro-dns",
 				},
 			},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			createTally := make(map[string]int)
@@ -381,8 +295,8 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 			log := logrus.NewEntry(logrus.StandardLogger())
 			ch := clienthelper.NewWithClient(log, client)
 
-			r := NewMachineConfigPoolReconciler(
-				log,
+			r := NewMachineConfigReconciler(
+				logrus.NewEntry(logrus.StandardLogger()),
 				client,
 				ch,
 			)
@@ -411,23 +325,58 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 	}
 }
 
-func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigPoolControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigPoolControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigPoolControllerName)
+func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	tests := []struct {
 		name           string
 		objects        []client.Object
-		request        ctrl.Request
 		wantCreated    map[string]int
 		wantUpdated    map[string]int
+		request        ctrl.Request
 		wantErrMsg     string
 		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
-			name: "MachineConfigPool reconciliation create missing DNS MachineConfigs",
+			name: "no MachineConfigPool for MachineConfig does nothing (cluster upgrading)",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: []operatorv1.OperatorCondition{
+							defaultAvailable,
+							defaultProgressing,
+							{
+								Type:               MachineConfigControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+								Status:             operatorv1.ConditionTrue,
+								LastTransitionTime: transitionTime,
+							},
+						},
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled: operator.FlagTrue,
+						},
+					},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			request: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "",
+					Name:      "99-custom-aro-dns",
+				},
+			},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			name: "valid MachineConfigPool for MachineConfig creates MachineConfig while cluster upgrading",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
@@ -441,12 +390,9 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 					},
 				},
 				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "custom",
-						Finalizers: []string{MachineConfigPoolControllerName},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					ObjectMeta: metav1.ObjectMeta{Name: "custom"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{
@@ -456,14 +402,14 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",
-					Name:      "custom",
+					Name:      "99-custom-aro-dns",
 				},
 			},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
 		},
 		{
-			name: "MachineConfigPool reconciliation updates existing DNS MachineConfigs",
+			name: "valid MachineConfigPool for MachineConfig updates existing MachineConfig while cluster upgrading",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
@@ -477,12 +423,9 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 					},
 				},
 				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "custom",
-						Finalizers: []string{MachineConfigPoolControllerName},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
+					ObjectMeta: metav1.ObjectMeta{Name: "custom"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 				&mcv1.MachineConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "99-custom-aro-dns"},
@@ -496,13 +439,48 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",
-					Name:      "custom",
+					Name:      "99-custom-aro-dns",
 				},
 			},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
 		},
+		{
+			name: "changes for a deleted MachineConfigPool do nothing",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "custom",
+						DeletionTimestamp: &transitionTime,
+					},
+					Status: mcv1.MachineConfigPoolStatus{},
+					Spec:   mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			request: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "",
+					Name:      "99-custom-aro-dns",
+				},
+			},
+			wantCreated:    map[string]int{},
+			wantUpdated:    map[string]int{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			createTally := make(map[string]int)
@@ -531,8 +509,8 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 			log := logrus.NewEntry(logrus.StandardLogger())
 			ch := clienthelper.NewWithClient(log, client)
 
-			r := NewMachineConfigPoolReconciler(
-				log,
+			r := NewMachineConfigReconciler(
+				logrus.NewEntry(logrus.StandardLogger()),
 				client,
 				ch,
 			)

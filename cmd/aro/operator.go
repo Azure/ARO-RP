@@ -30,7 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/cpms"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/dns"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/etchosts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails"
@@ -140,20 +140,20 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
 		}
-		if err = (dnsmasq.NewClusterReconciler(
-			log.WithField("controller", dnsmasq.ClusterControllerName),
+		if err = (dns.NewClusterReconciler(
+			log.WithField("controller", dns.ClusterControllerName),
 			client, ch)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
+			return fmt.Errorf("unable to create controller %s: %v", dns.ClusterControllerName, err)
 		}
-		if err = (dnsmasq.NewMachineConfigReconciler(
-			log.WithField("controller", dnsmasq.MachineConfigControllerName),
+		if err = (dns.NewMachineConfigReconciler(
+			log.WithField("controller", dns.MachineConfigControllerName),
 			client, ch)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigControllerName, err)
+			return fmt.Errorf("unable to create controller %s: %v", dns.MachineConfigControllerName, err)
 		}
-		if err = (dnsmasq.NewMachineConfigPoolReconciler(
-			log.WithField("controller", dnsmasq.MachineConfigPoolControllerName),
+		if err = (dns.NewMachineConfigPoolReconciler(
+			log.WithField("controller", dns.MachineConfigPoolControllerName),
 			client, ch)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
+			return fmt.Errorf("unable to create controller %s: %v", dns.MachineConfigPoolControllerName, err)
 		}
 		if err = (node.NewReconciler(
 			log.WithField("controller", node.ControllerName),
