@@ -6,6 +6,7 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"iter"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -19,9 +20,7 @@ import (
 type getCachedScheduleDocFunc func() (*api.MaintenanceScheduleDocument, bool)
 
 // get the list of clusters that we have cached
-type getClustersFunc func() []string
-
-type clusterCache struct {}
+type getClustersFunc func() iter.Seq2[string, selectorData]
 
 type Scheduler interface {
 	Process(context.Context) (bool, error)
@@ -78,7 +77,12 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		return false, errors.New("can't get the cached schedule doc")
 	}
 
+	a.log.Infof("processing schedule %s", doc.ID)
+
 	// go over each of the clusters
+	for id, cl := range a.getClusters() {
+		a.log.Infof("checking selectors for %s (sub %s)", id, cl.SubscriptionID)
+	}
 
 	return true, nil
 }
