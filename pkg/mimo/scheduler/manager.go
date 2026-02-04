@@ -5,6 +5,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -15,7 +16,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 )
 
-type getCachedDoc func() (*api.MaintenanceScheduleDocument, bool)
+type getCachedScheduleDocFunc func() (*api.MaintenanceScheduleDocument, bool)
+
+// get the list of clusters that we have cached
+type getClustersFunc func() []string
+
+type clusterCache struct {}
 
 type Scheduler interface {
 	Process(context.Context) (bool, error)
@@ -27,7 +33,8 @@ type scheduler struct {
 	log *logrus.Entry
 	now func() time.Time
 
-	cachedDoc getCachedDoc
+	cachedDoc   getCachedScheduleDocFunc
+	getClusters getClustersFunc
 
 	dbs schedulerDBs
 
@@ -40,15 +47,19 @@ func NewSchedulerForSchedule(
 	ctx context.Context,
 	_env env.Interface,
 	log *logrus.Entry,
-	cachedDoc getCachedDoc,
+	cachedDoc getCachedScheduleDocFunc,
+	getClusters getClustersFunc,
 	dbs schedulerDBs,
 	now func() time.Time) (Scheduler, error) {
 	a := &scheduler{
-		env:       _env,
-		log:       log,
-		cachedDoc: cachedDoc,
-		dbs:       dbs,
-		tasks:     make(map[api.MIMOTaskID]tasks.MaintenanceTask),
+		env: _env,
+		log: log,
+
+		cachedDoc:   cachedDoc,
+		getClusters: getClusters,
+
+		dbs:   dbs,
+		tasks: make(map[api.MIMOTaskID]tasks.MaintenanceTask),
 
 		now: now,
 	}
@@ -61,27 +72,13 @@ func (a *scheduler) AddMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenan
 }
 
 func (a *scheduler) Process(ctx context.Context) (bool, error) {
-	// // Get the manifests for this cluster which need to be worked
-	// i, err := a.mmf.GetQueuedByClusterResourceID(ctx, a.clusterResourceID, "")
-	// if err != nil {
-	// 	err = fmt.Errorf("failed getting manifests: %w", err)
-	// 	a.log.Error(err)
-	// 	return false, err
-	// }
+	doc, ok := a.cachedDoc()
+	if !ok {
+		a.log.Error("can't get the schedule doc?")
+		return false, errors.New("can't get the cached schedule doc")
+	}
 
-	// docList := make([]*api.MaintenanceManifestDocument, 0)
-	// for {
-	// 	docs, err := i.Next(ctx, -1)
-	// 	if err != nil {
-	// 		err = fmt.Errorf("failed reading next manifest document: %w", err)
-	// 		a.log.Error(err)
-	// 		return false, err
-	// 	}
-	// 	if docs == nil {
-	// 		break
-	// 	}
+	// go over each of the clusters
 
-	// 	docList = append(docList, docs.MaintenanceManifestDocuments...)
-	// }
 	return true, nil
 }

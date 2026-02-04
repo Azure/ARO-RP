@@ -14,10 +14,13 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 )
 
 type openShiftClusterCache struct {
 	log *logrus.Entry
+
+	subCache changefeed.SubscriptionsCache
 
 	clusters       map[string]*selectorData
 	lastChangefeed atomic.Value //time.Time
@@ -58,7 +61,7 @@ func (c *openShiftClusterCache) OnDoc(doc *api.OpenShiftClusterDocument) {
 			data = &selectorData{}
 		}
 
-		err := toSelectorData(doc, data)
+		err := c.toSelectorData(doc, data)
 		if err != nil {
 			c.log.Errorf("failed creating selector data for %s: %s", id, err.Error())
 			return
@@ -71,7 +74,7 @@ func (c *openShiftClusterCache) OnAllPendingProcessed() {
 	c.lastChangefeed.Store(time.Now())
 }
 
-func toSelectorData(doc *api.OpenShiftClusterDocument, selectorData *selectorData) error {
+func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, selectorData *selectorData) error {
 	resourceID := strings.ToLower(doc.OpenShiftCluster.ID)
 
 	r, err := azure.ParseResourceID(resourceID)
@@ -81,6 +84,8 @@ func toSelectorData(doc *api.OpenShiftClusterDocument, selectorData *selectorDat
 
 	selectorData.ResourceID = resourceID
 	selectorData.SubscriptionID = r.SubscriptionID
+
+	subCacheData, hasSubCacheData := c.subCache.GetSubscription(r.SubscriptionID)
 
 	return nil
 }
