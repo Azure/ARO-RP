@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v4"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -25,12 +27,17 @@ type SubscriptionsCache interface {
 	GetCacheSize() int
 	GetSubscription(string) (*subscriptionInfo, bool)
 	GetLastProcessed() (time.Time, bool)
+	WaitForInitialPopulation() *sync.WaitGroup
 }
 
 func NewSubscriptionsChangefeedCache(onlyValidSubscriptions bool) *subscriptionsChangeFeedResponder {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
 	return &subscriptionsChangeFeedResponder{
-		onlyValidSubscriptions: onlyValidSubscriptions,
-		subs:                   map[string]*subscriptionInfo{},
+		onlyValidSubscriptions:     onlyValidSubscriptions,
+		subs:                       xsync.NewMap[string, *subscriptionInfo](),
+		initialPopulationWaitGroup: wg,
 	}
 }
 
@@ -38,25 +45,23 @@ type subscriptionsChangeFeedResponder struct {
 	// Do we want to only include valid (i.e. not suspended) subscriptions?
 	onlyValidSubscriptions bool
 
-	mu                      sync.RWMutex
-	cond                    *sync.Cond
-	lastChangefeedProcessed atomic.Value // time.Time
+	lastChangefeedProcessed    atomic.Value // time.Time
+	initialPopulationWaitGroup *sync.WaitGroup
 
-	subs map[string]*subscriptionInfo
+	subs *xsync.Map[string, *subscriptionInfo]
+}
+
+func (c *subscriptionsChangeFeedResponder) WaitForInitialPopulation() *sync.WaitGroup {
+	return c.initialPopulationWaitGroup
 }
 
 func (c *subscriptionsChangeFeedResponder) GetSubscription(id string) (*subscriptionInfo, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	s, ok := c.subs[id]
+	s, ok := c.subs.Load(id)
 	return s, ok
 }
 
 func (c *subscriptionsChangeFeedResponder) GetCacheSize() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return len(c.subs)
+	return c.subs.Size()
 }
 
 func (c *subscriptionsChangeFeedResponder) GetLastProcessed() (time.Time, bool) {
@@ -64,17 +69,11 @@ func (c *subscriptionsChangeFeedResponder) GetLastProcessed() (time.Time, bool) 
 	return t, ok
 }
 
-func (c *subscriptionsChangeFeedResponder) Lock() {
-	c.mu.Lock()
-}
-func (c *subscriptionsChangeFeedResponder) Unlock() {
-	c.mu.Unlock()
-}
+// we don't use a mutex, we use a xsync.Map
+func (c *subscriptionsChangeFeedResponder) Lock()   {}
+func (c *subscriptionsChangeFeedResponder) Unlock() {}
 
-// the changefeed tracks the OpenShiftClusters change feed and keeps mon.docs
-// up-to-date.  We don't monitor clusters in Creating state, hence we don't add
-// them to mon.docs.  We also don't monitor clusters in Deleting state; when
-// this state is reached we delete from mon.docs
+// Populate the cache with the new documents from the changefeed
 func (r *subscriptionsChangeFeedResponder) OnDoc(sub *api.SubscriptionDocument) {
 	id := strings.ToLower(sub.ID)
 
@@ -84,20 +83,28 @@ func (r *subscriptionsChangeFeedResponder) OnDoc(sub *api.SubscriptionDocument) 
 		((sub.Subscription.State == api.SubscriptionStateSuspended ||
 			sub.Subscription.State == api.SubscriptionStateWarned) && r.onlyValidSubscriptions) {
 		// delete is a no-op if it doesn't exist
-		delete(r.subs, id)
+		r.subs.Delete(id)
 		return
 	}
-	c, ok := r.subs[id]
-	if ok {
-		// update this as subscription might have moved tenants
-		c.TenantID = strings.ToLower(sub.Subscription.Properties.TenantID)
-	} else {
-		r.subs[id] = &subscriptionInfo{
-			TenantID: strings.ToLower(sub.Subscription.Properties.TenantID),
+
+	r.subs.Compute(id, func(oldValue *subscriptionInfo, loaded bool) (*subscriptionInfo, xsync.ComputeOp) {
+		TenantID := strings.ToLower(sub.Subscription.Properties.TenantID)
+
+		// if it's the same, don't update the map
+		if loaded && (oldValue.TenantID == TenantID && oldValue.State == sub.Subscription.State) {
+			return nil, xsync.CancelOp
 		}
-	}
+
+		return &subscriptionInfo{
+			TenantID: strings.ToLower(sub.Subscription.Properties.TenantID),
+		}, xsync.UpdateOp
+	})
 }
 
 func (c *subscriptionsChangeFeedResponder) OnAllPendingProcessed() {
-	c.lastChangefeedProcessed.Store(time.Now())
+	old := c.lastChangefeedProcessed.Swap(time.Now())
+	// we've done one rotation, unlock the waitgroup
+	if old == nil {
+		c.initialPopulationWaitGroup.Done()
+	}
 }
