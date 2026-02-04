@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
+	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
@@ -46,7 +47,12 @@ type service struct {
 	workers        *atomic.Int32
 	workerRoutines sync.WaitGroup
 
-	b buckets.BucketWorker[*api.MaintenanceScheduleDocument]
+	b        buckets.BucketWorker[*api.MaintenanceScheduleDocument]
+	subs     changefeed.SubscriptionsCache
+	clusters *openShiftClusterCache
+
+	changefeedBatchSize int
+	changefeedInterval  time.Duration
 
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
@@ -84,6 +90,11 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
 		now:         time.Now,
 		pollTime:    time.Minute,
+
+		changefeedBatchSize: 50,
+		changefeedInterval:  10 * time.Second,
+
+		subs: changefeed.NewSubscriptionsChangefeedCache(false),
 
 		serveHealthz: true,
 	}
@@ -138,6 +149,32 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			}
 		}()
 	}
+
+	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return err
+	}
+
+	dbSubscriptions, err := s.dbGroup.Subscriptions()
+	if err != nil {
+		return err
+	}
+
+	// start subscription changefeed
+	var subChangefeed changefeed.Changefeed[*api.SubscriptionDocuments] = dbSubscriptions.ChangeFeed()
+	go changefeed.NewChangefeed(
+		ctx, s.baseLog.WithField("component", "changefeed"), subChangefeed,
+		s.changefeedInterval,
+		s.changefeedBatchSize, s.subs, stop,
+	)
+
+	// start cluster changefeed
+	var clusterChangefeed changefeed.Changefeed[*api.OpenShiftClusterDocuments] = dbOpenShiftClusters.ChangeFeed()
+	go changefeed.NewChangefeed(
+		ctx, s.baseLog.WithField("component", "changefeed"), clusterChangefeed,
+		s.changefeedInterval,
+		s.changefeedBatchSize, s.clusters, stop,
+	)
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
@@ -244,8 +281,20 @@ func (s *service) checkReady() bool {
 		return false
 	}
 
+	lastClusterChangefeed, ok := s.clusters.GetLastProcessed()
+	if !ok {
+		return false
+	}
+
+	lastSubsChangefeed, ok := s.subs.GetLastProcessed()
+	if !ok {
+		return false
+	}
+
 	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < time.Minute) // did we update our list of clusters recently?
+		return (time.Since(lastChangefeedTime) < time.Minute && // did we update our changefeeds recently?
+			time.Since(lastClusterChangefeed) < time.Minute &&
+			time.Since(lastSubsChangefeed) < time.Minute)
 	} else {
 		return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
 			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
