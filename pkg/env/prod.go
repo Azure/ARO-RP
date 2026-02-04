@@ -99,7 +99,6 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 			"GATEWAY_RESOURCEGROUP",
 			"MDSD_ENVIRONMENT",
 			"CLUSTER_MDSD_NAMESPACE")
-
 		if err != nil {
 			return nil, err
 		}

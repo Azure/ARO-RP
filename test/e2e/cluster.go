@@ -166,7 +166,6 @@ var _ = Describe("Cluster", Serial, func() {
 				for _, subnet := range ocpSubnets {
 					g.Expect(nAclSubnets).To(ContainElement(strings.ToLower(subnet)))
 				}
-
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 			By("creating stateful set")
@@ -210,7 +209,6 @@ var _ = Describe("Cluster", Serial, func() {
 				}
 			}
 		})
-
 	})
 
 	It("can create load balancer services", func(ctx context.Context) {

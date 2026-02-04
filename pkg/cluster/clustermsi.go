@@ -20,9 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
-var (
-	errClusterMsiNotPresentInResponse = errors.New("cluster msi not present in msi credentials response")
-)
+var errClusterMsiNotPresentInResponse = errors.New("cluster msi not present in msi credentials response")
 
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
 // backing certificate (if needed) and store the certificate in the cluster MSI key

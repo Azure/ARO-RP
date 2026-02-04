@@ -23,9 +23,7 @@ const (
 	cosmosDbGatewayProvisionedThroughputHack  = 1340502
 )
 
-var (
-	tenantUUIDHack = uuid.MustFromString(tenantIDHack)
-)
+var tenantUUIDHack = uuid.MustFromString(tenantIDHack)
 
 func max(is ...int) int {
 	max := is[0]

@@ -25,8 +25,10 @@ import (
 
 const internalLBFrontendIPName = "internal-lb-ip-v4"
 
-var errFetchInternalLBs = errors.New("error fetching internal load balancer")
-var errVMAvailability = errors.New("error determining the VM SKU availability")
+var (
+	errFetchInternalLBs = errors.New("error fetching internal load balancer")
+	errVMAvailability   = errors.New("error determining the VM SKU availability")
+)
 
 func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 	doc, err := MigrateInternalLoadBalancerZones(ctx, m.env, m.log, m.db, m.armLoadBalancers, m.armClusterPrivateLinkServices, m.armResourceSKUs, m.doc)

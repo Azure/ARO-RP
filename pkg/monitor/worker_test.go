@@ -17,8 +17,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-type panicMonitor struct {
-}
+type panicMonitor struct{}
 
 func (m *panicMonitor) Monitor(ctx context.Context) (err error) {
 	defer func() {
@@ -110,14 +109,16 @@ func TestChangefeedOperations(t *testing.T) {
 			subscriptionProvisioningState: api.SubscriptionStateRegistered,
 			expectDocs:                    2,
 			expectSubs:                    3,
-		}, {
+		},
+		{
 			name:                          "create cluster in creating state - should be ignored",
 			action:                        "create",
 			clusterProvisioningState:      api.ProvisioningStateCreating,
 			subscriptionProvisioningState: api.SubscriptionStateRegistered,
 			expectDocs:                    2,
 			expectSubs:                    4,
-		}, {
+		},
+		{
 			name:                          "subscription and cluster in Deleting state - BOTH should be ignored",
 			action:                        "create",
 			clusterProvisioningState:      api.ProvisioningStateDeleting,

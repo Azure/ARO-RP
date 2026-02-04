@@ -28,7 +28,6 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 			return nil, fmt.Errorf("resource %s identified as track2 sdk struct not marshalable", v.Type().Name())
 		}
 		b, err := res.MarshalJSON()
-
 		if err != nil {
 			return b, err
 		}

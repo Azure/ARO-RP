@@ -29,7 +29,7 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 
 		DeferCleanup(func(ctx context.Context) {
 			// reset feature flags to their default values
-			var oc = &admin.OpenShiftCluster{}
+			oc := &admin.OpenShiftCluster{}
 			resp, err := adminRequest(ctx,
 				http.MethodPatch, clusterResourceID, nil, true,
 				json.RawMessage("{\"operatorFlagsMergeStrategy\": \"reset\", \"properties\": {\"maintenanceTask\": \"SyncClusterObject\"}}"), oc)
@@ -48,7 +48,7 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 	})
 
 	It("Should be able to schedule and run a maintenance set via the admin API", func(ctx context.Context) {
-		var oc = &admin.OpenShiftCluster{}
+		oc := &admin.OpenShiftCluster{}
 		testflag := "aro.e2e.testflag." + uuid.DefaultGenerator.Generate()
 
 		By("set a bogus flag on the cluster")

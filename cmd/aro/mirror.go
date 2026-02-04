@@ -48,7 +48,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
 		"SRC_AUTH_REDHAT")
-
 	if err != nil {
 		return err
 	}
@@ -76,7 +75,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 			"AZURE_CLIENT_SECRET",
 			"AZURE_SUBSCRIPTION_ID",
 			"AZURE_TENANT_ID")
-
 		if err != nil {
 			return err
 		}
@@ -120,7 +118,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 	var imageMirroringSummary []string
 
 	for _, ref := range []string{
-
 		// https://hub.docker.com/_/fedora
 		"registry.fedoraproject.org/fedora:42",
 

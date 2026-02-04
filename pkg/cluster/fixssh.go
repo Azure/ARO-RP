@@ -74,7 +74,7 @@ NICs:
 			m.log.Infof("Skipping NIC %s, not associated with a control plane machine.", *nic.Name)
 			continue NICs
 		}
-		//Check for orphaned NICs
+		// Check for orphaned NICs
 		if nic.Properties.VirtualMachine == nil {
 			err := m.deleteOrphanedNIC(ctx, nic, resourceGroup, masterSubnetID)
 			if err != nil {
@@ -287,7 +287,9 @@ func (m *manager) deleteOrphanedNIC(ctx context.Context, nic *armnetwork.Interfa
 	nic.Properties.IPConfigurations = []*armnetwork.InterfaceIPConfiguration{{
 		Name: pointerutils.ToPtr(*nic.Name),
 		Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-			Subnet: &armnetwork.Subnet{ID: pointerutils.ToPtr(masterSubnetID)}}}}
+			Subnet: &armnetwork.Subnet{ID: pointerutils.ToPtr(masterSubnetID)},
+		},
+	}}
 	err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
 	if err != nil {
 		m.log.Errorf("Removing IPConfigurations from NIC %s has failed with err %s", *nic.Name, err)

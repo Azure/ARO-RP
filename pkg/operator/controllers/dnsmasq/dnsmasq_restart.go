@@ -40,7 +40,7 @@ func restartScriptIgnFile(data []byte) ign3types.File {
 			Contents: ign3types.Resource{
 				Source: pointerutils.ToPtr(dataurl.EncodeBytes(data)),
 			},
-			Mode: pointerutils.ToPtr(0744),
+			Mode: pointerutils.ToPtr(0o744),
 		},
 	}
 }
