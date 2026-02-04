@@ -197,6 +197,7 @@ issues:
 formatters:
   enable:
     - gci
+    - gofumpt
   settings:
     gci:
       custom-order: true
