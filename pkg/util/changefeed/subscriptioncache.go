@@ -39,6 +39,7 @@ type subscriptionsChangeFeedResponder struct {
 	onlyValidSubscriptions bool
 
 	mu                      sync.RWMutex
+	cond                    *sync.Cond
 	lastChangefeedProcessed atomic.Value // time.Time
 
 	subs map[string]*subscriptionInfo
