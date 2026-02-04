@@ -30,7 +30,6 @@ func (f *frontend) _postAdminOpenShiftClusterStopVM(log *logrus.Entry, ctx conte
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 
 	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
-
 	if err != nil {
 		return err
 	}

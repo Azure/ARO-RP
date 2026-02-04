@@ -51,7 +51,6 @@ func TestOpenShiftVersionList(t *testing.T) {
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
 							Properties: api.OpenShiftVersionProperties{
-
 								Version:           "4.9.9",
 								Enabled:           true,
 								Default:           false,
@@ -63,7 +62,6 @@ func TestOpenShiftVersionList(t *testing.T) {
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
 							Properties: api.OpenShiftVersionProperties{
-
 								Version:           "4.10.1",
 								Enabled:           false,
 								Default:           false,
@@ -123,7 +121,6 @@ func TestOpenShiftVersionList(t *testing.T) {
 			}
 
 			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
-
 			if err != nil {
 				t.Fatal(err)
 			}

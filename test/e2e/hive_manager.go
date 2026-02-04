@@ -50,5 +50,4 @@ var _ = Describe("Hive manager creates a namespace", func() {
 
 		Expect(res.String()).To(Equal(ns.String()))
 	})
-
 })

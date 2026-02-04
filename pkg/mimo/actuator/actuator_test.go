@@ -94,7 +94,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		}
 		fixtures.Clear()
 		checker.Clear()
-
 	})
 
 	JustBeforeEach(func() {
@@ -454,7 +453,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			verifyDatabaseState()
 		})
 	})
-
 })
 
 func TestActuator(t *testing.T) {

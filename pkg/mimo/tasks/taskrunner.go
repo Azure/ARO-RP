@@ -12,8 +12,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
-const DEFAULT_POLL_TIME = time.Second * 10
-const DEFAULT_TIMEOUT_DURATION = time.Minute * 20
+const (
+	DEFAULT_POLL_TIME        = time.Second * 10
+	DEFAULT_TIMEOUT_DURATION = time.Minute * 20
+)
 
 var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 	mimo.TLS_CERT_ROTATION_ID:     TLSCertRotation,

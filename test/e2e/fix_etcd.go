@@ -65,7 +65,6 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		aroConstraintClient, err := clients.Dynamic.GetClient(templateAroConstraint)
 		Expect(err).NotTo(HaveOccurred())
 		_, err = aroConstraintClient.Get(ctx, "aro-machines-deny", metav1.GetOptions{})
-
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				// This cluster does not have guardrails, so we don't need to disable and enable again

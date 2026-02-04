@@ -85,7 +85,7 @@ func applyGoLicense() error {
 			bb = append(bb, goLicense...)
 			bb = append(bb, b[i:]...)
 
-			err = os.WriteFile(path, bb, 0666)
+			err = os.WriteFile(path, bb, 0o666)
 			if err != nil {
 				return err
 			}
@@ -135,7 +135,7 @@ func applyPythonLicense() error {
 				bb = append(bb, b...)
 			}
 
-			err = os.WriteFile(path, bb, 0666)
+			err = os.WriteFile(path, bb, 0o666)
 			if err != nil {
 				return err
 			}

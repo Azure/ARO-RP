@@ -44,14 +44,11 @@ func (m *AsyncOperationDocument) Matches(x interface{}) bool {
 		return false
 	}
 
-	id, asyncOperationName, asyncOperationID, asyncOperationStartTime :=
-		doc.ID, doc.AsyncOperation.Name, doc.AsyncOperation.ID, doc.AsyncOperation.StartTime
-	doc.ID, doc.AsyncOperation.Name, doc.AsyncOperation.ID, doc.AsyncOperation.StartTime =
-		m.ID, m.AsyncOperation.Name, m.AsyncOperation.ID, m.AsyncOperation.StartTime
+	id, asyncOperationName, asyncOperationID, asyncOperationStartTime := doc.ID, doc.AsyncOperation.Name, doc.AsyncOperation.ID, doc.AsyncOperation.StartTime
+	doc.ID, doc.AsyncOperation.Name, doc.AsyncOperation.ID, doc.AsyncOperation.StartTime = m.ID, m.AsyncOperation.Name, m.AsyncOperation.ID, m.AsyncOperation.StartTime
 
 	defer func() {
-		doc.ID, doc.AsyncOperation.Name, doc.AsyncOperation.ID, doc.AsyncOperation.StartTime =
-			id, asyncOperationName, asyncOperationID, asyncOperationStartTime
+		doc.ID, doc.AsyncOperation.Name, doc.AsyncOperation.ID, doc.AsyncOperation.StartTime = id, asyncOperationName, asyncOperationID, asyncOperationStartTime
 	}()
 
 	return reflect.DeepEqual((*api.AsyncOperationDocument)(m), doc)

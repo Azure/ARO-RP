@@ -32,7 +32,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	var wd selenium.WebDriver
 	var host string
 
-	var clusterDetailTabs = []string{"Overview", "Nodes", "Machines", "MachineSets", "APIStatistics", "KCMStatistics", "DNSStatistics", "IngressStatistics", "ClusterOperators"}
+	clusterDetailTabs := []string{"Overview", "Nodes", "Machines", "MachineSets", "APIStatistics", "KCMStatistics", "DNSStatistics", "IngressStatistics", "ClusterOperators"}
 
 	JustBeforeEach(func() {
 		host, wdPoint = adminPortalSessionSetup()

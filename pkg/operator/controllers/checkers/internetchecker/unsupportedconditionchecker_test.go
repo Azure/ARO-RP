@@ -127,7 +127,6 @@ func TestUnsupportedCondition(t *testing.T) {
 			}
 
 			err := ucc.Check(ctx)
-
 			if err != nil {
 				t.Error(err)
 			}

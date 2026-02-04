@@ -17,13 +17,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/loadbalancer"
 )
 
-var (
-	denyList = []string{
-		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateLinkServices/([^/]+)$`,
-		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateEndpoints/([^/]+)$`,
-		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Storage/(.+)$`,
-	}
-)
+var denyList = []string{
+	`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateLinkServices/([^/]+)$`,
+	`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateEndpoints/([^/]+)$`,
+	`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Storage/(.+)$`,
+}
 
 func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {
 	idParts, err := arm.ParseResourceID(resourceID)

@@ -69,7 +69,6 @@ var _ = Describe("Encryption at host", Label(install), func() {
 
 var _ = Describe("Disk encryption at rest", Label(install), func() {
 	It("must be enabled with customer managed key for the cluster and each disk must have it enabled", func(ctx context.Context) {
-
 		By("getting the test cluster resource")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())

@@ -49,7 +49,8 @@ func NewActuator(
 	clusterResourceID string,
 	oc database.OpenShiftClusters,
 	mmf database.MaintenanceManifests,
-	now func() time.Time) (Actuator, error) {
+	now func() time.Time,
+) (Actuator, error) {
 	a := &actuator{
 		env:               _env,
 		log:               log,

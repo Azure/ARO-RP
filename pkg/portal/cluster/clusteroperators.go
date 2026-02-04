@@ -40,9 +40,9 @@ func clusterOperatorsInformationFromOperatorList(operators *configv1.ClusterOper
 	}
 
 	for _, co := range operators.Items {
-		var available = configv1.ConditionUnknown
-		var progressing = configv1.ConditionUnknown
-		var degraded = configv1.ConditionUnknown
+		available := configv1.ConditionUnknown
+		progressing := configv1.ConditionUnknown
+		degraded := configv1.ConditionUnknown
 
 		var conditions []OperatorCondition
 		for _, cnd := range co.Status.Conditions {
@@ -56,7 +56,6 @@ func clusterOperatorsInformationFromOperatorList(operators *configv1.ClusterOper
 			}
 
 			condition := OperatorCondition{
-
 				Message:     cnd.Message,
 				Reason:      cnd.Reason,
 				Status:      cnd.Status,

@@ -28,7 +28,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		"HOME",
 		"PARENT_DOMAIN_NAME",
 		"USER")
-
 	if err != nil {
 		return err
 	}

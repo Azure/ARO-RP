@@ -300,7 +300,8 @@ func TestMonitor(t *testing.T) {
 			mockEmitter: func(mock *mock_metrics.MockEmitter) {
 				mock.EXPECT().EmitFloat("monitor.nsg.duration", gomock.Any(), durationMetricDimensions)
 			},
-		}, {
+		},
+		{
 			name: "pass - no rules, 0 count profiles are not checked",
 			mockSubnet: func(mock *mock_armnetwork.MockSubnetsClient) {
 				masterSubnet, workerSubnet, _ := createBaseSubnets()

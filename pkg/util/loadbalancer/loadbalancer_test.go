@@ -17,53 +17,55 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-var infraID = "infraID"
-var location = "eastus"
-var publicIngressFIPConfigID = pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973")
-var originalLB = armnetwork.LoadBalancer{
-	Properties: &armnetwork.LoadBalancerPropertiesFormat{
-		FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-			{
-				Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-					PublicIPAddress: &armnetwork.PublicIPAddress{
-						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
-					},
-				},
-				ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
-				Name: pointerutils.ToPtr("public-lb-ip-v4"),
-			},
-			{
-				Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
-				ID:   publicIngressFIPConfigID,
-				Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-					LoadBalancingRules: []*armnetwork.SubResource{
-						{
-							ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
-						},
-						{
-							ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+var (
+	infraID                  = "infraID"
+	location                 = "eastus"
+	publicIngressFIPConfigID = pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973")
+	originalLB               = armnetwork.LoadBalancer{
+		Properties: &armnetwork.LoadBalancerPropertiesFormat{
+			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+				{
+					Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+						PublicIPAddress: &armnetwork.PublicIPAddress{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
 						},
 					},
-					PublicIPAddress: &armnetwork.PublicIPAddress{
-						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+					ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+					Name: pointerutils.ToPtr("public-lb-ip-v4"),
+				},
+				{
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+					ID:   publicIngressFIPConfigID,
+					Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+						LoadBalancingRules: []*armnetwork.SubResource{
+							{
+								ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+							},
+							{
+								ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+							},
+						},
+						PublicIPAddress: &armnetwork.PublicIPAddress{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+						},
 					},
 				},
-			},
-			{
-				Name: pointerutils.ToPtr("adce98f85c7dd47c5a21263a5e39c083"),
-				ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083"),
-				Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-					PublicIPAddress: &armnetwork.PublicIPAddress{
-						ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-adce98f85c7dd47c5a21263a5e39c083"),
+				{
+					Name: pointerutils.ToPtr("adce98f85c7dd47c5a21263a5e39c083"),
+					ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083"),
+					Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+						PublicIPAddress: &armnetwork.PublicIPAddress{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-adce98f85c7dd47c5a21263a5e39c083"),
+						},
 					},
 				},
 			},
 		},
-	},
-	Name:     pointerutils.ToPtr(infraID),
-	Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-	Location: pointerutils.ToPtr(location),
-}
+		Name:     pointerutils.ToPtr(infraID),
+		Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+		Location: pointerutils.ToPtr(location),
+	}
+)
 
 func TestRemoveLoadBalancerFrontendIPConfiguration(t *testing.T) {
 	// Run tests

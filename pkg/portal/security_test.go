@@ -393,7 +393,8 @@ func TestSecurity(t *testing.T) {
 					}
 
 					if tt2.authenticated && !slices.Contains([]string{
-						"/callback", "/healthz/ready", "/api/login", "/api/logout"}, tt.name) {
+						"/callback", "/healthz/ready", "/api/login", "/api/logout",
+					}, tt.name) {
 						payload.CallerIdentities[0].CallerIdentityValue = "username"
 					}
 					testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{payload})

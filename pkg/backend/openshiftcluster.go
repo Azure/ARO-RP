@@ -287,7 +287,6 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 
 			return nil
 		})
-
 		if err != nil {
 			return err
 		}
@@ -369,7 +368,7 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, d
 
 	var statusCode int
 	var cloudErr *api.CloudError
-	var detailedErr = autorest.DetailedError{}
+	detailedErr := autorest.DetailedError{}
 	var respErr *azcore.ResponseError
 
 	// Get the HTTP status code and map it to a result type

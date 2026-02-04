@@ -114,8 +114,8 @@ func removeOutboundIPsFromLB(lb sdknetwork.LoadBalancer) {
 }
 
 func removeOutboundRuleV4FrontendIPConfig(lb sdknetwork.LoadBalancer) {
-	var savedFIPConfig = make([]*sdknetwork.FrontendIPConfiguration, 0, len(lb.Properties.FrontendIPConfigurations))
-	var outboundRuleFrontendConfig = getOutboundRuleV4FIPConfigs(lb)
+	savedFIPConfig := make([]*sdknetwork.FrontendIPConfiguration, 0, len(lb.Properties.FrontendIPConfigurations))
+	outboundRuleFrontendConfig := getOutboundRuleV4FIPConfigs(lb)
 
 	for _, fipConfig := range lb.Properties.FrontendIPConfigurations {
 		fipConfigID := *fipConfig.ID
@@ -129,7 +129,7 @@ func removeOutboundRuleV4FrontendIPConfig(lb sdknetwork.LoadBalancer) {
 }
 
 func getOutboundRuleV4FIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwork.SubResource {
-	var obRuleV4FIPConfigs = make(map[string]sdknetwork.SubResource)
+	obRuleV4FIPConfigs := make(map[string]sdknetwork.SubResource)
 	for _, obRule := range lb.Properties.OutboundRules {
 		if *obRule.Name == outboundRuleV4 {
 			for _, fipConfig := range obRule.Properties.FrontendIPConfigurations {
@@ -144,7 +144,7 @@ func getOutboundRuleV4FIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwo
 
 // getFrontendIPConfigs returns a map of Frontend IP Configurations from the given load balancer
 func getFrontendIPConfigs(lb sdknetwork.LoadBalancer) map[string]sdknetwork.FrontendIPConfiguration {
-	var frontendIPConfigs = make(map[string]sdknetwork.FrontendIPConfiguration, len(lb.Properties.FrontendIPConfigurations))
+	frontendIPConfigs := make(map[string]sdknetwork.FrontendIPConfiguration, len(lb.Properties.FrontendIPConfigurations))
 
 	for _, fipConfig := range lb.Properties.FrontendIPConfigurations {
 		fipConfigID := *fipConfig.ID
@@ -349,7 +349,7 @@ func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[s
 func (m *manager) getClusterManagedIPs(ctx context.Context) (map[string]sdknetwork.PublicIPAddress, error) {
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-	var ipAddresses = make(map[string]sdknetwork.PublicIPAddress)
+	ipAddresses := make(map[string]sdknetwork.PublicIPAddress)
 
 	result, err := m.armPublicIPAddresses.List(ctx, resourceGroupName, nil)
 	if err != nil {

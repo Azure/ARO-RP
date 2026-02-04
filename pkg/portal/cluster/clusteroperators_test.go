@@ -150,7 +150,6 @@ func TestClusterOperators(t *testing.T) {
 						Type:   "Progressing",
 					},
 					{
-
 						Reason: "AsExpected",
 						Status: "True",
 						Type:   "Available",

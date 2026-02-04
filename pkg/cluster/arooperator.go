@@ -12,13 +12,11 @@ import (
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 )
 
-var (
-	CredentialsRequestGroupVersionResource = schema.GroupVersionResource{
-		Group:    cloudcredentialv1.SchemeGroupVersion.Group,
-		Version:  cloudcredentialv1.SchemeGroupVersion.Version,
-		Resource: "credentialsrequests",
-	}
-)
+var CredentialsRequestGroupVersionResource = schema.GroupVersionResource{
+	Group:    cloudcredentialv1.SchemeGroupVersion.Group,
+	Version:  cloudcredentialv1.SchemeGroupVersion.Version,
+	Resource: "credentialsrequests",
+}
 
 func (m *manager) isIngressProfileAvailable() bool {
 	// We try to acquire the IngressProfiles data at frontend best effort enrichment time only.

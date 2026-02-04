@@ -12,8 +12,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
-const ALLOW_EXPANDED_AZ_ENV = "ARO_INSTALLER_ALLOW_EXPANDED_AZS"
-const CONTROL_PLANE_MACHINE_COUNT = 3
+const (
+	ALLOW_EXPANDED_AZ_ENV       = "ARO_INSTALLER_ALLOW_EXPANDED_AZS"
+	CONTROL_PLANE_MACHINE_COUNT = 3
+)
 
 type availabilityZoneManager struct {
 	allowExpandedAvailabilityZones bool

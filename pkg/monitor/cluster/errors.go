@@ -10,14 +10,18 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-var errFetchClusterVersion = errors.New("error fetching ClusterVersion")
-var errFetchAROOperatorMasterDeployment = errors.New("error fetching ARO Operator master deployment")
-var errListAROOperatorDeployments = errors.New("error listing ARO Operator deployments")
-var errListReplicaSets = errors.New("error listing replicasets")
-var errListNamespaces = errors.New("error listing cluster namespaces")
+var (
+	errFetchClusterVersion              = errors.New("error fetching ClusterVersion")
+	errFetchAROOperatorMasterDeployment = errors.New("error fetching ARO Operator master deployment")
+	errListAROOperatorDeployments       = errors.New("error listing ARO Operator deployments")
+	errListReplicaSets                  = errors.New("error listing replicasets")
+	errListNamespaces                   = errors.New("error listing cluster namespaces")
+)
 
-var errAPIServerHealthzFailure = errors.New("error fetching APIServer healthz endpoint")
-var errAPIServerPingFailure = errors.New("error fetching APIServer healthz ping endpoint")
+var (
+	errAPIServerHealthzFailure = errors.New("error fetching APIServer healthz endpoint")
+	errAPIServerPingFailure    = errors.New("error fetching APIServer healthz ping endpoint")
+)
 
 type failureToRunClusterCollector struct {
 	collectorName string
