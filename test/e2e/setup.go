@@ -195,12 +195,12 @@ func SaveScreenshot(wd selenium.WebDriver, e error) {
 		panic(err)
 	}
 
-	err = os.WriteFile(imageAbsPath, imageBytes, 0666)
+	err = os.WriteFile(imageAbsPath, imageBytes, 0o666)
 	if err != nil {
 		panic(err)
 	}
 
-	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0666)
+	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0o666)
 	if err != nil {
 		panic(err)
 	}
@@ -261,7 +261,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		log.Infof("Failed to reach main portal path at %s. Error: %s", mainPortalPath, err.Error())
 	}
 	var portalAuthCmd string
-	var portalAuthArgs = make([]string, 0)
+	portalAuthArgs := make([]string, 0)
 	if os.Getenv("CI") != "" {
 		// In CI we have a prebuilt portalauth binary
 		portalAuthCmd = "./portalauth"
