@@ -13,6 +13,16 @@ const (
 	CPMSEnabled                        = "aro.cpms.enabled"
 	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
 	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
+
+	// DNS Type flag for CustomDNS feature
+	// Values: "" (default=dnsmasq), "dnsmasq", "clusterhosted"
+	// "clusterhosted" enables CustomDNS (CoreDNS static pod) for 4.21+ clusters
+	DNSType                            = "aro.dns.type"
+
+	// DNS Type values
+	DNSTypeDnsmasq                     = "dnsmasq"
+	DNSTypeClusterHosted               = "clusterhosted"
+
 	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
 	ImageConfigEnabled                 = "aro.imageconfig.enabled"
 	IngressEnabled                     = "aro.ingress.enabled"
@@ -65,6 +75,10 @@ func DefaultOperatorFlags() map[string]string {
 		CPMSEnabled:                        FlagFalse,
 		DnsmasqEnabled:                     FlagTrue,
 		RestartDnsmasqEnabled:              FlagFalse,
+
+		// DNS Type: blank (default) = dnsmasq, "dnsmasq" = force dnsmasq, "clusterhosted" = CustomDNS (4.21+)
+		DNSType:                            "",
+
 		GenevaLoggingEnabled:               FlagTrue,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,

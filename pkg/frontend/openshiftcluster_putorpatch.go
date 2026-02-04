@@ -347,6 +347,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc, operator.DefaultOperatorFlags)
 
+	// SetDNSDefaults will set DNS type based on cluster version (4.21+ uses CustomDNS)
+	api.SetDNSDefaults(doc)
+
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, putOrPatchClusterParameters.subId, putOrPatchClusterParameters.resourceProviderNamespace, doc)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package dnsmasq
+package dns
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -61,6 +61,13 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DnsmasqEnabled) {
 		r.Log.Debug("controller is disabled")
+		return reconcile.Result{}, nil
+	}
+
+	// Check effective DNS type - skip dnsmasq reconciliation if using CustomDNS
+	effectiveDNSType := GetEffectiveDNSType(ctx, r.Client, r.Log, instance)
+	if effectiveDNSType == operator.DNSTypeClusterHosted {
+		r.Log.Info("aro.dns.type=clusterhosted (CustomDNS enabled), skipping dnsmasq reconciliation")
 		return reconcile.Result{}, nil
 	}
 

@@ -16,6 +16,8 @@ func (m *manager) ensureDefaults(ctx context.Context) error {
 	var err error
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		api.SetDefaults(doc, operator.DefaultOperatorFlags)
+		// SetDNSDefaults will set DNS type based on cluster version (4.21+ uses CustomDNS)
+		api.SetDNSDefaults(doc)
 		return nil
 	})
 	if err != nil {
