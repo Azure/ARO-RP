@@ -365,6 +365,7 @@ func TestEmitNodeConditions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+            t.Parallel()
 			controller := gomock.NewController(t)
 			m := mock_metrics.NewMockEmitter(controller)
 
