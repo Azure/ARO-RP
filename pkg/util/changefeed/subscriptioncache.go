@@ -1,5 +1,8 @@
 package changefeed
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"strings"
 	"sync"
@@ -21,6 +24,7 @@ type SubscriptionsCache interface {
 
 	GetCacheSize() int
 	GetSubscription(string) (*subscriptionInfo, bool)
+	GetLastProcessed() (time.Time, bool)
 }
 
 func NewSubscriptionsChangefeedCache(onlyValidSubscriptions bool) *subscriptionsChangeFeedResponder {
@@ -52,6 +56,11 @@ func (c *subscriptionsChangeFeedResponder) GetCacheSize() int {
 	defer c.mu.RUnlock()
 
 	return len(c.subs)
+}
+
+func (c *subscriptionsChangeFeedResponder) GetLastProcessed() (time.Time, bool) {
+	t, ok := c.lastChangefeedProcessed.Load().(time.Time)
+	return t, ok
 }
 
 func (c *subscriptionsChangeFeedResponder) Lock() {
