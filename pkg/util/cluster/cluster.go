@@ -765,7 +765,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	c.log.Infof("Deleting cluster %s in resource group %s", clusterName, vnetResourceGroup)
+	c.log.Infof("Starting to delete cluster %s in resource group %s", clusterName, vnetResourceGroup)
 	var errs []error
 
 	if c.Config.IsCI {
@@ -1384,7 +1384,7 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 }
 
 func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
-	c.log.Printf("deleting resource group %s", resourceGroupName)
+	c.log.Printf("Checking that resource group %s has been deleted.", resourceGroupName)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -1392,7 +1392,7 @@ func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupN
 	err := wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
 		_, err := c.groups.Get(timeoutCtx, resourceGroupName)
 		if azureerrors.ResourceGroupNotFound(err) {
-			c.log.Infof("finished deleting resource group %s", resourceGroupName)
+			c.log.Infof("The resource group %s has been deleted.", resourceGroupName)
 			return true, nil
 		}
 		if err != nil {
