@@ -85,11 +85,11 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		if _, ok := n.Labels[masterRoleLabel]; ok {
 			masterCount++
 		}
-		if _, ok := n.Labels[workerRoleLabel]; ok {
-			workerinfraCount++
-		} else if _, ok := n.Labels[infraRoleLabel]; ok {
-			workerinfraCount++
-		}
+		_, isWorker := n.Labels[workerRoleLabel]                                   
+        _, isInfra := n.Labels[infraRoleLabel]                                     
+        if isWorker || isInfra {                                                   
+           workerinfraCount++                                                     
+        }  
 	})
 	if err != nil {
 		return err
