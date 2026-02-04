@@ -558,7 +558,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}, nil
 }
 
-func setup(ctx context.Context) error {
+func setupE2EInfrastructure(ctx context.Context) error {
 	if err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
@@ -649,7 +649,7 @@ func setup(ctx context.Context) error {
 	return nil
 }
 
-func done(ctx context.Context) error {
+func cleanupE2EInfrastructure(ctx context.Context) error {
 	// Load the usual cluster config (to pick up IsCI, etc.)
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
@@ -680,7 +680,7 @@ var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
-	if err := setup(context.Background()); err != nil {
+	if err := setupE2EInfrastructure(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}
@@ -694,7 +694,7 @@ var _ = AfterSuite(func() {
 	// The Background shouldn't get cancelled but it does:
 	//  Future#WaitForCompletion: context has been cancelled: StatusCode=200 -- Original Error: context deadline exceeded
 	//  REF: https://msazure.visualstudio.com/AzureRedHatOpenShift/_build/results?buildId=151689161&view=logs&j=a5843bde-d5e8-58fa-49ee-1eddd236493e&t=2c089743-578b-5275-4a10-68ef91b7a4f1
-	if err := done(context.Background()); err != nil {
+	if err := cleanupE2EInfrastructure(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}
