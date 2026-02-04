@@ -1352,21 +1352,43 @@ func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGro
 	return nil
 }
 
+// deleteCluster deletes an ARO cluster with retries for transient errors.
+// It uses separate timeouts for the overall operation (45m) and each individual
+// DeleteAndWait call (35m) to prevent a single slow attempt from exhausting the retry budget.
 func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName string) error {
 	c.log.Printf("deleting cluster %s", clusterName)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 25*time.Minute)
+	overallTimeout := 45 * time.Minute
+	perOperationTimeout := 35 * time.Minute
+
+	overallTimeoutCause := fmt.Errorf("cluster deletion timed out after %s for %s", overallTimeout, clusterName)
+	timeoutCtx, cancel := context.WithTimeoutCause(ctx, overallTimeout, overallTimeoutCause)
 	defer cancel()
 
 	var lastErr error
-	// Total Backoff ~= 18mins and this is a minimum. The overall timeout of 25 is to allow space
-	// for all the steps to run.
-	backoff := wait.Backoff{Steps: 20, Duration: 5 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
+	// Backoff waits: 0s + 30s + 60s = 90s total. Given perOperationTimeout (35m) and
+	// overallTimeout (45m), realistically only ~1 full retry is possible.
+	backoff := wait.Backoff{Steps: 3, Duration: 30 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
 	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func() (bool, error) {
-		err := c.openshiftclusters.DeleteAndWait(timeoutCtx, resourceGroup, clusterName)
+		opTimeoutCause := fmt.Errorf("DeleteAndWait timed out after %s for %s", perOperationTimeout, clusterName)
+		opCtx, opCancel := context.WithTimeoutCause(timeoutCtx, perOperationTimeout, opTimeoutCause)
+		defer opCancel()
+
+		err := c.openshiftclusters.DeleteAndWait(opCtx, resourceGroup, clusterName)
 		if err == nil {
 			return true, nil
 		}
+
+		if timeoutCtx.Err() != nil {
+			return false, context.Cause(timeoutCtx)
+		}
+
+		if opCtx.Err() != nil {
+			c.log.Warnf("operation timed out for cluster %s: %v", clusterName, context.Cause(opCtx))
+			lastErr = context.Cause(opCtx)
+			return false, nil
+		}
+
 		if azureerrors.IsRetryableError(err) {
 			c.log.Warnf("retryable error deleting cluster %s, will retry: %v", clusterName, err)
 			lastErr = err
@@ -1384,8 +1406,9 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	return nil
 }
 
+// checkResourceGroupDeleted polls until the resource group no longer exists or times out.
 func (c *Cluster) checkResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
-	c.log.Printf("Checking that resource group %s has been deleted.", resourceGroupName)
+	c.log.Printf("checking that resource group %s has been deleted", resourceGroupName)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
