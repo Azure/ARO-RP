@@ -46,7 +46,11 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		machineset := ""
 		if hasMachine {
 			machineset = machine.Labels[machinesetLabelKey]
-		}
+var role, machineset string                                                
+  if hasMachine {                                                            
+      role = machine.Labels[machineRoleLabelKey]                             
+      machineset = machine.Labels[machinesetLabelKey]                        
+  }   
 
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
