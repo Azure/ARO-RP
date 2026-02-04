@@ -1356,10 +1356,12 @@ func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGro
 func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName string) error {
 	c.log.Printf("deleting cluster %s", clusterName)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 25*time.Minute)
 	defer cancel()
 
 	var lastErr error
+	// Total Backoff ~= 18mins and this is a minimum. The overall timeout of 25 is to allow space
+	// for all the steps to run.
 	backoff := wait.Backoff{Steps: 20, Duration: 5 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
 	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func() (bool, error) {
 		err := c.openshiftclusters.DeleteAndWait(timeoutCtx, resourceGroup, clusterName)
