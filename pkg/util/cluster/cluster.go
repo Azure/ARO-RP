@@ -803,10 +803,9 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
 		}
 
-		// Why do we have 2 fucntions to delete a RG? Couldn't we call the same one twice?
-		if err := c.ensureResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
-			c.log.Errorf("Failed to ensure resource group %s deleted: %v", clusterResourceGroup, err)
-			errs = append(errs, fmt.Errorf("failed to ensure resource group %s deleted: %w", clusterResourceGroup, err))
+		if err := c.checkResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
+			c.log.Errorf("Failed to check resource group %s deleted: %v", clusterResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to check resource group %s deleted: %w", clusterResourceGroup, err))
 		}
 
 		if err := c.deleteResourceGroup(ctx, vnetResourceGroup); err != nil {
@@ -1385,7 +1384,7 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	return nil
 }
 
-func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
+func (c *Cluster) checkResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
 	c.log.Printf("Checking that resource group %s has been deleted.", resourceGroupName)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
@@ -1404,17 +1403,17 @@ func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupN
 			lastErr = err
 			c.log.Warnf("retryable error checking resource group %s, will retry: %v", resourceGroupName, err)
 		} else {
-			c.log.Infof("resource group %s still exists, waiting for deletion", resourceGroupName)
+			c.log.Infof("resource group %s still exists, checking for deletion", resourceGroupName)
 		}
 		return false, nil
 	}, timeoutCtx.Done())
 
 	if err != nil {
 		if err == wait.ErrWaitTimeout && lastErr != nil {
-			return fmt.Errorf("timed out waiting for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
+			return fmt.Errorf("timed out checking for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
 		}
 		if err == wait.ErrWaitTimeout {
-			return fmt.Errorf("timed out waiting for resource group %s to be deleted", resourceGroupName)
+			return fmt.Errorf("timed out checking for resource group %s to be deleted", resourceGroupName)
 		}
 		return err
 	}
