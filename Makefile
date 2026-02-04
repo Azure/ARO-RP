@@ -296,8 +296,8 @@ test-e2e: e2e.test
 test-go: generate build-all validate-go lint-go unit-test-go
 
 .PHONY: validate-go
-validate-go: validate-go-action
-	gofmt -s -w cmd hack pkg test
+validate-go: validate-go-action $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) fmt
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -324,6 +324,11 @@ unit-test-go: $(GOTESTSUM)
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+
+.PHONY: fmt
+fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (gci, gofumpt)
+	$(GOLANGCI_LINT) fmt
+	cd pkg/api/ && $(GOLANGCI_LINT) fmt
 
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT)
