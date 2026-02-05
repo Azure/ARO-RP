@@ -68,7 +68,7 @@ func AssertLoggingOutput(h *test.Hook, expected []ExpectedLogEntry) error {
 	return nil
 }
 
-func LogForTesting(t *testing.T) (*test.Hook, *logrus.Entry) {
+func LogForTesting(t testing.TB) (*test.Hook, *logrus.Entry) {
 	t.Helper()
 	hook, log := New()
 	t.Cleanup(func() {
