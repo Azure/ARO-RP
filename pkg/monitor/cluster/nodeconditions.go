@@ -38,19 +38,11 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		machine, hasMachine := machines[machineNamespacedName]
 		isSpotInstance := hasMachine && isSpotInstance(machine)
 
-		role := ""
+		var role, machineset string
 		if hasMachine {
 			role = machine.Labels[machineRoleLabelKey]
-		}
-
-		machineset := ""
-		if hasMachine {
 			machineset = machine.Labels[machinesetLabelKey]
-var role, machineset string                                                
-  if hasMachine {                                                            
-      role = machine.Labels[machineRoleLabelKey]                             
-      machineset = machine.Labels[machinesetLabelKey]                        
-  }   
+		}
 
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
@@ -89,18 +81,18 @@ var role, machineset string
 		if _, ok := n.Labels[masterRoleLabel]; ok {
 			masterCount++
 		}
-		_, isWorker := n.Labels[workerRoleLabel]                                   
-        _, isInfra := n.Labels[infraRoleLabel]                                     
-        if isWorker || isInfra {                                                   
-           workerinfraCount++                                                     
-        }  
+		_, isWorker := n.Labels[workerRoleLabel]
+		_, isInfra := n.Labels[infraRoleLabel]
+		if isWorker || isInfra {
+			workerInfraCount++
+		}
 	})
 	if err != nil {
 		return err
 	}
 
 	mon.emitGauge("node.count", int64(masterCount), map[string]string{"role": "master"})
-	mon.emitGauge("node.count", int64(workerinfraCount), map[string]string{"role": "worker"})
+	mon.emitGauge("node.count", int64(workerInfraCount), map[string]string{"role": "worker"})
 	return nil
 }
 
