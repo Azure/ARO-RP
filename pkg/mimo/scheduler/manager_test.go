@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -26,6 +27,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var _ = Describe("MIMO Scheduler", Ordered, func() {
@@ -51,6 +53,7 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 	var clusterCache *openShiftClusterCache
 
 	var log *logrus.Entry
+	var hook *test.Hook
 	var _env env.Interface
 
 	var controller *gomock.Controller
@@ -75,19 +78,14 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 
 		ctx, cancel = context.WithCancel(context.Background())
 
-		log = logrus.NewEntry(&logrus.Logger{
-			Out:       GinkgoWriter,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.DebugLevel,
-		})
+		hook, log = testlog.LogForTesting(GinkgoTB())
 
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
 	})
 
 	BeforeEach(func() {
-		now := func() time.Time { return time.Unix(120, 0) }
+		now := func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		schedules, schedulesClient = testdatabase.NewFakeMaintenanceSchedules(now)
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
@@ -155,7 +153,6 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 		})
 
 		// fire up the changefeeds
-
 		go changefeed.NewChangefeed(
 			ctx, log.WithField("component", "subchangefeed"), subscriptions.ChangeFeed(),
 			10*time.Millisecond,
@@ -194,6 +191,18 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 				MaintenanceSchedule: api.MaintenanceSchedule{
 					State:             api.MaintenanceScheduleStateEnabled,
 					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "Mon *-*-* 00:00:00",
+					LookForwardCount: 1,
+					ScheduleAcross:   "1 day",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
 				},
 			}
 			fixtures.AddMaintenanceScheduleDocuments(schedule)
@@ -201,8 +210,19 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 			// Schedule is unchanged
 			checker.AddMaintenanceScheduleDocuments(schedule)
 
+			// first monday in jan 2026
+			t := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID: uuidGeneratorManifests.Generate(),
+
+				ClusterResourceID: clusterResourceID,
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					Priority:          0,
+					RunAfter:          int(t.Unix()),
+				},
 			})
 		})
 
@@ -220,6 +240,9 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 			Expect(didWork).To(BeTrue())
 
 			verifyDatabaseState()
+
+			err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{})
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
