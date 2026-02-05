@@ -7,6 +7,21 @@ trigger:
   paths:
     exclude:
       - docs/*
+      - "**/*.md"
+      - LICENSE
+      - LICENSE.txt
+      - .gitignore
+      - OWNERS
+      - .github/CODEOWNERS
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/dependabot.yml
+      - .github/workflows/check-coverage.yml
+      - .github/workflows/codeql-analysis.yml
+      - .github/workflows/maintenance.yml
+      - .github/workflows/npm-audit.yml
+      - .github/workflows/prune-tags.yml
+      - .github/workflows/release-note.yml
+      - .github/workflows/yamllint.yml
   tags:
     include:
       - v2*
@@ -19,6 +34,21 @@ pr:
   paths:
     exclude:
       - docs/*
+      - "**/*.md"
+      - LICENSE
+      - LICENSE.txt
+      - .gitignore
+      - OWNERS
+      - .github/CODEOWNERS
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/dependabot.yml
+      - .github/workflows/check-coverage.yml
+      - .github/workflows/codeql-analysis.yml
+      - .github/workflows/maintenance.yml
+      - .github/workflows/npm-audit.yml
+      - .github/workflows/prune-tags.yml
+      - .github/workflows/release-note.yml
+      - .github/workflows/yamllint.yml
 
 variables:
   - template: vars.yml
