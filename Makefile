@@ -296,7 +296,7 @@ test-e2e: e2e.test
 test-go: generate build-all validate-go lint-go unit-test-go
 
 .PHONY: validate-go
-validate-go: validate-imports
+validate-go: validate-go-action
 	gofmt -s -w cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
@@ -343,14 +343,16 @@ validate-lint-go-fix: lint-go-fix
 	fi
 
 .PHONY: validate-gh-actions
-validate-gh-actions: ## Validate GitHub Actions are pinned to SHA
+validate-gh-actions: $(PINACT) ## Validate GitHub Actions are pinned to SHA
 	@echo "Checking that all GitHub Actions are pinned to SHA..."
-	@if grep -rE 'uses:\s+[^@]+@(v[0-9]|master|main|releases/)' .github/workflows/*.yml 2>/dev/null | grep -v '#'; then \
-		echo "Error: Found unpinned GitHub Actions (must use SHA with version comment)"; \
-		echo "Run 'npx pin-github-action .github/workflows/' to fix"; \
-		exit 1; \
-	fi
+	@$(PINACT) run --check --verify
 	@echo "All GitHub Actions are properly pinned to SHA"
+
+.PHONY: fix-gh-actions
+fix-gh-actions: $(PINACT) ## Pin unpinned GitHub Actions to SHA
+	@echo "Pinning GitHub Actions to SHA..."
+	@$(PINACT) run
+	@echo "Done. Please review the changes."
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
