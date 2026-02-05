@@ -86,6 +86,7 @@ const (
 func (i GetOrderbyQueryParameterType) String() string {
 	return []string{"id", "id desc", "deletedDateTime", "deletedDateTime desc", "addIns", "addIns desc", "api", "api desc", "appId", "appId desc", "applicationTemplateId", "applicationTemplateId desc", "appRoles", "appRoles desc", "certification", "certification desc", "createdDateTime", "createdDateTime desc", "defaultRedirectUri", "defaultRedirectUri desc", "description", "description desc", "disabledByMicrosoftStatus", "disabledByMicrosoftStatus desc", "displayName", "displayName desc", "groupMembershipClaims", "groupMembershipClaims desc", "identifierUris", "identifierUris desc", "info", "info desc", "isDeviceOnlyAuthSupported", "isDeviceOnlyAuthSupported desc", "isFallbackPublicClient", "isFallbackPublicClient desc", "keyCredentials", "keyCredentials desc", "logo", "logo desc", "notes", "notes desc", "oauth2RequirePostResponse", "oauth2RequirePostResponse desc", "optionalClaims", "optionalClaims desc", "parentalControlSettings", "parentalControlSettings desc", "passwordCredentials", "passwordCredentials desc", "publicClient", "publicClient desc", "publisherDomain", "publisherDomain desc", "requestSignatureVerification", "requestSignatureVerification desc", "requiredResourceAccess", "requiredResourceAccess desc", "samlMetadataUrl", "samlMetadataUrl desc", "serviceManagementReference", "serviceManagementReference desc", "signInAudience", "signInAudience desc", "spa", "spa desc", "tags", "tags desc", "tokenEncryptionKeyId", "tokenEncryptionKeyId desc", "verifiedPublisher", "verifiedPublisher desc", "web", "web desc"}[i]
 }
+
 func ParseGetOrderbyQueryParameterType(v string) (any, error) {
 	result := ID_GETORDERBYQUERYPARAMETERTYPE
 	switch v {
@@ -242,6 +243,7 @@ func ParseGetOrderbyQueryParameterType(v string) (any, error) {
 	}
 	return &result, nil
 }
+
 func SerializeGetOrderbyQueryParameterType(values []GetOrderbyQueryParameterType) []string {
 	result := make([]string, len(values))
 	for i, v := range values {
@@ -249,6 +251,7 @@ func SerializeGetOrderbyQueryParameterType(values []GetOrderbyQueryParameterType
 	}
 	return result
 }
+
 func (i GetOrderbyQueryParameterType) isMultiValue() bool {
 	return false
 }

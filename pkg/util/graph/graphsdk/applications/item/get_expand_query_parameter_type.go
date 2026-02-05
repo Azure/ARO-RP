@@ -22,6 +22,7 @@ const (
 func (i GetExpandQueryParameterType) String() string {
 	return []string{"*", "appManagementPolicies", "createdOnBehalfOf", "extensionProperties", "federatedIdentityCredentials", "homeRealmDiscoveryPolicies", "owners", "tokenIssuancePolicies", "tokenLifetimePolicies", "synchronization"}[i]
 }
+
 func ParseGetExpandQueryParameterType(v string) (any, error) {
 	result := ASTERISK_GETEXPANDQUERYPARAMETERTYPE
 	switch v {
@@ -50,6 +51,7 @@ func ParseGetExpandQueryParameterType(v string) (any, error) {
 	}
 	return &result, nil
 }
+
 func SerializeGetExpandQueryParameterType(values []GetExpandQueryParameterType) []string {
 	result := make([]string, len(values))
 	for i, v := range values {
@@ -57,6 +59,7 @@ func SerializeGetExpandQueryParameterType(values []GetExpandQueryParameterType) 
 	}
 	return result
 }
+
 func (i GetExpandQueryParameterType) isMultiValue() bool {
 	return false
 }

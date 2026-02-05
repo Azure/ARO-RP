@@ -65,6 +65,7 @@ const (
 func (i GetSelectQueryParameterType) String() string {
 	return []string{"id", "deletedDateTime", "accountEnabled", "addIns", "alternativeNames", "appDescription", "appDisplayName", "appId", "applicationTemplateId", "appOwnerOrganizationId", "appRoleAssignmentRequired", "appRoles", "customSecurityAttributes", "description", "disabledByMicrosoftStatus", "displayName", "homepage", "info", "keyCredentials", "loginUrl", "logoutUrl", "notes", "notificationEmailAddresses", "oauth2PermissionScopes", "passwordCredentials", "preferredSingleSignOnMode", "preferredTokenSigningKeyThumbprint", "replyUrls", "resourceSpecificApplicationPermissions", "samlSingleSignOnSettings", "servicePrincipalNames", "servicePrincipalType", "signInAudience", "tags", "tokenEncryptionKeyId", "verifiedPublisher", "appManagementPolicies", "appRoleAssignedTo", "appRoleAssignments", "claimsMappingPolicies", "createdObjects", "delegatedPermissionClassifications", "endpoints", "federatedIdentityCredentials", "homeRealmDiscoveryPolicies", "memberOf", "oauth2PermissionGrants", "ownedObjects", "owners", "tokenIssuancePolicies", "tokenLifetimePolicies", "transitiveMemberOf", "synchronization"}[i]
 }
+
 func ParseGetSelectQueryParameterType(v string) (any, error) {
 	result := ID_GETSELECTQUERYPARAMETERTYPE
 	switch v {
@@ -179,6 +180,7 @@ func ParseGetSelectQueryParameterType(v string) (any, error) {
 	}
 	return &result, nil
 }
+
 func SerializeGetSelectQueryParameterType(values []GetSelectQueryParameterType) []string {
 	result := make([]string, len(values))
 	for i, v := range values {
@@ -186,6 +188,7 @@ func SerializeGetSelectQueryParameterType(values []GetSelectQueryParameterType) 
 	}
 	return result
 }
+
 func (i GetSelectQueryParameterType) isMultiValue() bool {
 	return false
 }
