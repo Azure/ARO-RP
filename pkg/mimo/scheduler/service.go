@@ -1,4 +1,4 @@
-package actuator
+package scheduler
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -25,11 +24,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
-	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
+	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -38,11 +35,10 @@ type Runnable interface {
 }
 
 type service struct {
-	dialer  proxy.Dialer
 	baseLog *logrus.Entry
 	env     env.Interface
 
-	dbGroup actuatorDBs
+	dbGroup schedulerDBs
 
 	m              metrics.Emitter
 	mu             sync.RWMutex
@@ -51,7 +47,12 @@ type service struct {
 	workers        *atomic.Int32
 	workerRoutines sync.WaitGroup
 
-	b buckets.BucketWorker[*api.OpenShiftClusterDocument]
+	b        buckets.BucketWorker[*api.MaintenanceScheduleDocument]
+	subs     changefeed.SubscriptionsCache
+	clusters *openShiftClusterCache
+
+	changefeedBatchSize int
+	changefeedInterval  time.Duration
 
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
@@ -67,16 +68,17 @@ type service struct {
 
 var _ Runnable = (*service)(nil)
 
-type actuatorDBs interface {
+type schedulerDBs interface {
 	database.DatabaseGroupWithOpenShiftClusters
+	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithMaintenanceSchedules
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter, ownedBuckets []int) *service {
+func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metrics.Emitter, ownedBuckets []int) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
-		dialer:  dialer,
 
 		dbGroup: dbg,
 
@@ -89,11 +91,18 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		now:         time.Now,
 		pollTime:    time.Minute,
 
+		changefeedBatchSize: 50,
+		changefeedInterval:  10 * time.Second,
+
+		subs: changefeed.NewSubscriptionsChangefeedCache(false),
+
 		serveHealthz: true,
 	}
 
+	s.clusters = newOpenShiftClusterCache(log, s.subs)
+
 	s.cond = sync.NewCond(&s.mu)
-	s.b = buckets.NewBucketWorker[*api.OpenShiftClusterDocument](log, s.spawnWorker, &s.mu)
+	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
 	s.b.SetBuckets(ownedBuckets)
 
 	return s
@@ -156,9 +165,12 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			s.cond.Signal()
 		}()
 	}
+
+	s.startChangefeeds(ctx, stop)
+
 	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
 
-	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
+	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
 	for !s.stopping.Load() {
 		old, err := s.poll(ctx, lastGotDocs)
 		if err != nil {
@@ -178,21 +190,51 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	return nil
 }
 
+func (s *service) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
+	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return err
+	}
+
+	dbSubscriptions, err := s.dbGroup.Subscriptions()
+	if err != nil {
+		return err
+	}
+
+	// start subscription changefeed
+	var subChangefeed changefeed.Changefeed[*api.SubscriptionDocuments] = dbSubscriptions.ChangeFeed()
+	go changefeed.NewChangefeed(
+		ctx, s.baseLog.WithField("component", "changefeed"), subChangefeed,
+		s.changefeedInterval,
+		s.changefeedBatchSize, s.subs, stop,
+	)
+
+	// start cluster changefeed
+	var clusterChangefeed changefeed.Changefeed[*api.OpenShiftClusterDocuments] = dbOpenShiftClusters.ChangeFeed()
+	go changefeed.NewChangefeed(
+		ctx, s.baseLog.WithField("component", "changefeed"), clusterChangefeed,
+		s.changefeedInterval,
+		s.changefeedBatchSize, s.clusters, stop,
+	)
+
+	return nil
+}
+
 // Temporary method of updating without the changefeed -- the reason why is
 // complicated
-func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClusterDocument) (map[string]*api.OpenShiftClusterDocument, error) {
-	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
+func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceScheduleDocument) (map[string]*api.MaintenanceScheduleDocument, error) {
+	dbMaintenanceSchedules, err := s.dbGroup.MaintenanceSchedules()
 	if err != nil {
 		return nil, err
 	}
 
 	// Fetch all of the cluster UUIDs
-	i, err := dbOpenShiftClusters.GetAllResourceIDs(ctx, "")
+	i, err := dbMaintenanceSchedules.GetValid(ctx, "")
 	if err != nil {
 		return nil, err
 	}
 
-	docs := make([]*api.OpenShiftClusterDocument, 0)
+	docs := make([]*api.MaintenanceScheduleDocument, 0)
 
 	for {
 		d, err := i.Next(ctx, -1)
@@ -203,14 +245,14 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 			break
 		}
 
-		docs = append(docs, d.OpenShiftClusterDocuments...)
+		docs = append(docs, d.MaintenanceScheduleDocuments...)
 	}
 
-	s.baseLog.Debugf("fetched %d clusters from CosmosDB", len(docs))
+	s.baseLog.Debugf("fetched %d schedule documents from CosmosDB", len(docs))
 
-	docMap := make(map[string]*api.OpenShiftClusterDocument)
+	docMap := make(map[string]*api.MaintenanceScheduleDocument)
 	for _, d := range docs {
-		docMap[strings.ToLower(d.Key)] = d
+		docMap[strings.ToLower(d.ID)] = d
 	}
 
 	// remove docs that don't exist in the new set (removed clusters)
@@ -222,7 +264,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 		}
 	}
 
-	s.baseLog.Debugf("updating %d clusters", len(docMap))
+	s.baseLog.Debugf("updating %d schedules", len(docMap))
 
 	for _, cluster := range docMap {
 		s.b.UpsertDoc(cluster)
@@ -248,8 +290,20 @@ func (s *service) checkReady() bool {
 		return false
 	}
 
+	lastClusterChangefeed, ok := s.clusters.GetLastProcessed()
+	if !ok {
+		return false
+	}
+
+	lastSubsChangefeed, ok := s.subs.GetLastProcessed()
+	if !ok {
+		return false
+	}
+
 	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < time.Minute) // did we update our list of clusters recently?
+		return (time.Since(lastChangefeedTime) < time.Minute && // did we update our changefeeds recently?
+			time.Since(lastClusterChangefeed) < time.Minute &&
+			time.Since(lastSubsChangefeed) < time.Minute)
 	} else {
 		return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
 			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
@@ -266,31 +320,21 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	defer s.workerRoutines.Done()
 
 	delay := s.workerDelay()
-	log := utillog.EnrichWithResourceID(s.baseLog, id)
+	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
 	// Wait for a randomised delay before starting
 	time.Sleep(delay)
 
-	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
+	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
+
+	a, err := NewSchedulerForSchedule(context.Background(), s.env, log, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	dbMaintenanceManifests, err := s.dbGroup.MaintenanceManifests()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	a, err := NewActuator(context.Background(), s.env, log, id, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	// load in the tasks for the Actuator from the controller
+	// load in valid tasks
 	a.AddMaintenanceTasks(s.tasks)
 
 	t := time.NewTicker(s.pollTime)
@@ -303,11 +347,11 @@ out:
 	for !s.stopping.Load() {
 		func() {
 			s.workers.Add(1)
-			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
+			s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
 
 			defer func() {
 				s.workers.Add(-1)
-				s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
+				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
 			}()
 
 			_, err := a.Process(context.Background())
@@ -322,54 +366,4 @@ out:
 			break out
 		}
 	}
-}
-
-// DetermineBuckets uses the hostname to figure out which subset of buckets we
-// should be serving.
-func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
-	_log := env.Logger()
-
-	// We have a VMSS with 3 VMs in prod
-	vmCount := 3
-
-	b := []int{}
-	if !env.IsLocalDevelopmentMode() {
-		name, err := hostnameFunc()
-		if err != nil {
-			// if we can't get the hostname then just run all of them
-			_log.Warn("unable to get the hostname for bucket determination")
-		} else {
-			// figure out which VMSS host we're running on - e.g. rp-v20000101.01-000001"
-			splitName := strings.Split(name, "-")
-			if len(splitName) > 1 {
-				num, err := strconv.Atoi(splitName[len(splitName)-1])
-				if err != nil {
-					_log.Warningf("hostname %s doesn't end in a number, unable to partition buckets", name)
-				} else {
-					if num >= vmCount {
-						// Rather than guess, we fall back to all buckets. This
-						// means that a VMSS replacement of -3 might have some
-						// weird behaviour, but because we get a lock on the
-						// OpenShiftClusterObject before we do anything to the
-						// cluster, it should be fine.
-						_log.Warningf("vmss number is %d, currently only handles 3 partitions (vm numbers 0-2), falling back to all", num)
-					} else {
-						// For the 3 VMs, VM 1 will serve buckets 0,3,6...,
-						// VM 2 will serve 1,4,7... VM 3 will serve 2,5,8...
-						for i := num; i < bucket.Buckets; i += vmCount {
-							b = append(b, i)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// We haven't figured out our buckets so fall back to all
-	if len(b) == 0 {
-		for i := range 256 {
-			b = append(b, i)
-		}
-	}
-	return b
 }
