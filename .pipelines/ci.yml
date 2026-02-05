@@ -7,6 +7,8 @@ trigger:
   paths:
     exclude:
       - docs/*
+      - "*.md"
+      - .github/*
   tags:
     include:
       - v2*
@@ -19,6 +21,8 @@ pr:
   paths:
     exclude:
       - docs/*
+      - "*.md"
+      - .github/*
 
 variables:
   - template: vars.yml
