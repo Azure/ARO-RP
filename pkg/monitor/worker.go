@@ -117,7 +117,6 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 							fps == api.ProvisioningStateDeleting):
 					mon.deleteDoc(doc)
 				default:
-					// TODO: improve memory usage by storing a subset of doc in mon.docs
 					mon.upsertDoc(doc)
 				}
 			}
