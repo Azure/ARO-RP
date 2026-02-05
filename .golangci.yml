@@ -212,7 +212,7 @@ formatters:
         - prefix(github.com/openshift)
         - localmodule
   exclusions:
-    generated: lax
+    generated: disable
     paths:
       - vendor/portal
       - vendor
