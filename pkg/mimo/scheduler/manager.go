@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 type getCachedScheduleDocFunc func() (*api.MaintenanceScheduleDocument, bool)
@@ -73,15 +74,55 @@ func (a *scheduler) AddMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenan
 func (a *scheduler) Process(ctx context.Context) (bool, error) {
 	doc, ok := a.cachedDoc()
 	if !ok {
-		a.log.Error("can't get the schedule doc?")
 		return false, errors.New("can't get the cached schedule doc")
 	}
 
 	a.log.Infof("processing schedule %s", doc.ID)
 
+	calDef, err := parseCalendar(doc.MaintenanceSchedule.Schedule)
+	if err != nil {
+		return false, err
+	}
+	now := a.now()
+
+	next, hasFutureTime := Next(now, calDef)
+	if !hasFutureTime {
+		a.log.Infof("schedule '%s' will never trigger again, skipping", doc.MaintenanceSchedule.Schedule)
+		return true, nil
+	}
+	periods := []time.Time{now, next}
+
+	if doc.MaintenanceSchedule.LookForwardCount > 1 {
+		for i := range doc.MaintenanceSchedule.LookForwardCount - 1 {
+			n, inFuture := Next(periods[len(periods)-1], calDef)
+			if !inFuture {
+				a.log.Infof("schedule %s will only trigger %d times but look forward is %d", doc.MaintenanceSchedule.Schedule, i-1, doc.MaintenanceSchedule.LookForwardCount)
+				break
+			}
+
+			periods = append(periods, n)
+		}
+	}
+
+	a.log.Infof("processing windows in these time blocks: %s", periods)
+
 	// go over each of the clusters
 	for id, cl := range a.getClusters() {
-		a.log.Infof("checking selectors for %s (sub %s)", id, cl.SubscriptionID)
+		a.log.Infof("checking selectors for %s (sub %s)", id, cl["subscriptionID"])
+
+		clusterLog := log.EnrichWithResourceID(a.log, id)
+
+		matchesSelectors, err := cl.Matches(clusterLog, doc.MaintenanceSchedule.Selectors)
+		if err != nil {
+			clusterLog.Errorf("error matching selectors, skipping cluster: %s", err.Error())
+			continue
+		}
+
+		if matchesSelectors {
+			// logic
+
+			clusterLog.Info("matches selectors")
+		}
 	}
 
 	return true, nil
