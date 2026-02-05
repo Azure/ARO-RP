@@ -6,6 +6,7 @@ package scheduler
 import (
 	"fmt"
 	"iter"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -78,7 +79,7 @@ func (c *openShiftClusterCache) OnDoc(doc *api.OpenShiftClusterDocument) {
 				}
 
 				if updated {
-					return *new, xsync.UpdateOp
+					return new, xsync.UpdateOp
 				} else {
 					return selectorData{}, xsync.CancelOp
 				}
@@ -94,8 +95,8 @@ func (c *openShiftClusterCache) OnAllPendingProcessed() {
 	}
 }
 
-func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, old selectorData) (*selectorData, bool, error) {
-	new := &selectorData{}
+func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, old selectorData) (selectorData, bool, error) {
+	new := selectorData{}
 
 	resourceID := strings.ToLower(doc.OpenShiftCluster.ID)
 
@@ -104,21 +105,17 @@ func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument
 		return nil, false, err
 	}
 
-	new.ResourceID = resourceID
-	new.SubscriptionID = r.SubscriptionID
+	new[SelectorDataKeyResourceID] = resourceID
+	new[SelectorDataKeySubscriptionID] = r.SubscriptionID
 
 	subCacheData, hasSubCacheData := c.subCache.GetSubscription(r.SubscriptionID)
 	if hasSubCacheData {
-		new.SubscriptionState = subCacheData.State
+		new[SelectorDataKeySubscriptionState] = string(subCacheData.State)
 	} else {
 		return nil, false, fmt.Errorf("no matching subscription %s", r.SubscriptionID)
 	}
 
-	if new.ResourceID == old.ResourceID && new.SubscriptionID == old.SubscriptionID && new.SubscriptionState == old.SubscriptionState {
-		return nil, false, nil
-	}
-
-	return new, true, nil
+	return new, !reflect.DeepEqual(old, new), nil
 }
 
 func (c *openShiftClusterCache) GetClusters() iter.Seq2[string, selectorData] {
