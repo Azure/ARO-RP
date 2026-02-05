@@ -25,7 +25,9 @@ const (
 )
 
 const (
-	MaintenanceScheduleSelectorOperatorEq MaintenanceScheduleSelectorOperator = "eq"
+	MaintenanceScheduleSelectorOperatorEq    MaintenanceScheduleSelectorOperator = "eq"
+	MaintenanceScheduleSelectorOperatorIn    MaintenanceScheduleSelectorOperator = "in"
+	MaintenanceScheduleSelectorOperatorNotIn MaintenanceScheduleSelectorOperator = "notin"
 )
 
 type MIMOTaskID string
