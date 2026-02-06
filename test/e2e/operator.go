@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
 
@@ -730,6 +731,7 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		guardrailsNamespace           = "openshift-azure-guardrails"
 		gkControllerManagerDeployment = "gatekeeper-controller-manager"
 		gkAuditDeployment             = "gatekeeper-audit"
+		gkConstraintTemplateNameLabel = "arodenylabels"
 	)
 
 	It("Controller Manager must be restored if deleted", func(ctx context.Context) {
@@ -774,6 +776,35 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
 		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+	})
+
+	It("ConstraintTemplate must be restored if deleted", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
+			Skip("Guardrails Controller is not enabled, skipping test")
+		}
+
+		By("creating an unstructured object for ConstraintTemplate")
+		constraintTemplate := &unstructured.Unstructured{}
+		constraintTemplate.SetAPIVersion("templates.gatekeeper.sh/v1beta1")
+		constraintTemplate.SetKind("ConstraintTemplate")
+		constraintTemplate.SetName(gkConstraintTemplateNameLabel)
+
+		By("getting the dynamic client for ConstraintTemplate")
+		client, err := clients.Dynamic.GetClient(constraintTemplate)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the ConstraintTemplate to make sure it exists")
+		GetK8sObjectWithRetry(ctx, client.Get, gkConstraintTemplateNameLabel, metav1.GetOptions{})
+
+		By("deleting the ConstraintTemplate")
+		DeleteK8sObjectWithRetry(ctx, client.Delete, gkConstraintTemplateNameLabel, metav1.DeleteOptions{})
+
+		By("waiting for the ConstraintTemplate to be restored")
+		GetK8sObjectWithRetry(ctx, client.Get, gkConstraintTemplateNameLabel, metav1.GetOptions{})
 	})
 
 })
