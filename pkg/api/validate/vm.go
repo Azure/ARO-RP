@@ -186,6 +186,12 @@ var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 
 // Document support
 var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
+	// used for aro e2e testing
+	api.VMSizeStandardD2sV3: api.VMSizeStandardD2sV3Struct,
+	api.VMSizeStandardD2sV4: api.VMSizeStandardD2sV4Struct,
+	api.VMSizeStandardD2sV5: api.VMSizeStandardD2sV5Struct,
+	api.VMSizeStandardD2sV6: api.VMSizeStandardD2sV6Struct,
+
 	// General purpose
 	api.VMSizeStandardD4sV3:  api.VMSizeStandardD4sV3Struct,
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
@@ -360,19 +366,10 @@ func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
-func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
+func VMSizeIsValid(vmSize api.VMSize, isMaster bool) bool {
 	if isMaster {
 		_, supportedAsMaster := SupportedVMSizesByRole(VMRoleMaster)[vmSize]
 		return supportedAsMaster
-	}
-
-	if requireD2sWorkers {
-		switch vmSize {
-		case api.VMSizeStandardD2sV3, api.VMSizeStandardD2sV4, api.VMSizeStandardD2sV5:
-			return true
-		default:
-			return false
-		}
 	}
 
 	_, supportedAsWorker := SupportedVMSizesByRole(VMRoleWorker)[vmSize]
@@ -380,9 +377,9 @@ func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
 }
 
 // VMSizeIsValidForVersion validates VM size with version-specific restrictions
-func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool, v string) bool {
+func VMSizeIsValidForVersion(vmSize api.VMSize, isMaster bool, v string) bool {
 	// First check basic validity
-	if !VMSizeIsValid(vmSize, requireD2sWorkers, isMaster) {
+	if !VMSizeIsValid(vmSize, isMaster) {
 		return false
 	}
 
