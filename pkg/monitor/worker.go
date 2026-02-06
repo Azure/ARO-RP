@@ -277,7 +277,7 @@ out:
 
 // workOne checks the API server health of a cluster
 func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, subID string, tenantID string, hourlyRun bool, nsgMonTicker *time.Ticker) {
-	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
+	monitorCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
 	restConfig, err := restconfig.RestConfig(mon.dialer, doc.OpenShiftCluster)
@@ -317,18 +317,39 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	monitors = append(monitors, c, nsgMon)
-	allJobsDone := make(chan bool)
+	defer closeMonitors(monitors)
+
+	allJobsDone := make(chan bool, 1)
 	onPanic := func(m monitoring.Monitor) {
-		// emit a failed worker metric on panic
 		mon.m.EmitGauge("monitor."+m.MonitorName()+".failedworker", 1, dims)
 	}
-	go execute(ctx, log, allJobsDone, monitors, onPanic)
+
+	go execute(monitorCtx, log, allJobsDone, monitors, onPanic)
 
 	select {
 	case <-allJobsDone:
-	case <-ctx.Done():
+		return
+	case <-monitorCtx.Done():
 		log.Infof("The monitoring process for cluster %s has timed out.", doc.OpenShiftCluster.ID)
 		mon.m.EmitGauge("monitor.main.timedout", int64(1), dims)
+	}
+
+	// Wait for graceful completion before cleanup
+	gracePeriod := time.NewTimer(10 * time.Second)
+	defer gracePeriod.Stop()
+
+	select {
+	case <-allJobsDone:
+	case <-gracePeriod.C:
+		mon.m.EmitGauge("monitor.main.forcedcleanup", int64(1), dims)
+	}
+}
+
+func closeMonitors(monitors []monitoring.Monitor) {
+	for _, m := range monitors {
+		if closeable, ok := m.(monitoring.Closeable); ok {
+			closeable.Close()
+		}
 	}
 }
 

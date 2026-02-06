@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"errors"
+	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -39,6 +41,7 @@ import (
 const MONITOR_GOROUTINES_PER_CLUSTER = 5
 
 var _ monitoring.Monitor = (*Monitor)(nil)
+var _ monitoring.Closeable = (*Monitor)(nil)
 
 type collectorFunc func(context.Context) error
 
@@ -62,6 +65,9 @@ type Monitor struct {
 	tenantID    string
 
 	ocpclientset clienthelper.Interface
+
+	httpClient *http.Client
+	closeOnce  sync.Once
 
 	// Namespaces that are OpenShift or ARO managed that we want to monitor
 	namespacesToMonitor []string
@@ -158,6 +164,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		tenantID:            tenantID,
 		m:                   m,
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
+		httpClient:          httpClient,
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
 	}
@@ -331,4 +338,13 @@ func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
 
 func (m *Monitor) MonitorName() string {
 	return "cluster"
+}
+
+// Close releases HTTP client resources to prevent connection leaks.
+func (m *Monitor) Close() {
+	m.closeOnce.Do(func() {
+		if m.httpClient != nil {
+			m.httpClient.CloseIdleConnections()
+		}
+	})
 }

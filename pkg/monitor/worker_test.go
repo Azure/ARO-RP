@@ -33,6 +33,43 @@ func (m *panicMonitor) MonitorName() string {
 	return "panicMonitor"
 }
 
+// closeableMonitor implements both Monitor and Closeable interfaces for testing
+type closeableMonitor struct {
+	closeCalled bool
+	mu          sync.Mutex
+}
+
+func (m *closeableMonitor) Monitor(ctx context.Context) error {
+	return nil
+}
+
+func (m *closeableMonitor) MonitorName() string {
+	return "closeableMonitor"
+}
+
+func (m *closeableMonitor) Close() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.closeCalled = true
+}
+
+func (m *closeableMonitor) wasClosed() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.closeCalled
+}
+
+// nonCloseableMonitor only implements Monitor, not Closeable
+type nonCloseableMonitor struct{}
+
+func (m *nonCloseableMonitor) Monitor(ctx context.Context) error {
+	return nil
+}
+
+func (m *nonCloseableMonitor) MonitorName() string {
+	return "nonCloseableMonitor"
+}
+
 func TestExecute(t *testing.T) {
 	_, log := testlog.New()
 	pm := &panicMonitor{}
@@ -157,6 +194,69 @@ func TestChangefeedOperations(t *testing.T) {
 			}
 			if len(mon.subs) != op.expectSubs {
 				t.Errorf("%s: expected %d subscriptions in cache, got %d", op.name, op.expectSubs, len(mon.subs))
+			}
+		})
+	}
+}
+
+func TestCloseMonitors(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		monitors []monitoring.Monitor
+		expected []bool // whether each closeable monitor should have Close() called
+	}{
+		{
+			name:     "empty monitors list",
+			monitors: []monitoring.Monitor{},
+			expected: []bool{},
+		},
+		{
+			name: "only closeable monitors",
+			monitors: []monitoring.Monitor{
+				&closeableMonitor{},
+				&closeableMonitor{},
+			},
+			expected: []bool{true, true},
+		},
+		{
+			name: "only non-closeable monitors",
+			monitors: []monitoring.Monitor{
+				&nonCloseableMonitor{},
+				&nonCloseableMonitor{},
+			},
+			expected: []bool{},
+		},
+		{
+			name: "mixed closeable and non-closeable monitors",
+			monitors: []monitoring.Monitor{
+				&closeableMonitor{},
+				&nonCloseableMonitor{},
+				&closeableMonitor{},
+			},
+			expected: []bool{true, true},
+		},
+		{
+			name:     "nil monitors list (should not panic)",
+			monitors: nil,
+			expected: []bool{},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			// Call closeMonitors
+			closeMonitors(tt.monitors)
+
+			// Verify closeable monitors had Close() called
+			closeableIdx := 0
+			for _, m := range tt.monitors {
+				if cm, ok := m.(*closeableMonitor); ok {
+					if closeableIdx < len(tt.expected) {
+						if cm.wasClosed() != tt.expected[closeableIdx] {
+							t.Errorf("closeable monitor %d: expected Close() called = %v, got %v",
+								closeableIdx, tt.expected[closeableIdx], cm.wasClosed())
+						}
+						closeableIdx++
+					}
+				}
 			}
 		})
 	}
