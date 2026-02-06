@@ -79,3 +79,25 @@ by the local RP.
 `socat` will start displaying the raw statsd packets, containing metric name, labels
 and values for each metric gathered by monitor. If you are interested into specifics,
 you may need to grep by the metric name or string that you're looking for.
+
+## Unit tests
+
+Unit testing in Monitor is limited, as it heavily relies on some specifics
+from CosmosDB like the ChangeFeeds. There are some unit tests currently
+implemented that leverages on a fake client to test part of the functionality.
+These tests are part of the CI tests.
+
+It is possible to locally run a CosmosDB emulator that fully contains all
+features of CosmosDB. This emulator only works on a local setup, and it won't
+work on ARM Macbooks. To run tests with the emulator:
+
+```
+make start-local-cosmosdb
+go clean --testcache
+make unit-test-go-local-cosmosdb
+make stop-and-delete-local-cosmosdb
+```
+
+The emulator can be kept running (schema is deleted on each test run) if
+further testing is needed. Currently the CI does not support testing with a
+CosmosDB emulator.
