@@ -106,7 +106,7 @@ type manager struct {
 	graph   graph.Manager
 	rpBlob  blob.Manager
 
-	ch               clienthelper.Interface
+	kubeClientHelper clienthelper.Interface
 	kubernetescli    kubernetes.Interface
 	dynamiccli       dynamic.Interface
 	extensionscli    extensionsclient.Interface
