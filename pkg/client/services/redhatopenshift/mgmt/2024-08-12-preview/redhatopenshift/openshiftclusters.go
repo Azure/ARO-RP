@@ -21,11 +21,12 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
-	"github.com/gofrs/uuid"
 )
 
 // OpenShiftClustersClient is the rest API for Azure Red Hat OpenShift 4
