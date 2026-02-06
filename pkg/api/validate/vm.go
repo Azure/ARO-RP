@@ -186,6 +186,12 @@ var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 
 // Document support
 var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
+	// used for aro e2e testing
+	api.VMSizeStandardD2sV3: api.VMSizeStandardD2sV3Struct,
+	api.VMSizeStandardD2sV4: api.VMSizeStandardD2sV4Struct,
+	api.VMSizeStandardD2sV5: api.VMSizeStandardD2sV5Struct,
+	api.VMSizeStandardD2sV6: api.VMSizeStandardD2sV6Struct,
+
 	// General purpose
 	api.VMSizeStandardD4sV3:  api.VMSizeStandardD4sV3Struct,
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
