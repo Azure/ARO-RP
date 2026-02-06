@@ -21,11 +21,12 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
-	"github.com/gofrs/uuid"
 )
 
 // OpenShiftClustersClient is the rest API for Azure Red Hat OpenShift 4
@@ -65,7 +66,7 @@ func (client OpenShiftClustersClient) CreateOrUpdate(ctx context.Context, resour
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "CreateOrUpdate", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "CreateOrUpdate", "%s", err.Error())
 	}
 
 	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, resourceName, parameters)
@@ -153,7 +154,7 @@ func (client OpenShiftClustersClient) Delete(ctx context.Context, resourceGroupN
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Delete", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Delete", "%s", err.Error())
 	}
 
 	req, err := client.DeletePreparer(ctx, resourceGroupName, resourceName)
@@ -238,7 +239,7 @@ func (client OpenShiftClustersClient) Get(ctx context.Context, resourceGroupName
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Get", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Get", "%s", err.Error())
 	}
 
 	req, err := client.GetPreparer(ctx, resourceGroupName, resourceName)
@@ -434,7 +435,7 @@ func (client OpenShiftClustersClient) ListAdminCredentials(ctx context.Context, 
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListAdminCredentials", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListAdminCredentials", "%s", err.Error())
 	}
 
 	req, err := client.ListAdminCredentialsPreparer(ctx, resourceGroupName, resourceName)
@@ -516,7 +517,7 @@ func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, r
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", "%s", err.Error())
 	}
 
 	result.fn = client.listByResourceGroupNextResults
@@ -640,7 +641,7 @@ func (client OpenShiftClustersClient) ListCredentials(ctx context.Context, resou
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListCredentials", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListCredentials", "%s", err.Error())
 	}
 
 	req, err := client.ListCredentialsPreparer(ctx, resourceGroupName, resourceName)
@@ -724,7 +725,7 @@ func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupN
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Update", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Update", "%s", err.Error())
 	}
 
 	req, err := client.UpdatePreparer(ctx, resourceGroupName, resourceName, parameters)
