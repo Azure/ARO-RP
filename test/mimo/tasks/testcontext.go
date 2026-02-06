@@ -13,8 +13,12 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
 type fakeTestContext struct {
@@ -24,12 +28,23 @@ type fakeTestContext struct {
 	ch  clienthelper.Interface
 	log *logrus.Entry
 
+	ocDatabase database.OpenShiftClusters
+
 	clusterUUID       string
 	clusterResourceID string
+	tenantID          string
 	properties        api.OpenShiftClusterProperties
+	doc               *api.OpenShiftClusterDocument
+
+	interfacesClient          armnetwork.InterfacesClient
+	loadBalancerClient        armnetwork.LoadBalancersClient
+	resourceSKUsClient        armcompute.ResourceSKUsClient
+	privateLinkServicesClient armnetwork.PrivateLinkServicesClient
 
 	resultMessage string
 }
+
+var _ mimo.TaskContextWithAzureClients = &fakeTestContext{}
 
 type Option func(*fakeTestContext)
 
@@ -44,6 +59,7 @@ func WithOpenShiftClusterDocument(oc *api.OpenShiftClusterDocument) Option {
 		ftc.clusterUUID = oc.ID
 		ftc.clusterResourceID = oc.OpenShiftCluster.ID
 		ftc.properties = oc.OpenShiftCluster.Properties
+		ftc.doc = oc
 	}
 }
 
@@ -51,6 +67,36 @@ func WithOpenShiftClusterProperties(uuid string, oc api.OpenShiftClusterProperti
 	return func(ftc *fakeTestContext) {
 		ftc.clusterUUID = uuid
 		ftc.properties = oc
+	}
+}
+
+func WithOpenShiftDatabase(d database.OpenShiftClusters) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.ocDatabase = d
+	}
+}
+
+func WithLoadBalancersClient(c armnetwork.LoadBalancersClient) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.loadBalancerClient = c
+	}
+}
+
+func WithResourceSKUsClient(c armcompute.ResourceSKUsClient) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.resourceSKUsClient = c
+	}
+}
+
+func WithPrivateLinkServicesClient(c armnetwork.PrivateLinkServicesClient) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.privateLinkServicesClient = c
+	}
+}
+
+func WithInterfacesClient(c armnetwork.InterfacesClient) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.interfacesClient = c
 	}
 }
 
@@ -72,8 +118,10 @@ func (t *fakeTestContext) LocalFpAuthorizer() (autorest.Authorizer, error) {
 	return myAuthorizer, nil
 }
 func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
-	myCD := &api.OpenShiftClusterDocument{}
-	return myCD
+	if t.doc == nil {
+		panic("didn't set up OpenShiftClusterDocument in test")
+	}
+	return t.doc
 }
 
 // handle
@@ -97,6 +145,14 @@ func (t *fakeTestContext) Now() time.Time {
 	return t.now()
 }
 
+// Subscription
+func (t *fakeTestContext) GetTenantID() string {
+	if t.tenantID == "" {
+		panic("didn't set up tenantID in test")
+	}
+	return t.tenantID
+}
+
 // OpenShiftCluster
 func (t *fakeTestContext) GetClusterUUID() string {
 	if t.clusterUUID == "" {
@@ -112,10 +168,48 @@ func (t *fakeTestContext) GetOpenShiftClusterProperties() api.OpenShiftClusterPr
 	return t.properties
 }
 
+func (t *fakeTestContext) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+	return t.ocDatabase.PatchWithLease(ctx, t.doc.Key, f)
+}
+
+// Result
 func (t *fakeTestContext) SetResultMessage(s string) {
 	t.resultMessage = s
 }
 
 func (t *fakeTestContext) GetResultMessage() string {
 	return t.resultMessage
+}
+
+// WithAzureClients
+func (t *fakeTestContext) LoadBalancersClient() (armnetwork.LoadBalancersClient, error) {
+	if t.loadBalancerClient == nil {
+		return nil, fmt.Errorf("no LB client provided")
+	}
+
+	return t.loadBalancerClient, nil
+}
+
+func (t *fakeTestContext) ResourceSKUsClient() (armcompute.ResourceSKUsClient, error) {
+	if t.resourceSKUsClient == nil {
+		return nil, fmt.Errorf("no ResourceSKUs client provided")
+	}
+
+	return t.resourceSKUsClient, nil
+}
+
+func (t *fakeTestContext) PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, error) {
+	if t.privateLinkServicesClient == nil {
+		return nil, fmt.Errorf("no PLS client provided")
+	}
+
+	return t.privateLinkServicesClient, nil
+}
+
+func (t *fakeTestContext) InterfacesClient() (armnetwork.InterfacesClient, error) {
+	if t.interfacesClient == nil {
+		return nil, fmt.Errorf("no armnetwork.InterfacesClient provided")
+	}
+
+	return t.interfacesClient, nil
 }

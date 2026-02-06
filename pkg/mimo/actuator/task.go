@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
@@ -30,21 +31,27 @@ type th struct {
 
 	resultMessage string
 
-	oc *api.OpenShiftClusterDocument
+	oc  *api.OpenShiftClusterDocument
+	sub *api.SubscriptionDocument
+	dbs actuatorDBs
 
 	_ch clienthelper.Interface
+
+	az *azClients
 }
 
 // force interface checking
 var _ mimo.TaskContext = &th{}
 
-func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument) *th {
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, dbs actuatorDBs, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) *th {
 	return &th{
 		originalCtx: ctx,
 		ctx:         ctx,
 		env:         env,
 		log:         log,
 		oc:          oc,
+		sub:         sub,
+		dbs:         dbs,
 		_ch:         nil,
 	}
 }
@@ -128,6 +135,18 @@ func (t *th) GetClusterUUID() string {
 
 func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 	return t.oc.OpenShiftCluster.Properties
+}
+
+func (t *th) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+	db, err := t.dbs.OpenShiftClusters()
+	if err != nil {
+		return nil, err
+	}
+	return db.PatchWithLease(ctx, t.oc.Key, f)
+}
+
+func (t *th) GetTenantID() string {
+	return t.sub.Subscription.Properties.TenantID
 }
 
 // localFpAuthorizer implements mimo.TaskContext.
