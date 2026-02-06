@@ -11,12 +11,12 @@ from azext_aro._format import (
 from azext_aro._help import helps  # pylint: disable=unused-import
 
 
-def load_command_table(self, _):
+def load_command_table(loader, _):
     aro_sdk = CliCommandType(
         operations_tmpl='azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2025_07_25.operations#OpenShiftClustersOperations.{}',  # pylint: disable=line-too-long
         client_factory=cf_aro)
 
-    with self.command_group('aro', aro_sdk, client_factory=cf_aro) as g:
+    with loader.command_group('aro', aro_sdk, client_factory=cf_aro) as g:
         g.custom_command('create', 'aro_create', supports_no_wait=True)
         g.custom_command('delete', 'aro_delete', supports_no_wait=True, confirmation=True)
         g.custom_command('list', 'aro_list', table_transformer=aro_list_table_format)
@@ -30,3 +30,12 @@ def load_command_table(self, _):
         g.custom_command('get-versions', 'aro_get_versions', table_transformer=aro_version_table_format)
 
         g.custom_command('validate', 'aro_validate')
+
+    # TODO: figure out what these are or what to what they're referring:
+    # - aro_sdk
+    # - client_factory
+    # - supports_no_wait
+
+    # FIXME: "identity" doesn't show up in the list of commands in `az aro -h`
+    with loader.command_group('aro identity', aro_sdk, client_factory=cf_aro) as g:
+        g.custom_command('list-required', 'aro_identity_list_required', supports_no_wait=False)

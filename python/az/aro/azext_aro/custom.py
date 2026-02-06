@@ -754,6 +754,17 @@ def resolve_rp_client_id():
     return FP_CLIENT_ID
 
 
+def aro_identity_list_required(*,
+                               cmd,
+                               client,
+                               location,
+                               resource_group_name,
+                               version,
+                               vnet=None,
+                               vnet_resource_group_name=None):
+    logger.info("hi!")
+
+
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
