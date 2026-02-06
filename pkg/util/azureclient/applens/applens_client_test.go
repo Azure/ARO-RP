@@ -183,7 +183,6 @@ func TestListDetectorsDirect(t *testing.T) {
 			ResourceID: testResourceId,
 			Location:   testLocation,
 		}, nil)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +235,6 @@ func TestListDetectors(t *testing.T) {
 			ResourceID: testResourceId,
 			Location:   testLocation,
 		})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +309,6 @@ func TestListDetectorAroAuthHealth(t *testing.T) {
 			Location:   testLocation,
 			DetectorID: testDetectorName,
 		})
-
 	if err != nil {
 		t.Fatal(err)
 	}

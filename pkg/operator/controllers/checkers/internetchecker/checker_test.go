@@ -65,7 +65,7 @@ var (
 )
 
 func TestCheck(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		name          string
 		responses     []*fakeResponse
 		wantErr       string

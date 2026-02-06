@@ -197,6 +197,7 @@ issues:
 formatters:
   enable:
     - gci
+    - gofumpt
   settings:
     gci:
       custom-order: true
@@ -211,7 +212,7 @@ formatters:
         - prefix(github.com/openshift)
         - localmodule
   exclusions:
-    generated: lax
+    generated: disable
     paths:
       - vendor/portal
       - vendor

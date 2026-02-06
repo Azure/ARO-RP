@@ -37,9 +37,11 @@ type monitorDBs interface {
 }
 
 // Defaults for the different durations. We use different values in tests to speed them up.
-var defaultMonitorDelay = time.Duration(rand.Intn(60)) * time.Second
-var defaultMonitorInterval = time.Minute
-var defaultChangefeedInteval = 10 * time.Second
+var (
+	defaultMonitorDelay      = time.Duration(rand.Intn(60)) * time.Second
+	defaultMonitorInterval   = time.Minute
+	defaultChangefeedInteval = 10 * time.Second
+)
 
 type monitor struct {
 	baseLog *logrus.Entry
@@ -58,8 +60,8 @@ type monitor struct {
 	bucketCount int
 	buckets     map[int]struct{}
 
-	lastBucketlist atomic.Value //time.Time
-	lastChangefeed atomic.Value //time.Time
+	lastBucketlist atomic.Value // time.Time
+	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager

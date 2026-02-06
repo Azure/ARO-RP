@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeMaintenanceManifestDocumentTriggerHandler func(context.Context, *pkg.MaintenanceManifestDocument) error
-type fakeMaintenanceManifestDocumentQueryHandler func(MaintenanceManifestDocumentClient, *Query, *Options) MaintenanceManifestDocumentRawIterator
+type (
+	fakeMaintenanceManifestDocumentTriggerHandler func(context.Context, *pkg.MaintenanceManifestDocument) error
+	fakeMaintenanceManifestDocumentQueryHandler   func(MaintenanceManifestDocumentClient, *Query, *Options) MaintenanceManifestDocumentRawIterator
+)
 
 var _ MaintenanceManifestDocumentClient = &FakeMaintenanceManifestDocumentClient{}
 

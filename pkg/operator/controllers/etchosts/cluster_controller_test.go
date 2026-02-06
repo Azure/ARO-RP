@@ -350,7 +350,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			Hooks:     make(logrus.LevelHooks),
 			Level:     logrus.TraceLevel,
 		}
-		var hook = logtest.NewLocal(logger)
+		hook := logtest.NewLocal(logger)
 
 		clientBuilder := ctrlfake.NewClientBuilder().WithObjects(tt.objects...)
 

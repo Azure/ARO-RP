@@ -268,7 +268,6 @@ func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error)
 	}
 	// Frontend kubeactions expects an unstructured type
 	unstructuredPod, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&podManifest)
-
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +494,6 @@ func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name
 // If backups already exists the job is cowardly and refuses to overwrite them
 func backupEtcdData(ctx context.Context, log *logrus.Entry, node string, kubeActions adminactions.KubeActions) ([]byte, error) {
 	podDataBackup, err := createBackupEtcdDataPod(node)
-
 	if err != nil {
 		return []byte{}, err
 	}
@@ -566,7 +564,6 @@ func waitAndGetPodLogs(ctx context.Context, log *logrus.Entry, watcher watch.Int
 
 	log.Infof("Waiting for %s to reach %s phase", o.GetName(), corev1.PodSucceeded)
 	err := waitForPodSucceed(ctx, log, watcher)
-
 	if err != nil {
 		var failedErr *podFailedError
 		if !errors.As(err, &failedErr) {
@@ -661,7 +658,6 @@ func createBackupEtcdDataPod(node string) (*unstructured.Unstructured, error) {
 
 	// Frontend kubeactions expects an unstructured type
 	unstructuredPod, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&podManifest)
-
 	if err != nil {
 		return nil, err
 	}

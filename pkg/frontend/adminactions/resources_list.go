@@ -135,7 +135,7 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 		return armResources, nil
 	}
 	for _, snet := range vnet.Properties.Subnets {
-		//we already have the VNet resource, filtering subnets instead of fetching them individually with a SubnetClient
+		// we already have the VNet resource, filtering subnets instead of fetching them individually with a SubnetClient
 		interestingSubnet := (*snet.ID == a.oc.Properties.MasterProfile.SubnetID)
 		workerProfiles, _ := api.GetEnrichedWorkerProfiles(a.oc.Properties)
 
@@ -145,7 +145,7 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 		if !interestingSubnet {
 			continue
 		}
-		//by this time the snet subnet is used in a Master or Worker profile
+		// by this time the snet subnet is used in a Master or Worker profile
 		if snet.Properties.RouteTable != nil {
 			r, err := azure.ParseResourceID(*snet.Properties.RouteTable.ID)
 			if err != nil {
@@ -161,7 +161,7 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 				Resource: rt.RouteTable,
 			})
 		}
-		//Due to BYO NSGs not belonging to the managed resource group, we would like to list them as well
+		// Due to BYO NSGs not belonging to the managed resource group, we would like to list them as well
 		if snet.Properties.NetworkSecurityGroup == nil {
 			continue
 		}

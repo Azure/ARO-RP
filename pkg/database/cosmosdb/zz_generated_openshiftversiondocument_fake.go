@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeOpenShiftVersionDocumentTriggerHandler func(context.Context, *pkg.OpenShiftVersionDocument) error
-type fakeOpenShiftVersionDocumentQueryHandler func(OpenShiftVersionDocumentClient, *Query, *Options) OpenShiftVersionDocumentRawIterator
+type (
+	fakeOpenShiftVersionDocumentTriggerHandler func(context.Context, *pkg.OpenShiftVersionDocument) error
+	fakeOpenShiftVersionDocumentQueryHandler   func(OpenShiftVersionDocumentClient, *Query, *Options) OpenShiftVersionDocumentRawIterator
+)
 
 var _ OpenShiftVersionDocumentClient = &FakeOpenShiftVersionDocumentClient{}
 

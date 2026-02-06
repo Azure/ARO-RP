@@ -199,7 +199,8 @@ func RemoveZones(ctx context.Context,
 	vNetLinksClient privatedns.VirtualNetworkLinksClient,
 	privateZoneClient privatedns.PrivateZonesClient,
 	privateZones []mgmtprivatedns.PrivateZone,
-	resourceGroup string) error {
+	resourceGroup string,
+) error {
 	for _, privateZone := range privateZones {
 		if err := DeletePrivateDNSVNetLinks(ctx, vNetLinksClient, *privateZone.ID); err != nil {
 			return err

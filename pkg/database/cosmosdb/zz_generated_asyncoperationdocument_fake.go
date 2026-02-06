@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeAsyncOperationDocumentTriggerHandler func(context.Context, *pkg.AsyncOperationDocument) error
-type fakeAsyncOperationDocumentQueryHandler func(AsyncOperationDocumentClient, *Query, *Options) AsyncOperationDocumentRawIterator
+type (
+	fakeAsyncOperationDocumentTriggerHandler func(context.Context, *pkg.AsyncOperationDocument) error
+	fakeAsyncOperationDocumentQueryHandler   func(AsyncOperationDocumentClient, *Query, *Options) AsyncOperationDocumentRawIterator
+)
 
 var _ AsyncOperationDocumentClient = &FakeAsyncOperationDocumentClient{}
 

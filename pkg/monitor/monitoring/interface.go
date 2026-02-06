@@ -14,8 +14,7 @@ type Monitor interface {
 }
 
 // noOpMonitor is a no operation monitor
-type NoOpMonitor struct {
-}
+type NoOpMonitor struct{}
 
 func (no *NoOpMonitor) Monitor(context.Context) error {
 	return nil

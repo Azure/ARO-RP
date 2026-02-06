@@ -13,8 +13,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 )
 
-var _ kmetrics.LatencyMetric = (*tracer)(nil)
-var _ kmetrics.ResultMetric = (*tracer)(nil)
+var (
+	_ kmetrics.LatencyMetric = (*tracer)(nil)
+	_ kmetrics.ResultMetric  = (*tracer)(nil)
+)
 
 type tracer struct {
 	m metrics.Emitter

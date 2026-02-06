@@ -20,7 +20,7 @@ import (
 )
 
 func TestInstallConfigMap(t *testing.T) {
-	var expected = map[string]string{"install-config.yaml": "apiVersion: v1\nplatform:\n  azure:\n    region: \"testLocation\"\n"}
+	expected := map[string]string{"install-config.yaml": "apiVersion: v1\nplatform:\n  azure:\n    region: \"testLocation\"\n"}
 
 	r := installConfigCM("testNamespace", "testLocation")
 
@@ -30,7 +30,7 @@ func TestInstallConfigMap(t *testing.T) {
 }
 
 func TestClusterManifestsSecret(t *testing.T) {
-	var expected = map[string]string{"custom.yaml": "apiVersion: v1\nkind: Secret\nmetadata:\n  creationTimestamp: null\n  name: demo-credentials\n  namespace: default\nstringData:\n  demo1: value1\n  demo2: value2\ntype: Opaque\n"}
+	expected := map[string]string{"custom.yaml": "apiVersion: v1\nkind: Secret\nmetadata:\n  creationTimestamp: null\n  name: demo-credentials\n  namespace: default\nstringData:\n  demo1: value1\n  demo2: value2\ntype: Opaque\n"}
 	customManifests := map[string]kruntime.Object{
 		"custom.yaml": &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{

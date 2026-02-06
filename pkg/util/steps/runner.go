@@ -66,7 +66,6 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 
 		startTime := time.Now()
 		err := step.run(ctx, log)
-
 		if err != nil {
 			if azureerrors.IsUnauthorizedClientError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) ||

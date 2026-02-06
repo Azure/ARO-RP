@@ -21,8 +21,7 @@ type StreamResponder interface {
 	AdminReplyStream(log *logrus.Entry, w http.ResponseWriter, header http.Header, reader io.Reader, err error)
 }
 
-type defaultResponder struct {
-}
+type defaultResponder struct{}
 
 func (d defaultResponder) ReplyStream(log *logrus.Entry, w http.ResponseWriter, header http.Header, reader io.Reader, err error) {
 	for k, v := range header {
