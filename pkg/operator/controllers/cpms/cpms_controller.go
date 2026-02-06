@@ -55,7 +55,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	r.Log.Info("running reconciliation for CPMS")
+	r.Log.Info("Checking CPMS status.")
 	cpms := &machinev1.ControlPlaneMachineSet{}
 	err = r.Client.Get(
 		ctx,
