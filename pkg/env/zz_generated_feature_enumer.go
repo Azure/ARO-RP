@@ -27,7 +27,6 @@ func _FeatureNoOp() {
 	_ = x[FeatureDisableDenyAssignments-(0)]
 	_ = x[FeatureDisableSignedCertificates-(1)]
 	_ = x[FeatureEnableDevelopmentAuthorizer-(2)]
-	_ = x[FeatureRequireD2sWorkers-(3)]
 	_ = x[FeatureDisableReadinessDelay-(4)]
 	_ = x[FeatureRequireOIDCStorageWebEndpoint-(5)]
 	_ = x[FeatureUseMockMsiRp-(6)]
@@ -36,7 +35,7 @@ func _FeatureNoOp() {
 	_ = x[FeatureEnableClusterExpandedAvailabilityZones-(9)]
 }
 
-var _FeatureValues = []Feature{FeatureDisableDenyAssignments, FeatureDisableSignedCertificates, FeatureEnableDevelopmentAuthorizer, FeatureRequireD2sWorkers, FeatureDisableReadinessDelay, FeatureRequireOIDCStorageWebEndpoint, FeatureUseMockMsiRp, FeatureEnableMISE, FeatureEnforceMISE, FeatureEnableClusterExpandedAvailabilityZones}
+var _FeatureValues = []Feature{FeatureDisableDenyAssignments, FeatureDisableSignedCertificates, FeatureEnableDevelopmentAuthorizer, FeatureDisableReadinessDelay, FeatureRequireOIDCStorageWebEndpoint, FeatureUseMockMsiRp, FeatureEnableMISE, FeatureEnforceMISE, FeatureEnableClusterExpandedAvailabilityZones}
 
 var _FeatureNameToValueMap = map[string]Feature{
 	_FeatureName[0:29]:         FeatureDisableDenyAssignments,
