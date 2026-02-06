@@ -498,3 +498,60 @@ func TestMonitor(t *testing.T) {
 		})
 	}
 }
+
+func TestMonitorClose(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		httpClient  *http.Client
+		callCount   int
+		expectPanic bool
+		description string
+	}{
+		{
+			name:        "close with nil httpClient",
+			httpClient:  nil,
+			callCount:   1,
+			expectPanic: false,
+			description: "should handle nil httpClient gracefully",
+		},
+		{
+			name:        "close with valid httpClient",
+			httpClient:  &http.Client{},
+			callCount:   1,
+			expectPanic: false,
+			description: "should close idle connections on valid httpClient",
+		},
+		{
+			name:        "close multiple times is safe",
+			httpClient:  &http.Client{},
+			callCount:   3,
+			expectPanic: false,
+			description: "sync.Once should prevent multiple closes",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			mon := &Monitor{
+				httpClient: tt.httpClient,
+			}
+
+			// Call Close() multiple times based on callCount
+			for i := 0; i < tt.callCount; i++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							if !tt.expectPanic {
+								t.Errorf("Close() panicked unexpectedly: %v", r)
+							}
+						}
+					}()
+					mon.Close()
+				}()
+			}
+		})
+	}
+}
+
+func TestMonitorImplementsCloseable(t *testing.T) {
+	// Verify Monitor implements the Closeable interface at compile time
+	var _ interface{ Close() } = (*Monitor)(nil)
+}

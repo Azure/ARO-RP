@@ -13,6 +13,11 @@ type Monitor interface {
 	MonitorName() string
 }
 
+// Closeable is an optional interface for monitors that hold resources needing cleanup.
+type Closeable interface {
+	Close()
+}
+
 // noOpMonitor is a no operation monitor
 type NoOpMonitor struct {
 }
