@@ -46,7 +46,7 @@ func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.M
 	}
 
 	// Validate VM size in machine provider spec
-	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.isLocalDevelopmentMode, isMaster) {
+	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), isMaster) {
 		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%v'", machine.Name, machineProviderSpec.VMSize))
 	}
 
