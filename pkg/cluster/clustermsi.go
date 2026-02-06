@@ -24,22 +24,31 @@ var (
 	errClusterMsiNotPresentInResponse = errors.New("cluster msi not present in msi credentials response")
 )
 
+type msiKeyVaultStore interface {
+	GetSecret(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error)
+	SetSecret(ctx context.Context, name string, parameters azsecrets.SetSecretParameters, options *azsecrets.SetSecretOptions) (azsecrets.SetSecretResponse, error)
+}
+
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
 // backing certificate (if needed) and store the certificate in the cluster MSI key
 // vault. If the certificate stored in keyvault is eligible for renewal, the
 // certificate is empty or the certificate is for a different identity, this
 // function will request and persist a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
-	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
+	return EnsureClusterMsiCertificateWithParams(ctx, m.doc.ID, m.doc.OpenShiftCluster, m.env.Now, m.clusterMsiKeyVaultStore, m.msiDataplane)
+}
 
-	existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil)
+func EnsureClusterMsiCertificateWithParams(ctx context.Context, clusterDocID string, cluster *api.OpenShiftCluster, nowFunc func() time.Time, kvStore msiKeyVaultStore, msiDataplane dataplane.ClientFactory) error {
+	secretName := dataplane.IdentifierForManagedIdentityCredentials(clusterDocID)
+
+	existingMsiCertificate, err := kvStore.GetSecret(ctx, secretName, "", nil)
 	if err != nil && !azureerrors.IsNotFoundError(err) {
 		return err
 	}
 
 	// If the secret exists, we need to decide if it should be replaced.
 	if err == nil {
-		replace, err := m.shouldReplaceMSICertificate(&existingMsiCertificate, m.env.Now())
+		replace, err := shouldReplaceMSICertificate(&existingMsiCertificate, cluster, nowFunc())
 		if err != nil {
 			return err
 		}
@@ -51,7 +60,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 	// If we reach this point, it's because the secret was not found, or it was found but is invalid/expired.
 	// In either case, we need to create a new one.
 
-	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	clusterMsiResourceId, err := cluster.ClusterMsiResourceId()
 	if err != nil {
 		return err
 	}
@@ -60,7 +69,7 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		IdentityIDs: []string{clusterMsiResourceId.String()},
 	}
 
-	client, err := m.msiDataplane.NewClient(m.doc.OpenShiftCluster.Identity.IdentityURL)
+	client, err := msiDataplane.NewClient(cluster.Identity.IdentityURL)
 	if err != nil {
 		return err
 	}
@@ -70,16 +79,16 @@ func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
 		return err
 	}
 
-	name, parameters, err := dataplane.FormatManagedIdentityCredentialsForStorage(m.doc.ID, *msiCredObj)
+	name, parameters, err := dataplane.FormatManagedIdentityCredentialsForStorage(clusterDocID, *msiCredObj)
 	if err != nil {
 		return fmt.Errorf("failed to format managed identity credentials for storage: %w", err)
 	}
 
-	_, err = m.clusterMsiKeyVaultStore.SetSecret(ctx, name, parameters, nil)
+	_, err = kvStore.SetSecret(ctx, name, parameters, nil)
 	return err
 }
 
-func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
+func shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse, cluster *api.OpenShiftCluster, now time.Time) (bool, error) {
 	if cert.Attributes == nil || cert.Value == nil {
 		return true, nil
 	}
@@ -94,7 +103,7 @@ func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse,
 	}
 
 	// Check if the secret is for a different identity (e.g., after a cluster update).
-	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	clusterMsiResourceId, err := cluster.ClusterMsiResourceId()
 	if err != nil {
 		return false, err
 	}
@@ -105,13 +114,17 @@ func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse,
 
 	// Check if the certificate is within its renewal window.
 	// In the future, certificate refreshing will be handled by the Certificate Refresher. For now, handle it here.
-	return m.needsRefresh(cert, now)
+	return needsRefresh(cert, now)
 }
 
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
 // The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days
 // This is subject to change and docs can be untrustworthy, so use the keyvault tags to determine validity
 func (m *manager) needsRefresh(item *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
+	return needsRefresh(item, now)
+}
+
+func needsRefresh(item *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
 	if item.Tags == nil {
 		return false, fmt.Errorf("secret tags are nil")
 	}
