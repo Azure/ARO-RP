@@ -195,12 +195,12 @@ func SaveScreenshot(wd selenium.WebDriver, e error) {
 		panic(err)
 	}
 
-	err = os.WriteFile(imageAbsPath, imageBytes, 0666)
+	err = os.WriteFile(imageAbsPath, imageBytes, 0o666)
 	if err != nil {
 		panic(err)
 	}
 
-	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0666)
+	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0o666)
 	if err != nil {
 		panic(err)
 	}
@@ -261,7 +261,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		log.Infof("Failed to reach main portal path at %s. Error: %s", mainPortalPath, err.Error())
 	}
 	var portalAuthCmd string
-	var portalAuthArgs = make([]string, 0)
+	portalAuthArgs := make([]string, 0)
 	if os.Getenv("CI") != "" {
 		// In CI we have a prebuilt portalauth binary
 		portalAuthCmd = "./portalauth"
@@ -558,7 +558,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}, nil
 }
 
-func setup(ctx context.Context) error {
+func setupE2EInfrastructure(ctx context.Context) error {
 	if err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
@@ -649,7 +649,7 @@ func setup(ctx context.Context) error {
 	return nil
 }
 
-func done(ctx context.Context) error {
+func cleanupE2EInfrastructure(ctx context.Context) error {
 	// Load the usual cluster config (to pick up IsCI, etc.)
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
@@ -680,7 +680,7 @@ var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
-	if err := setup(context.Background()); err != nil {
+	if err := setupE2EInfrastructure(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}
@@ -690,8 +690,7 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
-
-	if err := done(context.Background()); err != nil {
+	if err := cleanupE2EInfrastructure(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}

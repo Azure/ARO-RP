@@ -106,8 +106,10 @@ type Cluster struct {
 	diskEncryptionSetsClient compute.DiskEncryptionSetsClient
 }
 
-const GenerateSubnetMaxTries = 100
-const localDefaultURL string = "https://localhost:8443"
+const (
+	GenerateSubnetMaxTries        = 100
+	localDefaultURL        string = "https://localhost:8443"
+)
 
 func DefaultMasterVmSizes() []string {
 	return []string{
@@ -140,7 +142,6 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	viper.AutomaticEnv()
 	viper.SetOptions(viper.ExperimentalBindStruct())
 	err := viper.Unmarshal(&conf)
-
 	if err != nil {
 		return nil, fmt.Errorf("error parsing env vars: %w", err)
 	}
@@ -209,7 +210,6 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 
 func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 	azEnvironment, err := azureclient.EnvironmentFromName(conf.AzureEnvironment)
-
 	if err != nil {
 		return nil, fmt.Errorf("can't parse Azure environment: %w", err)
 	}
@@ -509,7 +509,6 @@ func (c *Cluster) Create(ctx context.Context) error {
 	}
 
 	addressPrefix, masterSubnet, workerSubnet, err := c.generateSubnets()
-
 	if err != nil {
 		return err
 	}
@@ -651,7 +650,6 @@ func (c *Cluster) Create(ctx context.Context) error {
 
 	c.log.Info("creating cluster")
 	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode)
-
 	if err != nil {
 		return err
 	}
@@ -765,7 +763,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	c.log.Infof("Deleting cluster %s in resource group %s", clusterName, vnetResourceGroup)
+	c.log.Infof("Starting to delete cluster %s in resource group %s", clusterName, vnetResourceGroup)
 	var errs []error
 
 	if c.Config.IsCI {
@@ -803,9 +801,9 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
 		}
 
-		if err := c.ensureResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
-			c.log.Errorf("Failed to ensure resource group %s deleted: %v", clusterResourceGroup, err)
-			errs = append(errs, fmt.Errorf("failed to ensure resource group %s deleted: %w", clusterResourceGroup, err))
+		if err := c.checkResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
+			c.log.Errorf("Failed to check resource group %s deleted: %v", clusterResourceGroup, err)
+			errs = append(errs, fmt.Errorf("failed to check resource group %s deleted: %w", clusterResourceGroup, err))
 		}
 
 		if err := c.deleteResourceGroup(ctx, vnetResourceGroup); err != nil {
@@ -813,7 +811,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete resource group %s: %w", vnetResourceGroup, err))
 		}
 
-		if env.IsLocalDevelopmentMode() { //PR E2E
+		if env.IsLocalDevelopmentMode() { // PR E2E
 			if err := c.deleteVnetPeerings(ctx, vnetResourceGroup); err != nil {
 				c.log.Errorf("Failed to delete VNet peerings: %v", err)
 				errs = append(errs, fmt.Errorf("failed to delete VNet peerings: %w", err))
@@ -1352,19 +1350,43 @@ func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGro
 	return nil
 }
 
+// deleteCluster deletes an ARO cluster with retries for transient errors.
+// It uses separate timeouts for the overall operation (45m) and each individual
+// DeleteAndWait call (35m) to prevent a single slow attempt from exhausting the retry budget.
 func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName string) error {
 	c.log.Printf("deleting cluster %s", clusterName)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+	overallTimeout := 45 * time.Minute
+	perOperationTimeout := 35 * time.Minute
+
+	overallTimeoutCause := fmt.Errorf("cluster deletion timed out after %s for %s", overallTimeout, clusterName)
+	timeoutCtx, cancel := context.WithTimeoutCause(ctx, overallTimeout, overallTimeoutCause)
 	defer cancel()
 
 	var lastErr error
-	backoff := wait.Backoff{Steps: 20, Duration: 5 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
+	// Backoff waits: 0s + 30s + 60s = 90s total. Given perOperationTimeout (35m) and
+	// overallTimeout (45m), realistically only ~1 full retry is expected.
+	backoff := wait.Backoff{Steps: 3, Duration: 30 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
 	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func() (bool, error) {
-		err := c.openshiftclusters.DeleteAndWait(timeoutCtx, resourceGroup, clusterName)
+		opTimeoutCause := fmt.Errorf("DeleteAndWait timed out after %s for %s", perOperationTimeout, clusterName)
+		opCtx, opCancel := context.WithTimeoutCause(timeoutCtx, perOperationTimeout, opTimeoutCause)
+		defer opCancel()
+
+		err := c.openshiftclusters.DeleteAndWait(opCtx, resourceGroup, clusterName)
 		if err == nil {
 			return true, nil
 		}
+
+		if timeoutCtx.Err() != nil {
+			return false, context.Cause(timeoutCtx)
+		}
+
+		if opCtx.Err() != nil {
+			c.log.Warnf("operation timed out for cluster %s: %v", clusterName, context.Cause(opCtx))
+			lastErr = context.Cause(opCtx)
+			return false, nil
+		}
+
 		if azureerrors.IsRetryableError(err) {
 			c.log.Warnf("retryable error deleting cluster %s, will retry: %v", clusterName, err)
 			lastErr = err
@@ -1372,7 +1394,6 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 		}
 		return false, err
 	})
-
 	if err != nil {
 		if err == wait.ErrWaitTimeout && lastErr != nil {
 			return fmt.Errorf("error deleting cluster %s: %w", clusterName, lastErr)
@@ -1382,8 +1403,9 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	return nil
 }
 
-func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
-	c.log.Printf("deleting resource group %s", resourceGroupName)
+// checkResourceGroupDeleted polls until the resource group no longer exists or times out.
+func (c *Cluster) checkResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
+	c.log.Printf("checking that resource group %s has been deleted", resourceGroupName)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -1391,7 +1413,7 @@ func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupN
 	err := wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
 		_, err := c.groups.Get(timeoutCtx, resourceGroupName)
 		if azureerrors.ResourceGroupNotFound(err) {
-			c.log.Infof("finished deleting resource group %s", resourceGroupName)
+			c.log.Infof("The resource group %s has been deleted.", resourceGroupName)
 			return true, nil
 		}
 		if err != nil {
@@ -1401,17 +1423,16 @@ func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupN
 			lastErr = err
 			c.log.Warnf("retryable error checking resource group %s, will retry: %v", resourceGroupName, err)
 		} else {
-			c.log.Infof("resource group %s still exists, waiting for deletion", resourceGroupName)
+			c.log.Infof("resource group %s still exists, checking for deletion", resourceGroupName)
 		}
 		return false, nil
 	}, timeoutCtx.Done())
-
 	if err != nil {
 		if err == wait.ErrWaitTimeout && lastErr != nil {
-			return fmt.Errorf("timed out waiting for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
+			return fmt.Errorf("timed out checking for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
 		}
 		if err == wait.ErrWaitTimeout {
-			return fmt.Errorf("timed out waiting for resource group %s to be deleted", resourceGroupName)
+			return fmt.Errorf("timed out checking for resource group %s to be deleted", resourceGroupName)
 		}
 		return err
 	}
