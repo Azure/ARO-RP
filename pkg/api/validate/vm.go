@@ -362,19 +362,10 @@ func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
-func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
+func VMSizeIsValid(vmSize api.VMSize, isMaster bool) bool {
 	if isMaster {
 		_, supportedAsMaster := SupportedVMSizesByRole(VMRoleMaster)[vmSize]
 		return supportedAsMaster
-	}
-
-	if requireD2sWorkers {
-		switch vmSize {
-		case api.VMSizeStandardD2sV3, api.VMSizeStandardD2sV4, api.VMSizeStandardD2sV5:
-			return true
-		default:
-			return false
-		}
 	}
 
 	_, supportedAsWorker := SupportedVMSizesByRole(VMRoleWorker)[vmSize]
@@ -382,9 +373,9 @@ func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
 }
 
 // VMSizeIsValidForVersion validates VM size with version-specific restrictions
-func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool, v string) bool {
+func VMSizeIsValidForVersion(vmSize api.VMSize, isMaster bool, v string) bool {
 	// First check basic validity
-	if !VMSizeIsValid(vmSize, requireD2sWorkers, isMaster) {
+	if !VMSizeIsValid(vmSize, isMaster) {
 		return false
 	}
 
