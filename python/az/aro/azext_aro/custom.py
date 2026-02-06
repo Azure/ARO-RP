@@ -51,7 +51,10 @@ from tabulate import tabulate
 
 logger = get_logger(__name__)
 
-FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
+FP_CLIENT_ID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
+
+ARO_FEDERATED_CREDENTIAL_ROLE = "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
+FP_SERVICE_PRINCIPAL_ROLE = "42f3c60f-e7b1-46d7-ba56-6de681664342"
 
 
 def rp_mode_development():
@@ -754,6 +757,74 @@ def resolve_rp_client_id():
     return FP_CLIENT_ID
 
 
+def aro_identity_get_required(*,
+                              cmd,
+                              client,
+                              resource_group_name,
+                              location,
+                              version,
+                              master_subnet,
+                              worker_subnet,
+                              vnet,
+                              vnet_resource_group_name=None) -> None:
+
+    if not vnet_resource_group_name:
+        vnet_resource_group_name = resource_group_name
+
+    if version not in aro_get_versions(client, location):
+        raise ValidationError("--version invalid")
+
+    role_set = None
+    for tset in client.platform_workload_identity_role_sets.list(location):
+        if version.startswith(tset.open_shift_version):
+            role_set = tset
+
+    if not role_set:
+        raise RuntimeError("Could not find identity requirements for provided version and location.")
+
+    logger.warning("Use the following commands to create the required managed identities:")
+    print_identity_create_cmd(resource_group_name, 'aro-cluster', location)
+    for role in role_set.platform_workload_identity_roles:
+        print_identity_create_cmd(resource_group_name, role.operator_name, location)
+
+    auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
+    logger.warning("\nUse the following commands to create the required role assignments"
+                   " over virtual network and/or subnets:")
+    for role in role_set.platform_workload_identity_roles:
+        definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
+        scopes: list[str] = []
+        for permissions in definition.permissions:
+            for action in permissions.actions:
+                if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
+                    scopes = [master_subnet, worker_subnet]
+                elif action.startswith("Microsoft.Network/virtualNetworks/"):
+                    scopes = [vnet]
+                    break
+
+        for scope in scopes:
+            print_role_assignment_create_cmd(
+                f"$(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query principalId -o tsv)",
+                role.role_definition_id,
+                scope
+            )
+
+    logger.warning("\nUse the following commands to create the required role assignments"
+                   " over platform workload identities:")
+    for role in role_set.platform_workload_identity_roles:
+        print_role_assignment_create_cmd(
+            f"$(az identity show -g '{resource_group_name}' -n 'aro-cluster' --query principalId -o tsv)",
+            ARO_FEDERATED_CREDENTIAL_ROLE,
+            f"$(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query id -o tsv)"
+        )
+
+    logger.warning("\nUse the following command to create the required role assignment over the virtual network:")
+    print_role_assignment_create_cmd(
+        "$(az ad sp list --display-name 'Azure Red Hat OpenShift RP' --query '[0].id' -o tsv)",
+        FP_SERVICE_PRINCIPAL_ROLE,
+        vnet
+    )
+
+
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
@@ -782,3 +853,19 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
 
                 if not resource_contributor_exists:
                     assign_role_to_resource(cli_ctx, resource, sp_id, role)
+
+
+def print_identity_create_cmd(group, name, location):
+    msg = f"    az identity create -g \"{group}\" -n \"{name}\" -l \"{location}\""
+    logger.warning(msg)
+
+
+def print_role_assignment_create_cmd(assignee, role, scope):
+    msg = [
+        "    az role assignment create",
+        f"--assignee-object-id \"{assignee}\"",
+        "--assignee-principal-type ServicePrincipal",
+        f"--role \"{role}\"",
+        f"--scope \"{scope}\"",
+    ]
+    logger.warning(" ".join(msg))
