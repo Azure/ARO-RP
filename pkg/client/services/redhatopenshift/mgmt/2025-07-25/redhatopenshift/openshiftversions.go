@@ -21,12 +21,11 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // OpenShiftVersionsClient is the rest API for Azure Red Hat OpenShift 4
@@ -68,7 +67,7 @@ func (client OpenShiftVersionsClient) Get(ctx context.Context, location string, 
 			Constraints: []validation.Constraint{{Target: "openShiftVersion", Name: validation.MaxLength, Rule: 63, Chain: nil},
 				{Target: "openShiftVersion", Name: validation.MinLength, Rule: 1, Chain: nil},
 				{Target: "openShiftVersion", Name: validation.Pattern, Rule: `^(\d+)\.(\d+)\.(\d+)(.*)`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "Get", "%s", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "Get", err.Error())
 	}
 
 	req, err := client.GetPreparer(ctx, location, openShiftVersion)
@@ -149,7 +148,7 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", "%s", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", err.Error())
 	}
 
 	result.fn = client.listNextResults

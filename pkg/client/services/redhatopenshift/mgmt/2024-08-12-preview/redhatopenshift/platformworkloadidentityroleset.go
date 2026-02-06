@@ -21,12 +21,11 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
+	"github.com/gofrs/uuid"
 )
 
 // PlatformWorkloadIdentityRoleSetClient is the rest API for Azure Red Hat OpenShift 4
@@ -68,7 +67,7 @@ func (client PlatformWorkloadIdentityRoleSetClient) Get(ctx context.Context, loc
 			Constraints: []validation.Constraint{{Target: "openShiftMinorVersion", Name: validation.MaxLength, Rule: 63, Chain: nil},
 				{Target: "openShiftMinorVersion", Name: validation.MinLength, Rule: 1, Chain: nil},
 				{Target: "openShiftMinorVersion", Name: validation.Pattern, Rule: `^(\d+)\.(\d+)`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "Get", "%s", err.Error())
+		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "Get", err.Error())
 	}
 
 	req, err := client.GetPreparer(ctx, location, openShiftMinorVersion)
