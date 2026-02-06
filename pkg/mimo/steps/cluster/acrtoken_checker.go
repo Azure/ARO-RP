@@ -27,12 +27,12 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	}
 
 	env := th.Environment()
-	localFpAuthorizer, err := th.LocalFpAuthorizer()
+	msiAuthorizer, err := th.MsiAuthorizer()
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
 
-	manager, err := acrtoken.NewManager(env, localFpAuthorizer)
+	manager, err := acrtoken.NewManager(env, msiAuthorizer)
 	if err != nil {
 		return err
 	}
