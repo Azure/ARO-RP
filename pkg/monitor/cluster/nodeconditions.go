@@ -29,7 +29,8 @@ var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus
 }
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
-	count := 0
+	masterCount := 0
+	workerInfraCount := 0
 	machines := mon.getMachines(ctx)
 
 	err := mon.iterateOverNodes(ctx, func(n *corev1.Node) {
@@ -45,7 +46,11 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		machineset := ""
 		if hasMachine {
 			machineset = machine.Labels[machinesetLabelKey]
-		}
+var role, machineset string                                                
+  if hasMachine {                                                            
+      role = machine.Labels[machineRoleLabelKey]                             
+      machineset = machine.Labels[machinesetLabelKey]                        
+  }   
 
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
@@ -81,14 +86,21 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 			"kubeletVersion": n.Status.NodeInfo.KubeletVersion,
 		})
 
-		count += 1
+		if _, ok := n.Labels[masterRoleLabel]; ok {
+			masterCount++
+		}
+		_, isWorker := n.Labels[workerRoleLabel]                                   
+        _, isInfra := n.Labels[infraRoleLabel]                                     
+        if isWorker || isInfra {                                                   
+           workerinfraCount++                                                     
+        }  
 	})
 	if err != nil {
 		return err
 	}
 
-	mon.emitGauge("node.count", int64(count), nil)
-
+	mon.emitGauge("node.count", int64(masterCount), map[string]string{"role": "master"})
+	mon.emitGauge("node.count", int64(workerinfraCount), map[string]string{"role": "worker"})
 	return nil
 }
 
