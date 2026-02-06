@@ -118,12 +118,6 @@ delta from PROD/INT in some cases:
   development/test cycle faster, these behaviours are disabled in development
   mode via the DisableReadinessDelay feature flag.
 
-* Standard_D2s_v3 workers required
-
-  In development mode, use of Standard_D2s_v3 workers is required as a
-  cost-saving measure.  This is controlled by the RequireD2sV3Workers feature
-  flag.
-
 * There is standing access to development infrastructure using shared
   development credentials.
 

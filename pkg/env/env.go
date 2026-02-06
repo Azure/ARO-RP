@@ -39,7 +39,6 @@ const (
 	FeatureDisableDenyAssignments Feature = iota
 	FeatureDisableSignedCertificates
 	FeatureEnableDevelopmentAuthorizer
-	FeatureRequireD2sWorkers
 	FeatureDisableReadinessDelay
 	FeatureRequireOIDCStorageWebEndpoint
 	FeatureUseMockMsiRp

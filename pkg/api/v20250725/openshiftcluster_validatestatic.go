@@ -24,10 +24,9 @@ import (
 )
 
 type openShiftClusterStaticValidator struct {
-	location          string
-	domain            string
-	requireD2sWorkers bool
-	resourceID        string
+	location   string
+	domain     string
+	resourceID string
 
 	r azure.Resource
 }
@@ -326,7 +325,7 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundI
 }
 
 func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile, version string) error {
-	if !validate.VMSizeIsValidForVersion(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true, version) {
+	if !validate.VMSizeIsValidForVersion(api.VMSize(mp.VMSize), true, version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid for version '%s'.", mp.VMSize, version))
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
