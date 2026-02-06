@@ -46,19 +46,16 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	}
 }
 
-// CPMS reconciler will disable the cluster CPMS if `aro.cpms.enabled` is false or missing.
+// Reconcile - CPMS reconciler will do the following:
+// - disable the cluster controlplanemachineset if `aro.cpms.enabled` is false or missing
+// - make sure the cluster controlplanemachineset is set to Active if aro.cpms.enabled is true
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CPMSEnabled) {
-		r.Log.Infof("Flag %s is true, will not deactivate CPMS", operator.CPMSEnabled)
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
+	r.Log.Info("running reconciliation for CPMS")
 	cpms := &machinev1.ControlPlaneMachineSet{}
 	err = r.Client.Get(
 		ctx,
@@ -74,14 +71,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if cpms.Spec.State == machinev1.ControlPlaneMachineSetStateInactive {
-		r.Log.Info("CPMS is inactive, nothing to do")
-		return ctrl.Result{}, nil
+	// Check if CPMS is enabled for the cluster
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CPMSEnabled) {
+		r.Log.Infof("Flag %s is true, checking if CPMS is active", operator.CPMSEnabled)
+		// Check if the controlplanemachineset is set to active
+		if cpms.Spec.State == machinev1.ControlPlaneMachineSetStateInactive {
+			r.Log.Info("CPMS is inactive, setting state to active")
+			cpms.Spec.State = machinev1.ControlPlaneMachineSetStateActive
+			err = r.Client.Update(ctx, cpms)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	} else {
+		if cpms.Spec.State == machinev1.ControlPlaneMachineSetStateInactive {
+			r.Log.Info("CPMS is inactive, nothing to do")
+			return ctrl.Result{}, nil
+		}
+		// disable CPMS by deleting it
+		// https://docs.openshift.com/container-platform/4.12/machine_management/control_plane_machine_management/cpmso-disabling.html
+		return ctrl.Result{}, r.Client.Delete(ctx, cpms)
 	}
-
-	// disable CPMS by deleting it
-	// https://docs.openshift.com/container-platform/4.12/machine_management/control_plane_machine_management/cpmso-disabling.html
-	return ctrl.Result{}, r.Client.Delete(ctx, cpms)
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
