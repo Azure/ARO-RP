@@ -267,7 +267,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}

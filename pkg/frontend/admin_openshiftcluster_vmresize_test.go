@@ -189,6 +189,7 @@ func TestAdminVMResize(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 				kubeActionsFactory,
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 					return a, nil

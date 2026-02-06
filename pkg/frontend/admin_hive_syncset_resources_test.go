@@ -91,9 +91,9 @@ func Test_getAdminHiveClusterSync(t *testing.T) {
 			if tt.hiveEnabled {
 				clusterManager := mock_hive.NewMockClusterManager(controller)
 				clusterManager.EXPECT().GetClusterSync(gomock.Any(), gomock.Any()).Return(&clusterSync, nil).Times(tt.expectedGetClusterSyncCallCount)
-				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, clusterManager, nil, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, clusterManager, nil, nil, nil, nil, nil, nil)
 			} else {
-				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+				f, err = NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, _env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil, nil)
 			}
 
 			if err != nil {
