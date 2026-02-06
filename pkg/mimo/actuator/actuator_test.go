@@ -83,7 +83,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
 		subscriptions, subscriptionsClient = testdatabase.NewFakeSubscriptions()
 
-		dbc := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
+		dbc := database.NewDBGroup().WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
 
 		a = &actuator{
 			log: log,

@@ -58,6 +58,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
 	//var clustersClient cosmosdb.OpenShiftClusterDocumentClient
+	var subscriptions database.Subscriptions
+	//var subscriptionsClient *cosmosdb.FakeSubscriptionDocumentClient
 	var m metrics.Emitter
 
 	var svc *service
@@ -106,16 +108,17 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
-		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
+		subscriptions, _ = testdatabase.NewFakeSubscriptions()
+		dbc := database.NewDBGroup().WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
 
-		svc = NewService(_env, log, nil, dbg, m, []int{1})
+		svc = NewService(_env, log, nil, dbc, m, []int{1})
 		svc.now = now
 		svc.workerDelay = func() time.Duration { return 0 * time.Second }
 		svc.serveHealthz = false
 	})
 
 	JustBeforeEach(func() {
-		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
+		err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).Create()
 		Expect(err).ToNot(HaveOccurred())
 	})
 
