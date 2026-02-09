@@ -10,8 +10,7 @@ import (
 )
 
 // fakeCollectionClient is a fake collection client for faking out PartitionKeyRanges
-type fakeCollectionClient struct {
-}
+type fakeCollectionClient struct{}
 
 func (c *fakeCollectionClient) Create(ctx context.Context, newcoll *cosmosdb.Collection) (coll *cosmosdb.Collection, err error) {
 	return nil, cosmosdb.ErrNotImplemented

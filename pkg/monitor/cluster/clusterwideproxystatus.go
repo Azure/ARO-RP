@@ -26,9 +26,9 @@ const (
 	cluster              = "cluster"
 	mandatory_no_proxies = "localhost,127.0.0.1,.svc,.cluster.local,169.254.169.254"
 	AzureDNS             = "168.63.129.16"
-	//169.254.169.254 (the IMDS IP)
-	//168.63.129.16 (Azure DNS, if no custom DNS exists)
-	//localhost, 127.0.0.1, .svc, .cluster.local
+	// 169.254.169.254 (the IMDS IP)
+	// 168.63.129.16 (Azure DNS, if no custom DNS exists)
+	// localhost, 127.0.0.1, .svc, .cluster.local
 )
 
 // Main function to emit CWP status

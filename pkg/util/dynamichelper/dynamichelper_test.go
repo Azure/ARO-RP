@@ -341,7 +341,6 @@ func TestMergeGK(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, changed, diff, err := mergeGK(tt.old, tt.new)
-
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -57,7 +57,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var manifests database.MaintenanceManifests
 	var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
-	//var clustersClient cosmosdb.OpenShiftClusterDocumentClient
+	// var clustersClient cosmosdb.OpenShiftClusterDocumentClient
 	var m metrics.Emitter
 
 	var svc *service

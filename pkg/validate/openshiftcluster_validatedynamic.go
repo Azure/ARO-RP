@@ -187,7 +187,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			return err
 		}
 	} else {
-		//ClusterMSI Validation
+		// ClusterMSI Validation
 		cmsiDynamic, err := dynamic.NewValidator(
 			dv.log,
 			dv.env,

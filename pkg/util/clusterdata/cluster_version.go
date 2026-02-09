@@ -18,8 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-type clusterVersionEnricher struct {
-}
+type clusterVersionEnricher struct{}
 
 func (ce clusterVersionEnricher) Enrich(
 	ctx context.Context,

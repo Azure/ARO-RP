@@ -26,8 +26,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-type machineClientEnricher struct {
-}
+type machineClientEnricher struct{}
 
 const (
 	workerMachineSetsNamespace = "openshift-machine-api"

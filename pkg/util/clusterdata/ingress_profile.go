@@ -20,8 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-type ingressProfileEnricher struct {
-}
+type ingressProfileEnricher struct{}
 
 func (ip ingressProfileEnricher) Enrich(
 	ctx context.Context,

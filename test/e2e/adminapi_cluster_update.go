@@ -18,7 +18,7 @@ var _ = Describe("[Admin API] Cluster admin update action", Serial, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must run cluster update operation on a cluster", func(ctx context.Context) {
-		var oc = &admin.OpenShiftCluster{}
+		oc := &admin.OpenShiftCluster{}
 
 		// Wait for the cluster to be in a succeeded state before continuing
 		Eventually(func(g Gomega, ctx context.Context) {

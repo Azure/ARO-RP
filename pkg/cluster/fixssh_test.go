@@ -143,7 +143,8 @@ func configureInterface(backendPools []string,
 	subnet string,
 	name string,
 	addVM bool,
-	addIPConfig bool) *armnetwork.InterfacesClientGetResponse {
+	addIPConfig bool,
+) *armnetwork.InterfacesClientGetResponse {
 	iface := armnetwork.Interface{
 		Name:       pointerutils.ToPtr(name),
 		Properties: &armnetwork.InterfacePropertiesFormat{},

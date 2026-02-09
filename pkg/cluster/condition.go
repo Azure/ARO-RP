@@ -19,10 +19,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
 )
 
-const minimumWorkerNodes = 2
-const workerMachineRoleLabel = "machine.openshift.io/cluster-api-machine-role=worker"
-const workerNodeRoleLabel = "node-role.kubernetes.io/worker"
-const phaseRunning = "Running"
+const (
+	minimumWorkerNodes     = 2
+	workerMachineRoleLabel = "machine.openshift.io/cluster-api-machine-role=worker"
+	workerNodeRoleLabel    = "node-role.kubernetes.io/worker"
+	phaseRunning           = "Running"
+)
 
 var clusterOperatorsToRequireSettled = []string{"kube-controller-manager", "kube-apiserver", "kube-scheduler", "console", "authentication"}
 

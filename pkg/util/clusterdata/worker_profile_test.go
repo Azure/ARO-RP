@@ -38,13 +38,14 @@ const (
 func TestWorkerProfilesEnricherTask(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
-	var clusterID = fmt.Sprintf(
+	clusterID := fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/group/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
 		mockSubscriptionID,
 	)
 
 	invalidProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{
-		Raw: []byte("invalid")}}
+		Raw: []byte("invalid"),
+	}}
 
 	emptyProvSpec := machinev1beta1.ProviderSpec{}
 	noRawProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{}}
@@ -132,18 +133,18 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			//Given
+			// Given
 			clients := clients{
 				machine: tc.client,
 			}
 
 			e := machineClientEnricher{}
 
-			//When
+			// When
 			e.SetDefaults(tc.givenOc)
 			err := e.Enrich(context.Background(), log, tc.givenOc, clients.k8s, clients.config, clients.machine, clients.operator)
 
-			//Then
+			// Then
 			errorHandling.AssertErrorMessage(t, err, tc.wantErr)
 
 			if !reflect.DeepEqual(tc.givenOc, tc.wantOc) {
@@ -283,7 +284,7 @@ func getWantOc(clusID string, workerprofile []api.WorkerProfile) *api.OpenShiftC
 
 // This func returns an api.WorkerProfile object that represents a valid worker profile for a machine.
 func validWorkerProfile() []api.WorkerProfile {
-	var workerSubnetID = fmt.Sprintf(
+	workerSubnetID := fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
 		mockSubscriptionID, mockVnetRG, mockVnetName, mockSubnetName,
 	)

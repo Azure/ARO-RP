@@ -55,12 +55,14 @@ func TestEnsureAccessTokenClaims(t *testing.T) {
 			tokenFactory: func() azcore.TokenCredential {
 				return token{hasOid}
 			},
-		}, {
+		},
+		{
 			name: "valid token: has altsecid",
 			tokenFactory: func() azcore.TokenCredential {
 				return token{hasAltsecid}
 			},
-		}, {
+		},
+		{
 			name: "valid token: has puid",
 			tokenFactory: func() azcore.TokenCredential {
 				return token{hasPuid}

@@ -255,7 +255,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: configmapName,
 										},
-										DefaultMode: pointerutils.ToPtr(int32(0555)),
+										DefaultMode: pointerutils.ToPtr(int32(0o555)),
 									},
 								},
 							},

@@ -18,7 +18,7 @@ var _ = Describe("[Admin API] Billing documents", Serial, Ordered, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must return list of billing documents", func(ctx context.Context) {
-		var oc = &admin.OpenShiftCluster{}
+		oc := &admin.OpenShiftCluster{}
 
 		// Wait for the cluster to be in a succeeded state before continuing
 		Eventually(func(g Gomega, ctx context.Context) {

@@ -570,6 +570,7 @@ func TestGetClusterDeployment(t *testing.T) {
 		})
 	}
 }
+
 func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{

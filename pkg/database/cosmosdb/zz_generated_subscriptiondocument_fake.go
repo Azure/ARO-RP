@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeSubscriptionDocumentTriggerHandler func(context.Context, *pkg.SubscriptionDocument) error
-type fakeSubscriptionDocumentQueryHandler func(SubscriptionDocumentClient, *Query, *Options) SubscriptionDocumentRawIterator
+type (
+	fakeSubscriptionDocumentTriggerHandler func(context.Context, *pkg.SubscriptionDocument) error
+	fakeSubscriptionDocumentQueryHandler   func(SubscriptionDocumentClient, *Query, *Options) SubscriptionDocumentRawIterator
+)
 
 var _ SubscriptionDocumentClient = &FakeSubscriptionDocumentClient{}
 

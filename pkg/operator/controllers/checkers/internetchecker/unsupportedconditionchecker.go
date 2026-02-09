@@ -92,7 +92,6 @@ func (ucc *UnsupportedConditionChecker) checkWorkerNodeCount(ctx context.Context
 
 func (ucc *UnsupportedConditionChecker) setClusterOperatorStatus(ctx context.Context, upgradeableStatus configv1.ConditionStatus) error {
 	co, err := ucc.configcli.ConfigV1().ClusterOperators().Get(ctx, clusterOperatorName, metav1.GetOptions{})
-
 	if err != nil {
 		ucc.log.Errorf("Failed to get the %q operator: %q", clusterOperatorName, err.Error())
 		return err

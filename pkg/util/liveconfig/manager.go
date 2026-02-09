@@ -37,7 +37,8 @@ type dev struct {
 }
 
 func NewDev(location string, managedClustersClient utilcontainerservice.ManagedClustersClient) Manager {
-	return &dev{location: location,
+	return &dev{
+		location:              location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
 		hiveCredentialsMutex:  sync.RWMutex{},

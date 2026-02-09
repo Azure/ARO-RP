@@ -103,7 +103,8 @@ func TestNodes(t *testing.T) {
 					},
 				},
 				Volumes: make([]Volume, 0),
-				Labels: map[string]string{"beta.kubernetes.io/arch": "amd64",
+				Labels: map[string]string{
+					"beta.kubernetes.io/arch":                  "amd64",
 					"beta.kubernetes.io/instance-type":         "Standard_D8s_v3",
 					"beta.kubernetes.io/os":                    "linux",
 					"failure-domain.beta.kubernetes.io/region": "eastus",
@@ -115,14 +116,19 @@ func TestNodes(t *testing.T) {
 					"node.kubernetes.io/instance-type":         "Standard_D8s_v3",
 					"node.openshift.io/os_id":                  "rhcos",
 					"topology.kubernetes.io/region":            "eastus",
-					"topology.kubernetes.io/zone":              "eastus-1"},
-				Annotations: map[string]string{"machine.openshift.io/machine": "openshift-machine-api/aro-master-0",
+					"topology.kubernetes.io/zone":              "eastus-1",
+				},
+				Annotations: map[string]string{
+					"machine.openshift.io/machine":                           "openshift-machine-api/aro-master-0",
 					"machineconfiguration.openshift.io/currentConfig":        "rendered-master-ebd6f663e22984bdce9081039a6f01c0",
 					"machineconfiguration.openshift.io/desiredConfig":        "rendered-master-ebd6f663e22984bdce9081039a6f01c0",
 					"machineconfiguration.openshift.io/reason":               "",
 					"machineconfiguration.openshift.io/state":                "Done",
-					"volumes.kubernetes.io/controller-managed-attach-detach": "true"},
-			}}}
+					"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+				},
+			},
+		},
+	}
 
 	sort.SliceStable(info.Nodes, func(i, j int) bool { return info.Nodes[i].Name < info.Nodes[j].Name })
 	sort.SliceStable(expected.Nodes, func(i, j int) bool { return expected.Nodes[i].Name < expected.Nodes[j].Name })

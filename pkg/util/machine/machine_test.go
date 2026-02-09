@@ -98,7 +98,8 @@ func GetMachine(name string, isMaster bool, hasRole bool) *machinev1beta1.Machin
 					Raw: []byte(`{
 "apiVersion": "machine.openshift.io/v1beta1",
 "kind": "AzureMachineProviderSpec",
-}`)},
+}`),
+				},
 			},
 		},
 	}

@@ -63,7 +63,6 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 // reconciles the associated ARO MachineHealthCheck object
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
-
 	if err != nil {
 		return reconcile.Result{}, err
 	}

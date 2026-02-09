@@ -112,7 +112,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().GetSerialConsoleForVM(
 					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
 				).Times(1).DoAndReturn(func(ctx context.Context,
-					rg string, vmName string, target io.Writer) error {
+					rg string, vmName string, target io.Writer,
+				) error {
 					_, err := io.Copy(target, iothing)
 					return err
 				})
@@ -148,7 +149,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().GetSerialConsoleForVM(
 					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
 				).Times(1).DoAndReturn(func(ctx context.Context,
-					rg string, vmName string, target io.Writer) error {
+					rg string, vmName string, target io.Writer,
+				) error {
 					_, err := io.Copy(target, iothing)
 					return err
 				})
@@ -184,7 +186,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().GetSerialConsoleForVM(
 					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
 				).Times(1).DoAndReturn(func(ctx context.Context,
-					rg string, vmName string, target io.Writer) error {
+					rg string, vmName string, target io.Writer,
+				) error {
 					_, err := io.Copy(target, iothing)
 					return err
 				})
@@ -216,7 +219,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().GetSerialConsoleForVM(
 					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
 				).Times(1).DoAndReturn(func(ctx context.Context,
-					rg string, vmName string, target io.Writer) error {
+					rg string, vmName string, target io.Writer,
+				) error {
 					_, err := io.Copy(target, iothing)
 					return err
 				})

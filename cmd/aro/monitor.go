@@ -36,7 +36,6 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE")
-
 		if err != nil {
 			return err
 		}

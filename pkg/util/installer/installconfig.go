@@ -13,7 +13,6 @@ type Networking struct {
 
 // InstallConfig is the configuration for an OpenShift install.
 type Config struct {
-
 	// Networking is the configuration for the pod network provider in
 	// the cluster.
 	*Networking `json:"networking,omitempty"`

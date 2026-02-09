@@ -16,8 +16,10 @@ import (
 	previewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 )
 
-var scheme = runtime.NewScheme()
-var codecs = serializer.NewCodecFactory(scheme)
+var (
+	scheme = runtime.NewScheme()
+	codecs = serializer.NewCodecFactory(scheme)
+)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
 	arov1alpha1.AddToScheme,

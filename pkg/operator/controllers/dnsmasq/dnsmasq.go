@@ -117,7 +117,7 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 						Contents: ign3types.Resource{
 							Source: pointerutils.ToPtr(dataurl.EncodeBytes(config)),
 						},
-						Mode: pointerutils.ToPtr(0644),
+						Mode: pointerutils.ToPtr(0o644),
 					},
 				},
 				{
@@ -132,7 +132,7 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 						Contents: ign3types.Resource{
 							Source: pointerutils.ToPtr(dataurl.EncodeBytes(startpre)),
 						},
-						Mode: pointerutils.ToPtr(0744),
+						Mode: pointerutils.ToPtr(0o744),
 					},
 				},
 			},

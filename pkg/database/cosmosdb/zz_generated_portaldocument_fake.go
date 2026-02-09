@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakePortalDocumentTriggerHandler func(context.Context, *pkg.PortalDocument) error
-type fakePortalDocumentQueryHandler func(PortalDocumentClient, *Query, *Options) PortalDocumentRawIterator
+type (
+	fakePortalDocumentTriggerHandler func(context.Context, *pkg.PortalDocument) error
+	fakePortalDocumentQueryHandler   func(PortalDocumentClient, *Query, *Options) PortalDocumentRawIterator
+)
 
 var _ PortalDocumentClient = &FakePortalDocumentClient{}
 

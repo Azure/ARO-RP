@@ -286,7 +286,6 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 		}
 		return nil
 	})
-
 	if err != nil {
 		p.log.Fatal(err)
 	}
@@ -321,7 +320,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 		r.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").HandlerFunc(p.indexPrometheus)
 	}
 
-	//kubeconfig
+	// kubeconfig
 	if kconfig != nil {
 		r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/new").HandlerFunc(kconfig.New)
 	}
@@ -351,7 +350,6 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
-
 	if err != nil {
 		p.internalServerError(w, err)
 		return
@@ -366,7 +364,6 @@ func (p *portal) indexPrometheus(w http.ResponseWriter, r *http.Request) {
 	err := p.templatePrometheus.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
-
 	if err != nil {
 		p.internalServerError(w, err)
 		return

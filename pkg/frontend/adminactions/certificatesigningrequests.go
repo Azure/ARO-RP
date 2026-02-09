@@ -44,7 +44,6 @@ func (k *kubeActions) ApproveAllCsrs(ctx context.Context) error {
 
 func (k *kubeActions) updateCsr(ctx context.Context, csr *certificatesv1.CertificateSigningRequest) error {
 	modifiedCSR, hasCondition, err := addConditionIfNeeded(csr, string(certificatesv1.CertificateDenied), string(certificatesv1.CertificateApproved), "AROSupportApprove", "This CSR was approved by ARO support personnel.")
-
 	if err != nil {
 		return err
 	}

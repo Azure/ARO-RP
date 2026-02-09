@@ -165,7 +165,7 @@ func (s *statsd) parseSocketEnv(env string) (string, string, error) {
 }
 
 func (s *statsd) validateSocketDefinition(network string, address string) (bool, error) {
-	//Verify supported protocol provided. TCP might just work as well, but this was never tested
+	// Verify supported protocol provided. TCP might just work as well, but this was never tested
 	if network != "udp" && network != "unix" {
 		return false, fmt.Errorf("unsupported protocol for the mdm statds socket. Expecting  'udp:' or 'unix:'. Got: %q", network)
 	}

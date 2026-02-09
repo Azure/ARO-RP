@@ -60,7 +60,7 @@ func TestEnrichOne(t *testing.T) {
 			failedEnrichers:     map[string]bool{enricherName: true},
 		},
 		{
-			//should just not panic
+			// should just not panic
 			name:                "enricher not called because nil",
 			enricherCallCount:   1,
 			enricherReturnValue: nil,

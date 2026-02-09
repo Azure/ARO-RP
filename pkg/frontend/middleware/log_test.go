@@ -21,7 +21,7 @@ func TestAuditTargetResourceData(t *testing.T) {
 		operationID               = "test-operation-id"
 	)
 
-	var testCases = []struct {
+	testCases := []struct {
 		url          string
 		expectedKind string
 		expectedName string
@@ -118,7 +118,7 @@ func TestAuditTargetResourceData(t *testing.T) {
 }
 
 func TestIsAdminOp(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		url      string
 		expected bool
 	}{

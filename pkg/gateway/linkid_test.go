@@ -85,7 +85,8 @@ func TestGatewayVerification(t *testing.T) {
 			idParam:  "deleting",
 			wantId:   "deleting",
 			deleting: true,
-		}} {
+		},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
 			mockController := gomock.NewController(t)
 			defer mockController.Finish()

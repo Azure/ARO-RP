@@ -114,8 +114,7 @@ func TestUpdateClusterDNSFn(t *testing.T) {
 	})
 }
 
-type MatchesNilPrivateZone struct {
-}
+type MatchesNilPrivateZone struct{}
 
 func (MatchesNilPrivateZone) Matches(x interface{}) bool {
 	arg, ok := x.(*configv1.DNS)

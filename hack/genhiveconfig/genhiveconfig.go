@@ -61,7 +61,7 @@ func run(ctx context.Context, path string) error {
 	}
 
 	if path != "" {
-		return os.WriteFile(path, configmapRaw, 0666)
+		return os.WriteFile(path, configmapRaw, 0o666)
 	} else {
 		print(string(configmapRaw))
 		return nil

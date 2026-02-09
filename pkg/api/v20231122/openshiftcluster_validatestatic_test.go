@@ -41,9 +41,7 @@ const (
 	ingressProfileIp    = "1.2.3.4"
 )
 
-var (
-	subscriptionID = "00000000-0000-0000-0000-000000000000"
-)
+var subscriptionID = "00000000-0000-0000-0000-000000000000"
 
 func getResourceID(clusterName string) string {
 	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/%s", subscriptionID, clusterName)

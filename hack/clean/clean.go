@@ -67,7 +67,6 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID")
-
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		ttl = defaultTTL
 	}
 
-	var createdTag = defaultCreatedAtTag
+	createdTag := defaultCreatedAtTag
 	if os.Getenv("AZURE_PURGE_CREATED_TAG") != "" {
 		createdTag = os.Getenv("AZURE_PURGE_CREATED_TAG")
 	}

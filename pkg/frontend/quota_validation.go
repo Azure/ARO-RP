@@ -70,7 +70,7 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 	}
 
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
-	//worker node resource calculation
+	// worker node resource calculation
 	for _, w := range workerProfiles {
 		err := addRequiredResources(requiredResources, w.VMSize, w.Count)
 		if err != nil {
@@ -78,10 +78,10 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 		}
 	}
 
-	//Public IP Addresses minimum requirement: 2 for ARM template deployment and 1 for kube-controller-manager
+	// Public IP Addresses minimum requirement: 2 for ARM template deployment and 1 for kube-controller-manager
 	requiredResources["PublicIPAddresses"] = 3
 
-	//check requirements vs. usage
+	// check requirements vs. usage
 
 	// we're only checking the limits returned by the Usage API and ignoring usage limits missing from the results
 	// rationale:

@@ -96,7 +96,6 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 	for {
 		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.InNamespace(etcdNamespace),
 			client.MatchingFields(map[string]string{"type": string(corev1.SecretTypeTLS)}))
-
 		if err != nil {
 			return err
 		}

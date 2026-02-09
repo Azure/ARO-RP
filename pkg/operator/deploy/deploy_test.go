@@ -732,7 +732,6 @@ func TestTemplateManifests(t *testing.T) {
 			for _, fileBytes := range actualBytes {
 				var resource *kruntime.Object
 				err := yaml.Unmarshal(fileBytes, resource)
-
 				if err != nil {
 					t.Errorf("templateManifests() %s: unexpected error: %s\n", test.Name, err)
 				}

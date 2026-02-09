@@ -33,12 +33,16 @@ var ClusterVersion predicate.Predicate = predicate.NewPredicateFuncs(func(o clie
 	return o.GetName() == "version"
 })
 
-var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
-var PullSecret predicate.Predicate = predicate.NewPredicateFuncs(func(o client.Object) bool {
-	return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace)
-})
+var (
+	pullSecretName                     = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
+	PullSecret     predicate.Predicate = predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace)
+	})
+)
 
-var backupPullSecretName = types.NamespacedName{Name: operator.SecretName, Namespace: operator.Namespace}
-var BackupPullSecret predicate.Predicate = predicate.NewPredicateFuncs(func(o client.Object) bool {
-	return (o.GetName() == backupPullSecretName.Name && o.GetNamespace() == backupPullSecretName.Namespace)
-})
+var (
+	backupPullSecretName                     = types.NamespacedName{Name: operator.SecretName, Namespace: operator.Namespace}
+	BackupPullSecret     predicate.Predicate = predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == backupPullSecretName.Name && o.GetNamespace() == backupPullSecretName.Namespace)
+	})
+)

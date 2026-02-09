@@ -19,16 +19,18 @@ import (
 	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 )
 
-const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
-const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
-const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
-const apiv20220904Path = "github.com/Azure/ARO-RP/pkg/api/v20220904"
-const apiv20230401Path = "github.com/Azure/ARO-RP/pkg/api/v20230401"
-const apiv20230701previewPath = "github.com/Azure/ARO-RP/pkg/api/v20230701preview"
-const apiv20230904Path = "github.com/Azure/ARO-RP/pkg/api/v20230904"
-const apiv20231122Path = "github.com/Azure/ARO-RP/pkg/api/v20231122"
-const apiv20240812previewPath = "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
-const apiv20250725Path = "github.com/Azure/ARO-RP/pkg/api/v20250725"
+const (
+	apiv20200430Path        = "github.com/Azure/ARO-RP/pkg/api/v20200430"
+	apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
+	apiv20220401Path        = "github.com/Azure/ARO-RP/pkg/api/v20220401"
+	apiv20220904Path        = "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	apiv20230401Path        = "github.com/Azure/ARO-RP/pkg/api/v20230401"
+	apiv20230701previewPath = "github.com/Azure/ARO-RP/pkg/api/v20230701preview"
+	apiv20230904Path        = "github.com/Azure/ARO-RP/pkg/api/v20230904"
+	apiv20231122Path        = "github.com/Azure/ARO-RP/pkg/api/v20231122"
+	apiv20240812previewPath = "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	apiv20250725Path        = "github.com/Azure/ARO-RP/pkg/api/v20250725"
+)
 
 type generator struct {
 	exampleOpenShiftClusterPutParameter                func() interface{}

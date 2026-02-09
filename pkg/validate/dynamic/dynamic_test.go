@@ -2242,8 +2242,10 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			}
 
 			subnets := []Subnet{
-				{ID: masterSubnet,
-					Path: masterSubnetPath},
+				{
+					ID:   masterSubnet,
+					Path: masterSubnetPath,
+				},
 				{
 					ID:   workerSubnet,
 					Path: workerSubnetPath,

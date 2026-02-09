@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeBillingDocumentTriggerHandler func(context.Context, *pkg.BillingDocument) error
-type fakeBillingDocumentQueryHandler func(BillingDocumentClient, *Query, *Options) BillingDocumentRawIterator
+type (
+	fakeBillingDocumentTriggerHandler func(context.Context, *pkg.BillingDocument) error
+	fakeBillingDocumentQueryHandler   func(BillingDocumentClient, *Query, *Options) BillingDocumentRawIterator
+)
 
 var _ BillingDocumentClient = &FakeBillingDocumentClient{}
 

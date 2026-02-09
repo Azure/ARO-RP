@@ -39,7 +39,7 @@ type CloudErrorBody struct {
 	// The target of the particular error. For example, the name of the property in error.
 	Target string `json:"target,omitempty"`
 
-	//A list of additional details about the error.
+	// A list of additional details about the error.
 	Details []CloudErrorBody `json:"details,omitempty"`
 }
 

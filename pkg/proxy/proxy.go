@@ -164,7 +164,7 @@ func Proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request, sz int) {
 	var wg sync.WaitGroup
 
 	// Wait for the c1->c2 goroutine to complete before exiting.
-	//Then the deferred c1.Close() and c2.Close() will be called.
+	// Then the deferred c1.Close() and c2.Close() will be called.
 	defer wg.Wait()
 
 	wg.Add(1)

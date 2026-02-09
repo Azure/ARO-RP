@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeOpenShiftClusterDocumentTriggerHandler func(context.Context, *pkg.OpenShiftClusterDocument) error
-type fakeOpenShiftClusterDocumentQueryHandler func(OpenShiftClusterDocumentClient, *Query, *Options) OpenShiftClusterDocumentRawIterator
+type (
+	fakeOpenShiftClusterDocumentTriggerHandler func(context.Context, *pkg.OpenShiftClusterDocument) error
+	fakeOpenShiftClusterDocumentQueryHandler   func(OpenShiftClusterDocumentClient, *Query, *Options) OpenShiftClusterDocumentRawIterator
+)
 
 var _ OpenShiftClusterDocumentClient = &FakeOpenShiftClusterDocumentClient{}
 
