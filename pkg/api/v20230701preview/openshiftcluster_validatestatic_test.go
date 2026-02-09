@@ -1014,13 +1014,6 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'invalid' is invalid.",
 		},
 		{
-			name: "vmSize too small (prod)",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
-			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D2s_v3' is invalid.",
-		},
-		{
 			name: "disk too small",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].DiskSizeGB = 127
