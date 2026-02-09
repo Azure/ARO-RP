@@ -29,14 +29,14 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			desc:      "only valid subscriptions",
 			validOnly: true,
 			expected: map[string]subscriptionInfo{
-				"9187ef95-a9cc-487d-80df-f85e615cf926": subscriptionInfo{
+				"9187ef95-a9cc-487d-80df-f85e615cf926": {
 					State: api.SubscriptionStateRegistered, TenantID: "41441389-d1c2-4ade-b95d-99445d169804",
 				},
-				"fb4b6d1a-5ede-4ed4-8a37-96b9c5397616": subscriptionInfo{
+				"fb4b6d1a-5ede-4ed4-8a37-96b9c5397616": {
 					State: api.SubscriptionStateRegistered, TenantID: "84ca9ee8-04fd-4309-9968-62d22696192c",
 				},
 				// created after the initial feeding
-				"07e31457-5d73-4a99-a316-52a226179267": subscriptionInfo{
+				"07e31457-5d73-4a99-a316-52a226179267": {
 					State: api.SubscriptionStateRegistered, TenantID: "6baab395-b792-4ee1-99e7-4f8315be1543",
 				},
 			},
@@ -45,20 +45,20 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			desc:      "all (non-deleted) subscriptions",
 			validOnly: false,
 			expected: map[string]subscriptionInfo{
-				"9187ef95-a9cc-487d-80df-f85e615cf926": subscriptionInfo{
+				"9187ef95-a9cc-487d-80df-f85e615cf926": {
 					State: api.SubscriptionStateRegistered, TenantID: "41441389-d1c2-4ade-b95d-99445d169804",
 				},
-				"fb4b6d1a-5ede-4ed4-8a37-96b9c5397616": subscriptionInfo{
+				"fb4b6d1a-5ede-4ed4-8a37-96b9c5397616": {
 					State: api.SubscriptionStateRegistered, TenantID: "84ca9ee8-04fd-4309-9968-62d22696192c",
 				},
-				"ea93be31-c21d-424b-ac04-fcb6f20804dc": subscriptionInfo{
+				"ea93be31-c21d-424b-ac04-fcb6f20804dc": {
 					State: api.SubscriptionStateSuspended, TenantID: "6b456b5d-34c0-4ba1-b80f-5e38032a9003",
 				},
 				// created after the initial feeding
-				"07e31457-5d73-4a99-a316-52a226179267": subscriptionInfo{
+				"07e31457-5d73-4a99-a316-52a226179267": {
 					State: api.SubscriptionStateRegistered, TenantID: "6baab395-b792-4ee1-99e7-4f8315be1543",
 				},
-				"f9664b2f-0ea1-4401-be48-f7611f58c295": subscriptionInfo{
+				"f9664b2f-0ea1-4401-be48-f7611f58c295": {
 					State: api.SubscriptionStateWarned, TenantID: "bb0ba6ad-abb8-4b81-8c65-4081bfed7928",
 				},
 			},
