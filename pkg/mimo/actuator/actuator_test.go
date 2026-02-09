@@ -34,6 +34,8 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
 	var clustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient
+	var subscriptions database.Subscriptions
+	var subscriptionsClient *cosmosdb.FakeSubscriptionDocumentClient
 
 	var a Actuator
 
@@ -79,6 +81,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
+		subscriptions, subscriptionsClient = testdatabase.NewFakeSubscriptions()
+
+		dbc := database.NewDBGroup().WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
 
 		a = &actuator{
 			log: log,
@@ -86,8 +91,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 			clusterResourceID: strings.ToLower(clusterResourceID),
 
-			mmf: manifests,
-			oc:  clusters,
+			dbs: dbc,
 
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
 			now:   now,
@@ -112,7 +116,10 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		// After the the fixtures are created in each test's BeforeEach, load
 		// them into the database
-		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
+		err := fixtures.WithOpenShiftClusters(clusters).
+			WithMaintenanceManifests(manifests).
+			WithSubscriptions(subscriptions).
+			Create()
 		Expect(err).ToNot(HaveOccurred())
 
 		checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -135,6 +142,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		errs = checker.CheckOpenShiftClusters(clustersClient)
 		Expect(errs).To(BeNil(), "OpenShiftClusters don't match")
+
+		errs = checker.CheckSubscriptions(subscriptionsClient)
+		Expect(errs).To(BeNil(), "Subscriptions don't match")
 	}
 
 	When("old manifest", func() {
