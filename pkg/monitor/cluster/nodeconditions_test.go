@@ -25,7 +25,6 @@ import (
 )
 
 func TestEmitNodeConditions(t *testing.T) {
-	ctx := context.Background()
 	kubeletVersion := "v1.17.1+9d33dd3"
 
 	for _, tt := range []struct {
@@ -142,6 +141,8 @@ func TestEmitNodeConditions(t *testing.T) {
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "master"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-0",
 					"status":       "False",
@@ -281,6 +282,9 @@ func TestEmitNodeConditions(t *testing.T) {
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
+
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker",
 					"status":       "False",
@@ -347,6 +351,8 @@ func TestEmitNodeConditions(t *testing.T) {
 			wantEmitted: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-impossible-node",
 					"status":       "False",
@@ -363,9 +369,228 @@ func TestEmitNodeConditions(t *testing.T) {
 				})
 			},
 		},
+		{
+			name:     "empty cluster - no nodes emits zero counts",
+			nodes:    []client.Object{},
+			machines: []client.Object{},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
+			},
+		},
+		{
+			name: "healthy node - all conditions expected, no node.conditions emitted",
+			nodes: []client.Object{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-healthy-worker",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-healthy-worker",
+						},
+						Labels: map[string]string{
+							workerRoleLabel: "",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+							{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionFalse},
+							{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse},
+							{Type: corev1.NodePIDPressure, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+			},
+			machines: []client.Object{
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aro-healthy-worker",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "worker",
+							machinesetLabelKey:  "workers",
+						},
+					},
+					Spec: machinev1beta1.MachineSpec{
+						ProviderSpec: validProviderSpec(t),
+					},
+				},
+			},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
+				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+					"nodeName":       "aro-healthy-worker",
+					"kubeletVersion": kubeletVersion,
+					"role":           "worker",
+				})
+			},
+		},
+		{
+			name: "node with no role labels - not counted as master nor worker nor infra",
+			nodes: []client.Object{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-unlabeled-node",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-unlabeled-node",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+			},
+			machines: []client.Object{
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aro-unlabeled-node",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "worker",
+						},
+					},
+					Spec: machinev1beta1.MachineSpec{
+						ProviderSpec: validProviderSpec(t),
+					},
+				},
+			},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "unknown"})
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-unlabeled-node",
+					"status":       "False",
+					"type":         "Ready",
+					"spotInstance": "false",
+					"role":         "worker",
+					"machineset":   "",
+				})
+				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+					"nodeName":       "aro-unlabeled-node",
+					"kubeletVersion": kubeletVersion,
+					"role":           "worker",
+				})
+			},
+		},
+		{
+			name: "node with no annotations - no machine match, empty role/machineset",
+			nodes: []client.Object{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-no-annotation-node",
+						Labels: map[string]string{
+							workerRoleLabel: "",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+			},
+			machines: []client.Object{},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-no-annotation-node",
+					"status":       "False",
+					"type":         "Ready",
+					"spotInstance": "false",
+					"role":         "",
+					"machineset":   "",
+				})
+				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+					"nodeName":       "aro-no-annotation-node",
+					"kubeletVersion": kubeletVersion,
+					"role":           "",
+				})
+			},
+		},
+		{
+			name: "node with both worker AND infra labels - counted only once as worker",
+			nodes: []client.Object{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-dual-label-node",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-dual-label-node",
+						},
+						Labels: map[string]string{
+							workerRoleLabel: "",
+							infraRoleLabel:  "",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+			},
+			machines: []client.Object{
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aro-dual-label-node",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "worker",
+							machinesetLabelKey:  "workers",
+						},
+					},
+					Spec: machinev1beta1.MachineSpec{
+						ProviderSpec: validProviderSpec(t),
+					},
+				},
+			},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-dual-label-node",
+					"status":       "False",
+					"type":         "Ready",
+					"spotInstance": "false",
+					"role":         "worker",
+					"machineset":   "workers",
+				})
+				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+					"nodeName":       "aro-dual-label-node",
+					"kubeletVersion": kubeletVersion,
+					"role":           "worker",
+				})
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-            t.Parallel()
+			t.Parallel()
+			ctx := context.Background()
 			controller := gomock.NewController(t)
 			m := mock_metrics.NewMockEmitter(controller)
 
