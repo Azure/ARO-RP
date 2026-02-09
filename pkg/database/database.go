@@ -38,6 +38,12 @@ const (
 	collMaintenanceManifests            = "MaintenanceManifests"
 )
 
+// Generic interface of document iterators from pkg/database/cosmosdb/, used in
+// changefeeds.
+type DocumentIterator[E any, D api.DocumentList[E]] interface {
+	Next(context.Context, int) (D, error)
+}
+
 func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD, databaseAccountName string) (cosmosdb.DatabaseClient, error) {
 	h, err := NewJSONHandle(aead)
 	if err != nil {
