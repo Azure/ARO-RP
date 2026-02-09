@@ -300,7 +300,7 @@ validate-go: validate-go-action
 	gofmt -s -w cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
@@ -308,7 +308,7 @@ validate-go: validate-go-action
 validate-go-action: validate-imports validate-lint-go-fix validate-gh-actions
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 .PHONY: validate-fips
