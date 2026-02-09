@@ -141,7 +141,7 @@ func TestChangefeedProcessErrorContinuesProcessing(t *testing.T) {
 	err := testlog.AssertLoggingOutput(h, []testlog.ExpectedLogEntry{
 		{
 			"level": gomega.Equal(logrus.ErrorLevel),
-			"msg":   gomega.Equal("test error"),
+			"msg":   gomega.Equal("while calling iterator.Next(): test error"),
 		},
 	})
 	if err != nil {
