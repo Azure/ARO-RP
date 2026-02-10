@@ -46,13 +46,13 @@ func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, d
 
 var _ = Describe("MIMO Scheduler Service", Ordered, func() {
 	var fixtures *testdatabase.Fixture
-	//var checker *testdatabase.Checker
+	// var checker *testdatabase.Checker
 	var manifests database.MaintenanceManifests
-	//var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
+	// var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
-	//var clustersClient cosmosdb.OpenShiftClusterDocumentClient
+	// var clustersClient cosmosdb.OpenShiftClusterDocumentClient
 	var schedules database.MaintenanceSchedules
-	//var schedulesClient *cosmosdb.FakeMaintenanceScheduleDocumentClient
+	// var schedulesClient *cosmosdb.FakeMaintenanceScheduleDocumentClient
 	var m metrics.Emitter
 
 	var svc *service
@@ -90,7 +90,7 @@ var _ = Describe("MIMO Scheduler Service", Ordered, func() {
 		})
 
 		fixtures = testdatabase.NewFixture()
-		//checker = testdatabase.NewChecker()
+		// checker = testdatabase.NewChecker()
 	})
 
 	BeforeEach(func() {
