@@ -89,7 +89,11 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 	a.log.Infof("processing schedule %s", doc.ID)
 
 	// temp
-	scheduleWithin := time.Hour
+	scheduleWithin, err := time.ParseDuration(doc.MaintenanceSchedule.ScheduleAcross)
+	if err != nil {
+		a.log.Errorf("unrecognised scheduleacross: %s", err.Error())
+		return false, err
+	}
 
 	calDef, err := parseCalendar(doc.MaintenanceSchedule.Schedule)
 	if err != nil {
@@ -154,7 +158,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 				clusterLog.Errorf("error when consuming tasks for cluster: %s", err.Error())
 				break
 			}
-			if docs.Count == 0 {
+			if docs.GetCount() == 0 {
 				success = true
 				break
 			}
@@ -171,13 +175,37 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
+		problemCreatingManifest := false
 		for _, target := range periods[1:] {
 			scheduleMatch, found := foundPeriods[target.Unix()]
 			if !found {
 				clusterLog.Infof("need to create manifest for %s", target)
+
+				doc, err := manifestsDB.Create(ctx, &api.MaintenanceManifestDocument{
+					ID:                manifestsDB.NewUUID(),
+					ClusterResourceID: id,
+					MaintenanceManifest: api.MaintenanceManifest{
+						State: api.MaintenanceManifestStatePending,
+
+						MaintenanceTaskID: doc.MaintenanceSchedule.MaintenanceTaskID,
+						RunAfter:          target.Unix(),
+						RunBefore:         target.Add(time.Hour).Unix(),
+					},
+				})
+				if err != nil {
+					clusterLog.Errorf("error creating new maintenancemanifest, skipping: %s", err.Error())
+					problemCreatingManifest = true
+					break
+				}
+
+				clusterLog.Infof("created new manifest id=%s, to run at %s", doc.ID, target)
 			} else {
 				clusterLog.Infof("found manifest for %s (%s)", target, scheduleMatch)
 			}
+		}
+
+		if problemCreatingManifest {
+			continue
 		}
 	}
 
