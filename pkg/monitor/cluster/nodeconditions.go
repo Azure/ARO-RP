@@ -30,7 +30,8 @@ var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	masterCount := 0
-	workerInfraCount := 0
+	workerCount := 0
+	infraCount := 0
 	totalCount := 0
 	unknownCount := 0
 	machines := mon.getMachines(ctx)
@@ -86,8 +87,10 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 
 		if isMaster {
 			masterCount++
-		} else if isWorker || isInfra {
-			workerInfraCount++
+		} else if isWorker {
+			workerCount++
+		} else if isInfra {
+			infraCount++
 		}
 
 		if !isMaster && !isWorker && !isInfra {
@@ -103,7 +106,8 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	}
 
 	mon.emitGauge("node.count", int64(masterCount), map[string]string{"role": "master"})
-	mon.emitGauge("node.count", int64(workerInfraCount), map[string]string{"role": "worker"})
+	mon.emitGauge("node.count", int64(workerCount), map[string]string{"role": "worker"})
+	mon.emitGauge("node.count", int64(infraCount), map[string]string{"role": "infra"})
 	mon.emitGauge("node.count", int64(totalCount), map[string]string{"role": "all"})
 	mon.emitGauge("node.count", int64(unknownCount), map[string]string{"role": "unknown"})
 	return nil
