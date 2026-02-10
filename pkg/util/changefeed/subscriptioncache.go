@@ -4,7 +4,6 @@ package changefeed
 // Licensed under the Apache License 2.0.
 
 import (
-	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -100,7 +99,7 @@ func (r *subscriptionsChangeFeedResponder) OnDoc(sub *api.SubscriptionDocument) 
 		}
 
 		// if it's the same, don't update the map
-		if reflect.DeepEqual(oldValue, new) {
+		if oldValue == new {
 			return new, xsync.CancelOp
 		}
 		return new, xsync.UpdateOp

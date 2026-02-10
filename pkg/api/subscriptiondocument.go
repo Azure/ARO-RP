@@ -23,6 +23,9 @@ func (c *SubscriptionDocuments) GetCount() int {
 }
 
 func (c *SubscriptionDocuments) Docs() []*SubscriptionDocument {
+	if c == nil {
+		return []*SubscriptionDocument{}
+	}
 	return c.SubscriptionDocuments
 }
 

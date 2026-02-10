@@ -61,6 +61,9 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				"f9664b2f-0ea1-4401-be48-f7611f58c295": {
 					State: api.SubscriptionStateWarned, TenantID: "bb0ba6ad-abb8-4b81-8c65-4081bfed7928",
 				},
+				"8c90b62a-3783-4ea6-a8c8-cbaee4667ffd": {
+					State: api.SubscriptionStateSuspended, TenantID: "21e4577c-464b-4435-b9db-491274406c26",
+				},
 			},
 		},
 	}
@@ -95,6 +98,26 @@ func TestSubscriptionChangefeed(t *testing.T) {
 					},
 				},
 				&api.SubscriptionDocument{
+					// Will be set to suspended later
+					ID: "8c90b62a-3783-4ea6-a8c8-cbaee4667ffd",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "21e4577c-464b-4435-b9db-491274406c26",
+						},
+					},
+				},
+				&api.SubscriptionDocument{
+					// Will be set to deleted later
+					ID: "4e07b0f5-c789-4817-9079-94012b04e1c9",
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "8b0c5075-888e-4df6-b0f4-942dad50f132",
+						},
+					},
+				},
+				&api.SubscriptionDocument{
 					ID: "ea93be31-c21d-424b-ac04-fcb6f20804dc",
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateSuspended,
@@ -121,7 +144,7 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			stop := make(chan struct{})
 			defer close(stop)
 
-			go NewChangefeed(t.Context(), log, subscriptionChangefeed, 100*time.Microsecond, 1, cache, stop)
+			go RunChangefeed(t.Context(), log, subscriptionChangefeed, 100*time.Microsecond, 1, cache, stop)
 
 			cache.WaitForInitialPopulation()
 			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
@@ -148,10 +171,9 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			// Update one that is already populated
 			old, err := subscriptionsDB.Get(t.Context(), "9187ef95-a9cc-487d-80df-f85e615cf926")
 			require.NoError(t, err)
-
-			// Update one that is already populated
 			_, err = subscriptionsDB.Update(t.Context(), &api.SubscriptionDocument{
 				ID:   "9187ef95-a9cc-487d-80df-f85e615cf926",
 				ETag: old.ETag,
@@ -159,6 +181,38 @@ func TestSubscriptionChangefeed(t *testing.T) {
 					State: api.SubscriptionStateRegistered,
 					Properties: &api.SubscriptionProperties{
 						TenantID: "41441389-d1c2-4ade-b95d-99445d169804",
+					},
+				},
+			})
+			require.NoError(t, err)
+			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+
+			// Switch a registered to suspended
+			old2, err := subscriptionsDB.Get(t.Context(), "8c90b62a-3783-4ea6-a8c8-cbaee4667ffd")
+			require.NoError(t, err)
+			_, err = subscriptionsDB.Update(t.Context(), &api.SubscriptionDocument{
+				ID:   "8c90b62a-3783-4ea6-a8c8-cbaee4667ffd",
+				ETag: old2.ETag,
+				Subscription: &api.Subscription{
+					State: api.SubscriptionStateSuspended,
+					Properties: &api.SubscriptionProperties{
+						TenantID: "21e4577c-464b-4435-b9db-491274406c26",
+					},
+				},
+			})
+			require.NoError(t, err)
+			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+
+			// Switch a registered to deleted
+			old3, err := subscriptionsDB.Get(t.Context(), "4e07b0f5-c789-4817-9079-94012b04e1c9")
+			require.NoError(t, err)
+			_, err = subscriptionsDB.Update(t.Context(), &api.SubscriptionDocument{
+				ID:   "4e07b0f5-c789-4817-9079-94012b04e1c9",
+				ETag: old3.ETag,
+				Subscription: &api.Subscription{
+					State: api.SubscriptionStateDeleted,
+					Properties: &api.SubscriptionProperties{
+						TenantID: "8b0c5075-888e-4df6-b0f4-942dad50f132",
 					},
 				},
 			})
@@ -201,7 +255,7 @@ func TestSubscriptionChangefeedError(t *testing.T) {
 	defer close(stop)
 
 	// set it on a massive loop so it only runs once
-	go NewChangefeed(t.Context(), log, subscriptionChangefeed, 10000*time.Hour, 1, cache, stop)
+	go RunChangefeed(t.Context(), log, subscriptionChangefeed, 10000*time.Hour, 1, cache, stop)
 
 	// it'll print the log when on the first loop, use Eventually so that we're
 	// not in a race with the goroutine we spawned

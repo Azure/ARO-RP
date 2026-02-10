@@ -61,9 +61,9 @@ type monitor struct {
 	bucketCount int
 	buckets     map[int]struct{}
 
-	lastBucketlist             atomic.Value //time.Time
-	lastSubscriptionChangefeed atomic.Value //time.Time
-	lastClusterChangefeed      atomic.Value //time.Time
+	lastBucketlist             atomic.Value // time.Time
+	lastSubscriptionChangefeed atomic.Value // time.Time
+	lastClusterChangefeed      atomic.Value // time.Time
 	startTime                  time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
@@ -138,7 +138,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	err = mon.startChangefeeds(ctx, nil)
 	if err != nil {
-		mon.baseLog.Error("failed to start changefeed subscriber: %w", err)
+		mon.baseLog.Errorf("failed to start changefeed subscriber: %s", err.Error())
 		return err
 	}
 	go mon.changefeedMetrics(nil)
@@ -189,7 +189,7 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 
 	// fill the cache from the database change feed
 	clusterResponder := &clusterChangeFeedResponder{mon: mon}
-	go changefeed.NewChangefeed(
+	go changefeed.RunChangefeed(
 		ctx, mon.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
 		// Align this time with the deletion mechanism.
 		// Go to docs/monitoring.md for the details.
@@ -198,7 +198,7 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 	)
 
 	// fill the cache from the database change feed
-	go changefeed.NewChangefeed(
+	go changefeed.RunChangefeed(
 		ctx, mon.baseLog.WithField("component", "changefeed"), dbSubscriptions.ChangeFeed(),
 		mon.changefeedInterval,
 		changefeedBatchSize, mon.subs, stop,

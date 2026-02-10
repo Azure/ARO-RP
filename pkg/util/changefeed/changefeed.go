@@ -27,7 +27,7 @@ type ChangefeedConsumer[F any] interface {
 	Unlock()
 }
 
-func NewChangefeed[F any, X api.DocumentList[F]](
+func RunChangefeed[F any, X api.DocumentList[F]](
 	ctx context.Context,
 	log *logrus.Entry,
 	iterator database.DocumentIterator[F, X],

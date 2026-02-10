@@ -68,6 +68,7 @@ type clusterChangeFeedResponder struct {
 func (c *clusterChangeFeedResponder) Lock() {
 	c.mon.mu.Lock()
 }
+
 func (c *clusterChangeFeedResponder) Unlock() {
 	c.mon.mu.Unlock()
 }
