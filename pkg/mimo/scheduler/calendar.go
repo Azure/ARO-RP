@@ -201,6 +201,13 @@ func IsValid(t time.Time, sched calendar) bool {
 		}
 	}
 
+	if len(sched.Weekday) != 0 {
+		weekdayOK := slices.Contains(sched.Weekday, t.Weekday())
+		if !weekdayOK {
+			return false
+		}
+	}
+
 	if len(sched.Hour) != 0 {
 		hourOK := slices.Contains(sched.Hour, t.Hour())
 		if !hourOK {
@@ -264,6 +271,37 @@ func Next(now time.Time, sched calendar) (time.Time, bool) {
 			if !hasMonth {
 				targetMonth := time.Month(sched.Month[0])
 				nextPossible = time.Date(nextPossible.Year()+1, targetMonth, 1, 0, 0, 0, 0, nextPossible.Location())
+			}
+		}
+
+		if len(sched.Weekday) > 0 {
+			hasWeekday := false
+			for _, s := range sched.Weekday {
+				if s == nextPossible.Weekday() {
+					hasWeekday = true
+					break
+				}
+				if int(s) > int(nextPossible.Weekday()) {
+					for {
+						nextPossible = nextPossible.AddDate(0, 0, 1)
+						if s == nextPossible.Weekday() {
+							nextPossible = time.Date(nextPossible.Year(), nextPossible.Month(), nextPossible.Day(), 0, 0, 0, 0, nextPossible.Location())
+							break
+						}
+					}
+					hasWeekday = true
+					break
+				}
+			}
+
+			if !hasWeekday {
+				for {
+					nextPossible = nextPossible.AddDate(0, 0, 1)
+					if sched.Weekday[0] == nextPossible.Weekday() {
+						nextPossible = time.Date(nextPossible.Year(), nextPossible.Month(), nextPossible.Day(), 0, 0, 0, 0, nextPossible.Location())
+						break
+					}
+				}
 			}
 		}
 
