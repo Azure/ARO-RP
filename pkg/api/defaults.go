@@ -3,6 +3,15 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+import (
+	"github.com/coreos/go-semver/semver"
+)
+
+var (
+	// MinCustomDNSVersion is the minimum OCP version that supports CustomDNS (ClusterHostedDNS)
+	MinCustomDNSVersion = semver.Version{Major: 4, Minor: 21, Patch: 0}
+)
+
 // SetDefaults sets the default values for older api version
 // when interacting with newer api versions. This together with
 // database migration will make sure we have right values in the cluster documents
@@ -61,5 +70,36 @@ func SetDefaults(doc *OpenShiftClusterDocument, defaultOperatorFlags func() map[
 				},
 			}
 		}
+
+		// Set DNS type based on cluster version for new clusters.
+		// For 4.21+ clusters, set aro.dns.type to "clusterhosted" to enable CustomDNS.
+		// For older clusters, leave blank (default dnsmasq behavior).
+		setDNSDefaults(doc)
+	}
+}
+
+// setDNSDefaults sets the DNS type operator flag based on cluster version.
+func setDNSDefaults(doc *OpenShiftClusterDocument) {
+	if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
+		return
+	}
+
+	// Don't override if aro.dns.type is already explicitly set
+	if dnsType, exists := doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"]; exists && dnsType != "" {
+		return
+	}
+
+	clusterVersion := doc.OpenShiftCluster.Properties.ClusterProfile.Version
+	if clusterVersion == "" {
+		return
+	}
+
+	version, err := semver.NewVersion(clusterVersion)
+	if err != nil {
+		return
+	}
+
+	if !version.LessThan(MinCustomDNSVersion) {
+		doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
 	}
 }

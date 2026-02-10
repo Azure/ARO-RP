@@ -129,6 +129,63 @@ func TestSetDefaults(t *testing.T) {
 				base.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = nil
 			},
 		},
+		{
+			name: "dns defaults - version 4.21 sets clusterhosted",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
+				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
+			},
+		},
+		{
+			name: "dns defaults - version above 4.21 sets clusterhosted",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.22.1"
+				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.22.1"
+			},
+		},
+		{
+			name: "dns defaults - version below 4.21 does not set dns type",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.5"
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.5"
+			},
+		},
+		{
+			name: "dns defaults - preserve explicitly set dns type",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
+				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
+				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+			},
+		},
+		{
+			name: "dns defaults - empty version does not set dns type",
+			want: func() *OpenShiftClusterDocument {
+				return validOpenShiftClusterDocument()
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = ""
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			doc := validOpenShiftClusterDocument()
