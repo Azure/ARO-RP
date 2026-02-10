@@ -5,6 +5,7 @@ package api
 
 import (
 	"github.com/coreos/go-semver/semver"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 // when interacting with newer api versions. This together with
 // database migration will make sure we have right values in the cluster documents
 // when moving between old and new versions
-func SetDefaults(doc *OpenShiftClusterDocument, defaultOperatorFlags func() map[string]string) {
+func SetDefaults(doc *OpenShiftClusterDocument, defaultOperatorFlags func() map[string]string, log *logrus.Entry) {
 	if doc.OpenShiftCluster != nil {
 		// EncryptionAtHost was introduced in 2021-09-01-preview.
 		// It can't be changed post cluster creation
@@ -74,32 +75,71 @@ func SetDefaults(doc *OpenShiftClusterDocument, defaultOperatorFlags func() map[
 		// Set DNS type based on cluster version for new clusters.
 		// For 4.21+ clusters, set aro.dns.type to "clusterhosted" to enable CustomDNS.
 		// For older clusters, leave blank (default dnsmasq behavior).
-		setDNSDefaults(doc)
+		setDNSDefaults(doc, log)
 	}
 }
 
-// setDNSDefaults sets the DNS type operator flag based on cluster version.
-func setDNSDefaults(doc *OpenShiftClusterDocument) {
+// setDNSDefaults validates and sets the DNS type operator flag.
+// If aro.dns.type is explicitly set to "dnsmasq", it is always accepted.
+// If aro.dns.type is explicitly set to "clusterhosted", it is accepted only
+// when the cluster version is >= 4.21; otherwise the flag is cleared so the
+// cluster falls back to dnsmasq.
+// If aro.dns.type is empty or unset, the type is auto-detected from the
+// cluster version.
+func setDNSDefaults(doc *OpenShiftClusterDocument, log *logrus.Entry) {
 	if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
+		log.Info("DNS defaults: operator flags not initialized, skipping DNS type configuration")
 		return
 	}
 
-	// Don't override if aro.dns.type is already explicitly set
-	if dnsType, exists := doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"]; exists && dnsType != "" {
-		return
-	}
-
+	dnsType := doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"]
 	clusterVersion := doc.OpenShiftCluster.Properties.ClusterProfile.Version
-	if clusterVersion == "" {
+	meetsMinVersion := meetsMinCustomDNSVersion(clusterVersion, log)
+
+	switch dnsType {
+	case "dnsmasq":
+		// Switching to dnsmasq is always allowed regardless of version
+		log.Infof("DNS defaults: aro.dns.type explicitly set to %q, accepting request", dnsType)
 		return
+
+	case "clusterhosted":
+		// Switching to clusterhosted requires version >= 4.21
+		if meetsMinVersion {
+			log.Infof("DNS defaults: aro.dns.type explicitly set to %q and cluster version %s >= %s, accepting request", dnsType, clusterVersion, MinCustomDNSVersion.String())
+		} else {
+			// Version too old or unparseable — reject the switch, clear the flag
+			doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = ""
+			log.Infof("DNS defaults: aro.dns.type set to %q but cluster version %s does not meet minimum %s, clearing flag to default to dnsmasq", dnsType, clusterVersion, MinCustomDNSVersion.String())
+		}
+		return
+
+	default:
+		// Empty or unset — auto-detect from version
+		if clusterVersion == "" {
+			log.Info("DNS defaults: cluster version not set, skipping DNS type auto-detection")
+			return
+		}
+
+		if meetsMinVersion {
+			doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+			log.Infof("DNS defaults: cluster version %s >= %s, auto-setting aro.dns.type to clusterhosted (CustomDNS)", clusterVersion, MinCustomDNSVersion.String())
+		} else {
+			log.Infof("DNS defaults: cluster version %s < %s, defaulting to dnsmasq DNS", clusterVersion, MinCustomDNSVersion.String())
+		}
+	}
+}
+
+// meetsMinCustomDNSVersion returns true if clusterVersion is >= MinCustomDNSVersion.
+func meetsMinCustomDNSVersion(clusterVersion string, log *logrus.Entry) bool {
+	if clusterVersion == "" {
+		return false
 	}
 
 	version, err := semver.NewVersion(clusterVersion)
 	if err != nil {
-		return
+		log.Errorf("DNS defaults: failed to parse cluster version %q: %v", clusterVersion, err)
+		return false
 	}
 
-	if !version.LessThan(MinCustomDNSVersion) {
-		doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
-	}
+	return !version.LessThan(MinCustomDNSVersion)
 }
