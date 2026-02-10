@@ -729,139 +729,139 @@ az role assignment list --assignee $SP_ID --output json --query '[].{principalId
 
 2. Creating a service principal cluster on Apple Silicon (ARM64) Mac using local RP fails with:
 
-```
-pkg/containerinstall/podman.go:37 containerinstall.getContainerLogs.func2() stderr: fatal error: lfstack.push
-```
-
-**Root cause:** The OpenShift installer container image is built for `amd64/x86_64`. On Apple Silicon Macs, Podman runs containers inside a Linux VM (Fedora CoreOS via Apple Hypervisor). Without Apple's Rosetta translation layer, the VM falls back to QEMU emulation, which can violate assumptions made by Go's garbage collector regarding pointer packing in the `lfstack` data structure, causing a fatal runtime crash. Even though Podman 5.1.0+ enables Rosetta by default in the machine configuration, the Podman machine OS image may fail to activate Rosetta due to a missing trigger file (`/etc/containers/enable-rosetta`), causing a silent fallback to QEMU.
-
-**Diagnosis:**
-
-- Confirm Podman machine architecture:
-
-```bash
-podman machine info
-```
-
-Look for `arch: arm64` and `vmtype: applehv`.
-
-- Check Rosetta configuration:
-
-```bash
-podman machine inspect --format '{{.Rosetta}}'
-```
-
-Expected output: `true`.
-
-- Check if Rosetta is actually active inside the VM:
-
-```bash
-podman machine ssh cat /proc/sys/fs/binfmt_misc/rosetta
-```
-
-  - If the file **exists** and shows `enabled`, Rosetta is active — the issue is elsewhere.
-  - If the file **does not exist**, Rosetta is not active despite being configured. Continue with the resolution below.
-
-- Check VM journal for Rosetta activation failure:
-
-```bash
-podman machine ssh journalctl -b | grep -i rosetta
-```
-
-If you see output like:
-
-```
-rosetta-activation.service - Activates Rosetta if necessary was skipped because of an unmet condition check (ConditionPathExists=/etc/containers/enable-rosetta).
-```
-
-This confirms the trigger file is missing and Rosetta was not activated.
-
-**Resolution:**
-
-1. **Install Rosetta 2 on the macOS host.** Rosetta 2 must be installed on the macOS host for the Podman VM to use it:
-
-   ```bash
-   softwareupdate --install-rosetta --agree-to-license
+   ```
+   pkg/containerinstall/podman.go:37 containerinstall.getContainerLogs.func2() stderr: fatal error: lfstack.push
    ```
 
-   If already installed, the command will indicate so.
+   **Root cause:** The OpenShift installer container image is built for `amd64/x86_64`. On Apple Silicon Macs, Podman runs containers inside a Linux VM (Fedora CoreOS via Apple Hypervisor). Without Apple's Rosetta translation layer, the VM falls back to QEMU emulation, which can violate assumptions made by Go's garbage collector regarding pointer packing in the `lfstack` data structure, causing a fatal runtime crash. Even though Podman 5.1.0+ enables Rosetta by default in the machine configuration, the Podman machine OS image may fail to activate Rosetta due to a missing trigger file (`/etc/containers/enable-rosetta`), causing a silent fallback to QEMU.
 
-2. **Configure Rosetta in the Podman machine.** Verify Rosetta is enabled:
+   **Diagnosis:**
 
-   ```bash
-   podman machine inspect --format '{{.Rosetta}}'
-   ```
+   - Confirm Podman machine architecture:
 
-   If it returns `false`, create or edit `~/.config/containers/containers.conf`:
+     ```bash
+     podman machine info
+     ```
 
-   ```ini
-   [machine]
-   rosetta = true
-   ```
+     Look for `arch: arm64` and `vmtype: applehv`.
 
-   Then recreate the Podman machine:
+   - Check Rosetta configuration:
 
-   ```bash
-   podman machine stop
-   podman machine rm
-   podman machine init --cpus 4 --memory 4096 --disk-size 50
-   podman machine start
-   ```
+     ```bash
+     podman machine inspect --format '{{.Rosetta}}'
+     ```
 
-3. **Activate Rosetta inside the VM (if not automatically activated).** If `podman machine ssh cat /proc/sys/fs/binfmt_misc/rosetta` returns "No such file or directory" despite `Rosetta: true` in the machine config, manually activate it:
+     Expected output: `true`.
 
-   ```bash
-   podman machine ssh
-   sudo touch /etc/containers/enable-rosetta
-   sudo systemctl start rosetta-activation.service
-   ```
+   - Check if Rosetta is actually active inside the VM:
 
-   Verify activation:
+     ```bash
+     podman machine ssh cat /proc/sys/fs/binfmt_misc/rosetta
+     ```
 
-   ```bash
-   cat /proc/sys/fs/binfmt_misc/rosetta
-   ```
+     - If the file **exists** and shows `enabled`, Rosetta is active — the issue is elsewhere.
+     - If the file **does not exist**, Rosetta is not active despite being configured. Continue with the resolution below.
 
-   Expected output:
+   - Check VM journal for Rosetta activation failure:
 
-   ```
-   enabled
-   interpreter /mnt/rosetta
-   flags: POCF
-   offset 0
-   magic 7f454c4602010100000000000000000002003e00
-   mask fffffffffffefe00fffffffffffffffffeffffff
-   ```
+     ```bash
+     podman machine ssh journalctl -b | grep -i rosetta
+     ```
 
-   Exit the VM with `exit`. The trigger file persists across reboots, so `rosetta-activation.service` should start automatically on subsequent boots. You can also ensure it is enabled:
+     If you see output like:
 
-   ```bash
-   podman machine ssh sudo systemctl enable rosetta-activation.service
-   ```
+     ```
+     rosetta-activation.service - Activates Rosetta if necessary was skipped because of an unmet condition check (ConditionPathExists=/etc/containers/enable-rosetta).
+     ```
 
-4. **Ensure the correct Podman socket in the `env` file.** Find the actual Podman socket path:
+     This confirms the trigger file is missing and Rosetta was not activated.
 
-   ```bash
-   podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}'
-   ```
+   **Resolution:**
 
-   Update the `env` file with the correct path:
+   1. **Install Rosetta 2 on the macOS host.** Rosetta 2 must be installed on the macOS host for the Podman VM to use it:
 
-   ```bash
-   export ARO_PODMAN_SOCKET='unix://<path from above>'
-   ```
+      ```bash
+      softwareupdate --install-rosetta --agree-to-license
+      ```
 
-   > [!IMPORTANT]
-   > Do **not** use `unix:///var/run/docker.sock` — that is Docker's compatibility socket, not the Podman API socket. Using the wrong socket can cause connection failures or unexpected behavior.
+      If already installed, the command will indicate so.
 
-5. **Retry cluster creation:**
+   2. **Configure Rosetta in the Podman machine.** Verify Rosetta is enabled:
 
-   ```bash
-   make runlocal-rp
-   ```
+      ```bash
+      podman machine inspect --format '{{.Rosetta}}'
+      ```
 
-   And in a separate terminal:
+      If it returns `false`, create or edit `~/.config/containers/containers.conf`:
 
-   ```bash
-   go run ./hack/cluster create
-   ```
+      ```ini
+      [machine]
+      rosetta = true
+      ```
+
+      Then recreate the Podman machine:
+
+      ```bash
+      podman machine stop
+      podman machine rm
+      podman machine init --cpus 4 --memory 4096 --disk-size 50
+      podman machine start
+      ```
+
+   3. **Activate Rosetta inside the VM (if not automatically activated).** If `podman machine ssh cat /proc/sys/fs/binfmt_misc/rosetta` returns "No such file or directory" despite `Rosetta: true` in the machine config, manually activate it:
+
+      ```bash
+      podman machine ssh
+      sudo touch /etc/containers/enable-rosetta
+      sudo systemctl start rosetta-activation.service
+      ```
+
+      Verify activation:
+
+      ```bash
+      cat /proc/sys/fs/binfmt_misc/rosetta
+      ```
+
+      Expected output:
+
+      ```
+      enabled
+      interpreter /mnt/rosetta
+      flags: POCF
+      offset 0
+      magic 7f454c4602010100000000000000000002003e00
+      mask fffffffffffefe00fffffffffffffffffeffffff
+      ```
+
+      Exit the VM with `exit`. The trigger file persists across reboots, so `rosetta-activation.service` should start automatically on subsequent boots. You can also ensure it is enabled:
+
+      ```bash
+      podman machine ssh sudo systemctl enable rosetta-activation.service
+      ```
+
+   4. **Ensure the correct Podman socket in the `env` file.** Find the actual Podman socket path:
+
+      ```bash
+      podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}'
+      ```
+
+      Update the `env` file with the correct path:
+
+      ```bash
+      export ARO_PODMAN_SOCKET='unix://<path from above>'
+      ```
+
+      > [!IMPORTANT]
+      > Do **not** use `unix:///var/run/docker.sock` — that is Docker's compatibility socket, not the Podman API socket. Using the wrong socket can cause connection failures or unexpected behavior.
+
+   5. **Retry cluster creation:**
+
+      ```bash
+      make runlocal-rp
+      ```
+
+      And in a separate terminal:
+
+      ```bash
+      go run ./hack/cluster create
+      ```
