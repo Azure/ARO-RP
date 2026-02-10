@@ -153,14 +153,14 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 		})
 
 		// fire up the changefeeds
-		go changefeed.NewChangefeed(
+		go changefeed.RunChangefeed(
 			ctx, log.WithField("component", "subchangefeed"), subscriptions.ChangeFeed(),
 			10*time.Millisecond,
 			10, subsCache, stop,
 		)
 
 		// start cluster changefeed
-		go changefeed.NewChangefeed(
+		go changefeed.RunChangefeed(
 			ctx, log.WithField("component", "clusterchangefeed"), clusters.ChangeFeed(),
 			10*time.Millisecond,
 			10, clusterCache, stop,
@@ -245,5 +245,4 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
-
 })
