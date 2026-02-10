@@ -27,7 +27,7 @@ type openShiftClusterCache struct {
 	subCache changefeed.SubscriptionsCache
 
 	clusters                   *xsync.Map[string, selectorData]
-	lastChangefeed             atomic.Value //time.Time
+	lastChangefeed             atomic.Value // time.Time
 	initialPopulationWaitGroup *sync.WaitGroup
 }
 
@@ -45,7 +45,7 @@ func newOpenShiftClusterCache(log *logrus.Entry, subCache changefeed.Subscriptio
 // before we accept any, ensure that the subcache is populated by waiting on its
 // WaitGroup
 func (c *openShiftClusterCache) Lock() {
-	c.subCache.WaitForInitialPopulation().Wait()
+	c.subCache.WaitForInitialPopulation()
 }
 func (c *openShiftClusterCache) Unlock() {}
 

@@ -54,7 +54,7 @@ type service struct {
 	changefeedBatchSize int
 	changefeedInterval  time.Duration
 
-	lastChangefeed atomic.Value //time.Time
+	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
 
 	pollTime    time.Duration
@@ -202,17 +202,15 @@ func (s *service) startChangefeeds(ctx context.Context, stop <-chan struct{}) er
 	}
 
 	// start subscription changefeed
-	var subChangefeed changefeed.Changefeed[*api.SubscriptionDocuments] = dbSubscriptions.ChangeFeed()
-	go changefeed.NewChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), subChangefeed,
+	go changefeed.RunChangefeed(
+		ctx, s.baseLog.WithField("component", "changefeed"), dbSubscriptions.ChangeFeed(),
 		s.changefeedInterval,
 		s.changefeedBatchSize, s.subs, stop,
 	)
 
 	// start cluster changefeed
-	var clusterChangefeed changefeed.Changefeed[*api.OpenShiftClusterDocuments] = dbOpenShiftClusters.ChangeFeed()
-	go changefeed.NewChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), clusterChangefeed,
+	go changefeed.RunChangefeed(
+		ctx, s.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
 		s.changefeedInterval,
 		s.changefeedBatchSize, s.clusters, stop,
 	)
