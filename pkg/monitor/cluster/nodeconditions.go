@@ -105,11 +105,15 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		return err
 	}
 
+	if unknownCount > 0 {
+		mon.emitGauge("node.count", int64(unknownCount), map[string]string{"role": "unknown"})
+	}
+
 	mon.emitGauge("node.count", int64(masterCount), map[string]string{"role": "master"})
 	mon.emitGauge("node.count", int64(workerCount), map[string]string{"role": "worker"})
 	mon.emitGauge("node.count", int64(infraCount), map[string]string{"role": "infra"})
 	mon.emitGauge("node.count", int64(totalCount), map[string]string{"role": "all"})
-	mon.emitGauge("node.count", int64(unknownCount), map[string]string{"role": "unknown"})
+
 	return nil
 }
 

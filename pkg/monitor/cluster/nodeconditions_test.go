@@ -143,7 +143,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "infra"})
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
-				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-master-0",
 					"status":       "False",
@@ -285,7 +284,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				m.EXPECT().EmitGauge("node.count", int64(2), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "infra"})
 				m.EXPECT().EmitGauge("node.count", int64(3), map[string]string{"role": "all"})
-				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-worker",
@@ -355,7 +353,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "infra"})
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
-				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-impossible-node",
 					"status":       "False",
@@ -381,7 +378,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "infra"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "all"})
-				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 			},
 		},
 		{
@@ -430,7 +426,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "infra"})
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
-				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
 					"nodeName":       "aro-healthy-worker",
 					"kubeletVersion": kubeletVersion,
@@ -519,7 +514,6 @@ func TestEmitNodeConditions(t *testing.T) {
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "infra"})
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
-				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-no-annotation-node",
 					"status":       "False",
@@ -579,7 +573,7 @@ func TestEmitNodeConditions(t *testing.T) {
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "worker"})
 				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "infra"})
 				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "all"})
-				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "unknown"})
+
 				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 					"nodeName":     "aro-dual-label-node",
 					"status":       "False",
