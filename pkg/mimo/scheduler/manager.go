@@ -50,7 +50,8 @@ func NewSchedulerForSchedule(
 	cachedDoc getCachedScheduleDocFunc,
 	getClusters getClustersFunc,
 	dbs schedulerDBs,
-	now func() time.Time) (Scheduler, error) {
+	now func() time.Time,
+) (Scheduler, error) {
 	a := &scheduler{
 		env: _env,
 		log: log,
