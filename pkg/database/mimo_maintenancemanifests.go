@@ -19,10 +19,17 @@ const (
 	manifestExpiryFragment            = "(doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000"
 	manifestFetchOnlyRunAfterFragment = "doc.maintenanceManifest.runAfter < GetCurrentTimestamp() / 1000"
 
+	// scheduler queries
+	// fetch all future manifests up to a look forward point
+	manifestFetchOnlyRunAfterInFutureFragment = `doc.maintenanceManifest.runAfter > GetCurrentTimestamp() / 1000`
+	manifestFetchOnlyByTaskID                 = `doc.maintenanceManifest.maintenanceTaskID = @maintenanceTaskID`
+
 	MaintenanceManifestDequeueQueryForCluster = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND doc.clusterResourceID = @clusterResourceID AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
 	MaintenanceManifestQueryForCluster        = "SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID"
 	MaintenanceManifestQueueOverallQuery      = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment
 	MaintenanceManifestQueueLengthQuery       = "SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
+
+	MaintenanceManifestGetForTaskIDAndClusterBeforeTime = MaintenanceManifestQueryForCluster + " AND " + manifestFetchOnlyByTaskID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
 )
 
 type MaintenanceManifestDocumentMutator func(*api.MaintenanceManifestDocument) error
@@ -38,6 +45,8 @@ type MaintenanceManifests interface {
 	Create(context.Context, *api.MaintenanceManifestDocument) (*api.MaintenanceManifestDocument, error)
 	GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	GetQueuedByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+	GetFutureTasksForClusterAndTaskID(ctx context.Context, clusterResourceID string, taskID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+
 	Patch(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	PatchWithLease(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	Lease(ctx context.Context, clusterResourceID string, id string) (*api.MaintenanceManifestDocument, error)
@@ -196,6 +205,26 @@ func (c *maintenanceManifests) GetByClusterResourceID(ctx context.Context, clust
 			{
 				Name:  "@clusterResourceID",
 				Value: clusterResourceID,
+			},
+		},
+	}, &cosmosdb.Options{Continuation: continuation}), nil
+}
+
+func (c *maintenanceManifests) GetFutureTasksForClusterAndTaskID(ctx context.Context, clusterResourceID string, taskID, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
+	if clusterResourceID != strings.ToLower(clusterResourceID) {
+		return nil, fmt.Errorf("clusterResourceID %q is not lower case", clusterResourceID)
+	}
+
+	return c.c.Query("", &cosmosdb.Query{
+		Query: MaintenanceManifestGetForTaskIDAndClusterBeforeTime,
+		Parameters: []cosmosdb.Parameter{
+			{
+				Name:  "@clusterResourceID",
+				Value: clusterResourceID,
+			},
+			{
+				Name:  "maintenanceTaskID",
+				Value: taskID,
 			},
 		},
 	}, &cosmosdb.Options{Continuation: continuation}), nil
