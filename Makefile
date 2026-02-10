@@ -321,6 +321,11 @@ validate-fips: $(BINGO)
 unit-test-go: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
+.PHONY: unit-test-go-local-cosmosdb
+unit-test-go-local-cosmosdb:
+	USE_LOCAL_COSMOS_FOR_TEST="true" $(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+
+
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
@@ -445,6 +450,27 @@ install-tools: $(BINGO)
 ifeq ($(shell uname -s),Darwin)
 	codesign -f -s - ${GOPATH}/bin/mockgen
 endif
+
+.PHONY: start-local-cosmosdb
+start-local-cosmosdb:
+	docker run --detach --publish 8081:8081 --publish 10250-10255:10250-10255 --name local-cosmosdb mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+	@echo "Waiting for CosmosDB emulator to be ready..."
+	@timeout=180; \
+	elapsed=0; \
+	while ! curl -s -k -o /dev/null https://localhost:8081/_explorer/index.html; do \
+		if [ $$elapsed -ge $$timeout ]; then \
+			echo "ERROR: CosmosDB emulator failed to start after $$timeout seconds"; \
+			exit 1; \
+		fi; \
+		sleep 1; \
+		elapsed=$$((elapsed + 1)); \
+	done; \
+	echo "CosmosDB emulator is ready"
+
+.PHONY: stop-and-delete-local-cosmosdb
+stop-and-delete-local-cosmosdb:
+	docker stop local-cosmosdb
+	docker rm local-cosmosdb
 
 ###############################################################################
 # Containerized CI/CD RP

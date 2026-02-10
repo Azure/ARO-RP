@@ -23,7 +23,7 @@ const (
 func TestUpsertAndDelete(t *testing.T) {
 	// Setup single monitor for all test operations
 	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	defer env.LocalCosmosCleanup()
 	testMon := env.CreateTestMonitor("test-cache")
 	// Set owned buckets for the entire test sequence
 	ownedBuckets := []int{1, 2, 5}
@@ -214,11 +214,14 @@ func TestUpsertAndDelete(t *testing.T) {
 		})
 	}
 	testMon.mu.Unlock()
+
+	// Give any workers time to fully exit after lock is released
+	time.Sleep(200 * time.Millisecond)
 }
 
 func TestConcurrentUpsert(t *testing.T) {
 	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	defer env.LocalCosmosCleanup()
 
 	doc := createMockClusterDoc("cluster-concurrent", 1, api.ProvisioningStateSucceeded)
 	mon := env.CreateTestMonitor("cluster-concurrent")
@@ -240,11 +243,22 @@ func TestConcurrentUpsert(t *testing.T) {
 	if len(mon.docs) != 1 {
 		t.Errorf("Expected 1 doc after the same concurrent upsert, found %d", len(mon.docs))
 	}
+
+	// Close all workers opened by upsert
+	mon.mu.Lock()
+	for _, cacheDoc := range mon.docs {
+		if cacheDoc.stop != nil {
+			close(cacheDoc.stop)
+		}
+	}
+	mon.mu.Unlock()
+	// Give worker time to exit after stop channel was closed
+	time.Sleep(200 * time.Millisecond)
 }
 
 func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
 	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	defer env.LocalCosmosCleanup()
 
 	mon := env.CreateTestMonitor("test-channel-safety")
 
@@ -301,7 +315,15 @@ func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
 	if _, exists := mon.docs["cluster-1"]; exists {
 		t.Error("document should have been deleted")
 	}
+	// Close any remaining workers (should be none since deleteDoc closes them)
+	for _, cacheDoc := range mon.docs {
+		if cacheDoc.stop != nil {
+			close(cacheDoc.stop)
+		}
+	}
 	mon.mu.Unlock()
+	// Give worker time to exit after stop channel was closed
+	time.Sleep(200 * time.Millisecond)
 }
 
 func createMockClusterDoc(clusterID string, bucket int, provisioningState api.ProvisioningState) *api.OpenShiftClusterDocument {

@@ -34,7 +34,7 @@ func TestMonitor(t *testing.T) {
 
 	// Setup test environment
 	env := SetupTestEnvironment(t)
-	defer env.Cleanup()
+	defer env.LocalCosmosCleanup()
 
 	// Create multiple monitors for worker testing
 	workers := make([]Runnable, numWorker)
@@ -46,12 +46,12 @@ func TestMonitor(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		subDoc := newFakeSubscription()
 		clusterDoc := newFakeCluster(subDoc.ResourceID)
-		_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
+		_, err := env.OpenShiftClusterDB.Create(env.ctx, clusterDoc)
 		if err != nil {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
 		}
-		_, err = env.SubscriptionsDB.Create(context.Background(), subDoc)
+		_, err = env.SubscriptionsDB.Create(env.ctx, subDoc)
 		if err != nil {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
@@ -59,7 +59,7 @@ func TestMonitor(t *testing.T) {
 		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(env.ctx, 10*time.Second)
 	defer cancel()
 
 	wg := sync.WaitGroup{}
@@ -80,12 +80,12 @@ func TestMonitor(t *testing.T) {
 
 	subDoc := newFakeSubscription()
 	clusterDoc := newFakeCluster(subDoc.ResourceID)
-	_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
+	_, err := env.OpenShiftClusterDB.Create(env.ctx, clusterDoc)
 	if err != nil {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
 	}
-	_, err = env.SubscriptionsDB.Create(context.Background(), subDoc)
+	_, err = env.SubscriptionsDB.Create(env.ctx, subDoc)
 	if err != nil {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
@@ -96,12 +96,12 @@ func TestMonitor(t *testing.T) {
 
 	for k, v := range fakeClusterVisitMonitoringAttempts {
 		if *v < 1 {
-			t.Errorf("Expected that cluster %s got visits, but it got %v", k, v)
+			t.Errorf("Expected that cluster %s got visits, but it got %d", k, *v)
 		}
 	}
 
 	if *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] < 1 {
-		t.Errorf("Last added cluster %s didn't get any visit: %v", clusterDoc.ResourceID, fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
+		t.Errorf("Last added cluster %s didn't get any visit: %d", clusterDoc.ResourceID, *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
 	}
 }
 
