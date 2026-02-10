@@ -21,7 +21,11 @@ func (c *OpenShiftClusterDocuments) GetCount() int {
 	}
 	return c.Count
 }
+
 func (c *OpenShiftClusterDocuments) Docs() []*OpenShiftClusterDocument {
+	if c == nil {
+		return []*OpenShiftClusterDocument{}
+	}
 	return c.OpenShiftClusterDocuments
 }
 

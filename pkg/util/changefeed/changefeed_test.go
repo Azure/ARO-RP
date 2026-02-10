@@ -61,15 +61,14 @@ func (f *fakeResponder) OnDoc(doc *api.OpenShiftClusterDocument) {
 }
 
 func TestChangefeedEmpty(t *testing.T) {
-	h, log := testlog.New()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	h, log := testlog.LogForTesting(t)
 
 	stopChan := make(chan struct{})
 
 	r := &fakeResponder{}
-	NewChangefeed(ctx, log, &fakeChangefeed{stopChan: stopChan, expectedPages: 1}, 100*time.Millisecond, 1, r, stopChan)
+	// not run in a goroutine because fakeChangefeed will deterministically
+	// close stopchan and cause the changefeed loop to exit
+	RunChangefeed(t.Context(), log, &fakeChangefeed{stopChan: stopChan, expectedPages: 1}, 100*time.Millisecond, 1, r, stopChan)
 
 	err := testlog.AssertLoggingOutput(h, []testlog.ExpectedLogEntry{})
 	if err != nil {
@@ -83,10 +82,7 @@ func TestChangefeedEmpty(t *testing.T) {
 }
 
 func TestChangefeedSuccessfulDocs(t *testing.T) {
-	h, log := testlog.New()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	h, log := testlog.LogForTesting(t)
 
 	stopChan := make(chan struct{})
 
@@ -94,12 +90,14 @@ func TestChangefeedSuccessfulDocs(t *testing.T) {
 		stopChan:      stopChan,
 		expectedPages: 1,
 		docs: []*api.OpenShiftClusterDocuments{{
-			Count: 1, OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{{}, {}},
+			Count: 2, OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{{}, {}},
 		}},
 	}
 
 	r := &fakeResponder{}
-	NewChangefeed(ctx, log, cf, 100*time.Millisecond, 1, r, stopChan)
+	// not run in a goroutine because fakeChangefeed will deterministically
+	// close stopchan and cause the changefeed loop to exit
+	RunChangefeed(t.Context(), log, cf, 100*time.Millisecond, 1, r, stopChan)
 
 	err := testlog.AssertLoggingOutput(h, []testlog.ExpectedLogEntry{})
 	if err != nil {
@@ -113,10 +111,7 @@ func TestChangefeedSuccessfulDocs(t *testing.T) {
 }
 
 func TestChangefeedProcessErrorContinuesProcessing(t *testing.T) {
-	h, log := testlog.New()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	h, log := testlog.LogForTesting(t)
 
 	stopChan := make(chan struct{})
 
@@ -136,7 +131,9 @@ func TestChangefeedProcessErrorContinuesProcessing(t *testing.T) {
 	}
 
 	r := &fakeResponder{}
-	NewChangefeed(ctx, log, cf, 1*time.Millisecond, 1, r, stopChan)
+	// not run in a goroutine because fakeChangefeed will deterministically
+	// close stopchan and cause the changefeed loop to exit
+	RunChangefeed(t.Context(), log, cf, 1*time.Millisecond, 1, r, stopChan)
 
 	err := testlog.AssertLoggingOutput(h, []testlog.ExpectedLogEntry{
 		{
