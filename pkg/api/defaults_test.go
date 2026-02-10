@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
@@ -129,8 +131,9 @@ func TestSetDefaults(t *testing.T) {
 				base.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = nil
 			},
 		},
+		// DNS defaults: auto-detect from version (empty/unset aro.dns.type)
 		{
-			name: "dns defaults - version 4.21 sets clusterhosted",
+			name: "dns auto-detect - version 4.21 sets clusterhosted",
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
@@ -142,7 +145,7 @@ func TestSetDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "dns defaults - version above 4.21 sets clusterhosted",
+			name: "dns auto-detect - version above 4.21 sets clusterhosted",
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.22.1"
@@ -154,7 +157,7 @@ func TestSetDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "dns defaults - version below 4.21 does not set dns type",
+			name: "dns auto-detect - version below 4.21 does not set dns type",
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.5"
@@ -165,7 +168,17 @@ func TestSetDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "dns defaults - preserve explicitly set dns type",
+			name: "dns auto-detect - empty version does not set dns type",
+			want: func() *OpenShiftClusterDocument {
+				return validOpenShiftClusterDocument()
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = ""
+			},
+		},
+		// DNS defaults: explicit dnsmasq is always accepted
+		{
+			name: "dns switch - dnsmasq accepted on 4.21+ cluster",
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
@@ -178,12 +191,43 @@ func TestSetDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "dns defaults - empty version does not set dns type",
+			name: "dns switch - dnsmasq accepted on pre-4.21 cluster",
 			want: func() *OpenShiftClusterDocument {
-				return validOpenShiftClusterDocument()
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
+				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.ClusterProfile.Version = ""
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
+				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+			},
+		},
+		// DNS defaults: explicit clusterhosted validated against version
+		{
+			name: "dns switch - clusterhosted accepted on 4.21+ cluster",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
+				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
+				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+			},
+		},
+		{
+			name: "dns switch - clusterhosted rejected on pre-4.21 cluster, cleared to default",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
+				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = ""
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
+				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
 			},
 		},
 	} {
@@ -194,7 +238,7 @@ func TestSetDefaults(t *testing.T) {
 				tt.input(doc)
 			}
 
-			SetDefaults(doc, func() map[string]string { return map[string]string{"testflag": "testvalue"} })
+			SetDefaults(doc, func() map[string]string { return map[string]string{"testflag": "testvalue"} }, logrus.NewEntry(logrus.StandardLogger()))
 
 			if !reflect.DeepEqual(&doc, &want) {
 				t.Error(fmt.Errorf("\n%+v\n !=\n%+v", doc, want)) // can't use cmp due to cycle imports
