@@ -6,7 +6,10 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"fmt"
+	"hash/crc32"
 	"iter"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -73,12 +76,20 @@ func (a *scheduler) AddMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenan
 }
 
 func (a *scheduler) Process(ctx context.Context) (bool, error) {
+	manifestsDB, err := a.dbs.MaintenanceManifests()
+	if err != nil {
+		return false, fmt.Errorf("unable to get maintenancemanifests: %w", err)
+	}
+
 	doc, ok := a.cachedDoc()
 	if !ok {
 		return false, errors.New("can't get the cached schedule doc")
 	}
 
 	a.log.Infof("processing schedule %s", doc.ID)
+
+	// temp
+	scheduleWithin := time.Hour
 
 	calDef, err := parseCalendar(doc.MaintenanceSchedule.Schedule)
 	if err != nil {
@@ -119,12 +130,73 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
-		if matchesSelectors {
-			// logic
+		if !matchesSelectors {
+			continue
+		}
+		// logic
 
-			clusterLog.Info("matches selectors")
+		clusterLog.Info("matches selectors")
+
+		existingTasks, err := manifestsDB.GetFutureTasksForClusterAndTaskID(ctx, id, string(doc.MaintenanceSchedule.MaintenanceTaskID), "")
+		if err != nil {
+			clusterLog.Errorf("unable to list future tasks for cluster: %s", err.Error())
+			continue
+		}
+
+		timeWithinOffset := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(id), scheduleWithin)
+
+		foundPeriods := map[int64]string{}
+
+		success := false
+		for {
+			docs, err := existingTasks.Next(ctx, 10)
+			if err != nil {
+				clusterLog.Errorf("error when consuming tasks for cluster: %s", err.Error())
+				break
+			}
+			if docs.Count == 0 {
+				success = true
+				break
+			}
+
+			for _, d := range docs.MaintenanceManifestDocuments {
+				clusterLog.Infof("%s", d)
+
+				targetTime := time.Unix(d.MaintenanceManifest.RunAfter, 0).Add(timeWithinOffset).Unix()
+				foundPeriods[targetTime] = d.ID
+			}
+		}
+		if !success {
+			// we errored, so exit out
+			continue
+		}
+
+		for _, target := range periods[1:] {
+			scheduleMatch, found := foundPeriods[target.Unix()]
+			if !found {
+				clusterLog.Infof("need to create manifest for %s", target)
+			} else {
+				clusterLog.Infof("found manifest for %s (%s)", target, scheduleMatch)
+			}
 		}
 	}
 
 	return true, nil
+}
+
+// Take a cluster resource ID and deterministically turn it into a % to be used
+// for placing the cluster in the "scheduleAcross". For example, 0.0 will mean
+// that it will be scheduled exactly at the schedule time, 1.0 will mean
+// scheduled at schedule time + scheduleAcross.
+func ClusterResourceIDHashToScheduleWithinPercent(resourceID string) float64 {
+	sum := crc32.Checksum([]byte(strings.ToLower(resourceID)), crc32.IEEETable)
+	out := float64(sum) / float64(^uint32(0))
+	return out
+}
+
+// Given a period and a float from 0.0-1.0, calculate the target time within
+// that duration rounded to the second.
+func PercentWithinPeriod(percent float64, scheduleWithin time.Duration) time.Duration {
+	percentIn := time.Duration(int64(float64(int64(scheduleWithin)) * percent))
+	return percentIn.Round(time.Second)
 }

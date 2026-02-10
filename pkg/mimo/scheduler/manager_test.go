@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -110,6 +112,7 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 		}
 		fixtures.Clear()
 		checker.Clear()
+		hook.Reset()
 
 		uuidGeneratorManifests = deterministicuuid.NewTestUUIDGenerator(deterministicuuid.MAINTENANCE_MANIFESTS)
 	})
@@ -182,6 +185,7 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 
 	When("active schedule", func() {
 		var manifestScheduleID string
+		var manifestID string
 		var schedule *api.MaintenanceScheduleDocument
 
 		BeforeEach(func() {
@@ -194,7 +198,7 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 
 					Schedule:         "Mon *-*-* 00:00:00",
 					LookForwardCount: 1,
-					ScheduleAcross:   "1 day",
+					ScheduleAcross:   "0 seconds",
 
 					Selectors: []*api.MaintenanceScheduleSelector{
 						{
@@ -212,21 +216,56 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 
 			// first monday in jan 2026
 			t := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+			manifestID = uuidGeneratorManifests.Generate()
 
 			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-				ID: uuidGeneratorManifests.Generate(),
+				ID: manifestID,
 
 				ClusterResourceID: clusterResourceID,
 				MaintenanceManifest: api.MaintenanceManifest{
 					State:             api.MaintenanceManifestStatePending,
 					MaintenanceTaskID: "0",
 					Priority:          0,
-					RunAfter:          int(t.Unix()),
+					RunAfter:          t.Unix(),
 				},
 			})
 		})
 
-		It("creates manifests for active schedules", func() {
+		It("doesn't create a manifest for active schedules when one already exists", func() {
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					return nil
+				},
+			})
+
+			// create the expected one
+			manifests.Create(ctx, &api.MaintenanceManifestDocument{
+				ID: manifestID,
+
+				ClusterResourceID: clusterResourceID,
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					Priority:          0,
+					RunAfter:          time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC).Unix(),
+				},
+			})
+
+			a.cachedDoc = func() (*api.MaintenanceScheduleDocument, bool) { return schedule, true }
+
+			clusterCache.initialPopulationWaitGroup.Wait()
+
+			didWork, err := a.Process(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(didWork).To(BeTrue())
+
+			verifyDatabaseState()
+
+			// err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{})
+			// Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("creates manifests for active schedules when there are none in future", func() {
 			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 					return nil
@@ -234,6 +273,8 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 			})
 
 			a.cachedDoc = func() (*api.MaintenanceScheduleDocument, bool) { return schedule, true }
+
+			clusterCache.initialPopulationWaitGroup.Wait()
 
 			didWork, err := a.Process(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -246,3 +287,51 @@ var _ = Describe("MIMO Scheduler", Ordered, func() {
 		})
 	})
 })
+
+func TestClusterHash(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockSubID2 := "00000000-0000-0000-0000-000000000002"
+
+	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	clusterResourceID2 := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID2)
+
+	hash := ClusterResourceIDHashToScheduleWithinPercent(clusterResourceID)
+	hash2 := ClusterResourceIDHashToScheduleWithinPercent(clusterResourceID2)
+
+	// they need to be within 0.0-1.0, and uniqueish
+	assert.LessOrEqual(t, hash, 1.0)
+	assert.GreaterOrEqual(t, hash, 0.0)
+	assert.LessOrEqual(t, hash2, 1.0)
+	assert.GreaterOrEqual(t, hash2, 0.0)
+
+	assert.NotEqual(t, hash, hash2)
+}
+
+func TestClusterPercentWithinPeriod(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		percent   float64
+		period    time.Duration
+		endPeriod time.Duration
+	}{
+		{
+			desc:      "10% of 1 minute",
+			percent:   0.1,
+			period:    time.Minute,
+			endPeriod: time.Second * 6,
+		},
+		{
+			desc:      "100% of 1 minute",
+			percent:   1.0,
+			period:    time.Minute,
+			endPeriod: time.Second * 60,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			r := PercentWithinPeriod(tC.percent, tC.period)
+
+			assert.Equal(t, tC.endPeriod, r)
+		})
+	}
+}
