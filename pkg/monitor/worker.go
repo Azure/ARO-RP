@@ -154,9 +154,9 @@ out:
 	for {
 		mon.mu.RLock()
 		v := mon.docs[id]
+		mon.mu.RUnlock()
 		subID := strings.ToLower(r.SubscriptionID)
 		sub, subok := mon.subs.GetSubscription(subID)
-		mon.mu.RUnlock()
 
 		if v == nil {
 			break
