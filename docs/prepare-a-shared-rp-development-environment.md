@@ -17,20 +17,46 @@ locations.
    az account set -n "<your-azure-subscription>"
    ```
 
+1. Set the location for the environment. This will be used throughout the setup:
+
+   ```bash
+   LOCATION=eastus
+   ```
+
 1. You will need a resource group for global infrastructure
 
    ```bash
    GLOBAL_RESOURCEGROUP=global-infra
-   az group create -n $GLOBAL_RESOURCEGROUP --location eastus
+   az group create -n $GLOBAL_RESOURCEGROUP --location $LOCATION
    ```
 
 1. You will need a publicly resolvable DNS Zone resource in your Azure
    subscription. Set PARENT_DOMAIN_NAME and PARENT_DOMAIN_RESOURCEGROUP to the name and
-   resource group of the DNS Zone resource:
+   resource group of the DNS Zone resource.
+
+   If a child DNS zone `$LOCATION.<parent-domain>` already exists (e.g. from a
+   previous setup), you can derive the parent domain from it:
+
+   ```bash
+   CHILD_ZONE_NAME=$(az network dns zone list \
+     --query "[?starts_with(name, '$LOCATION.')].name | [0]" -o tsv)
+   PARENT_DOMAIN_NAME=${CHILD_ZONE_NAME#$LOCATION.}
+   PARENT_DOMAIN_RESOURCEGROUP=$(az network dns zone list \
+     --query "[?name=='$PARENT_DOMAIN_NAME'].resourceGroup | [0]" -o tsv)
+   echo "PARENT_DOMAIN_NAME=$PARENT_DOMAIN_NAME PARENT_DOMAIN_RESOURCEGROUP=$PARENT_DOMAIN_RESOURCEGROUP"
+   ```
+
+   If no child zone exists yet, list available zones and pick the parent manually:
+
+   ```bash
+   az network dns zone list --query "[].{Name:name, ResourceGroup:resourceGroup}" -o table
+   ```
+
+   Or create a new zone:
 
    ```bash
    PARENT_DOMAIN_NAME=<your-dns-parent-domain>
-   PARENT_DOMAIN_RESOURCEGROUP=global-infra
+   PARENT_DOMAIN_RESOURCEGROUP=$GLOBAL_RESOURCEGROUP
 
    az network dns zone create --name $PARENT_DOMAIN_NAME -g $PARENT_DOMAIN_RESOURCEGROUP
    ```
@@ -165,7 +191,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 1. Create an AAD application which will fake up the RP identity.
 
    ```bash
-   AZURE_RP_CLIENT_ID="$(az ad app create 
+   AZURE_RP_CLIENT_ID="$(az ad app create \
     --display-name ${PREFIX}-rp-shared \
     --query appId \
     --output tsv)"
@@ -202,14 +228,6 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 1. Create an AAD application which will be used by E2E and tooling.
 
    ```bash
-   AZURE_CLIENT_SECRET="$(uuidgen)"
-   AZURE_CLIENT_ID="$(az ad app create \
-     --display-name ${PREFIX}-tooling-shared \
-     --end-date '2299-12-31T11:59:59+00:00' \
-     --key-type password \
-     --password "$AZURE_CLIENT_SECRET" \
-     --query appId \
-     -o tsv)"
    AZURE_CLIENT_ID="$(az ad app create \
      --display-name ${PREFIX}-tooling-shared \
      --query appId \
@@ -252,7 +270,6 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 1. Set up the RP role definitions and subscription role assignments in your Azure subscription. The usage of "uuidgen" for fpRoleDefinitionId is simply there to keep from interfering with any linked resources and to create the role net new. This mimics the RBAC that ARM sets up. With at least `User Access Administrator` permissions on your subscription, do:
 
    ```bash
-   LOCATION=<YOUR-REGION>
    az deployment sub create \
      -l $LOCATION \
      --template-file pkg/deploy/assets/rbac-development.json \
@@ -287,7 +304,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    az rest --method PATCH \
     --uri "https://graph.microsoft.com/v1.0/applications/$OBJ_ID" \
     --headers 'Content-Type=application/json' \
-    --body '{"web":{"redirectUris":["https://locahlost:8444/callback"]}}'
+    --body '{"web":{"redirectUris":["https://localhost:8444/callback"]}}'
 
    az ad app credential reset \
      --id "$AZURE_PORTAL_CLIENT_ID" \
@@ -353,7 +370,7 @@ Generate new key/certificate files using an helper utility, and when these files
    mv dev-client.* secrets
    ```
 
-1. Create the  CA key/certificate:
+1. Create the cluster-mdsd CA key/certificate:
 
    ```bash
    go run ./hack/genkey cluster-mdsd
@@ -363,7 +380,7 @@ Generate new key/certificate files using an helper utility, and when these files
 ## Environment file
 
 1. Choose the resource group prefix. The resource group location will be
-   The resource group location will be appended to the prefix to make the resource group name. If a v4-prefixed environment exists in the subscription already, use a unique prefix.
+   appended to the prefix to make the resource group name. If a v4-prefixed environment exists in the subscription already, use a unique prefix.
 
    ```bash
    RESOURCEGROUP_PREFIX=<your-rg-prefix>
