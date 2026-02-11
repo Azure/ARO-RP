@@ -83,6 +83,14 @@ func (c *clusterChangeFeedResponder) OnDoc(doc *api.OpenShiftClusterDocument) {
 		ps == api.ProvisioningStateFailed &&
 			(fps == api.ProvisioningStateCreating ||
 				fps == api.ProvisioningStateDeleting):
+		// If the provisioning state is creating/deleting or failed during
+		// creating/deleting, remove the cluster from monitoring. A fully
+		// created cluster will later trigger the changefeed with a 'succeeded'
+		// state, while deleting documents will not appear in the changefeed
+		// once they are actually deleted, so we need to remove them when they
+		// start deletion.
+		//
+		// If the cluster is already not monitored, deleteDoc will be a no-op.
 		c.mon.deleteDoc(doc)
 	default:
 		c.mon.upsertDoc(doc)
