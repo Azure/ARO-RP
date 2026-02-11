@@ -757,12 +757,39 @@ def resolve_rp_client_id():
 def aro_identity_list_required(*,
                                cmd,
                                client,
+                               resource_name,
                                location,
-                               resource_group_name,
+                               resource_group_name=None,
                                version,
                                vnet=None,
-                               vnet_resource_group_name=None):
-    logger.info("hi!")
+                               vnet_resource_group_name=None) -> None:
+    if not rp_mode_development():
+        resource_client = get_mgmt_service_client(
+            cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
+        provider = resource_client.providers.get('Microsoft.RedHatOpenShift')
+        if provider.registration_state != 'Registered':
+            raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered. ',
+                                    'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
+
+    if not version in aro_get_versions(client, location):
+        raise ValidationError("--version invalid")
+
+    role_set = None
+    for tset in client.platform_workload_identity_role_sets.list(location):
+        if version.startswith(tset.open_shift_version):
+            role_set = tset
+
+    if not role_set:
+        raise RuntimeError("Could not find role set.")
+
+    print("Use the following commands to create the required managed identities:")
+    for role in role_set.platform_workload_identity_roles:
+        print(f"    az identity create -g '{resource_name}' -n '{role.operator_name}' -l '{location}'")
+
+    print("\nUse the following commands to create the required role assignments:")
+    for assignment in ["blah", "blah", "blah"]:
+        # TODO: write me
+        print(assignment)
 
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
