@@ -18,8 +18,8 @@ PLATFORM ?= linux/$(shell go env GOARCH)
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-MARINER_VERSION = 20250701
-FLUENTBIT_VERSION = 4.0.4
+MARINER_VERSION = 20260102
+FLUENTBIT_VERSION = 4.2.2
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
