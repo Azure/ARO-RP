@@ -29,6 +29,7 @@ func TestProcessLoop(t *testing.T) {
 	uuidGeneratorSchedules := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.MAINTENANCE_SCHEDULES)
 
 	manifestID := uuidGeneratorManifests.Generate()
+	manifestIDs := []string{manifestID, uuidGeneratorManifests.Generate(), uuidGeneratorManifests.Generate(), uuidGeneratorManifests.Generate(), uuidGeneratorManifests.Generate()}
 	manifestScheduleID := uuidGeneratorSchedules.Generate()
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00001111-0000-0000-0000-000000000000"
@@ -210,6 +211,181 @@ func TestProcessLoop(t *testing.T) {
 						// first monday in jan 2026
 						RunAfter:  time.Date(2026, 1, 5, 0, 51, 15, 0, time.UTC).Unix(),
 						RunBefore: time.Date(2026, 1, 5, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+		},
+		{
+			desc: "valid schedule, but it will never fire again",
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "2026-1-1 00:00:00",
+					LookForwardCount: 1,
+					ScheduleAcross:   "0s",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{},
+			desiredManifests:  []*api.MaintenanceManifestDocument{},
+		},
+		{
+			desc: "valid schedule, but it won't fire all the times within the lookAhead",
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					// There are only 4 mondays in Jan '26
+					Schedule:         "Mon 2026-1-* 00:00:00",
+					LookForwardCount: 5,
+					ScheduleAcross:   "1h",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{},
+			desiredManifests: []*api.MaintenanceManifestDocument{
+				{
+					ID:                manifestID,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 5, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 5, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[1],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 12, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 12, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[2],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 19, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 19, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[3],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 26, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 26, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+		},
+		{
+			desc: "valid daily schedule, new manifests created (lookahead=5, scheduleAcross=0s)",
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "*-*-* 00:00:00",
+					LookForwardCount: 5,
+					ScheduleAcross:   "0s",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{},
+			desiredManifests: []*api.MaintenanceManifestDocument{
+				{
+					ID:                manifestIDs[0],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						// starts the next day
+						RunAfter:  time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 2, 1, 0, 0, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[1],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 3, 1, 0, 0, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[2],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 4, 0, 0, 0, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 4, 1, 0, 0, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[3],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 5, 1, 0, 0, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[4],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 6, 1, 0, 0, 0, time.UTC).Unix(),
 					},
 				},
 			},
