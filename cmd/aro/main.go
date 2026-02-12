@@ -83,6 +83,9 @@ func main() {
 	case env.SERVICE_MIMO_ACTUATOR:
 		checkArgs(1)
 		err = mimoActuator(ctx, log)
+	case env.SERVICE_MIMO_SCHEDULER:
+		checkArgs(1)
+		err = mimoScheduler(ctx, log)
 	default:
 		usage()
 		os.Exit(2)
