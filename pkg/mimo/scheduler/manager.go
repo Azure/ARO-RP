@@ -88,7 +88,6 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 
 	a.log.Infof("processing schedule %s", doc.ID)
 
-	// temp
 	scheduleWithin, err := time.ParseDuration(doc.MaintenanceSchedule.ScheduleAcross)
 	if err != nil {
 		a.log.Errorf("unrecognised scheduleacross: %s", err.Error())
@@ -147,7 +146,11 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
-		timeWithinOffset := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(id), scheduleWithin)
+		// this is the amount of time we will be offset inside the
+		// 'scheduleAcross' window.
+		offsetWithinScheduleAcross := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(id), scheduleWithin)
+
+		clusterLog.Infof("Calculated scheduleAcross offset is %s", offsetWithinScheduleAcross.String())
 
 		foundPeriods := map[int64]string{}
 
@@ -166,7 +169,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			for _, d := range docs.MaintenanceManifestDocuments {
 				clusterLog.Infof("%s", d)
 
-				targetTime := time.Unix(d.MaintenanceManifest.RunAfter, 0).Add(timeWithinOffset).Unix()
+				targetTime := time.Unix(d.MaintenanceManifest.RunAfter, 0).Unix()
 				foundPeriods[targetTime] = d.ID
 			}
 		}
@@ -177,9 +180,10 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 
 		problemCreatingManifest := false
 		for _, target := range periods[1:] {
-			scheduleMatch, found := foundPeriods[target.Unix()]
+			targetWithOffset := target.Add(offsetWithinScheduleAcross)
+			scheduleMatch, found := foundPeriods[targetWithOffset.Unix()]
 			if !found {
-				clusterLog.Infof("need to create manifest for %s", target)
+				clusterLog.Infof("need to create manifest for %s window (%s)", target, targetWithOffset)
 
 				doc, err := manifestsDB.Create(ctx, &api.MaintenanceManifestDocument{
 					ID:                manifestsDB.NewUUID(),
@@ -188,8 +192,8 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 						State: api.MaintenanceManifestStatePending,
 
 						MaintenanceTaskID: doc.MaintenanceSchedule.MaintenanceTaskID,
-						RunAfter:          target.Unix(),
-						RunBefore:         target.Add(time.Hour).Unix(),
+						RunAfter:          targetWithOffset.Unix(),
+						RunBefore:         targetWithOffset.Add(time.Hour).Unix(),
 					},
 				})
 				if err != nil {
