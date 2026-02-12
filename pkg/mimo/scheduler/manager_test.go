@@ -33,6 +33,7 @@ func TestProcessLoop(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00001111-0000-0000-0000-000000000000"
 	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	clusterResourceID2 := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2", mockSubID)
 
 	testCases := []struct {
 		desc              string
@@ -236,7 +237,7 @@ func TestProcessLoop(t *testing.T) {
 			dbs := database.NewDBGroup().WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
 
 			subsCache := changefeed.NewSubscriptionsChangefeedCache(false)
-			clusterCache := newOpenShiftClusterCache(log, subsCache)
+			clusterCache := newOpenShiftClusterCache(log, subsCache, []int{1})
 			stop := make(chan struct{})
 			t.Cleanup(func() { close(stop) })
 
@@ -258,7 +259,8 @@ func TestProcessLoop(t *testing.T) {
 
 			// The cluster+subscription fixture is always the same
 			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(clusterResourceID),
+				Key:    strings.ToLower(clusterResourceID),
+				Bucket: 1,
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterResourceID,
 					Properties: api.OpenShiftClusterProperties{
@@ -273,6 +275,20 @@ func TestProcessLoop(t *testing.T) {
 					State: api.SubscriptionStateRegistered,
 					Properties: &api.SubscriptionProperties{
 						TenantID: mockTenantID,
+					},
+				},
+			})
+
+			// Add a cluster that does not meet our bucket requirements and so
+			// won't cause any Manifests to be created
+			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key:    strings.ToLower(clusterResourceID2),
+				Bucket: 2,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: clusterResourceID2,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+						MaintenanceState:  api.MaintenanceStateNone,
 					},
 				},
 			})
