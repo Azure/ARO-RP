@@ -72,15 +72,3 @@ type MaintenanceScheduleSelector struct {
 	Value    string                              `json:"value,omitempty"`
 	Values   []string                            `json:"values,omitempty"`
 }
-
-func (c *MaintenanceScheduleDocument) GetID() string {
-	return c.ID
-}
-
-func (c *MaintenanceScheduleDocument) GetKey() string {
-	return c.ID
-}
-
-func (c *MaintenanceScheduleDocument) GetBucket() int {
-	return 0
-}
