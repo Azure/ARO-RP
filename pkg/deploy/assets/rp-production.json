@@ -1001,6 +1001,31 @@
             "apiVersion": "2023-04-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/MaintenanceSchedules')]",
+            "properties": {
+                "options": {
+                    "throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"
+                },
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "MaintenanceSchedules",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'Subscriptions')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
