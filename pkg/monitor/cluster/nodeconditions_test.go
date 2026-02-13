@@ -584,6 +584,64 @@ func TestEmitNodeConditions(t *testing.T) {
 				})
 			},
 		},
+		{
+			name: "node with both master AND worker labels - counted only as master",
+			nodes: []client.Object{
+				&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "aro-master-worker-node",
+						Annotations: map[string]string{
+							machineAnnotationKey: "openshift-machine-api/aro-master-worker-node",
+						},
+						Labels: map[string]string{
+							masterRoleLabel: "",
+							workerRoleLabel: "",
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{
+							{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+						},
+						NodeInfo: corev1.NodeSystemInfo{
+							KubeletVersion: kubeletVersion,
+						},
+					},
+				},
+			},
+			machines: []client.Object{
+				&machinev1beta1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aro-master-worker-node",
+						Namespace: "openshift-machine-api",
+						Labels: map[string]string{
+							machineRoleLabelKey: "master",
+						},
+					},
+					Spec: machinev1beta1.MachineSpec{
+						ProviderSpec: validProviderSpec(t),
+					},
+				},
+			},
+			wantEmitted: func(m *mock_metrics.MockEmitter) {
+				m.EXPECT().EmitGauge("node.count", int64(1), map[string]string{"role": "master"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "worker"})
+				m.EXPECT().EmitGauge("node.count", int64(0), map[string]string{"role": "infra"})
+
+				m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+					"nodeName":     "aro-master-worker-node",
+					"status":       "False",
+					"type":         "Ready",
+					"spotInstance": "false",
+					"role":         "master",
+					"machineset":   "",
+				})
+				m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+					"nodeName":       "aro-master-worker-node",
+					"kubeletVersion": kubeletVersion,
+					"role":           "master",
+				})
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
