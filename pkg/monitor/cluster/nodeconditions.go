@@ -32,7 +32,6 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	masterCount := 0
 	workerCount := 0
 	infraCount := 0
-	totalCount := 0
 	unknownCount := 0
 	machines := mon.getMachines(ctx)
 
@@ -97,9 +96,8 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 			unknownCount++
 			mon.log.WithFields(logrus.Fields{
 				"nodeName": node.Name,
-			}).Warning("Node has no role labels")
+			}).Warning("Node has no known role labels")
 		}
-		totalCount++
 	})
 	if err != nil {
 		return err
@@ -112,7 +110,6 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	mon.emitGauge("node.count", int64(masterCount), map[string]string{"role": "master"})
 	mon.emitGauge("node.count", int64(workerCount), map[string]string{"role": "worker"})
 	mon.emitGauge("node.count", int64(infraCount), map[string]string{"role": "infra"})
-	mon.emitGauge("node.count", int64(totalCount), map[string]string{"role": "all"})
 
 	return nil
 }
