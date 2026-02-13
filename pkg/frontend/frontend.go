@@ -55,6 +55,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithMaintenanceSchedules
 	database.DatabaseGroupWithBilling
 }
 
@@ -315,6 +316,13 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		r.Route("/maintenancemanifests", func(r chi.Router) {
 			r.Get("/queued", f.getAdminQueuedMaintManifests)
 		})
+
+		r.Route("/maintenanceschedules", func(r chi.Router) {
+			// r.Get("/", f.getAdminMaintManifests)
+			r.Put("/", f.putAdminMaintScheduleCreate)
+			r.Get("/", f.getAdminMaintSchedules)
+		})
+
 		r.Route("/hivesyncset", func(r chi.Router) {
 			r.Get("/", f.listAdminHiveSyncSet)
 			r.Get("/syncsetname/{syncsetname}", f.getAdminHiveSyncSet)
