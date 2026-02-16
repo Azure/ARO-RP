@@ -73,12 +73,21 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 		return err
 	}
 
-	m := map[string]struct {
-		count    int64
-		severity string
-	}{}
-
 	mon.emitGauge("prometheus.alerts.count", int64(len(alerts)), nil)
+
+	mon.aggregateAndEmitAlerts(alerts)
+
+	return nil
+}
+
+func (mon *Monitor) aggregateAndEmitAlerts(alerts []model.Alert) {
+	collectedAlerts := map[string]struct {
+		count           int64
+		severity        string
+		target          string
+		secondaryTarget string
+		isTargeted      bool
+	}{}
 
 	for _, alert := range alerts {
 		if !namespace.IsOpenShiftNamespace(string(alert.Labels["namespace"])) {
@@ -89,22 +98,35 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 			continue
 		}
 
-		a := m[alert.Name()]
+		a := collectedAlerts[alert.Name()]
 
 		a.severity = string(alert.Labels["severity"])
 		a.count++
 
-		m[alert.Name()] = a
+		if isTargetedAlert(alert) {
+			a.target = string(alert.Labels["target"])
+			a.secondaryTarget = string(alert.Labels["secondary_target"])
+			a.isTargeted = true
+		}
+
+		collectedAlerts[alert.Name()] = a
 	}
 
-	for alertName, a := range m {
-		mon.emitGauge("prometheus.alerts", a.count, map[string]string{
-			"alert":    alertName,
-			"severity": a.severity,
-		})
+	for alertName, a := range collectedAlerts {
+		if a.isTargeted {
+			mon.emitGauge("prometheus.targeted.alerts", a.count, map[string]string{
+				"alert":            alertName,
+				"severity":         a.severity,
+				"target":           a.target,
+				"secondary_target": a.secondaryTarget,
+			})
+		} else {
+			mon.emitGauge("prometheus.alerts", a.count, map[string]string{
+				"alert":    alertName,
+				"severity": a.severity,
+			})
+		}
 	}
-
-	return nil
 }
 
 func alertIsIgnored(alertName string) bool {
@@ -121,4 +143,9 @@ func alertIsIgnored(alertName string) bool {
 	}
 
 	return false
+}
+
+// Checks if the alert contains the labels "target" and "secondary_target" with values
+func isTargetedAlert(alert model.Alert) bool {
+	return alert.Labels["target"] != "" && alert.Labels["secondary_target"] != ""
 }
