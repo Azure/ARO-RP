@@ -365,7 +365,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
-		Value: isCreate,
+		Value: true,
 	}
 	// TODO: ugh
 	if _, ok := template["parameters"].(map[string]interface{})["gatewayResourceGroupName"]; ok {

@@ -75,6 +75,10 @@ main() {
     local -ra enable_ports=(
         # RP frontend
         "443/tcp"
+        # RP additional frontend
+        "8443/tcp"
+        # Portal additional frontend
+        "8444/tcp"
         # Portal web
         "444/tcp"
         # MIMO Actuator healthz
