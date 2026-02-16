@@ -224,14 +224,14 @@ func TestMIMOPutSchedule(t *testing.T) {
 			wantStatusCode: http.StatusCreated,
 		},
 		{
-			name: "can update state",
+			name: "can't update maint ID",
 			fixtures: func(f *testdatabase.Fixture) {
 				f.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
 					ID: "08080808-0808-0808-0808-080808080001",
 					MaintenanceSchedule: api.MaintenanceSchedule{
 						MaintenanceTaskID: "exampletask",
 						State:             api.MaintenanceScheduleStateEnabled,
-						Schedule:          "1-1-1 00:00:00",
+						Schedule:          "*-*-* 00:00:00",
 						ScheduleAcross:    "12h",
 						LookForwardCount:  1,
 						Selectors: []*api.MaintenanceScheduleSelector{
@@ -246,8 +246,8 @@ func TestMIMOPutSchedule(t *testing.T) {
 			},
 			body: &admin.MaintenanceSchedule{
 				ID:                "08080808-0808-0808-0808-080808080001",
-				MaintenanceTaskID: "exampletask",
-				State:             admin.MaintenanceScheduleStateDisabled,
+				MaintenanceTaskID: "exampletask2",
+				State:             admin.MaintenanceScheduleStateEnabled,
 				Schedule:          "*-*-* 00:00:00",
 				LookForwardCount:  1,
 				ScheduleAcross:    "12h",
@@ -261,11 +261,12 @@ func TestMIMOPutSchedule(t *testing.T) {
 				},
 			},
 			wantResult: func(c *testdatabase.Checker) {
+				// unchanged
 				c.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
 					ID: "08080808-0808-0808-0808-080808080001",
 					MaintenanceSchedule: api.MaintenanceSchedule{
 						MaintenanceTaskID: "exampletask",
-						State:             api.MaintenanceScheduleStateDisabled,
+						State:             api.MaintenanceScheduleStateEnabled,
 						Schedule:          "*-*-* 00:00:00",
 						LookForwardCount:  1,
 						ScheduleAcross:    "12h",
@@ -279,22 +280,8 @@ func TestMIMOPutSchedule(t *testing.T) {
 					},
 				})
 			},
-			wantResponse: &admin.MaintenanceSchedule{
-				ID:                "08080808-0808-0808-0808-080808080001",
-				MaintenanceTaskID: "exampletask",
-				State:             admin.MaintenanceScheduleStateDisabled,
-				Schedule:          "*-*-* 00:00:00",
-				LookForwardCount:  1,
-				ScheduleAcross:    "12h",
-				Selectors: []*admin.MaintenanceScheduleSelector{
-					{
-						Key:      "foobar",
-						Operator: admin.MaintenanceScheduleSelectorOperatorIn,
-						Values:   []string{"baz"},
-					},
-				},
-			},
 			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: PropertyChangeNotAllowed: maintenanceTaskID: Changing property 'maintenanceTaskID' is not allowed.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

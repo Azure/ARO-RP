@@ -129,7 +129,7 @@ var _ = Describe("MIMO Scheduler Service", Ordered, func() {
 			}, &api.MaintenanceScheduleDocument{
 				ID: "00000000-0000-0000-0000-000000000001",
 				MaintenanceSchedule: api.MaintenanceSchedule{
-					State: api.MaintenanceManifestStateDisabled,
+					State: api.MaintenanceScheduleStateDisabled,
 				},
 			})
 		})
