@@ -593,36 +593,11 @@ func setupE2EInfrastructure(ctx context.Context) error {
 	azOCClient := redhatopenshift20250725.NewOpenShiftClustersClient(
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
-	// Only check for leftover clusters in local dev CI, not in release E2E
+	// Only handle leftover clusters in local dev CI, not in release E2E
 	if conf.IsLocalDevelopmentMode() && conf.IsCI {
-		const (
-			maxRetries  = 10
-			waitBetween = 30 * time.Second
-		)
-		totalWait := time.Duration(maxRetries) * waitBetween
-
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
-					log.Infof("No leftover cluster found on attempt %d; proceeding", attempt)
-					break
-				}
-				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
-			}
-
-			if doc.ProvisioningState != mgmtredhatopenshift20250725.Deleting {
-				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
-			}
-
-			if attempt == maxRetries {
-				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
-			}
-
-			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
-			time.Sleep(waitBetween)
+		if err := handleLeftoverClusterIfPresent(ctx, azOCClient, conf); err != nil {
+			return err
 		}
-		// Old cluster is gone, create the new one
 	}
 
 	// we only create a cluster when running this in CI
@@ -672,6 +647,83 @@ func cleanupE2EInfrastructure(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func handleLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopenshift20250725.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
+	pollingInterval := 30 * time.Second
+	doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			log.Info("No leftover cluster found; proceeding")
+			return nil
+		}
+		return fmt.Errorf("failed to check for leftover cluster: %w", err)
+	}
+	log.Infof("Found leftover cluster in %s state", doc.ProvisioningState)
+
+	switch doc.ProvisioningState {
+	case mgmtredhatopenshift20250725.Succeeded:
+		return nil
+
+	case mgmtredhatopenshift20250725.Creating,
+		mgmtredhatopenshift20250725.Updating,
+		mgmtredhatopenshift20250725.AdminUpdating:
+		log.Infof("Cluster is in %s state; waiting for operation to complete", doc.ProvisioningState)
+
+		for {
+			time.Sleep(pollingInterval)
+			doc, err = azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+			if err != nil {
+				return fmt.Errorf("failed to poll cluster state: %w", err)
+			}
+
+			switch doc.ProvisioningState {
+			case mgmtredhatopenshift20250725.Succeeded:
+				log.Info("Cluster operation completed successfully; will reuse it")
+				return nil
+
+			case mgmtredhatopenshift20250725.Failed:
+				log.Info("Cluster operation failed; will delete it")
+
+			case mgmtredhatopenshift20250725.Creating,
+				mgmtredhatopenshift20250725.Updating,
+				mgmtredhatopenshift20250725.AdminUpdating:
+				continue
+
+			default:
+				return fmt.Errorf("unexpected state transition to %s", doc.ProvisioningState)
+			}
+
+			break
+		}
+		fallthrough
+
+	case mgmtredhatopenshift20250725.Failed:
+		log.Info("Deleting failed cluster")
+		err = azOCClient.DeleteAndWait(ctx, conf.VnetResourceGroup, conf.ClusterName)
+		if err != nil {
+			return fmt.Errorf("failed to delete cluster: %w", err)
+		}
+		log.Info("Cluster deleted successfully")
+		return nil
+
+	case mgmtredhatopenshift20250725.Deleting:
+		log.Info("Cluster is already deleting; waiting for completion")
+		for {
+			time.Sleep(pollingInterval)
+			_, err = azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+			if err != nil && strings.Contains(err.Error(), "not found") {
+				log.Info("Cluster deletion completed")
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("failed to poll cluster deletion: %w", err)
+			}
+		}
+
+	default:
+		return fmt.Errorf("unexpected cluster state: %s", doc.ProvisioningState)
+	}
 }
 
 var _ = BeforeSuite(func() {

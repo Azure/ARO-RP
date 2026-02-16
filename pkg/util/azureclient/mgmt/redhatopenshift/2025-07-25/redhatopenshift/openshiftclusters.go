@@ -23,6 +23,7 @@ type OpenShiftClustersClient interface {
 	ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20250725.OpenShiftClusterAdminKubeconfig, err error)
 	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20250725.OpenShiftClusterCredentials, err error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20250725.OpenShiftCluster, err error)
+	Delete(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20250725.OpenShiftClustersDeleteFuture, err error)
 	OpenShiftClustersClientAddons
 }
 
