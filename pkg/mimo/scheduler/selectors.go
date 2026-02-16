@@ -7,10 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 )
 
 type SelectorDataType string
@@ -23,9 +27,15 @@ const (
 type SelectorDataKey string
 
 const (
-	SelectorDataKeyResourceID        SelectorDataKey = "resourceID"
-	SelectorDataKeySubscriptionID    SelectorDataKey = "subscriptionID"
-	SelectorDataKeySubscriptionState SelectorDataKey = "subscriptionState"
+	SelectorDataKeyResourceID         SelectorDataKey = "resourceID"
+	SelectorDataKeySubscriptionID     SelectorDataKey = "subscriptionID"
+	SelectorDataKeySubscriptionState  SelectorDataKey = "subscriptionState"
+	SelectorDataKeyAuthenticationType SelectorDataKey = "authenticationType"
+	SelectorDataArchitectureVersion   SelectorDataKey = "architectureVersion"
+	SelectorDataProvisioningState     SelectorDataKey = "provisioningState"
+	SelectorDataOutboundType          SelectorDataKey = "outboundType"
+	SelectorDataAPIServerVisibility   SelectorDataKey = "APIServerVisibility"
+	SelectorDataIsManagedDomain       SelectorDataKey = "isManagedDomain"
 )
 
 type selectorData map[SelectorDataKey]string
@@ -86,4 +96,29 @@ func (s selectorData) Matches(log *logrus.Entry, selectors []*api.MaintenanceSch
 		}
 	}
 	return matches, nil
+}
+
+func ToSelectorData(doc *api.OpenShiftClusterDocument, subscriptionState string) (selectorData, error) {
+	new := selectorData{}
+
+	resourceID := strings.ToLower(doc.OpenShiftCluster.ID)
+	r, err := azure.ParseResourceID(resourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	new[SelectorDataKeyResourceID] = resourceID
+	new[SelectorDataKeySubscriptionID] = r.SubscriptionID
+	new[SelectorDataKeySubscriptionState] = subscriptionState
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		new[SelectorDataKeyAuthenticationType] = "WorkloadIdentity"
+	} else {
+		new[SelectorDataKeyAuthenticationType] = "ServicePrincipal"
+	}
+	new[SelectorDataArchitectureVersion] = fmt.Sprintf("%d", doc.OpenShiftCluster.Properties.ArchitectureVersion)
+	new[SelectorDataProvisioningState] = string(doc.OpenShiftCluster.Properties.ProvisioningState)
+	new[SelectorDataOutboundType] = string(doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType)
+	new[SelectorDataAPIServerVisibility] = string(doc.OpenShiftCluster.Properties.APIServerProfile.Visibility)
+	new[SelectorDataIsManagedDomain] = fmt.Sprintf("%t", dns.IsManagedDomain(doc.OpenShiftCluster.Properties.ClusterProfile.Domain))
+	return new, nil
 }
