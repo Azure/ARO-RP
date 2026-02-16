@@ -122,10 +122,9 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 	a.log.Infof("processing windows in these time blocks: %s", periods)
 
 	// go over each of the clusters
-	for id, cl := range a.getClusters() {
-		a.log.Infof("checking selectors for %s (sub %s)", id, cl["subscriptionID"])
-
-		clusterLog := log.EnrichWithResourceID(a.log, id)
+	for clusterID, cl := range a.getClusters() {
+		a.log.Debugf("checking selectors for %s (sub %s)", clusterID, cl["subscriptionID"])
+		clusterLog := log.EnrichWithResourceID(a.log, clusterID)
 
 		matchesSelectors, err := cl.Matches(clusterLog, doc.MaintenanceSchedule.Selectors)
 		if err != nil {
@@ -134,31 +133,31 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		}
 
 		if !matchesSelectors {
+			clusterLog.Debugf("cluster does not match selectors")
 			continue
 		}
-		// logic
 
-		clusterLog.Info("matches selectors")
+		clusterLog.Debugf("cluster matches selectors")
 
-		existingTasks, err := manifestsDB.GetFutureTasksForClusterAndTaskID(ctx, id, string(doc.MaintenanceSchedule.MaintenanceTaskID), "")
+		// this is the amount of time we will be offset inside the
+		// 'scheduleAcross' window.
+		offsetWithinScheduleAcross := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(clusterID), scheduleWithin)
+
+		clusterLog.Debugf("Calculated scheduleAcross offset is %s", offsetWithinScheduleAcross.String())
+
+		foundPeriods := map[int64]string{}
+
+		existingTasks, err := manifestsDB.GetFutureTasksForClusterAndScheduleID(ctx, clusterID, doc.ID, "")
 		if err != nil {
 			clusterLog.Errorf("unable to list future tasks for cluster: %s", err.Error())
 			continue
 		}
 
-		// this is the amount of time we will be offset inside the
-		// 'scheduleAcross' window.
-		offsetWithinScheduleAcross := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(id), scheduleWithin)
-
-		clusterLog.Infof("Calculated scheduleAcross offset is %s", offsetWithinScheduleAcross.String())
-
-		foundPeriods := map[int64]string{}
-
 		success := false
 		for {
 			docs, err := existingTasks.Next(ctx, 10)
 			if err != nil {
-				clusterLog.Errorf("error when consuming tasks for cluster: %s", err.Error())
+				clusterLog.Errorf("error when consuming matching tasks for cluster: %s", err.Error())
 				break
 			}
 			if docs.GetCount() == 0 {
@@ -167,8 +166,6 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			}
 
 			for _, d := range docs.MaintenanceManifestDocuments {
-				clusterLog.Infof("%s", d)
-
 				targetTime := time.Unix(d.MaintenanceManifest.RunAfter, 0).Unix()
 				foundPeriods[targetTime] = d.ID
 			}
@@ -178,39 +175,57 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
-		problemCreatingManifest := false
+		manifestsCreated := 0
+		manifestsCancelled := 0
 		for _, target := range periods[1:] {
 			targetWithOffset := target.Add(offsetWithinScheduleAcross)
 			scheduleMatch, found := foundPeriods[targetWithOffset.Unix()]
 			if !found {
-				clusterLog.Infof("need to create manifest for %s window (%s)", target, targetWithOffset)
+				clusterLog.Debugf("creating manifest for %s window (%s)", target, targetWithOffset)
 
-				doc, err := manifestsDB.Create(ctx, &api.MaintenanceManifestDocument{
+				newManifest, err := manifestsDB.Create(ctx, &api.MaintenanceManifestDocument{
 					ID:                manifestsDB.NewUUID(),
-					ClusterResourceID: id,
+					ClusterResourceID: clusterID,
 					MaintenanceManifest: api.MaintenanceManifest{
 						State: api.MaintenanceManifestStatePending,
 
 						MaintenanceTaskID: doc.MaintenanceSchedule.MaintenanceTaskID,
+						CreatedBySchedule: api.MIMOScheduleID(doc.ID),
 						RunAfter:          targetWithOffset.Unix(),
 						RunBefore:         targetWithOffset.Add(time.Hour).Unix(),
 					},
 				})
 				if err != nil {
 					clusterLog.Errorf("error creating new maintenancemanifest, skipping: %s", err.Error())
-					problemCreatingManifest = true
 					break
 				}
 
-				clusterLog.Infof("created new manifest id=%s, to run at %s", doc.ID, target)
+				clusterLog.Infof("created new manifest id=%s for %s window (%s)", newManifest.ID, target, targetWithOffset)
+				manifestsCreated += 1
 			} else {
 				clusterLog.Infof("found manifest for %s (%s)", target, scheduleMatch)
+				// Remove it from the foundPeriods, so that we can remove any
+				// remainders (e.g. if we changed the schedule)
+				delete(foundPeriods, targetWithOffset.Unix())
 			}
 		}
 
-		if problemCreatingManifest {
-			continue
+		// Cancel the manifests which are not required which this
+		for _, notNeededManifest := range foundPeriods {
+			_, err = manifestsDB.Patch(ctx, clusterID, notNeededManifest, func(mmd *api.MaintenanceManifestDocument) error {
+				mmd.MaintenanceManifest.State = api.MaintenanceManifestStateCancelled
+				mmd.MaintenanceManifest.StatusText = "Cancelled by Scheduler as did not match current schedule settings"
+				return nil
+			})
+			if err != nil {
+				clusterLog.Errorf("error cancelling unneeded manifest: %s", err.Error())
+			} else {
+				manifestsCancelled += 1
+				clusterLog.Debugf("cancelled unneeded manifest %s", notNeededManifest)
+			}
 		}
+
+		clusterLog.Infof("created %d new manifests, cancelled %d existing manifests", manifestsCreated, manifestsCancelled)
 	}
 
 	return true, nil

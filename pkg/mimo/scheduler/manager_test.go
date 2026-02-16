@@ -71,6 +71,7 @@ func TestProcessLoop(t *testing.T) {
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						MaintenanceTaskID: "0",
 						Priority:          0,
 						// first monday in jan 2026
@@ -107,6 +108,7 @@ func TestProcessLoop(t *testing.T) {
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						MaintenanceTaskID: "0",
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC).Unix(),
@@ -120,6 +122,7 @@ func TestProcessLoop(t *testing.T) {
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						MaintenanceTaskID: "0",
 						Priority:          0,
 						// first monday in jan 2026
@@ -157,6 +160,7 @@ func TestProcessLoop(t *testing.T) {
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						MaintenanceTaskID: "0",
 						Priority:          0,
 						// first monday in jan 2026
@@ -193,6 +197,7 @@ func TestProcessLoop(t *testing.T) {
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						MaintenanceTaskID: "0",
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 5, 0, 51, 15, 0, time.UTC).Unix(),
@@ -206,6 +211,72 @@ func TestProcessLoop(t *testing.T) {
 					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						// first monday in jan 2026
+						RunAfter:  time.Date(2026, 1, 5, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 5, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+		},
+		{
+			desc: "valid schedule, existing manifest that is of a changed schedule (lookahead=1, scheduleAcross=1h)",
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "Mon *-*-* 00:00:00",
+					LookForwardCount: 1,
+					ScheduleAcross:   "1h",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{
+				{
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 6, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 6, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+			desiredManifests: []*api.MaintenanceManifestDocument{
+				{
+					// Old manifest set to be ignored
+					ID:                manifestID,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStateCancelled,
+						StatusText:        "Cancelled by Scheduler as did not match current schedule settings",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 6, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 6, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					// New manifest created
+					ID:                manifestIDs[1],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						MaintenanceTaskID: "0",
 						Priority:          0,
 						// first monday in jan 2026
@@ -269,6 +340,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 5, 0, 51, 15, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 5, 1, 51, 15, 0, time.UTC).Unix(),
@@ -280,6 +352,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 12, 0, 51, 15, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 12, 1, 51, 15, 0, time.UTC).Unix(),
@@ -291,6 +364,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 19, 0, 51, 15, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 19, 1, 51, 15, 0, time.UTC).Unix(),
@@ -302,6 +376,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 26, 0, 51, 15, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 26, 1, 51, 15, 0, time.UTC).Unix(),
@@ -338,6 +413,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						// starts the next day
 						RunAfter:  time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC).Unix(),
@@ -350,6 +426,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 3, 1, 0, 0, 0, time.UTC).Unix(),
@@ -361,6 +438,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 4, 0, 0, 0, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 4, 1, 0, 0, 0, time.UTC).Unix(),
@@ -372,6 +450,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 5, 1, 0, 0, 0, time.UTC).Unix(),
@@ -383,6 +462,7 @@ func TestProcessLoop(t *testing.T) {
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             api.MaintenanceManifestStatePending,
 						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
 						RunAfter:          time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC).Unix(),
 						RunBefore:         time.Date(2026, 1, 6, 1, 0, 0, 0, time.UTC).Unix(),
