@@ -27,7 +27,6 @@ import (
 	"github.com/tebeka/selenium"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -48,7 +47,6 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -596,7 +594,7 @@ func setupE2EInfrastructure(ctx context.Context) error {
 
 	// Only handle leftover clusters in local dev CI, not in release E2E
 	if conf.IsLocalDevelopmentMode() && conf.IsCI {
-		if err := handleLeftoverClusterIfPresent(ctx, azOCClient, conf); err != nil {
+		if err := deleteLeftoverClusterIfPresent(ctx, azOCClient, conf); err != nil {
 			return err
 		}
 	}
@@ -650,8 +648,8 @@ func cleanupE2EInfrastructure(ctx context.Context) error {
 	return nil
 }
 
-func handleLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopenshift20250725.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
-	doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+func deleteLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopenshift20250725.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
+	_, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			log.Info("No leftover cluster found; proceeding")
@@ -659,81 +657,14 @@ func handleLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopensh
 		}
 		return fmt.Errorf("failed to check for leftover cluster: %w", err)
 	}
-	log.Infof("Found leftover cluster in %s state", doc.ProvisioningState)
 
-	switch doc.ProvisioningState {
-	case mgmtredhatopenshift20250725.Succeeded:
-		log.Info("Cluster is healthy; will reuse it")
-		return nil
-
-	case mgmtredhatopenshift20250725.Creating,
-		mgmtredhatopenshift20250725.Updating,
-		mgmtredhatopenshift20250725.AdminUpdating:
-		log.Infof("Cluster is in %s state; waiting for operation to complete (may take up to 2 hours)", doc.ProvisioningState)
-
-		err = wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
-			doc, err = azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-			if err != nil {
-				return false, fmt.Errorf("failed to poll cluster state: %w", err)
-			}
-
-			switch doc.ProvisioningState {
-			case mgmtredhatopenshift20250725.Succeeded:
-				log.Info("Cluster operation completed successfully; will reuse it")
-				return true, nil
-
-			case mgmtredhatopenshift20250725.Failed:
-				log.Info("Cluster operation failed; will delete it")
-				return true, nil
-
-			case mgmtredhatopenshift20250725.Creating,
-				mgmtredhatopenshift20250725.Updating,
-				mgmtredhatopenshift20250725.AdminUpdating:
-				return false, nil
-
-			default:
-				return false, fmt.Errorf("unexpected state transition to %s", doc.ProvisioningState)
-			}
-		}, ctx.Done())
-		if err != nil {
-			return err
-		}
-
-		// If the operation succeeded, reuse the cluster
-		if doc.ProvisioningState == mgmtredhatopenshift20250725.Succeeded {
-			return nil
-		}
-
-		// If it failed, fall through to deletion
-		fallthrough
-
-	case mgmtredhatopenshift20250725.Failed:
-		log.Info("Deleting failed cluster")
-		err = azOCClient.DeleteAndWait(ctx, conf.VnetResourceGroup, conf.ClusterName)
-		if err != nil {
-			return fmt.Errorf("failed to delete cluster: %w", err)
-		}
-		log.Info("Cluster deleted successfully")
-		return nil
-
-	case mgmtredhatopenshift20250725.Deleting:
-		log.Info("Cluster is already deleting; waiting for completion")
-		err = wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
-			_, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-			if err != nil && strings.Contains(err.Error(), "not found") {
-				log.Info("Cluster deletion completed")
-				return true, nil
-			}
-			if err != nil {
-				return false, fmt.Errorf("failed to poll cluster deletion: %w", err)
-			}
-			return false, nil
-		}, ctx.Done())
-		return err
-
-	default:
-		return fmt.Errorf("unexpected cluster state: %s", doc.ProvisioningState)
+	log.Info("Found leftover cluster; deleting it")
+	err = azOCClient.DeleteAndWait(ctx, conf.VnetResourceGroup, conf.ClusterName)
+	if err != nil {
+		return fmt.Errorf("failed to delete leftover cluster: %w", err)
 	}
+	log.Info("Leftover cluster deleted successfully")
+	return nil
 }
 
 var _ = BeforeSuite(func() {
