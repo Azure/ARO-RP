@@ -103,8 +103,8 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 
 	s.cond = sync.NewCond(&s.mu)
 	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
-	// All Schedules have a bucket of 1
-	s.b.SetBuckets([]int{1})
+	// All Schedules have a bucket of 0
+	s.b.SetBuckets([]int{0})
 
 	return s
 }
