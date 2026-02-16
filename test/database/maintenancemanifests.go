@@ -25,8 +25,8 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetQueryHandler(database.MaintenanceManifestQueueOverallQuery, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsQueuedAll(client, query, options, now)
 	})
-	c.SetQueryHandler(database.MaintenanceManifestGetForTaskIDAndClusterBeforeTime, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
-		return fakeMaintenanceManifestsForClusterAndTaskID(client, query, options, now)
+	c.SetQueryHandler(database.MaintenanceManifestGetForScheduleIDAndClusterBeforeTime, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsForClusterAndScheduleID(client, query, options, now)
 	})
 
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
@@ -97,7 +97,7 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
 }
 
-func fakeMaintenanceManifestsForClusterAndTaskID(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+func fakeMaintenanceManifestsForClusterAndScheduleID(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
 	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
 	if err != nil {
 		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
@@ -110,14 +110,14 @@ func fakeMaintenanceManifestsForClusterAndTaskID(client cosmosdb.MaintenanceMani
 	}
 
 	clusterResourceID := query.Parameters[0].Value
-	taskID := query.Parameters[1].Value
+	scheduleID := query.Parameters[1].Value
 
 	var results []*api.MaintenanceManifestDocument
 	for _, r := range input.MaintenanceManifestDocuments {
 		if r.ClusterResourceID != clusterResourceID {
 			continue
 		}
-		if string(r.MaintenanceManifest.MaintenanceTaskID) != taskID {
+		if string(r.MaintenanceManifest.CreatedBySchedule) != scheduleID {
 			continue
 		}
 		if r.MaintenanceManifest.RunAfter < now().Unix() {
