@@ -11,9 +11,6 @@
 from azure.cli.core.aaz import *
 
 
-@register_command(
-    "role assignment create",
-)
 class Create(AAZCommand):
     """Create a role assignment by scope and name.
     """
