@@ -401,6 +401,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 						r.Post("/cancel", f.postAdminMaintManifestCancel)
 					})
 				})
+				r.Get("/selectors", f.getAdminOpenShiftClusterSelectors)
 			})
 		})
 
