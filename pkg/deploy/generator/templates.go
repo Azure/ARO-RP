@@ -6,6 +6,7 @@ package generator
 import (
 	"bytes"
 	"encoding/json"
+	"regexp"
 	"strconv"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
