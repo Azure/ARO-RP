@@ -104,6 +104,9 @@
         "keyvaultPrefix": {
             "value": ""
         },
+        "lbIpTagsDisabledRegions": {
+            "value": []
+        },
         "mdmFrontendUrl": {
             "value": ""
         },
@@ -163,6 +166,9 @@
         "portalElevatedGroupIds": {
             "value": ""
         },
+        "portalLbIpTags": {
+            "value": []
+        },
         "portalLogLevel": {
             "value": "info"
         },
@@ -171,6 +177,9 @@
         },
         "rpImage": {
             "value": ""
+        },
+        "rpLbIpTags": {
+            "value": []
         },
         "rpLogLevel": {
             "value": "info"
