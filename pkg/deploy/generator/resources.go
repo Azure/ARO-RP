@@ -90,6 +90,25 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 	}
 }
 
+func (g *generator) publicLBIPAddressTagged(name string, ipTagsParam string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &armnetwork.PublicIPAddress{
+			SKU: &armnetwork.PublicIPAddressSKU{
+				Name: pointerutils.ToPtr(armnetwork.PublicIPAddressSKUNameStandard),
+			},
+			Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
+				IPTags:                   []*armnetwork.IPTag{}, // Empty slice, will be replaced by templateFixup
+			},
+			Zones:    []*string{},
+			Name:     &name,
+			Type:     pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
 func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.AccountProperties, tags map[string]*string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.Account{
