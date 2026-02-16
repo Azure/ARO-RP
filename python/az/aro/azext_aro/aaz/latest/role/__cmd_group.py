@@ -11,9 +11,6 @@
 from azure.cli.core.aaz import *
 
 
-@register_command_group(
-    "role",
-)
 class __CMDGroup(AAZCommandGroup):
     """Manage Azure role-based access control (Azure RBAC)
     """
