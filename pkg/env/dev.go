@@ -6,7 +6,6 @@ package env
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 
 	"github.com/jongio/azidext/go/azidext"
@@ -81,13 +80,6 @@ func (d *dev) AROOperatorImage() string {
 // In development environment this size is set to zero as we create noop connection to audit server.
 func (d *dev) OtelAuditQueueSize() (int, error) {
 	return 0, nil
-}
-
-func (d *dev) Listen() (net.Listener, error) {
-	if d.Service() == string(SERVICE_MIMO_ACTUATOR) {
-		return net.Listen("tcp", ":8445")
-	}
-	return net.Listen("tcp", ":8443")
 }
 
 // TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
