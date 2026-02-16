@@ -107,23 +107,22 @@ func (c *openShiftClusterCache) OnAllPendingProcessed() {
 }
 
 func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, old selectorData) (selectorData, bool, error) {
-	new := selectorData{}
-
-	resourceID := strings.ToLower(doc.OpenShiftCluster.ID)
-
-	r, err := azure.ParseResourceID(resourceID)
+	r, err := azure.ParseResourceID(strings.ToLower(doc.OpenShiftCluster.ID))
 	if err != nil {
 		return nil, false, err
 	}
 
-	new[SelectorDataKeyResourceID] = resourceID
-	new[SelectorDataKeySubscriptionID] = r.SubscriptionID
-
+	var subscriptionState string
 	subCacheData, hasSubCacheData := c.subCache.GetSubscription(r.SubscriptionID)
 	if hasSubCacheData {
-		new[SelectorDataKeySubscriptionState] = string(subCacheData.State)
+		subscriptionState = string(subCacheData.State)
 	} else {
 		return nil, false, fmt.Errorf("no matching subscription %s", r.SubscriptionID)
+	}
+
+	new, err := ToSelectorData(doc, subscriptionState)
+	if err != nil {
+		return nil, false, err
 	}
 
 	return new, !reflect.DeepEqual(old, new), nil
