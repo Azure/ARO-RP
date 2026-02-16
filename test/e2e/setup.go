@@ -27,6 +27,7 @@ import (
 	"github.com/tebeka/selenium"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -650,7 +651,6 @@ func cleanupE2EInfrastructure(ctx context.Context) error {
 }
 
 func handleLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopenshift20250725.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
-	pollingInterval := 30 * time.Second
 	doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -663,39 +663,48 @@ func handleLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopensh
 
 	switch doc.ProvisioningState {
 	case mgmtredhatopenshift20250725.Succeeded:
+		log.Info("Cluster is healthy; will reuse it")
 		return nil
 
 	case mgmtredhatopenshift20250725.Creating,
 		mgmtredhatopenshift20250725.Updating,
 		mgmtredhatopenshift20250725.AdminUpdating:
-		log.Infof("Cluster is in %s state; waiting for operation to complete", doc.ProvisioningState)
+		log.Infof("Cluster is in %s state; waiting for operation to complete (may take up to 2 hours)", doc.ProvisioningState)
 
-		for {
-			time.Sleep(pollingInterval)
+		err = wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
 			doc, err = azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
 			if err != nil {
-				return fmt.Errorf("failed to poll cluster state: %w", err)
+				return false, fmt.Errorf("failed to poll cluster state: %w", err)
 			}
 
 			switch doc.ProvisioningState {
 			case mgmtredhatopenshift20250725.Succeeded:
 				log.Info("Cluster operation completed successfully; will reuse it")
-				return nil
+				return true, nil
 
 			case mgmtredhatopenshift20250725.Failed:
 				log.Info("Cluster operation failed; will delete it")
+				return true, nil
 
 			case mgmtredhatopenshift20250725.Creating,
 				mgmtredhatopenshift20250725.Updating,
 				mgmtredhatopenshift20250725.AdminUpdating:
-				continue
+				return false, nil
 
 			default:
-				return fmt.Errorf("unexpected state transition to %s", doc.ProvisioningState)
+				return false, fmt.Errorf("unexpected state transition to %s", doc.ProvisioningState)
 			}
-
-			break
+		}, ctx.Done())
+		if err != nil {
+			return err
 		}
+
+		// If the operation succeeded, reuse the cluster
+		if doc.ProvisioningState == mgmtredhatopenshift20250725.Succeeded {
+			return nil
+		}
+
+		// If it failed, fall through to deletion
 		fallthrough
 
 	case mgmtredhatopenshift20250725.Failed:
@@ -709,17 +718,18 @@ func handleLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopensh
 
 	case mgmtredhatopenshift20250725.Deleting:
 		log.Info("Cluster is already deleting; waiting for completion")
-		for {
-			time.Sleep(pollingInterval)
-			_, err = azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+		err = wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
+			_, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
 			if err != nil && strings.Contains(err.Error(), "not found") {
 				log.Info("Cluster deletion completed")
-				return nil
+				return true, nil
 			}
 			if err != nil {
-				return fmt.Errorf("failed to poll cluster deletion: %w", err)
+				return false, fmt.Errorf("failed to poll cluster deletion: %w", err)
 			}
-		}
+			return false, nil
+		}, ctx.Done())
+		return err
 
 	default:
 		return fmt.Errorf("unexpected cluster state: %s", doc.ProvisioningState)
