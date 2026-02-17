@@ -85,7 +85,7 @@ func Test_parseCalendar(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run("parsing "+tt.s, func(t *testing.T) {
-			got, gotErr := parseCalendar(tt.s)
+			got, gotErr := ParseCalendar(tt.s)
 			if gotErr != nil {
 				for _, e := range deep.Equal(gotErr.Error(), tt.wantErr) {
 					t.Error(e)

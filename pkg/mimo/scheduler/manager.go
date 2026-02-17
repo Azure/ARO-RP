@@ -94,7 +94,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	calDef, err := parseCalendar(doc.MaintenanceSchedule.Schedule)
+	calDef, err := ParseCalendar(doc.MaintenanceSchedule.Schedule)
 	if err != nil {
 		return false, err
 	}
