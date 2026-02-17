@@ -176,7 +176,6 @@ func (g *generator) rpTemplate() *arm.Template {
 
 	if g.production {
 		t.Variables = map[string]interface{}{
-
 			"rpCosmoDbVirtualNetworkRules": &[]mgmtdocumentdb.VirtualNetworkRule{
 				{
 					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
