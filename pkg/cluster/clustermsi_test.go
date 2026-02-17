@@ -380,11 +380,9 @@ func TestNeedsRefresh(t *testing.T) {
 		},
 	}
 
-	m := &manager{}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotBool, gotErr := m.needsRefresh(tc.item, tc.currentTime)
+			gotBool, gotErr := needsRefresh(tc.item, tc.currentTime)
 
 			if tc.wantErr {
 				if gotErr == nil {
