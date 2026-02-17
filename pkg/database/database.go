@@ -36,6 +36,7 @@ const (
 	collPortal                          = "Portal"
 	collSubscriptions                   = "Subscriptions"
 	collMaintenanceManifests            = "MaintenanceManifests"
+	collMaintenanceSchedules            = "MaintenanceSchedules"
 )
 
 // Generic interface of document iterators from pkg/database/cosmosdb/, used in

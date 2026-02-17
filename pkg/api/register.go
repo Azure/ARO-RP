@@ -54,6 +54,16 @@ type MaintenanceManifestStaticValidator interface {
 	Static(interface{}, *MaintenanceManifestDocument) error
 }
 
+type MaintenanceScheduleConverter interface {
+	ToExternal(doc *MaintenanceScheduleDocument) interface{}
+	ToExternalList(docs []*MaintenanceScheduleDocument, nextLink string) interface{}
+	ToInternal(interface{}, *MaintenanceScheduleDocument)
+}
+
+type MaintenanceScheduleStaticValidator interface {
+	Static(interface{}, *MaintenanceScheduleDocument) error
+}
+
 type BillingDocumentConverter interface {
 	ToExternal(doc *BillingDocument) interface{}
 	ToExternalList(docs []*BillingDocument, nextLink string) interface{}
@@ -72,6 +82,8 @@ type Version struct {
 	OperationList                                  OperationList
 	MaintenanceManifestConverter                   MaintenanceManifestConverter
 	MaintenanceManifestStaticValidator             MaintenanceManifestStaticValidator
+	MaintenanceScheduleConverter                   MaintenanceScheduleConverter
+	MaintenanceScheduleStaticValidator             MaintenanceScheduleStaticValidator
 	BillingDocumentConverter                       BillingDocumentConverter
 }
 
