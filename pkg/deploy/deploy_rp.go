@@ -84,6 +84,12 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
 	}
+	parameters.Parameters["rpVmssIpTags"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.RPVmssIpTags,
+	}
+	parameters.Parameters["rpVmssIpTagsDisabledRegions"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.RPVmssIpTagsDisabledRegions,
+	}
 	parameters.Parameters["keyvaultDNSSuffix"] = &arm.ParametersParameter{
 		Value: d.env.Environment().KeyVaultDNSSuffix,
 	}
