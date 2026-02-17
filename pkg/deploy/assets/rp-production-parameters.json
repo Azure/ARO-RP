@@ -205,6 +205,12 @@
         "rpVmssCapacity": {
             "value": 3
         },
+        "rpVmssIpTags": {
+            "value": []
+        },
+        "rpVmssIpTagsDisabledRegions": {
+            "value": []
+        },
         "sshPublicKey": {
             "value": ""
         },
