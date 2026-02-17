@@ -54,8 +54,14 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DnsmasqEnabled) {
+	if !IsDNSControllerEnabled(instance.Spec.OperatorFlags) {
 		r.Log.Debug("controller is disabled")
+		return reconcile.Result{}, nil
+	}
+
+	// CustomDNS clusters don't use 99-*-aro-dns MachineConfigs; skip reconciliation
+	if GetEffectiveDNSType(ctx, r.Client, r.Log, instance) == operator.DNSTypeClusterHosted {
+		r.Log.Debug("CustomDNS enabled, skipping dnsmasq MachineConfig reconciliation")
 		return reconcile.Result{}, nil
 	}
 

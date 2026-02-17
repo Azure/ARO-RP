@@ -59,18 +59,30 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DnsmasqEnabled) {
+	if !IsDNSControllerEnabled(instance.Spec.OperatorFlags) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	// Check effective DNS type - skip dnsmasq reconciliation if using CustomDNS
+	// Determine effective DNS type based on aro.dns.type flag and cluster version
 	effectiveDNSType := GetEffectiveDNSType(ctx, r.Client, r.Log, instance)
+
 	if effectiveDNSType == operator.DNSTypeClusterHosted {
-		r.Log.Info("aro.dns.type=clusterhosted (CustomDNS enabled), skipping dnsmasq reconciliation")
+		// CustomDNS: reconcile the Infrastructure CR with LB IPs instead of dnsmasq MachineConfigs.
+		// The Infrastructure CR's cloudLoadBalancerConfig is what MCO reads to render the CoreDNS static pod.
+		r.Log.Debug("running Infrastructure CR reconciliation for CustomDNS")
+		err = reconcileInfrastructureCR(ctx, r.Client, r.Log, instance.Spec.APIIntIP, instance.Spec.IngressIP)
+		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+			return reconcile.Result{}, err
+		}
+
+		r.ClearConditions(ctx)
 		return reconcile.Result{}, nil
 	}
 
+	// dnsmasq: reconcile 99-%s-aro-dns MachineConfigs for each MachineConfigPool
 	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled)
 	if restartDnsmasq {
 		r.Log.Debug("restartDnsmasq is enabled")
@@ -109,6 +121,10 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return o.GetName() == "version"
 	})
 
+	infrastructurePredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == infrastructureName
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Named(ClusterControllerName).
@@ -116,6 +132,13 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &configv1.ClusterVersion{}},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(clusterVersionPredicate),
+		).
+		// Watch Infrastructure CR for drift protection: if someone modifies
+		// the cloudLoadBalancerConfig, this triggers reconciliation to restore it.
+		Watches(
+			&source.Kind{Type: &configv1.Infrastructure{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(infrastructurePredicate),
 		).
 		Complete(r)
 }

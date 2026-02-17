@@ -11,17 +11,27 @@ const (
 	BannerEnabled                      = "aro.banner.enabled"
 	CheckerEnabled                     = "aro.checker.enabled"
 	CPMSEnabled                        = "aro.cpms.enabled"
-	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
-	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
+	// DNSEnabled is the new flag controlling whether the DNS controller runs.
+	// New clusters use this flag. For existing clusters that only have the
+	// legacy aro.dnsmasq.enabled flag, the controller falls back to it.
+	DNSEnabled = "aro.dns.enabled"
+
+	// DnsmasqEnabled is the legacy flag. Kept for backward compatibility with
+	// existing clusters whose CosmosDB documents predate the rename.
+	DnsmasqEnabled = "aro.dnsmasq.enabled"
+
+	// RestartDnsmasqEnabled controls whether a NM dispatcher restart script is
+	// included in the dnsmasq MachineConfig. Only relevant for dnsmasq mode.
+	RestartDnsmasqEnabled = "aro.restartdnsmasq.enabled"
 
 	// DNS Type flag for CustomDNS feature
 	// Values: "" (default=dnsmasq), "dnsmasq", "clusterhosted"
 	// "clusterhosted" enables CustomDNS (CoreDNS static pod) for 4.21+ clusters
-	DNSType                            = "aro.dns.type"
+	DNSType = "aro.dns.type"
 
 	// DNS Type values
-	DNSTypeDnsmasq                     = "dnsmasq"
-	DNSTypeClusterHosted               = "clusterhosted"
+	DNSTypeDnsmasq       = "dnsmasq"
+	DNSTypeClusterHosted = "clusterhosted"
 
 	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
 	ImageConfigEnabled                 = "aro.imageconfig.enabled"
@@ -73,11 +83,11 @@ func DefaultOperatorFlags() map[string]string {
 		BannerEnabled:                      FlagFalse,
 		CheckerEnabled:                     FlagTrue,
 		CPMSEnabled:                        FlagFalse,
-		DnsmasqEnabled:                     FlagTrue,
-		RestartDnsmasqEnabled:              FlagFalse,
+		DNSEnabled:            FlagTrue,
+		RestartDnsmasqEnabled: FlagFalse,
 
 		// DNS Type: blank (default) = dnsmasq, "dnsmasq" = force dnsmasq, "clusterhosted" = CustomDNS (4.21+)
-		DNSType:                            "",
+		DNSType: "",
 
 		GenevaLoggingEnabled:               FlagTrue,
 		ImageConfigEnabled:                 FlagTrue,

@@ -82,6 +82,17 @@ func supportsCustomDNS(version *semver.Version) bool {
 	return !version.LessThan(MinCustomDNSVersion)
 }
 
+// IsDNSControllerEnabled checks whether the DNS controller should run.
+// It checks the new flag (aro.dns.enabled) first. If the new flag is not
+// present in the operator flags (i.e., an existing cluster that predates
+// the rename), it falls back to the legacy flag (aro.dnsmasq.enabled).
+func IsDNSControllerEnabled(flags arov1alpha1.OperatorFlags) bool {
+	if _, exists := flags[operator.DNSEnabled]; exists {
+		return flags.GetSimpleBoolean(operator.DNSEnabled)
+	}
+	return flags.GetSimpleBoolean(operator.DnsmasqEnabled)
+}
+
 // ValidateDNSType validates the aro.dns.type flag value
 // Returns true if valid, false otherwise
 func ValidateDNSType(dnsType string) bool {
