@@ -80,6 +80,9 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	return nil
 }
 
+// Given a slice of model.Alert this func aggregates them in two metrics:
+// prometheus.alerts is used by many Geneva Monitors (example: MHCUnterminatedShortCircuit)
+// prometheus.targeted.alerts will be used as replacement for some Monitor metrics whose metrics already exist in Prometheus
 func (mon *Monitor) aggregateAndEmitAlerts(alerts []model.Alert) {
 	collectedAlerts := map[string]struct {
 		count           int64
