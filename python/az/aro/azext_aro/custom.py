@@ -265,9 +265,9 @@ def validate(*,  # pylint: disable=too-many-locals
              cmd,
              client,  # pylint: disable=unused-argument
              resource_group_name,  # pylint: disable=unused-argument
-             resource_name,  # pylint: disable=unused-argument
              master_subnet,
              worker_subnet,
+             resource_name=None,  # pylint: disable=unused-argument
              vnet=None,
              enable_preconfigured_nsg=None,
              cluster_resource_group=None,  # pylint: disable=unused-argument
@@ -757,10 +757,11 @@ def resolve_rp_client_id():
 def aro_identity_list_required(*,
                                cmd,
                                client,
-                               resource_name,
+                               resource_group_name,
                                location,
-                               resource_group_name=None,
                                version,
+                               master_subnet=None,
+                               worker_subnet=None,
                                vnet=None,
                                vnet_resource_group_name=None) -> None:
     if not rp_mode_development():
@@ -770,6 +771,23 @@ def aro_identity_list_required(*,
         if provider.registration_state != 'Registered':
             raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered. ',
                                     'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
+
+    if not vnet_resource_group_name:
+        vnet_resource_group_name = resource_group_name
+
+    # import pdb; pdb.set_trace()
+
+    # validate(
+    #     client=client,
+    #     cmd=cmd,
+    #     location=location,
+    #     master_subnet=master_subnet,
+    #     resource_group_name=resource_group_name,
+    #     version=version,
+    #     vnet=vnet,
+    #     vnet_resource_group_name=vnet_resource_group_name,
+    #     worker_subnet=worker_subnet,
+    # )
 
     if not version in aro_get_versions(client, location):
         raise ValidationError("--version invalid")
@@ -782,14 +800,21 @@ def aro_identity_list_required(*,
     if not role_set:
         raise RuntimeError("Could not find role set.")
 
-    print("Use the following commands to create the required managed identities:")
-    for role in role_set.platform_workload_identity_roles:
-        print(f"    az identity create -g '{resource_name}' -n '{role.operator_name}' -l '{location}'")
+    definitions = client.role_definitions.get_by_id(thing)
 
-    print("\nUse the following commands to create the required role assignments:")
-    for assignment in ["blah", "blah", "blah"]:
-        # TODO: write me
-        print(assignment)
+    logger.warning("Use the following commands to create the required managed identities:")
+    logger.warning(f"    az identity create -g '{resource_group_name}' -n 'aro-cluster' -l '{location}'")
+    for role in role_set.platform_workload_identity_roles:
+        logger.warning(f"    az identity create -g '{resource_group_name}' -n '{role.operator_name}' -l '{location}'")
+
+    logger.warning("\nUse the following commands to create the required role assignments:")
+    # TODO: logger.warning("static role for cluster ident")
+    for assignment in ["    blah", "    blah", "    blah"]:
+        # TODO:
+        #   - query role definitions to get allowed actions
+        #   - determine subnet vs vnet scope using role actions
+        #   - compose role assignment creation commands
+        logger.warning(assignment)
 
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
