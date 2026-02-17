@@ -37,7 +37,26 @@ func TestMIMOCreateSchedule(t *testing.T) {
 			wantError:      "400: InvalidParameter: maintenanceTaskID: Must be provided",
 			wantStatusCode: http.StatusBadRequest,
 		},
-
+		{
+			name:     "invalid calendar schedule",
+			fixtures: func(f *testdatabase.Fixture) {},
+			body: &admin.MaintenanceSchedule{
+				MaintenanceTaskID: "exampletask",
+				State:             admin.MaintenanceScheduleStateEnabled,
+				Schedule:          "*-*-* 90:00:00",
+				LookForwardCount:  1,
+				ScheduleAcross:    "12h",
+				Selectors: []*admin.MaintenanceScheduleSelector{
+					{
+						Key:      "foobar",
+						Operator: admin.MaintenanceScheduleSelectorOperatorIn,
+						Values:   []string{"baz"},
+					},
+				},
+			},
+			wantError:      "400: InvalidParameter: schedule: error parsing hour: 90 is out of range",
+			wantStatusCode: http.StatusBadRequest,
+		},
 		{
 			name:     "good",
 			fixtures: func(f *testdatabase.Fixture) {},
