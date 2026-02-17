@@ -336,6 +336,7 @@ ExecStart=/usr/bin/podman run \
   -m 2g \
   -p 444:8444 \
   -p 2222:2222 \
+  -p 2223:2223 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
