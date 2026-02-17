@@ -92,6 +92,8 @@ main() {
         "446/tcp"
         # Portal ssh
         "2222/tcp"
+        # Portal ssh tagged
+        "2223/tcp"
         # JIT ssh
         "22/tcp"
     )
