@@ -51,8 +51,14 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DnsmasqEnabled) {
+	if !IsDNSControllerEnabled(instance.Spec.OperatorFlags) {
 		r.Log.Debug("controller is disabled")
+		return reconcile.Result{}, nil
+	}
+
+	// CustomDNS uses Infrastructure CR (cluster-wide), not per-pool MachineConfigs; skip
+	if GetEffectiveDNSType(ctx, r.Client, r.Log, instance) == operator.DNSTypeClusterHosted {
+		r.Log.Debug("CustomDNS enabled, skipping dnsmasq MachineConfigPool reconciliation")
 		return reconcile.Result{}, nil
 	}
 

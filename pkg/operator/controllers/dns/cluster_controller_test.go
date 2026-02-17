@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,7 +63,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagFalse,
+							operator.DNSEnabled: operator.FlagFalse,
 						},
 					},
 				},
@@ -91,7 +92,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.DNSEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
 						},
 					},
@@ -113,7 +114,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.DNSEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
 						},
 					},
@@ -142,7 +143,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -175,7 +176,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -216,7 +217,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -259,7 +260,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -305,7 +306,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -327,6 +328,132 @@ func TestClusterReconciler(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			wantCreated: map[string]int{
+				"MachineConfig//99-master-aro-dns": 1,
+			},
+			wantUpdated:    map[string]int{},
+			request:        ctrl.Request{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			name: "CustomDNS clusterhosted path skips MachineConfig creation and reconciles Infrastructure CR",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DNSEnabled: operator.FlagTrue,
+							operator.DNSType:    operator.DNSTypeClusterHosted,
+						},
+						APIIntIP:  "10.0.0.1",
+						IngressIP: "10.0.0.2",
+					},
+				},
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{Name: "version"},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.21.0",
+							},
+						},
+					},
+				},
+				// Infrastructure CR as unstructured since the typed struct lacks cloudLoadBalancerConfig
+				&unstructured.Unstructured{
+					Object: map[string]any{
+						"apiVersion": "config.openshift.io/v1",
+						"kind":       "Infrastructure",
+						"metadata": map[string]any{
+							"name": "cluster",
+						},
+						"status": map[string]any{
+							"platformStatus": map[string]any{
+								"azure": map[string]any{},
+							},
+						},
+					},
+				},
+				// MachineConfigPool present but should be ignored for clusterhosted
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated:    map[string]int{},
+			wantUpdated:    map[string]int{},
+			request:        ctrl.Request{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			name: "clusterhosted flag with version < 4.21 falls back to dnsmasq and creates MachineConfigs",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DNSEnabled:      operator.FlagTrue,
+							operator.DNSType:         operator.DNSTypeClusterHosted,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{Name: "version"},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.10.11",
+							},
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			wantCreated: map[string]int{
+				"MachineConfig//99-master-aro-dns": 1,
+			},
+			wantUpdated:    map[string]int{},
+			request:        ctrl.Request{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			name: "legacy aro.dnsmasq.enabled flag works for backward compatibility",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 			},
 			wantCreated: map[string]int{

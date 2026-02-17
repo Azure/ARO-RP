@@ -59,7 +59,7 @@ func TestMachineConfigReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagFalse,
+							operator.DNSEnabled: operator.FlagFalse,
 						},
 					},
 				},
@@ -78,7 +78,7 @@ func TestMachineConfigReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -170,7 +170,7 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -203,7 +203,7 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -238,7 +238,7 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.DNSEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
 						},
 					},
@@ -359,7 +359,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -385,7 +385,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -418,7 +418,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -455,7 +455,7 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled: operator.FlagTrue,
+							operator.DNSEnabled: operator.FlagTrue,
 						},
 					},
 				},
