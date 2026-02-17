@@ -562,6 +562,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 												Primary: pointerutils.ToPtr(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 													Name: pointerutils.ToPtr("rp-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														IPTags: &[]mgmtcompute.VirtualMachineScaleSetIPTag{},
+													},
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{
