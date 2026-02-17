@@ -8,8 +8,8 @@
 |---|--------|-----------|
 | **Repo** | `Azure/ARO-RP` | `Azure/RP-Config` |
 | **Branch** | `preetisht/ARO-20272-from-master` | TBD |
-| **Commit** | `5c043f4ca82914ee9ec75d12a5bbe0f79d728223` | TBD |
-| **Tag** | — | — |
+| **Commit** | `c0924893ce60a6b0f441a66d48d386308ad1a20d` | TBD |
+| **Tag** | `v20260217.01-vmss-ip-tagged` | — |
 
 ---
 
