@@ -12,6 +12,7 @@
 | **Tag** | `v20260216.01-lb-tagged-ip-dual-frontend` | `v20260216.01-lb-tagged-ip-dual-frontend` |
 
 Released to INT on **2026-02-16**. Deployment completed successfully.
+[INT Release Pipeline](https://msazure.visualstudio.com/AzureRedHatOpenShift/_build/results?buildId=153392735&view=results)
 
 ---
 
