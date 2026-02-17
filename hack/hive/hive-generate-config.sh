@@ -116,6 +116,9 @@ generate_hive_config() {
     popd 1> /dev/null
     mv "$tmpd/hive-deployment.yaml" ./hack/hive/hive-config/
 
+    # ensure the hive deployment uses the pull secret
+    yq -yi 'select(.kind == "ServiceAccount").imagePullSecrets = [{"name": "hive-global-pull-secret"}]' ./hack/hive/hive-config/hive-deployment.yaml
+
     if [ -d ./hack/hive/hive-config/crds ]; then
         rm -rf ./hack/hive/hive-config/crds
     fi
