@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/mimo/scheduler"
 )
 
 func (f *frontend) putAdminMaintScheduleCreate(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +73,12 @@ func (f *frontend) _putAdminMaintSchedulePut(ctx context.Context, r *http.Reques
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Validate the calendar schedule is valid
+	_, err = scheduler.ParseCalendar(ext.Schedule)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "schedule", err.Error())
 	}
 
 	converter.ToInternal(ext, schedDoc)
