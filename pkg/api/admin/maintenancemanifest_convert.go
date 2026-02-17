@@ -23,6 +23,7 @@ func (m maintenanceManifestConverter) ToExternal(d *api.MaintenanceManifestDocum
 		StatusText: d.MaintenanceManifest.StatusText,
 
 		MaintenanceTaskID: MIMOTaskID(d.MaintenanceManifest.MaintenanceTaskID),
+		CreatedBySchedule: MIMOScheduleID(d.MaintenanceManifest.CreatedBySchedule),
 		Priority:          d.MaintenanceManifest.Priority,
 
 		RunAfter:  d.MaintenanceManifest.RunAfter,
@@ -48,6 +49,7 @@ func (m maintenanceManifestConverter) ToInternal(_i interface{}, out *api.Mainte
 
 	out.ID = i.ID
 	out.MaintenanceManifest.MaintenanceTaskID = api.MIMOTaskID(i.MaintenanceTaskID)
+	out.MaintenanceManifest.CreatedBySchedule = api.MIMOScheduleID(i.CreatedBySchedule)
 	out.MaintenanceManifest.Priority = i.Priority
 	out.MaintenanceManifest.RunAfter = i.RunAfter
 	out.MaintenanceManifest.RunBefore = i.RunBefore
