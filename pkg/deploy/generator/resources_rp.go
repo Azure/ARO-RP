@@ -297,7 +297,7 @@ func (g *generator) rpLB() *arm.Resource {
 								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
 							Probe: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-tagged')]"),
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https-tagged')]"),
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
@@ -342,6 +342,24 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: pointerutils.ToPtr("portal-lbrule-ssh"),
 					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend-tagged')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh-tagged')]"),
+							},
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							FrontendPort:     pointerutils.ToPtr(int32(22)),
+							BackendPort:      pointerutils.ToPtr(int32(2223)),
+						},
+						Name: pointerutils.ToPtr("portal-lbrule-ssh-tagged"),
+					},
 				},
 				Probes: []*armnetwork.Probe{
 					{
@@ -378,7 +396,7 @@ func (g *generator) rpLB() *arm.Resource {
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
 						},
-						Name: pointerutils.ToPtr("portal-probe-tagged"),
+						Name: pointerutils.ToPtr("portal-probe-https-tagged"),
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
@@ -387,6 +405,14 @@ func (g *generator) rpLB() *arm.Resource {
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
 						},
 						Name: pointerutils.ToPtr("portal-probe-ssh"),
+					},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
+							Port:           pointerutils.ToPtr(int32(2223)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+						},
+						Name: pointerutils.ToPtr("portal-probe-ssh-tagged"),
 					},
 				},
 			},
