@@ -1,6 +1,22 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
+    "variables": {
+        "rpCosmoDbVirtualNetworkRules": [
+            {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
+            },
+            {
+                "id": "[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
+            },
+            {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"
+            },
+            {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'default')]"
+            }
+        ]
+    },
     "parameters": {
         "clusterParentDomainName": {
             "type": "string"

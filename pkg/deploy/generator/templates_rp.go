@@ -166,23 +166,27 @@ func (g *generator) rpTemplate() *arm.Template {
 		t.Parameters[param] = p
 	}
 
-	if g.production {
-		t.Variables = map[string]interface{}{
-			"rpCosmoDbVirtualNetworkRules": &[]mgmtdocumentdb.VirtualNetworkRule{
-				{
-					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
-				},
-				{
-					ID: pointerutils.ToPtr("[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
-				},
-				{
-					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"),
-					// TODO: AKS Sharding: add rules for additional AKS shards for this RP instance. Currently only shard 1, which has subnet ClusterSubnet-001, is set above.
-					// AKS subnet design: https://docs.google.com/document/d/1gTGSW5S4uN1vB2hqVFKYr-qp6n62WbkdQMrKg-qvPbE
-				},
+	t.Variables = map[string]interface{}{
+		"rpCosmoDbVirtualNetworkRules": &[]mgmtdocumentdb.VirtualNetworkRule{
+			{
+				ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 			},
-		}
+			{
+				ID: pointerutils.ToPtr("[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
+			},
+			{
+				ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"),
+				// TODO: AKS Sharding: add rules for additional AKS shards for this RP instance. Currently only shard 1, which has subnet ClusterSubnet-001, is set above.
+				// AKS subnet design: https://docs.google.com/document/d/1gTGSW5S4uN1vB2hqVFKYr-qp6n62WbkdQMrKg-qvPbE
+			},
+			{
+				ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'default')]"),
+				// Classic SVC AKS clusters are in the default subnet, so we need to allowlist it as well.
+			},
+		},
+	}
 
+	if g.production {
 		t.Resources = append(t.Resources,
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
