@@ -228,22 +228,22 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: new("portal-frontend"),
 					},
-				{
-					Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-						PublicIPAddress: &armnetwork.PublicIPAddress{
-							ID: new("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]"),
+					{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
+								ID: new("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip-tagged')]"),
+							},
 						},
+						Name: new("rp-frontend-tagged"),
 					},
-					Name: new("rp-frontend-tagged"),
-				},
-				{
-					Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-						PublicIPAddress: &armnetwork.PublicIPAddress{
-							ID: new("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]"),
+					{
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &armnetwork.PublicIPAddress{
+								ID: new("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip-tagged')]"),
+							},
 						},
+						Name: new("portal-frontend-tagged"),
 					},
-					Name: new("portal-frontend-tagged"),
-				},
 				},
 				BackendAddressPools: []*armnetwork.BackendAddressPool{
 					{
@@ -269,60 +269,60 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: new("rp-lbrule"),
 					},
-				{
-					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-						FrontendIPConfiguration: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend-tagged')]"),
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend-tagged')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe-tagged')]"),
+							},
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
+							FrontendPort:     new(int32(443)),
+							BackendPort:      new(int32(8443)),
 						},
-						BackendAddressPool: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
-						},
-						Probe: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe-tagged')]"),
-						},
-						Protocol:         new(armnetwork.TransportProtocolTCP),
-						LoadDistribution: new(armnetwork.LoadDistributionDefault),
-						FrontendPort:     new(int32(443)),
-						BackendPort:      new(int32(8443)),
+						Name: new("rp-lbrule-8443"),
 					},
-					Name: new("rp-lbrule-8443"),
-				},
-				{
-					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-						FrontendIPConfiguration: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend-tagged')]"),
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend-tagged')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https-tagged')]"),
+							},
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
+							FrontendPort:     new(int32(443)),
+							BackendPort:      new(int32(8444)),
 						},
-						BackendAddressPool: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
-						},
-						Probe: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-tagged')]"),
-						},
-						Protocol:         new(armnetwork.TransportProtocolTCP),
-						LoadDistribution: new(armnetwork.LoadDistributionDefault),
-						FrontendPort:     new(int32(443)),
-						BackendPort:      new(int32(8444)),
+						Name: new("portal-lbrule-8444"),
 					},
-					Name: new("portal-lbrule-8444"),
-				},
-				{
-					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-						FrontendIPConfiguration: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
+							},
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
+							FrontendPort:     new(int32(443)),
+							BackendPort:      new(int32(444)),
 						},
-						BackendAddressPool: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
-						},
-						Probe: &armnetwork.SubResource{
-							ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
-						},
-						Protocol:         new(armnetwork.TransportProtocolTCP),
-						LoadDistribution: new(armnetwork.LoadDistributionDefault),
-						FrontendPort:     new(int32(443)),
-						BackendPort:      new(int32(444)),
+						Name: new("portal-lbrule"),
 					},
-					Name: new("portal-lbrule"),
-				},
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &armnetwork.SubResource{
@@ -341,6 +341,24 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: new("portal-lbrule-ssh"),
 					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend-tagged')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh-tagged')]"),
+							},
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
+							FrontendPort:     new(int32(22)),
+							BackendPort:      new(int32(2223)),
+						},
+						Name: new("portal-lbrule-ssh-tagged"),
+					},
 				},
 				Probes: []*armnetwork.Probe{
 					{
@@ -352,41 +370,49 @@ func (g *generator) rpLB() *arm.Resource {
 						},
 						Name: new("rp-probe"),
 					},
-				{
-					Properties: &armnetwork.ProbePropertiesFormat{
-						Protocol:       new(armnetwork.ProbeProtocolHTTPS),
-						Port:           new(int32(8443)),
-						NumberOfProbes: new(int32(2)),
-						RequestPath:    new("/healthz/ready"),
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
+							Port:           new(int32(8443)),
+							NumberOfProbes: new(int32(2)),
+							RequestPath:    new("/healthz/ready"),
+						},
+						Name: new("rp-probe-tagged"),
 					},
-					Name: new("rp-probe-tagged"),
-				},
-				{
-					Properties: &armnetwork.ProbePropertiesFormat{
-						Protocol:       new(armnetwork.ProbeProtocolHTTPS),
-						Port:           new(int32(444)),
-						NumberOfProbes: new(int32(2)),
-						RequestPath:    new("/healthz/ready"),
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
+							Port:           new(int32(444)),
+							NumberOfProbes: new(int32(2)),
+							RequestPath:    new("/healthz/ready"),
+						},
+						Name: new("portal-probe-https"),
 					},
-					Name: new("portal-probe-https"),
-				},
-				{
-					Properties: &armnetwork.ProbePropertiesFormat{
-						Protocol:       new(armnetwork.ProbeProtocolHTTPS),
-						Port:           new(int32(8444)),
-						NumberOfProbes: new(int32(2)),
-						RequestPath:    new("/healthz/ready"),
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
+							Port:           new(int32(8444)),
+							NumberOfProbes: new(int32(2)),
+							RequestPath:    new("/healthz/ready"),
+						},
+						Name: new("portal-probe-https-tagged"),
 					},
-					Name: new("portal-probe-tagged"),
-				},
-				{
-					Properties: &armnetwork.ProbePropertiesFormat{
-						Protocol:       new(armnetwork.ProbeProtocolTCP),
-						Port:           new(int32(2222)),
-						NumberOfProbes: new(int32(2)),
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolTCP),
+							Port:           new(int32(2222)),
+							NumberOfProbes: new(int32(2)),
+						},
+						Name: new("portal-probe-ssh"),
 					},
-					Name: new("portal-probe-ssh"),
-				},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       new(armnetwork.ProbeProtocolTCP),
+							Port:           new(int32(2223)),
+							NumberOfProbes: new(int32(2)),
+						},
+						Name: new("portal-probe-ssh-tagged"),
+					},
 				},
 			},
 			Name:     new("rp-lb"),
