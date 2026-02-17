@@ -67,28 +67,17 @@ func EnsureClusterMsiCertificate(ctx context.Context) error {
 		msiDataplane = dataplane.NewClientFactory(fpMSICred, taskEnv.MsiRpEndpoint(), msiDataplaneClientOptions)
 	}
 
-	// store existing certificate in a variable first, then run the ensure function
-	secretName := dataplane.IdentifierForManagedIdentityCredentials(oc.ID)
-	existingCert, err := kvStore.GetSecret(ctx, secretName, "", nil)
-	if err != nil {
-		return mimo.TransientError(fmt.Errorf("failed to get existing certificate: %w", err))
-	}
-
-	err = cluster.EnsureClusterMsiCertificateWithParams(ctx, oc.ID, oc.OpenShiftCluster, taskEnv.Now, kvStore, msiDataplane)
+	result, err := cluster.EnsureClusterMsiCertificateWithParams(ctx, oc.ID, oc.OpenShiftCluster, taskEnv.Now, kvStore, msiDataplane)
 	if err != nil {
 		return mimo.TransientError(fmt.Errorf("failed to ensure cluster MSI certificate: %w", err))
 	}
 
-	// check if the certificate was actually renewed by comparing before/after
-	// we do this because the MSI functions don't provide details on if a cert was renewed or not
-	newCert, err := kvStore.GetSecret(ctx, secretName, "", nil)
-	if err != nil {
-		return mimo.TransientError(fmt.Errorf("failed to verify certificate after renewal: %w", err))
-	}
-
-	if existingCert.ID != nil && newCert.ID != nil && *existingCert.ID != *newCert.ID {
+	switch result {
+	case cluster.MsiCertificateRefreshResultCreated:
+		th.SetResultMessage("cluster MSI certificate created successfully")
+	case cluster.MsiCertificateRefreshResultRenewed:
 		th.SetResultMessage("cluster MSI certificate renewed successfully")
-	} else {
+	case cluster.MsiCertificateRefreshResultUnchanged:
 		th.SetResultMessage("cluster MSI certificate verified (no renewal needed)")
 	}
 
