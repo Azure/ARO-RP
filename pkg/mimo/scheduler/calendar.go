@@ -26,7 +26,7 @@ type calendar struct {
 
 var calRegex = regexp.MustCompile(`(?:((?:Sun|Mon|Tue|Wed|Thu|Fri|Sat|,)+) )?([0-9,\*]+)-([0-9,\*]+)-([0-9,\*]+) ([0-9,\*]+):([0-9,\*]+):([0-9,\*]+)`)
 
-func parseCalendar(s string) (cal calendar, reterr error) {
+func ParseCalendar(s string) (cal calendar, reterr error) {
 	p := calRegex.FindStringSubmatch(s)
 	if len(p) == 0 {
 		return calendar{}, fmt.Errorf("failed to match '%s'", s)
