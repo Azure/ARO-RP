@@ -12,10 +12,10 @@ import (
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 func (r *Reconciler) workerReplicas(ctx context.Context) (int, error) {
@@ -46,7 +46,7 @@ func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.M
 	}
 
 	// Validate VM size in machine provider spec
-	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), isMaster) {
+	if !validate.VMSizeIsValid(vms.VMSize(machineProviderSpec.VMSize), isMaster) {
 		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%v'", machine.Name, machineProviderSpec.VMSize))
 	}
 

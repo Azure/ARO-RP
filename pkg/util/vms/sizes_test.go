@@ -5,8 +5,6 @@ package vms
 
 import (
 	"testing"
-
-	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func TestMinMasterVMSizesAreSupported(t *testing.T) {
@@ -68,7 +66,7 @@ func TestMinVMSizesForRoleWorkerContainsD2(t *testing.T) {
 	workerSizes := MinVMSizesForRole(VMRoleWorker)
 	d2Found := false
 	for _, sz := range workerSizes {
-		if sz == api.VMSizeStandardD2sV3 || sz == api.VMSizeStandardD2sV4 || sz == api.VMSizeStandardD2sV5 {
+		if sz == VMSizeStandardD2sV3 || sz == VMSizeStandardD2sV4 || sz == VMSizeStandardD2sV5 {
 			d2Found = true
 			break
 		}

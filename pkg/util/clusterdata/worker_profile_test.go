@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -292,7 +293,7 @@ func validWorkerProfile() []api.WorkerProfile {
 	return []api.WorkerProfile{
 		{
 			Name:             "fake-worker-profile-1",
-			VMSize:           api.VMSizeStandardD4sV3,
+			VMSize:           vms.VMSizeStandardD4sV3,
 			DiskSizeGB:       512,
 			EncryptionAtHost: api.EncryptionAtHostDisabled,
 			SubnetID:         workerSubnetID,
@@ -300,7 +301,7 @@ func validWorkerProfile() []api.WorkerProfile {
 		},
 		{
 			Name:             "fake-worker-profile-2",
-			VMSize:           api.VMSizeStandardD4sV3,
+			VMSize:           vms.VMSizeStandardD4sV3,
 			DiskSizeGB:       512,
 			EncryptionAtHost: api.EncryptionAtHostDisabled,
 			SubnetID:         workerSubnetID,

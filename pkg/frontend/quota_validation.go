@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 type QuotaValidator interface {
@@ -22,7 +23,7 @@ type QuotaValidator interface {
 
 type quotaValidator struct{}
 
-func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
+func addRequiredResources(requiredResources map[string]int, vmSize vms.VMSize, count int) error {
 	vm, ok := validate.VMSizeFromName(vmSize)
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided VM SKU %s is not supported.", vmSize))

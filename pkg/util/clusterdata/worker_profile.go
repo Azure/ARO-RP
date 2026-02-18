@@ -24,6 +24,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 type machineClientEnricher struct{}
@@ -79,7 +80,7 @@ func (ce machineClientEnricher) Enrich(
 			continue
 		}
 
-		workerProfiles[i].VMSize = api.VMSize(machineProviderSpec.VMSize)
+		workerProfiles[i].VMSize = vms.VMSize(machineProviderSpec.VMSize)
 		workerProfiles[i].DiskSizeGB = int(machineProviderSpec.OSDisk.DiskSizeGB)
 		workerProfiles[i].SubnetID = fmt.Sprintf(
 			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",

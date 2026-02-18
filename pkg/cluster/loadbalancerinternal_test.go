@@ -23,6 +23,7 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -96,7 +97,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 
 				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
 					{
-						Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
+						Name:      pointerutils.ToPtr(string(vms.VMSizeStandardD16asV4)),
 						Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
 						LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
 							{
@@ -138,7 +139,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 
 				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
 					{
-						Name:         pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
+						Name:         pointerutils.ToPtr(string(vms.VMSizeStandardD16asV4)),
 						Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
 						LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{}),
 						Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
@@ -203,7 +204,7 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 							LoadBalancerProfile: &api.LoadBalancerProfile{},
 						},
 						MasterProfile: api.MasterProfile{
-							VMSize:   api.VMSizeStandardD16asV4,
+							VMSize:   vms.VMSizeStandardD16asV4,
 							SubnetID: "subnetID",
 						},
 						APIServerProfile: api.APIServerProfile{
@@ -382,7 +383,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 
 			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
 				{
-					Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
+					Name:      pointerutils.ToPtr(string(vms.VMSizeStandardD16asV4)),
 					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
 					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
 						{Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"})},
@@ -566,7 +567,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 							LoadBalancerProfile: &api.LoadBalancerProfile{},
 						},
 						MasterProfile: api.MasterProfile{
-							VMSize:   api.VMSizeStandardD16asV4,
+							VMSize:   vms.VMSizeStandardD16asV4,
 							SubnetID: "subnetID",
 						},
 						APIServerProfile: api.APIServerProfile{

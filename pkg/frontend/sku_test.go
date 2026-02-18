@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -233,16 +234,16 @@ func TestValidateVMSku(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					WorkerProfiles: []api.WorkerProfile{
 						{
-							VMSize:           api.VMSize(tt.workerProfile1Sku),
+							VMSize:           vms.VMSize(tt.workerProfile1Sku),
 							EncryptionAtHost: tt.workerEncryptionAtHost,
 						},
 						{
-							VMSize:           api.VMSize(tt.workerProfile2Sku),
+							VMSize:           vms.VMSize(tt.workerProfile2Sku),
 							EncryptionAtHost: tt.workerEncryptionAtHost,
 						},
 					},
 					MasterProfile: api.MasterProfile{
-						VMSize:           api.VMSize(tt.masterProfileSku),
+						VMSize:           vms.VMSize(tt.masterProfileSku),
 						EncryptionAtHost: tt.masterEncryptionAtHost,
 					},
 				},
@@ -309,10 +310,10 @@ func TestValidateVMSku(t *testing.T) {
 				oc.Properties.WorkerProfiles = nil
 				oc.Properties.WorkerProfilesStatus = []api.WorkerProfile{
 					{
-						VMSize: api.VMSize(tt.workerProfile1Sku),
+						VMSize: vms.VMSize(tt.workerProfile1Sku),
 					},
 					{
-						VMSize: api.VMSize(tt.workerProfile2Sku),
+						VMSize: vms.VMSize(tt.workerProfile2Sku),
 					},
 				}
 			}
