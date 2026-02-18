@@ -21,6 +21,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/log"
 )
 
+const friendlyDateFormat string = "2006-01-02T15:04Z07:00"
+
 type getCachedScheduleDocFunc func() (*api.MaintenanceScheduleDocument, bool)
 
 // get the list of clusters that we have cached
@@ -86,7 +88,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		return false, errors.New("can't get the cached schedule doc")
 	}
 
-	a.log.Infof("processing schedule %s", doc.ID)
+	a.log.Infof("processing schedule %s (task ID=%s)", doc.ID, doc.MaintenanceSchedule.MaintenanceTaskID)
 
 	scheduleWithin, err := time.ParseDuration(doc.MaintenanceSchedule.ScheduleAcross)
 	if err != nil {
@@ -102,24 +104,26 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 
 	next, hasFutureTime := Next(now, calDef)
 	if !hasFutureTime {
-		a.log.Infof("schedule '%s' will never trigger again, skipping", doc.MaintenanceSchedule.Schedule)
+		a.log.Warnf("schedule '%s' will never trigger again, skipping", doc.MaintenanceSchedule.Schedule)
 		return true, nil
 	}
-	periods := []time.Time{now, next}
+	periods_friendly := []string{next.Format(friendlyDateFormat)}
+	periods := []time.Time{next}
 
 	if doc.MaintenanceSchedule.LookForwardCount > 1 {
 		for i := range doc.MaintenanceSchedule.LookForwardCount - 1 {
 			n, inFuture := Next(periods[len(periods)-1], calDef)
 			if !inFuture {
-				a.log.Infof("schedule %s will only trigger %d times but look forward is %d", doc.MaintenanceSchedule.Schedule, i-1, doc.MaintenanceSchedule.LookForwardCount)
+				a.log.Infof("schedule '%s' will only trigger %d times but look forward is %d", doc.MaintenanceSchedule.Schedule, i+1, doc.MaintenanceSchedule.LookForwardCount)
 				break
 			}
 
 			periods = append(periods, n)
+			periods_friendly = append(periods_friendly, n.Format(friendlyDateFormat))
 		}
 	}
 
-	a.log.Infof("processing windows in these time blocks: %s", periods)
+	a.log.Infof("next valid scheduled times: %s", strings.Join(periods_friendly, ", "))
 
 	// go over each of the clusters
 	for clusterID, cl := range a.getClusters() {
@@ -175,9 +179,10 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			continue
 		}
 
+		manifestsFound := 0
 		manifestsCreated := 0
 		manifestsCancelled := 0
-		for _, target := range periods[1:] {
+		for _, target := range periods {
 			targetWithOffset := target.Add(offsetWithinScheduleAcross)
 			scheduleMatch, found := foundPeriods[targetWithOffset.Unix()]
 			if !found {
@@ -200,13 +205,14 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 					break
 				}
 
-				clusterLog.Infof("created new manifest id=%s for %s window (%s)", newManifest.ID, target, targetWithOffset)
+				clusterLog.Infof("created new manifest id=%s for %s window (%s)", newManifest.ID, target.Format(friendlyDateFormat), targetWithOffset.Format(time.RFC3339))
 				manifestsCreated += 1
 			} else {
-				clusterLog.Infof("found manifest for %s (%s)", target, scheduleMatch)
+				clusterLog.Debugf("found manifest for %s (%s)", target, scheduleMatch)
 				// Remove it from the foundPeriods, so that we can remove any
 				// remainders (e.g. if we changed the schedule)
 				delete(foundPeriods, targetWithOffset.Unix())
+				manifestsFound += 1
 			}
 		}
 
@@ -225,7 +231,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			}
 		}
 
-		clusterLog.Infof("created %d new manifests, cancelled %d existing manifests", manifestsCreated, manifestsCancelled)
+		clusterLog.Infof("created=%d, found valid=%d, cancelled=%d", manifestsCreated, manifestsFound, manifestsCancelled)
 	}
 
 	return true, nil
