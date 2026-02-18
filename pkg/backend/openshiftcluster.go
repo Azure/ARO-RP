@@ -367,13 +367,17 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, d
 	}
 
 	var statusCode int
+	var cloudErrorCode string
 	var cloudErr *api.CloudError
 	detailedErr := autorest.DetailedError{}
 	var respErr *azcore.ResponseError
 
-	// Get the HTTP status code and map it to a result type
+	// Get the HTTP status code and cloud error code, then map to a result type
 	if errors.As(backendErr, &cloudErr) {
 		statusCode = cloudErr.StatusCode
+		if cloudErr.CloudErrorBody != nil {
+			cloudErrorCode = cloudErr.Code
+		}
 	} else if errors.As(backendErr, &detailedErr) {
 		if detailedErr.Response != nil {
 			statusCode = detailedErr.Response.StatusCode
@@ -383,7 +387,7 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, d
 	}
 
 	if statusCode > 0 {
-		resultType := utillog.MapStatusCodeToResultType(statusCode)
+		resultType := utillog.MapStatusCodeToResultType(statusCode, cloudErrorCode)
 		log = log.WithField("resultType", resultType)
 		if resultType == utillog.SuccessResultType {
 			log.Info("long running operation succeeded")

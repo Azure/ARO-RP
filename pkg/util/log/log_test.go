@@ -9,12 +9,15 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func TestMapStatusCodeToResultType(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		statusCode     int
+		cloudErrorCode string
 		expectedResult ResultType
 	}{
 		{
@@ -37,9 +40,15 @@ func TestMapStatusCodeToResultType(t *testing.T) {
 			statusCode:     500,
 			expectedResult: ServerErrorResultType,
 		},
+		{
+			name:           "Map 400 with InvalidResourceProviderPermissions to ServerError",
+			statusCode:     400,
+			cloudErrorCode: api.CloudErrorCodeInvalidResourceProviderPermissions,
+			expectedResult: ServerErrorResultType,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if MapStatusCodeToResultType(tt.statusCode) != tt.expectedResult {
+			if MapStatusCodeToResultType(tt.statusCode, tt.cloudErrorCode) != tt.expectedResult {
 				t.Error(tt.expectedResult + " found. Expected " + tt.expectedResult)
 			}
 		})

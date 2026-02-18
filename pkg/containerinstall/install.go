@@ -70,7 +70,7 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 		steps.Action(m.cleanupContainers),
 	}
 
-	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil)
+	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil, "")
 	if err != nil {
 		return err
 	}
