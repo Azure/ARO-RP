@@ -54,6 +54,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 type ClusterConfig struct {
@@ -112,19 +113,21 @@ const (
 )
 
 func DefaultMasterVmSizes() []string {
-	return []string{
-		api.VMSizeStandardD8sV5.String(),
-		api.VMSizeStandardD8sV4.String(),
-		api.VMSizeStandardD8sV3.String(),
+	sizes := vms.MinVMSizesForRole(vms.VMRoleMaster)
+	result := make([]string, len(sizes))
+	for i, s := range sizes {
+		result[i] = s.String()
 	}
+	return result
 }
 
 func DefaultWorkerVmSizes() []string {
-	return []string{
-		api.VMSizeStandardD4sV5.String(),
-		api.VMSizeStandardD4sV4.String(),
-		api.VMSizeStandardD4sV3.String(),
+	sizes := vms.MinVMSizesForRole(vms.VMRoleWorker)
+	result := make([]string, len(sizes))
+	for i, s := range sizes {
+		result[i] = s.String()
 	}
+	return result
 }
 
 func insecureLocalClient() *http.Client {
@@ -190,18 +193,25 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	}
 	if len(conf.WorkerVMSizes) == 0 {
 		if conf.WorkerVMSize == "" {
-			// No explicit worker VM size set - use defaults.
-			// In local dev mode, prepend a smaller size for cost savings.
-			if conf.IsLocalDevelopmentMode() {
-				conf.WorkerVMSizes = append(
-					[]string{api.VMSizeStandardD2sV3.String()},
-					DefaultWorkerVmSizes()...,
-				)
-			} else {
-				conf.WorkerVMSizes = DefaultWorkerVmSizes()
-			}
+			conf.WorkerVMSizes = DefaultWorkerVmSizes()
 		} else {
 			conf.WorkerVMSizes = []string{conf.WorkerVMSize}
+		}
+	}
+
+	// In CI or local dev mode, shuffle VM sizes to spread quota pressure
+	// across families. For workers, only shuffle the D4+ fallback portion
+	// (index 3 onward), keeping D2 sizes first for cost savings.
+	if conf.IsCI || conf.IsLocalDevelopmentMode() {
+		rand.Shuffle(len(conf.MasterVMSizes), func(i, j int) {
+			conf.MasterVMSizes[i], conf.MasterVMSizes[j] = conf.MasterVMSizes[j], conf.MasterVMSizes[i]
+		})
+		d2Count := 3
+		if len(conf.WorkerVMSizes) > d2Count {
+			fallbacks := conf.WorkerVMSizes[d2Count:]
+			rand.Shuffle(len(fallbacks), func(i, j int) {
+				fallbacks[i], fallbacks[j] = fallbacks[j], fallbacks[i]
+			})
 		}
 	}
 
