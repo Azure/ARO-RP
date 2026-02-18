@@ -5,6 +5,7 @@ package v20210901preview
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 type openShiftClusterConverter struct{}
@@ -36,7 +37,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				SoftwareDefinedNetwork: SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
 			},
 			MasterProfile: MasterProfile{
-				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
+				VMSize:              oc.Properties.MasterProfile.VMSize,
 				SubnetID:            oc.Properties.MasterProfile.SubnetID,
 				EncryptionAtHost:    EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost),
 				DiskEncryptionSetID: oc.Properties.MasterProfile.DiskEncryptionSetID,
@@ -68,7 +69,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		for _, p := range workerProfiles {
 			out.Properties.WorkerProfiles = append(out.Properties.WorkerProfiles, WorkerProfile{
 				Name:                p.Name,
-				VMSize:              VMSize(p.VMSize),
+				VMSize:              p.VMSize,
 				DiskSizeGB:          p.DiskSizeGB,
 				SubnetID:            p.SubnetID,
 				Count:               p.Count,
@@ -156,7 +157,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
-	out.Properties.MasterProfile.VMSize = vms.VMSize(oc.Properties.MasterProfile.VMSize)
+	out.Properties.MasterProfile.VMSize = oc.Properties.MasterProfile.VMSize
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)
 	out.Properties.MasterProfile.DiskEncryptionSetID = oc.Properties.MasterProfile.DiskEncryptionSetID

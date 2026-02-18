@@ -13,18 +13,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 func (f *frontend) supportedvmsizes(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vmRole := r.URL.Query().Get("vmRole")
+	vmRole := vms.VMRole(r.URL.Query().Get("vmRole"))
 	b, err := f.supportedVMSizesForRole(vmRole)
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) supportedVMSizesForRole(vmRole string) ([]byte, error) {
-	if vmRole != validate.VMRoleMaster && vmRole != validate.VMRoleWorker {
+func (f *frontend) supportedVMSizesForRole(vmRole vms.VMRole) ([]byte, error) {
+	if vmRole != vms.VMRoleMaster && vmRole != vms.VMRoleWorker {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmRole '%s' is invalid. vmRole can only be master or worker", vmRole))
 	}
 	vmsizes := validate.SupportedVMSizesByRole(vmRole)

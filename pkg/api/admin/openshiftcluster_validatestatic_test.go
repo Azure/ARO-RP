@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/api/util/vms"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {

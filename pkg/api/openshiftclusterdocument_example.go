@@ -1,6 +1,10 @@
 package api
 
-import "time"
+import (
+	"time"
+
+	"github.com/Azure/ARO-RP/pkg/util/vms"
+)
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -61,13 +65,13 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 					PreconfiguredNSG: PreconfiguredNSGDisabled,
 				},
 				MasterProfile: MasterProfile{
-					VMSize:   VMSizeStandardD8sV3,
+					VMSize:   vms.VMSizeStandardD8sV3,
 					SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master",
 				},
 				WorkerProfiles: []WorkerProfile{
 					{
 						Name:       "worker",
-						VMSize:     VMSizeStandardD2sV3,
+						VMSize:     vms.VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
 						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      3,
@@ -76,21 +80,21 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				WorkerProfilesStatus: []WorkerProfile{
 					{
 						Name:       "worker1",
-						VMSize:     VMSizeStandardD2sV3,
+						VMSize:     vms.VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
 						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      1,
 					},
 					{
 						Name:       "worker2",
-						VMSize:     VMSizeStandardD2sV3,
+						VMSize:     vms.VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
 						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      1,
 					},
 					{
 						Name:       "worker3",
-						VMSize:     VMSizeStandardD2sV3,
+						VMSize:     vms.VMSizeStandardD2sV3,
 						DiskSizeGB: 128,
 						SubnetID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
 						Count:      1,

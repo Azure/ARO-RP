@@ -137,14 +137,14 @@ func getOpenShiftClusterRequest() *v20240812preview.OpenShiftCluster {
 			},
 			MasterProfile: v20240812preview.MasterProfile{
 				EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-				VMSize:           v20240812preview.VMSize(mockVMSize),
+				VMSize:           vms.VMSize(mockVMSize),
 				SubnetID:         mockMasterSubnetID,
 			},
 			WorkerProfiles: []v20240812preview.WorkerProfile{
 				{
 					Name:             "worker",
 					EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-					VMSize:           v20240812preview.VMSize(mockVMSize),
+					VMSize:           vms.VMSize(mockVMSize),
 					DiskSizeGB:       128,
 					Count:            3,
 					SubnetID:         mockWorkerSubnetID,
@@ -205,14 +205,14 @@ func getNewOpenShiftClusterResponse() *v20240812preview.OpenShiftCluster {
 			},
 			MasterProfile: v20240812preview.MasterProfile{
 				EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-				VMSize:           v20240812preview.VMSize(mockVMSize),
+				VMSize:           vms.VMSize(mockVMSize),
 				SubnetID:         mockMasterSubnetID,
 			},
 			WorkerProfiles: []v20240812preview.WorkerProfile{
 				{
 					Name:             "worker",
 					EncryptionAtHost: v20240812preview.EncryptionAtHostDisabled,
-					VMSize:           v20240812preview.VMSize(mockVMSize),
+					VMSize:           vms.VMSize(mockVMSize),
 					DiskSizeGB:       128,
 					Count:            3,
 					SubnetID:         mockWorkerSubnetID,
@@ -1732,14 +1732,14 @@ func TestPutorPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				},
 				MasterProfile: admin.MasterProfile{
 					EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					VMSize:           admin.VMSize(mockVMSize),
+					VMSize:           vms.VMSize(mockVMSize),
 					SubnetID:         mockMasterSubnetID,
 				},
 				WorkerProfiles: []admin.WorkerProfile{
 					{
 						Name:             "worker",
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-						VMSize:           admin.VMSize(mockVMSize),
+						VMSize:           vms.VMSize(mockVMSize),
 						DiskSizeGB:       128,
 						Count:            3,
 						SubnetID:         mockWorkerSubnetID,
