@@ -18,6 +18,7 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -277,7 +278,7 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 }
 
 func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile, version string) error {
-	if !validate.VMSizeIsValidForVersion(vms.VMSize(mp.VMSize), true, version) {
+	if !validate.VMSizeIsValidForVersion(mp.VMSize, true, version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid.", mp.VMSize))
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {

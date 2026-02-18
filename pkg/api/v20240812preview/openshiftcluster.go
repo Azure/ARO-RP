@@ -1,6 +1,10 @@
 package v20240812preview
 
-import "time"
+import (
+	"time"
+
+	"github.com/Azure/ARO-RP/pkg/util/vms"
+)
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -219,7 +223,7 @@ const (
 // MasterProfile represents a master profile.
 type MasterProfile struct {
 	// The size of the master VMs.
-	VMSize VMSize `json:"vmSize,omitempty"`
+	VMSize vms.VMSize `json:"vmSize,omitempty"`
 
 	// The Azure resource ID of the master subnet.
 	SubnetID string `json:"subnetId,omitempty"`
@@ -242,7 +246,7 @@ type WorkerProfile struct {
 	Name string `json:"name,omitempty"`
 
 	// The size of the worker VMs.
-	VMSize VMSize `json:"vmSize,omitempty"`
+	VMSize vms.VMSize `json:"vmSize,omitempty"`
 
 	// The disk size of the worker VMs.
 	DiskSizeGB int `json:"diskSizeGB,omitempty"`

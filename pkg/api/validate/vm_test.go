@@ -5,6 +5,8 @@ package validate
 
 import (
 	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 func TestDiskSizeIsValid(t *testing.T) {

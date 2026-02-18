@@ -15,12 +15,12 @@ import (
 )
 
 func TestSupportedvmsizes(t *testing.T) {
-	mastervmsizes := validate.SupportedVMSizesByRole(validate.VMRoleMaster)
-	workervmsizes := validate.SupportedVMSizesByRole(validate.VMRoleWorker)
+	mastervmsizes := validate.SupportedVMSizesByRole(vms.VMRoleMaster)
+	workervmsizes := validate.SupportedVMSizesByRole(vms.VMRoleWorker)
 
 	type test struct {
 		name         string
-		vmRole       string
+		vmRole       vms.VMRole
 		wantResponse map[vms.VMSize]vms.VMSizeStruct
 		wantError    string
 	}
@@ -28,25 +28,25 @@ func TestSupportedvmsizes(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name:         "vmRole is invalid",
-			vmRole:       "invalidVMRole",
+			vmRole:       vms.VMRole("invalidVMRole"),
 			wantError:    `400: InvalidParameter: : The provided vmRole 'invalidVMRole' is invalid. vmRole can only be master or worker`,
 			wantResponse: nil,
 		},
 		{
 			name:         "vmRole is empty",
-			vmRole:       "",
+			vmRole:       vms.VMRole(""),
 			wantError:    `400: InvalidParameter: : The provided vmRole '' is invalid. vmRole can only be master or worker`,
 			wantResponse: nil,
 		},
 		{
 			name:         "master as vmRole",
-			vmRole:       "master",
+			vmRole:       vms.VMRoleMaster,
 			wantError:    "",
 			wantResponse: mastervmsizes,
 		},
 		{
 			name:         "worker as vmRole",
-			vmRole:       "worker",
+			vmRole:       vms.VMRoleWorker,
 			wantError:    "",
 			wantResponse: workervmsizes,
 		},

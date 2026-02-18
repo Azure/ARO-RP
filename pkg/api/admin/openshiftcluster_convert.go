@@ -371,7 +371,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 
-	out.Properties.MasterProfile.VMSize = vms.VMSize(oc.Properties.MasterProfile.VMSize)
+	out.Properties.MasterProfile.VMSize = oc.Properties.MasterProfile.VMSize
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)
 	out.Properties.MasterProfile.DiskEncryptionSetID = oc.Properties.MasterProfile.DiskEncryptionSetID

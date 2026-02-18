@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 type validateTest struct {
@@ -80,14 +81,14 @@ func validOpenShiftCluster() *OpenShiftCluster {
 				SoftwareDefinedNetwork: SoftwareDefinedNetworkOVNKubernetes,
 			},
 			MasterProfile: MasterProfile{
-				VMSize:           VMSizeStandardD8sV3,
+				VMSize:           vms.VMSizeStandardD8sV3,
 				EncryptionAtHost: EncryptionAtHostDisabled,
 				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
 			},
 			WorkerProfiles: []WorkerProfile{
 				{
 					Name:             "worker",
-					VMSize:           VMSizeStandardD4sV3,
+					VMSize:           vms.VMSizeStandardD4sV3,
 					EncryptionAtHost: EncryptionAtHostDisabled,
 					DiskSizeGB:       128,
 					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
@@ -611,7 +612,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 		{
 			name: "vmSize unsupported",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = VMSizeStandardD2sV3
+				oc.Properties.MasterProfile.VMSize = vms.VMSizeStandardD2sV3
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid.",
 		},
@@ -1008,7 +1009,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "worker vmSize change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD8sV3 },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = vms.VMSizeStandardD8sV3 },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
