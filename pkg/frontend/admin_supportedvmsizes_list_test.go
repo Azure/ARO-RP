@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-test/deep"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -21,7 +21,7 @@ func TestSupportedvmsizes(t *testing.T) {
 	type test struct {
 		name         string
 		vmRole       string
-		wantResponse map[api.VMSize]api.VMSizeStruct
+		wantResponse map[vms.VMSize]vms.VMSizeStruct
 		wantError    string
 	}
 
@@ -56,7 +56,7 @@ func TestSupportedvmsizes(t *testing.T) {
 			gotResponse, err := f.supportedVMSizesForRole(tt.vmRole)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 			if gotResponse != nil || tt.wantResponse != nil {
-				v := map[api.VMSize]api.VMSizeStruct{}
+				v := map[vms.VMSize]vms.VMSizeStruct{}
 				err = json.Unmarshal(gotResponse, &v)
 				if err != nil {
 					t.Error(err)

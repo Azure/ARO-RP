@@ -26,6 +26,7 @@ import (
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -318,14 +319,14 @@ func getOpenShiftClusterDocument(provisioningState, lastProvisioningState, faile
 				},
 				MasterProfile: api.MasterProfile{
 					EncryptionAtHost: api.EncryptionAtHostDisabled,
-					VMSize:           api.VMSize(mockVMSize),
+					VMSize:           vms.VMSize(mockVMSize),
 					SubnetID:         mockMasterSubnetID,
 				},
 				WorkerProfiles: []api.WorkerProfile{
 					{
 						Name:             "worker",
 						EncryptionAtHost: api.EncryptionAtHostDisabled,
-						VMSize:           api.VMSize(mockVMSize),
+						VMSize:           vms.VMSize(mockVMSize),
 						DiskSizeGB:       128,
 						Count:            3,
 						SubnetID:         mockWorkerSubnetID,
