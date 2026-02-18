@@ -15,7 +15,6 @@ func (vmSize VMSize) String() string {
 }
 
 // VMSize constants
-// add required resources in pkg/validate/dynamic/quota.go when adding a new VMSize
 const (
 	VMSizeStandardD2sV3  VMSize = "Standard_D2s_v3"
 	VMSizeStandardD4sV3  VMSize = "Standard_D4s_v3"
@@ -190,7 +189,7 @@ var ver419 = version.NewVersion(4, 19, 0)
 type VMSizeStruct struct {
 	CoreCount      int      // `json:"coreCount,omitempty"`
 	Family         VMFamily //`json:"family,omitempty"`
-	MinimumVersion *version.Version
+	MinimumVersion version.Version
 }
 
 var (
@@ -236,6 +235,7 @@ var (
 	VMSizeStandardD64dsV5Struct = VMSizeStruct{CoreCount: 64, Family: standardDDSv5}
 	VMSizeStandardD96dsV5Struct = VMSizeStruct{CoreCount: 96, Family: standardDDSv5}
 
+	VMSizeStandardD2sV6Struct  = VMSizeStruct{CoreCount: 2, Family: standardDSv6, MinimumVersion: ver419}
 	VMSizeStandardD4sV6Struct  = VMSizeStruct{CoreCount: 4, Family: standardDSv6, MinimumVersion: ver419}
 	VMSizeStandardD8sV6Struct  = VMSizeStruct{CoreCount: 8, Family: standardDSv6, MinimumVersion: ver419}
 	VMSizeStandardD16sV6Struct = VMSizeStruct{CoreCount: 16, Family: standardDSv6, MinimumVersion: ver419}
@@ -349,9 +349,9 @@ var (
 	VMSizeStandardD64ldsV6Struct = VMSizeStruct{CoreCount: 64, Family: standardDLDSv6, MinimumVersion: ver419}
 	VMSizeStandardD96ldsV6Struct = VMSizeStruct{CoreCount: 96, Family: standardDLDSv6, MinimumVersion: ver419}
 
-	//Struct GPU nodes
-	//Struct the formatting of the ncasv3_t4 family is different.  This can be seen through a
-	//Struct az vm list-usage -l eastus
+	// Struct GPU nodes
+	// Struct the formatting of the ncasv3_t4 family is different.  This can be seen through a
+	// Struct az vm list-usage -l eastus
 	VMSizeStandardNC4asT4V3Struct  = VMSizeStruct{CoreCount: 4, Family: standardNCAS}
 	VMSizeStandardNC8asT4V3Struct  = VMSizeStruct{CoreCount: 8, Family: standardNCAS}
 	VMSizeStandardNC16asT4V3Struct = VMSizeStruct{CoreCount: 16, Family: standardNCAS}
