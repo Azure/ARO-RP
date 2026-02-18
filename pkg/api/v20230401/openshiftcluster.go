@@ -3,7 +3,7 @@ package v20230401
 import (
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 // Copyright (c) Microsoft Corporation.

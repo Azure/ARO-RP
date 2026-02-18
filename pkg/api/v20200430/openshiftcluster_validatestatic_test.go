@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 type validateTest struct {

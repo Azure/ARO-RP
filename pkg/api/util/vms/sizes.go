@@ -16,7 +16,7 @@ import (
 // To add new instance types, needs Project Management's involvement and instructions are below.,
 // https://github.com/Azure/ARO-RP/blob/master/docs/adding-new-instance-types.md
 
-var SupportedMasterVmSizes = map[VMSize]VMSizeStruct{
+var SupportedMasterVMSizes = map[VMSize]VMSizeStruct{
 	// General purpose
 	VMSizeStandardD8sV3:  VMSizeStandardD8sV3Struct,
 	VMSizeStandardD16sV3: VMSizeStandardD16sV3Struct,
@@ -108,7 +108,7 @@ var SupportedMasterVmSizes = map[VMSize]VMSizeStruct{
 	VMSizeStandardD96dsV6: VMSizeStandardD96dsV6Struct,
 }
 
-var SupportedWorkerVmSizes = map[VMSize]VMSizeStruct{
+var SupportedWorkerVMSizes = map[VMSize]VMSizeStruct{
 	// General purpose
 	VMSizeStandardD4sV3:  VMSizeStandardD4sV3Struct,
 	VMSizeStandardD8sV3:  VMSizeStandardD8sV3Struct,
@@ -279,14 +279,14 @@ var SupportedWorkerVmSizes = map[VMSize]VMSizeStruct{
 	VMSizeStandardD96ldsV6: VMSizeStandardD96ldsV6Struct,
 }
 
-var SupportedMasterVmSizesForInternalUser = map[VMSize]VMSizeStruct{
+var SupportedMasterVMSizesForInternalUser = map[VMSize]VMSizeStruct{
 	VMSizeStandardD4sV3: VMSizeStandardD4sV3Struct,
 	VMSizeStandardD4sV4: VMSizeStandardD4sV4Struct,
 	VMSizeStandardD4sV5: VMSizeStandardD4sV5Struct,
 	VMSizeStandardD4sV6: VMSizeStandardD4sV6Struct,
 }
 
-var SupportedWorkerVmSizesForInternalUser = map[VMSize]VMSizeStruct{
+var SupportedWorkerVMSizesForInternalUser = map[VMSize]VMSizeStruct{
 	VMSizeStandardD2sV3: VMSizeStandardD2sV3Struct,
 	VMSizeStandardD2sV4: VMSizeStandardD2sV4Struct,
 	VMSizeStandardD2sV5: VMSizeStandardD2sV5Struct,
@@ -294,8 +294,8 @@ var SupportedWorkerVmSizesForInternalUser = map[VMSize]VMSizeStruct{
 }
 
 func init() {
-	maps.Copy(SupportedMasterVmSizesForInternalUser, SupportedMasterVmSizes)
-	maps.Copy(SupportedWorkerVmSizesForInternalUser, SupportedWorkerVmSizes)
+	maps.Copy(SupportedMasterVMSizesForInternalUser, SupportedMasterVMSizes)
+	maps.Copy(SupportedWorkerVMSizesForInternalUser, SupportedWorkerVMSizes)
 }
 
 // TODO: MAITIU - Choose correct sizes
@@ -325,14 +325,15 @@ var MinWorkerVMSizes = map[VMSize]VMSizeStruct{
 }
 
 func GetCICandidateMasterVMSizes() []VMSize {
-	var vmSizes = slices.Collect(maps.Keys(MinMasterVMSizes))
+	vmSizes := slices.Collect(maps.Keys(MinMasterVMSizes))
 	return shuffler(vmSizes)
 }
 
 func GetCICandidateWorkerVMSizes() []VMSize {
-	var vmSizes = slices.Collect(maps.Keys(MinWorkerVMSizes))
+	vmSizes := slices.Collect(maps.Keys(MinWorkerVMSizes))
 	return shuffler(vmSizes)
 }
+
 func shuffler(vmSizes []VMSize) []VMSize {
 	rand.Shuffle(len(vmSizes), func(i, j int) {
 		vmSizes[i], vmSizes[j] = vmSizes[j], vmSizes[i]

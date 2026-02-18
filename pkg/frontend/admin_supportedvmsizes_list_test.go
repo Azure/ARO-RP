@@ -10,7 +10,7 @@ import (
 	"github.com/go-test/deep"
 
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 

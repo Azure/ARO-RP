@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 

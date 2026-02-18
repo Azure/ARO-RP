@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 func validateTerminalProvisioningState(state api.ProvisioningState) error {

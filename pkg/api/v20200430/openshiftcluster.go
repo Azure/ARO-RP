@@ -1,6 +1,6 @@
 package v20200430
 
-import "github.com/Azure/ARO-RP/pkg/util/vms"
+import "github.com/Azure/ARO-RP/pkg/api/util/vms"
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
