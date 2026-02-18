@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 

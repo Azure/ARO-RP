@@ -6,7 +6,7 @@ package v20230904
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
 
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 type openShiftClusterConverter struct{}
