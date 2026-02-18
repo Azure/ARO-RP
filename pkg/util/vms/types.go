@@ -8,6 +8,14 @@ import (
 // Licensed under the Apache License 2.0.
 
 // VMSize represents a VM size
+type VMRole string
+
+const (
+	VMRoleMaster VMRole = "master"
+	VMRoleWorker VMRole = "worker"
+)
+
+// VMSize represents a VM size
 type VMSize string
 
 func (vmSize VMSize) String() string {
