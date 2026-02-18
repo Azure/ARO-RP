@@ -22,62 +22,90 @@ import (
 
 var errClusterMsiNotPresentInResponse = errors.New("cluster msi not present in msi credentials response")
 
+type MsiKeyVaultStore interface {
+	GetSecret(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error)
+	SetSecret(ctx context.Context, name string, parameters azsecrets.SetSecretParameters, options *azsecrets.SetSecretOptions) (azsecrets.SetSecretResponse, error)
+}
+
+type MsiCertificateRefreshResult int
+
+const (
+	MsiCertificateRefreshResultUnchanged MsiCertificateRefreshResult = iota
+	MsiCertificateRefreshResultCreated
+	MsiCertificateRefreshResultRenewed
+)
+
 // ensureClusterMsiCertificate leverages the MSI dataplane module to fetch the MSI's
 // backing certificate (if needed) and store the certificate in the cluster MSI key
 // vault. If the certificate stored in keyvault is eligible for renewal, the
 // certificate is empty or the certificate is for a different identity, this
 // function will request and persist a new certificate.
 func (m *manager) ensureClusterMsiCertificate(ctx context.Context) error {
-	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
+	_, err := EnsureClusterMsiCertificateWithParams(ctx, m.doc.ID, m.doc.OpenShiftCluster, m.env.Now, m.clusterMsiKeyVaultStore, m.msiDataplane)
+	return err
+}
 
-	existingMsiCertificate, err := m.clusterMsiKeyVaultStore.GetSecret(ctx, secretName, "", nil)
+func EnsureClusterMsiCertificateWithParams(ctx context.Context, clusterDocID string, cluster *api.OpenShiftCluster, nowFunc func() time.Time, kvStore MsiKeyVaultStore, msiDataplane dataplane.ClientFactory) (MsiCertificateRefreshResult, error) {
+	secretName := dataplane.IdentifierForManagedIdentityCredentials(clusterDocID)
+
+	existingMsiCertificate, err := kvStore.GetSecret(ctx, secretName, "", nil)
 	if err != nil && !azureerrors.IsNotFoundError(err) {
-		return err
+		return MsiCertificateRefreshResultUnchanged, err
 	}
 
+	certExisted := err == nil
+
 	// If the secret exists, we need to decide if it should be replaced.
-	if err == nil {
-		replace, err := m.shouldReplaceMSICertificate(&existingMsiCertificate, m.env.Now())
+	if certExisted {
+		replace, err := shouldReplaceMSICertificate(&existingMsiCertificate, cluster, nowFunc())
 		if err != nil {
-			return err
+			return MsiCertificateRefreshResultUnchanged, err
 		}
 		if !replace {
 			// The existing certificate is valid, so we're done.
-			return nil
+			return MsiCertificateRefreshResultUnchanged, nil
 		}
 	}
 	// If we reach this point, it's because the secret was not found, or it was found but is invalid/expired.
 	// In either case, we need to create a new one.
 
-	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	clusterMsiResourceId, err := cluster.ClusterMsiResourceId()
 	if err != nil {
-		return err
+		return MsiCertificateRefreshResultUnchanged, err
 	}
 
 	uaMsiRequest := dataplane.UserAssignedIdentitiesRequest{
 		IdentityIDs: []string{clusterMsiResourceId.String()},
 	}
 
-	client, err := m.msiDataplane.NewClient(m.doc.OpenShiftCluster.Identity.IdentityURL)
+	client, err := msiDataplane.NewClient(cluster.Identity.IdentityURL)
 	if err != nil {
-		return err
+		return MsiCertificateRefreshResultUnchanged, err
 	}
 
 	msiCredObj, err := client.GetUserAssignedIdentitiesCredentials(ctx, uaMsiRequest)
 	if err != nil {
-		return err
+		return MsiCertificateRefreshResultUnchanged, err
 	}
 
-	name, parameters, err := dataplane.FormatManagedIdentityCredentialsForStorage(m.doc.ID, *msiCredObj)
+	name, parameters, err := dataplane.FormatManagedIdentityCredentialsForStorage(clusterDocID, *msiCredObj)
 	if err != nil {
-		return fmt.Errorf("failed to format managed identity credentials for storage: %w", err)
+		return MsiCertificateRefreshResultUnchanged, fmt.Errorf("failed to format managed identity credentials for storage: %w", err)
 	}
 
-	_, err = m.clusterMsiKeyVaultStore.SetSecret(ctx, name, parameters, nil)
-	return err
+	_, err = kvStore.SetSecret(ctx, name, parameters, nil)
+	if err != nil {
+		return MsiCertificateRefreshResultUnchanged, err
+	}
+
+	// Determine result based on whether cert existed before
+	if certExisted {
+		return MsiCertificateRefreshResultRenewed, nil
+	}
+	return MsiCertificateRefreshResultCreated, nil
 }
 
-func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
+func shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse, cluster *api.OpenShiftCluster, now time.Time) (bool, error) {
 	if cert.Attributes == nil || cert.Value == nil {
 		return true, nil
 	}
@@ -92,7 +120,7 @@ func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse,
 	}
 
 	// Check if the secret is for a different identity (e.g., after a cluster update).
-	clusterMsiResourceId, err := m.doc.OpenShiftCluster.ClusterMsiResourceId()
+	clusterMsiResourceId, err := cluster.ClusterMsiResourceId()
 	if err != nil {
 		return false, err
 	}
@@ -103,13 +131,13 @@ func (m *manager) shouldReplaceMSICertificate(cert *azsecrets.GetSecretResponse,
 
 	// Check if the certificate is within its renewal window.
 	// In the future, certificate refreshing will be handled by the Certificate Refresher. For now, handle it here.
-	return m.needsRefresh(cert, now)
+	return needsRefresh(cert, now)
 }
 
 // https://eng.ms/docs/products/arm/rbac/managed_identities/msionboardingcertificaterotation
-// The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days
-// This is subject to change and docs can be untrustworthy, so use the keyvault tags to determine validity
-func (m *manager) needsRefresh(item *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
+// The cert is eligible to be refreshed after the 46 day mark, and expires at 90 days.
+// This is subject to change and docs can be untrustworthy, so use the keyvault tags to determine validity.
+func needsRefresh(item *azsecrets.GetSecretResponse, now time.Time) (bool, error) {
 	if item.Tags == nil {
 		return false, fmt.Errorf("secret tags are nil")
 	}
