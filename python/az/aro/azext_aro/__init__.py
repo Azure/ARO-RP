@@ -26,12 +26,11 @@ class AroCommandsLoader(AzCommandsLoader):
                          custom_command_type=aro_custom)
 
     def load_command_table(self, args):
-        if aaz:
-            load_aaz_command_table(
-                loader=self,
-                aaz_pkg_name=aaz.__name__,
-                args=args
-            )
+        load_aaz_command_table(
+            loader=self,
+            aaz_pkg_name=aaz.__name__,
+            args=args
+        )
         load_command_table(self, args)
         return self.command_table
 
