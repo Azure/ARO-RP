@@ -10,10 +10,7 @@ from azure.cli.core import (
 )
 from azure.cli.core.commands import CliCommandType
 from azure.cli.core.aaz import load_aaz_command_table
-try:
-    from . import aaz
-except ImportError:
-    aaz = None
+from . import aaz
 
 
 class AroCommandsLoader(AzCommandsLoader):
