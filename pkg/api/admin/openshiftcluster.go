@@ -5,6 +5,8 @@ package admin
 
 import (
 	"time"
+
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
 // OpenShiftClusterList represents a list of OpenShift clusters.
@@ -267,184 +269,16 @@ const (
 
 // MasterProfile represents a master profile.
 type MasterProfile struct {
-	VMSize              VMSize           `json:"vmSize,omitempty"`
+	VMSize              vms.VMSize       `json:"vmSize,omitempty"`
 	SubnetID            string           `json:"subnetId,omitempty"`
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
 }
 
-// VMSize represents a VM size.
-type VMSize string
-
-// VMSize constants.
-const (
-	VMSizeStandardD2sV3  VMSize = "Standard_D2s_v3"
-	VMSizeStandardD4sV3  VMSize = "Standard_D4s_v3"
-	VMSizeStandardD8sV3  VMSize = "Standard_D8s_v3"
-	VMSizeStandardD16sV3 VMSize = "Standard_D16s_v3"
-	VMSizeStandardD32sV3 VMSize = "Standard_D32s_v3"
-
-	VMSizeStandardD4sV4  VMSize = "Standard_D4s_v4"
-	VMSizeStandardD8sV4  VMSize = "Standard_D8s_v4"
-	VMSizeStandardD16sV4 VMSize = "Standard_D16s_v4"
-	VMSizeStandardD32sV4 VMSize = "Standard_D32s_v4"
-	VMSizeStandardD64sV4 VMSize = "Standard_D64s_v4"
-
-	VMSizeStandardD4sV5  VMSize = "Standard_D4s_v5"
-	VMSizeStandardD8sV5  VMSize = "Standard_D8s_v5"
-	VMSizeStandardD16sV5 VMSize = "Standard_D16s_v5"
-	VMSizeStandardD32sV5 VMSize = "Standard_D32s_v5"
-	VMSizeStandardD64sV5 VMSize = "Standard_D64s_v5"
-	VMSizeStandardD96sV5 VMSize = "Standard_D96s_v5"
-
-	VMSizeStandardD4asV4  VMSize = "Standard_D4as_v4"
-	VMSizeStandardD8asV4  VMSize = "Standard_D8as_v4"
-	VMSizeStandardD16asV4 VMSize = "Standard_D16as_v4"
-	VMSizeStandardD32asV4 VMSize = "Standard_D32as_v4"
-	VMSizeStandardD64asV4 VMSize = "Standard_D64as_v4"
-	VMSizeStandardD96asV4 VMSize = "Standard_D96as_v4"
-
-	VMSizeStandardD4asV5  VMSize = "Standard_D4as_v5"
-	VMSizeStandardD8asV5  VMSize = "Standard_D8as_v5"
-	VMSizeStandardD16asV5 VMSize = "Standard_D16as_v5"
-	VMSizeStandardD32asV5 VMSize = "Standard_D32as_v5"
-	VMSizeStandardD64asV5 VMSize = "Standard_D64as_v5"
-	VMSizeStandardD96asV5 VMSize = "Standard_D96as_v5"
-
-	VMSizeStandardD4dsV5  VMSize = "Standard_D4ds_v5"
-	VMSizeStandardD8dsV5  VMSize = "Standard_D8ds_v5"
-	VMSizeStandardD16dsV5 VMSize = "Standard_D16ds_v5"
-	VMSizeStandardD32dsV5 VMSize = "Standard_D32ds_v5"
-	VMSizeStandardD64dsV5 VMSize = "Standard_D64ds_v5"
-	VMSizeStandardD96dsV5 VMSize = "Standard_D96ds_v5"
-
-	VMSizeStandardD4sV6  VMSize = "Standard_D4s_v6"
-	VMSizeStandardD8sV6  VMSize = "Standard_D8s_v6"
-	VMSizeStandardD16sV6 VMSize = "Standard_D16s_v6"
-	VMSizeStandardD32sV6 VMSize = "Standard_D32s_v6"
-	VMSizeStandardD64sV6 VMSize = "Standard_D64s_v6"
-	VMSizeStandardD96sV6 VMSize = "Standard_D96s_v6"
-
-	VMSizeStandardD4dsV6  VMSize = "Standard_D4ds_v6"
-	VMSizeStandardD8dsV6  VMSize = "Standard_D8ds_v6"
-	VMSizeStandardD16dsV6 VMSize = "Standard_D16ds_v6"
-	VMSizeStandardD32dsV6 VMSize = "Standard_D32ds_v6"
-	VMSizeStandardD64dsV6 VMSize = "Standard_D64ds_v6"
-	VMSizeStandardD96dsV6 VMSize = "Standard_D96ds_v6"
-
-	VMSizeStandardE4sV3  VMSize = "Standard_E4s_v3"
-	VMSizeStandardE8sV3  VMSize = "Standard_E8s_v3"
-	VMSizeStandardE16sV3 VMSize = "Standard_E16s_v3"
-	VMSizeStandardE32sV3 VMSize = "Standard_E32s_v3"
-
-	VMSizeStandardE2sV4  VMSize = "Standard_E2s_v4"
-	VMSizeStandardE4sV4  VMSize = "Standard_E4s_v4"
-	VMSizeStandardE8sV4  VMSize = "Standard_E8s_v4"
-	VMSizeStandardE16sV4 VMSize = "Standard_E16s_v4"
-	VMSizeStandardE20sV4 VMSize = "Standard_E20s_v4"
-	VMSizeStandardE32sV4 VMSize = "Standard_E32s_v4"
-	VMSizeStandardE48sV4 VMSize = "Standard_E48s_v4"
-	VMSizeStandardE64sV4 VMSize = "Standard_E64s_v4"
-
-	VMSizeStandardE2sV5  VMSize = "Standard_E2s_v5"
-	VMSizeStandardE4sV5  VMSize = "Standard_E4s_v5"
-	VMSizeStandardE8sV5  VMSize = "Standard_E8s_v5"
-	VMSizeStandardE16sV5 VMSize = "Standard_E16s_v5"
-	VMSizeStandardE20sV5 VMSize = "Standard_E20s_v5"
-	VMSizeStandardE32sV5 VMSize = "Standard_E32s_v5"
-	VMSizeStandardE48sV5 VMSize = "Standard_E48s_v5"
-	VMSizeStandardE64sV5 VMSize = "Standard_E64s_v5"
-	VMSizeStandardE96sV5 VMSize = "Standard_E96s_v5"
-
-	VMSizeStandardE4asV4  VMSize = "Standard_E4as_v4"
-	VMSizeStandardE8asV4  VMSize = "Standard_E8as_v4"
-	VMSizeStandardE16asV4 VMSize = "Standard_E16as_v4"
-	VMSizeStandardE20asV4 VMSize = "Standard_E20as_v4"
-	VMSizeStandardE32asV4 VMSize = "Standard_E32as_v4"
-	VMSizeStandardE48asV4 VMSize = "Standard_E48as_v4"
-	VMSizeStandardE64asV4 VMSize = "Standard_E64as_v4"
-	VMSizeStandardE96asV4 VMSize = "Standard_E96as_v4"
-
-	VMSizeStandardE8asV5  VMSize = "Standard_E8as_v5"
-	VMSizeStandardE16asV5 VMSize = "Standard_E16as_v5"
-	VMSizeStandardE20asV5 VMSize = "Standard_E20as_v5"
-	VMSizeStandardE32asV5 VMSize = "Standard_E32as_v5"
-	VMSizeStandardE48asV5 VMSize = "Standard_E48as_v5"
-	VMSizeStandardE64asV5 VMSize = "Standard_E64as_v5"
-	VMSizeStandardE96asV5 VMSize = "Standard_E96as_v5"
-
-	VMSizeStandardE64isV3   VMSize = "Standard_E64is_v3"
-	VMSizeStandardE80isV4   VMSize = "Standard_E80is_v4"
-	VMSizeStandardE80idsV4  VMSize = "Standard_E80ids_v4"
-	VMSizeStandardE96dsV5   VMSize = "Standard_E96ds_v5"
-	VMSizeStandardE104isV5  VMSize = "Standard_E104is_v5"
-	VMSizeStandardE104idsV5 VMSize = "Standard_E104ids_v5"
-
-	VMSizeStandardF4sV2  VMSize = "Standard_F4s_v2"
-	VMSizeStandardF8sV2  VMSize = "Standard_F8s_v2"
-	VMSizeStandardF16sV2 VMSize = "Standard_F16s_v2"
-	VMSizeStandardF32sV2 VMSize = "Standard_F32s_v2"
-	VMSizeStandardF72sV2 VMSize = "Standard_F72s_v2"
-
-	VMSizeStandardM128ms VMSize = "Standard_M128ms"
-
-	VMSizeStandardL4s  VMSize = "Standard_L4s"
-	VMSizeStandardL8s  VMSize = "Standard_L8s"
-	VMSizeStandardL16s VMSize = "Standard_L16s"
-	VMSizeStandardL32s VMSize = "Standard_L32s"
-
-	VMSizeStandardL8sV2  VMSize = "Standard_L8s_v2"
-	VMSizeStandardL16sV2 VMSize = "Standard_L16s_v2"
-	VMSizeStandardL32sV2 VMSize = "Standard_L32s_v2"
-	VMSizeStandardL48sV2 VMSize = "Standard_L48s_v2"
-	VMSizeStandardL64sV2 VMSize = "Standard_L64s_v2"
-
-	VMSizeStandardL8sV3  VMSize = "Standard_L8s_v3"
-	VMSizeStandardL16sV3 VMSize = "Standard_L16s_v3"
-	VMSizeStandardL32sV3 VMSize = "Standard_L32s_v3"
-	VMSizeStandardL48sV3 VMSize = "Standard_L48s_v3"
-	VMSizeStandardL64sV3 VMSize = "Standard_L64s_v3"
-
-	VMSizeStandardL4sV4  VMSize = "Standard_L4s_v4"
-	VMSizeStandardL8sV4  VMSize = "Standard_L8s_v4"
-	VMSizeStandardL16sV4 VMSize = "Standard_L16s_v4"
-	VMSizeStandardL32sV4 VMSize = "Standard_L32s_v4"
-	VMSizeStandardL48sV4 VMSize = "Standard_L48s_v4"
-	VMSizeStandardL64sV4 VMSize = "Standard_L64s_v4"
-	VMSizeStandardL80sV4 VMSize = "Standard_L80s_v4"
-
-	VMSizeStandardD4lsV6  VMSize = "Standard_D4ls_v6"
-	VMSizeStandardD8lsV6  VMSize = "Standard_D8ls_v6"
-	VMSizeStandardD16lsV6 VMSize = "Standard_D16ls_v6"
-	VMSizeStandardD32lsV6 VMSize = "Standard_D32ls_v6"
-	VMSizeStandardD48lsV6 VMSize = "Standard_D48ls_v6"
-	VMSizeStandardD64lsV6 VMSize = "Standard_D64ls_v6"
-	VMSizeStandardD96lsV6 VMSize = "Standard_D96ls_v6"
-
-	VMSizeStandardD4ldsV6  VMSize = "Standard_D4lds_v6"
-	VMSizeStandardD8ldsV6  VMSize = "Standard_D8lds_v6"
-	VMSizeStandardD16ldsV6 VMSize = "Standard_D1l6ds_v6"
-	VMSizeStandardD32ldsV6 VMSize = "Standard_D32lds_v6"
-	VMSizeStandardD48ldsV6 VMSize = "Standard_D48lds_v6"
-	VMSizeStandardD64ldsV6 VMSize = "Standard_D64lds_v6"
-	VMSizeStandardD96ldsV6 VMSize = "Standard_D96lds_v6"
-
-	// GPU VMs
-	VMSizeStandardNC4asT4V3  VMSize = "Standard_NC4as_T4_v3"
-	VMSizeStandardNC8asT4V3  VMSize = "Standard_NC8as_T4_v3"
-	VMSizeStandardNC16asT4V3 VMSize = "Standard_NC16as_T4_v3"
-	VMSizeStandardNC64asT4V3 VMSize = "Standard_NC64as_T4_v3"
-
-	VMSizeStandardNC6sV3   VMSize = "Standard_NC6s_v3"
-	VMSizeStandardNC12sV3  VMSize = "Standard_NC12s_v3"
-	VMSizeStandardNC24sV3  VMSize = "Standard_NC24s_v3"
-	VMSizeStandardNC24rsV3 VMSize = "Standard_NC24rs_v3"
-)
-
 // WorkerProfile represents a worker profile.
 type WorkerProfile struct {
 	Name                string           `json:"name,omitempty"`
-	VMSize              VMSize           `json:"vmSize,omitempty"`
+	VMSize              vms.VMSize       `json:"vmSize,omitempty"`
 	DiskSizeGB          int              `json:"diskSizeGB,omitempty"`
 	SubnetID            string           `json:"subnetId,omitempty"`
 	Count               int              `json:"count,omitempty"`
