@@ -267,7 +267,7 @@ def validate(*,  # pylint: disable=too-many-locals
              resource_group_name,  # pylint: disable=unused-argument
              master_subnet,
              worker_subnet,
-             resource_name=None,  # pylint: disable=unused-argument
+             resource_name,  # pylint: disable=unused-argument
              vnet=None,
              enable_preconfigured_nsg=None,
              cluster_resource_group=None,  # pylint: disable=unused-argument
@@ -800,21 +800,30 @@ def aro_identity_list_required(*,
     if not role_set:
         raise RuntimeError("Could not find role set.")
 
-    definitions = client.role_definitions.get_by_id(thing)
-
     logger.warning("Use the following commands to create the required managed identities:")
     logger.warning(f"    az identity create -g '{resource_group_name}' -n 'aro-cluster' -l '{location}'")
     for role in role_set.platform_workload_identity_roles:
         logger.warning(f"    az identity create -g '{resource_group_name}' -n '{role.operator_name}' -l '{location}'")
 
+    auth_client = get_mgmt_service_client(cmd.cli_tx, ResourceType.MGMT_AUTHORIZATION)
+
     logger.warning("\nUse the following commands to create the required role assignments:")
+
     # TODO: logger.warning("static role for cluster ident")
-    for assignment in ["    blah", "    blah", "    blah"]:
-        # TODO:
-        #   - query role definitions to get allowed actions
-        #   - determine subnet vs vnet scope using role actions
-        #   - compose role assignment creation commands
-        logger.warning(assignment)
+
+    for role in role_set.platform_workload_identity_roles:
+        definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
+        action_scope: str
+        for permissions in definition.permissions:
+            for action in permissions.actions:
+                if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
+                    action_scope = "subnet"
+                    continue
+
+                if action.startswith("Microsoft.Network/virtualNetworks/"):
+                    action_scope = "vnet"
+
+        # TODO: compose role assignment create command for role
 
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
