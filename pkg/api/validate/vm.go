@@ -62,23 +62,5 @@ func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string) bool {
 }
 
 func VMSizeFromName(vmSize vms.VMSize) (vms.VMSizeStruct, bool) {
-	// this is for development purposes only
-	switch vmSize {
-	case vms.VMSizeStandardD2sV3:
-		return vms.VMSizeStandardD2sV3Struct, true
-	case vms.VMSizeStandardD2sV4:
-		return vms.VMSizeStandardD2sV4Struct, true
-	case vms.VMSizeStandardD2sV5:
-		return vms.VMSizeStandardD2sV5Struct, true
-	}
-
-	if size, ok := SupportedVMSizesByRole(vms.VMRoleWorker)[vmSize]; ok {
-		return size, true
-	}
-
-	if size, ok := SupportedVMSizesByRole(vms.VMRoleMaster)[vmSize]; ok {
-		return size, true
-	}
-
-	return vms.VMSizeStruct{}, false
+	return vms.LookupVMSize(vmSize)
 }

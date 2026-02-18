@@ -8,43 +8,43 @@ import (
 )
 
 func TestMinMasterVMSizesAreSupported(t *testing.T) {
-	for size := range MinMasterVMSizes {
-		if _, ok := SupportedMasterVmSizes[size]; !ok {
-			t.Errorf("MinMasterVMSizes entry %s is not in SupportedMasterVmSizes", size)
+	for size := range minMasterVMSizes {
+		if _, ok := SupportedMasterVMSizes[size]; !ok {
+			t.Errorf("minMasterVMSizes entry %s is not in SupportedMasterVMSizes", size)
 		}
 	}
 }
 
 func TestMinWorkerVMSizesAreSupported(t *testing.T) {
-	for size := range MinWorkerVMSizes {
-		if _, ok := SupportedWorkerVmSizesForInternalUser[size]; !ok {
-			t.Errorf("MinWorkerVMSizes entry %s is not in SupportedWorkerVmSizesForInternalUser", size)
+	for size := range minWorkerVMSizes {
+		if _, ok := supportedWorkerVMSizesForInternalUser[size]; !ok {
+			t.Errorf("minWorkerVMSizes entry %s is not in supportedWorkerVMSizesForInternalUser", size)
 		}
 	}
 }
 
 func TestMinVMSizesForRoleSorting(t *testing.T) {
-	masterSizes := MinVMSizesForRole(VMRoleMaster)
+	masterSizes := minVMSizesForRole(VMRoleMaster)
 	if len(masterSizes) == 0 {
-		t.Fatal("MinVMSizesForRole(master) returned empty slice")
+		t.Fatal("minVMSizesForRole(master) returned empty slice")
 	}
-	if len(masterSizes) != len(MinMasterVMSizes) {
-		t.Errorf("MinVMSizesForRole(master) returned %d entries, want %d", len(masterSizes), len(MinMasterVMSizes))
+	if len(masterSizes) != len(minMasterVMSizes) {
+		t.Errorf("minVMSizesForRole(master) returned %d entries, want %d", len(masterSizes), len(minMasterVMSizes))
 	}
 
-	workerSizes := MinVMSizesForRole(VMRoleWorker)
+	workerSizes := minVMSizesForRole(VMRoleWorker)
 	if len(workerSizes) == 0 {
-		t.Fatal("MinVMSizesForRole(worker) returned empty slice")
+		t.Fatal("minVMSizesForRole(worker) returned empty slice")
 	}
-	if len(workerSizes) != len(MinWorkerVMSizes) {
-		t.Errorf("MinVMSizesForRole(worker) returned %d entries, want %d", len(workerSizes), len(MinWorkerVMSizes))
+	if len(workerSizes) != len(minWorkerVMSizes) {
+		t.Errorf("minVMSizesForRole(worker) returned %d entries, want %d", len(workerSizes), len(minWorkerVMSizes))
 	}
 
 	// Verify D2 sizes (2 cores) come before D4 sizes (4 cores) in worker list
 	lastD2Idx := -1
 	firstD4Idx := len(workerSizes)
 	for i, sz := range workerSizes {
-		info := MinWorkerVMSizes[sz]
+		info := minWorkerVMSizes[sz]
 		if info.CoreCount == 2 && i > lastD2Idx {
 			lastD2Idx = i
 		}
@@ -57,13 +57,13 @@ func TestMinVMSizesForRoleSorting(t *testing.T) {
 	}
 
 	// Verify unknown role returns nil
-	if sizes := MinVMSizesForRole("unknown"); sizes != nil {
-		t.Errorf("MinVMSizesForRole(unknown) = %v, want nil", sizes)
+	if sizes := minVMSizesForRole("unknown"); sizes != nil {
+		t.Errorf("minVMSizesForRole(unknown) = %v, want nil", sizes)
 	}
 }
 
 func TestMinVMSizesForRoleWorkerContainsD2(t *testing.T) {
-	workerSizes := MinVMSizesForRole(VMRoleWorker)
+	workerSizes := minVMSizesForRole(VMRoleWorker)
 	d2Found := false
 	for _, sz := range workerSizes {
 		if sz == VMSizeStandardD2sV3 || sz == VMSizeStandardD2sV4 || sz == VMSizeStandardD2sV5 {
@@ -72,6 +72,6 @@ func TestMinVMSizesForRoleWorkerContainsD2(t *testing.T) {
 		}
 	}
 	if !d2Found {
-		t.Error("MinVMSizesForRole(worker) should contain at least one D2s size")
+		t.Error("minVMSizesForRole(worker) should contain at least one D2s size")
 	}
 }
