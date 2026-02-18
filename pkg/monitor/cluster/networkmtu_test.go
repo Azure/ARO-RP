@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"strconv"
-	"strings"
 	"testing"
 
 	"go.uber.org/mock/gomock"
@@ -115,14 +114,14 @@ func TestEmitNetworkMTUError(t *testing.T) {
 		log:       log,
 	}
 
-	err := mon.emitNetworkMTU(ctx)
-	if err == nil {
-		t.Error("expected error when network config is not found, got nil")
-	}
+	m.EXPECT().EmitGauge("network.mtu", int64(1), map[string]string{
+		"mtu":          "default",
+		"network_type": "unknown",
+	})
 
-	// Assert that it's a "not found" error
-	if err != nil && !strings.Contains(err.Error(), "not found") {
-		t.Errorf("expected 'not found' error, got: %v", err)
+	err := mon.emitNetworkMTU(ctx)
+	if err != nil {
+		t.Errorf("emitNetworkMTU() error = %v", err)
 	}
 }
 
