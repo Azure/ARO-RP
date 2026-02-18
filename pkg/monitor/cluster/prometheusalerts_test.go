@@ -330,6 +330,113 @@ func TestAggregateAndEmitAlerts(t *testing.T) {
 			},
 		},
 		{
+			name: "multiple targeted alerts with different targets",
+			alerts: []model.Alert{
+				{
+					Labels: model.LabelSet{
+						"alertname":        "NodeCondition",
+						"namespace":        "openshift-monitoring",
+						"severity":         "warning",
+						"target":           "node1",
+						"secondary_target": "MemoryPressure",
+					},
+				},
+				{
+					Labels: model.LabelSet{
+						"alertname":        "NodeCondition",
+						"namespace":        "openshift-monitoring",
+						"severity":         "warning",
+						"target":           "node2",
+						"secondary_target": "DiskPressure",
+					},
+				},
+				{
+					Labels: model.LabelSet{
+						"alertname":        "NodeCondition",
+						"namespace":        "openshift-monitoring",
+						"severity":         "warning",
+						"target":           "node1",
+						"secondary_target": "DiskPressure",
+					},
+				},
+			},
+			expectedGauges: []struct {
+				metric string
+				count  int64
+				dims   map[string]string
+			}{
+				{
+					metric: "prometheus.targeted.alerts",
+					count:  1,
+					dims: map[string]string{
+						"alert":            "NodeCondition",
+						"severity":         "warning",
+						"target":           "node1",
+						"secondary_target": "MemoryPressure",
+					},
+				},
+				{
+					metric: "prometheus.targeted.alerts",
+					count:  1,
+					dims: map[string]string{
+						"alert":            "NodeCondition",
+						"severity":         "warning",
+						"target":           "node2",
+						"secondary_target": "DiskPressure",
+					},
+				},
+				{
+					metric: "prometheus.targeted.alerts",
+					count:  1,
+					dims: map[string]string{
+						"alert":            "NodeCondition",
+						"severity":         "warning",
+						"target":           "node1",
+						"secondary_target": "DiskPressure",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple targeted alerts with same targets get aggregated",
+			alerts: []model.Alert{
+				{
+					Labels: model.LabelSet{
+						"alertname":        "NodeCondition",
+						"namespace":        "openshift-monitoring",
+						"severity":         "warning",
+						"target":           "node1",
+						"secondary_target": "MemoryPressure",
+					},
+				},
+				{
+					Labels: model.LabelSet{
+						"alertname":        "NodeCondition",
+						"namespace":        "openshift-monitoring",
+						"severity":         "warning",
+						"target":           "node1",
+						"secondary_target": "MemoryPressure",
+					},
+				},
+			},
+			expectedGauges: []struct {
+				metric string
+				count  int64
+				dims   map[string]string
+			}{
+				{
+					metric: "prometheus.targeted.alerts",
+					count:  2,
+					dims: map[string]string{
+						"alert":            "NodeCondition",
+						"severity":         "warning",
+						"target":           "node1",
+						"secondary_target": "MemoryPressure",
+					},
+				},
+			},
+		},
+		{
 			name:   "empty alert list",
 			alerts: []model.Alert{},
 			expectedGauges: []struct {

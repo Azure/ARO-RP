@@ -101,24 +101,36 @@ func (mon *Monitor) aggregateAndEmitAlerts(alerts []model.Alert) {
 			continue
 		}
 
+		// Targeted alerts are aggregated by targets. In other words: an alert+target+secondary_target combination is unique
+		// This allows us to do aggregations in Geneva.
+		// Example: unhealthy nodes by condition, any unique combination of condition - node_name is unique, and it will have a dedicated statsd counter
+		if isTargetedAlert(alert) {
+			target := string(alert.Labels["target"])
+			secondaryTarget := string(alert.Labels["secondary_target"])
+			alertName := fmt.Sprintf("%v##%v##%v", alert.Name(), target, secondaryTarget)
+			ta := collectedAlerts[alertName]
+			ta.target = target
+			ta.secondaryTarget = secondaryTarget
+			ta.isTargeted = true
+			ta.severity = string(alert.Labels["severity"])
+			ta.count++
+			collectedAlerts[alertName] = ta
+			continue
+		}
+
 		a := collectedAlerts[alert.Name()]
 
 		a.severity = string(alert.Labels["severity"])
 		a.count++
-
-		if isTargetedAlert(alert) {
-			a.target = string(alert.Labels["target"])
-			a.secondaryTarget = string(alert.Labels["secondary_target"])
-			a.isTargeted = true
-		}
 
 		collectedAlerts[alert.Name()] = a
 	}
 
 	for alertName, a := range collectedAlerts {
 		if a.isTargeted {
+			splitName := strings.Split(alertName, "##")
 			mon.emitGauge("prometheus.targeted.alerts", a.count, map[string]string{
-				"alert":            alertName,
+				"alert":            splitName[0],
 				"severity":         a.severity,
 				"target":           a.target,
 				"secondary_target": a.secondaryTarget,
