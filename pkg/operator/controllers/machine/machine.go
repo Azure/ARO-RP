@@ -12,10 +12,10 @@ import (
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 func (r *Reconciler) workerReplicas(ctx context.Context) (int, error) {

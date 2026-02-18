@@ -23,8 +23,8 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/api/util/vms"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 type machineClientEnricher struct{}
