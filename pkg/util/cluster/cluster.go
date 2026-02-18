@@ -967,8 +967,8 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			}
 		}
 
-		oc.Properties.MasterProfile.VMSize = vms.VMSize(c.Config.CandidateMasterVMSizes[masterIdx])
-		oc.Properties.WorkerProfiles[0].VMSize = vms.VMSize(c.Config.CandidateWorkerVMSizes[workerIdx])
+		oc.Properties.MasterProfile.VMSize = c.Config.CandidateMasterVMSizes[masterIdx]
+		oc.Properties.WorkerProfiles[0].VMSize = c.Config.CandidateWorkerVMSizes[workerIdx]
 		c.log.Infof("Creating cluster %s with master VM size %s and worker VM size %s",
 			clusterName, oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
 		err = c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
