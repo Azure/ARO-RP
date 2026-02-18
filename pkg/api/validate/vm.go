@@ -5,12 +5,12 @@ package validate
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api/util/version"
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 var supportedVMSizesByRoleMap = map[vms.VMRole]map[vms.VMSize]vms.VMSizeStruct{
-	vms.VMRoleMaster: vms.MinWorkerVMSizes,
-	vms.VMRoleWorker: vms.MinWorkerVMSizes,
+	vms.VMRoleMaster: vms.SupportedMasterVMSizes,
+	vms.VMRoleWorker: vms.SupportedWorkerVMSizes,
 }
 
 func SupportedVMSizesByRole(vmRole vms.VMRole) map[vms.VMSize]vms.VMSizeStruct {
@@ -35,8 +35,6 @@ func VMSizeIsValid(vmSize vms.VMSize, isMaster bool) bool {
 	return supportedAsWorker
 }
 
-// TODO: MAITIU - Fix this logic for when IsCI is true
-
 // VMSizeIsValidForVersion validates VM size with version-specific restrictions
 func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string) bool {
 	// First check basic validity
@@ -50,12 +48,12 @@ func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string) bool {
 	}
 	// Check version-specific restrictions
 	if isMaster {
-		if minVersion, exists := vms.MinMasterVMSizes[vmSize]; exists {
-			return clusterVersion.Gt(minVersion.MinimumVersion) || clusterVersion.Eq(minVersion.MinimumVersion)
+		if sizeInfo, exists := vms.SupportedMasterVMSizes[vmSize]; exists && sizeInfo.MinimumVersion != nil {
+			return clusterVersion.Gt(sizeInfo.MinimumVersion) || clusterVersion.Eq(sizeInfo.MinimumVersion)
 		}
 	} else {
-		if minVersion, exists := vms.MinWorkerVMSizes[vmSize]; exists {
-			return clusterVersion.Gt(minVersion.MinimumVersion) || clusterVersion.Eq(minVersion.MinimumVersion)
+		if sizeInfo, exists := vms.SupportedWorkerVMSizes[vmSize]; exists && sizeInfo.MinimumVersion != nil {
+			return clusterVersion.Gt(sizeInfo.MinimumVersion) || clusterVersion.Eq(sizeInfo.MinimumVersion)
 		}
 	}
 
