@@ -318,14 +318,9 @@ var MinWorkerVMSizes = map[api.VMSize]VMSizeStruct{
 	api.VMSizeStandardD4dsV5: VMSizeStandardD4dsV5Struct,
 }
 
-const (
-	VMRoleMaster = "master"
-	VMRoleWorker = "worker"
-)
-
 // MinVMSizesForRole returns the minimum VM sizes for a role, sorted by core
 // count (smallest first). This is used by test/CI/dev tooling.
-func MinVMSizesForRole(vmRole string) []api.VMSize {
+func MinVMSizesForRole(vmRole VMRole) []api.VMSize {
 	var m map[api.VMSize]VMSizeStruct
 	switch vmRole {
 	case VMRoleMaster:
