@@ -29,7 +29,7 @@ const (
 	MaintenanceManifestQueueOverallQuery      = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment
 	MaintenanceManifestQueueLengthQuery       = "SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
 
-	MaintenanceManifestGetForScheduleIDAndClusterBeforeTime = MaintenanceManifestQueryForCluster + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
+	MaintenanceManifestGetForScheduleIDAndClusterBeforeTime = MaintenanceManifestQueryForCluster + " AND " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
 )
 
 type MaintenanceManifestDocumentMutator func(*api.MaintenanceManifestDocument) error

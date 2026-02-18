@@ -120,6 +120,9 @@ func fakeMaintenanceManifestsForClusterAndScheduleID(client cosmosdb.Maintenance
 		if string(r.MaintenanceManifest.CreatedBySchedule) != scheduleID {
 			continue
 		}
+		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
+			continue
+		}
 		if r.MaintenanceManifest.RunAfter < now().Unix() {
 			continue
 		}
