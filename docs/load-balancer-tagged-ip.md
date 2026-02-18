@@ -14,6 +14,20 @@
 Released to INT on **2026-02-16**. Deployment completed successfully.
 [INT Release Pipeline](https://msazure.visualstudio.com/AzureRedHatOpenShift/_build/results?buildId=153392735&view=results)
 
+### INT Environment (v2 — SSH tagged rule) — Successful
+
+| | ARO-RP | RP-Config |
+|---|--------|-----------|
+| **Repo** | `Azure/ARO-RP` | `Azure/RP-Config` |
+| **Branch** | `preetisht/ARO-20087-from-master` | `b-ptripathi/vmss-ip-tags` |
+| **Commit** | `923f0af3679d5b952992f37ac9244110ee7d9fa1` | `163e61e5fa09cbb388df700dc4180ce367b74959` |
+| **Tag** | `v20260217.01-lb-tagged-ip-dual-frontend` | `v20260217.01-lb-tagged-ip-dual-frontend` |
+
+Released to INT on **2026-02-17**. Deployment completed successfully.
+[INT Release Pipeline (v2)](https://msazure.visualstudio.com/AzureRedHatOpenShift/_build/results?buildId=153402072&view=results)
+
+Changes in this release: renamed `portal-probe-tagged` to `portal-probe-https-tagged`, added `portal-lbrule-ssh-tagged` (port 22 → 2223), `portal-probe-ssh-tagged` (TCP/2223), firewall port 2223, and portal container `-p 2223:2223`.
+
 ---
 
 ## Motivation
