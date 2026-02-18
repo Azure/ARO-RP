@@ -61,8 +61,11 @@ func (client PlatformWorkloadIdentityRoleSetsClient) List(ctx context.Context, l
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: location,
-			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		{
+			TargetValue: location,
+			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}},
+		},
+	}); err != nil {
 		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetsClient", "List", "%s", err.Error())
 	}
 
