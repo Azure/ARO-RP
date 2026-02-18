@@ -75,8 +75,9 @@ type ClusterConfig struct {
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
 	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
 
-	MasterVMSize           vms.VMSize   `mapstructure:"MASTER_VM_SIZE"`
-	WorkerVMSize           vms.VMSize   `mapstructure:"WORKER_VM_SIZE"`
+	MasterVMSize vms.VMSize `mapstructure:"MASTER_VM_SIZE"`
+	WorkerVMSize vms.VMSize `mapstructure:"WORKER_VM_SIZE"`
+	// TODO: MAITIU - Do we need to touch this?
 	CandidateMasterVMSizes []vms.VMSize `mapstructure:"MASTER_VM_SIZES"`
 	CandidateWorkerVMSizes []vms.VMSize `mapstructure:"WORKER_VM_SIZES"`
 }
