@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -36,12 +38,20 @@ func TestProcessLoop(t *testing.T) {
 	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
 	clusterResourceID2 := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2", mockSubID)
 
+	base_logs := []testlog.ExpectedLogEntry{
+		{
+			"level": gomega.Equal(logrus.InfoLevel),
+			"msg":   gomega.Equal("processing schedule 08080808-0808-0808-0808-080808080001 (task ID=0)"),
+		},
+	}
+
 	testCases := []struct {
 		desc              string
 		schedule          *api.MaintenanceScheduleDocument
 		desiredSchedule   *api.MaintenanceScheduleDocument
 		existingManifests []*api.MaintenanceManifestDocument
 		desiredManifests  []*api.MaintenanceManifestDocument
+		expectedLogs      []testlog.ExpectedLogEntry
 	}{
 		{
 			desc: "valid schedule, new manifest created (lookahead=1, scheduleAcross=0s)",
@@ -80,6 +90,22 @@ func TestProcessLoop(t *testing.T) {
 					},
 				},
 			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070001 for 2026-01-05T00:00Z window (2026-01-05T00:00:00Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=1, found valid=0, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
 		},
 		{
 			desc: "valid schedule, existing manifest (lookahead=1, scheduleAcross=0s)",
@@ -131,6 +157,17 @@ func TestProcessLoop(t *testing.T) {
 					},
 				},
 			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=0, found valid=1, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
 		},
 		{
 			desc: "valid schedule, new manifest created (lookahead=1, scheduleAcross=1h)",
@@ -169,6 +206,22 @@ func TestProcessLoop(t *testing.T) {
 					},
 				},
 			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070001 for 2026-01-05T00:00Z window (2026-01-05T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=1, found valid=0, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
 		},
 		{
 			desc: "valid schedule, existing manifest (lookahead=1, scheduleAcross=1h)",
@@ -220,6 +273,17 @@ func TestProcessLoop(t *testing.T) {
 					},
 				},
 			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=0, found valid=1, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
 		},
 		{
 			desc: "valid schedule, existing manifest that is of a changed schedule (lookahead=1, scheduleAcross=1h)",
@@ -285,6 +349,22 @@ func TestProcessLoop(t *testing.T) {
 					},
 				},
 			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-05T00:00Z window (2026-01-05T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=1, found valid=0, cancelled=1"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
 		},
 		{
 			desc: "valid schedule, but it will never fire again",
@@ -309,6 +389,12 @@ func TestProcessLoop(t *testing.T) {
 			},
 			existingManifests: []*api.MaintenanceManifestDocument{},
 			desiredManifests:  []*api.MaintenanceManifestDocument{},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.WarnLevel),
+					"msg":   gomega.Equal("schedule '2026-1-1 00:00:00' will never trigger again, skipping"),
+				},
+			}...),
 		},
 		{
 			desc: "valid schedule, but it won't fire all the times within the lookAhead",
@@ -383,6 +469,41 @@ func TestProcessLoop(t *testing.T) {
 					},
 				},
 			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("schedule 'Mon 2026-1-* 00:00:00' will only trigger 4 times but look forward is 5"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z, 2026-01-12T00:00Z, 2026-01-19T00:00Z, 2026-01-26T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070001 for 2026-01-05T00:00Z window (2026-01-05T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-12T00:00Z window (2026-01-12T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070003 for 2026-01-19T00:00Z window (2026-01-19T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070004 for 2026-01-26T00:00Z window (2026-01-26T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=4, found valid=0, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
 		},
 		{
 			desc: "valid daily schedule, new manifests created (lookahead=5, scheduleAcross=0s)",
@@ -469,17 +590,53 @@ func TestProcessLoop(t *testing.T) {
 					},
 				},
 			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-02T00:00Z, 2026-01-03T00:00Z, 2026-01-04T00:00Z, 2026-01-05T00:00Z, 2026-01-06T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070001 for 2026-01-02T00:00Z window (2026-01-02T00:00:00Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-03T00:00Z window (2026-01-03T00:00:00Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070003 for 2026-01-04T00:00Z window (2026-01-04T00:00:00Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070004 for 2026-01-05T00:00Z window (2026-01-05T00:00:00Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070005 for 2026-01-06T00:00Z window (2026-01-06T00:00:00Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=5, found valid=0, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
 		},
 	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
+	for _, tt := range testCases {
+		t.Run(tt.desc, func(t *testing.T) {
 			require := require.New(t)
 			ctx := t.Context()
 
 			controller := gomock.NewController(nil)
 			_env := mock_env.NewMockInterface(controller)
 
-			_, log := testlog.LogForTesting(t)
+			hook, log := testlog.LogForTesting(t)
 
 			fixtures := testdatabase.NewFixture()
 			checker := testdatabase.NewChecker()
@@ -550,21 +707,21 @@ func TestProcessLoop(t *testing.T) {
 			})
 
 			// Add the schedule + any existing manifests to the fixture
-			fixtures.AddMaintenanceScheduleDocuments(tC.schedule)
-			fixtures.AddMaintenanceManifestDocuments(tC.existingManifests...)
+			fixtures.AddMaintenanceScheduleDocuments(tt.schedule)
+			fixtures.AddMaintenanceManifestDocuments(tt.existingManifests...)
 
 			// Apply the fixture
 			err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).Create()
 			require.NoError(err)
 
 			// Add the desired manifests to the checker
-			checker.AddMaintenanceManifestDocuments(tC.desiredManifests...)
+			checker.AddMaintenanceManifestDocuments(tt.desiredManifests...)
 			// If we expect a different schedule, add that to the checker,
 			// otherwise we just want to make sure it hasn't changed
-			if tC.desiredSchedule != nil {
-				checker.AddMaintenanceScheduleDocuments(tC.desiredSchedule)
+			if tt.desiredSchedule != nil {
+				checker.AddMaintenanceScheduleDocuments(tt.desiredSchedule)
 			} else {
-				checker.AddMaintenanceScheduleDocuments(tC.schedule)
+				checker.AddMaintenanceScheduleDocuments(tt.schedule)
 			}
 
 			// fire up the changefeeds
@@ -581,7 +738,7 @@ func TestProcessLoop(t *testing.T) {
 				10, clusterCache, stop,
 			)
 
-			a.cachedDoc = func() (*api.MaintenanceScheduleDocument, bool) { return tC.schedule, true }
+			a.cachedDoc = func() (*api.MaintenanceScheduleDocument, bool) { return tt.schedule, true }
 
 			clusterCache.initialPopulationWaitGroup.Wait()
 
@@ -595,8 +752,8 @@ func TestProcessLoop(t *testing.T) {
 			errs = checker.CheckMaintenanceSchedules(schedulesClient)
 			require.Empty(errs, "MaintenanceSchedules don't match")
 
-			// err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{})
-			// Expect(err).ToNot(HaveOccurred())
+			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)
+			require.NoError(err)
 		})
 	}
 }
