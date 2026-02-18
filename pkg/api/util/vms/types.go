@@ -1,6 +1,8 @@
 package vms
 
 import (
+	"encoding/json"
+
 	"github.com/Azure/ARO-RP/pkg/api/util/version"
 )
 
@@ -194,11 +196,31 @@ const (
 
 var ver419 = version.NewVersion(4, 19, 0)
 
-// TODO: MAITIU - Fix JSON coding/decoding
 type VMSizeStruct struct {
-	CoreCount      int      // `json:"coreCount,omitempty"`
-	Family         VMFamily //`json:"family,omitempty"`
-	MinimumVersion version.Version
+	CoreCount      int             `json:"coreCount,omitempty"`
+	Family         VMFamily        `json:"family,omitempty"`
+	MinimumVersion version.Version `json:"minimumVersion,omitempty"`
+}
+
+func (v *VMSizeStruct) UnmarshalJSON(data []byte) error {
+	type alias VMSizeStruct
+	aux := &struct {
+		MinimumVersion string `json:"minimumVersion,omitempty"`
+		*alias
+	}{
+		alias: (*alias)(v),
+	}
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	if aux.MinimumVersion != "" {
+		parsed, err := version.ParseVersion(aux.MinimumVersion)
+		if err != nil {
+			return err
+		}
+		v.MinimumVersion = parsed
+	}
+	return nil
 }
 
 var (
@@ -305,7 +327,6 @@ var (
 	vmSizeStandardE64isV3Struct   = VMSizeStruct{CoreCount: 64, Family: standardESv3}
 	vmSizeStandardE80isV4Struct   = VMSizeStruct{CoreCount: 80, Family: standardEISv4}
 	vmSizeStandardE80idsV4Struct  = VMSizeStruct{CoreCount: 80, Family: standardEIDSv4}
-	vmSizeStandardE96dsV5Struct   = VMSizeStruct{CoreCount: 96, Family: standardEDSv5}
 	vmSizeStandardE104isV5Struct  = VMSizeStruct{CoreCount: 104, Family: standardEISv5}
 	vmSizeStandardE104idsV5Struct = VMSizeStruct{CoreCount: 104, Family: standardEIDSv5}
 
@@ -396,9 +417,7 @@ const (
 	standardEISv4  VMFamily = "standardEISv4Family"
 	standardEIDSv4 VMFamily = "standardEIDSv4Family"
 	standardEISv5  VMFamily = "standardEISv5Family"
-	standardEDSv5  VMFamily = "standardEDSv5Family"
 	standardEIDSv5 VMFamily = "standardEIDSv5Family"
-	standardEIDv5  VMFamily = "standardEIDv5Family"
 	standardFSv2   VMFamily = "standardFSv2Family"
 	standardMS     VMFamily = "standardMSFamily"
 	standardLSv2   VMFamily = "standardLsv2Family"
