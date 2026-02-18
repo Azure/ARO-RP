@@ -47,7 +47,6 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -593,36 +592,11 @@ func setupE2EInfrastructure(ctx context.Context) error {
 	azOCClient := redhatopenshift20250725.NewOpenShiftClustersClient(
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
-	// Only check for leftover clusters in local dev CI, not in release E2E
+	// Only handle leftover clusters in local dev CI, not in release E2E
 	if conf.IsLocalDevelopmentMode() && conf.IsCI {
-		const (
-			maxRetries  = 10
-			waitBetween = 30 * time.Second
-		)
-		totalWait := time.Duration(maxRetries) * waitBetween
-
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
-					log.Infof("No leftover cluster found on attempt %d; proceeding", attempt)
-					break
-				}
-				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
-			}
-
-			if doc.ProvisioningState != mgmtredhatopenshift20250725.Deleting {
-				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
-			}
-
-			if attempt == maxRetries {
-				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
-			}
-
-			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
-			time.Sleep(waitBetween)
+		if err := deleteLeftoverClusterIfPresent(ctx, azOCClient, conf); err != nil {
+			return err
 		}
-		// Old cluster is gone, create the new one
 	}
 
 	// we only create a cluster when running this in CI
@@ -671,6 +645,25 @@ func cleanupE2EInfrastructure(ctx context.Context) error {
 		log.Info("Cluster deletion completed successfully")
 	}
 
+	return nil
+}
+
+func deleteLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopenshift20250725.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
+	_, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			log.Info("No leftover cluster found; proceeding")
+			return nil
+		}
+		return fmt.Errorf("failed to check for leftover cluster: %w", err)
+	}
+
+	log.Info("Found leftover cluster; deleting it")
+	err = azOCClient.DeleteAndWait(ctx, conf.VnetResourceGroup, conf.ClusterName)
+	if err != nil {
+		return fmt.Errorf("failed to delete leftover cluster: %w", err)
+	}
+	log.Info("Leftover cluster deleted successfully")
 	return nil
 }
 
