@@ -194,6 +194,7 @@ const (
 
 var ver419 = version.NewVersion(4, 19, 0)
 
+// TODO: MAITIU - Fix JSON coding/decoding
 type VMSizeStruct struct {
 	CoreCount      int      // `json:"coreCount,omitempty"`
 	Family         VMFamily //`json:"family,omitempty"`

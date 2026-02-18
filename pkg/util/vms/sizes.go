@@ -298,6 +298,8 @@ func init() {
 	maps.Copy(SupportedWorkerVmSizesForInternalUser, SupportedWorkerVmSizes)
 }
 
+// TODO: MAITIU - Choose correct sizes
+
 // MinMasterVMSizes contains the smallest supported master VM size for each
 // general-purpose D-series family. Used by test/CI/dev tooling to select
 // cost-effective sizes while spreading quota across families.

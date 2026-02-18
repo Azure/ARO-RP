@@ -35,6 +35,8 @@ func VMSizeIsValid(vmSize vms.VMSize, isMaster bool) bool {
 	return supportedAsWorker
 }
 
+// TODO: MAITIU - Fix this logic for when IsCI is true
+
 // VMSizeIsValidForVersion validates VM size with version-specific restrictions
 func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string) bool {
 	// First check basic validity
