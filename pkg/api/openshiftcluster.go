@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/util/vms"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 )
 
