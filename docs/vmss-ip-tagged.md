@@ -2,14 +2,29 @@
 
 ## Release Status
 
-### Pending
+### INT Environment — Successful
 
 | | ARO-RP | RP-Config |
 |---|--------|-----------|
 | **Repo** | `Azure/ARO-RP` | `Azure/RP-Config` |
-| **Branch** | `preetisht/ARO-20272-from-master` | TBD |
-| **Commit** | `c0924893ce60a6b0f441a66d48d386308ad1a20d` | TBD |
-| **Tag** | `v20260217.01-vmss-ip-tagged` | — |
+| **Branch** | `preetisht/ARO-20272-from-master` | `b-ptripathi/vmss-ip-tags` |
+| **Commit** | `c0924893ce60a6b0f441a66d48d386308ad1a20d` | `163e61e5fa09cbb388df700dc4180ce367b74959` |
+| **Tag** | `v20260217.01-vmss-ip-tagged` | `v20260217.01-vmss-ip-tagged` |
+
+Released to INT on **2026-02-17**. Deployment completed successfully.
+[INT Release Pipeline](https://msazure.visualstudio.com/AzureRedHatOpenShift/_build/results?buildId=153397264&view=results)
+
+### INT Environment Second release — Successful
+
+| | ARO-RP | RP-Config |
+|---|--------|-----------|
+| **Repo** | `Azure/ARO-RP` | `Azure/RP-Config` |
+| **Branch** | `preetisht/ARO-20272-from-master` | `b-ptripathi/vmss-ip-tags` |
+| **Commit** | `c0924893ce60a6b0f441a66d48d386308ad1a20d` | `163e61e5fa09cbb388df700dc4180ce367b74959` |
+| **Tag** | `v20260217.01-vmss-ip-tagged` | `v20260217.01-vmss-ip-tagged` |
+
+Released to INT on **2026-02-18**. Deployment completed successfully.
+[INT Release Pipeline (v2)](https://msazure.visualstudio.com/AzureRedHatOpenShift/_build/results?buildId=153534645&view=results)
 
 ---
 
