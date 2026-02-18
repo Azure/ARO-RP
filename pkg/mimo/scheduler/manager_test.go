@@ -52,6 +52,7 @@ func TestProcessLoop(t *testing.T) {
 		existingManifests []*api.MaintenanceManifestDocument
 		desiredManifests  []*api.MaintenanceManifestDocument
 		expectedLogs      []testlog.ExpectedLogEntry
+		extraRuns         int
 	}{
 		{
 			desc: "valid schedule, new manifest created (lookahead=1, scheduleAcross=0s)",
@@ -365,6 +366,101 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+		},
+		{
+			desc: "valid schedule, existing manifest that is of a changed schedule, runs twice (lookahead=1, scheduleAcross=1h)",
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "Mon *-*-* 00:00:00",
+					LookForwardCount: 1,
+					ScheduleAcross:   "1h",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{
+				{
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 6, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 6, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+			desiredManifests: []*api.MaintenanceManifestDocument{
+				{
+					// Old manifest set to be ignored
+					ID:                manifestID,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStateCancelled,
+						StatusText:        "Cancelled by Scheduler as did not match current schedule settings",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 6, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 6, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					// New manifest created
+					ID:                manifestIDs[1],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						MaintenanceTaskID: "0",
+						Priority:          0,
+						// first monday in jan 2026
+						RunAfter:  time.Date(2026, 1, 5, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 5, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-05T00:00Z window (2026-01-05T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=1, found valid=0, cancelled=1"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("processing schedule 08080808-0808-0808-0808-080808080001 (task ID=0)"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-05T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=0, found valid=1, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
+			extraRuns: 1,
 		},
 		{
 			desc: "valid schedule, but it will never fire again",
@@ -742,9 +838,12 @@ func TestProcessLoop(t *testing.T) {
 
 			clusterCache.initialPopulationWaitGroup.Wait()
 
-			didWork, err := a.Process(ctx)
-			require.NoError(err)
-			require.True(didWork)
+			for i := range tt.extraRuns + 1 {
+
+				didWork, err := a.Process(ctx)
+				require.NoError(err, "during run", i+1)
+				require.True(didWork, "during run", i+1)
+			}
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			require.Empty(errs, "MaintenanceManifests don't match")
