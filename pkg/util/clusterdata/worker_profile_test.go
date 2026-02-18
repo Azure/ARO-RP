@@ -23,9 +23,9 @@ import (
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
 )
 
