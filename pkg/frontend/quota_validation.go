@@ -32,7 +32,7 @@ func addRequiredResources(requiredResources map[string]int, vmSize vms.VMSize, c
 	requiredResources["virtualMachines"] += count
 	requiredResources["PremiumDiskCount"] += count
 
-	requiredResources[vm.Family] += vm.CoreCount * count
+	requiredResources[vm.Family.String()] += vm.CoreCount * count
 	requiredResources["cores"] += vm.CoreCount * count
 	return nil
 }

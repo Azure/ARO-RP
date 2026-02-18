@@ -5,14 +5,15 @@ package validate
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api/util/version"
+	"github.com/Azure/ARO-RP/pkg/util/vms"
 )
 
-var supportedVMSizesByRoleMap = map[string]map[vms.VMSize]vms.VMSizeStruct{
-	VMRoleMaster: supportedMasterVmSizes,
-	VMRoleWorker: supportedWorkerVmSizes,
+var supportedVMSizesByRoleMap = map[vms.VMRole]map[vms.VMSize]vms.VMSizeStruct{
+	vms.VMRoleMaster: vms.MinWorkerVMSizes,
+	vms.VMRoleWorker: vms.MinWorkerVMSizes,
 }
 
-func SupportedVMSizesByRole(vmRole string) map[vms.VMSize]vms.VMSizeStruct {
+func SupportedVMSizesByRole(vmRole vms.VMRole) map[vms.VMSize]vms.VMSizeStruct {
 	supportedvmsizes, exists := supportedVMSizesByRoleMap[vmRole]
 	if !exists {
 		return nil
@@ -26,11 +27,11 @@ func DiskSizeIsValid(sizeGB int) bool {
 
 func VMSizeIsValid(vmSize vms.VMSize, isMaster bool) bool {
 	if isMaster {
-		_, supportedAsMaster := SupportedVMSizesByRole(VMRoleMaster)[vmSize]
+		_, supportedAsMaster := SupportedVMSizesByRole(vms.VMRoleMaster)[vmSize]
 		return supportedAsMaster
 	}
 
-	_, supportedAsWorker := SupportedVMSizesByRole(VMRoleWorker)[vmSize]
+	_, supportedAsWorker := SupportedVMSizesByRole(vms.VMRoleWorker)[vmSize]
 	return supportedAsWorker
 }
 
@@ -47,12 +48,12 @@ func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string) bool {
 	}
 	// Check version-specific restrictions
 	if isMaster {
-		if minVersion, exists := masterVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+		if minVersion, exists := vms.MinMasterVMSizes[vmSize]; exists {
+			return clusterVersion.Gt(minVersion.MinimumVersion) || clusterVersion.Eq(minVersion.MinimumVersion)
 		}
 	} else {
-		if minVersion, exists := workerVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+		if minVersion, exists := vms.MinWorkerVMSizes[vmSize]; exists {
+			return clusterVersion.Gt(minVersion.MinimumVersion) || clusterVersion.Eq(minVersion.MinimumVersion)
 		}
 	}
 
@@ -71,11 +72,11 @@ func VMSizeFromName(vmSize vms.VMSize) (vms.VMSizeStruct, bool) {
 		return vms.VMSizeStandardD2sV5Struct, true
 	}
 
-	if size, ok := SupportedVMSizesByRole(VMRoleWorker)[vmSize]; ok {
+	if size, ok := SupportedVMSizesByRole(vms.VMRoleWorker)[vmSize]; ok {
 		return size, true
 	}
 
-	if size, ok := SupportedVMSizesByRole(VMRoleMaster)[vmSize]; ok {
+	if size, ok := SupportedVMSizesByRole(vms.VMRoleMaster)[vmSize]; ok {
 		return size, true
 	}
 
