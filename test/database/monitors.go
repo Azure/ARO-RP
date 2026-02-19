@@ -74,4 +74,8 @@ func injectMonitors(c *cosmosdb.FakeMonitorDocumentClient) {
 
 	c.SetTriggerHandler("renewLease", fakeMonitoringRenewLeaseTrigger)
 	c.SetTriggerHandler("retryLater", fakeMonitorRetryLaterTrigger)
+
+	c.SetSorter(func(in []*api.MonitorDocument) {
+		slices.SortFunc(in, func(a, b *api.MonitorDocument) int { return CompareIDable(a, b) })
+	})
 }

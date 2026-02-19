@@ -32,6 +32,9 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
 		return fakeMaintenanceManifestsRenewLeaseTrigger(ctx, doc, now)
 	})
+	c.SetSorter(func(in []*api.MaintenanceManifestDocument) {
+		slices.SortFunc(in, func(a, b *api.MaintenanceManifestDocument) int { return CompareIDable(a, b) })
+	})
 }
 
 func fakeMaintenanceManifestsDequeueForCluster(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {

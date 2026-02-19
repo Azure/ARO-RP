@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -47,4 +48,8 @@ func injectSubscriptions(c *cosmosdb.FakeSubscriptionDocumentClient) {
 
 	c.SetTriggerHandler("renewLease", fakeBillingRenewLeaseTrigger)
 	c.SetTriggerHandler("retryLater", fakeBillingRetryLaterTrigger)
+
+	c.SetSorter(func(in []*api.SubscriptionDocument) {
+		slices.SortFunc(in, func(a, b *api.SubscriptionDocument) int { return CompareIDable(a, b) })
+	})
 }

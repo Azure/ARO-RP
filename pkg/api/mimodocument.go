@@ -48,6 +48,10 @@ type MaintenanceManifestDocument struct {
 	Dequeues     int    `json:"dequeues,omitempty"`
 }
 
+func (c *MaintenanceManifestDocument) GetID() string {
+	return c.ID
+}
+
 func (e *MaintenanceManifestDocument) String() string {
 	return encodeJSON(e)
 }

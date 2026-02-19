@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 )
 
-type IDer interface {
+type Bucketable interface {
 	GetID() string
 	GetBucket() int
 	GetKey() string
@@ -20,7 +20,7 @@ type IDer interface {
 
 type WorkerFunc func(<-chan struct{}, string)
 
-type monitor[E IDer] struct {
+type monitor[E Bucketable] struct {
 	baseLog *logrus.Entry
 
 	bucketCount int
@@ -32,7 +32,7 @@ type monitor[E IDer] struct {
 	worker WorkerFunc
 }
 
-type BucketWorker[E IDer] interface {
+type BucketWorker[E Bucketable] interface {
 	Stop()
 	SetBuckets([]int)
 
@@ -41,7 +41,7 @@ type BucketWorker[E IDer] interface {
 	UpsertDoc(E)
 }
 
-func NewBucketWorker[E IDer](log *logrus.Entry, worker WorkerFunc, mu *sync.RWMutex) *monitor[E] {
+func NewBucketWorker[E Bucketable](log *logrus.Entry, worker WorkerFunc, mu *sync.RWMutex) *monitor[E] {
 	return &monitor[E]{
 		baseLog: log,
 

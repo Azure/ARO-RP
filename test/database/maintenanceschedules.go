@@ -4,7 +4,6 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
-	"cmp"
 	"context"
 	"slices"
 	"strconv"
@@ -18,6 +17,10 @@ import (
 func injectMaintenanceSchedules(c *cosmosdb.FakeMaintenanceScheduleDocumentClient, now func() time.Time) {
 	c.SetQueryHandler(database.MaintenanceScheduleQueryValid, func(client cosmosdb.MaintenanceScheduleDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceScheduleDocumentRawIterator {
 		return fakeMaintenanceSchedulesAllValid(client, query, options, now)
+	})
+
+	c.SetSorter(func(in []*api.MaintenanceScheduleDocument) {
+		slices.SortFunc(in, func(a, b *api.MaintenanceScheduleDocument) int { return CompareIDable(a, b) })
 	})
 }
 
@@ -41,9 +44,7 @@ func fakeMaintenanceSchedulesAllValid(client cosmosdb.MaintenanceScheduleDocumen
 		results = append(results, r)
 	}
 
-	slices.SortFunc(results, func(a, b *api.MaintenanceScheduleDocument) int {
-		return cmp.Compare(a.ID, b.ID)
-	})
+	slices.SortFunc(results, func(a, b *api.MaintenanceScheduleDocument) int { return CompareIDable(a, b) })
 
 	return cosmosdb.NewFakeMaintenanceScheduleDocumentIterator(results, startingIndex)
 }
