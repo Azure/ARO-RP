@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -68,5 +69,8 @@ func injectMonitors(c *cosmosdb.FakeMonitorDocumentClient, now func() time.Time)
 	})
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MonitorDocument) error {
 		return fakeMonitoringRenewLeaseTrigger(ctx, doc, now)
+	})
+	c.SetSorter(func(in []*api.MonitorDocument) {
+		slices.SortFunc(in, func(a, b *api.MonitorDocument) int { return CompareIDable(a, b) })
 	})
 }
