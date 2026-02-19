@@ -108,6 +108,9 @@
         "mimoActuatorLogLevel": {
             "value": "info"
         },
+        "mimoSchedulerLogLevel": {
+            "value": "info"
+        },
         "miseValidAppIDs": {
             "value": ""
         },
