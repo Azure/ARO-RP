@@ -24,7 +24,7 @@ func TestAdminListBillingDocuments(t *testing.T) {
 		name           string
 		throwsError    error
 		fixture        func(*testdatabase.Fixture)
-		compareOption  cmp.Option
+		compareOptions []cmp.Option
 		wantStatusCode int
 		wantResponse   *admin.BillingDocumentList
 		wantError      string
@@ -60,7 +60,12 @@ func TestAdminListBillingDocuments(t *testing.T) {
 						},
 					})
 			},
-			compareOption:  cmpopts.IgnoreFields(admin.Billing{}, "CreationTime"),
+			compareOptions: []cmp.Option{
+				cmpopts.IgnoreFields(admin.Billing{}, "CreationTime"),
+				cmpopts.SortSlices(func(a, b *admin.BillingDocument) bool {
+					return a.ID < b.ID
+				}),
+			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &admin.BillingDocumentList{
 				BillingDocuments: []*admin.BillingDocument{
@@ -134,7 +139,7 @@ func TestAdminListBillingDocuments(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse, tt.compareOption)
+			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse, tt.compareOptions...)
 			if err != nil {
 				t.Error(err)
 			}
