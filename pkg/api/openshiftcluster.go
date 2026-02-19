@@ -8,8 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 // OpenShiftCluster represents an OpenShift cluster
