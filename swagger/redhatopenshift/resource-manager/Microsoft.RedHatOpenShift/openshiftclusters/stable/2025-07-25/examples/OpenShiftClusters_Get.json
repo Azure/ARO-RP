@@ -108,7 +108,7 @@
         "identity": {
           "type": "UserAssigned",
           "userAssignedIdentities": {
-            "": {}
+            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name": {}
           }
         }
       }
