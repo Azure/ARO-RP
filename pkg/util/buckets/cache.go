@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type cacheDoc[E IDer] struct {
+type cacheDoc[E Bucketable] struct {
 	doc  E
 	stop chan<- struct{}
 }
