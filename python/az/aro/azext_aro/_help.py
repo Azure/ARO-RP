@@ -98,3 +98,12 @@ helps['aro wait'] = """
   short-summary: Wait for a cluster to reach a desired state.
   long-summary: If an operation on a cluster was interrupted or was started with `--no-wait`, use this command to wait for it to complete.
 """
+
+# FIXME: don't forget to complete this
+helps['aro identity list-required'] = """
+  type: command
+  short-summary: List required identities
+  examples:
+    - name: amazing example
+      text: write me
+"""

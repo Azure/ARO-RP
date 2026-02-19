@@ -156,6 +156,10 @@ def validate_subnet(key):
     def _validate_subnet(cmd, namespace):
         subnet = getattr(namespace, key)
 
+        # QUESTION: remove me before merge?
+        if not subnet:
+            return
+
         if not is_valid_resource_id(subnet):
             if not namespace.vnet:
                 raise RequiredArgumentMissingError(f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")

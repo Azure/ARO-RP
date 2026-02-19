@@ -62,12 +62,19 @@ func (client PlatformWorkloadIdentityRoleSetClient) Get(ctx context.Context, loc
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: location,
-			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}},
-		{TargetValue: openShiftMinorVersion,
-			Constraints: []validation.Constraint{{Target: "openShiftMinorVersion", Name: validation.MaxLength, Rule: 63, Chain: nil},
+		{
+			TargetValue: location,
+			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}},
+		},
+		{
+			TargetValue: openShiftMinorVersion,
+			Constraints: []validation.Constraint{
+				{Target: "openShiftMinorVersion", Name: validation.MaxLength, Rule: 63, Chain: nil},
 				{Target: "openShiftMinorVersion", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "openShiftMinorVersion", Name: validation.Pattern, Rule: `^(\d+)\.(\d+)`, Chain: nil}}}}); err != nil {
+				{Target: "openShiftMinorVersion", Name: validation.Pattern, Rule: `^(\d+)\.(\d+)`, Chain: nil},
+			},
+		},
+	}); err != nil {
 		return result, validation.NewError("redhatopenshift.PlatformWorkloadIdentityRoleSetClient", "Get", "%s", err.Error())
 	}
 
