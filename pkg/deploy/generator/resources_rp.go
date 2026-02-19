@@ -404,6 +404,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"monitorLogLevel",
 		"portalLogLevel",
 		"mimoActuatorLogLevel",
+		"mimoSchedulerLogLevel",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
