@@ -787,14 +787,9 @@ def aro_identity_list_required(*,
         raise RuntimeError("Could not find role set.")
 
     logger.warning("Use the following commands to create the required managed identities:")
-    logger.warning(f"    az identity create -g '{resource_group_name}' -n 'aro-cluster' -l '{location}'")
+    print_identity_create_cmd(resource_group_name, 'aro-cluster', location)
     for role in role_set.platform_workload_identity_roles:
-        logger.warning(" ".join([
-            "    az identity create",
-            f"-g '{resource_group_name}'",
-            f"-n '{role.operator_name}'",
-            f"-l '{location}'"
-        ]))
+        print_identity_create_cmd(resource_group_name, role.operator_name, location)
 
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     logger.warning("\nUse the following commands to create the required role assignments over network resources:")
@@ -866,3 +861,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
 
                 if not resource_contributor_exists:
                     assign_role_to_resource(cli_ctx, resource, sp_id, role)
+
+def print_identity_create_cmd(group, name, location):
+    msg = f"    az identity create -g '{group}' -n '{name}' -l '{location}'"
+    logger.warning(msg)
