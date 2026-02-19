@@ -6,7 +6,6 @@ package admin
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 type openShiftClusterConverter struct{}
@@ -134,7 +133,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		for _, p := range oc.Properties.WorkerProfiles {
 			out.Properties.WorkerProfiles = append(out.Properties.WorkerProfiles, WorkerProfile{
 				Name:                p.Name,
-				VMSize:              vms.VMSize(p.VMSize),
+				VMSize:              p.VMSize,
 				DiskSizeGB:          p.DiskSizeGB,
 				SubnetID:            p.SubnetID,
 				Count:               p.Count,
@@ -149,7 +148,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		for _, p := range oc.Properties.WorkerProfilesStatus {
 			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, WorkerProfile{
 				Name:                p.Name,
-				VMSize:              vms.VMSize(p.VMSize),
+				VMSize:              p.VMSize,
 				DiskSizeGB:          p.DiskSizeGB,
 				SubnetID:            p.SubnetID,
 				Count:               p.Count,
@@ -382,7 +381,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Properties.WorkerProfiles = make([]api.WorkerProfile, len(oc.Properties.WorkerProfiles))
 		for i := range oc.Properties.WorkerProfiles {
 			out.Properties.WorkerProfiles[i].Name = oc.Properties.WorkerProfiles[i].Name
-			out.Properties.WorkerProfiles[i].VMSize = vms.VMSize(oc.Properties.WorkerProfiles[i].VMSize)
+			out.Properties.WorkerProfiles[i].VMSize = oc.Properties.WorkerProfiles[i].VMSize
 			out.Properties.WorkerProfiles[i].DiskSizeGB = oc.Properties.WorkerProfiles[i].DiskSizeGB
 			out.Properties.WorkerProfiles[i].SubnetID = oc.Properties.WorkerProfiles[i].SubnetID
 			out.Properties.WorkerProfiles[i].Count = oc.Properties.WorkerProfiles[i].Count
@@ -395,7 +394,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Properties.WorkerProfilesStatus = make([]api.WorkerProfile, len(oc.Properties.WorkerProfilesStatus))
 		for i := range oc.Properties.WorkerProfilesStatus {
 			out.Properties.WorkerProfilesStatus[i].Name = oc.Properties.WorkerProfilesStatus[i].Name
-			out.Properties.WorkerProfilesStatus[i].VMSize = vms.VMSize(oc.Properties.WorkerProfilesStatus[i].VMSize)
+			out.Properties.WorkerProfilesStatus[i].VMSize = oc.Properties.WorkerProfilesStatus[i].VMSize
 			out.Properties.WorkerProfilesStatus[i].DiskSizeGB = oc.Properties.WorkerProfilesStatus[i].DiskSizeGB
 			out.Properties.WorkerProfilesStatus[i].SubnetID = oc.Properties.WorkerProfilesStatus[i].SubnetID
 			out.Properties.WorkerProfilesStatus[i].Count = oc.Properties.WorkerProfilesStatus[i].Count

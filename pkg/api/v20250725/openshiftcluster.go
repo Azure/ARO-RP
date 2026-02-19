@@ -1,10 +1,6 @@
 package v20250725
 
-import (
-	"time"
-
-	"github.com/Azure/ARO-RP/pkg/api/util/vms"
-)
+import "time"
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -223,7 +219,7 @@ const (
 // MasterProfile represents a master profile.
 type MasterProfile struct {
 	// The size of the master VMs.
-	VMSize vms.VMSize `json:"vmSize,omitempty"`
+	VMSize VMSize `json:"vmSize,omitempty"`
 
 	// The Azure resource ID of the master subnet.
 	SubnetID string `json:"subnetId,omitempty"`
@@ -235,13 +231,18 @@ type MasterProfile struct {
 	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
+// VMSize availability varies by region.
+// If a node contains insufficient compute resources (memory, cpu, etc.), pods might fail to run correctly.
+// For more details on restricted VM sizes, see: https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes
+type VMSize string
+
 // WorkerProfile represents a worker profile.
 type WorkerProfile struct {
 	// The worker profile name.
 	Name string `json:"name,omitempty"`
 
 	// The size of the worker VMs.
-	VMSize vms.VMSize `json:"vmSize,omitempty"`
+	VMSize VMSize `json:"vmSize,omitempty"`
 
 	// The disk size of the worker VMs.
 	DiskSizeGB int `json:"diskSizeGB,omitempty"`
