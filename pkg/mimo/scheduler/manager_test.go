@@ -839,7 +839,6 @@ func TestProcessLoop(t *testing.T) {
 			clusterCache.initialPopulationWaitGroup.Wait()
 
 			for i := range tt.extraRuns + 1 {
-
 				didWork, err := a.Process(ctx)
 				require.NoError(err, "during run", i+1)
 				require.True(didWork, "during run", i+1)
