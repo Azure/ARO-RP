@@ -267,7 +267,7 @@ def validate(*,  # pylint: disable=too-many-locals
              resource_group_name,  # pylint: disable=unused-argument
              master_subnet,
              worker_subnet,
-             resource_name,  # pylint: disable=unused-argument
+             resource_name=None,  # pylint: disable=unused-argument
              vnet=None,
              enable_preconfigured_nsg=None,
              cluster_resource_group=None,  # pylint: disable=unused-argument
@@ -760,9 +760,9 @@ def aro_identity_list_required(*,
                                resource_group_name,
                                location,
                                version,
-                               master_subnet=None,
-                               worker_subnet=None,
-                               vnet=None,
+                               master_subnet,
+                               worker_subnet,
+                               vnet,
                                vnet_resource_group_name=None) -> None:
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
@@ -775,19 +775,17 @@ def aro_identity_list_required(*,
     if not vnet_resource_group_name:
         vnet_resource_group_name = resource_group_name
 
-    # import pdb; pdb.set_trace()
-
-    # validate(
-    #     client=client,
-    #     cmd=cmd,
-    #     location=location,
-    #     master_subnet=master_subnet,
-    #     resource_group_name=resource_group_name,
-    #     version=version,
-    #     vnet=vnet,
-    #     vnet_resource_group_name=vnet_resource_group_name,
-    #     worker_subnet=worker_subnet,
-    # )
+    validate(
+        client=client,
+        cmd=cmd,
+        location=location,
+        master_subnet=master_subnet,
+        resource_group_name=resource_group_name,
+        version=version,
+        vnet=vnet,
+        vnet_resource_group_name=vnet_resource_group_name,
+        worker_subnet=worker_subnet,
+    )
 
     if not version in aro_get_versions(client, location):
         raise ValidationError("--version invalid")
@@ -803,28 +801,44 @@ def aro_identity_list_required(*,
     logger.warning("Use the following commands to create the required managed identities:")
     logger.warning(f"    az identity create -g '{resource_group_name}' -n 'aro-cluster' -l '{location}'")
     for role in role_set.platform_workload_identity_roles:
-        logger.warning(f"    az identity create -g '{resource_group_name}' -n '{role.operator_name}' -l '{location}'")
+        logger.warning(" ".join([
+            "    az identity create",
+            f"-g '{resource_group_name}'",
+            f"-n '{role.operator_name}'",
+            f"-l '{location}'"
+        ]))
 
-    auth_client = get_mgmt_service_client(cmd.cli_tx, ResourceType.MGMT_AUTHORIZATION)
-
+    auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     logger.warning("\nUse the following commands to create the required role assignments:")
-
-    # TODO: logger.warning("static role for cluster ident")
-
     for role in role_set.platform_workload_identity_roles:
         definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
-        action_scope: str
+        scope: str
         for permissions in definition.permissions:
             for action in permissions.actions:
                 if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
-                    action_scope = "subnet"
+                    scope = master_subnet
                     continue
 
                 if action.startswith("Microsoft.Network/virtualNetworks/"):
-                    action_scope = "vnet"
+                    scope = vnet
 
-        # TODO: compose role assignment create command for role
+        assignee_object_id: str = "something"
+        scope: str = "something else"
+        logger.warning(" ".join([
+            "    az role assignment create",
+            f"--assignee-object-id $(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query principalId -o tsv)",
+            "--assignee-principal-type ServicePrincipal",
+            f"--role '{role.role_definition_id}'",
+            f"--scope '{scope}'",
+        ]))
 
+    logger.warning(" ".join([
+        "    az role assignment create",
+        "--assignee-object-id $(az ad sp list --display-name 'Azure Red Hat OpenShift RP' --query '[0].id' -o tsv)",
+        "--assignee-principal-type ServicePrincipal",
+        f"--role '{role.role_definition_id}'",
+        f"--scope '{scope}'",
+    ]))
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
