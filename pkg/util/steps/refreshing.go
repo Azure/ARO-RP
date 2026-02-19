@@ -78,20 +78,12 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		// If we haven't timed out and there is an error that is either an
 		// unauthorized client (AADSTS700016) or "AuthorizationFailed" (likely
 		// role propagation delay) then refresh and retry.
-		//
-		// However, if the error targets the managed resource group, it is
-		// an RP permissions issue that will not resolve by retrying, so
-		// we fail immediately.
 		if timeoutCtx.Err() == nil && err != nil &&
 			(azureerrors.IsUnauthorizedClientError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.IsInvalidSecretError(err) ||
 				azureerrors.IsDeploymentMissingPermissionsError(err) ||
 				err == ErrWantRefresh) {
-			if s.managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, s.managedRGName) {
-				log.Printf("auth error on managed resource group, not retrying: %v", err)
-				return true, err
-			}
 			log.Printf("auth error, refreshing and retrying: %v", err)
 			// Try refreshing auth.
 			err = s.auth.Rebuild()
