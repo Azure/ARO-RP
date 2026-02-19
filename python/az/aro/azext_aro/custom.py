@@ -800,25 +800,22 @@ def aro_identity_list_required(*,
     logger.warning("\nUse the following commands to create the required role assignments:")
     for role in role_set.platform_workload_identity_roles:
         definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
-        scope: str
+        scopes: list[str] = list()
         for permissions in definition.permissions:
             for action in permissions.actions:
                 if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
-                    scope = master_subnet
-                    continue
+                    scopes = [master_subnet, worker_subnet]
+                elif action.startswith("Microsoft.Network/virtualNetworks/"):
+                    scopes = [vnet]
 
-                if action.startswith("Microsoft.Network/virtualNetworks/"):
-                    scope = vnet
-
-        assignee_object_id: str = "something"
-        scope: str = "something else"
-        logger.warning(" ".join([
-            "    az role assignment create",
-            f"--assignee-object-id $(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query principalId -o tsv)",
-            "--assignee-principal-type ServicePrincipal",
-            f"--role '{role.role_definition_id}'",
-            f"--scope '{scope}'",
-        ]))
+        for scope in scopes:
+            logger.warning(" ".join([
+                "    az role assignment create",
+                f"--assignee-object-id $(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query principalId -o tsv)",
+                "--assignee-principal-type ServicePrincipal",
+                f"--role '{role.role_definition_id}'",
+                f"--scope '{scope}'",
+            ]))
 
     logger.warning(" ".join([
         "    az role assignment create",
