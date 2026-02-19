@@ -797,7 +797,7 @@ def aro_identity_list_required(*,
         ]))
 
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
-    logger.warning("\nUse the following commands to create the required role assignments:")
+    logger.warning("\nUse the following commands to create the required role assignments over network resources:")
     for role in role_set.platform_workload_identity_roles:
         definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
         scopes: list[str] = list()
@@ -817,12 +817,25 @@ def aro_identity_list_required(*,
                 f"--scope '{scope}'",
             ]))
 
+    logger.warning("\nUse the following commands to create the required role assignments over platform workload identities:")
+    for role in role_set.platform_workload_identity_roles:
+        scope = f"$(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query id -o tsv)"
+        logger.warning(" ".join([
+            "    az role assignment create",
+            f"--assignee-object-id $(az identity show -g '{resource_group_name}' -n 'aro-cluster' --query principalId -o tsv)",
+            "--assignee-principal-type ServicePrincipal",
+            f"--role ef318e2a-8334-4a05-9e4a-295a196c6a6e",
+            f"--scope '{scope}'",
+        ]))
+
+    logger.warning("\nUse the following command to create the required roll assignment over the vnet:")
     logger.warning(" ".join([
         "    az role assignment create",
         "--assignee-object-id $(az ad sp list --display-name 'Azure Red Hat OpenShift RP' --query '[0].id' -o tsv)",
         "--assignee-principal-type ServicePrincipal",
-        f"--role '{role.role_definition_id}'",
-        f"--scope '{scope}'",
+        # First party ServicePrincipal
+        f"--role 42f3c60f-e7b1-46d7-ba56-6de681664342",
+        f"--scope '{vnet}'",
     ]))
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
