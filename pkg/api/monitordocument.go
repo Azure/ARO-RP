@@ -31,3 +31,7 @@ type MonitorDocument struct {
 
 	Monitor *Monitor `json:"monitor,omitempty"`
 }
+
+func (c *MonitorDocument) GetID() string {
+	return c.ID
+}
