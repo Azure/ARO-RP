@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -290,6 +291,60 @@ func detectVMProfile(errStr string) VMProfileType {
 		return VMProfileMaster
 	}
 	return VMProfileUnknown
+}
+
+var rxScopeResourceGroup = regexp.MustCompile(`(?i)/resourceGroups/([^/']+)`)
+
+// ResourceGroupFromError attempts to extract the Azure resource group name from
+// an Azure SDK error. It checks (in order):
+//  1. The HTTP request URL from the response attached to the error
+//  2. The error message text for an ARM scope pattern
+func ResourceGroupFromError(err error) (string, bool) {
+	if err == nil {
+		return "", false
+	}
+
+	if rg, ok := resourceGroupFromResponse(err); ok {
+		return rg, true
+	}
+
+	return resourceGroupFromMessage(err.Error())
+}
+
+func IsManagedResourceGroupError(err error, managedRGName string) bool {
+	rg, ok := ResourceGroupFromError(err)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(rg, managedRGName)
+}
+
+func resourceGroupFromResponse(err error) (string, bool) {
+	var url string
+
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) && detailedErr.Response != nil && detailedErr.Response.Request != nil {
+		url = detailedErr.Response.Request.URL.Path
+	}
+
+	var respErr *azcore.ResponseError
+	if url == "" && errors.As(err, &respErr) && respErr.RawResponse != nil && respErr.RawResponse.Request != nil {
+		url = respErr.RawResponse.Request.URL.Path
+	}
+
+	if url == "" {
+		return "", false
+	}
+
+	return resourceGroupFromMessage(url)
+}
+
+func resourceGroupFromMessage(msg string) (string, bool) {
+	matches := rxScopeResourceGroup.FindStringSubmatch(msg)
+	if len(matches) < 2 {
+		return "", false
+	}
+	return matches[1], true
 }
 
 // IsRetryableError returns true if the error is a transient/retryable error
