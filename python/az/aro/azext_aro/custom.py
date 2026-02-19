@@ -775,18 +775,6 @@ def aro_identity_list_required(*,
     if not vnet_resource_group_name:
         vnet_resource_group_name = resource_group_name
 
-    validate(
-        client=client,
-        cmd=cmd,
-        location=location,
-        master_subnet=master_subnet,
-        resource_group_name=resource_group_name,
-        version=version,
-        vnet=vnet,
-        vnet_resource_group_name=vnet_resource_group_name,
-        worker_subnet=worker_subnet,
-    )
-
     if not version in aro_get_versions(client, location):
         raise ValidationError("--version invalid")
 
