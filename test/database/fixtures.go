@@ -21,6 +21,7 @@ type Fixture struct {
 	openShiftVersionDocuments                []*api.OpenShiftVersionDocument
 	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
 	maintenanceManifestDocuments             []*api.MaintenanceManifestDocument
+	maintenanceScheduleDocuments             []*api.MaintenanceScheduleDocument
 
 	openShiftClustersDatabase                database.OpenShiftClusters
 	billingDatabase                          database.Billing
@@ -31,6 +32,7 @@ type Fixture struct {
 	openShiftVersionsDatabase                database.OpenShiftVersions
 	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
 	maintenanceManifestsDatabase             database.MaintenanceManifests
+	maintenanceSchedulesDatabase             database.MaintenanceSchedules
 
 	openShiftVersionsUUID                uuid.Generator
 	platformWorkloadIdentityRoleSetsUUID uuid.Generator
@@ -50,6 +52,7 @@ func (f *Fixture) Clear() {
 	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
 	f.platformWorkloadIdentityRoleSetDocuments = []*api.PlatformWorkloadIdentityRoleSetDocument{}
 	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
+	f.maintenanceScheduleDocuments = []*api.MaintenanceScheduleDocument{}
 }
 
 func (f *Fixture) WithOpenShiftClusters(db database.OpenShiftClusters) *Fixture {
@@ -96,6 +99,11 @@ func (f *Fixture) WithPlatformWorkloadIdentityRoleSets(db database.PlatformWorkl
 
 func (f *Fixture) WithMaintenanceManifests(db database.MaintenanceManifests) *Fixture {
 	f.maintenanceManifestsDatabase = db
+	return f
+}
+
+func (f *Fixture) WithMaintenanceSchedules(db database.MaintenanceSchedules) *Fixture {
+	f.maintenanceSchedulesDatabase = db
 	return f
 }
 
@@ -198,6 +206,17 @@ func (f *Fixture) AddMaintenanceManifestDocuments(docs ...*api.MaintenanceManife
 	}
 }
 
+func (f *Fixture) AddMaintenanceScheduleDocuments(docs ...*api.MaintenanceScheduleDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.maintenanceScheduleDocuments = append(f.maintenanceScheduleDocuments, docCopy.(*api.MaintenanceScheduleDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 
@@ -271,6 +290,16 @@ func (f *Fixture) Create() error {
 			i.ID = f.maintenanceManifestsDatabase.NewUUID()
 		}
 		_, err := f.maintenanceManifestsDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.maintenanceScheduleDocuments {
+		if i.ID == "" {
+			i.ID = f.maintenanceSchedulesDatabase.NewUUID()
+		}
+		_, err := f.maintenanceSchedulesDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}
