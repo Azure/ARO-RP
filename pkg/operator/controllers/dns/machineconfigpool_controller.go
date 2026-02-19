@@ -1,11 +1,10 @@
-package dnsmasq
+package dns
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
 	"context"
-	"regexp"
 
 	"github.com/sirupsen/logrus"
 
@@ -24,42 +23,47 @@ import (
 )
 
 const (
-	MachineConfigControllerName = "DnsmasqMachineConfig"
+	MachineConfigPoolControllerName = "DnsmasqMachineConfigPool"
 )
 
-type MachineConfigReconciler struct {
+type MachineConfigPoolReconciler struct {
 	base.AROController
 
 	ch clienthelper.Interface
 }
 
-var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
-
-func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *MachineConfigReconciler {
-	return &MachineConfigReconciler{
+func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *MachineConfigPoolReconciler {
+	return &MachineConfigPoolReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
-			Name:   MachineConfigControllerName,
+			Name:   MachineConfigPoolControllerName,
 		},
 		ch: ch,
 	}
 }
 
-// Reconcile watches ARO DNS MachineConfig objects, and if any changes,
-// reconciles it
-func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+// Reconcile watches MachineConfigPool objects, and if any changes,
+// reconciles the associated ARO DNS MachineConfig object
+func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DnsmasqEnabled) {
+	if !IsDNSControllerEnabled(instance.Spec.OperatorFlags) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled) {
+	// CustomDNS uses Infrastructure CR (cluster-wide), not per-pool MachineConfigs; skip
+	if GetEffectiveDNSType(ctx, r.Client, r.Log, instance) == operator.DNSTypeClusterHosted {
+		r.Log.Debug("CustomDNS enabled, skipping dnsmasq MachineConfigPool reconciliation")
+		return reconcile.Result{}, nil
+	}
+
+	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled)
+	if restartDnsmasq {
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
 	}
 
@@ -71,14 +75,8 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	r.Log.Debug("running")
-	m := rxARODNS.FindStringSubmatch(request.Name)
-	if m == nil {
-		return reconcile.Result{}, nil
-	}
-	role := m[1]
-
 	mcp := &mcv1.MachineConfigPool{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: role}, mcp)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, mcp)
 	if kerrors.IsNotFound(err) {
 		r.ClearDegraded(ctx)
 		return reconcile.Result{}, nil
@@ -92,7 +90,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, nil
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled), *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, restartDnsmasq, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -104,9 +102,9 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 }
 
 // SetupWithManager setup our mananger
-func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&mcv1.MachineConfig{}).
-		Named(MachineConfigControllerName).
+		For(&mcv1.MachineConfigPool{}).
+		Named(MachineConfigPoolControllerName).
 		Complete(r)
 }
