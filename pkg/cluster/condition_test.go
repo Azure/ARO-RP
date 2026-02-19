@@ -640,8 +640,8 @@ func TestHaveClusterOperatorsSettled(t *testing.T) {
 				Build())
 
 			m := &manager{
-				log: log,
-				ch:  ch,
+				log:              log,
+				kubeClientHelper: ch,
 			}
 
 			result, err := m.clusterOperatorsHaveSettled(ctx)

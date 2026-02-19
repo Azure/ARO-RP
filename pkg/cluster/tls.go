@@ -92,7 +92,7 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 	}
 
 	for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
-		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.ch, types.NamespacedName{Name: m.APICertName(), Namespace: namespace}, m.APICertName())
+		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.kubeClientHelper, types.NamespacedName{Name: m.APICertName(), Namespace: namespace}, m.APICertName())
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 	}
 
 	for _, namespace := range []string{"openshift-ingress", "openshift-azure-operator"} {
-		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.ch, types.NamespacedName{Namespace: namespace, Name: m.IngressCertName()}, m.IngressCertName())
+		err = EnsureTLSSecretFromKeyvault(ctx, m.env.ClusterKeyvault(), m.kubeClientHelper, types.NamespacedName{Namespace: namespace, Name: m.IngressCertName()}, m.IngressCertName())
 		if err != nil {
 			return err
 		}
