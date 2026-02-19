@@ -49,7 +49,6 @@ type scheduler struct {
 var _ Scheduler = (*scheduler)(nil)
 
 func NewSchedulerForSchedule(
-	ctx context.Context,
 	_env env.Interface,
 	log *logrus.Entry,
 	cachedDoc getCachedScheduleDocFunc,

@@ -382,7 +382,7 @@ func Next(now time.Time, sched calendar) (time.Time, bool) {
 					break
 				}
 				if s > nextPossible.Second() {
-					nextPossible = time.Date(nextPossible.Year(), nextPossible.Month(), nextPossible.Day(), nextPossible.Hour(), nextPossible.Second(), s, 0, nextPossible.Location())
+					nextPossible = time.Date(nextPossible.Year(), nextPossible.Month(), nextPossible.Day(), nextPossible.Hour(), nextPossible.Minute(), s, 0, nextPossible.Location())
 					hasSecond = true
 					break
 				}

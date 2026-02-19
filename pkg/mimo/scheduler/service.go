@@ -169,7 +169,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 
 	s.startChangefeeds(ctx, stop)
 
-	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", nil, s.checkReady)
 
 	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
 	for !s.stopping.Load() {
@@ -327,7 +327,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 
 	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
 
-	a, err := NewSchedulerForSchedule(context.Background(), s.env, log, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
+	a, err := NewSchedulerForSchedule(s.env, log, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return
