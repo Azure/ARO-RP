@@ -31,6 +31,5 @@ def load_command_table(loader, _):
 
         g.custom_command('validate', 'aro_validate')
 
-    # FIXME: "identity" doesn't show up in the list of commands in `az aro -h`
     with loader.command_group('aro identity', aro_sdk, client_factory=cf_aro) as g:
         g.custom_command('list-required', 'aro_identity_list_required', supports_no_wait=False)
