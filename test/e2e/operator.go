@@ -53,8 +53,8 @@ var _ = Describe("ARO Operator", Label(smoke, install), func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			for _, pod := range pods.Items {
 				// Check the latest 10 minutes of logs.
-				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name, &corev1.PodLogOptions{SinceSeconds: pointerutils.ToPtr(int64(600))}).DoRaw(ctx)
-				g.Expect(err).NotTo(HaveOccurred())
+				body, err := clients.Kubernetes.CoreV1().Pods(aroOperatorNamespace).GetLogs(pod.Name+"_fail", &corev1.PodLogOptions{SinceSeconds: pointerutils.ToPtr(int64(600))}).DoRaw(ctx)
+				g.Expect(err).NotTo(HaveOccurred(), "get logs for pod %s: %s", pod.Name, err)
 				g.Expect(string(body)).NotTo(ContainSubstring("level=error"))
 			}
 		}, ctx, 10*time.Minute, 30*time.Second).Should(Succeed())
