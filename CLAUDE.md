@@ -67,9 +67,11 @@ When modifying API types (`pkg/api/v*`):
 
 ## Architecture
 
-### Core Pattern: Async Update Model
+### Cluster Lifecycle: Async Update Model
 
-- **Frontend** (`pkg/frontend`): Accepts PUT/DELETE requests, writes to CosmosDB with non-terminal provisioningState (Updating/Deleting)
+For cluster create/update/delete operations, the RP uses an async model:
+
+- **Frontend** (`pkg/frontend`): HTTP server implementing the ARM RP contract. Handles GET, LIST, PUT, PATCH, DELETE, and various POST actions (credentials, preflight, admin operations). For cluster lifecycle mutations (PUT/DELETE), it writes to CosmosDB with a non-terminal provisioningState (Creating/Updating/Deleting).
 - **Backend** (`pkg/backend`): Polls database for documents with non-terminal states, processes them, updates with terminal state (Succeeded/Failed)
 - **Database**: CosmosDB with optimistic concurrency control (see `RetryOnPreconditionFailed`)
 
@@ -107,8 +109,8 @@ When running `go mod tidy`, use `make go-tidy` to handle both modules.
 
 **Multi-module gotchas:**
 
-- `go build ./...` from the repo root only builds the root module. To build/test `pkg/api/` packages, run from the `pkg/api/` directory: `cd pkg/api && go build ./...`
-- `make unit-test-go` handles both modules automatically via gotestsum
+- `go build ./...` from the repo root compiles `pkg/api` code transitively (the root module imports it, and the `replace` directive in `go.mod` resolves it to `./pkg/api`). However, Go's `./...` pattern **excludes subdirectories with their own `go.mod`**, so `go test ./...` from root will NOT run tests inside `pkg/api/`, and `go mod tidy` from root will NOT update `pkg/api/go.mod`.
+- `make unit-test-go` only runs `gotestsum ... ./...` from root — it does NOT separately test `pkg/api/`. To run tests in `pkg/api/`, use `cd pkg/api && go test ./...`.
 - `make fmt` runs `golangci-lint fmt` in both module roots (not `gofmt`)
 - `make lint-go-fix` also runs in both modules: root and `cd pkg/api/`
 
@@ -147,7 +149,7 @@ These files are used only for development and CI, not in the production RP binar
 - `pkg/util/cluster/` — Test cluster creation tooling (reads env vars via Viper)
 - `hack/cluster/` — CLI tool for manual cluster creation
 - `test/e2e/` — E2E test suite
-- `pkg/util/cluster/cluster.go` `ClusterConfig` uses `vms.VMSize` for VM size fields — changes here don't affect customer API surface
+- `pkg/util/cluster/cluster.go` `ClusterConfig` uses `string` fields for VM sizes (cast to `api.VMSize` at usage) — changes here don't affect customer API surface
 
 ## API Type System: Internal vs External Boundary
 
@@ -308,12 +310,12 @@ AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000
 
 ```go
 type ClusterConfig struct {
-    ClusterName    string     `mapstructure:"CLUSTER"`
-    SubscriptionID string     `mapstructure:"AZURE_SUBSCRIPTION_ID"`
-    IsCI           bool       `mapstructure:"CI"`
-    RpMode         string     `mapstructure:"RP_MODE"`
-    MasterVMSize   vms.VMSize `mapstructure:"MASTER_VM_SIZE"`
-    WorkerVMSize   vms.VMSize `mapstructure:"WORKER_VM_SIZE"`
+    ClusterName    string   `mapstructure:"CLUSTER"`
+    SubscriptionID string   `mapstructure:"AZURE_SUBSCRIPTION_ID"`
+    IsCI           bool     `mapstructure:"CI"`
+    RpMode         string   `mapstructure:"RP_MODE"`
+    MasterVMSize   string   `mapstructure:"MASTER_VM_SIZE"`
+    WorkerVMSize   string   `mapstructure:"WORKER_VM_SIZE"`
     // ... 15+ more fields
 }
 ```
