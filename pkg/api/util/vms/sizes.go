@@ -350,25 +350,31 @@ func LookupVMSize(vmSize VMSize) (VMSizeStruct, bool) {
 }
 
 func GetCICandidateMasterVMSizes() []VMSize {
-	vmSizes := slices.Collect(maps.Keys(minMasterVMSizes))
-	return shuffler(vmSizes)
+	return shuffleByCoreTier(minMasterVMSizes)
 }
 
 func GetCICandidateWorkerVMSizes() []VMSize {
-	vmSizes := slices.Collect(maps.Keys(minWorkerVMSizes))
-	return shuffler(vmSizes)
+	return shuffleByCoreTier(minWorkerVMSizes)
 }
 
-func shuffler(vmSizes []VMSize) []VMSize {
-	rand.Shuffle(len(vmSizes), func(i, j int) {
-		vmSizes[i], vmSizes[j] = vmSizes[j], vmSizes[i]
-	})
-	d2Count := 3
-	if len(vmSizes) > d2Count {
-		fallbacks := vmSizes[d2Count:]
-		rand.Shuffle(len(fallbacks), func(i, j int) {
-			fallbacks[i], fallbacks[j] = fallbacks[j], fallbacks[i]
-		})
+// shuffleByCoreTier groups VM sizes by core count (cheapest first),
+// shuffles within each tier to spread quota pressure, then concatenates
+// the tiers in ascending order.
+func shuffleByCoreTier(sizeMap map[VMSize]VMSizeStruct) []VMSize {
+	tiers := map[int][]VMSize{}
+	for sz, info := range sizeMap {
+		tiers[info.CoreCount] = append(tiers[info.CoreCount], sz)
 	}
-	return vmSizes
+
+	coreCounts := slices.Sorted(maps.Keys(tiers))
+
+	result := make([]VMSize, 0, len(sizeMap))
+	for _, cc := range coreCounts {
+		tier := tiers[cc]
+		rand.Shuffle(len(tier), func(i, j int) {
+			tier[i], tier[j] = tier[j], tier[i]
+		})
+		result = append(result, tier...)
+	}
+	return result
 }
