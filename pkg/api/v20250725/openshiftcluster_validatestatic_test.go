@@ -159,6 +159,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				v := &openShiftClusterStaticValidator{
 					location: *tt.location,
 					domain:   "location.aroapp.io",
+					isCI:     false,
 
 					resourceID: getResourceID(*tt.clusterName),
 					r: azure.Resource{
@@ -198,7 +199,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(ext, current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
+				err := v.Static(oc, current, v.isCI, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Errorf("Expected error %s, got nil", tt.wantErr)

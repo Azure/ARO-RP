@@ -198,7 +198,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(ext, current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
+				err := v.Static(oc, current, false, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Errorf("Expected error %s, got nil", tt.wantErr)
