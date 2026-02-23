@@ -547,21 +547,17 @@ func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
 	}
 
 	var statusCode int
-	var cloudErrorCode string
 
 	switch err := err.(type) {
 	case *api.CloudError:
 		statusCode = err.StatusCode
-		if err.CloudErrorBody != nil {
-			cloudErrorCode = err.Code
-		}
 	case statusCodeError:
 		statusCode = int(err)
 	default:
 		statusCode = 500
 	}
 
-	resultType := utillog.MapStatusCodeToResultType(statusCode, cloudErrorCode)
+	resultType := utillog.MapStatusCodeToResultType(statusCode)
 	log = log.WithField("resultType", resultType)
 
 	if resultType == utillog.SuccessResultType {

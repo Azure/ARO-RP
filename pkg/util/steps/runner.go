@@ -67,21 +67,18 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 		startTime := time.Now()
 		err := step.run(ctx, log)
 		if err != nil {
-			if azureerrors.IsUnauthorizedClientError(err) ||
-				azureerrors.IsInvalidSecretError(err) {
+			if managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, managedRGName) {
+				err = api.NewCloudError(
+					http.StatusInternalServerError,
+					api.CloudErrorCodeInternalServerError,
+					"encountered error",
+					err.Error())
+			} else if azureerrors.IsUnauthorizedClientError(err) ||
+				azureerrors.IsInvalidSecretError(err) ||
+				azureerrors.HasAuthorizationFailedError(err) {
 				err = api.NewCloudError(
 					http.StatusBadRequest,
 					api.CloudErrorCodeInvalidServicePrincipalCredentials,
-					"encountered error",
-					err.Error())
-			} else if azureerrors.HasAuthorizationFailedError(err) {
-				errCode := api.CloudErrorCodeInvalidServicePrincipalCredentials
-				if managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, managedRGName) {
-					errCode = api.CloudErrorCodeInvalidResourceProviderPermissions
-				}
-				err = api.NewCloudError(
-					http.StatusBadRequest,
-					errCode,
 					"encountered error",
 					err.Error())
 			} else if oDataError := (&msgraph_errors.ODataError{}); errors.As(err, &oDataError) {

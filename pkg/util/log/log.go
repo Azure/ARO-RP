@@ -50,14 +50,7 @@ const (
 	logLevelEnvKey = "ARO_LOG_LEVEL"
 )
 
-var serverErrorCodes = map[string]bool{
-	api.CloudErrorCodeInvalidResourceProviderPermissions: true,
-}
-
-func MapStatusCodeToResultType(statusCode int, cloudErrorCode string) ResultType {
-	if serverErrorCodes[cloudErrorCode] {
-		return ServerErrorResultType
-	}
+func MapStatusCodeToResultType(statusCode int) ResultType {
 	if statusCode < 300 && statusCode >= 200 {
 		return SuccessResultType
 	}
