@@ -39,11 +39,7 @@ func (ocb *openShiftClusterBackend) getResultType(backendErr error) utillog.Resu
 	var resultType utillog.ResultType
 	err, ok := backendErr.(*api.CloudError)
 	if ok {
-		var cloudErrorCode string
-		if err.CloudErrorBody != nil {
-			cloudErrorCode = err.Code
-		}
-		resultType = utillog.MapStatusCodeToResultType(err.StatusCode, cloudErrorCode)
+		resultType = utillog.MapStatusCodeToResultType(err.StatusCode)
 	}
 	return resultType
 }

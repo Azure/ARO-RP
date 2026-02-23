@@ -106,10 +106,10 @@ func TestCreateActionableError(t *testing.T) {
 				},
 			},
 			expectCloudError: &expectCloudErrorFields{
-				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidResourceProviderPermissions,
+				http.StatusInternalServerError,
+				api.CloudErrorCodeInternalServerError,
 				"",
-				"The resource provider does not have enough permissions on the managed resource group. Please check that the resource provider permissions are correct.",
+				"Internal server error.",
 			},
 		},
 		{

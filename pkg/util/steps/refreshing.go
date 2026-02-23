@@ -131,6 +131,15 @@ func CreateActionableError(err error, managedRGName string) error {
 		return err
 	}
 
+	if managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, managedRGName) {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"",
+			"Internal server error.",
+		)
+	}
+
 	switch {
 	case azureerrors.IsUnauthorizedClientError(err):
 		return newServicePrincipalCloudError(make_one_line_str(
@@ -142,17 +151,6 @@ func CreateActionableError(err error, managedRGName string) error {
 			http.StatusBadRequest,
 		)
 	case azureerrors.HasAuthorizationFailedError(err):
-		if managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, managedRGName) {
-			return api.NewCloudError(
-				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidResourceProviderPermissions,
-				"",
-				"The resource provider does not have enough "+
-					"permissions on the managed resource group. "+
-					"Please check that the resource provider permissions "+
-					"are correct.",
-			)
-		}
 		return newServicePrincipalCloudError(make_one_line_str(
 			"Authorization using provided credentials failed.",
 			"Please ensure that the provided application (client)",
