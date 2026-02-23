@@ -41,6 +41,7 @@ func TestVMSizeIsValid(t *testing.T) {
 		name          string
 		vmSize        vms.VMSize
 		isMaster      bool
+		isCI          bool
 		desiredResult bool
 	}{
 		{
@@ -79,7 +80,7 @@ func TestVMSizeIsValid(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			result := VMSizeIsValid(tt.vmSize, tt.isMaster)
+			result := VMSizeIsValid(tt.vmSize, tt.isMaster, tt.isCI)
 
 			if result != tt.desiredResult {
 				t.Errorf("Want %v, got %v", tt.desiredResult, result)
@@ -94,6 +95,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 		vmSize        vms.VMSize
 		isMaster      bool
 		version       string
+		isCI          bool
 		desiredResult bool
 	}{
 		// 4.19+ Master/Control Plane VM sizes - DSv6 series
@@ -528,7 +530,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			result := VMSizeIsValidForVersion(tt.vmSize, tt.isMaster, tt.version)
+			result := VMSizeIsValidForVersion(tt.vmSize, tt.isMaster, tt.version, tt.isCI)
 
 			if result != tt.desiredResult {
 				t.Errorf("Want %v, got %v", tt.desiredResult, result)
