@@ -29,7 +29,8 @@ const (
 	MaintenanceManifestQueueOverallQuery      = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment
 	MaintenanceManifestQueueLengthQuery       = "SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
 
-	MaintenanceManifestGetForScheduleIDAndClusterBeforeTime = MaintenanceManifestQueryForCluster + " AND " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
+	MaintenanceManifestGetFutureForScheduleIDAndCluster = MaintenanceManifestQueryForCluster + " AND " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
+	MaintenanceManifestGetFutureForScheduleID           = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
 )
 
 type MaintenanceManifestDocumentMutator func(*api.MaintenanceManifestDocument) error
@@ -45,6 +46,7 @@ type MaintenanceManifests interface {
 	Create(context.Context, *api.MaintenanceManifestDocument) (*api.MaintenanceManifestDocument, error)
 	GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	GetQueuedByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+	GetFutureTasksForScheduleID(ctx context.Context, scheduleID string, continuation string) cosmosdb.MaintenanceManifestDocumentIterator
 	GetFutureTasksForClusterAndScheduleID(ctx context.Context, clusterResourceID string, scheduleID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 
 	Patch(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
@@ -216,7 +218,7 @@ func (c *maintenanceManifests) GetFutureTasksForClusterAndScheduleID(ctx context
 	}
 
 	return c.c.Query("", &cosmosdb.Query{
-		Query: MaintenanceManifestGetForScheduleIDAndClusterBeforeTime,
+		Query: MaintenanceManifestGetFutureForScheduleIDAndCluster,
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@clusterResourceID",
@@ -228,6 +230,18 @@ func (c *maintenanceManifests) GetFutureTasksForClusterAndScheduleID(ctx context
 			},
 		},
 	}, &cosmosdb.Options{Continuation: continuation}), nil
+}
+
+func (c *maintenanceManifests) GetFutureTasksForScheduleID(ctx context.Context, scheduleID, continuation string) cosmosdb.MaintenanceManifestDocumentIterator {
+	return c.c.Query("", &cosmosdb.Query{
+		Query: MaintenanceManifestGetFutureForScheduleID,
+		Parameters: []cosmosdb.Parameter{
+			{
+				Name:  "@scheduleID",
+				Value: scheduleID,
+			},
+		},
+	}, &cosmosdb.Options{Continuation: continuation})
 }
 
 func (c *maintenanceManifests) GetQueuedByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
