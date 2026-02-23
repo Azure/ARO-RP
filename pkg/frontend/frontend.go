@@ -321,6 +321,9 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		r.Route("/maintenanceschedules", func(r chi.Router) {
 			r.Put("/", f.putAdminMaintScheduleCreate)
 			r.Get("/", f.getAdminMaintSchedules)
+			r.Route("/{scheduleId}", func(r chi.Router) {
+				r.Get("/", f.getAdminMaintSchedule)
+			})
 		})
 
 		r.Route("/hivesyncset", func(r chi.Router) {
