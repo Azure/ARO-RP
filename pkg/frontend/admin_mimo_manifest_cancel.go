@@ -77,3 +77,62 @@ func (f *frontend) _postAdminMaintManifestCancel(ctx context.Context, r *http.Re
 
 	return json.MarshalIndent(converter.ToExternal(modifiedDoc, true), "", "    ")
 }
+
+func (f *frontend) postAdminMaintManifestCancelBatch(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	scheduleID := r.URL.Query().Get("scheduleID")
+
+	b, err := f._postAdminMaintManifestCancelBatch(ctx, log, r, scheduleID)
+
+	if cloudErr, ok := err.(*api.CloudError); ok {
+		api.WriteCloudError(w, cloudErr)
+		return
+	}
+
+	adminReply(log, w, nil, b, err)
+}
+
+func (f *frontend) _postAdminMaintManifestCancelBatch(ctx context.Context, log *logrus.Entry, r *http.Request, scheduleID string) ([]byte, error) {
+	if scheduleID == "" {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "scheduleID", "Parameter is missing")
+	}
+
+	dbManifests, err := f.dbGroup.MaintenanceManifests()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	cancelled := 0
+	errors := 0
+
+	i := dbManifests.GetFutureTasksForScheduleID(ctx, scheduleID, "")
+	for {
+		docs, err := i.Next(ctx, 50)
+		if err != nil {
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Errorf("failed reading next schedule document: %w", err).Error())
+		}
+		if docs == nil {
+			break
+		}
+
+		for _, doc := range docs.MaintenanceManifestDocuments {
+			_, err := dbManifests.Patch(ctx, doc.ClusterResourceID, doc.ID, func(mmd *api.MaintenanceManifestDocument) error {
+				if mmd.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
+					// something got to us first
+					return nil
+				}
+
+				mmd.MaintenanceManifest.State = api.MaintenanceManifestStateCancelled
+				return nil
+			})
+			if err != nil {
+				log.Errorf("while cancelling %s, continuing: %s", doc.ID, err.Error())
+				errors += 1
+			} else {
+				cancelled += 1
+			}
+		}
+	}
+	return json.MarshalIndent(map[string]any{"cancelled": cancelled, "errors": errors}, "", "    ")
+}

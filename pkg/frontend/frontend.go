@@ -315,10 +315,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		r.Route("/maintenancemanifests", func(r chi.Router) {
 			r.Get("/queued", f.getAdminQueuedMaintManifests)
+			r.Post("/cancel", f.postAdminMaintManifestCancelBatch)
 		})
 
 		r.Route("/maintenanceschedules", func(r chi.Router) {
-			// r.Get("/", f.getAdminMaintManifests)
 			r.Put("/", f.putAdminMaintScheduleCreate)
 			r.Get("/", f.getAdminMaintSchedules)
 		})
