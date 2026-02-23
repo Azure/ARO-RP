@@ -7,7 +7,6 @@ import (
 	"maps"
 	"math/rand/v2"
 	"slices"
-	"sort"
 )
 
 // Public facing document which lists supported VM Sizes:
@@ -279,23 +278,33 @@ var SupportedWorkerVMSizes = map[VMSize]VMSizeStruct{
 	VMSizeStandardD96ldsV6: vmSizeStandardD96ldsV6Struct,
 }
 
-var supportedMasterVMSizesForInternalUser = map[VMSize]VMSizeStruct{
+var SupportedMasterVMSizesForTesting = map[VMSize]VMSizeStruct{
 	VMSizeStandardD4sV3: vmSizeStandardD4sV3Struct,
 	VMSizeStandardD4sV4: vmSizeStandardD4sV4Struct,
 	VMSizeStandardD4sV5: vmSizeStandardD4sV5Struct,
 	VMSizeStandardD4sV6: vmSizeStandardD4sV6Struct,
 }
 
-var supportedWorkerVMSizesForInternalUser = map[VMSize]VMSizeStruct{
+var SupportedWorkerVMSizesForTesting = map[VMSize]VMSizeStruct{
 	VMSizeStandardD2sV3: vmSizeStandardD2sV3Struct,
 	VMSizeStandardD2sV4: vmSizeStandardD2sV4Struct,
 	VMSizeStandardD2sV5: vmSizeStandardD2sV5Struct,
 	VMSizeStandardD2sV6: vmSizeStandardD2sV6Struct,
 }
 
+var SupportedVMSizesByRole = map[VMRole]map[VMSize]VMSizeStruct{
+	VMRoleMaster: SupportedMasterVMSizes,
+	VMRoleWorker: SupportedWorkerVMSizes,
+}
+
+var SupportedVMSizesByRoleForTesting = map[VMRole]map[VMSize]VMSizeStruct{
+	VMRoleMaster: SupportedMasterVMSizesForTesting,
+	VMRoleWorker: SupportedWorkerVMSizesForTesting,
+}
+
 func init() {
-	maps.Copy(supportedMasterVMSizesForInternalUser, SupportedMasterVMSizes)
-	maps.Copy(supportedWorkerVMSizesForInternalUser, SupportedWorkerVMSizes)
+	maps.Copy(SupportedMasterVMSizesForTesting, SupportedMasterVMSizes)
+	maps.Copy(SupportedWorkerVMSizesForTesting, SupportedWorkerVMSizes)
 }
 
 // minMasterVMSizes contains the smallest supported master VM size for each
@@ -331,10 +340,10 @@ func LookupVMSize(vmSize VMSize) (VMSizeStruct, bool) {
 	if s, ok := SupportedMasterVMSizes[vmSize]; ok {
 		return s, true
 	}
-	if s, ok := supportedWorkerVMSizesForInternalUser[vmSize]; ok {
+	if s, ok := SupportedWorkerVMSizesForTesting[vmSize]; ok {
 		return s, true
 	}
-	if s, ok := supportedMasterVMSizesForInternalUser[vmSize]; ok {
+	if s, ok := SupportedMasterVMSizesForTesting[vmSize]; ok {
 		return s, true
 	}
 	return VMSizeStruct{}, false
@@ -362,41 +371,4 @@ func shuffler(vmSizes []VMSize) []VMSize {
 		})
 	}
 	return vmSizes
-}
-
-// minVMSizesForRole returns the minimum VM sizes for a role, sorted by core
-// count (smallest first). This is used by test/CI/dev tooling.
-func minVMSizesForRole(vmRole VMRole) []VMSize {
-	var m map[VMSize]VMSizeStruct
-	switch vmRole {
-	case VMRoleMaster:
-		m = minMasterVMSizes
-	case VMRoleWorker:
-		m = minWorkerVMSizes
-	default:
-		return nil
-	}
-
-	type entry struct {
-		size      VMSize
-		coreCount int
-	}
-
-	entries := make([]entry, 0, len(m))
-	for sz, info := range m {
-		entries = append(entries, entry{size: sz, coreCount: info.CoreCount})
-	}
-
-	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].coreCount != entries[j].coreCount {
-			return entries[i].coreCount < entries[j].coreCount
-		}
-		return entries[i].size < entries[j].size
-	})
-
-	result := make([]VMSize, len(entries))
-	for i, e := range entries {
-		result[i] = e.size
-	}
-	return result
 }

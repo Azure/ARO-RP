@@ -133,7 +133,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 		}
 		ext := converter.ToExternal(oc)
 
-		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, resourceID); err != nil {
+		if err = staticValidator.Static(ext, nil, f.env.IsCI(), f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, resourceID); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{
