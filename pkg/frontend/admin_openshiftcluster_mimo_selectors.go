@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/mimo/scheduler"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // /admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/selectors
@@ -33,8 +34,17 @@ func (f *frontend) _getAdminOpenShiftClusterSelectors(ctx context.Context, r *ht
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+	rID, err := azure.ParseResourceID(resourceID)
+	if err != nil {
+		return nil, err
+	}
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	dbSubscriptions, err := f.dbGroup.Subscriptions()
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
@@ -47,15 +57,21 @@ func (f *frontend) _getAdminOpenShiftClusterSelectors(ctx context.Context, r *ht
 				"The Resource '%s/%s' under resource group '%s' was not found.",
 				resType, resName, resGroupName))
 	case err != nil:
-		return nil, err
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return nil, err
+	subDoc, err := dbSubscriptions.Get(ctx, rID.SubscriptionID)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+			fmt.Sprintf(
+				"The subscription ID '%s' was not found.",
+				rID.SubscriptionID))
+	case err != nil:
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	selectorData, err := scheduler.ToSelectorData(doc, string(subscriptionDoc.Subscription.State))
+	selectorData, err := scheduler.ToSelectorData(doc, string(subDoc.Subscription.State))
 	if err != nil {
 		return nil, err
 	}
