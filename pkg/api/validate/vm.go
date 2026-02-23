@@ -8,37 +8,33 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
-var supportedVMSizesByRoleMap = map[vms.VMRole]map[vms.VMSize]vms.VMSizeStruct{
-	vms.VMRoleMaster: vms.SupportedMasterVMSizes,
-	vms.VMRoleWorker: vms.SupportedWorkerVMSizes,
-}
-
-func SupportedVMSizesByRole(vmRole vms.VMRole) map[vms.VMSize]vms.VMSizeStruct {
-	supportedvmsizes, exists := supportedVMSizesByRoleMap[vmRole]
-	if !exists {
-		return nil
-	}
-	return supportedvmsizes
-}
-
 func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
-func VMSizeIsValid(vmSize vms.VMSize, isMaster bool) bool {
+func getSupportedVMSizesByRole(isCI bool) map[vms.VMRole]map[vms.VMSize]vms.VMSizeStruct {
+	if isCI {
+		return vms.SupportedVMSizesByRole
+	}
+	return vms.SupportedVMSizesByRoleForTesting
+}
+
+func VMSizeIsValid(vmSize vms.VMSize, isMaster bool, isCI bool) bool {
+	var supportedVMSizesByRole = getSupportedVMSizesByRole(isCI)
+
 	if isMaster {
-		_, supportedAsMaster := SupportedVMSizesByRole(vms.VMRoleMaster)[vmSize]
+		_, supportedAsMaster := supportedVMSizesByRole[vms.VMRoleMaster][vmSize]
 		return supportedAsMaster
 	}
 
-	_, supportedAsWorker := SupportedVMSizesByRole(vms.VMRoleWorker)[vmSize]
+	_, supportedAsWorker := supportedVMSizesByRole[vms.VMRoleWorker][vmSize]
 	return supportedAsWorker
 }
 
 // VMSizeIsValidForVersion validates VM size with version-specific restrictions
-func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string) bool {
+func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string, isCI bool) bool {
 	// First check basic validity
-	if !VMSizeIsValid(vmSize, isMaster) {
+	if !VMSizeIsValid(vmSize, isMaster, isCI) {
 		return false
 	}
 
