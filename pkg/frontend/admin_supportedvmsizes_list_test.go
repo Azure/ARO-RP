@@ -10,13 +10,12 @@ import (
 	"github.com/go-test/deep"
 
 	"github.com/Azure/ARO-RP/pkg/api/util/vms"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestSupportedvmsizes(t *testing.T) {
-	mastervmsizes := validate.SupportedVMSizesByRole(vms.VMRoleMaster)
-	workervmsizes := validate.SupportedVMSizesByRole(vms.VMRoleWorker)
+	mastervmsizes := vms.SupportedVMSizesByRole[vms.VMRoleMaster]
+	workervmsizes := vms.SupportedVMSizesByRole[vms.VMRoleWorker]
 
 	type test struct {
 		name         string

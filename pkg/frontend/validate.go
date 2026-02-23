@@ -18,7 +18,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/vms"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
 )
@@ -220,7 +219,7 @@ func validateNetworkInterfaceName(nicName string) error {
 
 func validateAdminMasterVMSize(vmSize string) error {
 	// check to ensure that the target size is supported as a master size
-	for k := range validate.SupportedVMSizesByRole(vms.VMRoleMaster) {
+	for k := range vms.SupportedVMSizesByRole[vms.VMRoleMaster] {
 		if strings.EqualFold(string(k), vmSize) {
 			return nil
 		}

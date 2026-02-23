@@ -53,11 +53,6 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		return err
 	}
 
-
-	apiRegistration(env) {
-		versiona.register(env)
-	}
-
 	var keys []string
 	if _env.IsLocalDevelopmentMode() {
 		keys = []string{
