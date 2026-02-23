@@ -82,7 +82,7 @@ For cluster create/update/delete operations, the RP uses an async model:
 | `pkg/api`                  | Internal/external API definitions with versioning (v20240812preview, v20250725, etc.) |
 | `pkg/frontend`             | RP REST API handlers                                                                  |
 | `pkg/backend`              | Async cluster operations worker                                                       |
-| `pkg/cluster`              | Cluster create/update/delete using OCP installer                                      |
+| `pkg/cluster`              | Cluster lifecycle orchestration (delegates installer to `pkg/hive` or `pkg/containerinstall`) |
 | `pkg/database`             | CosmosDB wrapper layer                                                                |
 | `pkg/env`                  | Environment shims (prod/dev/test)                                                     |
 | `pkg/operator/controllers` | Kubernetes controllers for ARO operator                                               |
@@ -92,7 +92,7 @@ For cluster create/update/delete operations, the RP uses an async model:
 
 | Package            | Purpose                                                                                                                                                              |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pkg/cluster`      | **Production** cluster manager used by the backend worker (`pkg/backend`) for real cluster create/update/delete via OCP installer                                    |
+| `pkg/cluster`      | **Production** cluster lifecycle orchestrator used by `pkg/backend`. Manages Azure infra, certs, operator deployment; delegates OCP installer to Hive (`pkg/hive`) or podman wrapper (`pkg/containerinstall`) |
 | `pkg/util/cluster` | **Test/dev/CI** tooling for creating test clusters via `hack/cluster` and E2E setup. Not part of the production RP path. Requires `CI=true` or `RP_MODE=development` |
 | `pkg/deploy`       | RP infrastructure deployment config (`aro deploy`). `Configuration` struct governs RP VMSS, CosmosDB, DNS, etc. Not consumed by `pkg/util/cluster`                   |
 
