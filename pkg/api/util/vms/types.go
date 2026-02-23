@@ -176,7 +176,7 @@ const (
 
 	VMSizeStandardD4ldsV6  VMSize = "Standard_D4lds_v6"
 	VMSizeStandardD8ldsV6  VMSize = "Standard_D8lds_v6"
-	VMSizeStandardD16ldsV6 VMSize = "Standard_D1l6ds_v6"
+	VMSizeStandardD16ldsV6 VMSize = "Standard_D16lds_v6"
 	VMSizeStandardD32ldsV6 VMSize = "Standard_D32lds_v6"
 	VMSizeStandardD48ldsV6 VMSize = "Standard_D48lds_v6"
 	VMSizeStandardD64ldsV6 VMSize = "Standard_D64lds_v6"
