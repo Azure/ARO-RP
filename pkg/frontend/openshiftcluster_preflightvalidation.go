@@ -142,7 +142,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			}
 		}
 	} else {
-		if err := staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, resourceID); err != nil {
+		if err := staticValidator.Static(ext, doc.OpenShiftCluster, f.env.IsCI(), f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, resourceID); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.CloudErrorBody{

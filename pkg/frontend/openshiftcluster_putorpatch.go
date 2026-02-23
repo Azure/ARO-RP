@@ -262,7 +262,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 	} else {
-		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, putOrPatchClusterParameters.path)
+		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.IsCI(), f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, putOrPatchClusterParameters.path)
 		if err != nil {
 			return nil, err
 		}
@@ -444,7 +444,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 }
 
 func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error {
-	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, path)
+	err := staticValidator.Static(ext, nil, f.env.IsCI(), f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, path)
 	if err != nil {
 		return err
 	}

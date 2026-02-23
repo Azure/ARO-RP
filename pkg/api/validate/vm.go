@@ -14,13 +14,13 @@ func DiskSizeIsValid(sizeGB int) bool {
 
 func getSupportedVMSizesByRole(isCI bool) map[vms.VMRole]map[vms.VMSize]vms.VMSizeStruct {
 	if isCI {
-		return vms.SupportedVMSizesByRole
+		return vms.SupportedVMSizesByRoleForTesting
 	}
-	return vms.SupportedVMSizesByRoleForTesting
+	return vms.SupportedVMSizesByRole
 }
 
 func VMSizeIsValid(vmSize vms.VMSize, isMaster bool, isCI bool) bool {
-	var supportedVMSizesByRole = getSupportedVMSizesByRole(isCI)
+	supportedVMSizesByRole := getSupportedVMSizesByRole(isCI)
 
 	if isMaster {
 		_, supportedAsMaster := supportedVMSizesByRole[vms.VMRoleMaster][vmSize]
