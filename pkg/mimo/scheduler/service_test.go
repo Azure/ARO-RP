@@ -4,161 +4,153 @@ package scheduler
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"sync"
+	"strings"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
-	"github.com/sirupsen/logrus"
+	"github.com/go-test/deep"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/metrics"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
+	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
-type fakeMetricsEmitter struct {
-	Metrics map[string]int64
-	m       sync.RWMutex
-}
+func TestSchedulerPolling(t *testing.T) {
+	testCases := []struct {
+		desc             string
+		schedules        []*api.MaintenanceScheduleDocument
+		previousLoop     map[string]*api.MaintenanceScheduleDocument
+		desiredSchedules map[string]*api.MaintenanceScheduleDocument
+		expectedLogs     []testlog.ExpectedLogEntry
+		expectedMetrics  []testmetrics.MetricsAssertion[int64]
+	}{
+		{
+			desc: "schedules are polled and updated",
+			schedules: []*api.MaintenanceScheduleDocument{
+				{
+					ID: "00000000-0000-0000-0000-000000000000",
+					MaintenanceSchedule: api.MaintenanceSchedule{
+						State: api.MaintenanceScheduleStateEnabled,
+					},
+				}, {
+					ID: "00000000-0000-0000-0000-000000000001",
+					MaintenanceSchedule: api.MaintenanceSchedule{
+						State: api.MaintenanceScheduleStateDisabled,
+					},
+				},
+			},
+			previousLoop: map[string]*api.MaintenanceScheduleDocument{},
+			desiredSchedules: map[string]*api.MaintenanceScheduleDocument{
+				"00000000-0000-0000-0000-000000000000": {
+					ID: "00000000-0000-0000-0000-000000000000",
+					MaintenanceSchedule: api.MaintenanceSchedule{
+						State: api.MaintenanceScheduleStateEnabled,
+					},
+				},
+			},
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"service": "mimo_scheduler",
+						"name":    "MaintenanceScheduleDocument",
+					},
+					Value: 1,
+				},
+			},
+		},
+		{
+			desc: "schedules are removed if they are not in a poll",
+			schedules: []*api.MaintenanceScheduleDocument{
+				{
+					ID: "00000000-0000-0000-0000-000000000000",
+					MaintenanceSchedule: api.MaintenanceSchedule{
+						State: api.MaintenanceScheduleStateEnabled,
+					},
+				}, {
+					ID: "00000000-0000-0000-0000-000000000001",
+					MaintenanceSchedule: api.MaintenanceSchedule{
+						State: api.MaintenanceScheduleStateDisabled,
+					},
+				},
+			},
+			previousLoop: map[string]*api.MaintenanceScheduleDocument{
+				"00000000-0000-0000-0000-000000000002": {ID: "00000000-0000-0000-0000-000000000002"},
+			},
+			desiredSchedules: map[string]*api.MaintenanceScheduleDocument{
+				"00000000-0000-0000-0000-000000000000": {
+					ID: "00000000-0000-0000-0000-000000000000",
+					MaintenanceSchedule: api.MaintenanceSchedule{
+						State: api.MaintenanceScheduleStateEnabled,
+					},
+				},
+			},
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"service": "mimo_scheduler",
+						"name":    "MaintenanceScheduleDocument",
+					},
+					Value: 1,
+				},
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.desc, func(t *testing.T) {
+			require := require.New(t)
+			ctx := t.Context()
 
-func newfakeMetricsEmitter() *fakeMetricsEmitter {
-	m := make(map[string]int64)
-	return &fakeMetricsEmitter{
-		Metrics: m,
-		m:       sync.RWMutex{},
+			controller := gomock.NewController(nil)
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Service().Return(strings.ToLower(string(env.SERVICE_MIMO_SCHEDULER)))
+
+			hook, log := testlog.LogForTesting(t)
+
+			fixtures := testdatabase.NewFixture()
+
+			now := func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
+			manifests, _ := testdatabase.NewFakeMaintenanceManifests(now)
+			schedules, _ := testdatabase.NewFakeMaintenanceSchedules(now)
+			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+			subscriptions, _ := testdatabase.NewFakeSubscriptions()
+
+			dbs := database.NewDBGroup().WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
+
+			metrics := testmetrics.NewFakeMetricsEmitter(t)
+
+			// Add the schedule + any existing manifests to the fixture
+			fixtures.AddMaintenanceScheduleDocuments(tt.schedules...)
+
+			// Apply the fixture
+			err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).Create()
+			require.NoError(err)
+
+			svc := NewService(_env, log, dbs, metrics, []int{0})
+			svc.now = now
+			svc.workerDelay = func() time.Duration { return 0 * time.Second }
+			svc.serveHealthz = false
+			svc.stopping.Store(true)
+
+			newOld, err := svc.poll(ctx, tt.previousLoop)
+			require.NoError(err)
+
+			diff := deep.Equal(tt.desiredSchedules, newOld)
+			require.Empty(diff, "poll returned wrong results")
+
+			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)
+			require.NoError(err)
+
+			// check the metrics -- we don't want any floats, but we do have gauges
+			metrics.AssertFloats()
+			metrics.AssertGauges(tt.expectedMetrics...)
+		})
 	}
 }
-
-func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
-	e.m.Lock()
-	defer e.m.Unlock()
-	e.Metrics[metricName] = metricValue
-}
-
-func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
-}
-
-var _ = Describe("MIMO Scheduler Service", Ordered, func() {
-	var fixtures *testdatabase.Fixture
-	// var checker *testdatabase.Checker
-	var manifests database.MaintenanceManifests
-	// var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
-	var clusters database.OpenShiftClusters
-	// var clustersClient cosmosdb.OpenShiftClusterDocumentClient
-	var schedules database.MaintenanceSchedules
-	// var schedulesClient *cosmosdb.FakeMaintenanceScheduleDocumentClient
-	var m metrics.Emitter
-
-	var svc *service
-
-	var ctx context.Context
-	var cancel context.CancelFunc
-
-	var log *logrus.Entry
-	var _env env.Interface
-
-	var controller *gomock.Controller
-	var stopChan chan struct{}
-
-	AfterAll(func() {
-		if cancel != nil {
-			cancel()
-		}
-
-		if controller != nil {
-			controller.Finish()
-		}
-	})
-
-	BeforeAll(func() {
-		controller = gomock.NewController(nil)
-		_env = mock_env.NewMockInterface(controller)
-
-		ctx, cancel = context.WithCancel(context.Background())
-
-		log = logrus.NewEntry(&logrus.Logger{
-			Out:       GinkgoWriter,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.DebugLevel,
-		})
-
-		fixtures = testdatabase.NewFixture()
-		// checker = testdatabase.NewChecker()
-	})
-
-	BeforeEach(func() {
-		m = newfakeMetricsEmitter()
-
-		now := func() time.Time { return time.Unix(120, 0) }
-		manifests, _ = testdatabase.NewFakeMaintenanceManifests(now)
-		schedules, _ = testdatabase.NewFakeMaintenanceSchedules(now)
-		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
-
-		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters)
-
-		svc = NewService(_env, log, dbg, m, []int{0})
-		svc.now = now
-		svc.workerDelay = func() time.Duration { return 0 * time.Second }
-		svc.serveHealthz = false
-	})
-
-	JustBeforeEach(func() {
-		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).Create()
-		Expect(err).ToNot(HaveOccurred())
-
-		stopChan = make(chan struct{})
-		DeferCleanup(func() { close(stopChan) })
-		svc.startChangefeeds(ctx, stopChan)
-	})
-
-	When("schedules are polled", func() {
-		BeforeEach(func() {
-			fixtures.Clear()
-			fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
-				ID: "00000000-0000-0000-0000-000000000000",
-				MaintenanceSchedule: api.MaintenanceSchedule{
-					State: api.MaintenanceScheduleStateEnabled,
-				},
-			}, &api.MaintenanceScheduleDocument{
-				ID: "00000000-0000-0000-0000-000000000001",
-				MaintenanceSchedule: api.MaintenanceSchedule{
-					State: api.MaintenanceScheduleStateDisabled,
-				},
-			})
-		})
-
-		AfterAll(func() {
-			svc.b.Stop()
-		})
-
-		It("updates the available schedules", func() {
-			lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
-
-			newOld, err := svc.poll(ctx, lastGotDocs)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Contains one that we check and one that we don't
-			Expect(newOld).To(HaveLen(1))
-		})
-
-		It("removes schedules if they are not included in the fetched items", func() {
-			svc.b.UpsertDoc(&api.MaintenanceScheduleDocument{ID: "00000000-0000-0000-0000-000000000002"})
-
-			lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
-			lastGotDocs["00000000-0000-0000-0000-000000000002"] = &api.MaintenanceScheduleDocument{ID: "00000000-0000-0000-0000-000000000002"}
-
-			newOld, err := svc.poll(ctx, lastGotDocs)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Contains one that we check and one that we don't
-			Expect(newOld).To(HaveLen(1))
-		})
-	})
-})
