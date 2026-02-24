@@ -9,7 +9,7 @@ import (
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// VMSize represents a VM size
+// VMRole represents a VM role = [master, worker]
 type VMRole string
 
 const (
@@ -196,6 +196,8 @@ const (
 
 var ver419 = version.NewVersion(4, 19, 0)
 
+// VMSizeStruct holds metadata for a VM size: core count, family, and
+// optional minimum OpenShift version requirement.
 type VMSizeStruct struct {
 	CoreCount      int             `json:"coreCount,omitempty"`
 	Family         VMFamily        `json:"family,omitempty"`
@@ -379,9 +381,9 @@ var (
 	vmSizeStandardD64ldsV6Struct = VMSizeStruct{CoreCount: 64, Family: standardDLDSv6, MinimumVersion: ver419}
 	vmSizeStandardD96ldsV6Struct = VMSizeStruct{CoreCount: 96, Family: standardDLDSv6, MinimumVersion: ver419}
 
-	// Struct GPU nodes
-	// Struct the formatting of the ncasv3_t4 family is different.  This can be seen through a
-	// Struct az vm list-usage -l eastus
+	// GPU nodes
+	// The formatting of the ncasv3_t4 family is different.  This can be seen through a
+	// az vm list-usage -l eastus
 	vmSizeStandardNC4asT4V3Struct  = VMSizeStruct{CoreCount: 4, Family: standardNCAS}
 	vmSizeStandardNC8asT4V3Struct  = VMSizeStruct{CoreCount: 8, Family: standardNCAS}
 	vmSizeStandardNC16asT4V3Struct = VMSizeStruct{CoreCount: 16, Family: standardNCAS}

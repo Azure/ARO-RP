@@ -132,7 +132,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
+				err := v.Static(oc, current, false, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Error(err)

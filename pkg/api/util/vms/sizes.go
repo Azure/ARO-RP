@@ -15,6 +15,7 @@ import (
 // To add new instance types, needs Project Management's involvement and instructions are below.,
 // https://github.com/Azure/ARO-RP/blob/master/docs/adding-new-instance-types.md
 
+// SupportedMasterVMSizes contains all VM sizes valid for control plane nodes.
 var SupportedMasterVMSizes = map[VMSize]VMSizeStruct{
 	// General purpose
 	VMSizeStandardD8sV3:  vmSizeStandardD8sV3Struct,
@@ -107,6 +108,7 @@ var SupportedMasterVMSizes = map[VMSize]VMSizeStruct{
 	VMSizeStandardD96dsV6: vmSizeStandardD96dsV6Struct,
 }
 
+// SupportedWorkerVMSizes contains all VM sizes valid for worker nodes.
 var SupportedWorkerVMSizes = map[VMSize]VMSizeStruct{
 	// General purpose
 	VMSizeStandardD4sV3:  vmSizeStandardD4sV3Struct,
@@ -278,6 +280,8 @@ var SupportedWorkerVMSizes = map[VMSize]VMSizeStruct{
 	VMSizeStandardD96ldsV6: vmSizeStandardD96ldsV6Struct,
 }
 
+// SupportedMasterVMSizesForTesting contains small master VM sizes used
+// in CI/dev. Initialized with these entries then merged with SupportedMasterVMSizes in init().
 var SupportedMasterVMSizesForTesting = map[VMSize]VMSizeStruct{
 	VMSizeStandardD4sV3: vmSizeStandardD4sV3Struct,
 	VMSizeStandardD4sV4: vmSizeStandardD4sV4Struct,
@@ -285,6 +289,8 @@ var SupportedMasterVMSizesForTesting = map[VMSize]VMSizeStruct{
 	VMSizeStandardD4sV6: vmSizeStandardD4sV6Struct,
 }
 
+// SupportedWorkerVMSizesForTesting contains small worker VM sizes used
+// in CI/dev. Initialized with these entries then merged with SupportedWorkerVMSizes in init().
 var SupportedWorkerVMSizesForTesting = map[VMSize]VMSizeStruct{
 	VMSizeStandardD2sV3: vmSizeStandardD2sV3Struct,
 	VMSizeStandardD2sV4: vmSizeStandardD2sV4Struct,
@@ -292,11 +298,14 @@ var SupportedWorkerVMSizesForTesting = map[VMSize]VMSizeStruct{
 	VMSizeStandardD2sV6: vmSizeStandardD2sV6Struct,
 }
 
+// SupportedVMSizesByRole maps each VMRole to its production-supported VM sizes.
 var SupportedVMSizesByRole = map[VMRole]map[VMSize]VMSizeStruct{
 	VMRoleMaster: SupportedMasterVMSizes,
 	VMRoleWorker: SupportedWorkerVMSizes,
 }
 
+// SupportedVMSizesByRoleForTesting maps each VMRole to its CI/dev VM sizes
+// (production sizes plus smaller testing-only sizes).
 var SupportedVMSizesByRoleForTesting = map[VMRole]map[VMSize]VMSizeStruct{
 	VMRoleMaster: SupportedMasterVMSizesForTesting,
 	VMRoleWorker: SupportedWorkerVMSizesForTesting,
@@ -349,10 +358,14 @@ func LookupVMSize(vmSize VMSize) (VMSizeStruct, bool) {
 	return VMSizeStruct{}, false
 }
 
+// GetCICandidateMasterVMSizes returns the minimum master VM sizes, shuffled
+// within each core-count tier to spread quota pressure in CI.
 func GetCICandidateMasterVMSizes() []VMSize {
 	return shuffleByCoreTier(minMasterVMSizes)
 }
 
+// GetCICandidateWorkerVMSizes returns the minimum worker VM sizes, shuffled
+// within each core-count tier to spread quota pressure in CI.
 func GetCICandidateWorkerVMSizes() []VMSize {
 	return shuffleByCoreTier(minWorkerVMSizes)
 }

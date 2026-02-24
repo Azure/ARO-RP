@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
+// DiskSizeIsValid returns true if sizeGB meets the minimum 128 GiB requirement.
 func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
@@ -19,6 +20,8 @@ func getSupportedVMSizesByRole(isCI bool) map[vms.VMRole]map[vms.VMSize]vms.VMSi
 	return vms.SupportedVMSizesByRole
 }
 
+// VMSizeIsValid returns true if vmSize is in the supported set for the given role.
+// When isCI is true, additional smaller sizes used for testing are accepted.
 func VMSizeIsValid(vmSize vms.VMSize, isMaster bool, isCI bool) bool {
 	supportedVMSizesByRole := getSupportedVMSizesByRole(isCI)
 
@@ -57,6 +60,7 @@ func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string, isCI bo
 	return true
 }
 
+// VMSizeFromName looks up the VMSizeStruct metadata for a given VM size name.
 func VMSizeFromName(vmSize vms.VMSize) (vms.VMSizeStruct, bool) {
 	return vms.LookupVMSize(vmSize)
 }
