@@ -20,8 +20,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
-//go:embed concerning_csvs/*.txt
-var concerningCSVsFS embed.FS
+//go:embed concerning_csvs/base.txt
+var concerningCSVsBase []byte
+
+//go:embed concerning_csvs/*.diff.txt
+var concerningCSVsDiffs embed.FS
 
 var csvGVK = schema.GroupVersionKind{
 	Group:   "operators.coreos.com",
@@ -110,14 +113,35 @@ func parseMajorMinor(version string) (string, error) {
 	return parts[0] + "." + parts[1], nil
 }
 
-// loadConcerningCSVs reads the embedded data file for the given major.minor
-// version and returns a set of concerning CSV names.
+// loadConcerningCSVs builds the set of concerning CSV names for the given
+// major.minor version by loading the shared base list and applying the
+// version-specific diff (additions prefixed with "+", removals with "-").
 func loadConcerningCSVs(majorMinor string) (map[string]bool, error) {
-	data, err := concerningCSVsFS.ReadFile(fmt.Sprintf("concerning_csvs/%s.txt", majorMinor))
+	diffData, err := concerningCSVsDiffs.ReadFile(fmt.Sprintf("concerning_csvs/%s.diff.txt", majorMinor))
 	if err != nil {
 		return nil, fmt.Errorf("no concerning CSV data for version %s", majorMinor)
 	}
 
+	result := loadLines(concerningCSVsBase)
+
+	scanner := bufio.NewScanner(strings.NewReader(string(diffData)))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) < 2 {
+			continue
+		}
+		switch line[0] {
+		case '+':
+			result[line[1:]] = true
+		case '-':
+			delete(result, line[1:])
+		}
+	}
+	return result, nil
+}
+
+// loadLines parses raw bytes into a set of non-empty trimmed lines.
+func loadLines(data []byte) map[string]bool {
 	result := make(map[string]bool)
 	scanner := bufio.NewScanner(strings.NewReader(string(data)))
 	for scanner.Scan() {
@@ -126,5 +150,5 @@ func loadConcerningCSVs(majorMinor string) (map[string]bool, error) {
 			result[line] = true
 		}
 	}
-	return result, nil
+	return result
 }
