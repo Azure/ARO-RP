@@ -18,12 +18,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
 func TestProcessLoop(t *testing.T) {
@@ -44,6 +46,12 @@ func TestProcessLoop(t *testing.T) {
 			"msg":   gomega.Equal("processing schedule 08080808-0808-0808-0808-080808080001 (task ID=0)"),
 		},
 	}
+	metric_dims := map[string]string{
+		dimension.ResourceName:         "resourcename",
+		dimension.ClusterResourceGroup: "resourcegroup",
+		dimension.SubscriptionID:       mockSubID,
+		dimension.ResourceID:           strings.ToLower(clusterResourceID),
+	}
 
 	testCases := []struct {
 		desc              string
@@ -53,6 +61,7 @@ func TestProcessLoop(t *testing.T) {
 		desiredManifests  []*api.MaintenanceManifestDocument
 		expectedLogs      []testlog.ExpectedLogEntry
 		extraRuns         int
+		expectedMetrics   []testmetrics.MetricsAssertion[int64]
 	}{
 		{
 			desc: "valid schedule, new manifest created (lookahead=1, scheduleAcross=0s)",
@@ -107,6 +116,13 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      1,
+				},
+			},
 		},
 		{
 			desc: "valid schedule, existing manifest (lookahead=1, scheduleAcross=0s)",
@@ -223,6 +239,13 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      1,
+				},
+			},
 		},
 		{
 			desc: "valid schedule, existing manifest (lookahead=1, scheduleAcross=1h)",
@@ -366,6 +389,18 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      1,
+				},
+				{
+					MetricName: "mimo.scheduler.manifests.cancelled",
+					Dimensions: metric_dims,
+					Value:      1,
+				},
+			},
 		},
 		{
 			desc: "valid schedule, existing manifest that is of a changed schedule, runs twice (lookahead=1, scheduleAcross=1h)",
@@ -460,6 +495,18 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      1,
+				},
+				{
+					MetricName: "mimo.scheduler.manifests.cancelled",
+					Dimensions: metric_dims,
+					Value:      1,
+				},
+			},
 			extraRuns: 1,
 		},
 		{
@@ -600,6 +647,13 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      4,
+				},
+			},
 		},
 		{
 			desc: "valid daily schedule, new manifests created (lookahead=5, scheduleAcross=0s)",
@@ -722,6 +776,13 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      5,
+				},
+			},
 		},
 	}
 	for _, tt := range testCases {
@@ -750,9 +811,12 @@ func TestProcessLoop(t *testing.T) {
 			stop := make(chan struct{})
 			t.Cleanup(func() { close(stop) })
 
+			metrics := testmetrics.NewFakeMetricsEmitter(t)
+
 			a := &scheduler{
 				log: log,
 				env: _env,
+				m:   metrics,
 
 				dbs:         dbs,
 				getClusters: clusterCache.GetClusters,
@@ -852,6 +916,10 @@ func TestProcessLoop(t *testing.T) {
 
 			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)
 			require.NoError(err)
+
+			// check the metrics -- we don't want any floats, but we do have gauges
+			metrics.AssertFloats()
+			metrics.AssertGauges(tt.expectedMetrics...)
 		})
 	}
 }
