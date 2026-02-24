@@ -13,6 +13,7 @@ import (
 const (
 	masterRoleLabel = "node-role.kubernetes.io/master"
 	workerRoleLabel = "node-role.kubernetes.io/worker"
+	infraRoleLabel  = "node-role.kubernetes.io/infra"
 )
 
 // emitSummary emits joined metric to be able to report better on all clusters

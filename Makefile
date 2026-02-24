@@ -1,4 +1,9 @@
 SHELL = /bin/bash
+
+# Source local env file if present (gitignored)
+-include .env
+export
+
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
@@ -6,6 +11,9 @@ E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2
 E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
+
+# Docker build platform: defaults to current architecture, override with PLATFORM=linux/amd64 for CI
+PLATFORM ?= linux/$(shell go env GOARCH)
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -178,24 +186,24 @@ init-contrib:
 
 .PHONY: image-aro-multistage
 image-aro-multistage:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+	docker build --platform=$(PLATFORM) --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-autorest
 image-autorest:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 .PHONY: image-fluentbit
 image-fluentbit:
-	docker build --platform=linux/amd64 --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=$(PLATFORM) --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 .PHONY: image-proxy
 image-proxy:
 	docker pull $(REGISTRY)/ubi9/ubi-minimal
-	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+	docker build --platform=$(PLATFORM) --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-gatekeeper
 image-gatekeeper:
-	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
+	docker build --platform=$(PLATFORM) --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
 
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
@@ -223,7 +231,7 @@ publish-image-gatekeeper: image-gatekeeper
 
 .PHONY: image-e2e
 image-e2e:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+	docker build --platform=$(PLATFORM) --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: publish-image-e2e
 publish-image-e2e: image-e2e
@@ -300,7 +308,7 @@ validate-go: validate-go-action $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) fmt
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
@@ -308,7 +316,7 @@ validate-go: validate-go-action $(GOLANGCI_LINT)
 validate-go-action: validate-imports validate-lint-go-fix validate-gh-actions
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 .PHONY: validate-fips
@@ -361,8 +369,8 @@ fix-gh-actions: $(PINACT) ## Pin unpinned GitHub Actions to SHA
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
-	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
-	docker run --platform=linux/amd64 -t --rm linter:latest
+	docker build --platform=$(PLATFORM) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
+	docker run --platform=$(PLATFORM) -t --rm linter:latest
 
 .PHONY: test-python
 test-python: pyenv az
@@ -374,7 +382,7 @@ test-python: pyenv az
 .PHONY: test-python-podman
 test-python-podman:
 	rm -rf pyenv
-	docker run --platform=linux/amd64 -t --rm \
+	docker run --platform=$(PLATFORM) -t --rm \
 	    -v ./:/app:z \
 		--user=0 \
 	 	$(REGISTRY)/ubi9/python-312:latest \
@@ -484,7 +492,7 @@ LOCAL_TUNNEL_IMAGE ?= aro-tunnel
 ci-azext-aro:
 	docker build . $(DOCKER_BUILD_CI_ARGS) \
 		-f Dockerfile.ci-azext-aro \
-		--platform=linux/amd64 \
+		--platform=$(PLATFORM) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_AZEXT_IMAGE):$(VERSION)
 

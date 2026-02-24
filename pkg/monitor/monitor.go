@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 )
 
@@ -53,16 +54,17 @@ type monitor struct {
 	clusterm metrics.Emitter
 	mu       sync.RWMutex
 	docs     map[string]*cacheDoc
-	subs     map[string]*subscriptionInfo
+	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
 	isMaster    bool
 	bucketCount int
 	buckets     map[int]struct{}
 
-	lastBucketlist atomic.Value // time.Time
-	lastChangefeed atomic.Value // time.Time
-	startTime      time.Time
+	lastBucketlist             atomic.Value // time.Time
+	lastSubscriptionChangefeed atomic.Value // time.Time
+	lastClusterChangefeed      atomic.Value // time.Time
+	startTime                  time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
 
@@ -73,12 +75,6 @@ type monitor struct {
 	delay              time.Duration // Time until the monitor starts running
 	interval           time.Duration // Interval between monitor runs
 	changefeedInterval time.Duration // Interval between changefeed runs (updates to cluster docs)
-}
-
-// subscriptionInfo stores TenantID for a given subscription. We don't store the
-// state as we filter out unwanted states in the changefeed.
-type subscriptionInfo struct {
-	TenantID string
 }
 
 type Runnable interface {
@@ -95,7 +91,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		m:        m,
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
-		subs:     map[string]*subscriptionInfo{},
+		subs:     changefeed.NewSubscriptionsChangefeedCache(true),
 		env:      e,
 
 		bucketCount: bucket.Buckets,
@@ -140,8 +136,11 @@ func (mon *monitor) Run(ctx context.Context) error {
 		return err
 	}
 
-	// fill the cache from the database change feed
-	go mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), nil)
+	err = mon.startChangefeeds(ctx, nil)
+	if err != nil {
+		mon.baseLog.Errorf("failed to start changefeed subscriber: %s", err.Error())
+		return err
+	}
 	go mon.changefeedMetrics(nil)
 
 	t := time.NewTicker(10 * time.Second)
@@ -177,6 +176,37 @@ func (mon *monitor) Run(ctx context.Context) error {
 	}
 }
 
+func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
+	dbOpenShiftClusters, err := mon.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return err
+	}
+
+	dbSubscriptions, err := mon.dbGroup.Subscriptions()
+	if err != nil {
+		return err
+	}
+
+	// fill the cache from the database change feed
+	clusterResponder := &clusterChangeFeedResponder{mon: mon}
+	go changefeed.RunChangefeed(
+		ctx, mon.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
+		// Align this time with the deletion mechanism.
+		// Go to docs/monitoring.md for the details.
+		mon.changefeedInterval,
+		changefeedBatchSize, clusterResponder, stop,
+	)
+
+	// fill the cache from the database change feed
+	go changefeed.RunChangefeed(
+		ctx, mon.baseLog.WithField("component", "changefeed"), dbSubscriptions.ChangeFeed(),
+		mon.changefeedInterval,
+		changefeedBatchSize, mon.subs, stop,
+	)
+
+	return nil
+}
+
 // checkReady checks the ready status of the monitor to make it consistent
 // across the /healthz/ready endpoint and emitted metrics.   We wait for 2
 // minutes before indicating health.  This ensures that there will be a gap in
@@ -186,11 +216,16 @@ func (mon *monitor) checkReady() bool {
 	if !ok {
 		return false
 	}
-	lastChangefeedTime, ok := mon.lastChangefeed.Load().(time.Time)
+	lastClusterChangefeedTime, ok := mon.lastClusterChangefeed.Load().(time.Time)
+	if !ok {
+		return false
+	}
+	lastSubscriptionChangefeedTime, ok := mon.lastSubscriptionChangefeed.Load().(time.Time)
 	if !ok {
 		return false
 	}
 	return (time.Since(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
-		(time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
+		(time.Since(lastClusterChangefeedTime) < time.Minute) && // did we process the cluster change feed recently?
+		(time.Since(lastSubscriptionChangefeedTime) < time.Minute) && // did we process the subscription change feed recently?
 		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
 }
