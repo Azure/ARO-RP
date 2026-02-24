@@ -789,7 +789,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			(&openShiftClusterConverter{}).ToInternal(tt.oc(), current)
 
 			v := &openShiftClusterStaticValidator{}
-			err := v.Static(oc, current, "", "", api.ArchitectureVersionV2, "")
+			err := v.Static(oc, current, false, "", "", api.ArchitectureVersionV2, "")
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Error(err)
