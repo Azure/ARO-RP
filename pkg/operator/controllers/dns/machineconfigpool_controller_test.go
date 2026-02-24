@@ -322,7 +322,7 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DNSEnabled:      operator.FlagTrue,
+							operator.DNSEnabled:          operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
 						},
 					},

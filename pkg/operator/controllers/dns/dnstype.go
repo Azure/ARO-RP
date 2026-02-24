@@ -9,17 +9,16 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
-	configv1 "github.com/openshift/api/config/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
-var (
-	// MinCustomDNSVersion is the minimum OCP version that supports CustomDNS (ClusterHostedDNS)
-	MinCustomDNSVersion = semver.Version{Major: 4, Minor: 21, Patch: 0}
-)
+// MinCustomDNSVersion is the minimum OCP version that supports CustomDNS (ClusterHostedDNS)
+var MinCustomDNSVersion = semver.Version{Major: 4, Minor: 21, Patch: 0}
 
 // GetEffectiveDNSType determines the effective DNS type based on the flag value and cluster version
 // Returns: operator.DNSTypeClusterHosted or operator.DNSTypeDnsmasq (or empty string for default dnsmasq)
@@ -36,6 +35,10 @@ func GetEffectiveDNSType(ctx context.Context, c client.Client, log *logrus.Entry
 		clusterVersion, err := getClusterVersion(ctx, c)
 		if err != nil {
 			log.Warnf("failed to get cluster version: %v, falling back to dnsmasq", err)
+			return operator.DNSTypeDnsmasq
+		}
+		if clusterVersion == nil {
+			log.Warn("cluster version not available (empty status history), falling back to dnsmasq")
 			return operator.DNSTypeDnsmasq
 		}
 

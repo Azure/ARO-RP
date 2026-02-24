@@ -345,7 +345,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	// SetDefaults will set defaults on cluster document
-	api.SetDefaults(doc, operator.DefaultOperatorFlags, log)
+	api.SetDefaults(doc, operator.DefaultOperatorFlags)
 
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, putOrPatchClusterParameters.subId, putOrPatchClusterParameters.resourceProviderNamespace, doc)
 	if err != nil {

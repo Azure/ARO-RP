@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
-
-	"github.com/sirupsen/logrus"
 )
 
 func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
@@ -238,7 +236,7 @@ func TestSetDefaults(t *testing.T) {
 				tt.input(doc)
 			}
 
-			SetDefaults(doc, func() map[string]string { return map[string]string{"testflag": "testvalue"} }, logrus.NewEntry(logrus.StandardLogger()))
+			SetDefaults(doc, func() map[string]string { return map[string]string{"testflag": "testvalue"} })
 
 			if !reflect.DeepEqual(&doc, &want) {
 				t.Error(fmt.Errorf("\n%+v\n !=\n%+v", doc, want)) // can't use cmp due to cycle imports

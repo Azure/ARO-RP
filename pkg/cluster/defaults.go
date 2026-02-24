@@ -15,7 +15,7 @@ import (
 func (m *manager) ensureDefaults(ctx context.Context) error {
 	var err error
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		api.SetDefaults(doc, operator.DefaultOperatorFlags, m.log)
+		api.SetDefaults(doc, operator.DefaultOperatorFlags)
 		return nil
 	})
 	if err != nil {

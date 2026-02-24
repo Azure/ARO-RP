@@ -20,9 +20,9 @@ func TestEmitDNSType(t *testing.T) {
 	defer ctrl.Finish()
 
 	tests := []struct {
-		name           string
-		operatorFlags  api.OperatorFlags
-		expectMetric   map[string]string
+		name          string
+		operatorFlags api.OperatorFlags
+		expectMetric  map[string]string
 	}{
 		{
 			name:          "DNS type: clusterhosted",

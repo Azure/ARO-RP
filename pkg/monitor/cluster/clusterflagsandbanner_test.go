@@ -124,7 +124,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				operator.ImageConfigEnabled:    operator.FlagFalse,
-				operator.DNSEnabled:        operator.FlagFalse,
+				operator.DNSEnabled:            operator.FlagFalse,
 				operator.GenevaLoggingEnabled:  operator.FlagFalse,
 				operator.AutosizedNodesEnabled: operator.FlagFalse,
 			},
@@ -140,7 +140,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				operator.ImageConfigEnabled:    "DNE",
-				operator.DNSEnabled:        "DNE",
+				operator.DNSEnabled:            "DNE",
 				operator.GenevaLoggingEnabled:  "DNE",
 				operator.AutosizedNodesEnabled: "DNE",
 			},
@@ -167,7 +167,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				operator.ImageConfigEnabled:    operator.FlagFalse,
-				operator.DNSEnabled:        operator.FlagFalse,
+				operator.DNSEnabled:            operator.FlagFalse,
 				operator.GenevaLoggingEnabled:  operator.FlagFalse,
 				operator.AutosizedNodesEnabled: operator.FlagFalse,
 			},

@@ -243,12 +243,24 @@ func TestGetEffectiveDNSType(t *testing.T) {
 			cvVersion: "",
 			want:      operator.DNSTypeDnsmasq,
 		},
+		{
+			name: "clusterhosted with empty status history falls back to dnsmasq",
+			flags: arov1alpha1.OperatorFlags{
+				operator.DNSType: operator.DNSTypeClusterHosted,
+			},
+			cvVersion: "empty-history",
+			want:      operator.DNSTypeDnsmasq,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var objects []client.Object
-			if tt.cvVersion != "" {
+			if tt.cvVersion == "empty-history" {
+				objects = append(objects, &configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{Name: "version"},
+				})
+			} else if tt.cvVersion != "" {
 				objects = append(objects, &configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{Name: "version"},
 					Status: configv1.ClusterVersionStatus{

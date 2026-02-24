@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/sirupsen/logrus"
 
@@ -55,7 +54,7 @@ func reconcileInfrastructureCR(ctx context.Context, c client.Client, log *logrus
 	desired := buildDesiredCloudLBConfig(apiIntIP, ingressIP)
 	current := getCurrentCloudLBConfig(infra)
 
-	if reflect.DeepEqual(current, desired) {
+	if cloudLBConfigEqual(current, desired) {
 		log.Debug("Infrastructure CR cloudLoadBalancerConfig is up to date")
 		return nil
 	}
@@ -159,4 +158,42 @@ func toInterfaceSlice(s []string) []any {
 		result[i] = v
 	}
 	return result
+}
+
+// cloudLBConfigEqual compares two cloudLoadBalancerConfig values treating
+// nil and empty slices as equivalent. This avoids spurious patches when the
+// API server round-trips an empty slice as an omitted field (nil).
+func cloudLBConfigEqual(a, b *cloudLoadBalancerConfig) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	if a.DNSType != b.DNSType {
+		return false
+	}
+	if a.ClusterHosted == nil && b.ClusterHosted == nil {
+		return true
+	}
+	if a.ClusterHosted == nil || b.ClusterHosted == nil {
+		return false
+	}
+	return stringSlicesEqual(a.ClusterHosted.APIIntLoadBalancerIPs, b.ClusterHosted.APIIntLoadBalancerIPs) &&
+		stringSlicesEqual(a.ClusterHosted.APILoadBalancerIPs, b.ClusterHosted.APILoadBalancerIPs) &&
+		stringSlicesEqual(a.ClusterHosted.IngressLoadBalancerIPs, b.ClusterHosted.IngressLoadBalancerIPs)
+}
+
+// stringSlicesEqual compares two string slices, treating nil and empty
+// slices ([]string{}) as equal.
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

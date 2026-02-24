@@ -16,6 +16,158 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func TestCloudLBConfigEqual(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b *cloudLoadBalancerConfig
+		want bool
+	}{
+		{
+			name: "both nil",
+			a:    nil,
+			b:    nil,
+			want: true,
+		},
+		{
+			name: "one nil one non-nil",
+			a:    nil,
+			b:    &cloudLoadBalancerConfig{DNSType: "ClusterHosted"},
+			want: false,
+		},
+		{
+			name: "same config",
+			a: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
+					APILoadBalancerIPs:     []string{"10.0.0.1"},
+					IngressLoadBalancerIPs: []string{"10.0.0.2"},
+				},
+			},
+			b: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
+					APILoadBalancerIPs:     []string{"10.0.0.1"},
+					IngressLoadBalancerIPs: []string{"10.0.0.2"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "nil and empty ingress slice treated as equal",
+			a: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
+					APILoadBalancerIPs:     []string{"10.0.0.1"},
+					IngressLoadBalancerIPs: nil,
+				},
+			},
+			b: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
+					APILoadBalancerIPs:     []string{"10.0.0.1"},
+					IngressLoadBalancerIPs: []string{},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "both nil ingress slices treated as equal",
+			a: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
+					APILoadBalancerIPs:    []string{"10.0.0.1"},
+				},
+			},
+			b: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
+					APILoadBalancerIPs:    []string{"10.0.0.1"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "different dnsType",
+			a:    &cloudLoadBalancerConfig{DNSType: "ClusterHosted"},
+			b:    &cloudLoadBalancerConfig{DNSType: "Other"},
+			want: false,
+		},
+		{
+			name: "different IPs",
+			a: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
+					APILoadBalancerIPs:    []string{"10.0.0.1"},
+				},
+			},
+			b: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs: []string{"10.0.0.2"},
+					APILoadBalancerIPs:    []string{"10.0.0.2"},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "one nil clusterHosted",
+			a: &cloudLoadBalancerConfig{
+				DNSType:       "ClusterHosted",
+				ClusterHosted: nil,
+			},
+			b: &cloudLoadBalancerConfig{
+				DNSType: "ClusterHosted",
+				ClusterHosted: &cloudLoadBalancerIPs{
+					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cloudLBConfigEqual(tt.a, tt.b)
+			if got != tt.want {
+				t.Errorf("cloudLBConfigEqual() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStringSlicesEqual(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b []string
+		want bool
+	}{
+		{name: "both nil", a: nil, b: nil, want: true},
+		{name: "nil and empty", a: nil, b: []string{}, want: true},
+		{name: "empty and nil", a: []string{}, b: nil, want: true},
+		{name: "both empty", a: []string{}, b: []string{}, want: true},
+		{name: "equal values", a: []string{"a", "b"}, b: []string{"a", "b"}, want: true},
+		{name: "different values", a: []string{"a"}, b: []string{"b"}, want: false},
+		{name: "different lengths", a: []string{"a"}, b: []string{"a", "b"}, want: false},
+		{name: "one nil one non-empty", a: nil, b: []string{"a"}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := stringSlicesEqual(tt.a, tt.b)
+			if got != tt.want {
+				t.Errorf("stringSlicesEqual() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBuildDesiredCloudLBConfig(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -50,14 +202,15 @@ func TestBuildDesiredCloudLBConfig(t *testing.T) {
 			},
 		},
 		{
-			name:      "empty ingress IP omits ingressLoadBalancerIPs",
+			name:      "empty ingress IP leaves IngressLoadBalancerIPs nil",
 			apiIntIP:  "10.0.0.1",
 			ingressIP: "",
 			want: &cloudLoadBalancerConfig{
 				DNSType: "ClusterHosted",
 				ClusterHosted: &cloudLoadBalancerIPs{
-					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
-					APILoadBalancerIPs:    []string{"10.0.0.1"},
+					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
+					APILoadBalancerIPs:     []string{"10.0.0.1"},
+					IngressLoadBalancerIPs: nil,
 				},
 			},
 		},
