@@ -24,15 +24,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 )
 
+// resourceContext holds immutable per-request resource identifiers.
+// Passed by value to prevent mutation by validation methods.
+type resourceContext struct {
+	resourceID string
+	r          azure.Resource
+}
+
 type openShiftClusterStaticValidator struct {
-	// Validator settings
 	isCI     bool
 	location string
 	domain   string
-
-	// Deatils for the candidate object being validated
-	resourceID string
-	r          azure.Resource
 }
 
 // Validate validates an OpenShift cluster
@@ -40,7 +42,6 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 	sv.isCI = isCI
 	sv.location = location
 	sv.domain = domain
-	sv.resourceID = resourceID
 	architectureVersion := installArchitectureVersion
 
 	oc := _oc.(*OpenShiftCluster)
@@ -51,13 +52,14 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 		current = (&openShiftClusterConverter{}).ToExternal(_current).(*OpenShiftCluster)
 	}
 
-	var err error
-	sv.r, err = azure.ParseResourceID(sv.resourceID)
+	r, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
 	}
 
-	err = sv.validate(oc, current == nil, architectureVersion)
+	rc := resourceContext{resourceID: resourceID, r: r}
+
+	err = sv.validate(rc, oc, current == nil, architectureVersion)
 	if err != nil {
 		return err
 	}
@@ -69,12 +71,12 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 	return sv.validateDelta(oc, current)
 }
 
-func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreate bool, architectureVersion api.ArchitectureVersion) error {
-	if !strings.EqualFold(oc.ID, sv.resourceID) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceID, "id", fmt.Sprintf("The provided resource ID '%s' did not match the name in the Url '%s'.", oc.ID, sv.resourceID))
+func (sv openShiftClusterStaticValidator) validate(rc resourceContext, oc *OpenShiftCluster, isCreate bool, architectureVersion api.ArchitectureVersion) error {
+	if !strings.EqualFold(oc.ID, rc.resourceID) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceID, "id", fmt.Sprintf("The provided resource ID '%s' did not match the name in the Url '%s'.", oc.ID, rc.resourceID))
 	}
-	if !strings.EqualFold(oc.Name, sv.r.ResourceName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceName, "name", fmt.Sprintf("The provided resource name '%s' did not match the name in the Url '%s'.", oc.Name, sv.r.ResourceName))
+	if !strings.EqualFold(oc.Name, rc.r.ResourceName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceName, "name", fmt.Sprintf("The provided resource name '%s' did not match the name in the Url '%s'.", oc.Name, rc.r.ResourceName))
 	}
 	if !strings.EqualFold(oc.Type, resourceProviderNamespace+"/"+resourceType) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceType, "type", fmt.Sprintf("The provided resource type '%s' did not match the name in the Url '%s'.", oc.Type, resourceProviderNamespace+"/"+resourceType))
@@ -87,10 +89,10 @@ func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreat
 		return err
 	}
 
-	return sv.validateProperties("properties", &oc.Properties, isCreate, architectureVersion)
+	return sv.validateProperties(rc, "properties", &oc.Properties, isCreate, architectureVersion)
 }
 
-func (sv openShiftClusterStaticValidator) validateProperties(path string, p *OpenShiftClusterProperties, isCreate bool, architectureVersion api.ArchitectureVersion) error {
+func (sv openShiftClusterStaticValidator) validateProperties(rc resourceContext, path string, p *OpenShiftClusterProperties, isCreate bool, architectureVersion api.ArchitectureVersion) error {
 	switch p.ProvisioningState {
 	case ProvisioningStateCreating, ProvisioningStateUpdating,
 		ProvisioningStateAdminUpdating, ProvisioningStateDeleting,
@@ -98,7 +100,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", fmt.Sprintf("The provided provisioning state '%s' is invalid.", p.ProvisioningState))
 	}
-	if err := sv.validateClusterProfile(path+".clusterProfile", &p.ClusterProfile, isCreate); err != nil {
+	if err := sv.validateClusterProfile(rc, path+".clusterProfile", &p.ClusterProfile, isCreate); err != nil {
 		return err
 	}
 	if err := sv.validateConsoleProfile(path+".consoleProfile", &p.ConsoleProfile); err != nil {
@@ -115,7 +117,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadBalancerProfile, isCreate, architectureVersion); err != nil {
 		return err
 	}
-	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile, p.ClusterProfile.Version); err != nil {
+	if err := sv.validateMasterProfile(rc, path+".masterProfile", &p.MasterProfile, p.ClusterProfile.Version); err != nil {
 		return err
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
@@ -148,7 +150,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validateClusterProfile(rc resourceContext, path string, cp *ClusterProfile, isCreate bool) error {
 	if pullsecret.Validate(cp.PullSecret) != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".pullSecret", "The provided pull secret is invalid.")
 	}
@@ -178,10 +180,10 @@ func (sv openShiftClusterStaticValidator) validateClusterProfile(path string, cp
 	if !validate.RxResourceGroupID.MatchString(cp.ResourceGroupID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", fmt.Sprintf("The provided resource group '%s' is invalid.", cp.ResourceGroupID))
 	}
-	if strings.Split(cp.ResourceGroupID, "/")[2] != sv.r.SubscriptionID {
+	if strings.Split(cp.ResourceGroupID, "/")[2] != rc.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", fmt.Sprintf("The provided resource group '%s' is invalid: must be in same subscription as cluster.", cp.ResourceGroupID))
 	}
-	if strings.EqualFold(cp.ResourceGroupID, fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", sv.r.SubscriptionID, sv.r.ResourceGroup)) {
+	if strings.EqualFold(cp.ResourceGroupID, fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", rc.r.SubscriptionID, rc.r.ResourceGroup)) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", fmt.Sprintf("The provided resource group '%s' is invalid: must be different from resourceGroup of the OpenShift cluster object.", cp.ResourceGroupID))
 	}
 
@@ -329,7 +331,7 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundI
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile, version string) error {
+func (sv openShiftClusterStaticValidator) validateMasterProfile(rc resourceContext, path string, mp *MasterProfile, version string) error {
 	if !validate.VMSizeIsValidForVersion(vms.VMSize(mp.VMSize), true, version, sv.isCI) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid for version '%s'.", mp.VMSize, version))
 	}
@@ -340,7 +342,7 @@ func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp 
 	if err != nil {
 		return err
 	}
-	if sr.SubscriptionID != sv.r.SubscriptionID {
+	if sr.SubscriptionID != rc.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", fmt.Sprintf("The provided master VM subnet '%s' is invalid: must be in same subscription as cluster.", mp.SubnetID))
 	}
 	switch mp.EncryptionAtHost {
@@ -356,7 +358,7 @@ func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp 
 		if err != nil {
 			return err
 		}
-		if desr.SubscriptionID != sv.r.SubscriptionID {
+		if desr.SubscriptionID != rc.r.SubscriptionID {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskEncryptionSetId", fmt.Sprintf("The provided master disk encryption set '%s' is invalid: must be in same subscription as cluster.", mp.DiskEncryptionSetID))
 		}
 	}

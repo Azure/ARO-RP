@@ -9,8 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
@@ -102,15 +100,6 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				v := &openShiftClusterStaticValidator{
 					location: "location",
 					domain:   "location.aroapp.io",
-
-					resourceID: id,
-					r: azure.Resource{
-						SubscriptionID: subscriptionID,
-						ResourceGroup:  "resourceGroup",
-						Provider:       "Microsoft.RedHatOpenShift",
-						ResourceType:   "openshiftClusters",
-						ResourceName:   "resourceName",
-					},
 				}
 
 				validOCForTest := func() *OpenShiftCluster {
@@ -132,7 +121,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
-				err := v.Static(oc, current, false, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
+				err := v.Static(oc, current, false, v.location, v.domain, api.ArchitectureVersionV2, id)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Error(err)
