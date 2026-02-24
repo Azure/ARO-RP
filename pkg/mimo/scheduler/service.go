@@ -272,6 +272,12 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 	// Store when we last fetched the clusters
 	s.lastChangefeed.Store(s.now())
 
+	// Emit a metric containing the size of our cache
+	s.m.EmitGauge("changefeed.caches.size", int64(len(docMap)), map[string]string{
+		"service": s.env.Service(),
+		"name":    "MaintenanceScheduleDocument",
+	})
+
 	return docMap, nil
 }
 
@@ -327,7 +333,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 
 	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
 
-	a, err := NewSchedulerForSchedule(s.env, log, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
+	a, err := NewSchedulerForSchedule(s.env, log, s.m, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return
