@@ -15,7 +15,7 @@ const (
 	resourceType              = "openShiftClusters"
 )
 
-func register() {
+func init() {
 	api.APIs[APIVersion] = &api.Version{
 		OpenShiftClusterConverter:                openShiftClusterConverter{},
 		OpenShiftClusterStaticValidator:          openShiftClusterStaticValidator{},
