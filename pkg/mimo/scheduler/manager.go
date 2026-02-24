@@ -9,15 +9,19 @@ import (
 	"fmt"
 	"hash/crc32"
 	"iter"
+	"maps"
 	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -37,6 +41,7 @@ type scheduler struct {
 	env env.Interface
 	log *logrus.Entry
 	now func() time.Time
+	m   metrics.Emitter
 
 	cachedDoc   getCachedScheduleDocFunc
 	getClusters getClustersFunc
@@ -51,6 +56,7 @@ var _ Scheduler = (*scheduler)(nil)
 func NewSchedulerForSchedule(
 	_env env.Interface,
 	log *logrus.Entry,
+	m metrics.Emitter,
 	cachedDoc getCachedScheduleDocFunc,
 	getClusters getClustersFunc,
 	dbs schedulerDBs,
@@ -59,6 +65,7 @@ func NewSchedulerForSchedule(
 	a := &scheduler{
 		env: _env,
 		log: log,
+		m:   m,
 
 		cachedDoc:   cachedDoc,
 		getClusters: getClusters,
@@ -231,6 +238,26 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		}
 
 		clusterLog.Infof("created=%d, found valid=%d, cancelled=%d", manifestsCreated, manifestsFound, manifestsCancelled)
+
+		// emit metrics when we have created or cancelled manifests
+		resID, err := azure.ParseResourceID(clusterID)
+		if err != nil {
+			// this basically can't happen
+			continue
+		}
+
+		clusterDims := map[string]string{
+			dimension.ResourceID:           clusterID,
+			dimension.SubscriptionID:       resID.SubscriptionID,
+			dimension.ClusterResourceGroup: resID.ResourceGroup,
+			dimension.ResourceName:         resID.ResourceName,
+		}
+		if manifestsCreated > 0 {
+			a.m.EmitGauge("mimo.scheduler.manifests.created", int64(manifestsCreated), clusterDims)
+		}
+		if manifestsCancelled > 0 {
+			a.m.EmitGauge("mimo.scheduler.manifests.cancelled", int64(manifestsCancelled), clusterDims)
+		}
 	}
 
 	return true, nil
