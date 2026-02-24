@@ -106,7 +106,7 @@ func (e *fakeMetricsEmitter) AssertFloats(assertions ...MetricsAssertion[float64
 			e.t.Errorf("float metric '%s' with dims '%s' was not emitted", a.MetricName, a.Dimensions)
 		} else {
 			if val != a.Value {
-				e.t.Errorf("float metric '%s' with dims '%s' had incorrect emitted value %d, wanted %d", a.MetricName, a.Dimensions, val, a.Value)
+				e.t.Errorf("float metric '%s' with dims '%s' had incorrect emitted value %f, wanted %f", a.MetricName, a.Dimensions, val, a.Value)
 			}
 		}
 	}
