@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
@@ -230,11 +231,7 @@ func validateAdminMasterVMSize(vmSize string) error {
 
 // validateInstallVersion validates the install version set in the clusterprofile.version
 // TODO convert this into static validation instead of this receiver function in the validation for frontend.
-func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
-	if err := f.setDefaultVersionIfEmpty(oc); err != nil {
-		return err
-	}
-
+func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster, subscription *api.SubscriptionDocument) error {
 	f.ocpVersionsMu.RLock()
 	defer f.ocpVersionsMu.RUnlock()
 
@@ -242,6 +239,19 @@ func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShift
 	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
 	_, err := semver.NewVersion(oc.Properties.ClusterProfile.Version)
 
+	// Check if arbitrary versions are enabled via AFEC flag or development environment
+	allowArbitraryVersions := f.env.IsLocalDevelopmentMode() || 
+		(subscription != nil && feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagArbitraryVersions))
+
+	// If arbitrary versions are enabled, only validate that it's a valid semver format
+	if allowArbitraryVersions {
+		if err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", fmt.Sprintf("The requested OpenShift version '%s' is not a valid semantic version.", oc.Properties.ClusterProfile.Version))
+		}
+		return nil
+	}
+
+	// Default behavior: version must be in the enabled list AND be valid semver
 	if !ok || err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", fmt.Sprintf("The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version))
 	}

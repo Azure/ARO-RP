@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
+	"github.com/golang/mock/gomock"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -274,12 +274,14 @@ func TestValidateInstallVersion(t *testing.T) {
 	defaultOcpVersion := "4.12.25"
 
 	for _, tt := range []struct {
-		test              string
-		version           string
-		defaultOcpVersion string
-		availableVersions []string
-		wantVersion       string
-		wantErr           string
+		test                     string
+		version                  string
+		defaultOcpVersion        string
+		availableVersions        []string
+		arbitraryVersionsEnabled bool
+		isLocalDevelopmentMode   bool
+		wantVersion              string
+		wantErr                  string
 	}{
 		{
 			test:              "Valid and available OCP version specified returns no error",
@@ -324,19 +326,90 @@ func TestValidateInstallVersion(t *testing.T) {
 			defaultOcpVersion: defaultOcpVersion,
 			availableVersions: []string{"4.12.25", "4.13.40", "4.14.16", "4.14.16+installerref-abcdef"},
 		},
+		{
+			test:                     "Arbitrary valid semver version with feature flag enabled returns no error",
+			version:                  "4.15.0-custom.build.123",
+			availableVersions:        []string{"4.12.25", "4.13.40", "4.14.16"},
+			arbitraryVersionsEnabled: true,
+		},
+		{
+			test:                     "Arbitrary invalid version with feature flag enabled returns error",
+			version:                  "not-a-valid-version",
+			availableVersions:        []string{"4.12.25", "4.13.40", "4.14.16"},
+			arbitraryVersionsEnabled: true,
+			wantErr:                  "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version 'not-a-valid-version' is not a valid semantic version.",
+		},
+		{
+			test:                     "Arbitrary version without feature flag enabled returns error",
+			version:                  "4.15.0-custom.build.123",
+			availableVersions:        []string{"4.12.25", "4.13.40", "4.14.16"},
+			arbitraryVersionsEnabled: false,
+			wantErr:                  "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.15.0-custom.build.123' is invalid.",
+		},
+		{
+			test:                   "Arbitrary valid semver version with dev mode enabled returns no error",
+			version:                "4.15.0-dev.branch.789",
+			availableVersions:      []string{"4.12.25", "4.13.40", "4.14.16"},
+			isLocalDevelopmentMode: true,
+		},
+		{
+			test:                   "Arbitrary invalid version with dev mode enabled returns error",
+			version:                "invalid-version-string",
+			availableVersions:      []string{"4.12.25", "4.13.40", "4.14.16"},
+			isLocalDevelopmentMode: true,
+			wantErr:                "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version 'invalid-version-string' is not a valid semantic version.",
+		},
+		{
+			test:                     "Both AFEC flag and dev mode enabled - should work",
+			version:                  "4.16.0-rc.1",
+			availableVersions:        []string{"4.12.25", "4.13.40", "4.14.16"},
+			arbitraryVersionsEnabled: true,
+			isLocalDevelopmentMode:   true,
+		},
+		{
+			test:                   "Dev mode overrides normal validation for arbitrary versions",
+			version:                "4.17.0-0.nightly-2024-12-01-000000",
+			availableVersions:      []string{"4.12.25", "4.13.40", "4.14.16"},
+			isLocalDevelopmentMode: true,
+		},
 	} {
 		t.Run(tt.test, func(t *testing.T) {
 			ctx := context.Background()
+			controller := gomock.NewController(t)
+			defer controller.Finish()
 
 			enabledOcpVersions := map[string]*api.OpenShiftVersion{}
 			for _, av := range tt.availableVersions {
 				enabledOcpVersions[av] = &api.OpenShiftVersion{}
 			}
 
+			mockEnv := mock_env.NewMockInterface(controller)
+			mockEnv.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(tt.isLocalDevelopmentMode)
+
 			f := frontend{
 				enabledOcpVersions: enabledOcpVersions,
-				defaultOcpVersion:  tt.defaultOcpVersion,
-				baseLog:            logrus.NewEntry(logrus.StandardLogger()),
+			defaultOcpVersion:  tt.defaultOcpVersion,
+			env:                mockEnv,
+			}
+
+			// Create subscription document with optional feature flag
+			subscription := &api.SubscriptionDocument{
+				Subscription: &api.Subscription{
+					Properties: &api.SubscriptionProperties{
+						RegisteredFeatures: []api.RegisteredFeatureProfile{},
+					},
+				},
+			}
+
+			// Add arbitrary versions feature flag if enabled for this test
+			if tt.arbitraryVersionsEnabled {
+				subscription.Subscription.Properties.RegisteredFeatures = append(
+					subscription.Subscription.Properties.RegisteredFeatures,
+					api.RegisteredFeatureProfile{
+						Name:  api.FeatureFlagArbitraryVersions,
+						State: "Registered",
+					},
+				)
 			}
 
 			oc := &api.OpenShiftCluster{
@@ -347,7 +420,7 @@ func TestValidateInstallVersion(t *testing.T) {
 				},
 			}
 
-			err := f.validateInstallVersion(ctx, oc)
+			err := f.validateInstallVersion(ctx, oc, subscription)
 			if tt.wantVersion != "" && oc.Properties.ClusterProfile.Version != tt.wantVersion {
 				t.Errorf("wanted clusterdoc updated with version %s but got %s", tt.wantVersion, oc.Properties.ClusterProfile.Version)
 			}
