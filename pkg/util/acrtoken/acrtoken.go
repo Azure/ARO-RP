@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
+	sdkarmcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry/v2"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerregistry"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -33,14 +33,14 @@ type manager struct {
 	env env.Interface
 	r   azure.Resource
 
-	tokens     containerregistry.TokensClient
-	registries containerregistry.RegistriesClient
+	tokens     armcontainerregistry.TokensClient
+	registries armcontainerregistry.RegistriesClient
 
 	uuid uuid.Generator
 	now  func() time.Time
 }
 
-func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
+func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClient, registriesClient armcontainerregistry.RegistriesClient) (Manager, error) {
 	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
 		return nil, err
@@ -50,8 +50,8 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manag
 		env: env,
 		r:   r,
 
-		tokens:     containerregistry.NewTokensClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
-		registries: containerregistry.NewRegistriesClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
+		tokens:     tokensClient,
+		registries: registriesClient,
 		uuid:       uuid.DefaultGenerator,
 		now:        time.Now,
 	}
@@ -103,10 +103,10 @@ func (m *manager) PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryP
 // generates a new password for it and returns it
 // https://docs.microsoft.com/en-us/azure/container-registry/container-registry-repository-scoped-permissions
 func (m *manager) EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error) {
-	err := m.tokens.CreateAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username, mgmtcontainerregistry.Token{
-		TokenProperties: &mgmtcontainerregistry.TokenProperties{
+	_, err := m.tokens.CreateAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username, sdkarmcontainerregistry.Token{
+		Properties: &sdkarmcontainerregistry.TokenProperties{
 			ScopeMapID: pointerutils.ToPtr(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
-			Status:     mgmtcontainerregistry.TokenStatusEnabled,
+			Status:     pointerutils.ToPtr(sdkarmcontainerregistry.TokenStatusEnabled),
 		},
 	})
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
@@ -117,7 +117,7 @@ func (m *manager) EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryPr
 		return "", err
 	}
 
-	return m.generateTokenPassword(ctx, mgmtcontainerregistry.TokenPasswordNamePassword1, rp)
+	return m.generateTokenPassword(ctx, sdkarmcontainerregistry.TokenPasswordNamePassword1, rp)
 }
 
 // RotateTokenPassword chooses either the unused token password or the token
@@ -128,28 +128,28 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 	if err != nil {
 		return err
 	}
-	tokenPasswords := *tokenProperties.Credentials.Passwords
+	tokenPasswords := tokenProperties.Credentials.Passwords
 
-	var passwordToRenew mgmtcontainerregistry.TokenPasswordName
+	var passwordToRenew sdkarmcontainerregistry.TokenPasswordName
 	switch {
 	// Passwords only has one entry: renew password that isn't present
 	case len(tokenPasswords) == 1:
-		if tokenPasswords[0].Name == mgmtcontainerregistry.TokenPasswordNamePassword1 {
-			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword2
+		if *tokenPasswords[0].Name == sdkarmcontainerregistry.TokenPasswordNamePassword1 {
+			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword2
 		} else {
-			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 		}
 	// Passwords has two entries: compare creation dates, renew oldest
 	case len(tokenPasswords) == 2:
-		if tokenPasswords[0].CreationTime.Before(tokenPasswords[1].CreationTime.Time) {
-			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+		if tokenPasswords[0].CreationTime.Before(*tokenPasswords[1].CreationTime) {
+			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 		} else {
-			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword2
+			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword2
 		}
 	// default case, including passwords having zero entries: generate password 1
 	// this shouldn't ever happen, which guarantees it will happen
 	default:
-		passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+		passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 	}
 
 	newPassword, err := m.generateTokenPassword(ctx, passwordToRenew, rp)
@@ -162,10 +162,10 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 
 // generateTokenPassword takes an existing ACR token and generates
 // a password for the specified password name
-func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
-	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
+func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarmcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
+	creds, err := m.registries.GenerateCredentialsAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, sdkarmcontainerregistry.GenerateCredentialsParameters{
 		TokenID: pointerutils.ToPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
-		Name:    passwordName,
+		Name:    pointerutils.ToPtr(passwordName),
 	})
 	if err != nil {
 		return "", err
@@ -174,13 +174,13 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtco
 	// response details from Azure API
 	// https://learn.microsoft.com/en-us/rest/api/containerregistry/tokens/create?tabs=Go#tokencreate
 
-	for _, pw := range *creds.Passwords {
-		if pw.Name == passwordName {
+	for _, pw := range creds.Passwords {
+		if pw.Name != nil && *pw.Name == passwordName {
 			return *pw.Value, nil
 		}
 	}
 
-	return *(*creds.Passwords)[0].Value, nil
+	return *(creds.Passwords)[0].Value, nil
 }
 
 func (m *manager) Delete(ctx context.Context, rp *api.RegistryProfile) error {
