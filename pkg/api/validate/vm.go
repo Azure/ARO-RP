@@ -404,13 +404,13 @@ func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool
 	// Check version-specific restrictions
 	if isMaster {
 		if minVersion, exists := masterVmSizesWithMinimumVersion[vmSize]; exists {
-			if !(clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)) {
+			if !clusterVersion.Gt(minVersion) && !clusterVersion.Eq(minVersion) {
 				return VMValidityNotSupportedInVersion
 			}
 		}
 	} else {
 		if minVersion, exists := workerVmSizesWithMinimumVersion[vmSize]; exists {
-			if !(clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)) {
+			if !clusterVersion.Gt(minVersion) && !clusterVersion.Eq(minVersion) {
 				return VMValidityNotSupportedInVersion
 			}
 		}
