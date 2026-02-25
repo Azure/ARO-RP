@@ -58,6 +58,25 @@ func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClien
 	return m, nil
 }
 
+func NewManagerWithClients(env env.Interface, tokensClient containerregistry.TokensClient, registriesClient containerregistry.RegistriesClient) (Manager, error) {
+	r, err := azure.ParseResourceID(env.ACRResourceID())
+	if err != nil {
+		return nil, err
+	}
+
+	m := &manager{
+		env: env,
+		r:   r,
+
+		tokens:     tokensClient,
+		registries: registriesClient,
+		uuid:       uuid.DefaultGenerator,
+		now:        time.Now,
+	}
+
+	return m, nil
+}
+
 func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
 	for i, registryProfile := range oc.Properties.RegistryProfiles {
 		if registryProfile.Name == m.env.ACRDomain() {
