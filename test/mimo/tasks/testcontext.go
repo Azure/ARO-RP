@@ -73,7 +73,7 @@ func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entr
 	return ftc
 }
 
-func (t *fakeTestContext) LocalFpAuthorizer() (autorest.Authorizer, error) {
+func (t *fakeTestContext) MsiAuthorizer() (autorest.Authorizer, error) {
 	myAuthorizer := autorest.NullAuthorizer{}
 	return myAuthorizer, nil
 }

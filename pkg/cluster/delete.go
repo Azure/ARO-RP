@@ -610,7 +610,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	if !m.env.IsLocalDevelopmentMode() {
-		acrManager, err := acrtoken.NewManager(m.env, m.localFpAuthorizer)
+		acrManager, err := acrtoken.NewManager(m.env, m.rpMIAuthorizer)
 		if err != nil {
 			return err
 		}
