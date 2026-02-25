@@ -132,8 +132,7 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 
 			tc := testtasks.NewFakeTestContext(
 				ctx, mockEnv, log, now,
-				testtasks.WithOpenShiftClusterProperties(mockGuid, oc),
-				testtasks.WithOpenShiftClusterResourceID(clusterResourceID),
+				testtasks.WithOpenShiftClusterDocument(&api.OpenShiftClusterDocument{ID: mockGuid, OpenShiftCluster: &api.OpenShiftCluster{ID: clusterResourceID, Properties: oc}}),
 			)
 
 			err := EnsureClusterMsiCertificate(tc)

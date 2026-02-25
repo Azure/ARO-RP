@@ -134,7 +134,7 @@ func TestEnsureACRToken(t *testing.T) {
 			tc := testtasks.NewFakeTestContext(
 				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
 				testtasks.WithClientHelper(ch),
-				testtasks.WithOpenShiftClusterProperties(clusterUUID, tt.oc().Properties),
+				testtasks.WithOpenShiftClusterDocument(&api.OpenShiftClusterDocument{ID: clusterUUID, OpenShiftCluster: tt.oc()}),
 			)
 
 			err := EnsureACRTokenIsValid(tc)

@@ -145,7 +145,7 @@ func TestConfigureAPIServerCertificates(t *testing.T) {
 			tc := testtasks.NewFakeTestContext(
 				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
 				testtasks.WithClientHelper(ch),
-				testtasks.WithOpenShiftClusterProperties(clusterUUID, tt.clusterproperties),
+				testtasks.WithOpenShiftClusterDocument(&api.OpenShiftClusterDocument{ID: clusterUUID, OpenShiftCluster: &api.OpenShiftCluster{Properties: tt.clusterproperties}}),
 			)
 
 			err := EnsureAPIServerServingCertificateConfiguration(tc)
@@ -265,7 +265,7 @@ func TestConfigureIngressCertificate(t *testing.T) {
 			tc := testtasks.NewFakeTestContext(
 				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
 				testtasks.WithClientHelper(ch),
-				testtasks.WithOpenShiftClusterProperties(clusterUUID, tt.clusterproperties),
+				testtasks.WithOpenShiftClusterDocument(&api.OpenShiftClusterDocument{ID: clusterUUID, OpenShiftCluster: &api.OpenShiftCluster{Properties: tt.clusterproperties}}),
 			)
 
 			err := EnsureIngressServingCertificateConfiguration(tc)
@@ -456,7 +456,7 @@ func TestRotateClusterCertificates(t *testing.T) {
 			tc := testtasks.NewFakeTestContext(
 				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
 				testtasks.WithClientHelper(ch),
-				testtasks.WithOpenShiftClusterProperties(clusterUUID, tt.clusterproperties),
+				testtasks.WithOpenShiftClusterDocument(&api.OpenShiftClusterDocument{ID: clusterUUID, OpenShiftCluster: &api.OpenShiftCluster{Properties: tt.clusterproperties}}),
 			)
 
 			err := RotateManagedCertificates(tc)

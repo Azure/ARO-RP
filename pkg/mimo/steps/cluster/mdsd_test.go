@@ -94,11 +94,11 @@ func TestMDSDRotate(t *testing.T) {
 			tc := testtasks.NewFakeTestContext(
 				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
 				testtasks.WithClientHelper(ch),
-				testtasks.WithOpenShiftClusterProperties(clusterUUID, api.OpenShiftClusterProperties{
+				testtasks.WithOpenShiftClusterDocument(&api.OpenShiftClusterDocument{ID: clusterUUID, OpenShiftCluster: &api.OpenShiftCluster{Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
 						Domain: "something",
 					},
-				}),
+				}}}),
 			)
 
 			err := EnsureMDSDCertificates(tc)
