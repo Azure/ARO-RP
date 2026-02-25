@@ -932,7 +932,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.MasterProfile.VMSize = "Standard_D2s_v3"
 			},
-			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid.",
+			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided VM size 'Standard_D2s_v3' is invalid for the 'master' role.",
 		},
 		{
 			name: "subnetId invalid",
@@ -1012,14 +1012,14 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'invalid' is invalid for the 'worker' role.",
 		},
 		{
 			name: "vmSize too small (prod)",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D2s_v3' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'Standard_D2s_v3' is invalid for the 'worker' role.",
 		},
 		{
 			name: "vmSize too big (dev)",
@@ -1027,7 +1027,7 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
 			},
 			requireD2sWorkers: true,
-			wantErr:           "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid.",
+			wantErr:           "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'Standard_D4s_v3' is invalid for the 'worker' role.",
 		},
 		{
 			name: "disk too small",
