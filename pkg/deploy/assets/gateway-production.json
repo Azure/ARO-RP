@@ -336,6 +336,7 @@
                     "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-gateway-', resourceGroup().location))]": {}
                 }
             },
+            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Compute', 'virtualMachines', resourceGroup().location, 3))]",
             "name": "[concat('gateway-vmss-', parameters('vmssName'))]",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
