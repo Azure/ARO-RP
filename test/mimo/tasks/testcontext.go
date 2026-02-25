@@ -36,7 +36,7 @@ type fakeTestContext struct {
 	resultMessage string
 }
 
-var _ mimo.TaskContextWithAzureClients = &fakeTestContext{}
+var _ mimo.TaskContext = &fakeTestContext{}
 
 type Option func(*fakeTestContext)
 
@@ -96,8 +96,6 @@ func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDoc
 	return t.doc
 }
 
-// handle
-
 func (t *fakeTestContext) Environment() env.Interface {
 	return t.env
 }
@@ -149,7 +147,7 @@ func (t *fakeTestContext) GetResultMessage() string {
 	return t.resultMessage
 }
 
-// WithAzureClients
+// Azure Clients
 func (t *fakeTestContext) LoadBalancersClient() (armnetwork.LoadBalancersClient, error) {
 	if t.loadBalancerClient == nil {
 		return nil, fmt.Errorf("no LB client provided")

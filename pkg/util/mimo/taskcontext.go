@@ -21,43 +21,38 @@ type TaskContext interface {
 	context.Context
 	Now() time.Time
 	Environment() env.Interface
-	ClientHelper() (clienthelper.Interface, error)
 	Log() *logrus.Entry
+
+	// Result messages
+	SetResultMessage(string)
 
 	// OpenShiftCluster
 	GetClusterUUID() string
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
 	GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument
 
+	// Kubernetes client
+	ClientHelper() (clienthelper.Interface, error)
+
 	// Subscription
 	GetTenantID() string
 
-	SetResultMessage(string)
-	GetResultMessage() string
-}
-
-type TaskContextWithAzureClients interface {
-	TaskContext
-
+	// Azure Networking clients
 	InterfacesClient() (armnetwork.InterfacesClient, error)
 	LoadBalancersClient() (armnetwork.LoadBalancersClient, error)
 	PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, error)
+
+	// Azure Compute clients
 	ResourceSKUsClient() (armcompute.ResourceSKUsClient, error)
+
+	// Azure Container Registry clients
+	TokensClient()
 }
 
 func GetTaskContext(c context.Context) (TaskContext, error) {
 	r, ok := c.(TaskContext)
 	if !ok {
 		return nil, fmt.Errorf("cannot convert %v to TaskContext", c)
-	}
-
-	return r, nil
-}
-
-func GetTaskContextWithAzureClients(c context.Context) (TaskContextWithAzureClients, error) {
-	r, ok := c.(TaskContextWithAzureClients)
-	if !ok {
-		return nil, fmt.Errorf("cannot convert %v to TaskContextWithAzureClients", c)
 	}
 
 	return r, nil
