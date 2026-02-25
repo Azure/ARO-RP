@@ -83,6 +83,40 @@ deploy_aks_dev() {
             "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
 }
 
+deploy_hive_acr_dev() {
+    echo "########## Deploying Hive ACR in RG $RESOURCEGROUP ##########"
+    local acr_name="${HIVE_ACR_NAME:-arolocaldev${LOCATION}}"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n hive-acr \
+        --template-file pkg/deploy/assets/ci-development.json \
+        --parameters "acrName=$acr_name" >/dev/null
+    echo "########## Created ACR: $acr_name ##########"
+}
+
+deploy_hive_acr_cache_and_access() {
+    echo "########## Deploying Hive artifact cache and AKS access in RG $RESOURCEGROUP ##########"
+    local acr_name="${HIVE_ACR_NAME:-arolocaldev${LOCATION}}"
+    local aks_cluster="${AKS_CLUSTER_NAME:-aro-aks-cluster-001}"
+    
+    if [ -z "$HIVE_PULL_USERNAME" ] || [ -z "$HIVE_PULL_PASSWORD" ]; then
+        echo "ERROR: HIVE_PULL_USERNAME and HIVE_PULL_PASSWORD must be set"
+        echo "See team wiki for Hive pull secret credentials"
+        return 1
+    fi
+    
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n hive-acr-cache-and-access \
+        --template-file pkg/deploy/assets/hive-acr-cache-and-access.bicep \
+        --parameters \
+            "acrName=$acr_name" \
+            "aksClusterName=$aks_cluster" \
+            "hiveRegistryUsername=$HIVE_PULL_USERNAME" \
+            "hiveRegistryPassword=$HIVE_PULL_PASSWORD" >/dev/null
+    echo "########## Hive artifact cache and AKS access configured for $acr_name ##########"
+}
+
 deploy_vpn_for_dedicated_rp() {
     echo "########## Deploying Dev VPN in RG $RESOURCEGROUP ##########"
     az deployment group create \
