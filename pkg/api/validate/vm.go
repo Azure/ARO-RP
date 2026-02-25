@@ -32,6 +32,14 @@ func SupportedVMSizesByRole(vmRole string) map[api.VMSize]api.VMSizeStruct {
 	return supportedvmsizes
 }
 
+type VMValidity int
+
+const (
+	VMValidityOK VMValidity = iota
+	VMValidityNotSupportedForRole
+	VMValidityNotSupportedInVersion
+)
+
 var ver419 = version.NewVersion(4, 19, 0)
 
 var masterVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
@@ -382,29 +390,34 @@ func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
 }
 
 // VMSizeIsValidForVersion validates VM size with version-specific restrictions
-func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool, v string) bool {
+func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool, v string) VMValidity {
 	// First check basic validity
 	if !VMSizeIsValid(vmSize, requireD2sWorkers, isMaster) {
-		return false
+		return VMValidityNotSupportedForRole
 	}
 
+	// If we can't parse the version, just trust the above VMSizeIsValid
 	clusterVersion, err := version.ParseVersion(v)
 	if err != nil {
-		return false
+		return VMValidityOK
 	}
 	// Check version-specific restrictions
 	if isMaster {
 		if minVersion, exists := masterVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+			if !(clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)) {
+				return VMValidityNotSupportedInVersion
+			}
 		}
 	} else {
 		if minVersion, exists := workerVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+			if !(clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)) {
+				return VMValidityNotSupportedInVersion
+			}
 		}
 	}
 
 	// VM size has no version restrictions or passed all checks
-	return true
+	return VMValidityOK
 }
 
 func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
