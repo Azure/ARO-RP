@@ -302,7 +302,7 @@ func TestStepRunner(t *testing.T) {
 			h, log := testlog.New()
 			steps := tt.steps(controller)
 
-			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc)
+			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc, "")
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)

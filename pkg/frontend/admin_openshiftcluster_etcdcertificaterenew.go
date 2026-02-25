@@ -88,7 +88,7 @@ func (e *etcdrenew) validateEtcdAndBackupDeleteSecretOnFlagSet(ctx context.Conte
 		)
 	}
 
-	_, err := steps.Run(ctx, e.log, 10*time.Second, s, nil)
+	_, err := steps.Run(ctx, e.log, 10*time.Second, s, nil, "")
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (e *etcdrenew) isEtcDRootCertRenewed(ctx context.Context) error {
 	s := []steps.Step{
 		steps.Condition(e.isEtcdRevised, e.timeout, true),
 	}
-	_, err := steps.Run(ctx, e.log, 30*time.Second, s, nil)
+	_, err := steps.Run(ctx, e.log, 30*time.Second, s, nil, "")
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (e *etcdrenew) revertChanges(ctx context.Context) error {
 		steps.Action(e.recoverEtcdSecrets),
 		steps.Condition(e.isEtcdRevised, 30*time.Minute, true),
 	}
-	_, err := steps.Run(ctx, e.log, 10*time.Second, s, nil)
+	_, err := steps.Run(ctx, e.log, 10*time.Second, s, nil, "")
 	if err != nil {
 		return err
 	}
