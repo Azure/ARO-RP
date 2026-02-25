@@ -46,6 +46,10 @@ type cloudLoadBalancerConfig struct {
 // It reads the current state, compares with the desired state derived from the
 // ARO Cluster spec, and patches if they differ.
 func reconcileInfrastructureCR(ctx context.Context, c client.Client, log *logrus.Entry, apiIntIP, ingressIP string) error {
+	if apiIntIP == "" {
+		return fmt.Errorf("apiIntIP must not be empty for CustomDNS Infrastructure CR reconciliation")
+	}
+
 	infra, err := getInfrastructureCR(ctx, c)
 	if err != nil {
 		return fmt.Errorf("failed to get Infrastructure CR: %w", err)

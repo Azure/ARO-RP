@@ -395,6 +395,13 @@ func TestReconcileInfrastructureCR(t *testing.T) {
 		wantErr   string
 	}{
 		{
+			name:      "empty apiIntIP returns error",
+			apiIntIP:  "",
+			ingressIP: "10.0.0.2",
+			infraObj:  nil,
+			wantErr:   "apiIntIP must not be empty",
+		},
+		{
 			name:      "Infrastructure CR not found returns error",
 			apiIntIP:  "10.0.0.1",
 			ingressIP: "10.0.0.2",
