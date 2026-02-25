@@ -16,7 +16,7 @@ jobs:
   validate-python:
     runs-on: ubuntu-latest
     container:
-      image: registry.access.redhat.com/ubi9/python-311:latest
+      image: registry.access.redhat.com/ubi9/python-312:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

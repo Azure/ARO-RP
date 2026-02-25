@@ -122,7 +122,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		"registry.fedoraproject.org/fedora:42",
 
 		// https://mcr.microsoft.com/en-us/product/azure-cli/about
-		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
 		"mcr.microsoft.com/azure-cli:azurelinux3.0",
 
 		// https://catalog.redhat.com/software/containers/rhel8/support-tools/5ba3eaf9bed8bd6ee819b78b

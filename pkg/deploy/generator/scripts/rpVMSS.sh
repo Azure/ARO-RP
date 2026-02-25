@@ -5,6 +5,9 @@ set -o errexit \
     -o nounset
 
 main() {
+     # check we are FIPS enabled
+    fips_verify
+
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
@@ -39,16 +42,11 @@ main() {
         python3
         # required for podman networking
         firewalld
-        # Required to enable fips
-        grubby
-        dracut-fips
     )
 
     dnf_install_pkgs install_pkgs \
                       retry_wait_time \
                       "$pkg_retry_count"
-
-    fips_configure
 
     # shellcheck disable=SC2119
     configure_logrotate

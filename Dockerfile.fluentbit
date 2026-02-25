@@ -1,5 +1,5 @@
-ARG MARINER_VERSION
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0.${MARINER_VERSION}-amd64 AS builder
+ARG AZURELINUX_VERSION
+FROM mcr.microsoft.com/azurelinux/base/core:${AZURELINUX_VERSION}-amd64 AS builder
 RUN tdnf repolist --refresh && tdnf update -yq
 RUN tdnf install -yq ca-certificates flex build-essential systemd-devel cmake wget tar c-ares-devel sqlite-devel openssl-devel zstd-devel nghttp2-devel
 ARG VERSION
@@ -172,21 +172,20 @@ RUN cmake -B build/ \
 RUN make -C build
 RUN make -C build install
 
-FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0.${MARINER_VERSION}-amd64
+FROM mcr.microsoft.com/azurelinux/distroless/base:${AZURELINUX_VERSION}-amd64
 COPY --from=builder \
     /lib/libcap.so.2 \
     /lib/libcares.so.2 \
     /lib/libstdc++.so.6 \
-    /lib/libgcrypt.so.20 \
-    /lib/libgpg-error.so.0 \
     /lib/liblz4.so.1 \
     /lib/liblzma.so.5 \
     /lib/libnghttp2.so.14 \
     /lib/libsqlite3.so.0  \
-    /lib/libssl.so.1.1 \
+    /lib/libssl.so.3 \
     /lib/libsystemd.so.0 \
     /lib/libzstd.so.1 \
     /lib/libz.so.1 \
     /lib/
 COPY --from=builder /opt/td-agent-bit/bin/fluent-bit /opt/td-agent-bit/bin/td-agent-bit
+RUN ["/opt/td-agent-bit/bin/td-agent-bit", "--version"]
 ENTRYPOINT ["/opt/td-agent-bit/bin/td-agent-bit"]

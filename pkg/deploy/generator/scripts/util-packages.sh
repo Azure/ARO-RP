@@ -1,20 +1,15 @@
 #!/bin/bash
 # Repository and package management related functions
 
-configure_repo_mariner_extended() {
-    local -r extended_repo_config="https://packages.microsoft.com/cbl-mariner/2.0/prod/extended/x86_64/config.repo"
-    curl -sSL "$extended_repo_config" -o /etc/yum.repos.d/mariner-extended.repo
-
-    local -r repo_name="cbl-mariner2.0prodextendedx86_64"
-
+configure_repo_azurelinux_extended() {
     local -ra cmd=(
-        dnf
-        update
+        tdnf
+        install
         -y
-        --enablerepo="$repo_name"
+        azurelinux-repos-extended
     )
 
-    log "Enabling repo $repo_name"
+    log "Enabling repo azurelinux-repos-extended"
     retry cmd "$1" "${2:-}"
 }
 
@@ -26,7 +21,7 @@ configure_repo_mariner_extended() {
 configure_rpm_repos() {
     log "starting"
 
-    configure_repo_mariner_extended "$1" "${2:-1}"
+    configure_repo_azurelinux_extended "$1" "${2:-1}"
 }
 
 # dnf_install_pkgs
@@ -43,7 +38,7 @@ dnf_install_pkgs() {
         -y
         install
     )
-    
+
     # Reference: https://www.shellcheck.net/wiki/SC2206
     # append pkgs array to cmd
     mapfile -O $(( ${#cmd[@]} + 1 )) -d ' ' cmd <<< "${pkgs[@]}"
@@ -57,7 +52,7 @@ dnf_install_pkgs() {
 # dnf_update_pkgs
 # args:
 # 1) excludes - nameref, string array, optional; Packages to exclude from updating
-#       Each index must be prefixed with -x 
+#       Each index must be prefixed with -x
 # 2) wait_time - nameref, integer; Time to wait before retrying command
 # 3) retries - integer, optional; Ammount of times to retry command, defaults to 5
 dnf_update_pkgs() {
