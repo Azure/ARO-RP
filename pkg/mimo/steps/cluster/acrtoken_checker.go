@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
@@ -27,12 +30,29 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	}
 
 	env := th.Environment()
-	localFpAuthorizer, err := th.LocalFpAuthorizer()
+
+	// TODO: Move this into the TaskContext
+	r, err := azure.ParseResourceID(env.ACRResourceID())
+	if err != nil {
+		return err
+	}
+
+	fpCredential, err := env.FPNewClientCertificateCredential(env.TenantID(), nil)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
 
-	manager, err := acrtoken.NewManager(env, localFpAuthorizer)
+	tokensClient, err := armcontainerregistry.NewTokensClient(r.SubscriptionID, fpCredential, env.Environment().ArmClientOptions())
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	registriesClient, err := armcontainerregistry.NewRegistriesClient(r.SubscriptionID, fpCredential, env.Environment().ArmClientOptions())
+	if err != nil {
+		return mimo.TerminalError(err)
+	}
+
+	manager, err := acrtoken.NewManager(env, tokensClient, registriesClient)
 	if err != nil {
 		return err
 	}
