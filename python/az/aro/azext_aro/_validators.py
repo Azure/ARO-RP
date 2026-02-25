@@ -128,8 +128,8 @@ def validate_pull_secret(namespace):
                 namespace.pull_secret = file.read().rstrip('\n')
 
         if not isinstance(json.loads(namespace.pull_secret), dict):
-            raise Exception()
-    except Exception as e:
+            raise ValueError("Pull secret must be a valid JSON object")
+    except (ValueError, json.JSONDecodeError) as e:
         raise InvalidArgumentValueError("Invalid --pull-secret.") from e
 
 
