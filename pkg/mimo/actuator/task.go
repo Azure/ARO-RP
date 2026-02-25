@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/go-autorest/autorest"
 )
 
 type th struct {
@@ -28,21 +29,25 @@ type th struct {
 
 	resultMessage string
 
-	oc *api.OpenShiftClusterDocument
+	oc  *api.OpenShiftClusterDocument
+	sub *api.SubscriptionDocument
 
 	_ch clienthelper.Interface
+
+	az *azClients
 }
 
 // force interface checking
 var _ mimo.TaskContext = &th{}
 
-func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument) *th {
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) *th {
 	return &th{
 		originalCtx: ctx,
 		ctx:         ctx,
 		env:         env,
 		log:         log,
 		oc:          oc,
+		sub:         sub,
 		_ch:         nil,
 	}
 }
@@ -126,6 +131,19 @@ func (t *th) GetClusterUUID() string {
 
 func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 	return t.oc.OpenShiftCluster.Properties
+}
+
+func (t *th) GetTenantID() string {
+	return t.sub.Subscription.Properties.TenantID
+}
+
+// localFpAuthorizer implements mimo.TaskContext.
+func (t *th) LocalFpAuthorizer() (autorest.Authorizer, error) {
+	localFPAuthorizer, err := t.env.FPAuthorizer(t.env.TenantID(), nil, t.env.Environment().ResourceManagerScope)
+	if err != nil {
+		return nil, err
+	}
+	return localFPAuthorizer, nil
 }
 
 // GetOpenshiftClusterDocument implements mimo.TaskContext.
