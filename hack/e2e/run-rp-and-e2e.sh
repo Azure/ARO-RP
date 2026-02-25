@@ -10,6 +10,8 @@ if [[ $CI ]]; then
     echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
 
     set -a
+    LOCATION="${LOCATION:-eastus}"
+    VPN="${VPN:-vpn-${LOCATION}.ovpn}"
     HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
     HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
     CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
@@ -26,6 +28,15 @@ if [[ $CI ]]; then
         DATABASE_NAME="${DATABASE_NAME}-miwi"
     fi
 fi
+
+current_subscription_id() {
+    if [[ -n "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
+        echo "$AZURE_SUBSCRIPTION_ID"
+        return 0
+    fi
+
+    az account show --query id -o tsv 2>/dev/null || true
+}
 
 validate_rp_running() {
     echo "########## ？Checking ARO RP Status ##########"
@@ -200,10 +211,16 @@ deploy_e2e_db() {
 
 register_sub() {
     echo "########## 🔑 Registering subscription ##########"
+    local subscription_id
+    subscription_id="$(current_subscription_id)"
+    if [[ -z "$subscription_id" ]]; then
+        echo ">> Unable to determine subscription ID from az account."
+        return 1
+    fi
     curl -sko /dev/null -X PUT \
         -H 'Content-Type: application/json' \
         -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
-        "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
+        "https://localhost:8443/subscriptions/$subscription_id?api-version=2.0"
 }
 
 clean_e2e_db() {
@@ -246,7 +263,7 @@ echo "######################################"
 echo "######## Current settings : ##########"
 echo
 echo "LOCATION=$LOCATION"
-echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
+echo "AZURE_SUBSCRIPTION_ID=$(current_subscription_id)"
 echo
 echo "CI=$CI"
 echo "RP_MODE=$RP_MODE"
@@ -281,7 +298,7 @@ echo "######################################"
     echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"
     return 128
 )
-[[ $AZURE_SUBSCRIPTION_ID ]] || (
-    echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"
+[[ $(current_subscription_id) ]] || (
+    echo ">> Subscription ID is not set; please validate your az login or ./secrets/env"
     return 128
 )
