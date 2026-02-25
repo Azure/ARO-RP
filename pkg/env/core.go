@@ -6,6 +6,7 @@ package env
 import (
 	"context"
 	"crypto/fips140"
+	"os"
 	"strings"
 	"time"
 
@@ -55,6 +56,7 @@ type Core interface {
 
 	// for ease of faking, load time in a consistent place everywhere
 	Now() time.Time
+	EnvironmentType() string
 }
 
 type core struct {
@@ -96,6 +98,10 @@ func (c *core) Now() time.Time {
 // database or serving components such as the frontend.
 func (c *core) LoggerForComponent(component string) *logrus.Entry {
 	return c.serviceLog.WithField("component", component)
+}
+
+func (c *core) EnvironmentType() string {
+	return os.Getenv("ENVIRONMENT")
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
