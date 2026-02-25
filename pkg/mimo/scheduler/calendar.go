@@ -24,7 +24,7 @@ type calendar struct {
 	Minute []int
 }
 
-var calRegex = regexp.MustCompile(`(?:((?P<weekday>:Sun|Mon|Tue|Wed|Thu|Fri|Sat|,)+) )?(?P<year>[0-9,\*]+)-(?P<month>[0-9,\*]+)-(?P<day>[0-9,\*]+) (?P<hour>[0-9,\*]+):(?P<minute>[0-9,\*]+)(?::(?P<second>[0-9,\*]+))?$`)
+var calRegex = regexp.MustCompile(`^(?:(?P<weekday>[a-zA-Z,]+) )?(?P<year>[0-9,\*]+)-(?P<month>[0-9,\*]+)-(?P<day>[0-9,\*]+) (?P<hour>[0-9,\*]+):(?P<minute>[0-9,\*]+)(?::(?P<second>[0-9,\*]+))?$`)
 
 func ParseCalendar(s string) (cal calendar, reterr error) {
 	names := calRegex.SubexpNames()
@@ -47,22 +47,25 @@ func ParseCalendar(s string) (cal calendar, reterr error) {
 		case "weekday":
 			// calc weekdays -- missing counts as all
 			if p[x] != "*" && p[x] != "" {
-				for weekday := range strings.SplitSeq(p[x], ",") {
+				for weekday := range strings.SplitSeq(strings.ToLower(p[x]), ",") {
 					switch weekday {
-					case "Mon":
+					case "mon", "monday":
 						c.Weekday = append(c.Weekday, time.Monday)
-					case "Tue":
+					case "tue", "tuesday":
 						c.Weekday = append(c.Weekday, time.Tuesday)
-					case "Wed":
+					case "wed", "wednesday":
 						c.Weekday = append(c.Weekday, time.Wednesday)
-					case "Thu":
+					case "thu", "thursday":
 						c.Weekday = append(c.Weekday, time.Thursday)
-					case "Fri":
+					case "fri", "friday":
 						c.Weekday = append(c.Weekday, time.Friday)
-					case "Sat":
+					case "sat", "saturday":
 						c.Weekday = append(c.Weekday, time.Saturday)
-					case "Sun":
+					case "sun", "sunday":
 						c.Weekday = append(c.Weekday, time.Sunday)
+					default:
+						reterr = fmt.Errorf("error parsing weekday: unknown weekday '%s'", weekday)
+						return
 					}
 				}
 			}
@@ -135,8 +138,9 @@ func ParseCalendar(s string) (cal calendar, reterr error) {
 						reterr = fmt.Errorf("error parsing minute: %w", err)
 						return
 					}
-					if v > 59 || v < 0 {
-						reterr = fmt.Errorf("error parsing minute: %d is out of range", v)
+
+					if !slices.Contains([]int{0, 15, 30, 45}, v) {
+						reterr = fmt.Errorf("error parsing minute: '%d' is not one of 0/15/30/45", v)
 						return
 					}
 					c.Minute = append(c.Minute, v)

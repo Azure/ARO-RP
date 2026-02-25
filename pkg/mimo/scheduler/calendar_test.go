@@ -23,9 +23,8 @@ func Test_parseCalendar(t *testing.T) {
 				Year:    []int{},
 				Month:   []int{},
 				Day:     []int{},
-
-				Hour:   []int{0},
-				Minute: []int{0},
+				Hour:    []int{0},
+				Minute:  []int{0},
 			},
 		},
 		{
@@ -35,9 +34,42 @@ func Test_parseCalendar(t *testing.T) {
 				Year:    []int{},
 				Month:   []int{},
 				Day:     []int{},
-
-				Hour:   []int{0},
-				Minute: []int{0},
+				Hour:    []int{0},
+				Minute:  []int{0},
+			},
+		},
+		{
+			s: "soup *-*-* 00:00",
+			want: calendar{
+				Weekday: []time.Weekday{},
+				Year:    []int{},
+				Month:   []int{},
+				Day:     []int{},
+				Hour:    []int{},
+				Minute:  []int{},
+			},
+			wantErr: "error parsing weekday: unknown weekday 'soup'",
+		},
+		{
+			s: "Monday *-*-* 00:00",
+			want: calendar{
+				Weekday: []time.Weekday{time.Monday},
+				Year:    []int{},
+				Month:   []int{},
+				Day:     []int{},
+				Hour:    []int{0},
+				Minute:  []int{0},
+			},
+		},
+		{
+			s: "Mon,Tuesday *-*-* 00:00",
+			want: calendar{
+				Weekday: []time.Weekday{time.Monday, time.Tuesday},
+				Year:    []int{},
+				Month:   []int{},
+				Day:     []int{},
+				Hour:    []int{0},
+				Minute:  []int{0},
 			},
 		},
 		{
@@ -47,9 +79,8 @@ func Test_parseCalendar(t *testing.T) {
 				Year:    []int{},
 				Month:   []int{},
 				Day:     []int{},
-
-				Hour:   []int{0},
-				Minute: []int{0},
+				Hour:    []int{0},
+				Minute:  []int{0},
 			},
 		},
 		{
@@ -59,9 +90,8 @@ func Test_parseCalendar(t *testing.T) {
 				Year:    []int{},
 				Month:   []int{},
 				Day:     []int{1},
-
-				Hour:   []int{0},
-				Minute: []int{0},
+				Hour:    []int{0},
+				Minute:  []int{0},
 			},
 		},
 		{
@@ -71,8 +101,7 @@ func Test_parseCalendar(t *testing.T) {
 				Year:    []int{},
 				Month:   []int{},
 				// output is sorted
-				Day: []int{1, 2, 3, 4},
-
+				Day:    []int{1, 2, 3, 4},
 				Hour:   []int{0},
 				Minute: []int{0},
 			},
@@ -100,6 +129,40 @@ func Test_parseCalendar(t *testing.T) {
 				Minute:  []int{},
 			},
 			wantErr: "error parsing seconds: per-second granularity is unsupported",
+		},
+		{
+			s: "*-*-* 00:15",
+			want: calendar{
+				Weekday: []time.Weekday{},
+				Year:    []int{},
+				Month:   []int{},
+				Day:     []int{},
+				Hour:    []int{0},
+				Minute:  []int{15},
+			},
+		},
+		{
+			s: "*-*-* 00:15,30",
+			want: calendar{
+				Weekday: []time.Weekday{},
+				Year:    []int{},
+				Month:   []int{},
+				Day:     []int{},
+				Hour:    []int{0},
+				Minute:  []int{15, 30},
+			},
+		},
+		{
+			s: "*-*-* 00:22",
+			want: calendar{
+				Weekday: []time.Weekday{},
+				Year:    []int{},
+				Month:   []int{},
+				Day:     []int{},
+				Hour:    []int{},
+				Minute:  []int{},
+			},
+			wantErr: "error parsing minute: '22' is not one of 0/15/30/45",
 		},
 		{
 			s: "garbage",
