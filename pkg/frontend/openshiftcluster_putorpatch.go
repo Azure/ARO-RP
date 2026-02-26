@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -263,7 +262,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 	} else {
-		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, putOrPatchClusterParameters.path)
+		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.IsCI(), f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, putOrPatchClusterParameters.path)
 		if err != nil {
 			return nil, err
 		}
@@ -444,8 +443,15 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 	return nil
 }
 
-func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error {
-	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, path)
+func (f *frontend) ValidateNewCluster(
+	ctx context.Context,
+	subscription *api.SubscriptionDocument,
+	cluster *api.OpenShiftCluster,
+	staticValidator api.OpenShiftClusterStaticValidator,
+	ext any,
+	path string,
+) error {
+	err := staticValidator.Static(ext, nil, f.env.IsCI(), f.env.Location(), f.env.Domain(), version.InstallArchitectureVersion, path)
 	if err != nil {
 		return err
 	}

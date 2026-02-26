@@ -33,29 +33,23 @@ The desired instance types should be free of any restrictions. The subscription 
 
 ### CLI Method
 
-1) Comment out `FeatureRequireD2sWorkers` from the range of features in `pkg/env/dev.go`. This will allow you to create development clusters with other VM sizes.
+1) Follow the usual steps to [deploy a development RP](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md), but don't use the hack script to create a cluster.
 
-> __NOTE:__ Please be responsible with your usage of larger VM sizes, as they incur additional cost.
-
-2) Follow the usual steps to [deploy a development RP](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md), but don't use the hack script to create a cluster.
-
-3) Follow steps in https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster to create a cluster, specifying `-worker-vm-size` and/or `--master-vm-size` in the `az aro create` step to specify an alternate sku:
+2) Follow steps in https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster to create a cluster, specifying `-worker-vm-size` and/or `--master-vm-size` in the `az aro create` step to specify an alternate sku:
 
 ~~~
 az aro create   --resource-group $RESOURCEGROUP   --name $CLUSTER   --vnet aro-lseries   --master-subnet master-subnet   --worker-subnet worker-subnet   --worker-vm-size "Standard_L8s_v2"
 ~~~
 
-4) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.
+3) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.
 
 ### Hack scripts method
 
-1) Comment out `FeatureRequireD2sWorkers` from the range of features in `pkg/env/dev.go`.
+1) Start your local RP. If it was already running, restart it to take into account commented lines.
 
-2) Start your local RP. If it was already running, restart it to take into account commented lines.
+2) Use the [hack script to create a cluster.](https://github.com/cadenmarchese/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster), with MASTER_VM_SIZE and WORKER_VM_SIZE variables set to desired instance size.
 
-3) Use the [hack script to create a cluster.](https://github.com/cadenmarchese/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster), with MASTER_VM_SIZE and WORKER_VM_SIZE variables set to desired instance size.
-
-4) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.
+3) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.
 
 ### Post-install method
 

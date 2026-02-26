@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
@@ -24,7 +22,6 @@ type validateTest struct {
 	location            *string
 	current             func(oc *OpenShiftCluster)
 	modify              func(oc *OpenShiftCluster)
-	requireD2sWorkers   bool
 	architectureVersion *api.ArchitectureVersion
 	wantErr             string
 }
@@ -158,17 +155,8 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				v := &openShiftClusterStaticValidator{
-					location:          *tt.location,
-					domain:            "location.aroapp.io",
-					requireD2sWorkers: tt.requireD2sWorkers,
-					resourceID:        getResourceID(*tt.clusterName),
-					r: azure.Resource{
-						SubscriptionID: subscriptionID,
-						ResourceGroup:  "resourceGroup",
-						Provider:       "Microsoft.RedHatOpenShift",
-						ResourceType:   "openshiftClusters",
-						ResourceName:   *tt.clusterName,
-					},
+					location: *tt.location,
+					domain:   "location.aroapp.io",
 				}
 
 				validOCForTest := func() *OpenShiftCluster {
@@ -199,7 +187,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(ext, current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, api.ArchitectureVersionV2, v.resourceID)
+				err := v.Static(oc, current, false, v.location, v.domain, api.ArchitectureVersionV2, getResourceID(*tt.clusterName))
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Errorf("Expected error %s, got nil", tt.wantErr)
@@ -930,21 +918,6 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 				oc.Properties.WorkerProfiles[0].VMSize = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'invalid' is invalid.",
-		},
-		{
-			name: "vmSize too small (prod)",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
-			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D2s_v3' is invalid.",
-		},
-		{
-			name: "vmSize too big (dev)",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
-			},
-			requireD2sWorkers: true,
-			wantErr:           "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid.",
 		},
 		{
 			name: "disk too small",

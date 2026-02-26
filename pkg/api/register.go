@@ -13,7 +13,7 @@ type OpenShiftClusterConverter interface {
 }
 
 type OpenShiftClusterStaticValidator interface {
-	Static(interface{}, *OpenShiftCluster, string, string, bool, ArchitectureVersion, string) error
+	Static(any, *OpenShiftCluster, bool, string, string, ArchitectureVersion, string) error
 }
 
 type OpenShiftClusterCredentialsConverter interface {

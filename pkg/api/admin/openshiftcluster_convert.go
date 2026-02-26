@@ -62,7 +62,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				}(),
 			},
 			MasterProfile: MasterProfile{
-				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
+				VMSize:              oc.Properties.MasterProfile.VMSize,
 				SubnetID:            oc.Properties.MasterProfile.SubnetID,
 				EncryptionAtHost:    EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost),
 				DiskEncryptionSetID: oc.Properties.MasterProfile.DiskEncryptionSetID,
@@ -133,7 +133,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		for _, p := range oc.Properties.WorkerProfiles {
 			out.Properties.WorkerProfiles = append(out.Properties.WorkerProfiles, WorkerProfile{
 				Name:                p.Name,
-				VMSize:              VMSize(p.VMSize),
+				VMSize:              p.VMSize,
 				DiskSizeGB:          p.DiskSizeGB,
 				SubnetID:            p.SubnetID,
 				Count:               p.Count,
@@ -148,7 +148,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		for _, p := range oc.Properties.WorkerProfilesStatus {
 			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, WorkerProfile{
 				Name:                p.Name,
-				VMSize:              VMSize(p.VMSize),
+				VMSize:              p.VMSize,
 				DiskSizeGB:          p.DiskSizeGB,
 				SubnetID:            p.SubnetID,
 				Count:               p.Count,
@@ -370,7 +370,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 
-	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
+	out.Properties.MasterProfile.VMSize = oc.Properties.MasterProfile.VMSize
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)
 	out.Properties.MasterProfile.DiskEncryptionSetID = oc.Properties.MasterProfile.DiskEncryptionSetID
@@ -381,7 +381,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Properties.WorkerProfiles = make([]api.WorkerProfile, len(oc.Properties.WorkerProfiles))
 		for i := range oc.Properties.WorkerProfiles {
 			out.Properties.WorkerProfiles[i].Name = oc.Properties.WorkerProfiles[i].Name
-			out.Properties.WorkerProfiles[i].VMSize = api.VMSize(oc.Properties.WorkerProfiles[i].VMSize)
+			out.Properties.WorkerProfiles[i].VMSize = oc.Properties.WorkerProfiles[i].VMSize
 			out.Properties.WorkerProfiles[i].DiskSizeGB = oc.Properties.WorkerProfiles[i].DiskSizeGB
 			out.Properties.WorkerProfiles[i].SubnetID = oc.Properties.WorkerProfiles[i].SubnetID
 			out.Properties.WorkerProfiles[i].Count = oc.Properties.WorkerProfiles[i].Count
@@ -394,7 +394,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Properties.WorkerProfilesStatus = make([]api.WorkerProfile, len(oc.Properties.WorkerProfilesStatus))
 		for i := range oc.Properties.WorkerProfilesStatus {
 			out.Properties.WorkerProfilesStatus[i].Name = oc.Properties.WorkerProfilesStatus[i].Name
-			out.Properties.WorkerProfilesStatus[i].VMSize = api.VMSize(oc.Properties.WorkerProfilesStatus[i].VMSize)
+			out.Properties.WorkerProfilesStatus[i].VMSize = oc.Properties.WorkerProfilesStatus[i].VMSize
 			out.Properties.WorkerProfilesStatus[i].DiskSizeGB = oc.Properties.WorkerProfilesStatus[i].DiskSizeGB
 			out.Properties.WorkerProfilesStatus[i].SubnetID = oc.Properties.WorkerProfilesStatus[i].SubnetID
 			out.Properties.WorkerProfilesStatus[i].Count = oc.Properties.WorkerProfilesStatus[i].Count

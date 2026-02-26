@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
@@ -27,8 +28,8 @@ import (
 func TestValidateZones(t *testing.T) {
 	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 
-	controlPlaneSku := string(api.VMSizeStandardD16asV4)
-	workerProfileSku := string(api.VMSizeStandardD8asV4)
+	controlPlaneSku := string(vms.VMSizeStandardD16asV4)
+	workerProfileSku := string(vms.VMSizeStandardD8asV4)
 
 	type test struct {
 		name string
@@ -52,11 +53,11 @@ func TestValidateZones(t *testing.T) {
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						VMSize: api.VMSizeStandardD16asV4,
+						VMSize: vms.VMSizeStandardD16asV4,
 					},
 					WorkerProfiles: []api.WorkerProfile{
 						{
-							VMSize: api.VMSizeStandardD8asV4,
+							VMSize: vms.VMSizeStandardD8asV4,
 						},
 					},
 					Zones: []string{},
@@ -72,11 +73,11 @@ func TestValidateZones(t *testing.T) {
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						VMSize: api.VMSizeStandardD16asV4,
+						VMSize: vms.VMSizeStandardD16asV4,
 					},
 					WorkerProfiles: []api.WorkerProfile{
 						{
-							VMSize: api.VMSizeStandardD8asV4,
+							VMSize: vms.VMSizeStandardD8asV4,
 						},
 					},
 					Zones: []string{"1", "2", "3"},
@@ -92,11 +93,11 @@ func TestValidateZones(t *testing.T) {
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						VMSize: api.VMSizeStandardD16asV4,
+						VMSize: vms.VMSizeStandardD16asV4,
 					},
 					WorkerProfiles: []api.WorkerProfile{
 						{
-							VMSize: api.VMSizeStandardD8asV4,
+							VMSize: vms.VMSizeStandardD8asV4,
 						},
 					},
 					Zones: []string{"1", "2", "3"},
@@ -113,11 +114,11 @@ func TestValidateZones(t *testing.T) {
 				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						VMSize: api.VMSizeStandardD16asV4,
+						VMSize: vms.VMSizeStandardD16asV4,
 					},
 					WorkerProfiles: []api.WorkerProfile{
 						{
-							VMSize: api.VMSizeStandardD8asV4,
+							VMSize: vms.VMSizeStandardD8asV4,
 						},
 					},
 					Zones: []string{"1", "2", "3", "4"},
@@ -193,11 +194,11 @@ func TestValidateZones(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							WorkerProfiles: []api.WorkerProfile{
 								{
-									VMSize: api.VMSize(workerProfileSku),
+									VMSize: vms.VMSize(workerProfileSku),
 								},
 							},
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSize(controlPlaneSku),
+								VMSize: vms.VMSize(controlPlaneSku),
 							},
 						},
 					},
