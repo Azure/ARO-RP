@@ -157,6 +157,20 @@ func IsNotFoundError(err error) bool {
 	return false
 }
 
+func IsStatusConflictError(err error) bool {
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		return detailedErr.StatusCode == http.StatusConflict
+	}
+
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		return responseError.StatusCode == http.StatusConflict
+	}
+
+	return false
+}
+
 // IsInvalidSecretError returns if errors is InvalidCredentials error
 // Example: (adal.tokenRefreshError) adal: Refresh request failed. Status Code = '401'.
 // Response body: {"error":"invalid_client","error_description":"AADSTS7000215:
