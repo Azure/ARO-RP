@@ -184,8 +184,12 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 			wantErr: "parsing failed for Invalid UUID. Invalid resource Id format",
 		},
 		{
-			name:               "Fail - An action is denied for a platform identity",
-			platformIdentities: platformWorkloadIdentities,
+			name: "Fail - An action is denied for a platform identity",
+			platformIdentities: map[string]api.PlatformWorkloadIdentity{
+				"Dummy1": {
+					ResourceID: platformIdentity1,
+				},
+			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 			},
@@ -204,8 +208,12 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 			wantErr: fmt.Sprintf("400: InvalidClusterMSIPermissions: : The cluster user assigned identity does not have required permissions on platform workload identity '%s'.", platformIdentity1),
 		},
 		{
-			name:               "Fail - An action is missing for a platform identity",
-			platformIdentities: platformWorkloadIdentities,
+			name: "Fail - An action is missing for a platform identity",
+			platformIdentities: map[string]api.PlatformWorkloadIdentity{
+				"Dummy1": {
+					ResourceID: platformIdentity1,
+				},
+			},
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 			},
