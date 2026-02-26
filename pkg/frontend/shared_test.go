@@ -225,7 +225,7 @@ func (ti *testInfra) WithMaintenanceManifests(now func() time.Time) *testInfra {
 }
 
 func (ti *testInfra) WithMaintenanceSchedules(now func() time.Time) *testInfra {
-	ti.maintenanceSchedulesDatabase, ti.maintenanceSchedulesClient = testdatabase.NewFakeMaintenanceSchedules(now)
+	ti.maintenanceSchedulesDatabase, ti.maintenanceSchedulesClient = testdatabase.NewFakeMaintenanceSchedules()
 	ti.fixture.WithMaintenanceSchedules(ti.maintenanceSchedulesDatabase)
 	ti.dbGroup.WithMaintenanceSchedules(ti.maintenanceSchedulesDatabase)
 	return ti
