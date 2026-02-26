@@ -184,12 +184,8 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 			wantErr: "parsing failed for Invalid UUID. Invalid resource Id format",
 		},
 		{
-			name: "Fail - An action is denied for a platform identity",
-			platformIdentities: map[string]api.PlatformWorkloadIdentity{
-				"Dummy1": {
-					ResourceID: platformIdentity1,
-				},
-			},
+			name:               "Fail - An action is denied for a platform identity",
+			platformIdentities: platformWorkloadIdentities,
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 			},
@@ -205,15 +201,11 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					cancel()
 				}).Return(&msiNotAllowedActions, nil).AnyTimes()
 			},
-			wantErr: fmt.Sprintf("400: InvalidWorkloadIdentityPermissions: : The cluster user assigned identity does not have required permissions on platform workload identity '%s' used for role 'Dummy1'.", platformIdentity1),
+			wantErr: fmt.Sprintf("400: InvalidClusterMSIPermissions: : The cluster user assigned identity does not have required permissions on platform workload identity '%s'.", platformIdentity1),
 		},
 		{
-			name: "Fail - An action is missing for a platform identity",
-			platformIdentities: map[string]api.PlatformWorkloadIdentity{
-				"Dummy1": {
-					ResourceID: platformIdentity1,
-				},
-			},
+			name:               "Fail - An action is missing for a platform identity",
+			platformIdentities: platformWorkloadIdentities,
 			mocks: func(roleDefinitions *mock_armauthorization.MockRoleDefinitionsClient) {
 				roleDefinitions.EXPECT().GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{}).Return(msiRequiredPermissions, nil)
 			},
@@ -229,7 +221,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					cancel()
 				}).Return(&msiActionMissing, nil).AnyTimes()
 			},
-			wantErr: fmt.Sprintf("400: InvalidWorkloadIdentityPermissions: : The cluster user assigned identity does not have required permissions on platform workload identity '%s' used for role 'Dummy1'.", platformIdentity1),
+			wantErr: fmt.Sprintf("400: InvalidClusterMSIPermissions: : The cluster user assigned identity does not have required permissions on platform workload identity '%s'.", platformIdentity1),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
