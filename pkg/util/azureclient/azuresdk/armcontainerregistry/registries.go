@@ -19,7 +19,6 @@ type registriesClient struct {
 
 var _ RegistriesClient = &registriesClient{}
 
-// NewRegistriesClient creates a new TokensClient
 func NewRegistriesClient(subscriptionId string, credential azcore.TokenCredential, options *arm.ClientOptions) (RegistriesClient, error) {
 	clientFactory, err := armcontainerregistry.NewClientFactory(subscriptionId, credential, options)
 	if err != nil {

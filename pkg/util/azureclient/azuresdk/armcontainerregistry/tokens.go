@@ -19,7 +19,6 @@ type tokensClient struct {
 
 var _ TokensClient = &tokensClient{}
 
-// NewTokensClient creates a new TokensClient
 func NewTokensClient(subscriptionId string, credential azcore.TokenCredential, options *arm.ClientOptions) (TokensClient, error) {
 	clientFactory, err := armcontainerregistry.NewClientFactory(subscriptionId, credential, options)
 	if err != nil {
