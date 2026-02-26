@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
-	azerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
@@ -63,7 +63,7 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return nil
 	}
 
-	if azerrors.IsNotFoundError(err) {
+	if azureerrors.IsNotFoundError(err) {
 		err = nil
 	}
 	if err != nil {
@@ -99,7 +99,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 
 	var isCreate bool
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, nil)
-	if azerrors.IsNotFoundError(err) {
+	if azureerrors.IsNotFoundError(err) {
 		isCreate = true
 	}
 
@@ -136,7 +136,7 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	}
 
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
-	if azerrors.IsNotFoundError(err) {
+	if azureerrors.IsNotFoundError(err) {
 		return nil
 	}
 	if err != nil {

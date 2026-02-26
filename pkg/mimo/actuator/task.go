@@ -12,8 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	"github.com/Azure/go-autorest/autorest"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
@@ -128,15 +126,6 @@ func (t *th) GetClusterUUID() string {
 
 func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 	return t.oc.OpenShiftCluster.Properties
-}
-
-// localFpAuthorizer implements mimo.TaskContext.
-func (t *th) LocalFpAuthorizer() (autorest.Authorizer, error) {
-	localFPAuthorizer, err := t.env.FPAuthorizer(t.env.TenantID(), nil, t.env.Environment().ResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-	return localFPAuthorizer, nil
 }
 
 // GetOpenshiftClusterDocument implements mimo.TaskContext.

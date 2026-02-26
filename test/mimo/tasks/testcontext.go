@@ -10,8 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/go-autorest/autorest"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
@@ -71,11 +69,6 @@ func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entr
 		i(ftc)
 	}
 	return ftc
-}
-
-func (t *fakeTestContext) LocalFpAuthorizer() (autorest.Authorizer, error) {
-	myAuthorizer := autorest.NullAuthorizer{}
-	return myAuthorizer, nil
 }
 
 func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
