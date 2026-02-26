@@ -117,6 +117,23 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - checkout: self
+
+          - script: |
+              set -x
+              echo "=== Disk Usage Report ==="
+              df -h /
+              echo ""
+              echo "=== Top 10 largest directories under / ==="
+              du -h --max-depth=2 / 2>/dev/null | sort -rh | head -20
+              echo ""
+              echo "=== Docker disk usage ==="
+              docker system df -v 2>/dev/null || echo "Docker not available or not running"
+              echo ""
+              echo "=== Docker images ==="
+              docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null || true
+            displayName: Disk Usage Report (pre-build)
+            condition: always()
+
           - task: Docker@2
             inputs:
               command: "login"
@@ -142,6 +159,23 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+
+          - script: |
+              set -x
+              echo "=== Disk Usage Report ==="
+              df -h /
+              echo ""
+              echo "=== Top 10 largest directories under / ==="
+              du -h --max-depth=2 / 2>/dev/null | sort -rh | head -20
+              echo ""
+              echo "=== Docker disk usage ==="
+              docker system df -v 2>/dev/null || echo "Docker not available or not running"
+              echo ""
+              echo "=== Docker images ==="
+              docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null || true
+            displayName: Disk Usage Report (pre-build)
+            condition: always()
+
           - task: Docker@2
             inputs:
               command: "login"
@@ -182,6 +216,23 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+
+          - script: |
+              set -x
+              echo "=== Disk Usage Report ==="
+              df -h /
+              echo ""
+              echo "=== Top 10 largest directories under / ==="
+              du -h --max-depth=2 / 2>/dev/null | sort -rh | head -20
+              echo ""
+              echo "=== Docker disk usage ==="
+              docker system df -v 2>/dev/null || echo "Docker not available or not running"
+              echo ""
+              echo "=== Docker images ==="
+              docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null || true
+            displayName: Disk Usage Report (pre-build)
+            condition: always()
+
           - task: Docker@2
             inputs:
               command: "login"
