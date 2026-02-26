@@ -20,7 +20,6 @@ import (
 
 type Manager interface {
 	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
-	GetRegistryProfileFromSlice(oc []*api.RegistryProfile) *api.RegistryProfile
 	NewRegistryProfile() *api.RegistryProfile
 	PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryProfile)
 	EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error)
@@ -68,9 +67,9 @@ func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 	return nil
 }
 
-func (m *manager) GetRegistryProfileFromSlice(registryProfiles []*api.RegistryProfile) *api.RegistryProfile {
+func GetRegistryProfileFromSlice(_env env.Interface, registryProfiles []*api.RegistryProfile) *api.RegistryProfile {
 	for _, rp := range registryProfiles {
-		if rp.Name == m.env.ACRDomain() {
+		if rp.Name == _env.ACRDomain() {
 			return rp
 		}
 	}
