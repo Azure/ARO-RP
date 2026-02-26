@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -123,6 +125,17 @@ func (dv *dynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, plat
 		}
 
 		err = dv.validateActionsByOID(ctx, &pid, actions, nil)
+		if err == wait.ErrWaitTimeout {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidClusterMSIPermissions,
+				"",
+				fmt.Sprintf(
+					"The cluster user assigned identity does not have required permissions on platform workload identity '%s'.",
+					platformIdentity.ResourceID,
+				),
+			)
+		}
 		if err != nil {
 			return err
 		}
