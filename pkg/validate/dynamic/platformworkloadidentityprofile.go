@@ -8,6 +8,7 @@ import (
 	sdkauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
@@ -123,6 +124,18 @@ func (dv *dynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, plat
 		}
 
 		err = dv.validateActionsByOID(ctx, &pid, actions, nil)
+		if err == wait.ErrWaitTimeout {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				"",
+				fmt.Sprintf(
+					"The cluster user assigned identity does not have required permissions on platform workload identity '%s' used for role '%s'.",
+					platformIdentity.ResourceID,
+					name,
+				),
+			)
+		}
 		if err != nil {
 			return err
 		}
