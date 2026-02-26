@@ -17,6 +17,18 @@ func Test_parseCalendar(t *testing.T) {
 		wantErr string
 	}{
 		{
+			s: "Sun --* 00:00",
+			want: calendar{
+				Weekday: []time.Weekday{},
+				Year:    []int{},
+				Month:   []int{},
+				Day:     []int{},
+				Hour:    []int{},
+				Minute:  []int{},
+			},
+			wantErr: "failed to match 'Sun --* 00:00'",
+		},
+		{
 			s: "Mon *-*-* 00:00:00",
 			want: calendar{
 				Weekday: []time.Weekday{time.Monday},
