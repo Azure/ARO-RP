@@ -800,7 +800,7 @@ func TestProcessLoop(t *testing.T) {
 
 			now := func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
 			manifests, manifestsClient := testdatabase.NewFakeMaintenanceManifests(now)
-			schedules, schedulesClient := testdatabase.NewFakeMaintenanceSchedules(now)
+			schedules, schedulesClient := testdatabase.NewFakeMaintenanceSchedules()
 			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 			subscriptions, _ := testdatabase.NewFakeSubscriptions()
 
