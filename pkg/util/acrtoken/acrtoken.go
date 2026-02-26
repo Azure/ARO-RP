@@ -5,16 +5,15 @@ package acrtoken
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	sdkarmcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry/v2"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -109,11 +108,8 @@ func (m *manager) EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryPr
 			Status:     pointerutils.ToPtr(sdkarmcontainerregistry.TokenStatusEnabled),
 		},
 	})
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusConflict {
-		err = nil
-	}
-	if err != nil {
+	// Ignore StatusConflict errors (it means it's already created)
+	if err != nil && !azureerrors.IsStatusConflictError(err) {
 		return "", err
 	}
 
@@ -185,9 +181,9 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarm
 
 func (m *manager) Delete(ctx context.Context, rp *api.RegistryProfile) error {
 	err := m.tokens.DeleteAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username)
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
-		err = nil
+	// Ignore not-founds on delete
+	if err != nil && azureerrors.IsNotFoundError(err) {
+		return nil
 	}
 	return err
 }
