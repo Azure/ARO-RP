@@ -7,16 +7,15 @@ import (
 	"context"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
-func injectMaintenanceSchedules(c *cosmosdb.FakeMaintenanceScheduleDocumentClient, now func() time.Time) {
+func injectMaintenanceSchedules(c *cosmosdb.FakeMaintenanceScheduleDocumentClient) {
 	c.SetQueryHandler(database.MaintenanceScheduleQueryValid, func(client cosmosdb.MaintenanceScheduleDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceScheduleDocumentRawIterator {
-		return fakeMaintenanceSchedulesAllValid(client, query, options, now)
+		return fakeMaintenanceSchedulesAllValid(client, query, options)
 	})
 
 	c.SetSorter(func(in []*api.MaintenanceScheduleDocument) {
@@ -24,7 +23,7 @@ func injectMaintenanceSchedules(c *cosmosdb.FakeMaintenanceScheduleDocumentClien
 	})
 }
 
-func fakeMaintenanceSchedulesAllValid(client cosmosdb.MaintenanceScheduleDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceScheduleDocumentRawIterator {
+func fakeMaintenanceSchedulesAllValid(client cosmosdb.MaintenanceScheduleDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceScheduleDocumentRawIterator {
 	startingIndex, err := fakeMaintenanceSchedulesGetContinuation(options)
 	if err != nil {
 		return cosmosdb.NewFakeMaintenanceScheduleDocumentErroringRawIterator(err)
