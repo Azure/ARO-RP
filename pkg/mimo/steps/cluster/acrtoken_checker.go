@@ -27,18 +27,8 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	}
 
 	env := th.Environment()
-	localFpAuthorizer, err := th.LocalFpAuthorizer()
-	if err != nil {
-		return mimo.TerminalError(err)
-	}
-
-	manager, err := acrtoken.NewManager(env, localFpAuthorizer)
-	if err != nil {
-		return err
-	}
-
 	registryProfiles := th.GetOpenShiftClusterProperties().RegistryProfiles
-	rp := manager.GetRegistryProfileFromSlice(registryProfiles)
+	rp := acrtoken.GetRegistryProfileFromSlice(env, registryProfiles)
 	if rp != nil {
 		now := time.Now().UTC()
 		issueDate := rp.IssueDate

@@ -124,7 +124,6 @@ func TestEnsureACRToken(t *testing.T) {
 			g := NewWithT(t)
 			controller := gomock.NewController(t)
 			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
 			_env.EXPECT().ACRDomain().AnyTimes().Return(intACR)
 			_env.EXPECT().Environment().AnyTimes().Return(&tt.azureEnv)
 			_, log := testlog.New()
