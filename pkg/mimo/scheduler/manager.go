@@ -27,6 +27,15 @@ import (
 
 const friendlyDateFormat string = "2006-01-02T15:04Z07:00"
 
+type newSchedulerFunc func(
+	_env env.Interface,
+	log *logrus.Entry,
+	m metrics.Emitter,
+	cachedDoc getCachedScheduleDocFunc,
+	getClusters getClustersFunc,
+	dbs schedulerDBs,
+	now func() time.Time,
+) (Scheduler, error)
 type getCachedScheduleDocFunc func() (*api.MaintenanceScheduleDocument, bool)
 
 // get the list of clusters that we have cached

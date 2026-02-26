@@ -42,10 +42,10 @@ type service struct {
 
 	m              metrics.Emitter
 	mu             sync.RWMutex
-	cond           *sync.Cond
 	stopping       *atomic.Bool
 	workers        *atomic.Int32
 	workerRoutines sync.WaitGroup
+	newScheduler   newSchedulerFunc
 
 	b        buckets.BucketWorker[*api.MaintenanceScheduleDocument]
 	subs     changefeed.SubscriptionsCache
@@ -86,10 +86,11 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		stopping: &atomic.Bool{},
 		workers:  &atomic.Int32{},
 
-		startTime:   time.Now(),
-		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
-		now:         time.Now,
-		pollTime:    time.Minute,
+		startTime:    time.Now(),
+		workerDelay:  func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
+		now:          time.Now,
+		pollTime:     time.Minute,
+		newScheduler: NewSchedulerForSchedule,
 
 		changefeedBatchSize: 50,
 		changefeedInterval:  10 * time.Second,
@@ -100,8 +101,6 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 	}
 
 	s.clusters = newOpenShiftClusterCache(log, s.subs, ownedBuckets)
-
-	s.cond = sync.NewCond(&s.mu)
 	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
 	// All Schedules have a bucket of 0
 	s.b.SetBuckets([]int{0})
@@ -163,11 +162,13 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			<-stop
 			s.baseLog.Print("stopping")
 			s.stopping.Store(true)
-			s.cond.Signal()
 		}()
 	}
 
-	s.startChangefeeds(ctx, stop)
+	err := s.startChangefeeds(ctx, stop)
+	if err != nil {
+		return err
+	}
 
 	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", nil, s.checkReady)
 
@@ -183,10 +184,9 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		<-t.C
 	}
 
-	if !s.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
-		s.waitForWorkerCompletion()
-	}
-	s.baseLog.Print("exiting")
+	// If we're here, we're exiting
+	s.baseLog.Print("exiting, waiting for all workers to finish")
+	s.workerRoutines.Wait()
 	close(done)
 	return nil
 }
@@ -281,14 +281,6 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 	return docMap, nil
 }
 
-func (s *service) waitForWorkerCompletion() {
-	s.mu.Lock()
-	for s.workers.Load() > 0 {
-		s.cond.Wait()
-	}
-	s.mu.Unlock()
-}
-
 func (s *service) checkReady() bool {
 	lastChangefeedTime, ok := s.lastChangefeed.Load().(time.Time)
 	if !ok {
@@ -333,7 +325,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 
 	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
 
-	a, err := NewSchedulerForSchedule(s.env, log, s.m, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
+	a, err := s.newScheduler(s.env, log, s.m, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return
