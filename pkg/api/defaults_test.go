@@ -135,7 +135,7 @@ func TestSetDefaults(t *testing.T) {
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
-				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeClusterHosted
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
@@ -147,7 +147,7 @@ func TestSetDefaults(t *testing.T) {
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.22.1"
-				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeClusterHosted
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
@@ -180,12 +180,12 @@ func TestSetDefaults(t *testing.T) {
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
-				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+				doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeDnsmasq
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
 				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
-				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+				base.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeDnsmasq
 			},
 		},
 		{
@@ -193,12 +193,12 @@ func TestSetDefaults(t *testing.T) {
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
-				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+				doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeDnsmasq
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
 				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
-				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "dnsmasq"
+				base.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeDnsmasq
 			},
 		},
 		// DNS defaults: explicit clusterhosted validated against version
@@ -207,12 +207,12 @@ func TestSetDefaults(t *testing.T) {
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
-				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeClusterHosted
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
 				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.21.0"
-				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				base.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeClusterHosted
 			},
 		},
 		{
@@ -220,12 +220,12 @@ func TestSetDefaults(t *testing.T) {
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
-				doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = ""
+				doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = ""
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
 				base.OpenShiftCluster.Properties.ClusterProfile.Version = "4.20.0"
-				base.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+				base.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeClusterHosted
 			},
 		},
 	} {

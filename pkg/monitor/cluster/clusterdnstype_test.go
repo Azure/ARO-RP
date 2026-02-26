@@ -12,6 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
@@ -26,37 +27,37 @@ func TestEmitDNSType(t *testing.T) {
 	}{
 		{
 			name:          "DNS type: clusterhosted",
-			operatorFlags: api.OperatorFlags{"aro.dns.type": "clusterhosted"},
+			operatorFlags: api.OperatorFlags{pkgoperator.DNSType: pkgoperator.DNSTypeClusterHosted},
 			expectMetric: map[string]string{
-				"type": "clusterhosted",
+				"type": pkgoperator.DNSTypeClusterHosted,
 			},
 		},
 		{
 			name:          "DNS type: explicit dnsmasq",
-			operatorFlags: api.OperatorFlags{"aro.dns.type": "dnsmasq"},
+			operatorFlags: api.OperatorFlags{pkgoperator.DNSType: pkgoperator.DNSTypeDnsmasq},
 			expectMetric: map[string]string{
-				"type": "dnsmasq",
+				"type": pkgoperator.DNSTypeDnsmasq,
 			},
 		},
 		{
 			name:          "DNS type: empty string defaults to dnsmasq",
-			operatorFlags: api.OperatorFlags{"aro.dns.type": ""},
+			operatorFlags: api.OperatorFlags{pkgoperator.DNSType: ""},
 			expectMetric: map[string]string{
-				"type": "dnsmasq",
+				"type": pkgoperator.DNSTypeDnsmasq,
 			},
 		},
 		{
 			name:          "DNS type: flag not set defaults to dnsmasq",
 			operatorFlags: api.OperatorFlags{},
 			expectMetric: map[string]string{
-				"type": "dnsmasq",
+				"type": pkgoperator.DNSTypeDnsmasq,
 			},
 		},
 		{
 			name:          "DNS type: nil operator flags defaults to dnsmasq",
 			operatorFlags: nil,
 			expectMetric: map[string]string{
-				"type": "dnsmasq",
+				"type": pkgoperator.DNSTypeDnsmasq,
 			},
 		},
 	}

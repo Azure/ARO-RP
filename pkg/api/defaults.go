@@ -10,6 +10,16 @@ import (
 // MinCustomDNSVersion is the minimum OCP version that supports CustomDNS (ClusterHostedDNS)
 var MinCustomDNSVersion = semver.Version{Major: 4, Minor: 21, Patch: 0}
 
+// DNS operator flag key and values. These mirror the canonical constants in
+// pkg/operator/flags.go (operator.DNSType, operator.DNSTypeDnsmasq,
+// operator.DNSTypeClusterHosted). Defined here because pkg/api cannot import
+// pkg/operator without creating a circular dependency.
+const (
+	dnsTypeFlagKey       = "aro.dns.type"  // operator.DNSType
+	dnsTypeDnsmasq       = "dnsmasq"       // operator.DNSTypeDnsmasq
+	dnsTypeClusterHosted = "clusterhosted" // operator.DNSTypeClusterHosted
+)
+
 // SetDefaults sets the default values for older api version
 // when interacting with newer api versions. This together with
 // database migration will make sure we have right values in the cluster documents
@@ -88,20 +98,20 @@ func setDNSDefaults(doc *OpenShiftClusterDocument) {
 		return
 	}
 
-	dnsType := doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"]
+	dnsType := doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey]
 	clusterVersion := doc.OpenShiftCluster.Properties.ClusterProfile.Version
 	meetsMinVersion := meetsMinCustomDNSVersion(clusterVersion)
 
 	switch dnsType {
-	case "dnsmasq":
+	case dnsTypeDnsmasq:
 		// Switching to dnsmasq is always allowed regardless of version
 		return
 
-	case "clusterhosted":
+	case dnsTypeClusterHosted:
 		// Switching to clusterhosted requires version >= 4.21
 		if !meetsMinVersion {
 			// Version too old or unparseable — reject the switch, clear the flag
-			doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = ""
+			doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = ""
 		}
 		return
 
@@ -112,7 +122,7 @@ func setDNSDefaults(doc *OpenShiftClusterDocument) {
 		}
 
 		if meetsMinVersion {
-			doc.OpenShiftCluster.Properties.OperatorFlags["aro.dns.type"] = "clusterhosted"
+			doc.OpenShiftCluster.Properties.OperatorFlags[dnsTypeFlagKey] = dnsTypeClusterHosted
 		}
 	}
 }

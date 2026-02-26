@@ -31,13 +31,13 @@ func TestCloudLBConfigEqual(t *testing.T) {
 		{
 			name: "one nil one non-nil",
 			a:    nil,
-			b:    &cloudLoadBalancerConfig{DNSType: "ClusterHosted"},
+			b:    &cloudLoadBalancerConfig{DNSType: infrastructureDNSTypeClusterHosted},
 			want: false,
 		},
 		{
 			name: "same config",
 			a: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -45,7 +45,7 @@ func TestCloudLBConfigEqual(t *testing.T) {
 				},
 			},
 			b: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -57,7 +57,7 @@ func TestCloudLBConfigEqual(t *testing.T) {
 		{
 			name: "nil and empty ingress slice treated as equal",
 			a: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -65,7 +65,7 @@ func TestCloudLBConfigEqual(t *testing.T) {
 				},
 			},
 			b: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -77,14 +77,14 @@ func TestCloudLBConfigEqual(t *testing.T) {
 		{
 			name: "both nil ingress slices treated as equal",
 			a: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
 					APILoadBalancerIPs:    []string{"10.0.0.1"},
 				},
 			},
 			b: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
 					APILoadBalancerIPs:    []string{"10.0.0.1"},
@@ -94,21 +94,21 @@ func TestCloudLBConfigEqual(t *testing.T) {
 		},
 		{
 			name: "different dnsType",
-			a:    &cloudLoadBalancerConfig{DNSType: "ClusterHosted"},
+			a:    &cloudLoadBalancerConfig{DNSType: infrastructureDNSTypeClusterHosted},
 			b:    &cloudLoadBalancerConfig{DNSType: "Other"},
 			want: false,
 		},
 		{
 			name: "different IPs",
 			a: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
 					APILoadBalancerIPs:    []string{"10.0.0.1"},
 				},
 			},
 			b: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs: []string{"10.0.0.2"},
 					APILoadBalancerIPs:    []string{"10.0.0.2"},
@@ -119,11 +119,11 @@ func TestCloudLBConfigEqual(t *testing.T) {
 		{
 			name: "one nil clusterHosted",
 			a: &cloudLoadBalancerConfig{
-				DNSType:       "ClusterHosted",
+				DNSType:       infrastructureDNSTypeClusterHosted,
 				ClusterHosted: nil,
 			},
 			b: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs: []string{"10.0.0.1"},
 				},
@@ -180,7 +180,7 @@ func TestBuildDesiredCloudLBConfig(t *testing.T) {
 			apiIntIP:  "10.0.0.1",
 			ingressIP: "10.0.0.2",
 			want: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -193,7 +193,7 @@ func TestBuildDesiredCloudLBConfig(t *testing.T) {
 			apiIntIP:  "10.0.0.5",
 			ingressIP: "10.0.0.6",
 			want: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.5"},
 					APILoadBalancerIPs:     []string{"10.0.0.5"},
@@ -206,7 +206,7 @@ func TestBuildDesiredCloudLBConfig(t *testing.T) {
 			apiIntIP:  "10.0.0.1",
 			ingressIP: "",
 			want: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -252,12 +252,12 @@ func TestGetCurrentCloudLBConfig(t *testing.T) {
 					"status": map[string]any{
 						"platformStatus": map[string]any{
 							"azure": map[string]any{
-								"cloudLoadBalancerConfig": map[string]any{
-									"dnsType": "ClusterHosted",
-									"clusterHosted": map[string]any{
-										"apiIntLoadBalancerIPs":  []any{"10.0.0.1"},
-										"apiLoadBalancerIPs":     []any{"10.0.0.1"},
-										"ingressLoadBalancerIPs": []any{"10.0.0.2"},
+								fieldCloudLoadBalancerConfig: map[string]any{
+									fieldDNSType: infrastructureDNSTypeClusterHosted,
+									fieldClusterHosted: map[string]any{
+										fieldAPIIntLoadBalancerIPs:  []any{"10.0.0.1"},
+										fieldAPILoadBalancerIPs:     []any{"10.0.0.1"},
+										fieldIngressLoadBalancerIPs: []any{"10.0.0.2"},
 									},
 								},
 							},
@@ -266,7 +266,7 @@ func TestGetCurrentCloudLBConfig(t *testing.T) {
 				},
 			},
 			want: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -288,11 +288,11 @@ func TestGetCurrentCloudLBConfig(t *testing.T) {
 					"status": map[string]any{
 						"platformStatus": map[string]any{
 							"azure": map[string]any{
-								"cloudLoadBalancerConfig": map[string]any{
-									"dnsType": "ClusterHosted",
-									"clusterHosted": map[string]any{
-										"apiIntLoadBalancerIPs": []any{"10.0.0.1"},
-										"apiLoadBalancerIPs":    []any{"10.0.0.1"},
+								fieldCloudLoadBalancerConfig: map[string]any{
+									fieldDNSType: infrastructureDNSTypeClusterHosted,
+									fieldClusterHosted: map[string]any{
+										fieldAPIIntLoadBalancerIPs: []any{"10.0.0.1"},
+										fieldAPILoadBalancerIPs:    []any{"10.0.0.1"},
 									},
 								},
 							},
@@ -301,7 +301,7 @@ func TestGetCurrentCloudLBConfig(t *testing.T) {
 				},
 			},
 			want: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  []string{"10.0.0.1"},
 					APILoadBalancerIPs:     []string{"10.0.0.1"},
@@ -316,8 +316,8 @@ func TestGetCurrentCloudLBConfig(t *testing.T) {
 					"status": map[string]any{
 						"platformStatus": map[string]any{
 							"azure": map[string]any{
-								"cloudLoadBalancerConfig": map[string]any{
-									"dnsType": "ClusterHosted",
+								fieldCloudLoadBalancerConfig: map[string]any{
+									fieldDNSType: infrastructureDNSTypeClusterHosted,
 								},
 							},
 						},
@@ -325,7 +325,7 @@ func TestGetCurrentCloudLBConfig(t *testing.T) {
 				},
 			},
 			want: &cloudLoadBalancerConfig{
-				DNSType: "ClusterHosted",
+				DNSType: infrastructureDNSTypeClusterHosted,
 				ClusterHosted: &cloudLoadBalancerIPs{
 					APIIntLoadBalancerIPs:  nil,
 					APILoadBalancerIPs:     nil,
@@ -417,7 +417,7 @@ func TestReconcileInfrastructureCR(t *testing.T) {
 					"apiVersion": "config.openshift.io/v1",
 					"kind":       "Infrastructure",
 					"metadata": map[string]any{
-						"name": "cluster",
+						"name": infrastructureName,
 					},
 					"status": map[string]any{
 						"platformStatus": map[string]any{
@@ -437,7 +437,7 @@ func TestReconcileInfrastructureCR(t *testing.T) {
 					"apiVersion": "config.openshift.io/v1",
 					"kind":       "Infrastructure",
 					"metadata": map[string]any{
-						"name": "cluster",
+						"name": infrastructureName,
 					},
 					"status": map[string]any{
 						"platformStatus": map[string]any{
@@ -457,7 +457,7 @@ func TestReconcileInfrastructureCR(t *testing.T) {
 					"apiVersion": "config.openshift.io/v1",
 					"kind":       "Infrastructure",
 					"metadata": map[string]any{
-						"name": "cluster",
+						"name": infrastructureName,
 					},
 					"status": map[string]any{
 						"platformStatus": map[string]any{

@@ -159,7 +159,7 @@ func TestClusterReconciler(t *testing.T) {
 			wantErrMsg:  `error getting the ClusterVersion: clusterversions.config.openshift.io "version" not found`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
-					Type:               "DnsmasqClusterControllerDegraded",
+					Type:               ClusterControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             "True",
 					Message:            `error getting the ClusterVersion: clusterversions.config.openshift.io "version" not found`,
 					LastTransitionTime: transitionTime,
@@ -372,7 +372,7 @@ func TestClusterReconciler(t *testing.T) {
 						"apiVersion": "config.openshift.io/v1",
 						"kind":       "Infrastructure",
 						"metadata": map[string]any{
-							"name": "cluster",
+							"name": infrastructureName,
 						},
 						"status": map[string]any{
 							"platformStatus": map[string]any{

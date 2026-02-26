@@ -25,6 +25,27 @@ var infrastructureGVK = schema.GroupVersionKind{
 
 const infrastructureName = "cluster"
 
+// infrastructureDNSTypeClusterHosted is the OpenShift API enum value for
+// CloudLoadBalancerConfig.DNSType on the Infrastructure CR. This is distinct
+// from operator.DNSTypeClusterHosted ("clusterhosted"), which is the ARO
+// operator flag value for aro.dns.type.
+const infrastructureDNSTypeClusterHosted = "ClusterHosted"
+
+// Infrastructure CR field path segments for unstructured access.
+// These are shared by getCurrentCloudLBConfig and patchInfrastructureStatus
+// to ensure the read and write paths reference identical field names.
+const (
+	fieldStatus                  = "status"
+	fieldPlatformStatus          = "platformStatus"
+	fieldAzure                   = "azure"
+	fieldCloudLoadBalancerConfig = "cloudLoadBalancerConfig"
+	fieldClusterHosted           = "clusterHosted"
+	fieldDNSType                 = "dnsType"
+	fieldAPIIntLoadBalancerIPs   = "apiIntLoadBalancerIPs"
+	fieldAPILoadBalancerIPs      = "apiLoadBalancerIPs"
+	fieldIngressLoadBalancerIPs  = "ingressLoadBalancerIPs"
+)
+
 // cloudLoadBalancerIPs holds the load balancer IPs that must be set on the
 // Infrastructure CR for CustomDNS (ClusterHostedDNS) to function.
 // These IPs are used by MCO to render the CoreDNS static pod Corefile.
@@ -88,7 +109,7 @@ func getInfrastructureCR(ctx context.Context, c client.Client) (*unstructured.Un
 // Per the TDR, apiLoadBalancerIPs is set to the same value as apiIntLoadBalancerIPs.
 func buildDesiredCloudLBConfig(apiIntIP, ingressIP string) *cloudLoadBalancerConfig {
 	cfg := &cloudLoadBalancerConfig{
-		DNSType: "ClusterHosted",
+		DNSType: infrastructureDNSTypeClusterHosted,
 		ClusterHosted: &cloudLoadBalancerIPs{
 			APIIntLoadBalancerIPs: []string{apiIntIP},
 			APILoadBalancerIPs:    []string{apiIntIP},
@@ -104,17 +125,17 @@ func buildDesiredCloudLBConfig(apiIntIP, ingressIP string) *cloudLoadBalancerCon
 // the Infrastructure CR's status.platformStatus.azure.
 func getCurrentCloudLBConfig(infra *unstructured.Unstructured) *cloudLoadBalancerConfig {
 	dnsType, found, err := unstructured.NestedString(infra.Object,
-		"status", "platformStatus", "azure", "cloudLoadBalancerConfig", "dnsType")
+		fieldStatus, fieldPlatformStatus, fieldAzure, fieldCloudLoadBalancerConfig, fieldDNSType)
 	if !found || err != nil {
 		return nil
 	}
 
 	apiIntIPs, _, _ := unstructured.NestedStringSlice(infra.Object,
-		"status", "platformStatus", "azure", "cloudLoadBalancerConfig", "clusterHosted", "apiIntLoadBalancerIPs")
+		fieldStatus, fieldPlatformStatus, fieldAzure, fieldCloudLoadBalancerConfig, fieldClusterHosted, fieldAPIIntLoadBalancerIPs)
 	apiIPs, _, _ := unstructured.NestedStringSlice(infra.Object,
-		"status", "platformStatus", "azure", "cloudLoadBalancerConfig", "clusterHosted", "apiLoadBalancerIPs")
+		fieldStatus, fieldPlatformStatus, fieldAzure, fieldCloudLoadBalancerConfig, fieldClusterHosted, fieldAPILoadBalancerIPs)
 	ingressIPs, _, _ := unstructured.NestedStringSlice(infra.Object,
-		"status", "platformStatus", "azure", "cloudLoadBalancerConfig", "clusterHosted", "ingressLoadBalancerIPs")
+		fieldStatus, fieldPlatformStatus, fieldAzure, fieldCloudLoadBalancerConfig, fieldClusterHosted, fieldIngressLoadBalancerIPs)
 
 	return &cloudLoadBalancerConfig{
 		DNSType: dnsType,
@@ -130,15 +151,15 @@ func getCurrentCloudLBConfig(infra *unstructured.Unstructured) *cloudLoadBalance
 // status subresource to set the cloudLoadBalancerConfig.
 func patchInfrastructureStatus(ctx context.Context, c client.Client, infra *unstructured.Unstructured, desired *cloudLoadBalancerConfig) error {
 	patch := map[string]any{
-		"status": map[string]any{
-			"platformStatus": map[string]any{
-				"azure": map[string]any{
-					"cloudLoadBalancerConfig": map[string]any{
-						"dnsType": desired.DNSType,
-						"clusterHosted": map[string]any{
-							"apiIntLoadBalancerIPs":  toInterfaceSlice(desired.ClusterHosted.APIIntLoadBalancerIPs),
-							"apiLoadBalancerIPs":     toInterfaceSlice(desired.ClusterHosted.APILoadBalancerIPs),
-							"ingressLoadBalancerIPs": toInterfaceSlice(desired.ClusterHosted.IngressLoadBalancerIPs),
+		fieldStatus: map[string]any{
+			fieldPlatformStatus: map[string]any{
+				fieldAzure: map[string]any{
+					fieldCloudLoadBalancerConfig: map[string]any{
+						fieldDNSType: desired.DNSType,
+						fieldClusterHosted: map[string]any{
+							fieldAPIIntLoadBalancerIPs:  toInterfaceSlice(desired.ClusterHosted.APIIntLoadBalancerIPs),
+							fieldAPILoadBalancerIPs:     toInterfaceSlice(desired.ClusterHosted.APILoadBalancerIPs),
+							fieldIngressLoadBalancerIPs: toInterfaceSlice(desired.ClusterHosted.IngressLoadBalancerIPs),
 						},
 					},
 				},

@@ -118,7 +118,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 // SetupWithManager setup our mananger
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	clusterVersionPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == "version"
+		return o.GetName() == clusterVersionName
 	})
 
 	infrastructurePredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {

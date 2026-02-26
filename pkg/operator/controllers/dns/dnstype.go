@@ -13,12 +13,13 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
-// MinCustomDNSVersion is the minimum OCP version that supports CustomDNS (ClusterHostedDNS)
-var MinCustomDNSVersion = semver.Version{Major: 4, Minor: 21, Patch: 0}
+// clusterVersionName is the well-known name of the singleton ClusterVersion resource.
+const clusterVersionName = "version"
 
 // GetEffectiveDNSType determines the effective DNS type based on the flag value and cluster version
 // Returns: operator.DNSTypeClusterHosted or operator.DNSTypeDnsmasq (or empty string for default dnsmasq)
@@ -57,7 +58,7 @@ func GetEffectiveDNSType(ctx context.Context, c client.Client, log *logrus.Entry
 // getClusterVersion retrieves the current cluster version from the ClusterVersion object
 func getClusterVersion(ctx context.Context, c client.Client) (*semver.Version, error) {
 	cv := &configv1.ClusterVersion{}
-	err := c.Get(ctx, client.ObjectKey{Name: "version"}, cv)
+	err := c.Get(ctx, client.ObjectKey{Name: clusterVersionName}, cv)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +83,7 @@ func supportsCustomDNS(version *semver.Version) bool {
 	if version == nil {
 		return false
 	}
-	return !version.LessThan(MinCustomDNSVersion)
+	return !version.LessThan(api.MinCustomDNSVersion)
 }
 
 // IsDNSControllerEnabled checks whether the DNS controller should run.
