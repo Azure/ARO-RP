@@ -181,7 +181,12 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			lastGotDocs = old
 		}
 
-		<-t.C
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+			s.baseLog.Warn("context closed, stopping")
+			s.stopping.Store(true)
+		}
 	}
 
 	// If we're here, we're exiting
@@ -341,24 +346,24 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	}()
 
 out:
-	for !s.stopping.Load() {
-		func() {
-			s.workers.Add(1)
-			s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
-
-			defer func() {
-				s.workers.Add(-1)
-				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
-			}()
-
-			_, err := a.Process(context.Background())
-			if err != nil {
-				log.Error(err)
-			}
-		}()
-
+	for {
 		select {
 		case <-t.C:
+			if s.stopping.Load() {
+				break out
+			}
+			func() {
+				s.workers.Add(1)
+				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
+				defer func() {
+					s.workers.Add(-1)
+					s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
+				}()
+				_, err := a.Process(context.Background())
+				if err != nil {
+					log.Error(err)
+				}
+			}()
 		case <-stop:
 			break out
 		}
