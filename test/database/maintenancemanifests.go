@@ -22,13 +22,21 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetQueryHandler(database.MaintenanceManifestDequeueQueryForCluster, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsDequeueForCluster(client, query, options, now)
 	})
-
 	c.SetQueryHandler(database.MaintenanceManifestQueueOverallQuery, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsQueuedAll(client, query, options, now)
+	})
+	c.SetQueryHandler(database.MaintenanceManifestGetFutureForScheduleIDAndCluster, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsForClusterAndScheduleID(client, query, options, now)
+	})
+	c.SetQueryHandler(database.MaintenanceManifestGetFutureForScheduleID, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsForScheduleID(client, query, options, now)
 	})
 
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
 		return fakeMaintenanceManifestsRenewLeaseTrigger(ctx, doc, now)
+	})
+	c.SetSorter(func(in []*api.MaintenanceManifestDocument) {
+		slices.SortFunc(in, func(a, b *api.MaintenanceManifestDocument) int { return CompareIDable(a, b) })
 	})
 }
 
@@ -83,6 +91,80 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 	var results []*api.MaintenanceManifestDocument
 	for _, r := range input.MaintenanceManifestDocuments {
 		if r.ClusterResourceID != clusterResourceID {
+			continue
+		}
+		results = append(results, r)
+	}
+
+	slices.SortFunc(results, func(a, b *api.MaintenanceManifestDocument) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+
+	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
+}
+
+func fakeMaintenanceManifestsForClusterAndScheduleID(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
+	}
+
+	input, err := client.ListAll(context.Background(), nil)
+	if err != nil {
+		// TODO: should this never happen?
+		panic(err)
+	}
+
+	clusterResourceID := query.Parameters[0].Value
+	scheduleID := query.Parameters[1].Value
+
+	var results []*api.MaintenanceManifestDocument
+	for _, r := range input.MaintenanceManifestDocuments {
+		if r.ClusterResourceID != clusterResourceID {
+			continue
+		}
+		if string(r.MaintenanceManifest.CreatedBySchedule) != scheduleID {
+			continue
+		}
+		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
+			continue
+		}
+		if r.MaintenanceManifest.RunAfter < now().Unix() {
+			continue
+		}
+		results = append(results, r)
+	}
+
+	slices.SortFunc(results, func(a, b *api.MaintenanceManifestDocument) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+
+	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
+}
+
+func fakeMaintenanceManifestsForScheduleID(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
+	}
+
+	input, err := client.ListAll(context.Background(), nil)
+	if err != nil {
+		// TODO: should this never happen?
+		panic(err)
+	}
+
+	scheduleID := query.Parameters[0].Value
+
+	var results []*api.MaintenanceManifestDocument
+	for _, r := range input.MaintenanceManifestDocuments {
+		if string(r.MaintenanceManifest.CreatedBySchedule) != scheduleID {
+			continue
+		}
+		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
+			continue
+		}
+		if r.MaintenanceManifest.RunAfter < now().Unix() {
 			continue
 		}
 		results = append(results, r)

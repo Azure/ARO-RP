@@ -160,6 +160,11 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		return err
 	}
 
+	dbMaintenanceSchedules, err := database.NewMaintenanceSchedules(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	// Note: When handling DB operations don't delete records but set TTL on them otherwise if we're leveraging change feeds, it will break.
 	dbPlatformWorkloadIdentityRoleSets, err := database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
 	if err != nil {
@@ -188,7 +193,8 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 		WithOpenShiftVersions(dbOpenShiftVersions).
 		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
 		WithSubscriptions(dbSubscriptions).
-		WithMaintenanceManifests(dbMaintenanceManifests)
+		WithMaintenanceManifests(dbMaintenanceManifests).
+		WithMaintenanceSchedules(dbMaintenanceSchedules)
 
 	size, err := _env.OtelAuditQueueSize()
 	if err != nil {

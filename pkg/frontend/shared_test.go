@@ -96,6 +96,8 @@ type testInfra struct {
 	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
 	maintenanceManifestsClient               *cosmosdb.FakeMaintenanceManifestDocumentClient
 	maintenanceManifestsDatabase             database.MaintenanceManifests
+	maintenanceSchedulesClient               *cosmosdb.FakeMaintenanceScheduleDocumentClient
+	maintenanceSchedulesDatabase             database.MaintenanceSchedules
 }
 
 func newTestInfra(t *testing.T) *testInfra {
@@ -219,6 +221,13 @@ func (ti *testInfra) WithMaintenanceManifests(now func() time.Time) *testInfra {
 	ti.maintenanceManifestsDatabase, ti.maintenanceManifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 	ti.fixture.WithMaintenanceManifests(ti.maintenanceManifestsDatabase)
 	ti.dbGroup.WithMaintenanceManifests(ti.maintenanceManifestsDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithMaintenanceSchedules(now func() time.Time) *testInfra {
+	ti.maintenanceSchedulesDatabase, ti.maintenanceSchedulesClient = testdatabase.NewFakeMaintenanceSchedules()
+	ti.fixture.WithMaintenanceSchedules(ti.maintenanceSchedulesDatabase)
+	ti.dbGroup.WithMaintenanceSchedules(ti.maintenanceSchedulesDatabase)
 	return ti
 }
 

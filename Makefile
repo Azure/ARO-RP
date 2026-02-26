@@ -253,6 +253,10 @@ runlocal-portal:
 runlocal-actuator:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-actuator
 
+.PHONY: runlocal-scheduler
+runlocal-scheduler:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-scheduler
+
 .PHONY: build-portal
 build-portal:
 	cd portal/v2 && npm install && npm run build

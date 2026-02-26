@@ -39,3 +39,7 @@ type BillingDocument struct {
 func (c *BillingDocument) String() string {
 	return encodeJSON(c)
 }
+
+func (c *BillingDocument) GetID() string {
+	return c.ID
+}

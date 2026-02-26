@@ -424,7 +424,14 @@ func (p *prod) FPClientID() string {
 }
 
 func (p *prod) Listen() (net.Listener, error) {
-	return net.Listen("tcp", ":8443")
+	switch p.Service() {
+	case strings.ToLower(string(SERVICE_MIMO_ACTUATOR)):
+		return net.Listen("tcp", ":8445")
+	case strings.ToLower(string(SERVICE_MIMO_SCHEDULER)):
+		return net.Listen("tcp", ":8446")
+	default:
+		return net.Listen("tcp", ":8443")
+	}
 }
 
 func (p *prod) GatewayDomains() []string {

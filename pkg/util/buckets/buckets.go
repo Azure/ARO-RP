@@ -9,39 +9,44 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 )
 
+type Bucketable interface {
+	GetID() string
+	GetBucket() int
+	GetKey() string
+}
+
 type WorkerFunc func(<-chan struct{}, string)
 
-type monitor struct {
+type monitor[E Bucketable] struct {
 	baseLog *logrus.Entry
 
 	bucketCount int
 	buckets     map[int]struct{}
 
 	mu   *sync.RWMutex
-	docs map[string]*cacheDoc
+	docs map[string]*cacheDoc[E]
 
 	worker WorkerFunc
 }
 
-type BucketWorker interface {
+type BucketWorker[E Bucketable] interface {
 	Stop()
 	SetBuckets([]int)
 
-	Doc(string) *api.OpenShiftClusterDocument
-	DeleteDoc(*api.OpenShiftClusterDocument)
-	UpsertDoc(*api.OpenShiftClusterDocument)
+	Doc(string) (E, bool)
+	DeleteDoc(E)
+	UpsertDoc(E)
 }
 
-func NewBucketWorker(log *logrus.Entry, worker WorkerFunc, mu *sync.RWMutex) *monitor {
-	return &monitor{
+func NewBucketWorker[E Bucketable](log *logrus.Entry, worker WorkerFunc, mu *sync.RWMutex) *monitor[E] {
+	return &monitor[E]{
 		baseLog: log,
 
 		worker: worker,
-		docs:   map[string]*cacheDoc{},
+		docs:   map[string]*cacheDoc[E]{},
 
 		buckets:     map[int]struct{}{},
 		bucketCount: bucket.Buckets,
@@ -50,16 +55,17 @@ func NewBucketWorker(log *logrus.Entry, worker WorkerFunc, mu *sync.RWMutex) *mo
 	}
 }
 
-func (mon *monitor) Doc(id string) *api.OpenShiftClusterDocument {
+func (mon *monitor[E]) Doc(id string) (r E, ok bool) {
 	id = strings.ToLower(id)
 	v := mon.docs[id]
 	if v == nil {
-		return nil
+		ok = false
+		return
 	}
-	return v.doc
+	return v.doc, true
 }
 
-func (mon *monitor) SetBuckets(buckets []int) {
+func (mon *monitor[E]) SetBuckets(buckets []int) {
 	mon.mu.Lock()
 	defer mon.mu.Unlock()
 	mon.buckets = map[int]struct{}{}

@@ -55,3 +55,7 @@ type SubscriptionDocument struct {
 func (c *SubscriptionDocument) String() string {
 	return encodeJSON(c)
 }
+
+func (c *SubscriptionDocument) GetID() string {
+	return c.ID
+}
