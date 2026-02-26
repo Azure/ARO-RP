@@ -496,15 +496,35 @@ ci-azext-aro:
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_AZEXT_IMAGE):$(VERSION)
 
+# How old idle images must be before ci-clean removes them (default 48h).
+# Override with CI_CLEAN_AGE=24h for more aggressive cleanup.
+CI_CLEAN_AGE ?= 48h
+
 .PHONY: ci-clean
-ci-clean:
-	$(shell podman $(PODMAN_REMOTE_ARGS) ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman $(PODMAN_REMOTE_ARGS) rm -f > /dev/null)
-	podman $(PODMAN_REMOTE_ARGS) \
-	    image prune --all --filter="label=aro-*=true"
+ci-clean: ## Remove stopped containers, dangling images, and ALL unused images older than CI_CLEAN_AGE
+	@echo "=== ci-clean: removing stopped containers ==="
+	docker container prune -f
+	@echo ""
+	@echo "=== ci-clean: removing dangling (untagged) images ==="
+	docker image prune -f
+	@echo ""
+	@echo "=== ci-clean: removing ALL unused images older than $(CI_CLEAN_AGE) ==="
+	docker image prune --all --filter "until=$(CI_CLEAN_AGE)" -f || true
+	# To restrict cleanup to only ARO build images, comment the line above
+	# and uncomment the three lines below:
+	# docker image prune --all --filter "until=$(CI_CLEAN_AGE)" --filter "label=aro-portal-build=true" -f || true
+	# docker image prune --all --filter "until=$(CI_CLEAN_AGE)" --filter "label=aro-builder=true" -f || true
+	# docker image prune --all --filter "until=$(CI_CLEAN_AGE)" --filter "label=aro-final=true" -f || true
+	@echo ""
+	@echo "=== ci-clean: pruning build cache older than $(CI_CLEAN_AGE) ==="
+	docker builder prune --filter "until=$(CI_CLEAN_AGE)" -f || true
+	@echo ""
+	@echo "=== ci-clean: Docker disk usage after cleanup ==="
+	docker --debug system df || true
 
 .PHONY: ci-rp
 ci-rp:
-	docker build . ${DOCKER_BUILD_CI_ARGS} \
+	docker --debug build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
 		--build-arg REGISTRY=$(REGISTRY) \

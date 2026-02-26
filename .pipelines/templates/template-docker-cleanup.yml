@@ -1,0 +1,75 @@
+# Reusable template for Docker environment cleanup.
+#
+# Delegates to `make ci-clean`, which safely removes:
+#   - Stopped containers
+#   - Dangling (untagged) images
+#   - ALL unused images older than CI_CLEAN_AGE (default 48h)
+#   - Build cache older than CI_CLEAN_AGE
+#
+# Running containers and images referenced by running containers are NEVER
+# removed, so this is safe to run even when another pipeline job is executing
+# on the same node.
+#
+# Usage:
+#   - template: ./templates/template-docker-cleanup.yml
+#     parameters:
+#       reason: "pre-build"   # or "post-build", shown in step names for clarity
+
+parameters:
+  - name: reason
+    type: string
+    default: "pre-build"
+
+steps:
+  - bash: |
+      echo "=== Docker cleanup (${{ parameters.reason }}): started ==="
+
+      echo "--- Disk usage before cleanup ---"
+      df -h / || true
+
+      echo "--- /mnt/storage (separate mounted disk) ---"
+      if mountpoint -q /mnt/storage 2>/dev/null; then
+        df -h /mnt/storage
+        echo "Top 10 largest entries under /mnt/storage:"
+        du -h --max-depth=2 /mnt/storage 2>/dev/null | sort -rh | head -10 || true
+      else
+        echo "/mnt/storage is not a mounted filesystem on this node"
+      fi
+
+      echo "--- Top 10 largest directories under / (depth 2) ---"
+      TOP_DIRS=$(du -h --max-depth=2 / 2>/dev/null | sort -rh | head -10) || true
+      echo "$TOP_DIRS"
+
+      echo "--- Drilling into top 3 directories ---"
+      echo "$TOP_DIRS" | head -3 | while read size dir; do
+        echo ""
+        echo ">>> $dir ($size) — largest subdirectories:"
+        du -h --max-depth=2 "$dir" 2>/dev/null | sort -rh | head -10 || true
+        echo ">>> $dir ($size) — largest files:"
+        find "$dir" -maxdepth 2 -type f -exec du -h {} + 2>/dev/null | sort -rh | head -10 || true
+      done
+
+      echo "--- Docker disk usage summary ---"
+      docker system df -v 2>/dev/null || echo "(docker not available yet, skipping)"
+
+      echo "--- Running containers (will NOT be touched) ---"
+      docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" 2>/dev/null || true
+
+      echo "--- All containers (including stopped) ---"
+      docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" 2>/dev/null || true
+
+      echo "--- All Docker images on this node ---"
+      docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" 2>/dev/null || true
+
+      echo "--- Running make ci-clean (removes ALL unused images >48h old) ---"
+      make ci-clean 2>&1 || echo "(make ci-clean failed or not available, skipping)"
+
+      echo "--- Disk usage after cleanup ---"
+      df -h / || true
+      if mountpoint -q /mnt/storage 2>/dev/null; then
+        df -h /mnt/storage
+      fi
+
+      echo "=== Docker cleanup (${{ parameters.reason }}): complete ==="
+    displayName: "🧹 Docker environment cleanup (${{ parameters.reason }})"
+    condition: always()

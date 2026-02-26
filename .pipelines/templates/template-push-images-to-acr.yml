@@ -4,7 +4,10 @@ parameters:
 steps:
   - script: |
       set -e
-      #trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
+      # On exit: safely clean up stopped containers and dangling images.
+      # Uses "docker image prune -f" (NOT -af) to only remove untagged images,
+      # which is safe even when another pipeline job runs on the same node.
+      trap 'set +e; echo "--- Cleanup trap triggered ---"; docker container prune -f; docker image prune -f; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json; echo "--- Cleanup trap complete ---"' EXIT
 
       export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
