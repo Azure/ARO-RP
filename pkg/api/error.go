@@ -93,6 +93,7 @@ const (
 	CloudErrorCodeInvalidResourceProviderPermissions                         = "InvalidResourceProviderPermissions"
 	CloudErrorCodeInvalidServicePrincipalPermissions                         = "InvalidServicePrincipalPermissions"
 	CloudErrorCodeInvalidWorkloadIdentityPermissions                         = "InvalidWorkloadIdentityPermissions"
+	CloudErrorCodeInvalidClusterMSIPermissions                               = "InvalidClusterMSIPermissions"
 	CloudErrorCodeInvalidLocation                                            = "InvalidLocation"
 	CloudErrorCodeInvalidOperationID                                         = "InvalidOperationID"
 	CloudErrorCodeDuplicateClientID                                          = "DuplicateClientID"
