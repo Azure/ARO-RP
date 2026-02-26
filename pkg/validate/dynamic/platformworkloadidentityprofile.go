@@ -128,12 +128,11 @@ func (dv *dynamic) ValidateClusterUserAssignedIdentity(ctx context.Context, plat
 		if err == wait.ErrWaitTimeout {
 			return api.NewCloudError(
 				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidWorkloadIdentityPermissions,
+				api.CloudErrorCodeInvalidClusterMSIPermissions,
 				"",
 				fmt.Sprintf(
-					"The cluster user assigned identity does not have required permissions on platform workload identity '%s' used for role '%s'.",
+					"The cluster user assigned identity does not have required permissions on platform workload identity '%s'.",
 					platformIdentity.ResourceID,
-					name,
 				),
 			)
 		}
