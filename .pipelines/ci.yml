@@ -136,7 +136,7 @@ stages:
           - script: |
               set -xe
               echo "Building with TAG: $(TAG)"
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(TAG)
+              make ci-azext-aro VERSION=$(TAG)
             displayName: "🛠 Build & Test Az ARO Extension"
 
           # Push the image to ACR
@@ -175,12 +175,14 @@ stages:
 
           # Build and test RP and Portal
           # Note:
-          # - ADO masks $(REGISTRY) and $(BUILDER_REGISTRY) in all log
+          # - ADO masks $(REGISTRY) and $(BUILDER_REGISTRY) in all log output
           # - The InvalidDefaultArgInFrom warnings are a BuildKit static lint
           #   check on ARGs with no default; harmless since --build-arg is set.
+          # - --load was removed: it requires the docker-buildx-plugin which is
+          #   not installed on CI nodes. The legacy builder loads images locally
+          #   by default, so --load is unnecessary.
           - script: |
               set -e
-              DOCKER_BUILD_CI_ARGS="--load" \
               make ci-rp
             displayName: 🛠 Build & Test RP and Portal
 
@@ -237,7 +239,7 @@ stages:
           # Build the E2E image
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=$(TAG)
+              make aro-e2e VERSION=$(TAG)
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR

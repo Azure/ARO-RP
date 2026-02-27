@@ -12,8 +12,22 @@ E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
 
-# Docker build platform: defaults to current architecture, override with PLATFORM=linux/amd64 for CI
-PLATFORM ?= linux/$(shell go env GOARCH)
+# When Go is not installed on the host (e.g., CI Docker-only jobs), provide
+# safe fallback values. Without this guard, every $(shell go ...) call —
+# including those in .bingo/Variables.mk — produces "go: command not found"
+# noise (hundreds of lines). When Go IS installed, all $(shell go ...) calls
+# run normally and errors are visible.
+ifneq ($(shell command -v go 2>/dev/null),)
+  PLATFORM ?= linux/$(shell go env GOARCH)
+  GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
+  GOPATH ?= $(shell go env GOPATH)
+  GO     ?= $(shell which go)
+else
+  PLATFORM ?= linux/amd64
+  GOLANG_VERSION ?=
+  GOPATH ?= /tmp/go
+  GO     ?= go
+endif
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -24,9 +38,6 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
-
-# Golang version go mod tidy compatibility
-GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
 
 include .bingo/Variables.mk
 
@@ -520,11 +531,11 @@ ci-clean: ## Remove stopped containers, dangling images, and ALL unused images o
 	docker builder prune --filter "until=$(CI_CLEAN_AGE)" -f || true
 	@echo ""
 	@echo "=== ci-clean: Docker disk usage after cleanup ==="
-	docker --debug system df || true
+	docker system df || true
 
 .PHONY: ci-rp
 ci-rp:
-	docker --debug build . ${DOCKER_BUILD_CI_ARGS} \
+	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
 		--build-arg REGISTRY=$(REGISTRY) \
