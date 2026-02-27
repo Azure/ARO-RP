@@ -37,7 +37,7 @@ kill_podman() {
     echo "podman logs:"
     cat podmanlog
     echo "########## Kill the podman running in background ##########"
-    
+
     if [ -n "$PODMAN_PID" ]; then
         kill $PODMAN_PID 2>/dev/null
         wait $PODMAN_PID 2>/dev/null || echo "Podman process $PODMAN_PID was not a child of this shell."
@@ -84,4 +84,10 @@ install_docker_dependencies() {
     sudo systemctl enable docker
     docker compose version
     echo "Docker and dependencies installed successfully with pinned versions."
+}
+
+install_docker_dependencies_azure_linux() {
+    echo "########## 🐳 Installing Docker Compose (Mariner) ##########"
+    tdnf install docker-compose
+    sudo systemctl enable --now docker
 }

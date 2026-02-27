@@ -210,7 +210,7 @@ stages:
           # Install Docker, Docker Compose, and dependencies
           - bash: |
               . ./hack/e2e/utils.sh
-              install_docker_dependencies
+              install_docker_dependencies_azurelinux
             displayName: Install Docker and Docker Compose
           - task: Docker@2
             inputs:
@@ -335,7 +335,7 @@ stages:
           # Install Docker, Docker Compose, and dependencies
           - bash: |
               . ./hack/e2e/utils.sh
-              install_docker_dependencies
+              install_docker_dependencies_azurelinux
             displayName: Install Docker and Docker Compose
           - task: Docker@2
             inputs:
