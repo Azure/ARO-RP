@@ -13,7 +13,7 @@ GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_gra
 OC ?= oc
 
 # Docker build platform: defaults to current architecture, override with PLATFORM=linux/amd64 for CI
-PLATFORM ?= linux/$(shell go env GOARCH)
+PLATFORM ?= linux/amd64
 
 export GOFLAGS=$(GO_FLAGS)
 
