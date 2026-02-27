@@ -190,7 +190,7 @@ stages:
           # Build the E2E image
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--output=type=docker" make aro-e2e VERSION=$(TAG)
+              make aro-e2e VERSION=$(TAG)
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
