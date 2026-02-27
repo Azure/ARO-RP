@@ -117,16 +117,26 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - checkout: self
+
+          # Redirect Docker storage to /mnt/storage if available (before login/builds)
+          - template: ./templates/template-docker-storage.yml
+
           - task: Docker@2
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
 
+          # Clean up stale Docker state from previous runs on this node.
+          # Only removes stopped containers, dangling images, and old build cache.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "pre-build"
+
           # Build and Test Az ARO Extension
           - script: |
               set -xe
               echo "Building with TAG: $(TAG)"
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(TAG)
+              make ci-azext-aro VERSION=$(TAG)
             displayName: "🛠 Build & Test Az ARO Extension"
 
           # Push the image to ACR
@@ -137,20 +147,43 @@ stages:
               tag: $(TAG)
               pushLatest: true
 
+          # Post-build cleanup: remove stopped containers and dangling images
+          # so they don't accumulate across runs on persistent CI nodes.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "post-build-azext"
+
       - job: Build_And_Test_RP_And_Portal
         pool:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+
+          # Redirect Docker storage to /mnt/storage if available (before login/builds)
+          - template: ./templates/template-docker-storage.yml
+
           - task: Docker@2
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
 
+          # Clean up stale Docker state from previous runs on this node.
+          # Only removes stopped containers, dangling images, and old build cache.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "pre-build"
+
           # Build and test RP and Portal
+          # Note:
+          # - ADO masks $(REGISTRY) and $(BUILDER_REGISTRY) in all log output
+          # - The InvalidDefaultArgInFrom warnings are a BuildKit static lint
+          #   check on ARGs with no default; harmless since --build-arg is set.
+          # - --load was removed: it requires the docker-buildx-plugin which is
+          #   not installed on CI nodes. The legacy builder loads images locally
+          #   by default, so --load is unnecessary.
           - script: |
-              set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(TAG)
+              set -e
+              make ci-rp
             displayName: 🛠 Build & Test RP and Portal
 
           # Publish test results
@@ -177,20 +210,36 @@ stages:
               tag: $(TAG)
               pushLatest: true
 
+          # Post-build cleanup: remove stopped containers and dangling images
+          # so they don't accumulate across runs on persistent CI nodes.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "post-build-rp"
+
       - job: Build_And_Push_E2E_Image
         pool:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+
+          # Redirect Docker storage to /mnt/storage if available (before login/builds)
+          - template: ./templates/template-docker-storage.yml
+
           - task: Docker@2
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
 
+          # Clean up stale Docker state from previous runs on this node.
+          # Only removes stopped containers, dangling images, and old build cache.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "pre-build"
+
           # Build the E2E image
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=$(TAG)
+              make aro-e2e VERSION=$(TAG)
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
@@ -200,6 +249,12 @@ stages:
               repository: "e2e"
               tag: $(TAG)
               pushLatest: true
+
+          # Post-build cleanup: remove stopped containers and dangling images
+          # so they don't accumulate across runs on persistent CI nodes.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "post-build-e2e"
 
   - stage: E2E # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
@@ -223,6 +278,12 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+
+          # Clean up stale Docker state from previous runs on this node.
+          # Only removes stopped containers, dangling images, and old build cache.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "pre-e2e"
 
           # AZ CLI Login
           - template: ./templates/template-az-cli-login.yml
@@ -315,12 +376,32 @@ stages:
             displayName: Append must-gather to Pipeline
             condition: Failed()
 
-          # Clean up Docker Compose services
+          # Clean up Docker Compose services with diagnostics
           - bash: |
-              docker compose down
+              set -x
+              echo "=== Docker state before compose down ==="
+              echo "--- Running containers ---"
+              docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" || true
+              echo "--- All containers (including stopped) ---"
+              docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" || true
+              echo "--- Docker images on this node ---"
+              docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" || true
+              echo "--- Docker disk usage ---"
+              docker system df || true
+              echo ""
+              echo "=== Stopping compose services ==="
+              docker compose down --remove-orphans || true
               rm -f aks.kubeconfig
-            displayName: Cleanup Docker Compose Services and Kubeconfig
+              echo ""
+              echo "=== Docker state after compose down ==="
+              docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" || true
+            displayName: Cleanup Docker Compose Services and Kubeconfig (with diagnostics)
             condition: always()
+
+          # Post-E2E cleanup: remove stopped containers and dangling images
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "post-e2e-csp"
 
           # Clean Up Database
           - bash: |
@@ -348,6 +429,12 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+
+          # Clean up stale Docker state from previous runs on this node.
+          # Only removes stopped containers, dangling images, and old build cache.
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "pre-e2e"
 
           # AZ CLI Login
           - template: ./templates/template-az-cli-login.yml
@@ -457,12 +544,32 @@ stages:
             displayName: Append must-gather to Pipeline
             condition: Failed()
 
-          # Clean up Docker Compose services
+          # Clean up Docker Compose services with diagnostics
           - bash: |
-              docker compose down
+              set -x
+              echo "=== Docker state before compose down ==="
+              echo "--- Running containers ---"
+              docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" || true
+              echo "--- All containers (including stopped) ---"
+              docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" || true
+              echo "--- Docker images on this node ---"
+              docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" || true
+              echo "--- Docker disk usage ---"
+              docker system df || true
+              echo ""
+              echo "=== Stopping compose services ==="
+              docker compose down --remove-orphans || true
               rm -f aks.kubeconfig
-            displayName: Cleanup Docker Compose Services and Kubeconfig
+              echo ""
+              echo "=== Docker state after compose down ==="
+              docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" || true
+            displayName: Cleanup Docker Compose Services and Kubeconfig (with diagnostics)
             condition: always()
+
+          # Post-E2E cleanup: remove stopped containers and dangling images
+          - template: ./templates/template-docker-cleanup.yml
+            parameters:
+              reason: "post-e2e-miwi"
 
           # Clean Up Database
           - bash: |

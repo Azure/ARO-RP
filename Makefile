@@ -12,8 +12,22 @@ E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
 
-# Docker build platform: defaults to current architecture, override with PLATFORM=linux/amd64 for CI
-PLATFORM ?= linux/$(shell go env GOARCH)
+# When Go is not installed on the host (e.g., CI Docker-only jobs), provide
+# safe fallback values. Without this guard, every $(shell go ...) call —
+# including those in .bingo/Variables.mk — produces "go: command not found"
+# noise (hundreds of lines). When Go IS installed, all $(shell go ...) calls
+# run normally and errors are visible.
+ifneq ($(shell command -v go 2>/dev/null),)
+  PLATFORM ?= linux/$(shell go env GOARCH)
+  GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
+  GOPATH ?= $(shell go env GOPATH)
+  GO     ?= $(shell which go)
+else
+  PLATFORM ?= linux/amd64
+  GOLANG_VERSION ?=
+  GOPATH ?= /tmp/go
+  GO     ?= go
+endif
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -24,9 +38,6 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
-
-# Golang version go mod tidy compatibility
-GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
 
 include .bingo/Variables.mk
 
@@ -496,11 +507,31 @@ ci-azext-aro:
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_AZEXT_IMAGE):$(VERSION)
 
+# How old idle images must be before ci-clean removes them (default 48h).
+# Override with CI_CLEAN_AGE=24h for more aggressive cleanup.
+CI_CLEAN_AGE ?= 48h
+
 .PHONY: ci-clean
-ci-clean:
-	$(shell podman $(PODMAN_REMOTE_ARGS) ps --external --format "{{.Command}} {{.ID}}" | grep buildah | cut -d " " -f 2 | xargs podman $(PODMAN_REMOTE_ARGS) rm -f > /dev/null)
-	podman $(PODMAN_REMOTE_ARGS) \
-	    image prune --all --filter="label=aro-*=true"
+ci-clean: ## Remove stopped containers, dangling images, and ALL unused images older than CI_CLEAN_AGE
+	@echo "=== ci-clean: removing stopped containers ==="
+	docker container prune -f
+	@echo ""
+	@echo "=== ci-clean: removing dangling (untagged) images ==="
+	docker image prune -f
+	@echo ""
+	@echo "=== ci-clean: removing ALL unused images older than $(CI_CLEAN_AGE) ==="
+	docker image prune --all --filter "until=$(CI_CLEAN_AGE)" -f || true
+	# To restrict cleanup to only ARO build images, comment the line above
+	# and uncomment the three lines below:
+	# docker image prune --all --filter "until=$(CI_CLEAN_AGE)" --filter "label=aro-portal-build=true" -f || true
+	# docker image prune --all --filter "until=$(CI_CLEAN_AGE)" --filter "label=aro-builder=true" -f || true
+	# docker image prune --all --filter "until=$(CI_CLEAN_AGE)" --filter "label=aro-final=true" -f || true
+	@echo ""
+	@echo "=== ci-clean: pruning build cache older than $(CI_CLEAN_AGE) ==="
+	docker builder prune --filter "until=$(CI_CLEAN_AGE)" -f || true
+	@echo ""
+	@echo "=== ci-clean: Docker disk usage after cleanup ==="
+	docker system df || true
 
 .PHONY: ci-rp
 ci-rp:

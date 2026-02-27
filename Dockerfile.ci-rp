@@ -1,3 +1,4 @@
+# check=skip=InvalidDefaultArgInFrom
 ARG REGISTRY
 ARG BUILDER_REGISTRY
 ARG ARO_VERSION

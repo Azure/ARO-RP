@@ -35,6 +35,16 @@ steps:
           sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
         sudo apt-get update
         sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+        # Redirect Docker data-root to /mnt/storage if it's a separate mounted disk.
+        # This avoids filling the small root partition (~73GB) during builds.
+        if mountpoint -q /mnt/storage 2>/dev/null; then
+          echo "Configuring Docker data-root to /mnt/storage/docker..."
+          sudo mkdir -p /mnt/storage/docker
+          sudo mkdir -p /etc/docker
+          echo '{"data-root": "/mnt/storage/docker"}' | sudo tee /etc/docker/daemon.json > /dev/null
+        fi
+
         sudo systemctl start docker
         sudo systemctl enable docker
 

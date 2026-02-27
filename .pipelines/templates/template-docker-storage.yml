@@ -1,0 +1,94 @@
+# Redirect Docker data-root away from /var/lib/docker.
+#
+# The CI pool nodes have a small root partition (~73GB) that fills up during
+# Go module downloads and image builds (~15GB).
+#
+# Preferred target: /mnt/storage/docker (separate mounted disk, if available
+# and large enough). Temporary fallback: /opt/docker-data on the root
+# partition — same disk but keeps Docker data in a known, dedicated location
+# until /mnt/storage is properly provisioned on CI nodes.
+#
+# Must be called AFTER Docker is installed/available but BEFORE any builds.
+#
+# Usage:
+#   - template: ./templates/template-docker-storage.yml
+
+steps:
+  - bash: |
+      set -e
+
+      # Determine the best storage directory available:
+      #   1. /mnt/storage/docker  — separate disk (preferred, need ≥10GB)
+      #   2. /opt/docker-data     — root partition fallback (temporary)
+      if mountpoint -q /mnt/storage 2>/dev/null; then
+        MIN_SIZE_KB=$((10 * 1024 * 1024))  # 10GB in KB
+        AVAIL_KB=$(df --output=avail /mnt/storage | tail -1 | tr -d ' ')
+        if [ "${AVAIL_KB}" -ge "${MIN_SIZE_KB}" ]; then
+          STORAGE_DIR="/mnt/storage/docker"
+          echo "/mnt/storage has sufficient space — using ${STORAGE_DIR}"
+        else
+          AVAIL_HUMAN=$(df -h --output=avail /mnt/storage | tail -1 | tr -d ' ')
+          echo "/mnt/storage is mounted but only ${AVAIL_HUMAN} available (need ≥10GB)"
+          STORAGE_DIR="/opt/docker-data"
+          echo "Falling back to ${STORAGE_DIR} on root partition"
+        fi
+      else
+        echo "/mnt/storage is not a mounted filesystem"
+        STORAGE_DIR="/opt/docker-data"
+        echo "Falling back to ${STORAGE_DIR} on root partition"
+      fi
+
+      CURRENT_ROOT=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo '/var/lib/docker')
+      if [ "${CURRENT_ROOT}" = "${STORAGE_DIR}" ]; then
+        echo "Docker data-root is already ${STORAGE_DIR} — nothing to do"
+        exit 0
+      fi
+
+      echo ""
+      echo "=== Redirecting Docker data-root: ${CURRENT_ROOT} → ${STORAGE_DIR} ==="
+      df -h /
+      echo ""
+
+      # Create the target directory and config directory
+      sudo mkdir -p "${STORAGE_DIR}"
+      sudo mkdir -p /etc/docker
+
+      # Configure Docker daemon to use the new data-root
+      # Merge with existing daemon.json if present, otherwise create new
+      DAEMON_JSON="/etc/docker/daemon.json"
+      if [ -f "${DAEMON_JSON}" ]; then
+        echo "Existing daemon.json found, merging data-root setting:"
+        cat "${DAEMON_JSON}"
+        # Use jq if available, otherwise overwrite
+        if command -v jq &>/dev/null; then
+          sudo cp "${DAEMON_JSON}" "${DAEMON_JSON}.bak"
+          jq --arg dr "${STORAGE_DIR}" '. + {"data-root": $dr}' "${DAEMON_JSON}.bak" | sudo tee "${DAEMON_JSON}" > /dev/null
+        else
+          echo "{\"data-root\": \"${STORAGE_DIR}\"}" | sudo tee "${DAEMON_JSON}" > /dev/null
+        fi
+      else
+        echo "{\"data-root\": \"${STORAGE_DIR}\"}" | sudo tee "${DAEMON_JSON}" > /dev/null
+      fi
+      echo "Updated daemon.json:"
+      cat "${DAEMON_JSON}"
+
+      echo ""
+
+      # Restart Docker to apply the new data-root
+      echo "Restarting Docker daemon..."
+      sudo systemctl restart docker
+      sudo systemctl is-active docker
+
+      # Verify the change took effect
+      ACTUAL_ROOT=$(docker info --format '{{.DockerRootDir}}')
+      echo "Docker data-root is now: ${ACTUAL_ROOT}"
+      if [ "${ACTUAL_ROOT}" != "${STORAGE_DIR}" ]; then
+        echo "ERROR: Docker data-root did not change to ${STORAGE_DIR}"
+        exit 1
+      fi
+
+      echo ""
+      echo "--- Disk usage after redirect ---"
+      df -h /
+      echo "=== Docker data-root redirect complete ==="
+    displayName: "📂 Redirect Docker storage to dedicated directory"
