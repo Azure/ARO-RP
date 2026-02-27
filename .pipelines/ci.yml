@@ -117,6 +117,10 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - checkout: self
+
+          # Redirect Docker storage to /mnt/storage if available (before login/builds)
+          - template: ./templates/template-docker-storage.yml
+
           - task: Docker@2
             inputs:
               command: "login"
@@ -154,6 +158,10 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+
+          # Redirect Docker storage to /mnt/storage if available (before login/builds)
+          - template: ./templates/template-docker-storage.yml
+
           - task: Docker@2
             inputs:
               command: "login"
@@ -166,18 +174,13 @@ stages:
               reason: "pre-build"
 
           # Build and test RP and Portal
-          # Note: ADO masks $(REGISTRY) and $(BUILDER_REGISTRY) in all log
-          # output because they match pipeline variable values. This is
-          # cosmetic — the values ARE passed correctly (build succeeds).
-          # The InvalidDefaultArgInFrom warnings are a BuildKit static lint
-          # check on ARGs with no default; harmless since --build-arg is set.
+          # Note:
+          # - ADO masks $(REGISTRY) and $(BUILDER_REGISTRY) in all log
+          # - The InvalidDefaultArgInFrom warnings are a BuildKit static lint
+          #   check on ARGs with no default; harmless since --build-arg is set.
           - script: |
-              set -xe
+              set -e
               DOCKER_BUILD_CI_ARGS="--load" \
-              REGISTRY="$(REGISTRY)" \
-              BUILDER_REGISTRY="$(BUILDER_REGISTRY)" \
-              VERSION="$(TAG)" \
-              LOCAL_ARO_RP_IMAGE="$(LOCAL_ARO_RP_IMAGE)" \
               make ci-rp
             displayName: 🛠 Build & Test RP and Portal
 
@@ -216,6 +219,10 @@ stages:
           name: 1es-aro-ci-pool
         steps:
           - template: ./templates/template-checkout.yml
+
+          # Redirect Docker storage to /mnt/storage if available (before login/builds)
+          - template: ./templates/template-docker-storage.yml
+
           - task: Docker@2
             inputs:
               command: "login"

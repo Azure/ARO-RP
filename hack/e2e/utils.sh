@@ -80,6 +80,17 @@ install_docker_dependencies() {
         docker-buildx-plugin=${DOCKER_BUILDX_VERSION} \
         docker-compose-plugin=${DOCKER_COMPOSE_VERSION} \
         make
+
+    # Redirect Docker data-root to /mnt/storage if it's a separate mounted disk.
+    # This avoids filling the small root partition (~73GB) during Go module
+    # downloads and image builds (~15GB).
+    if mountpoint -q /mnt/storage 2>/dev/null; then
+        echo "Configuring Docker data-root to /mnt/storage/docker..."
+        sudo mkdir -p /mnt/storage/docker
+        sudo mkdir -p /etc/docker
+        echo '{"data-root": "/mnt/storage/docker"}' | sudo tee /etc/docker/daemon.json > /dev/null
+    fi
+
     sudo systemctl start docker
     sudo systemctl enable docker
     docker compose version
