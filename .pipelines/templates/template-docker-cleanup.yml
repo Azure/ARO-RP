@@ -23,22 +23,26 @@ parameters:
 steps:
   - bash: |
       echo "=== Docker cleanup (${{ parameters.reason }}): started ==="
+      echo ""
 
       echo "--- Disk usage before cleanup ---"
       df -h / || true
+      echo ""
 
-      echo "--- /mnt/storage (separate mounted disk) ---"
-      if mountpoint -q /mnt/storage 2>/dev/null; then
-        df -h /mnt/storage
-        echo "Top 10 largest entries under /mnt/storage:"
-        du -h --max-depth=2 /mnt/storage 2>/dev/null | sort -rh | head -10 || true
-      else
-        echo "/mnt/storage is not a mounted filesystem on this node"
+      echo "--- Docker data-root ---"
+      DOCKER_ROOT=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo '/var/lib/docker')
+      echo "Docker data-root: ${DOCKER_ROOT}"
+      if [ -d "${DOCKER_ROOT}" ]; then
+        df -h "${DOCKER_ROOT}"
+        echo "Top 10 largest entries under ${DOCKER_ROOT}:"
+        du -h --max-depth=2 "${DOCKER_ROOT}" 2>/dev/null | sort -rh | head -10 || true
       fi
+      echo ""
 
       echo "--- Top 10 largest directories under / (depth 2) ---"
       TOP_DIRS=$(du -h --max-depth=2 / 2>/dev/null | sort -rh | head -10) || true
       echo "$TOP_DIRS"
+      echo ""
 
       echo "--- Drilling into top 3 directories ---"
       echo "$TOP_DIRS" | head -3 | while read size dir; do
@@ -48,27 +52,36 @@ steps:
         echo ">>> $dir ($size) — largest files:"
         find "$dir" -maxdepth 2 -type f -exec du -h {} + 2>/dev/null | sort -rh | head -10 || true
       done
+      echo ""
 
       echo "--- Docker disk usage summary ---"
       docker system df -v 2>/dev/null || echo "(docker not available yet, skipping)"
+      echo ""
 
       echo "--- Running containers (will NOT be touched) ---"
       docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" 2>/dev/null || true
+      echo ""
 
       echo "--- All containers (including stopped) ---"
       docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" 2>/dev/null || true
+      echo ""
 
       echo "--- All Docker images on this node ---"
       docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" 2>/dev/null || true
+      echo ""
 
       echo "--- Running make ci-clean (removes ALL unused images >48h old) ---"
       make ci-clean 2>&1 || echo "(make ci-clean failed or not available, skipping)"
+      echo ""
 
       echo "--- Disk usage after cleanup ---"
       df -h / || true
-      if mountpoint -q /mnt/storage 2>/dev/null; then
-        df -h /mnt/storage
+      DOCKER_ROOT_AFTER=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo '')
+      if [ -n "${DOCKER_ROOT_AFTER}" ] && [ "${DOCKER_ROOT_AFTER}" != "/var/lib/docker" ]; then
+        echo "Docker data-root (${DOCKER_ROOT_AFTER}):"
+        df -h "${DOCKER_ROOT_AFTER}" || true
       fi
+      echo ""
 
       echo "=== Docker cleanup (${{ parameters.reason }}): complete ==="
     displayName: "🧹 Docker environment cleanup (${{ parameters.reason }})"
