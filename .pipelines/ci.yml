@@ -171,6 +171,7 @@ stages:
             inputs:
               command: push
               tags: $(LOCAL_ARO_RP_IMAGE):$(TAG)
+              repository: $(REGISTRY)
 
       - job: Build_And_Push_E2E_Image
         pool:
@@ -193,6 +194,7 @@ stages:
             inputs:
               command: push
               tags: $(LOCAL_E2E_IMAGE):$(TAG)
+              repository: $(REGISTRY)
 
   - stage: E2E # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
