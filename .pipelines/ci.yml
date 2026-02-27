@@ -126,7 +126,7 @@ stages:
           - script: |
               set -xe
               echo "Building with TAG: $(TAG)"
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(TAG)
+              DOCKER_BUILD_CI_ARGS="--output=type=docker" make ci-azext-aro VERSION=$(TAG)
             displayName: "🛠 Build & Test Az ARO Extension"
 
           # Push the image to ACR
@@ -150,7 +150,7 @@ stages:
           # Build and test RP and Portal
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(TAG)
+              DOCKER_BUILD_CI_ARGS="--output=type=docker" make ci-rp VERSION=$(TAG)
             displayName: 🛠 Build & Test RP and Portal
 
           # Publish test results
@@ -190,7 +190,7 @@ stages:
           # Build the E2E image
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=$(TAG)
+              DOCKER_BUILD_CI_ARGS="--output=type=docker" make aro-e2e VERSION=$(TAG)
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
