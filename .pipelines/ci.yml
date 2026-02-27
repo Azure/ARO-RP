@@ -130,9 +130,10 @@ stages:
             displayName: "🛠 Build & Test Az ARO Extension"
 
           # Push the image to ACR
-          - task: 1ES.PushContainerImage@1
+          - task: Docker@2
             inputs:
-              image: $(LOCAL_ARO_AZEXT_IMAGE):$(TAG)
+              command: push
+              tags: $(LOCAL_ARO_AZEXT_IMAGE):$(TAG)
       - job: Build_And_Test_RP_And_Portal
         pool:
           name: 1es-aro-ci-pool
@@ -166,9 +167,10 @@ stages:
             condition: succeededOrFailed()
 
           # Push the RP image to ACR
-          - task: 1ES.PushContainerImage@1
+          - task: Docker@2
             inputs:
-              image: $(LOCAL_ARO_RP_IMAGE):$(TAG)
+              command: push
+              tags: $(LOCAL_ARO_RP_IMAGE):$(TAG)
 
       - job: Build_And_Push_E2E_Image
         pool:
@@ -187,9 +189,10 @@ stages:
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
-          - task: 1ES.PushContainerImage@1
+          - task: Docker@2
             inputs:
-              image: $(LOCAL_E2E_IMAGE):$(TAG)
+              command: push
+              tags: $(LOCAL_E2E_IMAGE):$(TAG)
 
   - stage: E2E # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
