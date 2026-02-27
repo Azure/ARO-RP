@@ -25,12 +25,24 @@ steps:
         exit 0
       fi
 
+      # Check that /mnt/storage is large enough to be useful (at least 10GB).
+      # Some nodes mount a tiny ramdisk there (~3MB) which would fill instantly.
+      MIN_SIZE_KB=$((10 * 1024 * 1024))  # 10GB in KB
+      AVAIL_KB=$(df --output=avail /mnt/storage | tail -1 | tr -d ' ')
+      if [ "${AVAIL_KB}" -lt "${MIN_SIZE_KB}" ]; then
+        AVAIL_HUMAN=$(df -h --output=avail /mnt/storage | tail -1 | tr -d ' ')
+        echo "/mnt/storage is mounted but only ${AVAIL_HUMAN} available (need ≥10GB) — skipping Docker data-root redirect"
+        echo "Docker will use default data-root: $(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo '/var/lib/docker')"
+        exit 0
+      fi
+
       echo "=== Redirecting Docker data-root to ${STORAGE_DIR} ==="
       echo "--- /mnt/storage disk usage before ---"
       df -h /mnt/storage
 
-      # Create the target directory
+      # Create the target directory and config directory
       sudo mkdir -p "${STORAGE_DIR}"
+      sudo mkdir -p /etc/docker
 
       # Configure Docker daemon to use the new data-root
       # Merge with existing daemon.json if present, otherwise create new
