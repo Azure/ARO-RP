@@ -167,11 +167,9 @@ stages:
             condition: succeededOrFailed()
 
           # Push the RP image to ACR
-          - task: Docker@2
-            inputs:
-              command: push
-              tags: $(LOCAL_ARO_RP_IMAGE):$(TAG)
-              repository: $(REGISTRY)
+          - script: |
+              docker push $(LOCAL_ARO_RP_IMAGE):$(TAG)
+            displayName: Push Docker Image
 
       - job: Build_And_Push_E2E_Image
         pool:
@@ -190,11 +188,9 @@ stages:
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
-          - task: Docker@2
-            inputs:
-              command: push
-              tags: $(LOCAL_E2E_IMAGE):$(TAG)
-              repository: $(REGISTRY)
+          - script: |
+              docker push $(LOCAL_E2E_IMAGE):$(TAG)
+            displayName: Push Docker Image
 
   - stage: E2E # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
