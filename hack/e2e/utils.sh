@@ -86,7 +86,7 @@ install_docker_dependencies() {
     echo "Docker and dependencies installed successfully with pinned versions."
 }
 
-install_docker_dependencies_azure_linux() {
+install_docker_dependencies_azurelinux() {
     echo "########## 🐳 Installing Docker Compose (Mariner) ##########"
     tdnf install docker-compose
     sudo systemctl enable --now docker
