@@ -143,6 +143,10 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - task: Docker@2
+            inputs:
+              command: "login"
+              containerRegistry: arosvcdev
 
           # Build and test RP and Portal
           - script: |
@@ -180,6 +184,10 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - task: Docker@2
+            inputs:
+              command: "login"
+              containerRegistry: arosvcdev
 
           # Build the E2E image
           - script: |
