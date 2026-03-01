@@ -4,9 +4,9 @@
 parameters:
   - name: acrFQDN
     type: string
-  - name: repository  # This is both the ACR and local repository name
-    type: string  # The local and ACR image repository name
-  - name: tag  # The tag for the image
+  - name: repository # This is both the ACR and local repository name
+    type: string # The local and ACR image repository name
+  - name: tag # The tag for the image
     type: string
   - name: pushLatest
     type: boolean
@@ -14,29 +14,13 @@ parameters:
 
 steps:
   - task: AzureCLI@2
-    displayName: 'Authenticate to Azure and Push Docker Image'
+    displayName: "Authenticate to Azure and Push Docker Image"
     inputs:
-      azureSubscription: 'ado-pipeline-dev-image-push'  # Service connection name
+      azureSubscription: "ado-pipeline-dev-image-push" # Service connection name
       scriptType: bash
-      scriptLocation: 'inlineScript'
+      scriptLocation: "inlineScript"
       inlineScript: |
         set -xe
-
-        # Install Docker dependencies
-        echo "Installing Docker and Docker Compose Plugin..."
-        sudo apt-get update
-        sudo apt-get install -y ca-certificates curl gnupg
-        sudo install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc
-        sudo chmod a+r /etc/apt/keyrings/docker.asc
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-          $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
-          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-        sudo systemctl start docker
-        sudo systemctl enable docker
 
         # Authenticate to Azure and ACR
         echo "Authenticating to Azure and ACR..."
