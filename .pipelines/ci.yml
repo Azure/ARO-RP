@@ -121,9 +121,6 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
-          - script: |
-              az acr login --name arosvcdev
-            displayName: Log into ACR
 
           # Build and Test Az ARO Extension
           - script: |
@@ -149,9 +146,6 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
-          - script: |
-              az acr login --name arosvcdev
-            displayName: Log into ACR
 
           # Build and test RP and Portal
           - script: |
