@@ -268,13 +268,13 @@ func TestGetRegistryProfiles(t *testing.T) {
 	a.Nil(r)
 
 	// GetRegistryProfileFromSlice finds it successfully
-	r = mgr.GetRegistryProfileFromSlice(ocWithProfile.Properties.RegistryProfiles)
+	r = GetRegistryProfileFromSlice(mgr.env, ocWithProfile.Properties.RegistryProfiles)
 	a.NotNil(r)
 	a.Equal("arointsvc.example.com", r.Name)
 	a.Equal("foo", r.Username)
 
 	// GetRegistryProfileFromSlice can't find it as it doesn't exist
-	r = mgr.GetRegistryProfileFromSlice(ocWithoutProfile.Properties.RegistryProfiles)
+	r = GetRegistryProfileFromSlice(mgr.env, ocWithoutProfile.Properties.RegistryProfiles)
 	a.Nil(r)
 }
 

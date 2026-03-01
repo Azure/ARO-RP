@@ -13,7 +13,7 @@ GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_gra
 OC ?= oc
 
 # Docker build platform: defaults to current architecture, override with PLATFORM=linux/amd64 for CI
-PLATFORM ?= linux/$(shell go env GOARCH)
+PLATFORM ?= linux/amd64
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -507,6 +507,7 @@ ci-rp:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -524,6 +525,7 @@ aro-e2e:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.aro-e2e \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -536,6 +538,7 @@ ci-tunnel:
 	    build . \
 		-f Dockerfile.ci-tunnel \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
