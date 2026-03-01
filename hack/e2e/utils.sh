@@ -89,5 +89,4 @@ install_docker_dependencies() {
 install_docker_dependencies_azurelinux() {
     echo "########## 🐳 Installing Docker Compose (Mariner) ##########"
     sudo tdnf install -y docker-compose
-    sudo systemctl enable --now docker
 }
