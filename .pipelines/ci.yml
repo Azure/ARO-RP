@@ -133,10 +133,13 @@ stages:
             displayName: "🛠 Build & Test Az ARO Extension"
 
           # Push the image to ACR
-          - task: Docker@2
-            inputs:
-              command: push
-              tags: $(LOCAL_ARO_AZEXT_IMAGE):$(TAG)
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
+              repository: "azext-aro"
+              tag: $(TAG)
+              pushLatest: true
+
       - job: Build_And_Test_RP_And_Portal
         pool:
           name: 1es-aro-ci-pool
@@ -173,9 +176,12 @@ stages:
             condition: succeededOrFailed()
 
           # Push the RP image to ACR
-          - script: |
-              docker push $(LOCAL_ARO_RP_IMAGE):$(TAG)
-            displayName: Push Docker Image
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
+              repository: "aro"
+              tag: $(TAG)
+              pushLatest: true
 
       - job: Build_And_Push_E2E_Image
         pool:
@@ -186,9 +192,6 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
-          - script: |
-              az acr login --name arosvcdev
-            displayName: Log into ACR
 
           # Build the E2E image
           - script: |
@@ -197,9 +200,12 @@ stages:
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
-          - script: |
-              docker push $(LOCAL_E2E_IMAGE):$(TAG)
-            displayName: Push Docker Image
+          - template: ./templates/template-acr-push.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
+              repository: "e2e"
+              tag: $(TAG)
+              pushLatest: true
 
   - stage: E2E # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
