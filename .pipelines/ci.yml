@@ -121,6 +121,9 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - script: |
+              az acr login --name arosvcdev
+            displayName: Log into ACR
 
           # Build and Test Az ARO Extension
           - script: |
@@ -143,10 +146,9 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
-          - task: Docker@2
-            inputs:
-              command: "login"
-              containerRegistry: arosvcdev
+          - script: |
+              az acr login --name arosvcdev
+            displayName: Log into ACR
 
           # Build and test RP and Portal
           - script: |
@@ -184,10 +186,9 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
-          - task: Docker@2
-            inputs:
-              command: "login"
-              containerRegistry: arosvcdev
+          - script: |
+              az acr login --name arosvcdev
+            displayName: Log into ACR
 
           # Build the E2E image
           - script: |
