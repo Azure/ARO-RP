@@ -34,6 +34,7 @@ type monitor[E Bucketable] struct {
 
 type BucketWorker[E Bucketable] interface {
 	Stop()
+	Size() int
 	SetBuckets([]int)
 
 	Doc(string) (E, bool)
@@ -53,6 +54,10 @@ func NewBucketWorker[E Bucketable](log *logrus.Entry, worker WorkerFunc, mu *syn
 
 		mu: mu,
 	}
+}
+
+func (mon *monitor[E]) Size() int {
+	return len(mon.docs)
 }
 
 func (mon *monitor[E]) Doc(id string) (r E, ok bool) {
