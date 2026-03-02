@@ -259,7 +259,11 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 		docMap[strings.ToLower(d.ID)] = d
 	}
 
-	// remove docs that don't exist in the new set (removed clusters)
+	// Acquire lock for when we're mutating the changefeed cache
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// remove docs that don't exist in the new set (removed schedules)
 	for oldCluster := range oldDocs {
 		_, ok := docMap[strings.ToLower(oldCluster)]
 		if !ok {
@@ -274,13 +278,12 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 		s.b.UpsertDoc(cluster)
 	}
 
-	// Store when we last fetched the clusters
+	// Store when we last fetched the schedules
 	s.lastChangefeed.Store(s.now())
 
 	// Emit a metric containing the size of our cache
-	s.m.EmitGauge("changefeed.caches.size", int64(len(docMap)), map[string]string{
-		"service": s.env.Service(),
-		"name":    "MaintenanceScheduleDocument",
+	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
+		"name": "MaintenanceScheduleDocument",
 	})
 
 	return docMap, nil
