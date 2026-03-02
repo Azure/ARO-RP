@@ -10,10 +10,13 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
@@ -27,6 +30,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
+	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
 type fakeMetricsEmitter struct {
@@ -49,6 +54,148 @@ func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dim
 }
 
 func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
+}
+
+func TestActuatorPolling(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+
+	testCases := []struct {
+		desc            string
+		docs            []*api.OpenShiftClusterDocument
+		previousLoop    map[string]*api.OpenShiftClusterDocument
+		desiredDocs     map[string]*api.OpenShiftClusterDocument
+		expectedLogs    []testlog.ExpectedLogEntry
+		expectedMetrics []testmetrics.MetricsAssertion[int64]
+	}{
+		{
+			desc: "clusters are polled and updated",
+			docs: []*api.OpenShiftClusterDocument{
+				{
+					Key:    strings.ToLower(clusterResourceID),
+					Bucket: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: clusterResourceID,
+					},
+				},
+				{
+					Key:    strings.ToLower(clusterResourceID + "ignored"),
+					Bucket: 2,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: clusterResourceID + "ignored",
+					},
+				},
+			},
+			previousLoop: map[string]*api.OpenShiftClusterDocument{},
+			desiredDocs: map[string]*api.OpenShiftClusterDocument{
+				strings.ToLower(clusterResourceID): {
+					// Only essential metadata is actually stored
+					Key:    strings.ToLower(clusterResourceID),
+					Bucket: 1,
+				},
+				strings.ToLower(clusterResourceID + "ignored"): {
+					Key:    strings.ToLower(clusterResourceID + "ignored"),
+					Bucket: 2,
+				},
+			},
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+
+						"name": "OpenShiftClusterDocument",
+					},
+					// we still keep clusters that aren't in our bucket in the
+					// cache, in case the buckets change
+					Value: 2,
+				},
+			},
+		},
+		{
+			desc: "clusters are removed if they are not in a poll",
+			docs: []*api.OpenShiftClusterDocument{
+				{
+					Key:    strings.ToLower(clusterResourceID),
+					Bucket: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: clusterResourceID,
+					},
+				},
+			},
+			previousLoop: map[string]*api.OpenShiftClusterDocument{
+				strings.ToLower(clusterResourceID): {
+					Key:    strings.ToLower(clusterResourceID),
+					Bucket: 1,
+				},
+				strings.ToLower(clusterResourceID + "ignored"): {
+					Key:    strings.ToLower(clusterResourceID + "ignored"),
+					Bucket: 2,
+				},
+			},
+			desiredDocs: map[string]*api.OpenShiftClusterDocument{
+				strings.ToLower(clusterResourceID): {
+					Key:    strings.ToLower(clusterResourceID),
+					Bucket: 1,
+				},
+			},
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.desc, func(t *testing.T) {
+			require := require.New(t)
+			ctx := t.Context()
+
+			controller := gomock.NewController(nil)
+			_env := mock_env.NewMockInterface(controller)
+			hook, log := testlog.LogForTesting(t)
+
+			fixtures := testdatabase.NewFixture()
+
+			now := func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
+			manifests, _ := testdatabase.NewFakeMaintenanceManifests(now)
+			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+			subscriptions, _ := testdatabase.NewFakeSubscriptions()
+
+			dbs := database.NewDBGroup().WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
+
+			metrics := testmetrics.NewFakeMetricsEmitter(t)
+
+			// Apply the fixture
+			fixtures.AddOpenShiftClusterDocuments(tt.docs...)
+			err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).Create()
+			require.NoError(err)
+
+			svc := NewService(_env, log, nil, dbs, metrics, []int{1})
+			svc.now = now
+			svc.workerDelay = func() time.Duration { return 0 * time.Second }
+			svc.serveHealthz = false
+			svc.stopping.Store(true)
+
+			newOld, err := svc.poll(ctx, tt.previousLoop)
+			require.NoError(err)
+
+			diff := deep.Equal(tt.desiredDocs, newOld)
+			for _, e := range diff {
+				t.Error(e)
+			}
+
+			err = testlog.AssertLoggingOutput(hook, tt.expectedLogs)
+			require.NoError(err)
+
+			// check the metrics -- we don't want any floats, but we do have gauges
+			metrics.AssertFloats()
+			metrics.AssertGauges(tt.expectedMetrics...)
+		})
+	}
 }
 
 var _ = Describe("MIMO Actuator Service", Ordered, func() {
@@ -117,53 +264,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	JustBeforeEach(func() {
 		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
 		Expect(err).ToNot(HaveOccurred())
-	})
-
-	When("clusters are polled", func() {
-		BeforeEach(func() {
-			fixtures.Clear()
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key:    strings.ToLower(clusterResourceID),
-				Bucket: 1,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID,
-				},
-			})
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key:    strings.ToLower(clusterResourceID + "ignored"),
-				Bucket: 2,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID + "ignored",
-				},
-			})
-		})
-
-		AfterAll(func() {
-			svc.b.Stop()
-		})
-
-		It("updates the available clusters", func() {
-			lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
-
-			newOld, err := svc.poll(ctx, lastGotDocs)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Contains one that we check and one that we don't
-			Expect(newOld).To(HaveLen(2))
-		})
-
-		It("removes clusters if they are not in the doc", func() {
-			svc.b.UpsertDoc(&api.OpenShiftClusterDocument{Key: clusterResourceID + "2"})
-
-			lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
-			lastGotDocs[clusterResourceID+"2"] = &api.OpenShiftClusterDocument{Key: clusterResourceID + "2"}
-
-			newOld, err := svc.poll(ctx, lastGotDocs)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Contains one that we check and one that we don't
-			Expect(newOld).To(HaveLen(2))
-		})
 	})
 
 	When("maintenance needs to occur", func() {
