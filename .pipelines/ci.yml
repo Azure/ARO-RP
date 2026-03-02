@@ -121,6 +121,9 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - template: ./templates/template-acr-login.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
 
           # Build and Test Az ARO Extension
           - script: |
@@ -146,6 +149,9 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - template: ./templates/template-acr-login.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
 
           # Build and test RP and Portal
           - script: |
@@ -186,6 +192,9 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - template: ./templates/template-acr-login.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
 
           # Build the E2E image
           - script: |
