@@ -95,12 +95,12 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		changefeedBatchSize: 50,
 		changefeedInterval:  10 * time.Second,
 
-		subs: changefeed.NewSubscriptionsChangefeedCache(false),
+		subs: changefeed.NewSubscriptionsChangefeedCache(m, false),
 
 		serveHealthz: true,
 	}
 
-	s.clusters = newOpenShiftClusterCache(log, s.subs, ownedBuckets)
+	s.clusters = newOpenShiftClusterCache(log, m, s.subs, ownedBuckets)
 	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
 	// All Schedules have a bucket of 0
 	s.b.SetBuckets([]int{0})
