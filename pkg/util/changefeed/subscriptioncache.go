@@ -12,6 +12,7 @@ import (
 	"github.com/puzpuzpuz/xsync/v4"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 )
 
 // subscriptionInfo is used as the value in a map with subscriptionID as the
@@ -32,7 +33,7 @@ type SubscriptionsCache interface {
 	WaitForInitialPopulation()
 }
 
-func NewSubscriptionsChangefeedCache(onlyValidSubscriptions bool) *subscriptionsChangeFeedResponder {
+func NewSubscriptionsChangefeedCache(m metrics.Emitter, onlyValidSubscriptions bool) *subscriptionsChangeFeedResponder {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
@@ -40,10 +41,13 @@ func NewSubscriptionsChangefeedCache(onlyValidSubscriptions bool) *subscriptions
 		onlyValidSubscriptions:     onlyValidSubscriptions,
 		subs:                       xsync.NewMap[string, subscriptionInfo](),
 		initialPopulationWaitGroup: wg,
+		m:                          m,
 	}
 }
 
 type subscriptionsChangeFeedResponder struct {
+	m metrics.Emitter
+
 	// Do we want to only include valid (i.e. not suspended) subscriptions?
 	onlyValidSubscriptions bool
 
@@ -112,4 +116,7 @@ func (c *subscriptionsChangeFeedResponder) OnAllPendingProcessed() {
 	if old == nil {
 		c.initialPopulationWaitGroup.Done()
 	}
+	c.m.EmitGauge("changefeed.caches.size", int64(c.subs.Size()), map[string]string{
+		"name": "SubscriptionDocument",
+	})
 }

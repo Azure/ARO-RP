@@ -122,6 +122,20 @@ func TestProcessLoop(t *testing.T) {
 					Dimensions: metric_dims,
 					Value:      1,
 				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
 			},
 		},
 		{
@@ -185,6 +199,22 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
+			},
 		},
 		{
 			desc: "valid schedule, new manifest created (lookahead=1, scheduleAcross=1h)",
@@ -244,6 +274,20 @@ func TestProcessLoop(t *testing.T) {
 					MetricName: "mimo.scheduler.manifests.created",
 					Dimensions: metric_dims,
 					Value:      1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
 				},
 			},
 		},
@@ -308,6 +352,22 @@ func TestProcessLoop(t *testing.T) {
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
+			},
 		},
 		{
 			desc: "valid schedule, existing manifest that is of a changed schedule (lookahead=1, scheduleAcross=1h)",
@@ -399,6 +459,20 @@ func TestProcessLoop(t *testing.T) {
 					MetricName: "mimo.scheduler.manifests.cancelled",
 					Dimensions: metric_dims,
 					Value:      1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
 				},
 			},
 		},
@@ -506,6 +580,20 @@ func TestProcessLoop(t *testing.T) {
 					Dimensions: metric_dims,
 					Value:      1,
 				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
 			},
 			extraRuns: 1,
 		},
@@ -538,6 +626,22 @@ func TestProcessLoop(t *testing.T) {
 					"msg":   gomega.Equal("schedule '2026-1-1 00:00:00' will never trigger again, skipping"),
 				},
 			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
+			},
 		},
 		{
 			desc: "valid schedule, but it won't fire all the times within the lookAhead",
@@ -652,6 +756,20 @@ func TestProcessLoop(t *testing.T) {
 					MetricName: "mimo.scheduler.manifests.created",
 					Dimensions: metric_dims,
 					Value:      4,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
 				},
 			},
 		},
@@ -782,6 +900,20 @@ func TestProcessLoop(t *testing.T) {
 					Dimensions: metric_dims,
 					Value:      5,
 				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
 			},
 		},
 	}
@@ -794,6 +926,7 @@ func TestProcessLoop(t *testing.T) {
 			_env := mock_env.NewMockInterface(controller)
 
 			hook, log := testlog.LogForTesting(t)
+			metrics := testmetrics.NewFakeMetricsEmitter(t)
 
 			fixtures := testdatabase.NewFixture()
 			checker := testdatabase.NewChecker()
@@ -806,12 +939,10 @@ func TestProcessLoop(t *testing.T) {
 
 			dbs := database.NewDBGroup().WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
 
-			subsCache := changefeed.NewSubscriptionsChangefeedCache(false)
-			clusterCache := newOpenShiftClusterCache(log, subsCache, []int{1})
+			subsCache := changefeed.NewSubscriptionsChangefeedCache(metrics, false)
+			clusterCache := newOpenShiftClusterCache(log, metrics, subsCache, []int{1})
 			stop := make(chan struct{})
 			t.Cleanup(func() { close(stop) })
-
-			metrics := testmetrics.NewFakeMetricsEmitter(t)
 
 			a := &scheduler{
 				log: log,

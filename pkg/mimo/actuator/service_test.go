@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/require"
 
+	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -102,7 +102,6 @@ func TestActuatorPolling(t *testing.T) {
 				{
 					MetricName: "changefeed.caches.size",
 					Dimensions: map[string]string{
-
 						"name": "OpenShiftClusterDocument",
 					},
 					// we still keep clusters that aren't in our bucket in the

@@ -19,11 +19,13 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 )
 
 type openShiftClusterCache struct {
 	log *logrus.Entry
+	m   metrics.Emitter
 
 	subCache changefeed.SubscriptionsCache
 
@@ -33,11 +35,12 @@ type openShiftClusterCache struct {
 	initialPopulationWaitGroup *sync.WaitGroup
 }
 
-func newOpenShiftClusterCache(log *logrus.Entry, subCache changefeed.SubscriptionsCache, ownedBuckets []int) *openShiftClusterCache {
+func newOpenShiftClusterCache(log *logrus.Entry, m metrics.Emitter, subCache changefeed.SubscriptionsCache, ownedBuckets []int) *openShiftClusterCache {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &openShiftClusterCache{
 		log:                        log,
+		m:                          m,
 		subCache:                   subCache,
 		clusters:                   xsync.NewMap[string, selectorData](),
 		ownedBuckets:               ownedBuckets,
@@ -104,6 +107,9 @@ func (c *openShiftClusterCache) OnAllPendingProcessed() {
 	if old == nil {
 		c.initialPopulationWaitGroup.Done()
 	}
+	c.m.EmitGauge("changefeed.caches.size", int64(c.clusters.Size()), map[string]string{
+		"name": "OpenShiftClusterDocument",
+	})
 }
 
 func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, old selectorData) (selectorData, bool, error) {
