@@ -1,4 +1,4 @@
-# This template is used to authenticate to Azure and push Docker images across Azure tenants.
+# This template is used to push Docker images across Azure tenants.
 # We cannot use the simpler Docker@2 push command because MSI does not support cross-tenant authentication.
 
 parameters:
@@ -14,7 +14,7 @@ parameters:
 
 steps:
   - task: AzureCLI@2
-    displayName: "Authenticate to Azure and Push Docker Image"
+    displayName: "Push Docker Image"
     inputs:
       azureSubscription: "ado-pipeline-dev-image-push" # Service connection name
       scriptType: bash
@@ -22,20 +22,12 @@ steps:
       inlineScript: |
         set -xe
 
-        # Authenticate to Azure and ACR
-        echo "Authenticating to Azure and ACR..."
-        ACR_FQDN="${{ parameters.acrFQDN }}"
-        REGISTRY_NAME=$(echo $ACR_FQDN | cut -d'.' -f1)
-
-        # Login to ACR
-        az acr login --name $REGISTRY_NAME
-
         # List Docker images to verify the built image exists
         echo "Listing Docker images..."
         docker images
 
         # Define the full repository image name
-        IMAGE_NAME="${ACR_FQDN}/${{ parameters.repository }}:${{ parameters.tag }}"
+        IMAGE_NAME="${{ parameters.acrFQDN }}/${{ parameters.repository }}:${{ parameters.tag }}"
 
         # Check if the local image exists
         echo "Checking for image ${IMAGE_NAME}..."
