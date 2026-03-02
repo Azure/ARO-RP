@@ -89,15 +89,8 @@ services:
       vpn:
         condition: service_healthy
     command: ["rp"]
-    secrets:
-      - source: proxy-client-key
-        target: /app/secrets/proxy-client.key
-      - source: proxy-client-crt
-        target: /app/secrets/proxy-client.crt
-      - source: proxy-crt
-        target: /app/secrets/proxy.crt
-      - source: hive-kubeconfig
-        target: /app/secrets/aks.kubeconfig
+    volumes:
+      - ${PWD}/secrets:/app/secrets:z
     environment:
       <<: *common-env
       ADMIN_OBJECT_ID:
@@ -118,7 +111,15 @@ services:
     ports:
       - "8443:8443"
     healthcheck:
-      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8443/healthz/ready"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-k",
+          "-sS",
+          "-f",
+          "https://localhost:8443/healthz/ready",
+        ]
       interval: 90s
       timeout: 30s
       retries: 3
@@ -137,19 +138,22 @@ services:
     ports:
       - "8444:8444"
       - "2222:2222"
-    secrets:
-      - source: proxy-client-key
-        target: /app/secrets/proxy-client.key
-      - source: proxy-client-crt
-        target: /app/secrets/proxy-client.crt
-      - source: proxy-crt
-        target: /app/secrets/proxy.crt
+    volumes:
+      - ${PWD}/secrets:/app/secrets:z
     cap_drop:
       - NET_RAW
     command: ["portal"]
     restart: on-failure:3
     healthcheck:
-      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8444/healthz/ready"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-k",
+          "-sS",
+          "-f",
+          "https://localhost:8444/healthz/ready",
+        ]
       interval: 30s
       timeout: 20s
       retries: 3
