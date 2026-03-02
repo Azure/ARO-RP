@@ -213,6 +213,10 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 		docMap[strings.ToLower(d.Key)] = d
 	}
 
+	// Acquire lock for when we're mutating the changefeed cache
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	// remove docs that don't exist in the new set (removed clusters)
 	for oldCluster := range oldDocs {
 		_, ok := docMap[strings.ToLower(oldCluster)]
@@ -230,6 +234,11 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 
 	// Store when we last fetched the clusters
 	s.lastChangefeed.Store(s.now())
+
+	// Emit a metric containing the size of our cache
+	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
+		"name": "OpenShiftClusterDocument",
+	})
 
 	return docMap, nil
 }
