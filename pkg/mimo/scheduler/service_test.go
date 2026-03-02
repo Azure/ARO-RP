@@ -62,7 +62,6 @@ func TestSchedulerPolling(t *testing.T) {
 				{
 					MetricName: "changefeed.caches.size",
 					Dimensions: map[string]string{
-
 						"name": "MaintenanceScheduleDocument",
 					},
 					Value: 1,
