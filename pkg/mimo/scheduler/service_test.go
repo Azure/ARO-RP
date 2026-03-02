@@ -5,7 +5,6 @@ package scheduler
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -63,8 +62,8 @@ func TestSchedulerPolling(t *testing.T) {
 				{
 					MetricName: "changefeed.caches.size",
 					Dimensions: map[string]string{
-						"service": "mimo_scheduler",
-						"name":    "MaintenanceScheduleDocument",
+
+						"name": "MaintenanceScheduleDocument",
 					},
 					Value: 1,
 				},
@@ -100,8 +99,7 @@ func TestSchedulerPolling(t *testing.T) {
 				{
 					MetricName: "changefeed.caches.size",
 					Dimensions: map[string]string{
-						"service": "mimo_scheduler",
-						"name":    "MaintenanceScheduleDocument",
+						"name": "MaintenanceScheduleDocument",
 					},
 					Value: 1,
 				},
@@ -115,8 +113,6 @@ func TestSchedulerPolling(t *testing.T) {
 
 			controller := gomock.NewController(nil)
 			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().Service().Return(strings.ToLower(string(env.SERVICE_MIMO_SCHEDULER)))
-
 			hook, log := testlog.LogForTesting(t)
 
 			fixtures := testdatabase.NewFixture()
@@ -182,7 +178,6 @@ func TestSchedulerStoppingWholeProcess(t *testing.T) {
 	m := testmetrics.NewFakeMetricsEmitter(t)
 	controller := gomock.NewController(nil)
 	_env := mock_env.NewMockInterface(controller)
-	_env.EXPECT().Service().Return(strings.ToLower(string(env.SERVICE_MIMO_SCHEDULER))).AnyTimes()
 
 	_, log := testlog.LogForTesting(t)
 	fixtures := testdatabase.NewFixture()
@@ -225,8 +220,7 @@ func TestSchedulerStoppingWholeProcess(t *testing.T) {
 		{
 			MetricName: "changefeed.caches.size",
 			Dimensions: map[string]string{
-				"service": "mimo_scheduler",
-				"name":    "MaintenanceScheduleDocument",
+				"name": "MaintenanceScheduleDocument",
 			},
 			Value: 1,
 		},
@@ -246,7 +240,6 @@ func TestSchedulerStoppingSingleItem(t *testing.T) {
 	m := testmetrics.NewFakeMetricsEmitter(t)
 	controller := gomock.NewController(nil)
 	_env := mock_env.NewMockInterface(controller)
-	_env.EXPECT().Service().Return(strings.ToLower(string(env.SERVICE_MIMO_SCHEDULER))).AnyTimes()
 
 	_, log := testlog.LogForTesting(t)
 	fixtures := testdatabase.NewFixture()
@@ -299,8 +292,7 @@ func TestSchedulerStoppingSingleItem(t *testing.T) {
 		{
 			MetricName: "changefeed.caches.size",
 			Dimensions: map[string]string{
-				"service": "mimo_scheduler",
-				"name":    "MaintenanceScheduleDocument",
+				"name": "MaintenanceScheduleDocument",
 			},
 			// This will end up as 0 because we set the schedule to inactive
 			Value: 0,
