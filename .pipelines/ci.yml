@@ -410,6 +410,7 @@ stages:
               echo "##vso[task.setvariable variable=DATABASE_NAME]${DATABASE_NAME}"
             displayName: Set CLUSTER and DATABASE_NAME
           - bash: |
+              sudo tdnf install -y azurelinux-repos-extended
               sudo tdnf install -y yq
             displayName: Install deps
           - bash: |
