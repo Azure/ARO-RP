@@ -40,7 +40,7 @@ type manager struct {
 	now  func() time.Time
 }
 
-func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
+func NewManager(env env.Interface, msiAuthorizer autorest.Authorizer) (Manager, error) {
 	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
 		return nil, err
@@ -50,8 +50,8 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manag
 		env: env,
 		r:   r,
 
-		tokens:     containerregistry.NewTokensClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
-		registries: containerregistry.NewRegistriesClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
+		tokens:     containerregistry.NewTokensClient(env.Environment(), r.SubscriptionID, msiAuthorizer),
+		registries: containerregistry.NewRegistriesClient(env.Environment(), r.SubscriptionID, msiAuthorizer),
 		uuid:       uuid.DefaultGenerator,
 		now:        time.Now,
 	}
