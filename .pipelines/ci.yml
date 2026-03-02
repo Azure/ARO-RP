@@ -410,6 +410,9 @@ stages:
               echo "##vso[task.setvariable variable=DATABASE_NAME]${DATABASE_NAME}"
             displayName: Set CLUSTER and DATABASE_NAME
           - bash: |
+              sudo tdnf install -y jq
+            displayName: Install deps
+          - bash: |
               # Set SKIP_MIWI_ROLE_ASSIGNMENT=true to avoid creating platform identities and assigning Azure roles during
               # MIWI pipeline runs. These operations are handled as part of cluster creation, within the e2e's BeforeSuite.
               . secrets/env
