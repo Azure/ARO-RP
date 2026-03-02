@@ -241,9 +241,9 @@ stages:
           - bash: |
               az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
-              chmod 0440 secrets/*.key
-              chmod 0440 secrets/*.crt
-              chmod 0440 secrets/*.pem
+              chmod 0444 secrets/*.key
+              chmod 0444 secrets/*.crt
+              chmod 0444 secrets/*.pem
             displayName: Fetch secrets
 
           - bash: |
@@ -368,9 +368,9 @@ stages:
           - bash: |
               az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
-              chmod 0440 secrets/*.key
-              chmod 0440 secrets/*.crt
-              chmod 0440 secrets/*.pem
+              chmod 0444 secrets/*.key
+              chmod 0444 secrets/*.crt
+              chmod 0444 secrets/*.pem
             displayName: Fetch secrets
 
           - bash: |
