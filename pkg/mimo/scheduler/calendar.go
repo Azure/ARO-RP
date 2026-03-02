@@ -225,12 +225,7 @@ const nextiterlimit = 1000
 func Next(now time.Time, sched calendar) (time.Time, bool) {
 	nextPossible := now.Round(time.Second).Add(time.Second)
 
-	for v := range nextiterlimit {
-		// no next found
-		if v == nextiterlimit {
-			return nextPossible, false
-		}
-
+	for range nextiterlimit {
 		if len(sched.Year) > 0 {
 			for _, s := range sched.Year {
 				if s == nextPossible.Year() {
