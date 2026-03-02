@@ -5,6 +5,7 @@ x-aro-common-env:
   environment: &common-env
     ARO_ADOPT_BY_HIVE: "true"
     ARO_IMAGE:
+    ARO_CHECKOUT_PATH: /aro
     ARO_INSTALL_VIA_HIVE: "true"
     AZURE_ARM_CLIENT_ID:
     AZURE_CLIENT_ID:
@@ -90,16 +91,15 @@ services:
         condition: service_healthy
     command: ["rp"]
     volumes:
-      - ${PWD}/secrets:/app/secrets:z
+      - ${PWD}/secrets:/aro/secrets:z
     environment:
       <<: *common-env
       ADMIN_OBJECT_ID:
-      ARO_CHECKOUT_PATH: /app
       AZURE_GATEWAY_CLIENT_ID:
       AZURE_GATEWAY_CLIENT_SECRET:
       AZURE_GATEWAY_SERVICE_PRINCIPAL_ID:
-      HIVE_KUBE_CONFIG_PATH: /app/secrets/aks.kubeconfig
-      KUBECONFIG: /app/secrets/aks.kubeconfig
+      HIVE_KUBE_CONFIG_PATH: /aro/secrets/aks.kubeconfig
+      KUBECONFIG: /aro/secrets/aks.kubeconfig
       MOCK_MSI_CERT:
       MOCK_MSI_CLIENT_ID:
       MOCK_MSI_OBJECT_ID:
@@ -139,7 +139,7 @@ services:
       - "8444:8444"
       - "2222:2222"
     volumes:
-      - ${PWD}/secrets:/app/secrets:z
+      - ${PWD}/secrets:/aro/secrets:z
     cap_drop:
       - NET_RAW
     command: ["portal"]
