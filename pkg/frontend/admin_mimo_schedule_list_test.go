@@ -162,8 +162,6 @@ func TestMIMOListSchedules(t *testing.T) {
 				tt.limit = 100
 			}
 
-			fmt.Printf("limit: %d", tt.limit)
-
 			resp, b, err := ti.request(http.MethodGet,
 				fmt.Sprintf("https://server/admin/maintenanceschedules?limit=%d", tt.limit),
 				http.Header{
