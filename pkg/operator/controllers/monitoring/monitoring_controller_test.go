@@ -30,9 +30,7 @@ import (
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 )
 
-var (
-	cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
-)
+var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
 
 func TestReconcileMonitoringConfig(t *testing.T) {
 	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)

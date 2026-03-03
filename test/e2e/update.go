@@ -111,7 +111,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 	var lbName string
 	var rgName string
 
-	var _ = BeforeEach(func(ctx context.Context) {
+	_ = BeforeEach(func(ctx context.Context) {
 		By("ensuring the public loadbalancer starts with one outbound IP")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())

@@ -522,7 +522,8 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					"resultType":      gomega.Equal(utillog.UserErrorResultType),
 					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 					"errorDetails":    gomega.ContainSubstring("This is a user error result type"),
-				}},
+				},
+			},
 		},
 		{
 			name:                     "Server Error Status Code",
@@ -542,7 +543,8 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					"resultType":      gomega.Equal(utillog.ServerErrorResultType),
 					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
 					"errorDetails":    gomega.ContainSubstring("This is a server error result type"),
-				}},
+				},
+			},
 		},
 		{
 			name:                     "Server Error Status Code DetailedError With Response",

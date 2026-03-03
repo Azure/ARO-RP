@@ -47,7 +47,6 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -195,12 +194,12 @@ func SaveScreenshot(wd selenium.WebDriver, e error) {
 		panic(err)
 	}
 
-	err = os.WriteFile(imageAbsPath, imageBytes, 0666)
+	err = os.WriteFile(imageAbsPath, imageBytes, 0o666)
 	if err != nil {
 		panic(err)
 	}
 
-	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0666)
+	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0o666)
 	if err != nil {
 		panic(err)
 	}
@@ -261,7 +260,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		log.Infof("Failed to reach main portal path at %s. Error: %s", mainPortalPath, err.Error())
 	}
 	var portalAuthCmd string
-	var portalAuthArgs = make([]string, 0)
+	portalAuthArgs := make([]string, 0)
 	if os.Getenv("CI") != "" {
 		// In CI we have a prebuilt portalauth binary
 		portalAuthCmd = "./portalauth"
@@ -558,7 +557,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}, nil
 }
 
-func setup(ctx context.Context) error {
+func setupE2EInfrastructure(ctx context.Context) error {
 	if err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
@@ -593,36 +592,11 @@ func setup(ctx context.Context) error {
 	azOCClient := redhatopenshift20250725.NewOpenShiftClustersClient(
 		_env.Environment(), _env.SubscriptionID(), authAdapter)
 
-	// Only check for leftover clusters in local dev CI, not in release E2E
+	// Only handle leftover clusters in local dev CI, not in release E2E
 	if conf.IsLocalDevelopmentMode() && conf.IsCI {
-		const (
-			maxRetries  = 10
-			waitBetween = 30 * time.Second
-		)
-		totalWait := time.Duration(maxRetries) * waitBetween
-
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			doc, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
-			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
-					log.Infof("No leftover cluster found on attempt %d; proceeding", attempt)
-					break
-				}
-				return fmt.Errorf("failed to check leftover cluster (attempt %d): %w", attempt, err)
-			}
-
-			if doc.ProvisioningState != mgmtredhatopenshift20250725.Deleting {
-				return fmt.Errorf("unexpected state %s on attempt %d; aborting", doc.ProvisioningState, attempt)
-			}
-
-			if attempt == maxRetries {
-				return fmt.Errorf("cluster still stuck in Deleting after %s; aborting", totalWait)
-			}
-
-			log.Infof("Cluster still deleting (%d/%d); retrying in %s", attempt, maxRetries, waitBetween)
-			time.Sleep(waitBetween)
+		if err := deleteLeftoverClusterIfPresent(ctx, azOCClient, conf); err != nil {
+			return err
 		}
-		// Old cluster is gone, create the new one
 	}
 
 	// we only create a cluster when running this in CI
@@ -649,7 +623,7 @@ func setup(ctx context.Context) error {
 	return nil
 }
 
-func done(ctx context.Context) error {
+func cleanupE2EInfrastructure(ctx context.Context) error {
 	// Load the usual cluster config (to pick up IsCI, etc.)
 	conf, err := utilcluster.NewClusterConfigFromEnv()
 	if err != nil {
@@ -674,13 +648,32 @@ func done(ctx context.Context) error {
 	return nil
 }
 
+func deleteLeftoverClusterIfPresent(ctx context.Context, azOCClient redhatopenshift20250725.OpenShiftClustersClient, conf *utilcluster.ClusterConfig) error {
+	_, err := azOCClient.Get(ctx, conf.VnetResourceGroup, conf.ClusterName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			log.Info("No leftover cluster found; proceeding")
+			return nil
+		}
+		return fmt.Errorf("failed to check for leftover cluster: %w", err)
+	}
+
+	log.Info("Found leftover cluster; deleting it")
+	err = azOCClient.DeleteAndWait(ctx, conf.VnetResourceGroup, conf.ClusterName)
+	if err != nil {
+		return fmt.Errorf("failed to delete leftover cluster: %w", err)
+	}
+	log.Info("Leftover cluster deleted successfully")
+	return nil
+}
+
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
 	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
-	if err := setup(context.Background()); err != nil {
+	if err := setupE2EInfrastructure(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}
@@ -690,8 +683,7 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
-
-	if err := done(context.Background()); err != nil {
+	if err := cleanupE2EInfrastructure(context.Background()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}

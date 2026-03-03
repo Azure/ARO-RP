@@ -28,6 +28,7 @@ type Checker struct {
 	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
 	validationResult                         []*api.ValidationResult
 	maintenanceManifestDocuments             []*api.MaintenanceManifestDocument
+	maintenanceScheduleDocuments             []*api.MaintenanceScheduleDocument
 }
 
 func NewChecker() *Checker {
@@ -45,6 +46,7 @@ func (f *Checker) Clear() {
 	f.platformWorkloadIdentityRoleSetDocuments = []*api.PlatformWorkloadIdentityRoleSetDocument{}
 	f.validationResult = []*api.ValidationResult{}
 	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
+	f.maintenanceScheduleDocuments = []*api.MaintenanceScheduleDocument{}
 }
 
 func (f *Checker) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
@@ -154,6 +156,17 @@ func (f *Checker) AddMaintenanceManifestDocuments(docs ...*api.MaintenanceManife
 		}
 
 		f.maintenanceManifestDocuments = append(f.maintenanceManifestDocuments, docCopy.(*api.MaintenanceManifestDocument))
+	}
+}
+
+func (f *Checker) AddMaintenanceScheduleDocuments(docs ...*api.MaintenanceScheduleDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.maintenanceScheduleDocuments = append(f.maintenanceScheduleDocuments, docCopy.(*api.MaintenanceScheduleDocument))
 	}
 }
 
@@ -354,6 +367,30 @@ func (f *Checker) CheckMaintenanceManifests(client *cosmosdb.FakeMaintenanceMani
 		}
 	} else if len(all.MaintenanceManifestDocuments) != 0 || len(f.maintenanceManifestDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("document length different, %d vs %d", len(all.MaintenanceManifestDocuments), len(f.maintenanceManifestDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckMaintenanceSchedules(client *cosmosdb.FakeMaintenanceScheduleDocumentClient) (errs []error) {
+	ctx := context.Background()
+
+	all, err := client.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	sort.Slice(all.MaintenanceScheduleDocuments, func(i, j int) bool {
+		return all.MaintenanceScheduleDocuments[i].ID < all.MaintenanceScheduleDocuments[j].ID
+	})
+
+	if len(f.maintenanceScheduleDocuments) != 0 && len(all.MaintenanceScheduleDocuments) == len(f.maintenanceScheduleDocuments) {
+		diff := deep.Equal(all.MaintenanceScheduleDocuments, f.maintenanceScheduleDocuments)
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
+		}
+	} else if len(all.MaintenanceScheduleDocuments) != 0 || len(f.maintenanceScheduleDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("document length different, %d vs %d", len(all.MaintenanceScheduleDocuments), len(f.maintenanceScheduleDocuments)))
 	}
 
 	return errs

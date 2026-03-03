@@ -58,7 +58,6 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 	It("must be able to approve multiple CSRs", func(ctx context.Context) {
 		testCSRMassApproveOK(ctx, prefix, namespace, csrCount)
 	})
-
 })
 
 func testCSRApproveOK(ctx context.Context, objName, namespace string) {

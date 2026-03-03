@@ -12,3 +12,5 @@ spec:
     - UnknownError
   globalPullSecretRef:
     name: hive-global-pull-secret
+  hiveImagePullSecretRef:
+    name: hive-global-pull-secret

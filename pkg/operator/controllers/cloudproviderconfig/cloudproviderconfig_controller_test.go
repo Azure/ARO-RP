@@ -25,9 +25,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-var (
-	cmMetadata = metav1.ObjectMeta{Name: "cloud-provider-config", Namespace: "openshift-config"}
-)
+var cmMetadata = metav1.ObjectMeta{Name: "cloud-provider-config", Namespace: "openshift-config"}
 
 func TestReconcileCloudProviderConfig(t *testing.T) {
 	type test struct {
@@ -100,7 +98,7 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 			Hooks:     make(logrus.LevelHooks),
 			Level:     logrus.TraceLevel,
 		}
-		var hook = logtest.NewLocal(logger)
+		hook := logtest.NewLocal(logger)
 
 		instance := &arov1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{

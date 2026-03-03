@@ -7,6 +7,21 @@ trigger:
   paths:
     exclude:
       - docs/*
+      - "**/*.md"
+      - LICENSE
+      - LICENSE.txt
+      - .gitignore
+      - OWNERS
+      - .github/CODEOWNERS
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/dependabot.yml
+      - .github/workflows/check-coverage.yml
+      - .github/workflows/codeql-analysis.yml
+      - .github/workflows/maintenance.yml
+      - .github/workflows/npm-audit.yml
+      - .github/workflows/prune-tags.yml
+      - .github/workflows/release-note.yml
+      - .github/workflows/yamllint.yml
   tags:
     include:
       - v2*
@@ -19,6 +34,21 @@ pr:
   paths:
     exclude:
       - docs/*
+      - "**/*.md"
+      - LICENSE
+      - LICENSE.txt
+      - .gitignore
+      - OWNERS
+      - .github/CODEOWNERS
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/dependabot.yml
+      - .github/workflows/check-coverage.yml
+      - .github/workflows/codeql-analysis.yml
+      - .github/workflows/maintenance.yml
+      - .github/workflows/npm-audit.yml
+      - .github/workflows/prune-tags.yml
+      - .github/workflows/release-note.yml
+      - .github/workflows/yamllint.yml
 
 variables:
   - template: vars.yml
@@ -91,12 +121,15 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - template: ./templates/template-acr-login.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
 
           # Build and Test Az ARO Extension
           - script: |
               set -xe
               echo "Building with TAG: $(TAG)"
-              DOCKER_BUILD_CI_ARGS="--load" make ci-azext-aro VERSION=$(TAG)
+              make ci-azext-aro VERSION=$(TAG)
             displayName: "🛠 Build & Test Az ARO Extension"
 
           # Push the image to ACR
@@ -116,11 +149,14 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - template: ./templates/template-acr-login.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
 
           # Build and test RP and Portal
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make ci-rp VERSION=$(TAG)
+              make ci-rp VERSION=$(TAG)
             displayName: 🛠 Build & Test RP and Portal
 
           # Publish test results
@@ -156,11 +192,14 @@ stages:
             inputs:
               command: "login"
               containerRegistry: arointsvc #service connection name
+          - template: ./templates/template-acr-login.yml
+            parameters:
+              acrFQDN: "arosvcdev.azurecr.io"
 
           # Build the E2E image
           - script: |
               set -xe
-              DOCKER_BUILD_CI_ARGS="--load" make aro-e2e VERSION=$(TAG)
+              make aro-e2e VERSION=$(TAG)
             displayName: 🛠 Build the E2E image
 
           # Push the E2E image to ACR
@@ -187,7 +226,7 @@ stages:
           # Install Docker, Docker Compose, and dependencies
           - bash: |
               . ./hack/e2e/utils.sh
-              install_docker_dependencies
+              install_docker_dependencies_azurelinux
             displayName: Install Docker and Docker Compose
           - task: Docker@2
             inputs:
@@ -202,6 +241,9 @@ stages:
           - bash: |
               az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              chmod 0444 secrets/*.key
+              chmod 0444 secrets/*.crt
+              chmod 0444 secrets/*.pem
             displayName: Fetch secrets
 
           - bash: |
@@ -239,7 +281,6 @@ stages:
           - bash: |
               . ./hack/e2e/run-rp-and-e2e.sh
               az acr login --name arosvcdev
-              az acr login --name arointsvc
 
               deploy_e2e_db
               register_sub
@@ -312,7 +353,7 @@ stages:
           # Install Docker, Docker Compose, and dependencies
           - bash: |
               . ./hack/e2e/utils.sh
-              install_docker_dependencies
+              install_docker_dependencies_azurelinux
             displayName: Install Docker and Docker Compose
           - task: Docker@2
             inputs:
@@ -327,6 +368,9 @@ stages:
           - bash: |
               az account set -s $AZURE_SUBSCRIPTION_ID
               SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
+              chmod 0444 secrets/*.key
+              chmod 0444 secrets/*.crt
+              chmod 0444 secrets/*.pem
             displayName: Fetch secrets
 
           - bash: |
@@ -366,6 +410,10 @@ stages:
               echo "##vso[task.setvariable variable=DATABASE_NAME]${DATABASE_NAME}"
             displayName: Set CLUSTER and DATABASE_NAME
           - bash: |
+              sudo tdnf install -y azurelinux-repos-extended
+              sudo tdnf install -y yq
+            displayName: Install deps
+          - bash: |
               # Set SKIP_MIWI_ROLE_ASSIGNMENT=true to avoid creating platform identities and assigning Azure roles during
               # MIWI pipeline runs. These operations are handled as part of cluster creation, within the e2e's BeforeSuite.
               . secrets/env
@@ -376,7 +424,6 @@ stages:
               create_miwi_env_file
               . ./env
               az acr login --name arosvcdev
-              az acr login --name arointsvc
               deploy_e2e_db
               register_sub
               docker compose build vpn

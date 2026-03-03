@@ -69,7 +69,7 @@ func formatServerGroups(path string) error {
 		return err
 	}
 
-	return os.WriteFile(path, append(b, '\n'), 0666)
+	return os.WriteFile(path, append(b, '\n'), 0o666)
 }
 
 func canonicalizeServerResources(path string) error {
@@ -100,5 +100,5 @@ func canonicalizeServerResources(path string) error {
 		return err
 	}
 
-	return os.WriteFile(path, append(b, '\n'), 0666)
+	return os.WriteFile(path, append(b, '\n'), 0o666)
 }

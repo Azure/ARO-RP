@@ -53,7 +53,7 @@ type service struct {
 
 	b buckets.BucketWorker
 
-	lastChangefeed atomic.Value //time.Time
+	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
 
 	pollTime    time.Duration

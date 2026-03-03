@@ -29,7 +29,6 @@ ENV USER_UID=1001 \
     USER_NAME=guardrails-operator
 
 WORKDIR /
-RUN microdnf update -y && microdnf clean all -y
 COPY --from=builder /go/src/github.com/open-policy-agent/gatekeeper/manager .
 ENTRYPOINT ["/manager"]
 

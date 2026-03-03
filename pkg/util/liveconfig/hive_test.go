@@ -23,7 +23,6 @@ import (
 var hiveEmbeddedFiles embed.FS
 
 func SetupTestHarness() {
-
 }
 
 func TestProdHiveAdmin(t *testing.T) {

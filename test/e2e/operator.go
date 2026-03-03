@@ -146,7 +146,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 })
 
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
-
 	BeforeEach(func(ctx context.Context) {
 		By("checking if monitoring ConfigMap controller is enabled")
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
@@ -228,7 +227,6 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 		By("waiting for the machine health check to be restored")
 		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
-
 })
 
 var _ = Describe("ARO Operator - Conditions", func() {
@@ -417,11 +415,16 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(*s.Properties.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
+			By("checking that the cluster document annotations have been patched")
+			Eventually(func(g Gomega, ctx context.Context) {
 				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
-			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+				// Using 2 seconds because the cluster doc should be patched very quickly after the subnet itself is patched.
+				// The small eventually avoids any unfortunate timing
+			}).WithContext(ctx).WithTimeout(time.Second * 2).Should(Succeed())
 		}
 	})
 })
@@ -770,7 +773,6 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
 		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
 	})
-
 })
 
 var _ = Describe("ARO Operator - Cloud Provider Config ConfigMap", func() {
@@ -895,5 +897,4 @@ var _ = Describe("ARO Operator - etchosts", func() {
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithPolling(PollingInterval).Should(Succeed())
 		}
 	})
-
 })

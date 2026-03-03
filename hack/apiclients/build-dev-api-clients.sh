@@ -16,7 +16,7 @@ function generate_golang() {
   # Generating Track 1 Golang SDK
   # Needs work to migrate to Track 2
   docker run \
-    --platform=linux/amd64 \
+    --platform=${PLATFORM:-linux/$(go env GOARCH)} \
     --rm \
     -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
     -v $PWD/swagger:/swagger:z \
@@ -31,7 +31,7 @@ function generate_golang() {
     --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
   docker run \
-    --platform=linux/amd64 \
+    --platform=${PLATFORM:-linux/$(go env GOARCH)} \
     --rm \
     -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
     --entrypoint sed \
@@ -51,7 +51,7 @@ function generate_python() {
 
   # Generating Track 2 Python SDK
   docker run \
-    --platform=linux/amd64 \
+    --platform=${PLATFORM:-linux/$(go env GOARCH)} \
     --rm \
     -v $PWD/python/client:/python/client:z \
     -v $PWD/swagger:/swagger:z \

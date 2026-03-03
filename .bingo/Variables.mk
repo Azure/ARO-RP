@@ -71,6 +71,12 @@ $(GOCOV): $(BINGO_DIR)/gocov.mod
 	@echo "(re)installing $(GOBIN)/gocov-v1.1.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gocov.mod -o=$(GOBIN)/gocov-v1.1.0 "github.com/axw/gocov/gocov"
 
+GOFUMPT := $(GOBIN)/gofumpt-v0.7.0
+$(GOFUMPT): $(BINGO_DIR)/gofumpt.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/gofumpt-v0.7.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=gofumpt.mod -o=$(GOBIN)/gofumpt-v0.7.0 "mvdan.cc/gofumpt"
+
 GOJQ := $(GOBIN)/gojq-v0.12.16
 $(GOJQ): $(BINGO_DIR)/gojq.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
@@ -100,4 +106,10 @@ $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
 	@echo "(re)installing $(GOBIN)/mockgen-v0.6.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.6.0 "go.uber.org/mock/mockgen"
+
+PINACT := $(GOBIN)/pinact-v1.6.0
+$(PINACT): $(BINGO_DIR)/pinact.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/pinact-v1.6.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=pinact.mod -o=$(GOBIN)/pinact-v1.6.0 "github.com/suzuki-shunsuke/pinact/cmd/pinact"
 

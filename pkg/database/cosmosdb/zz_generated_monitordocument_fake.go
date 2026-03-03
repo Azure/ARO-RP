@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeMonitorDocumentTriggerHandler func(context.Context, *pkg.MonitorDocument) error
-type fakeMonitorDocumentQueryHandler func(MonitorDocumentClient, *Query, *Options) MonitorDocumentRawIterator
+type (
+	fakeMonitorDocumentTriggerHandler func(context.Context, *pkg.MonitorDocument) error
+	fakeMonitorDocumentQueryHandler   func(MonitorDocumentClient, *Query, *Options) MonitorDocumentRawIterator
+)
 
 var _ MonitorDocumentClient = &FakeMonitorDocumentClient{}
 

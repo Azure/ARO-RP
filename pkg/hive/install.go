@@ -173,7 +173,7 @@ func azureCredentialSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscrip
 }
 
 func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, sub *api.SubscriptionDocument, isDevelopment bool) *hivev1.ClusterDeployment {
-	var envVars = []corev1.EnvVar{
+	envVars := []corev1.EnvVar{
 		{
 			Name:  "ARO_UUID",
 			Value: doc.ID,

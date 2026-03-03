@@ -5,6 +5,7 @@ x-aro-common-env:
   environment: &common-env
     ARO_ADOPT_BY_HIVE: "true"
     ARO_IMAGE:
+    ARO_CHECKOUT_PATH: /aro
     ARO_INSTALL_VIA_HIVE: "true"
     AZURE_ARM_CLIENT_ID:
     AZURE_CLIENT_ID:
@@ -89,24 +90,16 @@ services:
       vpn:
         condition: service_healthy
     command: ["rp"]
-    secrets:
-      - source: proxy-client-key
-        target: /app/secrets/proxy-client.key
-      - source: proxy-client-crt
-        target: /app/secrets/proxy-client.crt
-      - source: proxy-crt
-        target: /app/secrets/proxy.crt
-      - source: hive-kubeconfig
-        target: /app/secrets/aks.kubeconfig
+    volumes:
+      - ${PWD}/secrets:/aro/secrets:z
     environment:
       <<: *common-env
       ADMIN_OBJECT_ID:
-      ARO_CHECKOUT_PATH: /app
       AZURE_GATEWAY_CLIENT_ID:
       AZURE_GATEWAY_CLIENT_SECRET:
       AZURE_GATEWAY_SERVICE_PRINCIPAL_ID:
-      HIVE_KUBE_CONFIG_PATH: /app/secrets/aks.kubeconfig
-      KUBECONFIG: /app/secrets/aks.kubeconfig
+      HIVE_KUBE_CONFIG_PATH: /aro/secrets/aks.kubeconfig
+      KUBECONFIG: /aro/secrets/aks.kubeconfig
       MOCK_MSI_CERT:
       MOCK_MSI_CLIENT_ID:
       MOCK_MSI_OBJECT_ID:
@@ -118,7 +111,15 @@ services:
     ports:
       - "8443:8443"
     healthcheck:
-      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8443/healthz/ready"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-k",
+          "-sS",
+          "-f",
+          "https://localhost:8443/healthz/ready",
+        ]
       interval: 90s
       timeout: 30s
       retries: 3
@@ -137,19 +138,22 @@ services:
     ports:
       - "8444:8444"
       - "2222:2222"
-    secrets:
-      - source: proxy-client-key
-        target: /app/secrets/proxy-client.key
-      - source: proxy-client-crt
-        target: /app/secrets/proxy-client.crt
-      - source: proxy-crt
-        target: /app/secrets/proxy.crt
+    volumes:
+      - ${PWD}/secrets:/aro/secrets:z
     cap_drop:
       - NET_RAW
     command: ["portal"]
     restart: on-failure:3
     healthcheck:
-      test: ["CMD", "curl", "-k", "-sS", "-f", "https://localhost:8444/healthz/ready"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-k",
+          "-sS",
+          "-f",
+          "https://localhost:8444/healthz/ready",
+        ]
       interval: 30s
       timeout: 20s
       retries: 3

@@ -24,7 +24,6 @@ func NewTestFederatedIdentityCredentialsClient(subscriptionID string) (*utilmsi.
 			Transport: newFakeFederatedIdentityCredentialsClient(),
 		},
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create FederatedIdentityCredentialsClient: %v", err)
 	}

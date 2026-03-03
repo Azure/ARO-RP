@@ -127,9 +127,12 @@ func TestFilterVmSizes(t *testing.T) {
 				"Fake_Sku": {
 					Name: pointerutils.ToPtr("Fake_Sku"),
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{{
-						ReasonCode: pointerutils.ToPtr(armcompute.ResourceSKURestrictionsReasonCodeNotAvailableForSubscription)}}),
-					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{{
-						Zones: pointerutils.ToSlicePtr([]string{"eastus-2"})},
+						ReasonCode: pointerutils.ToPtr(armcompute.ResourceSKURestrictionsReasonCodeNotAvailableForSubscription),
+					}}),
+					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+						{
+							Zones: pointerutils.ToSlicePtr([]string{"eastus-2"}),
+						},
 					}),
 					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{{
 						Name: pointerutils.ToPtr("some-capability"),

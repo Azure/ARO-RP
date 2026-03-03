@@ -88,7 +88,8 @@ func NewAAD(log *logrus.Entry,
 	clientCerts []*x509.Certificate,
 	allGroups []string,
 	unauthenticatedRouter *mux.Router,
-	verifier oidc.Verifier) (*aad, error) {
+	verifier oidc.Verifier,
+) (*aad, error) {
 	if len(sessionKey) != 32 {
 		return nil, errors.New("invalid sessionKey")
 	}

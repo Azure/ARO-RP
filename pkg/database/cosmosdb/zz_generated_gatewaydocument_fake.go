@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeGatewayDocumentTriggerHandler func(context.Context, *pkg.GatewayDocument) error
-type fakeGatewayDocumentQueryHandler func(GatewayDocumentClient, *Query, *Options) GatewayDocumentRawIterator
+type (
+	fakeGatewayDocumentTriggerHandler func(context.Context, *pkg.GatewayDocument) error
+	fakeGatewayDocumentQueryHandler   func(GatewayDocumentClient, *Query, *Options) GatewayDocumentRawIterator
+)
 
 var _ GatewayDocumentClient = &FakeGatewayDocumentClient{}
 

@@ -26,6 +26,9 @@ var denylist = []string{
 	"v4-eastus",
 	"v4-australiasoutheast",
 	"v4-westeurope",
+	"v4-eastus-aks1",
+	"v4-australiasoutheast-aks1",
+	"v4-westeurope-aks1",
 	"management-westeurope",
 	"management-eastus",
 	"management-australiasoutheast",
@@ -64,7 +67,6 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID")
-
 	if err != nil {
 		return err
 	}
@@ -85,7 +87,7 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		ttl = defaultTTL
 	}
 
-	var createdTag = defaultCreatedAtTag
+	createdTag := defaultCreatedAtTag
 	if os.Getenv("AZURE_PURGE_CREATED_TAG") != "" {
 		createdTag = os.Getenv("AZURE_PURGE_CREATED_TAG")
 	}
@@ -108,6 +110,11 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		return err
 	}
 
+	err = rc.CleanOrphanedE2EServicePrincipals(ctx, settings.ttl)
+	if err != nil {
+		log.Errorf("Error cleaning orphaned service principals: %v", err)
+	}
+
 	return rc.CleanResourceGroups(ctx)
 }
 
@@ -127,13 +134,9 @@ func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *lo
 	// NSG from the vnet, thus breaking inbound access to the cluster.
 	// We use purge=true to distinguish between dev and prod clusters:
 	// https://github.com/Azure/ARO-RP/blob/master/pkg/cluster/deploybaseresources.go#L81-L87
-	devCluster := false
-	if resourceGroup.Tags != nil {
-		_, devCluster = resourceGroup.Tags["purge"]
-	}
-	if !devCluster {
-		return false
-	}
+	// Previously we only evaluated resource groups that had a "purge" tag
+	// (dev clusters). Removed that gate so prod e2e clusters are also
+	// considered for deletion by the subsequent TTL/persist/createdAt checks.
 
 	// if prefix is set we check if we need to evaluate this group for purge
 	// before we check other fields.

@@ -75,12 +75,12 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 	ext.State = admin.MaintenanceManifestStatePending
 
 	if ext.RunAfter == 0 {
-		ext.RunAfter = int(f.now().Unix())
+		ext.RunAfter = f.now().Unix()
 	}
 
 	// add a 7d timeout by default
 	if ext.RunBefore == 0 {
-		ext.RunBefore = int(f.now().Add(time.Hour * 7 * 24).Unix())
+		ext.RunBefore = f.now().Add(time.Hour * 7 * 24).Unix()
 	}
 
 	err = validator.Static(ext, nil)
