@@ -152,7 +152,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(s.changefeedInterval)
 	defer t.Stop()
 
 	if stop != nil {
@@ -241,7 +241,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 	docs := make([]*api.MaintenanceScheduleDocument, 0)
 
 	for {
-		d, err := i.Next(ctx, -1)
+		d, err := i.Next(ctx, s.changefeedBatchSize)
 		if err != nil {
 			return nil, err
 		}

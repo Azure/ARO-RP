@@ -53,6 +53,9 @@ type service struct {
 
 	b buckets.BucketWorker[*api.OpenShiftClusterDocument]
 
+	changefeedBatchSize int
+	changefeedInterval  time.Duration
+
 	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
 
@@ -88,6 +91,9 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
 		now:         time.Now,
 		pollTime:    time.Minute,
+
+		changefeedBatchSize: 50,
+		changefeedInterval:  10 * time.Second,
 
 		serveHealthz: true,
 	}
@@ -143,7 +149,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(s.changefeedInterval)
 	defer t.Stop()
 
 	if stop != nil {
@@ -195,7 +201,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	docs := make([]*api.OpenShiftClusterDocument, 0)
 
 	for {
-		d, err := i.Next(ctx, -1)
+		d, err := i.Next(ctx, s.changefeedBatchSize)
 		if err != nil {
 			return nil, err
 		}
