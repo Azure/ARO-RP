@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/mimo/scheduler"
 )
@@ -19,82 +20,89 @@ import (
 func (f *frontend) putAdminMaintScheduleCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	b, err := f._putAdminMaintSchedulePut(ctx, r)
+	isCreated, b, err := f._putAdminMaintSchedulePut(ctx, r)
 
 	if cloudErr, ok := err.(*api.CloudError); ok {
 		api.WriteCloudError(w, cloudErr)
 		return
 	}
 
-	err = statusCodeError(http.StatusCreated)
+	if isCreated {
+		err = statusCodeError(http.StatusCreated)
+	} else {
+		err = statusCodeError(http.StatusOK)
+	}
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _putAdminMaintSchedulePut(ctx context.Context, r *http.Request) ([]byte, error) {
+func (f *frontend) _putAdminMaintSchedulePut(ctx context.Context, r *http.Request) (bool, []byte, error) {
 	converter := f.apis[admin.APIVersion].MaintenanceScheduleConverter
 	validator := f.apis[admin.APIVersion].MaintenanceScheduleStaticValidator
 
 	dbMaintenanceSchedules, err := f.dbGroup.MaintenanceSchedules()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return false, nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 	var ext *admin.MaintenanceSchedule
 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	if len(body) == 0 || !json.Valid(body) {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized.")
+		return false, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized.")
 	}
 	err = json.Unmarshal(body, &ext)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error())
+		return false, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error())
 	}
 
 	var schedDoc *api.MaintenanceScheduleDocument
-	isCreate := true
+	isCreate := false
 
 	if ext.ID != "" {
-		isCreate = false
-
 		schedDoc, err = dbMaintenanceSchedules.Get(ctx, ext.ID)
-		if err != nil {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInternalServerError, "", "Failure fetching existing schedule: "+err.Error())
-		}
-
-		err = validator.Static(ext, schedDoc)
-		if err != nil {
-			return nil, err
+		if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+			isCreate = true
+			// Schedule not found, so it's a new one with a fixed ID
+		} else if err != nil {
+			return false, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInternalServerError, "", "Failure fetching existing schedule: "+err.Error())
 		}
 	} else {
-		// fill in the ID
+		isCreate = true
 		ext.ID = dbMaintenanceSchedules.NewUUID()
-		schedDoc = &api.MaintenanceScheduleDocument{ID: ext.ID}
+	}
 
+	if isCreate {
 		err = validator.Static(ext, nil)
 		if err != nil {
-			return nil, err
+			return false, nil, err
 		}
+		schedDoc = &api.MaintenanceScheduleDocument{ID: ext.ID}
+		converter.ToInternal(ext, schedDoc)
+	} else {
+		err = validator.Static(ext, schedDoc)
+		if err != nil {
+			return false, nil, err
+		}
+		converter.ToInternal(ext, schedDoc)
 	}
 
 	// Validate the calendar schedule is valid
 	_, err = scheduler.ParseCalendar(ext.Schedule)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "schedule", err.Error())
+		return false, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "schedule", err.Error())
 	}
-
-	converter.ToInternal(ext, schedDoc)
 
 	var savedDoc *api.MaintenanceScheduleDocument
 	if isCreate {
 		savedDoc, err = dbMaintenanceSchedules.Create(ctx, schedDoc)
 		if err != nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+			return false, nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 		}
 	} else {
 		savedDoc, err = dbMaintenanceSchedules.Update(ctx, schedDoc)
 		if err != nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+			return false, nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 		}
 	}
-
-	return json.MarshalIndent(converter.ToExternal(savedDoc), "", "    ")
+	resp, err := json.MarshalIndent(converter.ToExternal(savedDoc), "", "    ")
+	return isCreate, resp, err
 }
