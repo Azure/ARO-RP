@@ -110,7 +110,7 @@ func (f *frontend) _postAdminMaintManifestCancelBatch(ctx context.Context, log *
 	for {
 		docs, err := i.Next(ctx, 50)
 		if err != nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Errorf("failed reading next schedule document: %w", err).Error())
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Errorf("failed reading next document: %w", err).Error())
 		}
 		if docs == nil {
 			break
