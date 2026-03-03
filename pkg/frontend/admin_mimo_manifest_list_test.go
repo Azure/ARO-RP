@@ -189,8 +189,6 @@ func TestMIMOListManifests(t *testing.T) {
 				tt.limit = 100
 			}
 
-			fmt.Printf("limit: %d", tt.limit)
-
 			resp, b, err := ti.request(http.MethodGet,
 				fmt.Sprintf("https://server/admin%s/maintenancemanifests?limit=%d", resourceID, tt.limit),
 				http.Header{
