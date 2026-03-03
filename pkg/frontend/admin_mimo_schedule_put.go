@@ -63,7 +63,7 @@ func (f *frontend) _putAdminMaintSchedulePut(ctx context.Context, r *http.Reques
 			isCreate = true
 			// Schedule not found, so it's a new one with a fixed ID
 		} else if err != nil {
-			return false, nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInternalServerError, "", "Failure fetching existing schedule: "+err.Error())
+			return false, nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Failure fetching existing schedule: "+err.Error())
 		}
 	} else {
 		isCreate = true
