@@ -166,13 +166,7 @@ func ParseCalendar(s string) (cal calendar, reterr error) {
 
 func IsValid(t time.Time, sched calendar) bool {
 	if len(sched.Year) != 0 {
-		yearOK := false
-		for _, s := range sched.Year {
-			if s >= t.Year() {
-				yearOK = true
-				break
-			}
-		}
+		yearOK := slices.Contains(sched.Year, t.Year())
 		if !yearOK {
 			return false
 		}

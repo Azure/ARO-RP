@@ -224,6 +224,13 @@ func TestNext(t *testing.T) {
 			want2: true,
 		},
 		{
+			name:  "fixed year when it is this year, monthly",
+			now:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			sched: calendar{Year: []int{2026}, Day: []int{1}, Hour: []int{0}, Minute: []int{0}},
+			want:  "2026-02-01 00:00:00 +0000 UTC",
+			want2: true,
+		},
+		{
 			name:  "next month, over year",
 			now:   time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC),
 			sched: calendar{Day: []int{1}, Hour: []int{0}, Minute: []int{0}},
@@ -235,6 +242,21 @@ func TestNext(t *testing.T) {
 			now:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 			sched: calendar{Hour: []int{0}, Minute: []int{0}},
 			want:  "2026-01-02 00:00:00 +0000 UTC",
+			want2: true,
+		},
+		{
+			name:  "specific days",
+			now:   time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC),
+			sched: calendar{Day: []int{1, 7, 14, 23}, Hour: []int{0}, Minute: []int{0}},
+			want:  "2026-01-14 00:00:00 +0000 UTC",
+			want2: true,
+		},
+		{
+			name: "specific days and has to roll over",
+			now:  time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC),
+			// april doesn't have 31 days so it should go to the 1st
+			sched: calendar{Day: []int{1, 31}, Hour: []int{0}, Minute: []int{0}},
+			want:  "2026-05-01 00:00:00 +0000 UTC",
 			want2: true,
 		},
 		{
@@ -259,6 +281,20 @@ func TestNext(t *testing.T) {
 			want2: true,
 		},
 		{
+			name:  "daily in march",
+			now:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			sched: calendar{Month: []int{3}, Hour: []int{0}, Minute: []int{0}},
+			want:  "2026-03-01 00:00:00 +0000 UTC",
+			want2: true,
+		},
+		{
+			name:  "daily in jan or march when it is jan but can't run",
+			now:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			sched: calendar{Month: []int{1, 3}, Day: []int{1}, Hour: []int{0}, Minute: []int{0}},
+			want:  "2026-03-01 00:00:00 +0000 UTC",
+			want2: true,
+		},
+		{
 			name:  "next day (feb 28+1 26)",
 			now:   time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC),
 			sched: calendar{Hour: []int{0}, Minute: []int{0}},
@@ -277,6 +313,20 @@ func TestNext(t *testing.T) {
 			now:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 			sched: calendar{Minute: []int{0}},
 			want:  "2026-01-01 01:00:00 +0000 UTC",
+			want2: true,
+		},
+		{
+			name:  "specific hours",
+			now:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			sched: calendar{Hour: []int{6, 12, 18}, Minute: []int{0}},
+			want:  "2026-01-01 06:00:00 +0000 UTC",
+			want2: true,
+		},
+		{
+			name:  "specific hours and the day has to roll over",
+			now:   time.Date(2026, 1, 1, 20, 0, 0, 0, time.UTC),
+			sched: calendar{Hour: []int{6, 12, 18}, Minute: []int{0}},
+			want:  "2026-01-02 06:00:00 +0000 UTC",
 			want2: true,
 		},
 		{
@@ -311,6 +361,12 @@ func TestNext(t *testing.T) {
 			name:  "never",
 			now:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 			sched: calendar{Year: []int{2025}},
+			want2: false,
+		},
+		{
+			name:  "fixed year (past)",
+			now:   time.Date(2028, 1, 1, 0, 0, 0, 0, time.UTC),
+			sched: calendar{Year: []int{2027}, Month: []int{1}, Day: []int{1}, Hour: []int{0}, Minute: []int{0}},
 			want2: false,
 		},
 	}
