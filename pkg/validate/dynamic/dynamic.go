@@ -681,6 +681,7 @@ func (c closure) usingCheckAccessV2() (result bool, err error) {
 		if ok {
 			delete(actionsToFind, result.ActionId)
 			if result.AccessDecision != client.Allowed {
+				c.dv.log.Infof("permission %s not allowed for object ID: %s", result.ActionId, *c.oid)
 				return false, nil
 			}
 		}
