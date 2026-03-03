@@ -110,6 +110,60 @@ func TestMIMOCreateSchedule(t *testing.T) {
 			},
 			wantStatusCode: http.StatusCreated,
 		},
+		{
+			name:     "create with fixed ID",
+			fixtures: func(f *testdatabase.Fixture) {},
+			body: &admin.MaintenanceSchedule{
+				ID:                "08080808-0808-0808-0808-080808080001",
+				MaintenanceTaskID: "exampletask",
+				State:             admin.MaintenanceScheduleStateEnabled,
+				Schedule:          "*-*-* 12:00:00",
+				LookForwardCount:  1,
+				ScheduleAcross:    "12h",
+				Selectors: []*admin.MaintenanceScheduleSelector{
+					{
+						Key:      "foobar",
+						Operator: admin.MaintenanceScheduleSelectorOperatorIn,
+						Values:   []string{"baz"},
+					},
+				},
+			},
+			wantResult: func(c *testdatabase.Checker) {
+				c.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
+					ID: "08080808-0808-0808-0808-080808080001",
+					MaintenanceSchedule: api.MaintenanceSchedule{
+						MaintenanceTaskID: "exampletask",
+						State:             api.MaintenanceScheduleStateEnabled,
+						Schedule:          "*-*-* 12:00:00",
+						LookForwardCount:  1,
+						ScheduleAcross:    "12h",
+						Selectors: []*api.MaintenanceScheduleSelector{
+							{
+								Key:      "foobar",
+								Operator: api.MaintenanceScheduleSelectorOperatorIn,
+								Values:   []string{"baz"},
+							},
+						},
+					},
+				})
+			},
+			wantResponse: &admin.MaintenanceSchedule{
+				ID:                "08080808-0808-0808-0808-080808080001",
+				MaintenanceTaskID: "exampletask",
+				State:             admin.MaintenanceScheduleStateEnabled,
+				Schedule:          "*-*-* 12:00:00",
+				LookForwardCount:  1,
+				ScheduleAcross:    "12h",
+				Selectors: []*admin.MaintenanceScheduleSelector{
+					{
+						Key:      "foobar",
+						Operator: admin.MaintenanceScheduleSelectorOperatorIn,
+						Values:   []string{"baz"},
+					},
+				},
+			},
+			wantStatusCode: http.StatusCreated,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			now := func() time.Time { return time.Unix(1000, 0) }
@@ -240,7 +294,7 @@ func TestMIMOPutSchedule(t *testing.T) {
 					},
 				},
 			},
-			wantStatusCode: http.StatusCreated,
+			wantStatusCode: http.StatusOK,
 		},
 		{
 			name: "can't update maint ID",
