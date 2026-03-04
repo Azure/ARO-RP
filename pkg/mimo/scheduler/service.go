@@ -362,6 +362,9 @@ out:
 					s.workers.Add(-1)
 					s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
 				}()
+				// Run each process in the background context so that completion
+				// of the current loop is finished before we exit cleanly, as
+				// the outer process will wait for s.workers to become 0.
 				_, err := a.Process(context.Background())
 				if err != nil {
 					log.Error(err)
