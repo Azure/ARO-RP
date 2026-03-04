@@ -106,10 +106,10 @@ func (e *fakeMetricsEmitter) AssertFloats(assertions ...MetricsAssertion[float64
 
 		val, ok := e.floats.LoadAndDelete(seekingKey)
 		if !ok {
-			e.errorf("float metric '%s' with dims '%s' was not emitted", a.MetricName, a.Dimensions)
+			e.errorf("float metric '%s' with dims '%v' was not emitted", a.MetricName, a.Dimensions)
 		} else {
 			if val != a.Value {
-				e.errorf("float metric '%s' with dims '%s' had incorrect emitted value %f, wanted %f", a.MetricName, a.Dimensions, val, a.Value)
+				e.errorf("float metric '%s' with dims '%v' had incorrect emitted value %f, wanted %f", a.MetricName, a.Dimensions, val, a.Value)
 			}
 		}
 	}
@@ -118,11 +118,11 @@ func (e *fakeMetricsEmitter) AssertFloats(assertions ...MetricsAssertion[float64
 		dims := map[string]string{}
 		err := json.Unmarshal([]byte(k), &dims)
 		if err != nil {
-			e.errorf("failed unmarshalling: %s", err)
+			e.errorf("failed unmarshalling: %s", err.Error())
 		}
 		key := dims["__METRIC_NAME"]
 		delete(dims, "__METRIC_NAME")
-		e.errorf("float metric '%s' with dims '%s' not asserted upon", key, dims)
+		e.errorf("float metric '%s' with dims '%v' not asserted upon", key, dims)
 	}
 
 	e.assertedOnFloats = true
@@ -147,7 +147,7 @@ func (e *fakeMetricsEmitter) AssertGauges(assertions ...MetricsAssertion[int64])
 		dims := map[string]string{}
 		err := json.Unmarshal([]byte(k), &dims)
 		if err != nil {
-			e.errorf("failed unmarshalling: %s", err)
+			e.errorf("failed unmarshalling: %s", err.Error())
 		}
 		key := dims["__METRIC_NAME"]
 		delete(dims, "__METRIC_NAME")
