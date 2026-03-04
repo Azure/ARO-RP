@@ -28,7 +28,8 @@ type appLensActions struct {
 }
 
 func NewAppLensActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
-	subscriptionDoc *api.SubscriptionDocument) (AppLensActions, error) {
+	subscriptionDoc *api.SubscriptionDocument,
+) (AppLensActions, error) {
 	fpClientCertCred, err := env.FPNewClientCertificateCredential(env.Environment().AppLensTenantID, nil)
 	if err != nil {
 		return nil, err
@@ -49,7 +50,6 @@ func NewAppLensActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCl
 
 func (a *appLensActions) AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error) {
 	detector, err := a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId, Location: a.oc.Location})
-
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,6 @@ func (a *appLensActions) AppLensGetDetector(ctx context.Context, detectorId stri
 
 func (a *appLensActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {
 	detectors, err := a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID, Location: a.oc.Location})
-
 	if err != nil {
 		return nil, err
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -68,18 +68,18 @@ func TestAdminListVMSizeList(t *testing.T) {
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
 					VMSizeList(gomock.Any()).
-					Return([]mgmtcompute.ResourceSku{
+					Return([]*armcompute.ResourceSKU{
 						{
 							Name: pointerutils.ToPtr("Standard_D8s_v90"),
-							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{
 								{
-									Type: mgmtcompute.Location,
+									Type: pointerutils.ToPtr(armcompute.ResourceSKURestrictionsTypeLocation),
 								},
-							},
+							}),
 						},
 						{
 							Name:         pointerutils.ToPtr("Standard_D8s_v9001"),
-							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 						},
 					}, nil)
 			},
@@ -140,7 +140,6 @@ func TestAdminListVMSizeList(t *testing.T) {
 			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 				return a, nil
 			}, nil, nil)
-
 			if err != nil {
 				t.Fatal(err)
 			}

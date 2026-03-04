@@ -56,7 +56,7 @@ func TestMonitor(t *testing.T) {
 					},
 					Status: hivev1.ClusterDeploymentStatus{
 						Conditions: []hivev1.ClusterDeploymentCondition{
-							{ //should be returned
+							{ // should be returned
 								Type:   hivev1.ClusterReadyCondition,
 								Status: corev1.ConditionFalse,
 							},
@@ -110,7 +110,7 @@ func TestMonitor(t *testing.T) {
 					},
 					Status: hivev1.ClusterDeploymentStatus{
 						Conditions: []hivev1.ClusterDeploymentCondition{
-							{ //should be returned
+							{ // should be returned
 								Type:   hivev1.ClusterReadyCondition,
 								Status: corev1.ConditionFalse,
 							},

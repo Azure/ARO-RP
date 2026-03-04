@@ -49,7 +49,8 @@ func NewActuator(
 	clusterResourceID string,
 	oc database.OpenShiftClusters,
 	mmf database.MaintenanceManifests,
-	now func() time.Time) (Actuator, error) {
+	now func() time.Time,
+) (Actuator, error) {
 	a := &actuator{
 		env:               _env,
 		log:               log,
@@ -108,7 +109,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 	// Check for manifests that have timed out first
 	for _, doc := range docList {
-		if evaluationTime.After(time.Unix(int64(doc.MaintenanceManifest.RunBefore), 0)) {
+		if evaluationTime.After(time.Unix(doc.MaintenanceManifest.RunBefore, 0)) {
 			taskLog := a.log.WithFields(logrus.Fields{
 				"manifestID": doc.ID,
 				"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,

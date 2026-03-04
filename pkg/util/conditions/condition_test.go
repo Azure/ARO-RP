@@ -29,7 +29,7 @@ func TestSetCondition(t *testing.T) {
 	version := "unknown"
 
 	kubeclock = clockTesting.NewFakeClock(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
-	var transitionTime = metav1.Time{Time: kubeclock.Now()}
+	transitionTime := metav1.Time{Time: kubeclock.Now()}
 
 	for _, tt := range []struct {
 		name    string

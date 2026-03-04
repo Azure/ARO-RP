@@ -72,6 +72,7 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
 	return dh.EnsureDeletedGVR(ctx, groupKind, namespace, name, "")
 }
+
 func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error {
 	gvr, err := dh.Resolve(groupKind, optionalVersion)
 	if err != nil {

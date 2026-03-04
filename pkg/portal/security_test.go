@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -19,8 +20,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
-
-	"k8s.io/utils/strings/slices"
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -394,7 +393,8 @@ func TestSecurity(t *testing.T) {
 					}
 
 					if tt2.authenticated && !slices.Contains([]string{
-						"/callback", "/healthz/ready", "/api/login", "/api/logout"}, tt.name) {
+						"/callback", "/healthz/ready", "/api/login", "/api/logout",
+					}, tt.name) {
 						payload.CallerIdentities[0].CallerIdentityValue = "username"
 					}
 					testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{payload})

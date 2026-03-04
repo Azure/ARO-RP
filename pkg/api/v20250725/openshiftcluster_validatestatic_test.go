@@ -849,7 +849,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.MasterProfile.VMSize = "Standard_D2s_v3"
 			},
-			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid.",
+			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid for version '4.10.0'.",
 		},
 		{
 			name: "subnetId invalid",

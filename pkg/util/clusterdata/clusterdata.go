@@ -34,7 +34,7 @@ type ParallelEnricher struct {
 	enrichers map[string]ClusterEnricher
 	emitter   metrics.Emitter
 	dialer    proxy.Dialer
-	//only used for testing because the metrics emission is async
+	// only used for testing because the metrics emission is async
 	metricsWG *sync.WaitGroup
 }
 
@@ -117,7 +117,7 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 
 		expectedResults++
 
-		//only used in testing
+		// only used in testing
 		if p.metricsWG != nil {
 			p.metricsWG.Add(1)
 		}
@@ -126,7 +126,7 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 		go func() {
 			t := time.Now()
 
-			//only used in testing
+			// only used in testing
 			if p.metricsWG != nil {
 				defer p.metricsWG.Done()
 			}
@@ -146,12 +146,12 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 
 func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan error, expectedResults int) {
 	timeout := false
-	//retrieve the errors from the routines
+	// retrieve the errors from the routines
 	for i := 0; i < expectedResults; i++ {
 		err := <-errChannel
 		switch err {
 		case nil:
-			//do nothing
+			// do nothing
 		case context.Canceled, context.DeadlineExceeded:
 			if !timeout {
 				p.emitter.EmitGauge("enricher.timeouts", 1, nil)
@@ -168,7 +168,8 @@ func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan erro
 // if some clients fail to be initialized, it also returns the list of enrichers
 // that we should skip because the clients they are using failed to instantiate
 func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) (
-	k8s kubernetes.Interface, machineclient machineclient.Interface, operatorclient operatorclient.Interface, configclient configclient.Interface, unsuccessfulEnrichers map[string]bool) {
+	k8s kubernetes.Interface, machineclient machineclient.Interface, operatorclient operatorclient.Interface, configclient configclient.Interface, unsuccessfulEnrichers map[string]bool,
+) {
 	unsuccessfulEnrichers = make(map[string]bool)
 	k8s, err := p.setupK8sClient(ctx, oc)
 	if err != nil {

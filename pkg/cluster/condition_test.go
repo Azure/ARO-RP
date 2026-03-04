@@ -118,7 +118,8 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 			log: logrus.NewEntry(logrus.StandardLogger()),
 			maocli: machinefake.NewSimpleClientset(
 				&machinev1beta1.Machine{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1",
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "node1",
 						Namespace: "openshift-machine-api",
 						Labels: map[string]string{
 							"machine.openshift.io/cluster-api-machine-role": "worker",
@@ -131,7 +132,8 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 					},
 				},
 				&machinev1beta1.Machine{
-					ObjectMeta: metav1.ObjectMeta{Name: "node2",
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "node2",
 						Namespace: "openshift-machine-api",
 						Labels: map[string]string{
 							"machine.openshift.io/cluster-api-machine-role": "worker",
@@ -144,7 +146,8 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 					},
 				},
 				&machinev1beta1.Machine{
-					ObjectMeta: metav1.ObjectMeta{Name: "node3",
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "node3",
 						Namespace: "openshift-machine-api",
 						Labels: map[string]string{
 							"machine.openshift.io/cluster-api-machine-role": "worker",
@@ -157,7 +160,8 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 					},
 				},
 				&machinev1beta1.Machine{
-					ObjectMeta: metav1.ObjectMeta{Name: "node4-has-no-status",
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "node4-has-no-status",
 						Namespace: "openshift-machine-api",
 						Labels: map[string]string{
 							"machine.openshift.io/cluster-api-machine-role": "worker",

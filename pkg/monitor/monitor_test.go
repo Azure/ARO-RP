@@ -24,8 +24,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-var fakeBucketAllocator = bucket.Random{}
-var fakeDefaultLocation = "centralus"
+var (
+	fakeBucketAllocator = bucket.Random{}
+	fakeDefaultLocation = "centralus"
+)
 
 func TestMonitor(t *testing.T) {
 	numWorker := 3

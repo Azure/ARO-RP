@@ -15,6 +15,20 @@ func (c *SubscriptionDocuments) String() string {
 	return encodeJSON(c)
 }
 
+func (c *SubscriptionDocuments) GetCount() int {
+	if c == nil {
+		return 0
+	}
+	return c.Count
+}
+
+func (c *SubscriptionDocuments) Docs() []*SubscriptionDocument {
+	if c == nil {
+		return []*SubscriptionDocument{}
+	}
+	return c.SubscriptionDocuments
+}
+
 // SubscriptionDocument represents a subscription document.
 // pkg/database/cosmosdb requires its definition.
 type SubscriptionDocument struct {

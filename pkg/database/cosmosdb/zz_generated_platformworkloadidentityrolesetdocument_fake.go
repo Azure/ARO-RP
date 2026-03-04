@@ -13,8 +13,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler func(context.Context, *pkg.PlatformWorkloadIdentityRoleSetDocument) error
-type fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler func(PlatformWorkloadIdentityRoleSetDocumentClient, *Query, *Options) PlatformWorkloadIdentityRoleSetDocumentRawIterator
+type (
+	fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler func(context.Context, *pkg.PlatformWorkloadIdentityRoleSetDocument) error
+	fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler   func(PlatformWorkloadIdentityRoleSetDocumentClient, *Query, *Options) PlatformWorkloadIdentityRoleSetDocumentRawIterator
+)
 
 var _ PlatformWorkloadIdentityRoleSetDocumentClient = &FakePlatformWorkloadIdentityRoleSetDocumentClient{}
 

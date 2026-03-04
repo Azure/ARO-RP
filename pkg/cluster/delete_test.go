@@ -958,6 +958,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				tt.kvClientMocks(mockKvClient)
 			}
 
+			mockEnv := mock_env.NewMockInterface(controller)
+			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(now)
+
 			factory := mock_msidataplane.NewMockClientFactory(controller)
 			client := mock_msidataplane.NewMockClient(controller)
 			if tt.msiDataplaneStub != nil {
@@ -971,7 +974,7 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
 				clusterMsiKeyVaultStore:                mockKvClient,
 				msiDataplane:                           factory,
-				now:                                    now,
+				env:                                    mockEnv,
 			}
 
 			err := m.deleteFederatedCredentials(ctx)

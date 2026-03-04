@@ -104,7 +104,7 @@ func cloudConfigSecretFromChanges(secret *corev1.Secret, cf map[string]interface
 // what's in the cluster doc.
 func (m *manager) servicePrincipalUpdated(ctx context.Context) (*corev1.Secret, error) {
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	//data:
+	// data:
 	// cloud-config: <base64 map[string]string with keys 'aadClientId' and 'aadClientSecret'>
 	secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-cloud-provider", metav1.GetOptions{})
 	if err != nil {
@@ -204,7 +204,7 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	//data:
+	// data:
 	// azure_client_id: secret_id
 	// azure_client_secret: secret_value
 	// azure_tenant_id: tenant_id

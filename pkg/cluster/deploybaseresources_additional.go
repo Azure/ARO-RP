@@ -555,8 +555,8 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 					Name: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 				},
 			},
-			LoadBalancingRules: []*sdknetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
-			Probes:             []*sdknetwork.Probe{},             //required to override default LB rules for port 80 and 443
+			LoadBalancingRules: []*sdknetwork.LoadBalancingRule{}, // required to override default LB rules for port 80 and 443
+			Probes:             []*sdknetwork.Probe{},             // required to override default LB rules for port 80 and 443
 			OutboundRules: []*sdknetwork.OutboundRule{
 				{
 					Properties: &sdknetwork.OutboundRulePropertiesFormat{

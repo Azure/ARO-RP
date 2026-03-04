@@ -24,7 +24,7 @@ RUN npm run lint && npm run build
 ###############################################################################
 # Stage 2: Compile the Golang RP code
 ###############################################################################
-FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20 AS builder
+FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21 AS builder
 ARG ARO_VERSION
 LABEL aro-builder=true
 USER root
@@ -71,7 +71,6 @@ RUN hack/fips/validate-fips.sh ./aro
 ###############################################################################
 FROM ${REGISTRY}/ubi9/ubi-minimal AS final
 LABEL aro-final=true
-RUN microdnf update -y && microdnf clean all -y
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 COPY --from=builder /app/report.xml /app/coverage.xml /app/
 ENTRYPOINT ["aro"]

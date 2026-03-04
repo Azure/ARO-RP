@@ -46,6 +46,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 
 	return &doc
 }
+
 func TestSetDefaults(t *testing.T) {
 	for _, tt := range []struct {
 		name  string

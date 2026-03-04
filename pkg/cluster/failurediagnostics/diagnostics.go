@@ -23,7 +23,6 @@ func NewFailureDiagnostics(log *logrus.Entry, _env env.Interface,
 	doc *api.OpenShiftClusterDocument,
 
 	virtualMachines compute.VirtualMachinesClient,
-
 ) *manager {
 	return &manager{
 		log:             log,

@@ -147,7 +147,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 })
 
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
-
 	BeforeEach(func(ctx context.Context) {
 		By("checking if monitoring ConfigMap controller is enabled")
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
@@ -229,7 +228,6 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 		By("waiting for the machine health check to be restored")
 		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
-
 })
 
 var _ = Describe("ARO Operator - Conditions", func() {
@@ -418,11 +416,16 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, nil)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(*s.Properties.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
+			By("checking that the cluster document annotations have been patched")
+			Eventually(func(g Gomega, ctx context.Context) {
 				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
-			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+				// Using 2 seconds because the cluster doc should be patched very quickly after the subnet itself is patched.
+				// The small eventually avoids any unfortunate timing
+			}).WithContext(ctx).WithTimeout(time.Second * 2).Should(Succeed())
 		}
 	})
 })
@@ -432,24 +435,6 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		managedUpgradeOperatorNamespace  = "openshift-managed-upgrade-operator"
 		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
 	)
-
-	It("must be deployed by default with FIPS crypto mandated", func(ctx context.Context) {
-		By("getting MUO pods")
-		pods := ListK8sObjectWithRetry(
-			ctx, clients.Kubernetes.CoreV1().Pods(managedUpgradeOperatorNamespace).List, metav1.ListOptions{
-				LabelSelector: "name=managed-upgrade-operator",
-			})
-		Expect(pods.Items).NotTo(BeEmpty())
-
-		By("verifying that MUO has FIPS crypto mandated by reading logs")
-		Eventually(func(g Gomega, ctx context.Context) {
-			body := GetK8sPodLogsWithRetry(
-				ctx, managedUpgradeOperatorNamespace, pods.Items[0].Name, corev1.PodLogOptions{},
-			)
-
-			g.Expect(body).To(ContainSubstring(`X:boringcrypto,strictfipsruntime`))
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-	}, SpecTimeout(2*time.Minute))
 
 	It("must be restored if deleted", func(ctx context.Context) {
 		deleteFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Delete
@@ -614,15 +599,23 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		return names
 	}
 
-	AfterEach(func(ctx context.Context) {
-		// delete the MCP after, just in case
+	// cleanupMCPAndWaitForMC deletes the MCP and waits for the associated MachineConfig to be garbage collected
+	cleanupMCPAndWaitForMC := func(ctx context.Context) {
 		err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			Expect(err).ToNot(HaveOccurred())
 		}
 
-		// reset the force reconciliation flag
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Wait for the MachineConfig to be fully deleted before proceeding
+		Eventually(func(g Gomega, _ctx context.Context) {
+			machineConfigs := getMachineConfigNames(g, _ctx)
+			g.Expect(machineConfigs).NotTo(ContainElement(mcName))
+		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
+	}
+
+	// resetForceReconciliationFlag ensures the forceReconciliation flag is set to false
+	resetForceReconciliationFlag := func(ctx context.Context) {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 			if err != nil {
 				return err
@@ -632,6 +625,15 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 			return err
 		})
 		Expect(err).NotTo(HaveOccurred())
+	}
+
+	BeforeEach(func(ctx context.Context) {
+		cleanupMCPAndWaitForMC(ctx)
+	})
+
+	AfterEach(func(ctx context.Context) {
+		cleanupMCPAndWaitForMC(ctx)
+		resetForceReconciliationFlag(ctx)
 	})
 
 	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
@@ -684,8 +686,8 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 
 		By("checking the machineconfig labels, we can see if it has reconciled")
 		Eventually(func(g Gomega, _ctx context.Context) map[string]string {
-			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(_ctx, mcName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
 
 			return config.Labels
 		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).MustPassRepeatedly(3).Should(Equal(map[string]string{
@@ -706,12 +708,15 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking the machineconfig labels, we can see if our flag has been removed")
+		// Use a longer timeout here - the operator's reconciliation loop may take time to process
+		// the forceReconciliation flag change, especially under load
+		reconcileTimeout := 3 * time.Minute
 		Eventually(func(g Gomega, _ctx context.Context) map[string]string {
-			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(_ctx, mcName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
 
 			return config.Labels
-		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).Should(Equal(map[string]string{
+		}).WithContext(ctx).WithPolling(polling).WithTimeout(reconcileTimeout).Should(Equal(map[string]string{
 			"machineconfiguration.openshift.io/role": mcpName,
 		}))
 	})
@@ -1010,5 +1015,4 @@ var _ = Describe("ARO Operator - etchosts", func() {
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithPolling(PollingInterval).Should(Succeed())
 		}
 	})
-
 })

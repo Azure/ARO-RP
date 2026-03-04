@@ -35,7 +35,8 @@ func TestVMSerialConsole(t *testing.T) {
 				iothing := bytes.NewBufferString("outputhere")
 
 				vmc.EXPECT().GetSerialConsoleForVM(gomock.Any(), clusterRG, "vm1", gomock.Any()).DoAndReturn(func(ctx context.Context,
-					rg string, vmName string, target io.Writer) error {
+					rg string, vmName string, target io.Writer,
+				) error {
 					_, err := io.Copy(target, iothing)
 					return err
 				})

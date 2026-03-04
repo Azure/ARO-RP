@@ -12,14 +12,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
-const DEFAULT_POLL_TIME = time.Second * 10
-const DEFAULT_TIMEOUT_DURATION = time.Minute * 20
+const (
+	DEFAULT_POLL_TIME        = time.Second * 10
+	DEFAULT_TIMEOUT_DURATION = time.Minute * 20
+)
 
 var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 	mimo.TLS_CERT_ROTATION_ID:     TLSCertRotation,
 	mimo.ACR_TOKEN_CHECKER_ID:     ACRTokenChecker,
 	mimo.OPERATOR_FLAGS_UPDATE_ID: UpdateOperatorFlags,
 	mimo.MDSD_CERT_ROTATION_ID:    MDSDCertRotation,
+	mimo.MSI_CERT_RENEWAL_ID:      MSICertificateRenewal,
 }
 
 func run(t utilmimo.TaskContext, s []steps.Step) error {

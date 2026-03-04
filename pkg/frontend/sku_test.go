@@ -11,10 +11,10 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -22,9 +22,9 @@ import (
 func TestValidateVMSku(t *testing.T) {
 	for _, tt := range []struct {
 		name                       string
-		restrictions               mgmtcompute.ResourceSkuRestrictionsReasonCode
-		restrictionLocation        *[]string
-		restrictedZones            []string
+		restrictions               armcompute.ResourceSKURestrictionsReasonCode
+		restrictionLocation        []*string
+		restrictedZones            []*string
 		workerProfile1Sku          string
 		workerProfile2Sku          string
 		masterProfileSku           string
@@ -131,10 +131,10 @@ func TestValidateVMSku(t *testing.T) {
 		},
 		{
 			name:         "worker sku exists in region but is not available in subscription",
-			restrictions: mgmtcompute.NotAvailableForSubscription,
-			restrictionLocation: &[]string{
+			restrictions: armcompute.ResourceSKURestrictionsReasonCodeNotAvailableForSubscription,
+			restrictionLocation: pointerutils.ToSlicePtr([]string{
 				"eastus",
-			},
+			}),
 			workerProfile1Sku:      "Standard_L80",
 			workerProfile2Sku:      "Standard_L80",
 			masterProfileSku:       "Standard_D4s_v2",
@@ -146,10 +146,10 @@ func TestValidateVMSku(t *testing.T) {
 		},
 		{
 			name:         "master sku exists in region but is not available in subscription",
-			restrictions: mgmtcompute.NotAvailableForSubscription,
-			restrictionLocation: &[]string{
+			restrictions: armcompute.ResourceSKURestrictionsReasonCodeNotAvailableForSubscription,
+			restrictionLocation: pointerutils.ToSlicePtr([]string{
 				"eastus",
-			},
+			}),
 			workerProfile1Sku:      "Standard_D4s_v2",
 			workerProfile2Sku:      "Standard_D4s_v2",
 			masterProfileSku:       "Standard_L80",
@@ -161,11 +161,11 @@ func TestValidateVMSku(t *testing.T) {
 		},
 		{
 			name:         "sku is restricted in a single zone",
-			restrictions: mgmtcompute.NotAvailableForSubscription,
-			restrictionLocation: &[]string{
+			restrictions: armcompute.ResourceSKURestrictionsReasonCodeNotAvailableForSubscription,
+			restrictionLocation: pointerutils.ToSlicePtr([]string{
 				"eastus",
-			},
-			restrictedZones:        []string{"3"},
+			}),
+			restrictedZones:        pointerutils.ToSlicePtr([]string{"3"}),
 			workerProfile1Sku:      "Standard_D4s_v2",
 			workerProfile2Sku:      "Standard_D4s_v2",
 			masterProfileSku:       "Standard_L80",
@@ -222,7 +222,7 @@ func TestValidateVMSku(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.restrictedZones == nil {
-				tt.restrictedZones = []string{"1", "2", "3"}
+				tt.restrictedZones = pointerutils.ToSlicePtr([]string{"1", "2", "3"})
 			}
 
 			controller := gomock.NewController(t)
@@ -255,52 +255,52 @@ func TestValidateVMSku(t *testing.T) {
 				return pointerutils.ToPtr("False")
 			}
 
-			skus := []mgmtcompute.ResourceSku{
+			skus := []*armcompute.ResourceSKU{
 				{
 					Name:      &tt.availableSku,
-					Locations: &[]string{"eastus"},
-					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-						{Zones: &[]string{"1, 2, 3"}},
-					},
-					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
-					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
+					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+						{Zones: pointerutils.ToSlicePtr([]string{"1, 2, 3"})},
+					}),
+					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
 						{
 							Name:  pointerutils.ToPtr("EncryptionAtHostSupported"),
 							Value: encryptionAtHost(tt.availableSkuHasEncryption),
 						},
-					},
+					}),
 					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 				{
 					Name:      &tt.availableSku2,
-					Locations: &[]string{"eastus"},
-					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-						{Zones: &[]string{"1, 2, 3"}},
-					},
-					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
-					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
+					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+						{Zones: pointerutils.ToSlicePtr([]string{"1, 2, 3"})},
+					}),
+					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
 						{
 							Name:  pointerutils.ToPtr("EncryptionAtHostSupported"),
 							Value: encryptionAtHost(tt.availableSku2HasEncryption),
 						},
-					},
+					}),
 					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 				{
 					Name:      &tt.restrictedSku,
-					Locations: &[]string{"eastus"},
-					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-						{Zones: &tt.restrictedZones},
-					},
-					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{
+					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+						{Zones: tt.restrictedZones},
+					}),
+					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{
 						{
-							ReasonCode: tt.restrictions,
-							RestrictionInfo: &mgmtcompute.ResourceSkuRestrictionInfo{
+							ReasonCode: pointerutils.ToPtr(tt.restrictions),
+							RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
 								Locations: tt.restrictionLocation,
 							},
 						},
-					},
-					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{},
+					}),
+					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{}),
 					ResourceType: pointerutils.ToPtr("virtualMachines"),
 				},
 			}
@@ -317,9 +317,9 @@ func TestValidateVMSku(t *testing.T) {
 				}
 			}
 
-			resourceSkusClient := mock_compute.NewMockResourceSkusClient(controller)
+			resourceSkusClient := mock_armcompute.NewMockResourceSKUsClient(controller)
 			resourceSkusClient.EXPECT().
-				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus")).
+				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus"), false).
 				Return(skus, tt.resourceSkusClientErr)
 
 			err := validateVMSku(context.Background(), oc, resourceSkusClient)

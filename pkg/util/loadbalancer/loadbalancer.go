@@ -47,7 +47,7 @@ func RemoveHealthProbe(lb *armnetwork.LoadBalancer, resourceID string) error {
 	}
 	lb.Properties.Probes = newProbes
 
-	//return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeInvalidParameter, "", "No health probes found for this loadbalancer")
+	// return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeInvalidParameter, "", "No health probes found for this loadbalancer")
 
 	return nil
 }

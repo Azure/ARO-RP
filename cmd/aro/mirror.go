@@ -48,7 +48,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
 		"SRC_AUTH_REDHAT")
-
 	if err != nil {
 		return err
 	}
@@ -76,7 +75,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 			"AZURE_CLIENT_SECRET",
 			"AZURE_SUBSCRIPTION_ID",
 			"AZURE_TENANT_ID")
-
 		if err != nil {
 			return err
 		}
@@ -120,7 +118,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 	var imageMirroringSummary []string
 
 	for _, ref := range []string{
-
 		// https://hub.docker.com/_/fedora
 		"registry.fedoraproject.org/fedora:42",
 
@@ -167,8 +164,8 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 
 		// OpenShift Automated Release Tooling partner images
 		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
-		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.23-openshift-4.19",
 		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20",
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21",
 	} {
 		l := mirrorLog.WithField("payload", ref)
 		startTime := time.Now()

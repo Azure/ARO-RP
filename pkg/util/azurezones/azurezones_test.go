@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
@@ -121,17 +121,17 @@ func TestDetermineZones(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlaneSku := &mgmtcompute.ResourceSku{
+			controlPlaneSku := &armcompute.ResourceSKU{
 				Name: pointerutils.ToPtr("controlPlaneSKU"),
-				LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-					{Zones: &tt.controlPlaneSkuZones},
-				},
+				LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+					{Zones: pointerutils.ToSlicePtr(tt.controlPlaneSkuZones)},
+				}),
 			}
-			workerSku := &mgmtcompute.ResourceSku{
+			workerSku := &armcompute.ResourceSKU{
 				Name: pointerutils.ToPtr("workerSKU"),
-				LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-					{Zones: &tt.workerSkuZones},
-				},
+				LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+					{Zones: pointerutils.ToSlicePtr(tt.workerSkuZones)},
+				}),
 			}
 
 			m := &availabilityZoneManager{

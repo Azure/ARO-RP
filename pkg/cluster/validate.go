@@ -5,11 +5,10 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -18,8 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/validate"
 )
-
-var errListVMResourceSKUs = errors.New("failure listing resource SKUs")
 
 func (m *manager) validateResources(ctx context.Context) error {
 	var clusterMSICredential azcore.TokenCredential
@@ -31,22 +28,11 @@ func (m *manager) validateResources(ctx context.Context) error {
 	).Dynamic(ctx)
 }
 
-func (m *manager) getVMSKUsForCurrentRegion(ctx context.Context) (map[string]*mgmtcompute.ResourceSku, error) {
-	location := m.doc.OpenShiftCluster.Location
-	filter := fmt.Sprintf("location eq %s", location)
-	skus, err := m.resourceSkus.List(ctx, filter)
-	if err != nil {
-		return nil, errors.Join(errListVMResourceSKUs, err)
-	}
-
-	return computeskus.FilterVMSizes(skus, location), nil
-}
-
 // validateZones validates the SKU availability and zones of the cluster being
 // created. This function is only to be called during cluster bootstrap!
 func (m *manager) validateZones(ctx context.Context) error {
 	location := m.doc.OpenShiftCluster.Location
-	filteredSkus, err := m.getVMSKUsForCurrentRegion(ctx)
+	filteredSkus, err := computeskus.GetVMSkusForCurrentRegion(ctx, m.armResourceSKUs, location)
 	if err != nil {
 		return err
 	}
@@ -81,7 +67,7 @@ func (m *manager) validateZones(ctx context.Context) error {
 }
 
 // see pkg/frontend/sku_validation.go
-func checkSKUAvailability(skus map[string]*mgmtcompute.ResourceSku, location, path, vmsize string) (*mgmtcompute.ResourceSku, error) {
+func checkSKUAvailability(skus map[string]*armcompute.ResourceSKU, location, path, vmsize string) (*armcompute.ResourceSKU, error) {
 	// Ensure desired sku exists in target region
 	sku, ok := skus[vmsize]
 	if !ok {

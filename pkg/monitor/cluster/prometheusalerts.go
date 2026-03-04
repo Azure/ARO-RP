@@ -22,6 +22,12 @@ var ignoredAlerts = map[string]struct{}{
 	"InsightsDisabled":     {},
 }
 
+type targetedAlertKey struct {
+	alertName       string
+	target          string
+	secondaryTarget string
+}
+
 func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	var resp *http.Response
 	var err error
@@ -73,12 +79,26 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 		return err
 	}
 
-	m := map[string]struct {
+	mon.emitGauge("prometheus.alerts.count", int64(len(alerts)), nil)
+
+	mon.aggregateAndEmitAlerts(alerts)
+
+	return nil
+}
+
+// Given a slice of model.Alert this func aggregates them in two metrics:
+// prometheus.alerts is used by many Geneva Monitors (example: MHCUnterminatedShortCircuit)
+// prometheus.targeted.alerts will be used as replacement for some Monitor metrics whose metrics already exist in Prometheus
+func (mon *Monitor) aggregateAndEmitAlerts(alerts []model.Alert) {
+	collectedAlerts := map[string]struct {
 		count    int64
 		severity string
 	}{}
 
-	mon.emitGauge("prometheus.alerts.count", int64(len(alerts)), nil)
+	targetedAlerts := map[targetedAlertKey]struct {
+		count    int64
+		severity string
+	}{}
 
 	for _, alert := range alerts {
 		if !namespace.IsOpenShiftNamespace(string(alert.Labels["namespace"])) {
@@ -89,22 +109,45 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 			continue
 		}
 
-		a := m[alert.Name()]
+		// Targeted alerts are decomposed by targets. In other words: an alert+target+secondary_target combination is unique
+		// This allows us to do aggregations in Geneva, rather than having a single counter hiding all the label values.
+		// Example: unhealthy nodes by condition, any unique combination of condition - node_name is unique, and it will have a dedicated statsd counter
+		if isTargetedAlert(alert) {
+			alertKey := targetedAlertKey{
+				alertName:       alert.Name(),
+				target:          string(alert.Labels["target"]),
+				secondaryTarget: string(alert.Labels["secondary_target"]),
+			}
+			ta := targetedAlerts[alertKey]
+			ta.severity = string(alert.Labels["severity"])
+			ta.count++
+			targetedAlerts[alertKey] = ta
+			continue
+		}
+
+		a := collectedAlerts[alert.Name()]
 
 		a.severity = string(alert.Labels["severity"])
 		a.count++
 
-		m[alert.Name()] = a
+		collectedAlerts[alert.Name()] = a
 	}
 
-	for alertName, a := range m {
+	for alertName, a := range collectedAlerts {
 		mon.emitGauge("prometheus.alerts", a.count, map[string]string{
 			"alert":    alertName,
 			"severity": a.severity,
 		})
 	}
 
-	return nil
+	for alertKey, a := range targetedAlerts {
+		mon.emitGauge("prometheus.targeted.alerts", a.count, map[string]string{
+			"alert":            alertKey.alertName,
+			"severity":         a.severity,
+			"target":           alertKey.target,
+			"secondary_target": alertKey.secondaryTarget,
+		})
+	}
 }
 
 func alertIsIgnored(alertName string) bool {
@@ -121,4 +164,9 @@ func alertIsIgnored(alertName string) bool {
 	}
 
 	return false
+}
+
+// Checks if the alert contains the labels "target" and "secondary_target" with values
+func isTargetedAlert(alert model.Alert) bool {
+	return alert.Labels["target"] != "" && alert.Labels["secondary_target"] != ""
 }

@@ -192,7 +192,8 @@ func TestUpdate(t *testing.T) {
 									"resourceId": &tt.oc.ID,
 								},
 							},
-						}}, nil)
+						},
+					}, nil)
 
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, sdkdns.RecordSet{
@@ -229,7 +230,8 @@ func TestUpdate(t *testing.T) {
 									"resourceId": pointerutils.ToPtr("not us"),
 								},
 							},
-						}}, nil)
+						},
+					}, nil)
 			},
 			wantErr: `recordset "api.test" already registered`,
 		},

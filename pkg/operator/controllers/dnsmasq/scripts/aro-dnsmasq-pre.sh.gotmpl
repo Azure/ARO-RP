@@ -9,16 +9,27 @@ set -euo pipefail
 # This file can be rerun and the effect is idempotent, output might change if the DHCP configuration changes
 
 NODEIP=$(/sbin/ip --json route get 168.63.129.16 | /bin/jq -r ".[].prefsrc")
+DNS_SERVERS=$(nmcli device show | awk 'BEGIN {FS=":\\s*"} $1 ~ /DNS/ && $2 ~ /.+/ { if (!seen[$2]++) print $2 }')
+DNS_SEARCH=$(nmcli device show | awk 'BEGIN {FS=":\\s*"} $1 ~ /DOMAIN/ && $2 ~ /.+/ { if (!seen[$2]++) print $2 }')
 
-if [ "$NODEIP" != "" ]; then
-    /bin/cp -Z /etc/resolv.conf /etc/resolv.conf.dnsmasq
-    SEARCHDOMAIN=$(awk '/^search/ { print $2; }' /etc/resolv.conf.dnsmasq)
+echo NODEIP=${NODEIP}
+echo DNS_SERVERS=${DNS_SERVERS}
+echo DNS_SEARCH=${DNS_SEARCH}
+
+if [ "${NODEIP}" != "" ] && [ "${DNS_SERVERS}" != "" ] && [ "${DNS_SEARCH}" != "" ]; then
+    echo Writing /etc/resolv.conf.dnsmasq
+    # Only nameserver lines are relevant to dnsmasq
+    cat <<EOF | /bin/tee /etc/resolv.conf.dnsmasq
+# Created by aro-dnsmasq-pre.sh
+$(echo "${DNS_SERVERS}" | awk '{print "nameserver " $0 "\n"}')
+EOF
     /bin/chmod 0744 /etc/resolv.conf.dnsmasq
 
+    echo Writing /etc/NetworkManager/conf.d/aro-dns.conf
     cat <<EOF | /bin/tee /etc/NetworkManager/conf.d/aro-dns.conf
-# Added by dnsmasq.service
+# Created by aro-dnsmasq-pre.sh
 [global-dns]
-searches=$SEARCHDOMAIN
+searches=$DNS_SEARCH
 
 [global-dns-domain-*]
 servers=$NODEIP

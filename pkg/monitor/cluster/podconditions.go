@@ -130,7 +130,7 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 
 func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		//Sum up the total number of restarts in the pod to match the number of restarts shown in the 'oc get pods' display
+		// Sum up the total number of restarts in the pod to match the number of restarts shown in the 'oc get pods' display
 		t := int32(0)
 		for _, cs := range p.Status.ContainerStatuses {
 			t += cs.RestartCount

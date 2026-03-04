@@ -54,6 +54,21 @@ type MaintenanceManifestStaticValidator interface {
 	Static(interface{}, *MaintenanceManifestDocument) error
 }
 
+type MaintenanceScheduleConverter interface {
+	ToExternal(doc *MaintenanceScheduleDocument) interface{}
+	ToExternalList(docs []*MaintenanceScheduleDocument, nextLink string) interface{}
+	ToInternal(interface{}, *MaintenanceScheduleDocument)
+}
+
+type MaintenanceScheduleStaticValidator interface {
+	Static(interface{}, *MaintenanceScheduleDocument) error
+}
+
+type BillingDocumentConverter interface {
+	ToExternal(doc *BillingDocument) interface{}
+	ToExternalList(docs []*BillingDocument, nextLink string) interface{}
+}
+
 // Version is a set of endpoints implemented by each API version
 type Version struct {
 	OpenShiftClusterConverter                      OpenShiftClusterConverter
@@ -67,6 +82,9 @@ type Version struct {
 	OperationList                                  OperationList
 	MaintenanceManifestConverter                   MaintenanceManifestConverter
 	MaintenanceManifestStaticValidator             MaintenanceManifestStaticValidator
+	MaintenanceScheduleConverter                   MaintenanceScheduleConverter
+	MaintenanceScheduleStaticValidator             MaintenanceScheduleStaticValidator
+	BillingDocumentConverter                       BillingDocumentConverter
 }
 
 // APIs is the map of registered API versions

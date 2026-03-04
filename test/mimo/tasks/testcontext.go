@@ -10,8 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/go-autorest/autorest"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
@@ -54,6 +52,12 @@ func WithOpenShiftClusterProperties(uuid string, oc api.OpenShiftClusterProperti
 	}
 }
 
+func WithOpenShiftClusterResourceID(resourceID string) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.clusterResourceID = resourceID
+	}
+}
+
 func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entry, now func() time.Time, o ...Option) *fakeTestContext {
 	ftc := &fakeTestContext{
 		Context: ctx,
@@ -67,13 +71,14 @@ func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entr
 	return ftc
 }
 
-func (t *fakeTestContext) LocalFpAuthorizer() (autorest.Authorizer, error) {
-	myAuthorizer := autorest.NullAuthorizer{}
-	return myAuthorizer, nil
-}
 func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
-	myCD := &api.OpenShiftClusterDocument{}
-	return myCD
+	return &api.OpenShiftClusterDocument{
+		ID: t.clusterUUID,
+		OpenShiftCluster: &api.OpenShiftCluster{
+			ID:         t.clusterResourceID,
+			Properties: t.properties,
+		},
+	}
 }
 
 // handle

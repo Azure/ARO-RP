@@ -10,5 +10,7 @@ import (
 // Re-export apiversion variants of this
 type Version apiversion.Version
 
-var NewVersion = apiversion.NewVersion
-var ParseVersion = apiversion.ParseVersion
+var (
+	NewVersion   = apiversion.NewVersion
+	ParseVersion = apiversion.ParseVersion
+)

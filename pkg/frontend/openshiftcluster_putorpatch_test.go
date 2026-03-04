@@ -358,6 +358,7 @@ func getServicePrincipalOpenShiftClusterDocument(provisioningState, lastProvisio
 	}
 	return doc
 }
+
 func getExistingServicePrincipalOpenShiftClusterDocument(provisioningState, lastProvisioningState, failedProvisioningState api.ProvisioningState) *api.OpenShiftClusterDocument {
 	doc := getServicePrincipalOpenShiftClusterDocument(provisioningState, lastProvisioningState, failedProvisioningState)
 	// FakeClusterConflictChecker will not allow the update to proceed if the ClientIDKey & ClusterResourceGroupIDKey is set.
@@ -407,6 +408,7 @@ func getWorkloadIdentityOpenShiftClusterDocument(provisioningState, lastProvisio
 	}
 	return doc
 }
+
 func getExistingWorkloadIdentityOpenShiftClusterDocument(provisioningState, lastProvisioningState, failedProvisioningState api.ProvisioningState) *api.OpenShiftClusterDocument {
 	doc := getWorkloadIdentityOpenShiftClusterDocument(provisioningState, lastProvisioningState, failedProvisioningState)
 	// FakeClusterConflictChecker will not allow the update to proceed if the ClientIDKey & ClusterResourceGroupIDKey is set.

@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -69,11 +69,11 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 	return json.Marshal(f.filterVMSkus(skus))
 }
 
-func (f *frontend) filterVMSkus(skus []mgmtcompute.ResourceSku) []string {
+func (f *frontend) filterVMSkus(skus []*armcompute.ResourceSKU) []string {
 	filteredSkus := []string{}
 
 	for _, sku := range skus {
-		if sku.Restrictions != nil && len(*sku.Restrictions) == 0 {
+		if sku.Restrictions != nil && len(sku.Restrictions) == 0 {
 			if sku.Name != nil {
 				filteredSkus = append(filteredSkus, *sku.Name)
 			}

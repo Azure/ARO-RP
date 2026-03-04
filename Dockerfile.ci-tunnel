@@ -2,7 +2,7 @@ ARG REGISTRY
 ARG BUILDER_REGISTRY
 ARG ARO_VERSION
 
-FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20 AS builder
+FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21 AS builder
 ARG ARO_VERSION
 USER root
 WORKDIR /app
@@ -20,7 +20,6 @@ COPY pkg pkg
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./hack/tunnel
 
 FROM ${REGISTRY}/ubi9/ubi-minimal AS final
-RUN microdnf update -y && microdnf clean all -y
 COPY --from=builder /app/tunnel /usr/local/bin/
 ENTRYPOINT ["tunnel"]
 EXPOSE 8443/tcp

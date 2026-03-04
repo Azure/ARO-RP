@@ -249,15 +249,16 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			mockEnv := mock_env.NewMockInterface(controller)
+			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
 
 			h, log := testlog.New()
 			m := &manager{
+				env:           mockEnv,
 				log:           log,
 				kubernetescli: tt.kubernetescli,
 				configcli:     tt.configcli,
 				operatorcli:   tt.operatorcli,
-				now:           func() time.Time { return time.Now() },
 			}
 
 			err := m.runSteps(ctx, tt.steps, tt.runType)
@@ -366,10 +367,15 @@ func TestInstallationTimeMetrics(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			controller := gomock.NewController(t)
+
+			mockEnv := mock_env.NewMockInterface(controller)
+			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) })
+
 			m := &manager{
+				env:            mockEnv,
 				log:            log,
 				metricsEmitter: fm,
-				now:            func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) },
 			}
 
 			err := m.runSteps(ctx, tt.steps, tt.metricsTopic)

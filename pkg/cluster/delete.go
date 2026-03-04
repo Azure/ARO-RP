@@ -164,6 +164,7 @@ var deleteOrder = map[string]int{
 	"microsoft.compute/galleries/images":                -1, // before microsoft.compute/galleries
 	"microsoft.compute/galleries/serviceArtifacts":      -1, // before microsoft.compute/galleries
 	"microsoft.network/networkinterfaces":               -1, // before microsoft.network/loadbalancers
+	"microsoft.network/networksecuritygroups":           1,  // after load balancers and other resources
 	"microsoft.network/privatednszones":                 1,  // after everything else: get other deletions underway first
 	"microsoft.compute/galleries":                       1,  // after everything else in case there are nested microsoft.compute/galleries resources
 }

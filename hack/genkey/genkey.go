@@ -49,13 +49,13 @@ func run(name string, flags flagsType) error {
 	}
 
 	// key in der format
-	err = os.WriteFile(name+".key", x509.MarshalPKCS1PrivateKey(key), 0600)
+	err = os.WriteFile(name+".key", x509.MarshalPKCS1PrivateKey(key), 0o600)
 	if err != nil {
 		return err
 	}
 
 	// cert in der format
-	err = os.WriteFile(name+".crt", cert[0].Raw, 0666)
+	err = os.WriteFile(name+".crt", cert[0].Raw, 0o666)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func run(name string, flags flagsType) error {
 	}
 
 	// key and cert in PKCS#8 PEM format for Azure Key Vault.
-	return os.WriteFile(name+".pem", buf.Bytes(), 0600)
+	return os.WriteFile(name+".pem", buf.Bytes(), 0o600)
 }
 
 func usage() {

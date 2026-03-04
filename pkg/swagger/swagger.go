@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-
-	"k8s.io/utils/strings/slices"
+	"slices"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -287,7 +286,7 @@ func Run(api, outputDir string) error {
 		return err
 	}
 
-	return os.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
+	return os.WriteFile(outputDir+"/redhatopenshift.json", b, 0o666)
 }
 
 func deepCopy(v interface{}) (interface{}, error) {

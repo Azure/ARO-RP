@@ -323,9 +323,9 @@ func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path strin
 }
 
 func checkPickedExactlyOne(path string, lbp *LoadBalancerProfile) error {
-	var isManagedOutboundIPCount = lbp.ManagedOutboundIPs != nil
-	var isOutboundIPs = lbp.OutboundIPs != nil
-	var isOutboundIPPrefixes = lbp.OutboundIPPrefixes != nil
+	isManagedOutboundIPCount := lbp.ManagedOutboundIPs != nil
+	isOutboundIPs := lbp.OutboundIPs != nil
+	isOutboundIPPrefixes := lbp.OutboundIPPrefixes != nil
 	var providedProfiles int
 	if isManagedOutboundIPCount {
 		providedProfiles++

@@ -7,13 +7,15 @@ import (
 	"fmt"
 	"slices"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
-const ALLOW_EXPANDED_AZ_ENV = "ARO_INSTALLER_ALLOW_EXPANDED_AZS"
-const CONTROL_PLANE_MACHINE_COUNT = 3
+const (
+	ALLOW_EXPANDED_AZ_ENV       = "ARO_INSTALLER_ALLOW_EXPANDED_AZS"
+	CONTROL_PLANE_MACHINE_COUNT = 3
+)
 
 type availabilityZoneManager struct {
 	allowExpandedAvailabilityZones bool
@@ -38,7 +40,7 @@ func (m *availabilityZoneManager) FilterZones(zones []string) []string {
 	return zones
 }
 
-func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, workerSKU *mgmtcompute.ResourceSku) ([]string, []string, []string, error) {
+func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, workerSKU *armcompute.ResourceSKU) ([]string, []string, []string, error) {
 	controlPlaneZones := computeskus.Zones(controlPlaneSKU)
 	workerZones := computeskus.Zones(workerSKU)
 

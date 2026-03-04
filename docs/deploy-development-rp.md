@@ -653,6 +653,26 @@ podman machine ssh
 sudo openvpn --config /Users/<user_name>/go/src/github.com/Azure/ARO-RP/secrets/vpn-aks-westeurope.ovpn --daemon --writepid vpnpid
 ps aux | grep openvpn
 ```
+
+### Outbound HTTP Logging
+
+By default, in development mode (`RP_MODE=development`), the verbose outbound HTTP request logs (`HttpRequestStart`/`HttpRequestEnd`) are disabled to reduce console noise. Only failed requests (HTTP >= 400) are logged.
+
+To enable full outbound HTTP logging in development:
+```
+export ARO_ENABLE_OUTBOUND_HTTP_LOGGING=true
+```
+
+#### Behavior Matrix
+
+| `RP_MODE` | `ARO_ENABLE_OUTBOUND_HTTP_LOGGING` | `HttpRequestStart/End` | `OutboundRequestFailed` |
+|-----------|-------------------------------------|------------------------|-------------------------|
+| (not dev) | (ignored) | ✅ Yes | ✅ Yes |
+| development | false/unset | ❌ No | ✅ Yes |
+| development | `true` | ✅ Yes | ✅ Yes |
+
+**Note**: This setting only affects development mode. In production, outbound HTTP logging is always enabled for compliance requirements.
+
 ### Instructions for Modifying Environment File
 **Update the env File**
 - Open the `env` file.

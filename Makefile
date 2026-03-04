@@ -1,4 +1,9 @@
 SHELL = /bin/bash
+
+# Source local env file if present (gitignored)
+-include .env
+export
+
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
@@ -6,6 +11,19 @@ E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2
 E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
+
+# When Go is not installed on the host (e.g., CI Docker-only jobs), provide
+# safe fallback values. Without this guard, every $(shell go ...) call —
+# including those in .bingo/Variables.mk — produces "go: command not found"
+# noise (hundreds of lines). When Go IS installed, all $(shell go ...) calls
+# run normally and errors are visible.
+ifneq ($(shell command -v go 2>/dev/null),)
+  PLATFORM ?= linux/$(shell go env GOARCH)
+  GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
+else
+  PLATFORM ?= linux/amd64
+  GOLANG_VERSION ?=
+endif
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -16,9 +34,6 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
-
-# Golang version go mod tidy compatibility
-GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
 
 include .bingo/Variables.mk
 
@@ -32,20 +47,24 @@ else
 	VERSION = $(TAG)
 endif
 
-# REGISTRY and BUILDER_REGISTRY are set conditionally below based on RP_IMAGE_ACR
+# REGISTRY, BUILDER_REGISTRY, and FEDORA_REGISTRY are set conditionally below based on RP_IMAGE_ACR
 # default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
 	BUILDER_REGISTRY = arointsvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
 	BUILDER_REGISTRY = arosvc.azurecr.io
+	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY ?= registry.access.redhat.com
 	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
+	FEDORA_REGISTRY ?= arointsvc.azurecr.io
 else
 	REGISTRY = $(RP_IMAGE_ACR)
 	BUILDER_REGISTRY = quay.io/openshift-release-dev
+	FEDORA_REGISTRY = $(REGISTRY)
 endif
 
 # prod images
@@ -174,24 +193,24 @@ init-contrib:
 
 .PHONY: image-aro-multistage
 image-aro-multistage:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+	docker build --platform=$(PLATFORM) --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-autorest
 image-autorest:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 .PHONY: image-fluentbit
 image-fluentbit:
-	docker build --platform=linux/amd64 --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=$(PLATFORM) --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 .PHONY: image-proxy
 image-proxy:
 	docker pull $(REGISTRY)/ubi9/ubi-minimal
-	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+	docker build --platform=$(PLATFORM) --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-gatekeeper
 image-gatekeeper:
-	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
+	docker build --platform=$(PLATFORM) --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
 
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
@@ -219,7 +238,7 @@ publish-image-gatekeeper: image-gatekeeper
 
 .PHONY: image-e2e
 image-e2e:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+	docker build --platform=$(PLATFORM) --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: publish-image-e2e
 publish-image-e2e: image-e2e
@@ -292,19 +311,19 @@ test-e2e: e2e.test
 test-go: generate build-all validate-go lint-go unit-test-go
 
 .PHONY: validate-go
-validate-go: validate-imports
-	gofmt -s -w cmd hack pkg test
+validate-go: validate-go-action $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) fmt
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action: validate-imports validate-lint-go-fix
+validate-go-action: validate-imports validate-lint-go-fix validate-gh-actions
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 .PHONY: validate-fips
@@ -320,6 +339,11 @@ unit-test-go: $(GOTESTSUM)
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+
+.PHONY: fmt
+fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (gci, gofumpt)
+	$(GOLANGCI_LINT) fmt
+	cd pkg/api/ && $(GOLANGCI_LINT) fmt
 
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT)
@@ -338,10 +362,22 @@ validate-lint-go-fix: lint-go-fix
 		exit 1; \
 	fi
 
+.PHONY: validate-gh-actions
+validate-gh-actions: $(PINACT) ## Validate GitHub Actions are pinned to SHA
+	@echo "Checking that all GitHub Actions are pinned to SHA..."
+	@$(PINACT) run --check --verify
+	@echo "All GitHub Actions are properly pinned to SHA"
+
+.PHONY: fix-gh-actions
+fix-gh-actions: $(PINACT) ## Pin unpinned GitHub Actions to SHA
+	@echo "Pinning GitHub Actions to SHA..."
+	@$(PINACT) run
+	@echo "Done. Please review the changes."
+
 .PHONY: lint-admin-portal
 lint-admin-portal:
-	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
-	docker run --platform=linux/amd64 -t --rm linter:latest
+	docker build --platform=$(PLATFORM) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
+	docker run --platform=$(PLATFORM) -t --rm linter:latest
 
 .PHONY: test-python
 test-python: pyenv az
@@ -353,7 +389,7 @@ test-python: pyenv az
 .PHONY: test-python-podman
 test-python-podman:
 	rm -rf pyenv
-	docker run --platform=linux/amd64 -t --rm \
+	docker run --platform=$(PLATFORM) -t --rm \
 	    -v ./:/app:z \
 		--user=0 \
 	 	$(REGISTRY)/ubi9/python-312:latest \
@@ -463,7 +499,7 @@ LOCAL_TUNNEL_IMAGE ?= aro-tunnel
 ci-azext-aro:
 	docker build . $(DOCKER_BUILD_CI_ARGS) \
 		-f Dockerfile.ci-azext-aro \
-		--platform=linux/amd64 \
+		--platform=$(PLATFORM) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_AZEXT_IMAGE):$(VERSION)
 
@@ -478,6 +514,7 @@ ci-rp:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -495,6 +532,7 @@ aro-e2e:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.aro-e2e \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -507,6 +545,7 @@ ci-tunnel:
 	    build . \
 		-f Dockerfile.ci-tunnel \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -521,6 +560,22 @@ run-portal:
 run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production, including Hive. Requires a VPN connection.
 	docker compose rm -sf rp
 	docker compose up rp
+
+.PHONY: acr-login
+acr-login: ## Login to arointsvc ACR using PULL_SECRET
+	@. hack/devtools/rp_dev_helper.sh && acr_login
+
+.PHONY: dev-env-build
+dev-env-build: acr-login ## Build the dev environment container image
+	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose build aro-dev-env
+
+.PHONY: dev-env-start
+dev-env-start: acr-login ## Start the dev environment RP container
+	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose up -d aro-dev-env
+
+.PHONY: dev-env-stop
+dev-env-stop: ## Stop the containerized RP
+	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose down aro-dev-env
 
 .PHONY: run-selenium
 run-selenium:
