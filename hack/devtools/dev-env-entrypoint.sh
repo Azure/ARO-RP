@@ -5,10 +5,9 @@ set -e
 # Auto-detects whether to use a host-mounted Podman socket or start
 # Podman inside the container (macOS / Docker path).
 
-if [ -S /podman/podman.sock ]; then
-    # Linux path: host Podman socket is mounted
-    export ARO_PODMAN_SOCKET="unix:///podman/podman.sock"
-    echo "Using host Podman socket at /podman/podman.sock"
+if [ -S /run/podman/podman.sock ]; then
+    # Linux path: host Podman socket is mounted at the default location
+    echo "Using host Podman socket at /run/podman/podman.sock"
 else
     # macOS / Docker path: start Podman inside the container
     echo "No host Podman socket found, starting Podman service inside container..."
@@ -25,9 +24,10 @@ else
         echo "ERROR: Podman service did not start in time"
         exit 1
     fi
-    export ARO_PODMAN_SOCKET="unix:///run/podman/podman.sock"
     echo "Podman service started at /run/podman/podman.sock"
 fi
+
+export ARO_PODMAN_SOCKET="unix:///run/podman/podman.sock"
 
 # Source environment and run the RP
 . /workspace/env && make runlocal-rp

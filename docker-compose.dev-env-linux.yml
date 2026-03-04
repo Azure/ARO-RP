@@ -3,4 +3,4 @@
 services:
   aro-dev-env:
     volumes:
-      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/podman/podman.sock:z
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock:z
