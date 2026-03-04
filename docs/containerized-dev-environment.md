@@ -8,6 +8,9 @@ The following files, located at the project root, are used for this setup:
 
 - `Dockerfile.dev-env`: Defines the container image with necessary dependencies and tools.
 - `docker-compose.yml`: Contains the definition for the `aro-dev-env` service.
+- `docker-compose.dev-env-linux.yml`: Linux-specific override (adds host Podman socket mount).
+- `docker-compose.dev-env-macos.yml`: macOS-specific override (privileged mode, no SELinux labels).
+- `hack/devtools/dev-env-entrypoint.sh`: Entrypoint script that auto-detects the Podman runtime.
 
 ## How the Local Workspace is Mounted
 
@@ -22,9 +25,19 @@ This means any changes you make to files in your local repository are immediatel
 
 ## Prerequisites
 
+### Linux
+
 1.  Podman 4.7+ installed on your host system ([https://podman.io/docs/installation](https://podman.io/docs/installation)).
 2.  Azure CLI installed on your host system.
 3.  You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
+
+### macOS (including Apple Silicon / ARM64)
+
+1.  [OrbStack](https://orbstack.dev/) (recommended) or Docker Desktop installed.
+2.  Azure CLI installed on your host system (`brew install azure-cli`).
+3.  You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
+
+**Note:** On macOS the dev environment runs under Docker (via OrbStack or Docker Desktop). Podman runs *inside* the container automatically — no host Podman installation is needed. The Makefile detects macOS and uses the correct compose tool and overrides.
 
 ## Setup Steps
 
@@ -53,51 +66,70 @@ Follow these steps from the **root directory** of the ARO-RP repository:
     . ./env
     ```
 
-3.  **Enable the Podman socket** (required when not using Hive for cluster deployment):
+3.  **Enable the Podman socket** (Linux only — not needed on macOS):
 
     ```bash
     systemctl --user enable --now podman.socket
     ```
-    
+
     Verify the socket is running:
     ```bash
     systemctl --user status podman.socket
     ```
 
-4.  **Build the container image:**
+4.  **Configure platform** (macOS ARM64 only):
+    If you are on Apple Silicon, add the following to your `env` file:
+    ```bash
+    export PLATFORM=linux/arm64
+    ```
+    If you don't have ACR access, also add:
+    ```bash
+    export FEDORA_REGISTRY=registry.fedoraproject.org
+    ```
+
+5.  **Build the container image:**
 
     ```bash
     make dev-env-build
     ```
 
-5.  **Start the container:**
+6.  **Start the container:**
 
     ```bash
     make dev-env-start
     ```
-    
-    **Note:** The container runs the command `. /workspace/env && make runlocal-rp`, which sources your environment variables and starts the RP in local development mode.
-    
+
+    **Note:** The container runs an entrypoint script that sources your environment variables and starts the RP in local development mode. On macOS, the entrypoint also starts Podman inside the container automatically.
+
     Verify the container is running:
     ```bash
+    # Linux
     podman compose ps
+    # macOS
+    docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml ps
     ```
 
-6.  **View RP Logs (Optional):**
+7.  **View RP Logs (Optional):**
     Check the logs to see the RP startup output.
 
     ```bash
+    # Linux
     podman compose logs aro-dev-env
+    # macOS
+    docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml logs aro-dev-env
     ```
 
-7.  **Enter the container shell:**
+8.  **Enter the container shell:**
     To interact with the environment inside the container (e.g., run other commands, debug).
 
     ```bash
+    # Linux
     podman compose exec aro-dev-env bash
+    # macOS
+    docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml exec aro-dev-env bash
     ```
 
-8.  **Run other development commands (Inside container shell):**
+9.  **Run other development commands (Inside container shell):**
     From inside the container, you can run project-specific `make` commands or scripts that expect the Go environment to be set up.
 
     ```bash
@@ -140,5 +172,8 @@ make dev-env-stop
 If you also want to remove the built image:
 
 ```bash
+# Linux
 podman rmi aro-rp_aro-dev
+# macOS
+docker rmi aro-rp_aro-dev
 ```
