@@ -2,8 +2,11 @@ package metrics
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"testing"
 
@@ -19,6 +22,8 @@ type fakeMetricsEmitter struct {
 	assertedOnGauges bool
 	floats           *xsync.Map[string, float64]
 	assertedOnFloats bool
+
+	testOutput *bytes.Buffer
 }
 
 type MetricsAssertion[X int64 | float64] struct {
@@ -32,7 +37,6 @@ type FakeMetrics interface {
 
 	AssertFloats(...MetricsAssertion[float64])
 	AssertGauges(...MetricsAssertion[int64])
-	Reset(testing.TB)
 }
 
 func NewFakeMetricsEmitter(t testing.TB) *fakeMetricsEmitter {
@@ -67,21 +71,20 @@ func getKey(metricName string, dims map[string]string) string {
 	return string(r)
 }
 
-func (e *fakeMetricsEmitter) Reset(t testing.TB) {
-	e.t = t
-	e.assertedOnFloats = false
-	e.assertedOnGauges = false
-	e.floats.Clear()
-	e.gauges.Clear()
+func (e *fakeMetricsEmitter) errorf(format string, a ...any) {
+	if e.testOutput != nil {
+		fmt.Fprintf(e.testOutput, format+"\n", a...)
+	}
+	e.t.Errorf(format, a...)
 }
 
 func (e *fakeMetricsEmitter) onCleanup() {
 	if !e.t.Failed() {
 		if !e.assertedOnFloats {
-			e.t.Error("!!! did not assert on any metric floats !!!")
+			e.errorf("!!! did not assert on any metric floats !!!")
 		}
 		if !e.assertedOnGauges {
-			e.t.Error("!!! did not assert on any metric gauges !!!")
+			e.errorf("!!! did not assert on any metric gauges !!!")
 		}
 	}
 }
@@ -103,10 +106,10 @@ func (e *fakeMetricsEmitter) AssertFloats(assertions ...MetricsAssertion[float64
 
 		val, ok := e.floats.LoadAndDelete(seekingKey)
 		if !ok {
-			e.t.Errorf("float metric '%s' with dims '%s' was not emitted", a.MetricName, a.Dimensions)
+			e.errorf("float metric '%s' with dims '%s' was not emitted", a.MetricName, a.Dimensions)
 		} else {
 			if val != a.Value {
-				e.t.Errorf("float metric '%s' with dims '%s' had incorrect emitted value %f, wanted %f", a.MetricName, a.Dimensions, val, a.Value)
+				e.errorf("float metric '%s' with dims '%s' had incorrect emitted value %f, wanted %f", a.MetricName, a.Dimensions, val, a.Value)
 			}
 		}
 	}
@@ -115,11 +118,11 @@ func (e *fakeMetricsEmitter) AssertFloats(assertions ...MetricsAssertion[float64
 		dims := map[string]string{}
 		err := json.Unmarshal([]byte(k), &dims)
 		if err != nil {
-			e.t.Errorf("failed unmarshalling: %s", err)
+			e.errorf("failed unmarshalling: %s", err)
 		}
 		key := dims["__METRIC_NAME"]
 		delete(dims, "__METRIC_NAME")
-		e.t.Errorf("float metric '%s' with dims '%s' not asserted upon", key, dims)
+		e.errorf("float metric '%s' with dims '%s' not asserted upon", key, dims)
 	}
 
 	e.assertedOnFloats = true
@@ -132,10 +135,10 @@ func (e *fakeMetricsEmitter) AssertGauges(assertions ...MetricsAssertion[int64])
 
 		val, ok := e.gauges.LoadAndDelete(seekingKey)
 		if !ok {
-			e.t.Errorf("gauge metric '%s' with dims '%s' was not emitted", a.MetricName, a.Dimensions)
+			e.errorf("gauge metric '%s' with dims '%v' was not emitted", a.MetricName, a.Dimensions)
 		} else {
 			if val != a.Value {
-				e.t.Errorf("gauge metric '%s' with dims '%s' had incorrect emitted value %d, wanted %d", a.MetricName, a.Dimensions, val, a.Value)
+				e.errorf("gauge metric '%s' with dims '%v' had incorrect emitted value %d, wanted %d", a.MetricName, a.Dimensions, val, a.Value)
 			}
 		}
 	}
@@ -144,11 +147,11 @@ func (e *fakeMetricsEmitter) AssertGauges(assertions ...MetricsAssertion[int64])
 		dims := map[string]string{}
 		err := json.Unmarshal([]byte(k), &dims)
 		if err != nil {
-			e.t.Errorf("failed unmarshalling: %s", err)
+			e.errorf("failed unmarshalling: %s", err)
 		}
 		key := dims["__METRIC_NAME"]
 		delete(dims, "__METRIC_NAME")
-		e.t.Errorf("gauge metric '%s' with dims '%s' not asserted upon", key, dims)
+		e.errorf("gauge metric '%s' with dims '%v' not asserted upon", key, dims)
 	}
 
 	e.assertedOnGauges = true
