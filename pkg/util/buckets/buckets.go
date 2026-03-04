@@ -57,10 +57,14 @@ func NewBucketWorker[E Bucketable](log *logrus.Entry, worker WorkerFunc, mu *syn
 }
 
 func (mon *monitor[E]) Size() int {
+	mon.mu.RLock()
+	defer mon.mu.RUnlock()
 	return len(mon.docs)
 }
 
 func (mon *monitor[E]) Doc(id string) (r E, ok bool) {
+	mon.mu.RLock()
+	defer mon.mu.RUnlock()
 	id = strings.ToLower(id)
 	v := mon.docs[id]
 	if v == nil {
