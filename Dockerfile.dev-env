@@ -3,34 +3,35 @@ FROM ${FEDORA_REGISTRY}/fedora:42
 
 # Install system dependencies
 RUN dnf update -y && dnf install -y \
+    binutils-gold \
+    bzip2-devel \
+    curl \
+    gcc \
+    git \
+    golang-github-containerd-btrfs-devel \
     gpgme-devel \
+    jq \
     libassuan-devel \
+    libffi-devel \
+    lvm2 \
+    lvm2-devel \
+    make \
+    ncurses-devel \
     openssl \
     openssl-devel \
     openssl-libs \
-    lvm2 \
-    lvm2-devel \
-    golang-github-containerd-btrfs-devel \
-    bzip2-devel \
-    ncurses-devel \
-    libffi-devel \
+    openvpn \
+    patch \
+    podman \
+    podman-docker \
+    python3-pip \
     readline-devel \
     sqlite-devel \
     tk-devel \
+    wget \
+    which \
     xz-devel \
     zlib-devel \
-    gcc \
-    make \
-    patch \
-    openvpn \
-    podman \
-    podman-docker \
-    git \
-    curl \
-    wget \
-    python3-pip \
-    which \
-    binutils-gold \
     && dnf clean all
 
 WORKDIR /workspace
