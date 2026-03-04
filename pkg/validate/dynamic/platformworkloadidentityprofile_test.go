@@ -201,7 +201,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					cancel()
 				}).Return(&msiNotAllowedActions, nil).AnyTimes()
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: fmt.Sprintf("400: InvalidClusterMSIPermissions: : The cluster user assigned identity does not have required permissions on platform workload identity '%s'.", platformIdentity1),
 		},
 		{
 			name:               "Fail - An action is missing for a platform identity",
@@ -221,7 +221,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					cancel()
 				}).Return(&msiActionMissing, nil).AnyTimes()
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: fmt.Sprintf("400: InvalidClusterMSIPermissions: : The cluster user assigned identity does not have required permissions on platform workload identity '%s'.", platformIdentity1),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
