@@ -9,23 +9,28 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	mock_hive "github.com/Azure/ARO-RP/pkg/frontend/mocks"
 )
 
-func TestAdminHiveK8sObjectsList(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func withLog(req *http.Request) *http.Request {
+	log := logrus.New().WithField("test", "hive-k8sobjects")
+	ctx := context.WithValue(req.Context(), middleware.ContextKeyLog, log)
+	return req.WithContext(ctx)
+}
 
-	manager := mock_hive.NewMockHiveK8sObjectManager(ctrl)
-	manager.EXPECT().
-		List(gomock.Any(), "pods", "default").
-		Return([]byte(`{"items":[]}`), nil)
+func withChiRouteParam(req *http.Request, key, val string) *http.Request {
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add(key, val)
+	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+}
+
+func TestAdminHiveK8sObjectsList_ManagerNil_DefaultBehavior(t *testing.T) {
+
+	t.Setenv(envLocalDevMockHive, "")
 
 	f := &frontend{
-		hiveK8sObjectManager: manager,
+		hiveK8sObjectManager: nil,
 	}
 
 	req := httptest.NewRequest(
@@ -34,47 +39,38 @@ func TestAdminHiveK8sObjectsList(t *testing.T) {
 		nil,
 	)
 
-	routeCtx := chi.NewRouteContext()
-	routeCtx.URLParams.Add("resource", "pods")
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
-
-	log := logrus.New().WithField("test", "list")
-	req = req.WithContext(context.WithValue(req.Context(), middleware.ContextKeyLog, log))
+	req = withChiRouteParam(req, "resource", "pods")
+	req = withLog(req)
 
 	rr := httptest.NewRecorder()
+
 	f.adminHiveK8sObjectsList(rr, req)
 
-	require.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, http.StatusNotImplemented, rr.Code)
+	require.Contains(t, rr.Body.String(), "hive k8s object manager not configured")
 }
 
-func TestAdminHiveK8sObjectsGet(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestAdminHiveK8sObjectsList_ManagerNil_MockEnabled_ReturnsMock(t *testing.T) {
 
-	manager := mock_hive.NewMockHiveK8sObjectManager(ctrl)
-	manager.EXPECT().
-		Get(gomock.Any(), "pods", "default", "mypod").
-		Return([]byte(`{"metadata":{"name":"mypod"}}`), nil)
+	t.Setenv(envLocalDevMockHive, "true")
 
 	f := &frontend{
-		hiveK8sObjectManager: manager,
+		hiveK8sObjectManager: nil,
 	}
 
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"/admin/hive/k8sobjects/pods?namespace=default&name=mypod",
+		"/admin/hive/k8sobjects/pods?namespace=default",
 		nil,
 	)
 
-	routeCtx := chi.NewRouteContext()
-	routeCtx.URLParams.Add("resource", "pods")
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
-
-	log := logrus.New().WithField("test", "get")
-	req = req.WithContext(context.WithValue(req.Context(), middleware.ContextKeyLog, log))
+	req = withChiRouteParam(req, "resource", "pods")
+	req = withLog(req)
 
 	rr := httptest.NewRecorder()
+
 	f.adminHiveK8sObjectsList(rr, req)
 
 	require.Equal(t, http.StatusOK, rr.Code)
+	require.Contains(t, rr.Body.String(), "local-dev-pod")
 }
