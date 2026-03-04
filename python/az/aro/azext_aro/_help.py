@@ -109,3 +109,9 @@ helps['aro identity get-required'] = """
   short-summary: Get required identities
   long-summary: Get required identities for creating a cluster with managed identities.
 """
+
+helps['aro identity create-required'] = """
+  type: command
+  short-summary: Create required identities
+  long-summary: Create required identities to prepare for creating a cluster with managed identities.
+"""
