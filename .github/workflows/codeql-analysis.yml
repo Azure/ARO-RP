@@ -15,8 +15,6 @@ permissions:
   contents: read
   security-events: write
 
-env:
-  GOFLAGS: -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 
 jobs:
   analyze:
@@ -59,5 +57,7 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@5049b573e2cbf31c2dbde702a60c24fe476f0766 # v4
+      env:
+        GOFLAGS: -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
       with:
         category: "/language:${{matrix.language}}"
