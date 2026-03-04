@@ -1,0 +1,6 @@
+# Compose override for Linux (Podman).
+# Adds the host Podman socket mount for container operations.
+services:
+  aro-dev-env:
+    volumes:
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/podman/podman.sock:z

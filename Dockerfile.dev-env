@@ -1,4 +1,4 @@
-ARG FEDORA_REGISTRY
+ARG FEDORA_REGISTRY=registry.fedoraproject.org
 FROM ${FEDORA_REGISTRY}/fedora:42
 
 # Install system dependencies
@@ -52,3 +52,12 @@ COPY .bingo/ .bingo/
 RUN export PATH="/usr/local/go/bin:/root/go/bin:$PATH" && \
     /root/go/bin/bingo get
 ENV PATH="/workspace/.bingo/bin:${PATH}"
+
+# Create a non-root user matching the host UID for bind-mount permissions.
+# On Linux with Podman userns=keep-id this is a no-op; on macOS/Docker it
+# ensures files written inside the container have the correct owner.
+ARG USERID=1000
+RUN if [ "${USERID}" != "0" ]; then \
+        useradd -m -u "${USERID}" -s /bin/bash aro-dev \
+        && chown -R aro-dev:aro-dev /workspace; \
+    fi
