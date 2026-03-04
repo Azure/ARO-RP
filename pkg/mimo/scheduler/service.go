@@ -5,9 +5,10 @@ package scheduler
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"errors"
 	"log"
-	"math/rand"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
@@ -86,8 +87,15 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		stopping: &atomic.Bool{},
 		workers:  &atomic.Int32{},
 
-		startTime:    time.Now(),
-		workerDelay:  func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
+		startTime: time.Now(),
+		workerDelay: func() time.Duration {
+			n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(60))
+			if err != nil {
+				log.Warnf("unable to generate random worker delay: %v", err)
+				return 0
+			}
+			return time.Duration(n.Int64()) * time.Second
+		},
 		now:          time.Now,
 		pollTime:     time.Minute,
 		newScheduler: NewSchedulerForSchedule,
