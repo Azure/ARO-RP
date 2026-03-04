@@ -58,6 +58,6 @@ ENV PATH="/workspace/.bingo/bin:${PATH}"
 # ensures files written inside the container have the correct owner.
 ARG USERID=1000
 RUN if [ "${USERID}" != "0" ]; then \
-        useradd -m -u "${USERID}" -s /bin/bash aro-dev \
+        useradd -l -m -u "${USERID}" -s /bin/bash aro-dev \
         && chown -R aro-dev:aro-dev /workspace; \
     fi
