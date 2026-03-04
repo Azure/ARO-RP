@@ -567,15 +567,15 @@ acr-login: ## Login to arointsvc ACR using PULL_SECRET
 
 # Dev-env: detect OS and choose compose tool / overrides
 ifeq ($(shell uname -s),Darwin)
-  DEV_ENV_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml
-  DEV_ENV_USERID = $(shell id -u)
+  DEV_ENV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml
+  DEV_ENV_USERID := $(shell id -u)
   DEV_ENV_FEDORA_REGISTRY ?= $(if $(RP_IMAGE_ACR),$(FEDORA_REGISTRY),registry.fedoraproject.org)
-  DEV_ENV_DEPS =
+  DEV_ENV_DEPS :=
 else
-  DEV_ENV_COMPOSE = podman compose -f docker-compose.yml -f docker-compose.dev-env-linux.yml
-  DEV_ENV_USERID = $(shell id -u)
-  DEV_ENV_FEDORA_REGISTRY = $(FEDORA_REGISTRY)
-  DEV_ENV_DEPS = acr-login
+  DEV_ENV_COMPOSE := podman compose -f docker-compose.yml -f docker-compose.dev-env-linux.yml
+  DEV_ENV_USERID := $(shell id -u)
+  DEV_ENV_FEDORA_REGISTRY := $(FEDORA_REGISTRY)
+  DEV_ENV_DEPS := acr-login
 endif
 
 .PHONY: dev-env-build
