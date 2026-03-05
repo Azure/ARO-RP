@@ -38,4 +38,13 @@ Replace <NEW-BRANCH-NAME> with a valid branch name and try again."
     exit 1
 fi
 
+echo "Before committing, ensure you've run the required make commands:"
+echo "  - make generate"
+echo "  - make imports"
+read -r -p "Have you run all required make commands? [y/N] " run_make_commands
+if [[ ! "${run_make_commands}" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+    echo "Commit aborted. Run the required make commands and try again."
+    exit 1
+fi
+
 exit 0
