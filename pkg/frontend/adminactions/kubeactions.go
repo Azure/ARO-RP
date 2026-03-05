@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/sirupsen/logrus"
 
@@ -19,7 +20,9 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -60,9 +63,25 @@ type kubeActions struct {
 
 // NewKubeActions returns a kubeActions
 func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (KubeActions, error) {
-	restConfig, err := restconfig.RestConfig(env, oc)
-	if err != nil {
-		return nil, err
+	var restConfig *rest.Config
+	var err error
+
+	if oc != nil {
+		restConfig, err = restconfig.RestConfig(env, oc)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// local development fallback
+		kubeconfig := os.Getenv("HIVE_KUBE_CONFIG_PATH")
+		if kubeconfig == "" {
+			return nil, fmt.Errorf("HIVE_KUBE_CONFIG_PATH not set")
+		}
+
+		restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
