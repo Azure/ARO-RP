@@ -67,6 +67,7 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 	var err error
 
 	if oc != nil {
+		// normal RP path (non-local)
 		restConfig, err = restconfig.RestConfig(env, oc)
 		if err != nil {
 			return nil, err
