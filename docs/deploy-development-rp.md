@@ -102,7 +102,7 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
 1. Create a resource group for your cluster and managed identities
 
-1. Source the local dev script and run the command to set up the wimi env file for you
+1. Source the local dev script and run the command to set up the miwi env file for you
 
    ```bash
    source ./hack/devtools/local_dev_env.sh
