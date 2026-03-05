@@ -40,6 +40,7 @@ type AzureActions interface {
 	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
 	GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error)
+	GetVirtualMachine(ctx context.Context, resourceGroupName string, VMName string, expand mgmtcompute.InstanceViewTypes) (result mgmtcompute.VirtualMachine, err error)
 }
 
 type azureActions struct {
@@ -195,4 +196,8 @@ func (a *azureActions) GetEffectiveRouteTable(ctx context.Context, nicName strin
 	}
 
 	return jsonData, nil
+}
+
+func (a *azureActions) GetVirtualMachine(ctx context.Context, resourceGroupName string, VMName string, expand mgmtcompute.InstanceViewTypes) (result mgmtcompute.VirtualMachine, err error) {
+	return a.virtualMachines.Get(ctx, resourceGroupName, VMName, expand)
 }
