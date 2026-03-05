@@ -77,7 +77,7 @@ az keyvault set-policy -n $KEYVAULT_NAME \
   - run the az aro create command
 ```bash
 az aro create --resource-group $RESOURCEGROUP \
-              --name $CLUSTER  \
+              --name $CLUSTER_NAME  \
               --vnet aro-vnet  \
               --master-subnet master-subnet \
               --worker-subnet worker-subnet \

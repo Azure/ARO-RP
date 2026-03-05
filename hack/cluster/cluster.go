@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	Cluster = "CLUSTER"
+	Cluster = "CLUSTER_NAME"
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
 	if len(os.Args) != 2 {
-		return fmt.Errorf("usage: CLUSTER=x %s {create,delete}", os.Args[0])
+		return fmt.Errorf("usage: CLUSTER_NAME=x %s {create,delete}", os.Args[0])
 	}
 
 	conf, err := cluster.NewClusterConfigFromEnv()
