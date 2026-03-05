@@ -211,7 +211,8 @@ func TestGetClusterMachines(t *testing.T) {
 	ctx := context.Background()
 
 	// Helper to create a machine object
-	createMachine := func(name, role, labelZone, specZone, vmSize string) machinev1beta1.Machine {
+	// phase can be empty string to create a machine with nil Phase
+	createMachine := func(name, role, labelZone, specZone, vmSize, phase string) machinev1beta1.Machine {
 		providerSpec := &machinev1beta1.AzureMachineProviderSpec{
 			Zone:   &specZone,
 			VMSize: vmSize,
@@ -225,7 +226,7 @@ func TestGetClusterMachines(t *testing.T) {
 			labels["machine.openshift.io/cluster-api-machine-role"] = role
 		}
 
-		return machinev1beta1.Machine{
+		machine := machinev1beta1.Machine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   name,
 				Labels: labels,
@@ -238,6 +239,12 @@ func TestGetClusterMachines(t *testing.T) {
 				},
 			},
 		}
+
+		if phase != "" {
+			machine.Status.Phase = &phase
+		}
+
+		return machine
 	}
 
 	// Helper to encode machine list to bytes
@@ -259,9 +266,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - 3 master nodes with matching zones",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -271,11 +278,11 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - filters non-master machines",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3"),
-					createMachine("worker-0", "worker", "1", "1", "Standard_D4s_v3"),
-					createMachine("worker-1", "worker", "2", "2", "Standard_D4s_v3"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("worker-0", "worker", "1", "1", "Standard_D4s_v3", "Running"),
+					createMachine("worker-1", "worker", "2", "2", "Standard_D4s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -285,9 +292,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - zone mismatch between label and spec",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3"), // Label zone 1, spec zone 2
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3"),
+					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Running"), // Label zone 1, spec zone 2
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -297,9 +304,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - multiple zone mismatches",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3"), // Mismatch
-					createMachine("master-1", "master", "2", "3", "Standard_D8s_v3"), // Mismatch
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3"), // OK
+					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Running"), // Mismatch
+					createMachine("master-1", "master", "2", "3", "Standard_D8s_v3", "Running"), // Mismatch
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"), // OK
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -310,8 +317,8 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - only 2 master nodes (zone distribution fails)",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -321,9 +328,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - 3 masters but only 2 zones",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3"),
-					createMachine("master-2", "master", "1", "1", "Standard_D8s_v3"), // Duplicate zone
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "1", "1", "Standard_D8s_v3", "Running"), // Duplicate zone
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -333,10 +340,10 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - filters machines without role label",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3"),
-					createMachine("master-3", "", "1", "1", "Standard_D8s_v3"), // No role label
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("master-3", "", "1", "1", "Standard_D8s_v3", "Running"), // No role label
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -346,14 +353,62 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - filters machines named master- but with wrong role",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3"),
-					createMachine("master-infra-0", "infra", "1", "1", "Standard_D8s_v3"), // Has "master" in name but wrong role
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("master-infra-0", "infra", "1", "1", "Standard_D8s_v3", "Running"), // Has "master" in name but wrong role
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3, // Only masters with role=master
+		},
+		{
+			name: "failure - machine with nil phase",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", ""), // nil phase
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "machine master-1 status phase is not Running, current phase is nil",
+		},
+		{
+			name: "failure - machine with Provisioning phase",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Provisioning"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "machine master-1 status phase is not Running, current phase is Provisioning",
+		},
+		{
+			name: "failure - machine with Failed phase",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Failed"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "machine master-2 status phase is not Running, current phase is Failed",
+		},
+		{
+			name: "failure - multiple machines with wrong phase",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Deleting"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", ""),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "master-0 status phase is not Running",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

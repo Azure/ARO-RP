@@ -110,6 +110,18 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 			if err != nil {
 				return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode provider spec, %s", err.Error()))
 			}
+
+			if machine.Status.Phase == nil || *machine.Status.Phase != "Running" {
+				phase := "nil"
+				if machine.Status.Phase != nil {
+					phase = *machine.Status.Phase
+				}
+				err := fmt.Errorf("machine %s status phase is not Running, current phase is %s", machine.Name, phase)
+				log.Info(err)
+				validationErrs = append(validationErrs, err)
+				continue
+			}
+
 			filteredMachine := machineBasics{
 				labelZone: machine.Labels["machine.openshift.io/zone"],
 				specZone:  *providerSpec.Zone,
