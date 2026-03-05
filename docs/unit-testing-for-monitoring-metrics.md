@@ -141,18 +141,18 @@ myscript.sh | socat UNIX-CONNECT:$SOCKETFILE -
 ````
 #!/bin/bash
 # example metric 
-CLUSTER="< your testcluster example name>"
+CLUSTER_NAME="< your testcluster example name>"
 SUBSCRIPTION="<  your subscription here >"
 METRIC="< your metric name>"
 ACCOUNT="< your CLUSTER_MDM_ACCOUNT >"
 NAMESPACE="< CLUSTER_MDM_NAMESPACE>"
 DIM_HOSTNAME="<your hostname >"
 DIM_LOCATION="< your region >"
-DIM_NAME="pod-$CLUSTER"
+DIM_NAME="pod-$CLUSTER_NAME"
 DIM_NAMESPACE="< somenamespace> "
 DIM_RESOURCEGROUP="< your resourcegroup> "
-DIM_RESOURCEID="/subscriptions/$SUBSCRIPTION/resourceGroups/$DIM_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
-DIM_RESOURCENAME=$CLUSTER
+DIM_RESOURCEID="/subscriptions/$SUBSCRIPTION/resourceGroups/$DIM_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME"
+DIM_RESOURCENAME=$CLUSTER_NAME
 
 ### or read data from file, like: data=$( cat mydatafile )
 data="10 11 12 13 13 13 13 15 16 19 20 21 25"

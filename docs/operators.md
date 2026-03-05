@@ -104,7 +104,7 @@ export ARO_IMAGE=quay.io/<user>/aro:latest
 - We can mimick the AdminUpdate when updating the ARO Operator
 This is the way we would test the same PUCM workflow we would use in Prod to update the operator.
 ```
-curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
+curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME?api-version=admin" --header "Content-Type: application/json" -d "{}"
 ```
 
 ### How to create & publish ARO Operator image to ACR/Quay

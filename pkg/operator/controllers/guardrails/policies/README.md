@@ -272,9 +272,9 @@ A tool [admr-gen](https://github.com/ArrisLee/admr-gen) has been created and can
 
 Set up local dev env following “Deploy development RP” section if not already: https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md
 
-Deploy a dev cluster $CLUSTER in your preferred region, cmd example:
+Deploy a dev cluster $CLUSTER_NAME in your preferred region, cmd example:
 ```sh
-CLUSTER=jeff-test-aro go run ./hack/cluster create
+CLUSTER_NAME=jeff-test-aro go run ./hack/cluster create
 ```
 
 Scale the standard aro operator to 0, cmd:
@@ -284,7 +284,7 @@ oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 
 Run aro operator from local code, cmd example:
 ```sh
-CLUSTER=jeff-test-aro go run -tags aro,containers_image_openpgp ./cmd/aro operator master
+CLUSTER_NAME=jeff-test-aro go run -tags aro,containers_image_openpgp ./cmd/aro operator master
 ```
 
 Wait a couple of minutes until aro operator fully synchronized

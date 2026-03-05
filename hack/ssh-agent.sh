@@ -5,10 +5,10 @@
 # you want to pass in
 
 usage() {
-    echo "usage: CLUSTER=cluster $0 hostname_pattern" >&2
-    echo "       Examples: CLUSTER=cluster $0 master1" >&2
-    echo "                 CLUSTER=cluster $0 eastus1 # worker node 1" >&2
-    echo "                 CLUSTER=cluster $0 bootstrap" >&2
+    echo "usage: CLUSTER_NAME=cluster $0 hostname_pattern" >&2
+    echo "       Examples: CLUSTER_NAME=cluster $0 master1" >&2
+    echo "                 CLUSTER_NAME=cluster $0 eastus1 # worker node 1" >&2
+    echo "                 CLUSTER_NAME=cluster $0 bootstrap" >&2
     exit 1
 }
 
@@ -25,12 +25,12 @@ trap cleanup EXIT
 eval "$(ssh-agent | grep -v '^echo ')"
 
 if [[ -z "$RESOURCEID" ]]; then
-    if [[ -z "$CLUSTER" ]]; then
-        echo "CLUSTER must be specified"
+    if [[ -z "$CLUSTER_NAME" ]]; then
+        echo "CLUSTER_NAME must be specified"
         usage
     fi
-    
-    RESOURCEID="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER}"
+
+    RESOURCEID="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER_NAME}"
 fi
 
 CLUSTER_RESOURCEGROUP=$(go run ./hack/db "$RESOURCEID" | jq -r .openShiftCluster.properties.clusterProfile.resourceGroupId | cut -d/ -f5)
