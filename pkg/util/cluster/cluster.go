@@ -57,7 +57,7 @@ import (
 )
 
 type ClusterConfig struct {
-	ClusterName           string `mapstructure:"CLUSTER"`
+	ClusterName           string `mapstructure:"CLUSTER_NAME"`
 	SubscriptionID        string `mapstructure:"AZURE_SUBSCRIPTION_ID"`
 	TenantID              string `mapstructure:"AZURE_TENANT_ID"`
 	Location              string `mapstructure:"LOCATION"`
@@ -791,7 +791,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
 		}
@@ -828,7 +828,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
 		}
@@ -1309,12 +1309,12 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	return nil
 }
 
-func (c *Cluster) deleteMiwiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
+func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
 	if !c.Config.UseWorkloadIdentity {
-		c.log.Print("Skipping deletion of miwi role assignments")
+		c.log.Print("Skipping deletion of wimi roleassignments")
 		return nil
 	}
-	c.log.Print("deleting miwi role assignments")
+	c.log.Print("deleting wimi role assignments")
 
 	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
 	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &wiRoleSets); err != nil {

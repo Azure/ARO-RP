@@ -62,7 +62,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[data-automation-key='name']")
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(cluster.Text()).To(Equal(os.Getenv("CLUSTER")))
+		Expect(cluster.Text()).To(Equal(os.Getenv("CLUSTER_NAME")))
 	})
 
 	It("Should be able to filter cluster data correctly", func() {

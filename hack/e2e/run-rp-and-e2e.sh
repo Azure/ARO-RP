@@ -12,17 +12,17 @@ if [[ $CI ]]; then
     set -a
     HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
     HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
-    CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    CLUSTER_RESOURCEGROUP="$CLUSTER"
+    CLUSTER_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    CLUSTER_RESOURCEGROUP="$CLUSTER_NAME"
     DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     PRIVATE_CLUSTER=true
     E2E_DELETE_CLUSTER=true # any value other than "false" ensures the cluster is deleted
     set +a
 
-    # for MIWI e2e tests, append -miwi to CLUSTER, RESOURCEGROUP, and DATABASE_NAME
+    # for MIWI e2e tests, append -miwi to CLUSTER_NAME, RESOURCEGROUP, and DATABASE_NAME
     if [[ $USE_WI ]]; then
-        CLUSTER="${CLUSTER}-miwi"
-        CLUSTER_RESOURCEGROUP="$CLUSTER"
+        CLUSTER_NAME="${CLUSTER_NAME}-miwi"
+        CLUSTER_RESOURCEGROUP="$CLUSTER_NAME"
         DATABASE_NAME="${DATABASE_NAME}-miwi"
     fi
 fi
@@ -215,7 +215,7 @@ clean_e2e_db() {
 }
 
 delete_e2e_cluster() {
-    echo "########## 🧹 Deleting Cluster $CLUSTER ##########"
+    echo "########## 🧹 Deleting Cluster $CLUSTER_NAME ##########"
     if [[ $CI ]]; then
         ./cluster delete
     else
@@ -227,11 +227,11 @@ update_role_sets() {
     ./aro update-role-sets
 }
 
-# TODO: CLUSTER and is also recalculated in multiple places
+# TODO: CLUSTER_NAME and is also recalculated in multiple places
 # in the billing pipelines :-(
 
-if [[ -z $CLUSTER ]]; then
-    echo "CLUSTER is not set, aborting"
+if [[ -z $CLUSTER_NAME ]]; then
+    echo "CLUSTER_NAME is not set, aborting"
     return 1
 fi
 
@@ -256,7 +256,7 @@ echo "DATABASE_NAME=$DATABASE_NAME"
 echo "RESOURCEGROUP=$RESOURCEGROUP"
 echo "KEYVAULT_PREFIX=$KEYVAULT_PREFIX"
 echo
-echo "CLUSTER=$CLUSTER"
+echo "CLUSTER_NAME=$CLUSTER_NAME"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"

@@ -429,7 +429,7 @@ unit-test-python:
 
 .PHONY: admin.kubeconfig
 admin.kubeconfig: ## Get cluster admin kubeconfig
-	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
+	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER_NAME} >admin.kubeconfig
 
 .PHONY: aks.kubeconfig
 aks.kubeconfig: ## Get AKS admin kubeconfig
