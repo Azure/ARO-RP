@@ -16,6 +16,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
+	corev1 "k8s.io/api/core/v1"
+
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -71,6 +73,11 @@ func (f *frontend) _getValidateFullResize(log *logrus.Entry, ctx context.Context
 		return err
 	}
 	azureVMs, err := getAzureVMs(log, ctx, azureActions, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+	if err != nil {
+		return err
+	}
+
+	err = validateClusterNodes(log, ctx, kubeActions)
 	if err != nil {
 		return err
 	}
@@ -218,10 +225,6 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 		return nil, err
 	}
 
-	for name, contents := range masterVMs {
-		log.Warnf("Azure VM %v has vmSize %v, status %v and zone %v", name, contents.vmSize, contents.status, contents.zone)
-	}
-
 	err = validateZoneDistribution(masterVMs, func(m azureVMBasics) string { return m.zone })
 	if err != nil {
 		return nil, err
@@ -295,4 +298,46 @@ func validateVMPowerState(log *logrus.Entry, vmStatuses []string, vmName string)
 	}
 
 	return nil
+}
+
+func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) error {
+	var validationErrs []error
+	rawNodes, err := kubeActions.KubeList(ctx, "Node", "")
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	nodeList := &corev1.NodeList{}
+	err = codec.NewDecoderBytes(rawNodes, &codec.JsonHandle{}).Decode(nodeList)
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode nodes, %s", err.Error()))
+	}
+
+	controlPlaneNodesFound := []string{}
+	for _, node := range nodeList.Items {
+		if role, ok := node.Labels["node-role.kubernetes.io/master"]; ok && role == "" {
+			controlPlaneNodesFound = append(controlPlaneNodesFound, node.Name)
+			if node.Spec.Unschedulable {
+				err := fmt.Errorf("node %s is unschedulable", node.Name)
+				log.Info(err)
+				validationErrs = append(validationErrs, err)
+			}
+
+			for _, condition := range node.Status.Conditions {
+				if condition.Type == corev1.NodeReady && condition.Status != corev1.ConditionTrue {
+					err := fmt.Errorf("node %s is not ready", node.Name)
+					log.Info(err)
+					validationErrs = append(validationErrs, err)
+				}
+			}
+		}
+	}
+
+	if len(controlPlaneNodesFound) != 3 {
+		err := fmt.Errorf("expected 3 control plane nodes, found %d: [%s]", len(controlPlaneNodesFound), strings.Join(controlPlaneNodesFound, ", "))
+		log.Info(err)
+		validationErrs = append(validationErrs, err)
+	}
+
+	return errors.Join(validationErrs...)
 }
