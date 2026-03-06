@@ -366,6 +366,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				// We don't emit unplanned maintenance signal for resize since it is only used for planned maintenance
 				r.Post("/resize", f.postAdminOpenShiftClusterVMResize)
 
+				r.Get("/preresizevalidation", f.getPreResizeControlPlaneVMsValidation)
+
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
