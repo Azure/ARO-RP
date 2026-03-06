@@ -28,7 +28,7 @@ type diagnosticStep struct {
 }
 
 func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
-	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
+	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines, m.armLoadBalancers, m.metrics)
 
 	s := []diagnosticStep{
 		{f: m.logClusterVersion, isJSON: true},
@@ -41,6 +41,9 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 	// only log serial consoles and Hive CD on an install, not on updates/adminUpdates
 	if runType == "install" {
 		s = append(s, diagnosticStep{f: d.LogVMSerialConsole, isJSON: false})
+		s = append(s, diagnosticStep{f: d.LogLoadBalancers, isJSON: false})
+		s = append(s, diagnosticStep{f: d.LogBootstrapNodeState, isJSON: false})
+		s = append(s, diagnosticStep{f: d.LogBootstrapMCS, isJSON: false})
 		s = append(s, diagnosticStep{f: m.logClusterDeployment, isJSON: true})
 	}
 

@@ -8,6 +8,8 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azmetrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
@@ -17,17 +19,23 @@ type manager struct {
 	doc *api.OpenShiftClusterDocument
 
 	virtualMachines compute.VirtualMachinesClient
+	loadBalancers   armnetwork.LoadBalancersClient
+	metrics         azmetrics.MetricsClient
 }
 
 func NewFailureDiagnostics(log *logrus.Entry, _env env.Interface,
 	doc *api.OpenShiftClusterDocument,
 
 	virtualMachines compute.VirtualMachinesClient,
+	loadBalancers armnetwork.LoadBalancersClient,
+	metrics azmetrics.MetricsClient,
 ) *manager {
 	return &manager{
 		log:             log,
 		env:             _env,
 		doc:             doc,
 		virtualMachines: virtualMachines,
+		loadBalancers:   loadBalancers,
+		metrics:         metrics,
 	}
 }

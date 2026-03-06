@@ -182,6 +182,21 @@ func (mr *MockVirtualMachinesClientMockRecorder) RedeployAndWait(ctx, resourceGr
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedeployAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).RedeployAndWait), ctx, resourceGroupName, VMName)
 }
 
+// RunCommandAndWait mocks base method.
+func (m *MockVirtualMachinesClient) RunCommandAndWait(ctx context.Context, resourceGroupName, VMName string, parameters compute.RunCommandInput) (compute.RunCommandResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunCommandAndWait", ctx, resourceGroupName, VMName, parameters)
+	ret0, _ := ret[0].(compute.RunCommandResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunCommandAndWait indicates an expected call of RunCommandAndWait.
+func (mr *MockVirtualMachinesClientMockRecorder) RunCommandAndWait(ctx, resourceGroupName, VMName, parameters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCommandAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).RunCommandAndWait), ctx, resourceGroupName, VMName, parameters)
+}
+
 // StartAndWait mocks base method.
 func (m *MockVirtualMachinesClient) StartAndWait(ctx context.Context, resourceGroupName, VMName string) error {
 	m.ctrl.T.Helper()

@@ -144,6 +144,18 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogLoadBalancers: load balancer or metrics client missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogBootstrapNodeState: vmclient missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogBootstrapMCS: vmclient missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterDeployment: null`),
 				},
 			},
@@ -235,6 +247,18 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogVMSerialConsole: vmclient missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogLoadBalancers: load balancer or metrics client missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogBootstrapNodeState: vmclient missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogBootstrapMCS: vmclient missing`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
