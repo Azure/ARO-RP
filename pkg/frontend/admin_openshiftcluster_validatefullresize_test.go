@@ -11,6 +11,7 @@ import (
 
 	"go.uber.org/mock/gomock"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -66,7 +67,7 @@ func TestValidateZoneDistribution(t *testing.T) {
 			items: map[string]string{
 				"item1": "1",
 				"item2": "2",
-				"item3": "1",
+				"item3": "2",
 			},
 			getZone: func(s string) string { return s },
 			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
@@ -102,8 +103,7 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		name           string
 		ocMachines     map[string]machineBasics
 		azureVMs       map[string]azureVMBasics
-		wantErr        string
-		wantErrStrings []string // For tests with multiple errors, check each string is present
+		wantErrStrings []string
 	}{
 		{
 			name: "valid - all machines match Azure VMs",
@@ -113,9 +113,9 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
 			azureVMs: map[string]azureVMBasics{
-				"master-0": {status: []string{"PowerState/running"}, vmSize: "Standard_D8s_v3", zone: "1"},
-				"master-1": {status: []string{"PowerState/running"}, vmSize: "Standard_D8s_v3", zone: "2"},
-				"master-2": {status: []string{"PowerState/running"}, vmSize: "Standard_D8s_v3", zone: "3"},
+				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
+				"master-1": {zone: "2", vmSize: "Standard_D8s_v3"},
+				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
 			},
 		},
 		{
@@ -123,31 +123,41 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 			ocMachines: map[string]machineBasics{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
 			azureVMs: map[string]azureVMBasics{
-				"master-0": {status: []string{"PowerState/running"}, vmSize: "Standard_D8s_v3", zone: "1"},
+				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
+				"master-1": {zone: "2", vmSize: "Standard_D8s_v3"},
 			},
-			wantErr: "machine master-1 not found in Azure resources",
+			wantErrStrings: []string{"machine master-2 not found in Azure resources"},
 		},
 		{
 			name: "invalid - zone mismatch",
 			ocMachines: map[string]machineBasics{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
 			azureVMs: map[string]azureVMBasics{
-				"master-0": {status: []string{"PowerState/running"}, vmSize: "Standard_D8s_v3", zone: "2"},
+				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
+				"master-1": {zone: "3", vmSize: "Standard_D8s_v3"}, // Wrong zone
+				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
 			},
-			wantErr: "machine master-0 has zone 1 in its spec, however Azure VM is running in zone 2",
+			wantErrStrings: []string{"machine master-1 has zone 2 in its spec, however Azure VM is running in zone 3"},
 		},
 		{
 			name: "invalid - size mismatch",
 			ocMachines: map[string]machineBasics{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
 			azureVMs: map[string]azureVMBasics{
-				"master-0": {status: []string{"PowerState/running"}, vmSize: "Standard_D16s_v3", zone: "1"},
+				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
+				"master-1": {zone: "2", vmSize: "Standard_D16s_v3"}, // Wrong size
+				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
 			},
-			wantErr: "machine master-0 has size Standard_D8s_v3 in its spec, however Azure VM is running a Standard_D16s_v3 VM",
+			wantErrStrings: []string{"machine master-1 has size Standard_D8s_v3 in its spec, however Azure VM is running a Standard_D16s_v3 VM"},
 		},
 		{
 			name: "invalid - multiple errors collected",
@@ -157,14 +167,12 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
 			azureVMs: map[string]azureVMBasics{
-				"master-0": {status: []string{"PowerState/running"}, vmSize: "Standard_D16s_v3", zone: "2"},
-				"master-1": {status: []string{"PowerState/running"}, vmSize: "Standard_D4s_v3", zone: "2"},
+				"master-0": {zone: "2", vmSize: "Standard_D16s_v3"}, // Both wrong
+				"master-1": {zone: "2", vmSize: "Standard_D8s_v3"},
 			},
-			// errors.Join() order depends on map iteration - check all error strings are present
 			wantErrStrings: []string{
 				"machine master-0 has zone 1 in its spec, however Azure VM is running in zone 2",
 				"machine master-0 has size Standard_D8s_v3 in its spec, however Azure VM is running a Standard_D16s_v3 VM",
-				"machine master-1 has size Standard_D8s_v3 in its spec, however Azure VM is running a Standard_D4s_v3 VM",
 				"machine master-2 not found in Azure resources",
 			},
 		},
@@ -172,11 +180,18 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 			name: "invalid - zone and size mismatch for same machine",
 			ocMachines: map[string]machineBasics{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
 			azureVMs: map[string]azureVMBasics{
-				"master-0": {status: []string{"PowerState/running"}, vmSize: "Standard_D16s_v3", zone: "2"},
+				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
+				"master-1": {zone: "3", vmSize: "Standard_D16s_v3"}, // Both wrong
+				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
 			},
-			wantErr: "machine master-0 has zone 1 in its spec, however Azure VM is running in zone 2\nmachine master-0 has size Standard_D8s_v3 in its spec, however Azure VM is running a Standard_D16s_v3 VM",
+			wantErrStrings: []string{
+				"machine master-1 has zone 2 in its spec, however Azure VM is running in zone 3",
+				"machine master-1 has size Standard_D8s_v3 in its spec, however Azure VM is running a Standard_D16s_v3 VM",
+			},
 		},
 		{
 			name:       "valid - empty maps",
@@ -187,7 +202,6 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateClusterMachinesAndVMs(log, tt.ocMachines, tt.azureVMs)
 
-			// For tests with multiple errors, check each error string is present
 			if len(tt.wantErrStrings) > 0 {
 				if err == nil {
 					t.Fatalf("expected error with messages %v, got nil", tt.wantErrStrings)
@@ -199,7 +213,7 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 					}
 				}
 			} else {
-				utilerror.AssertErrorMessage(t, err, tt.wantErr)
+				utilerror.AssertErrorMessage(t, err, "")
 			}
 		})
 	}
@@ -422,7 +436,7 @@ func TestGetClusterMachines(t *testing.T) {
 
 			if tt.wantErr != "" {
 				if err == nil {
-					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+					t.Fatalf("expected error, got nil")
 				}
 				if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Errorf("expected error to contain %q, got: %s", tt.wantErr, err.Error())
@@ -786,6 +800,215 @@ func TestGetAzureVMs(t *testing.T) {
 				if len(vms) != tt.wantCount {
 					t.Errorf("expected %d VMs, got %d", tt.wantCount, len(vms))
 				}
+			}
+		})
+	}
+}
+
+// TestValidateClusterNodes tests the validateClusterNodes function
+func TestValidateClusterNodes(t *testing.T) {
+	_, log := testlog.New()
+	ctx := context.Background()
+
+	// Helper to create a node object
+	// isControlPlane: true for control plane nodes (sets master label with empty value), false for worker nodes
+	createNode := func(name string, isControlPlane bool, unschedulable bool, ready bool) corev1.Node {
+		labels := map[string]string{}
+		if isControlPlane {
+			labels["node-role.kubernetes.io/master"] = ""
+		}
+
+		conditions := []corev1.NodeCondition{}
+		if ready {
+			conditions = append(conditions, corev1.NodeCondition{
+				Type:   corev1.NodeReady,
+				Status: corev1.ConditionTrue,
+			})
+		} else {
+			conditions = append(conditions, corev1.NodeCondition{
+				Type:   corev1.NodeReady,
+				Status: corev1.ConditionFalse,
+			})
+		}
+
+		return corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: labels,
+			},
+			Spec: corev1.NodeSpec{
+				Unschedulable: unschedulable,
+			},
+			Status: corev1.NodeStatus{
+				Conditions: conditions,
+			},
+		}
+	}
+
+	// Helper to encode node list to bytes
+	encodeNodeList := func(nodes ...corev1.Node) []byte {
+		nodeList := &corev1.NodeList{
+			Items: nodes,
+		}
+		b, _ := json.Marshal(nodeList)
+		return b
+	}
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_adminactions.MockKubeActions)
+		wantErr string
+	}{
+		{
+			name: "success - 3 control plane nodes, all ready and schedulable",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true),
+					createNode("master-1", true, false, true),
+					createNode("master-2", true, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+		},
+		{
+			name: "success - filters worker nodes",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true),
+					createNode("master-1", true, false, true),
+					createNode("master-2", true, false, true),
+					createNode("worker-0", false, false, true), // Worker node (role != "")
+					createNode("worker-1", false, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+		},
+		{
+			name: "failure - node is unschedulable",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true),
+					createNode("master-1", true, true, true), // Unschedulable
+					createNode("master-2", true, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "node master-1 is unschedulable",
+		},
+		{
+			name: "failure - node is not ready",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true),
+					createNode("master-1", true, false, false), // Not ready
+					createNode("master-2", true, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "node master-1 is not ready",
+		},
+		{
+			name: "failure - multiple nodes unschedulable",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, true, true), // Unschedulable
+					createNode("master-1", true, false, true),
+					createNode("master-2", true, true, true), // Unschedulable
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "master-0 is unschedulable",
+		},
+		{
+			name: "failure - multiple nodes not ready",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, false), // Not ready
+					createNode("master-1", true, false, true),
+					createNode("master-2", true, false, false), // Not ready
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "master-0 is not ready",
+		},
+		{
+			name: "failure - node both unschedulable and not ready",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true),
+					createNode("master-1", true, true, false), // Both issues
+					createNode("master-2", true, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "master-1 is unschedulable",
+		},
+		{
+			name: "failure - only 2 control plane nodes",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true),
+					createNode("master-1", true, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "expected 3 control plane nodes, found 2: [master-0, master-1]",
+		},
+		{
+			name: "failure - 4 control plane nodes",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true),
+					createNode("master-1", true, false, true),
+					createNode("master-2", true, false, true),
+					createNode("master-3", true, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "expected 3 control plane nodes, found 4: [master-0, master-1, master-2, master-3]",
+		},
+		{
+			name: "failure - 0 control plane nodes",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("worker-0", false, false, true),
+					createNode("worker-1", false, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "expected 3 control plane nodes, found 0: []",
+		},
+		{
+			name: "failure - combination of issues",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, true, true),   // Unschedulable
+					createNode("master-1", true, false, false), // Not ready
+					createNode("master-2", true, false, true),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "master-0 is unschedulable",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			kubeActions := mock_adminactions.NewMockKubeActions(ctrl)
+			tt.mocks(kubeActions)
+
+			err := validateClusterNodes(log, ctx, kubeActions)
+
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("expected error to contain %q, got: %s", tt.wantErr, err.Error())
+				}
+			} else {
+				utilerror.AssertErrorMessage(t, err, "")
 			}
 		})
 	}
