@@ -34,7 +34,7 @@ const (
 	machineNamespace = "openshift-machine-api"
 )
 
-func (f *frontend) getPostFullResizeValidation(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getPostResizeControlPlaneVMs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
@@ -69,11 +69,11 @@ func (f *frontend) getPostFullResizeValidation(w http.ResponseWriter, r *http.Re
 		adminReply(log, w, nil, nil, err)
 		return
 	}
-	err = f._getPostFullResizeValidation(log, ctx, kubeActions, azureActions, doc)
+	err = f._getPostResizeControlPlaneVMs(log, ctx, kubeActions, azureActions, doc)
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _getPostFullResizeValidation(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
+func (f *frontend) _getPostResizeControlPlaneVMs(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
 	ocMachines, err := getClusterMachines(log, ctx, kubeActions)
 	if err != nil {
 		return err
@@ -88,7 +88,13 @@ func (f *frontend) _getPostFullResizeValidation(log *logrus.Entry, ctx context.C
 		return err
 	}
 
-	_, err = validateClusterNodes(log, ctx, kubeActions)
+	ocNodes, err := validateClusterNodes(log, ctx, kubeActions)
+	if err != nil {
+		return err
+	}
+
+	err = validateClusterMachinesAndNodes(log, ocMachines, ocNodes)
+
 	return err
 }
 
