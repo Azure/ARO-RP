@@ -88,7 +88,7 @@ func (f *frontend) _getPostFullResizeValidation(log *logrus.Entry, ctx context.C
 		return err
 	}
 
-	err = validateClusterNodes(log, ctx, kubeActions)
+	_, err = validateClusterNodes(log, ctx, kubeActions)
 	return err
 }
 
@@ -104,7 +104,16 @@ type azureVMBasics struct {
 	zone   string
 }
 
+type nodeBasics struct {
+	nodeInstanceType string
+	betaInstanceType string
+}
+
 func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineBasics, error) {
+	var validationErrs []error
+	filteredMachines := make(map[string]machineBasics)
+	foundMachineSize := ""
+
 	rawPods, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
@@ -116,8 +125,6 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode machines, %s", err.Error()))
 	}
 
-	var validationErrs []error
-	filteredMachines := make(map[string]machineBasics)
 	for _, machine := range machines.Items {
 		if role, ok := machine.Labels["machine.openshift.io/cluster-api-machine-role"]; ok && role == "master" {
 			providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
@@ -149,6 +156,30 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 				validationErrs = append(validationErrs, err)
 				continue
 			}
+
+			machineLabelSize, ok := machine.Labels["machine.openshift.io/instance-type"]
+			if !ok || machineLabelSize != filteredMachine.size {
+				labelValue := machineLabelSize
+				if !ok {
+					labelValue = "<missing>"
+				}
+				err := fmt.Errorf("machine %s has a mismatch between label instance-type %s and instance type defined in the spec %s. These values should match", machine.Name, labelValue, filteredMachine.size)
+				log.Info(err)
+				validationErrs = append(validationErrs, err)
+				continue
+			}
+
+			if foundMachineSize == "" {
+				foundMachineSize = filteredMachine.size // we'll keep the machine size of the first machine to compare it with the rest
+			}
+
+			if filteredMachine.size != foundMachineSize {
+				err := fmt.Errorf("machine %s has size %s, however previous machines had %s. All machines should have the same size", machine.Name, filteredMachine.size, foundMachineSize)
+				log.Info(err)
+				validationErrs = append(validationErrs, err)
+				continue
+			}
+
 			filteredMachines[machine.Name] = filteredMachine
 		}
 	}
@@ -265,6 +296,28 @@ func validateClusterMachinesAndVMs(log *logrus.Entry, ocMachines map[string]mach
 	return errors.Join(validationErrs...)
 }
 
+func validateClusterMachinesAndNodes(log *logrus.Entry, ocMachines map[string]machineBasics, ocNodes map[string]nodeBasics) error {
+	// assumptions: keys in both maps should match, nodes are named after machines
+	var validationErrs []error
+
+	for name, machineSpec := range ocMachines {
+		if _, ok := ocNodes[name]; !ok {
+			err := fmt.Errorf("machine %s not found in cluster nodes", name)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if machineSpec.size != ocNodes[name].nodeInstanceType {
+			err := fmt.Errorf("machine %s has size %s in its spec, however node has instance-type %s", name, machineSpec.size, ocNodes[name].nodeInstanceType)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+		}
+	}
+
+	return errors.Join(validationErrs...)
+}
+
 func validateZoneDistribution[T any](items map[string]T, getZone func(T) string) error {
 	if len(items) != 3 {
 		return fmt.Errorf("expected 3 items, got %d", len(items))
@@ -305,23 +358,22 @@ func validateVMPowerState(log *logrus.Entry, vmStatuses []string, vmName string)
 	return nil
 }
 
-func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) error {
+func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]nodeBasics, error) {
 	var validationErrs []error
 	rawNodes, err := kubeActions.KubeList(ctx, "Node", "")
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
 	nodeList := &corev1.NodeList{}
 	err = codec.NewDecoderBytes(rawNodes, &codec.JsonHandle{}).Decode(nodeList)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode nodes, %s", err.Error()))
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode nodes, %s", err.Error()))
 	}
 
-	controlPlaneNodesFound := []string{}
+	controlPlaneNodesFound := make(map[string]nodeBasics)
 	for _, node := range nodeList.Items {
 		if role, ok := node.Labels["node-role.kubernetes.io/master"]; ok && role == "" {
-			controlPlaneNodesFound = append(controlPlaneNodesFound, node.Name)
 			if node.Spec.Unschedulable {
 				err := fmt.Errorf("node %s is unschedulable", node.Name)
 				log.Info(err)
@@ -335,14 +387,34 @@ func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions ad
 					validationErrs = append(validationErrs, err)
 				}
 			}
+
+			nodeInfo := nodeBasics{
+				nodeInstanceType: node.Labels["node.kubernetes.io/instance-type"],
+				betaInstanceType: node.Labels["beta.kubernetes.io/instance-type"],
+			}
+			controlPlaneNodesFound[node.Name] = nodeInfo
+
+			if nodeInfo.betaInstanceType != nodeInfo.nodeInstanceType {
+				err := fmt.Errorf("node %s has a mismatch between labels. node.kubernetes.io/instance-type: %s beta.kubernetes.io/instance-type: %s", node.Name, nodeInfo.nodeInstanceType, nodeInfo.betaInstanceType)
+				log.Info(err)
+				validationErrs = append(validationErrs, err)
+			}
 		}
 	}
 
 	if len(controlPlaneNodesFound) != 3 {
-		err := fmt.Errorf("expected 3 control plane nodes, found %d: [%s]", len(controlPlaneNodesFound), strings.Join(controlPlaneNodesFound, ", "))
+		nodeNames := make([]string, 0, len(controlPlaneNodesFound))
+		for name := range controlPlaneNodesFound {
+			nodeNames = append(nodeNames, name)
+		}
+		err := fmt.Errorf("expected 3 control plane nodes, found %d: [%s]", len(controlPlaneNodesFound), strings.Join(nodeNames, ", "))
 		log.Info(err)
 		validationErrs = append(validationErrs, err)
 	}
 
-	return errors.Join(validationErrs...)
+	if err := errors.Join(validationErrs...); err != nil {
+		return nil, err
+	}
+
+	return controlPlaneNodesFound, nil
 }

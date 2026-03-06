@@ -226,7 +226,8 @@ func TestGetClusterMachines(t *testing.T) {
 
 	// Helper to create a machine object
 	// phase can be empty string to create a machine with nil Phase
-	createMachine := func(name, role, labelZone, specZone, vmSize, phase string) machinev1beta1.Machine {
+	// labelInstanceType can be empty string to create a machine without instance-type label
+	createMachine := func(name, role, labelZone, specZone, vmSize, labelInstanceType, phase string) machinev1beta1.Machine {
 		providerSpec := &machinev1beta1.AzureMachineProviderSpec{
 			Zone:   &specZone,
 			VMSize: vmSize,
@@ -238,6 +239,9 @@ func TestGetClusterMachines(t *testing.T) {
 		}
 		if role != "" {
 			labels["machine.openshift.io/cluster-api-machine-role"] = role
+		}
+		if labelInstanceType != "" {
+			labels["machine.openshift.io/instance-type"] = labelInstanceType
 		}
 
 		machine := machinev1beta1.Machine{
@@ -280,9 +284,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - 3 master nodes with matching zones",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -292,11 +296,11 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - filters non-master machines",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
-					createMachine("worker-0", "worker", "1", "1", "Standard_D4s_v3", "Running"),
-					createMachine("worker-1", "worker", "2", "2", "Standard_D4s_v3", "Running"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("worker-0", "worker", "1", "1", "Standard_D4s_v3", "Standard_D4s_v3", "Running"),
+					createMachine("worker-1", "worker", "2", "2", "Standard_D4s_v3", "Standard_D4s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -306,9 +310,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - zone mismatch between label and spec",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Running"), // Label zone 1, spec zone 2
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Label zone 1, spec zone 2
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -318,9 +322,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - multiple zone mismatches",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Running"), // Mismatch
-					createMachine("master-1", "master", "2", "3", "Standard_D8s_v3", "Running"), // Mismatch
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"), // OK
+					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Mismatch
+					createMachine("master-1", "master", "2", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Mismatch
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // OK
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -331,8 +335,8 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - only 2 master nodes (zone distribution fails)",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -342,9 +346,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - 3 masters but only 2 zones",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "1", "1", "Standard_D8s_v3", "Running"), // Duplicate zone
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Duplicate zone
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -354,10 +358,10 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - filters machines without role label",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
-					createMachine("master-3", "", "1", "1", "Standard_D8s_v3", "Running"), // No role label
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-3", "", "1", "1", "Standard_D8s_v3", "", "Running"), // No role label
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -367,10 +371,10 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "success - filters machines named master- but with wrong role",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
-					createMachine("master-infra-0", "infra", "1", "1", "Standard_D8s_v3", "Running"), // Has "master" in name but wrong role
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-infra-0", "infra", "1", "1", "Standard_D8s_v3", "", "Running"), // Has "master" in name but wrong role
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -380,9 +384,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - machine with nil phase",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", ""), // nil phase
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", ""), // nil phase
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -392,9 +396,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - machine with Provisioning phase",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Provisioning"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Provisioning"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -404,9 +408,9 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - machine with Failed phase",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Failed"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Failed"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
@@ -416,13 +420,73 @@ func TestGetClusterMachines(t *testing.T) {
 			name: "failure - multiple machines with wrong phase",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Deleting"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", ""),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Running"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Deleting"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", ""),
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
 			wantErr: "master-0 status phase is not Running",
+		},
+		{
+			name: "failure - machine missing instance-type label",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "", "Running"), // Missing instance-type label
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "machine master-1 has a mismatch between label instance-type <missing> and instance type defined in the spec Standard_D8s_v3",
+		},
+		{
+			name: "failure - machine with mismatched instance-type label",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D16s_v3", "Running"), // Wrong label
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "machine master-1 has a mismatch between label instance-type Standard_D16s_v3 and instance type defined in the spec Standard_D8s_v3",
+		},
+		{
+			name: "failure - combination of instance-type and zone mismatches",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Zone mismatch
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "", "Running"),                // Missing instance-type
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "master-0 has a mismatch",
+		},
+		{
+			name: "failure - machines have different sizes",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D16s_v3", "Standard_D16s_v3", "Running"), // Different size
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "machine master-1 has size Standard_D16s_v3, however previous machines had Standard_D8s_v3",
+		},
+		{
+			name: "failure - multiple machines with different sizes",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					createMachine("master-1", "master", "2", "2", "Standard_D16s_v3", "Standard_D16s_v3", "Running"), // Different size
+					createMachine("master-2", "master", "3", "3", "Standard_D32s_v3", "Standard_D32s_v3", "Running"), // Different size
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "master-1 has size Standard_D16s_v3",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -812,10 +876,17 @@ func TestValidateClusterNodes(t *testing.T) {
 
 	// Helper to create a node object
 	// isControlPlane: true for control plane nodes (sets master label with empty value), false for worker nodes
-	createNode := func(name string, isControlPlane bool, unschedulable bool, ready bool) corev1.Node {
+	// nodeInstanceType and betaInstanceType can be empty strings to omit those labels
+	createNode := func(name string, isControlPlane bool, unschedulable bool, ready bool, nodeInstanceType, betaInstanceType string) corev1.Node {
 		labels := map[string]string{}
 		if isControlPlane {
 			labels["node-role.kubernetes.io/master"] = ""
+		}
+		if nodeInstanceType != "" {
+			labels["node.kubernetes.io/instance-type"] = nodeInstanceType
+		}
+		if betaInstanceType != "" {
+			labels["beta.kubernetes.io/instance-type"] = betaInstanceType
 		}
 
 		conditions := []corev1.NodeCondition{}
@@ -855,41 +926,44 @@ func TestValidateClusterNodes(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_adminactions.MockKubeActions)
-		wantErr string
+		name      string
+		mocks     func(*mock_adminactions.MockKubeActions)
+		wantErr   string
+		wantCount int
 	}{
 		{
 			name: "success - 3 control plane nodes, all ready and schedulable",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, true),
-					createNode("master-1", true, false, true),
-					createNode("master-2", true, false, true),
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
+			wantCount: 3,
 		},
 		{
 			name: "success - filters worker nodes",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, true),
-					createNode("master-1", true, false, true),
-					createNode("master-2", true, false, true),
-					createNode("worker-0", false, false, true), // Worker node (role != "")
-					createNode("worker-1", false, false, true),
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("worker-0", false, false, true, "Standard_D8s_v3", "Standard_D8s_v3"), // Worker node (role != "")
+					createNode("worker-1", false, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
+			wantCount: 3,
 		},
 		{
 			name: "failure - node is unschedulable",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, true),
-					createNode("master-1", true, true, true), // Unschedulable
-					createNode("master-2", true, false, true),
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, true, true, "Standard_D8s_v3", "Standard_D8s_v3"), // Unschedulable
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
@@ -899,9 +973,9 @@ func TestValidateClusterNodes(t *testing.T) {
 			name: "failure - node is not ready",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, true),
-					createNode("master-1", true, false, false), // Not ready
-					createNode("master-2", true, false, true),
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, false, false, "Standard_D8s_v3", "Standard_D8s_v3"), // Not ready
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
@@ -911,9 +985,9 @@ func TestValidateClusterNodes(t *testing.T) {
 			name: "failure - multiple nodes unschedulable",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, true, true), // Unschedulable
-					createNode("master-1", true, false, true),
-					createNode("master-2", true, true, true), // Unschedulable
+					createNode("master-0", true, true, true, "Standard_D8s_v3", "Standard_D8s_v3"), // Unschedulable
+					createNode("master-1", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-2", true, true, true, "Standard_D8s_v3", "Standard_D8s_v3"), // Unschedulable
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
@@ -923,9 +997,9 @@ func TestValidateClusterNodes(t *testing.T) {
 			name: "failure - multiple nodes not ready",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, false), // Not ready
-					createNode("master-1", true, false, true),
-					createNode("master-2", true, false, false), // Not ready
+					createNode("master-0", true, false, false, "Standard_D8s_v3", "Standard_D8s_v3"), // Not ready
+					createNode("master-1", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-2", true, false, false, "Standard_D8s_v3", "Standard_D8s_v3"), // Not ready
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
@@ -935,9 +1009,9 @@ func TestValidateClusterNodes(t *testing.T) {
 			name: "failure - node both unschedulable and not ready",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, true),
-					createNode("master-1", true, true, false), // Both issues
-					createNode("master-2", true, false, true),
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, true, false, "Standard_D8s_v3", "Standard_D8s_v3"), // Both issues
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
@@ -947,48 +1021,72 @@ func TestValidateClusterNodes(t *testing.T) {
 			name: "failure - only 2 control plane nodes",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, true),
-					createNode("master-1", true, false, true),
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
-			wantErr: "expected 3 control plane nodes, found 2: [master-0, master-1]",
+			wantErr: "expected 3 control plane nodes, found 2",
 		},
 		{
 			name: "failure - 4 control plane nodes",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, false, true),
-					createNode("master-1", true, false, true),
-					createNode("master-2", true, false, true),
-					createNode("master-3", true, false, true),
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-3", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
-			wantErr: "expected 3 control plane nodes, found 4: [master-0, master-1, master-2, master-3]",
+			wantErr: "expected 3 control plane nodes, found 4",
 		},
 		{
 			name: "failure - 0 control plane nodes",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("worker-0", false, false, true),
-					createNode("worker-1", false, false, true),
+					createNode("worker-0", false, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("worker-1", false, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
-			wantErr: "expected 3 control plane nodes, found 0: []",
+			wantErr: "expected 3 control plane nodes, found 0",
 		},
 		{
 			name: "failure - combination of issues",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				nodes := encodeNodeList(
-					createNode("master-0", true, true, true),   // Unschedulable
-					createNode("master-1", true, false, false), // Not ready
-					createNode("master-2", true, false, true),
+					createNode("master-0", true, true, true, "Standard_D8s_v3", "Standard_D8s_v3"),   // Unschedulable
+					createNode("master-1", true, false, false, "Standard_D8s_v3", "Standard_D8s_v3"), // Not ready
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
 				)
 				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
 			},
 			wantErr: "master-0 is unschedulable",
+		},
+		{
+			name: "failure - node instance-type labels mismatch",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, false, true, "Standard_D8s_v3", "Standard_D16s_v3"), // Mismatch
+					createNode("master-2", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantErr: "node master-1 has a mismatch between labels",
+		},
+		{
+			name: "success - nodes with matching instance-type labels",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				nodes := encodeNodeList(
+					createNode("master-0", true, false, true, "Standard_D8s_v3", "Standard_D8s_v3"),
+					createNode("master-1", true, false, true, "Standard_D16s_v3", "Standard_D16s_v3"),
+					createNode("master-2", true, false, true, "Standard_D32s_v3", "Standard_D32s_v3"),
+				)
+				k.EXPECT().KubeList(ctx, "Node", "").Return(nodes, nil)
+			},
+			wantCount: 3,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -998,7 +1096,7 @@ func TestValidateClusterNodes(t *testing.T) {
 			kubeActions := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(kubeActions)
 
-			err := validateClusterNodes(log, ctx, kubeActions)
+			nodes, err := validateClusterNodes(log, ctx, kubeActions)
 
 			if tt.wantErr != "" {
 				if err == nil {
@@ -1006,6 +1104,121 @@ func TestValidateClusterNodes(t *testing.T) {
 				}
 				if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Errorf("expected error to contain %q, got: %s", tt.wantErr, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if len(nodes) != tt.wantCount {
+					t.Errorf("expected %d nodes, got %d", tt.wantCount, len(nodes))
+				}
+			}
+		})
+	}
+}
+
+// TestValidateClusterMachinesAndNodes tests the validateClusterMachinesAndNodes function
+func TestValidateClusterMachinesAndNodes(t *testing.T) {
+	_, log := testlog.New()
+
+	for _, tt := range []struct {
+		name           string
+		ocMachines     map[string]machineBasics
+		ocNodes        map[string]nodeBasics
+		wantErrStrings []string
+	}{
+		{
+			name: "valid - all machines match nodes",
+			ocMachines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
+			},
+			ocNodes: map[string]nodeBasics{
+				"master-0": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+				"master-1": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+				"master-2": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+			},
+		},
+		{
+			name: "invalid - machine not found in nodes",
+			ocMachines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
+			},
+			ocNodes: map[string]nodeBasics{
+				"master-0": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+				"master-1": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+			},
+			wantErrStrings: []string{"machine master-2 not found in cluster nodes"},
+		},
+		{
+			name: "invalid - instance-type mismatch",
+			ocMachines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
+			},
+			ocNodes: map[string]nodeBasics{
+				"master-0": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+				"master-1": {nodeInstanceType: "Standard_D16s_v3", betaInstanceType: "Standard_D16s_v3"}, // Wrong size
+				"master-2": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+			},
+			wantErrStrings: []string{"machine master-1 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v3"},
+		},
+		{
+			name: "invalid - multiple errors collected",
+			ocMachines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
+			},
+			ocNodes: map[string]nodeBasics{
+				"master-0": {nodeInstanceType: "Standard_D16s_v3", betaInstanceType: "Standard_D16s_v3"}, // Wrong size
+				"master-1": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
+			},
+			wantErrStrings: []string{
+				"machine master-0 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v3",
+				"machine master-2 not found in cluster nodes",
+			},
+		},
+		{
+			name: "invalid - all machines have mismatched nodes",
+			ocMachines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
+			},
+			ocNodes: map[string]nodeBasics{
+				"master-0": {nodeInstanceType: "Standard_D16s_v3", betaInstanceType: "Standard_D16s_v3"},
+				"master-1": {nodeInstanceType: "Standard_D32s_v3", betaInstanceType: "Standard_D32s_v3"},
+				"master-2": {nodeInstanceType: "Standard_D64s_v3", betaInstanceType: "Standard_D64s_v3"},
+			},
+			wantErrStrings: []string{
+				"master-0 has size Standard_D8s_v3",
+				"master-1 has size Standard_D8s_v3",
+				"master-2 has size Standard_D8s_v3",
+			},
+		},
+		{
+			name:       "valid - empty maps",
+			ocMachines: map[string]machineBasics{},
+			ocNodes:    map[string]nodeBasics{},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateClusterMachinesAndNodes(log, tt.ocMachines, tt.ocNodes)
+
+			if len(tt.wantErrStrings) > 0 {
+				if err == nil {
+					t.Fatalf("expected error with messages %v, got nil", tt.wantErrStrings)
+				}
+				errStr := err.Error()
+				for _, wantErrString := range tt.wantErrStrings {
+					if !strings.Contains(errStr, wantErrString) {
+						t.Errorf("expected error to contain %q, but got: %s", wantErrString, errStr)
+					}
 				}
 			} else {
 				utilerror.AssertErrorMessage(t, err, "")
