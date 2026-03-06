@@ -376,7 +376,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
 
-				r.Get("/validateresize", f.getValidateFullResize)
+				r.Get("/postresizevalidation", f.getPostFullResizeValidation)
 				// MIMO
 				r.Route("/maintenancemanifests", func(r chi.Router) {
 					r.Get("/", f.getAdminMaintManifests)

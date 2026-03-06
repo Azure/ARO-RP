@@ -34,40 +34,46 @@ const (
 	machineNamespace = "openshift-machine-api"
 )
 
-func (f *frontend) getValidateFullResize(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getPostFullResizeValidation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-	err := f._getValidateFullResize(log, ctx, r)
-	adminReply(log, w, nil, nil, err)
-}
-
-func (f *frontend) _getValidateFullResize(log *logrus.Entry, ctx context.Context, r *http.Request) error {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		apiErr := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		adminReply(log, w, nil, nil, apiErr)
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName))
+		apiErr := api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName))
+		adminReply(log, w, nil, nil, apiErr)
+		return
 	case err != nil:
-		return err
+		adminReply(log, w, nil, nil, err)
+		return
 	}
 	kubeActions, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		apiErr := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		adminReply(log, w, nil, nil, apiErr)
+		return
 	}
 
 	azureActions, err := f.newStreamAzureAction(ctx, r, log)
 	if err != nil {
-		return err
+		adminReply(log, w, nil, nil, err)
+		return
 	}
+	err = f._getPostFullResizeValidation(log, ctx, kubeActions, azureActions, doc)
+	adminReply(log, w, nil, nil, err)
+}
 
+func (f *frontend) _getPostFullResizeValidation(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
 	ocMachines, err := getClusterMachines(log, ctx, kubeActions)
 	if err != nil {
 		return err
@@ -77,13 +83,12 @@ func (f *frontend) _getValidateFullResize(log *logrus.Entry, ctx context.Context
 		return err
 	}
 
-	err = validateClusterNodes(log, ctx, kubeActions)
+	err = validateClusterMachinesAndVMs(log, ocMachines, azureVMs)
 	if err != nil {
 		return err
 	}
 
-	err = validateClusterMachinesAndVMs(log, ocMachines, azureVMs)
-
+	err = validateClusterNodes(log, ctx, kubeActions)
 	return err
 }
 
