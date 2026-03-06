@@ -1,0 +1,10 @@
+# Compose override for macOS (Docker / OrbStack).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml up aro-dev-env
+services:
+  aro-dev-env:
+    privileged: true
+    volumes:
+      - .:/workspace
+      - ~/.azure:/root/.azure:ro
+      - ~/.ssh:/root/.ssh:ro
+      - ./secrets:/workspace/secrets:ro
