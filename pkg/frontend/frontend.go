@@ -114,6 +114,7 @@ type frontend struct {
 	// these helps us to test and mock easier
 	now                          func() time.Time
 	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+	validateResizeQuota          func(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, vmSize string) error
 
 	streamResponder StreamResponder
 }
@@ -195,6 +196,7 @@ func NewFrontend(ctx context.Context,
 
 		now:                          time.Now,
 		systemDataClusterDocEnricher: enrichClusterSystemData,
+		validateResizeQuota:          defaultValidateResizeQuota,
 
 		streamResponder: defaultResponder{},
 	}
@@ -365,6 +367,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				// We don't emit unplanned maintenance signal for resize since it is only used for planned maintenance
 				r.Post("/resize", f.postAdminOpenShiftClusterVMResize)
+
+				r.Get("/preresizevalidation", f.getPreResizeControlPlaneVMsValidation)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
 
