@@ -23,6 +23,7 @@ type VirtualMachinesClientAddons interface {
 	StopAndWait(ctx context.Context, resourceGroupName string, VMName string, deallocateVM bool) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
 	GetSerialConsoleForVM(ctx context.Context, resourceGroupName string, VMName string, target io.Writer) error
+	RunCommandAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.RunCommandInput) (mgmtcompute.RunCommandResult, error)
 }
 
 func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error {
@@ -114,6 +115,19 @@ func (c *virtualMachinesClient) retrieveBootDiagnosticsData(ctx context.Context,
 	}
 
 	return *resp.SerialConsoleLogBlobURI, nil
+}
+
+func (c *virtualMachinesClient) RunCommandAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.RunCommandInput) (mgmtcompute.RunCommandResult, error) {
+	future, err := c.RunCommand(ctx, resourceGroupName, VMName, parameters)
+	if err != nil {
+		return mgmtcompute.RunCommandResult{}, err
+	}
+
+	if err := future.WaitForCompletionRef(ctx, c.Client); err != nil {
+		return mgmtcompute.RunCommandResult{}, err
+	}
+
+	return future.Result(c.VirtualMachinesClient)
 }
 
 // GetSerialConsoleForVM will return the serial console log blob as an
