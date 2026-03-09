@@ -90,22 +90,66 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					}, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`{"status":"success","message":"SKU 'Standard_D8s_v3' is available and valid for control plane resize in region 'eastus'."}` + "\n"),
+			wantResponse:   []byte(`"All pre-flight checks passed"` + "\n"),
 		},
 		{
-			name:           "missing vmSize parameter",
-			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			vmSize:         "",
-			fixture:        func(f *testdatabase.Fixture) {},
+			name:       "missing vmSize parameter",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: vmSize: The provided vmSize is empty.`,
 		},
 		{
-			name:           "unsupported master VM size",
-			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			vmSize:         "Standard_D2s_v3",
-			fixture:        func(f *testdatabase.Fixture) {},
+			name:       "unsupported master VM size",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D2s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: : The provided vmSize 'Standard_D2s_v3' is unsupported for master.`,
