@@ -22,17 +22,6 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 	namespace := r.URL.Query().Get("namespace")
 	name := r.URL.Query().Get("name")
 
-	if namespace == "" {
-		adminReply(log, w, nil, nil,
-			api.NewCloudError(
-				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidRequestContent,
-				"",
-				"namespace is required",
-			))
-		return
-	}
-
 	// Local dev mock response
 	if os.Getenv(envLocalDevMockHive) == "true" {
 		log.Warn("using LOCALDEV_MOCK_HIVE mock response")
