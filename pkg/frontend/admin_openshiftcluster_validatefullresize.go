@@ -34,6 +34,17 @@ const (
 	machineNamespace = "openshift-machine-api"
 )
 
+// convertErrorLineEndings converts newlines to a clearer separator " | ", as it seems that the new lines are not being parsed in GA
+// (or we need to do deeper changes to have nicer error messages)
+func convertErrorLineEndings(err error) error {
+	if err == nil {
+		return nil
+	}
+	errMsg := err.Error()
+	errMsg = strings.ReplaceAll(errMsg, "\n", " | ")
+	return fmt.Errorf("%s", errMsg)
+}
+
 func (f *frontend) getPostResizeControlPlaneVMs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
@@ -76,26 +87,25 @@ func (f *frontend) getPostResizeControlPlaneVMs(w http.ResponseWriter, r *http.R
 func (f *frontend) _getPostResizeControlPlaneVMs(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
 	ocMachines, err := getClusterMachines(log, ctx, kubeActions)
 	if err != nil {
-		return err
+		return convertErrorLineEndings(err)
 	}
 	azureVMs, err := getAzureVMs(log, ctx, azureActions, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 	if err != nil {
-		return err
+		return convertErrorLineEndings(err)
 	}
 
 	err = validateClusterMachinesAndVMs(log, ocMachines, azureVMs)
 	if err != nil {
-		return err
+		return convertErrorLineEndings(err)
 	}
 
 	ocNodes, err := validateClusterNodes(log, ctx, kubeActions)
 	if err != nil {
-		return err
+		return convertErrorLineEndings(err)
 	}
 
 	err = validateClusterMachinesAndNodes(log, ocMachines, ocNodes)
-
-	return err
+	return convertErrorLineEndings(err)
 }
 
 type machineBasics struct {
