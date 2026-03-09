@@ -216,7 +216,7 @@ services:
       args:
         - FEDORA_REGISTRY=${FEDORA_REGISTRY:-registry.fedoraproject.org}
         - USERID=${USERID:-1000}
-    image: aro-rp_aro-dev
+    image: localhost/aro-rp_aro-dev
     platform: ${PLATFORM:-linux/amd64}
     volumes:
       - .:/workspace:Z
