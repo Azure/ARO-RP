@@ -6,16 +6,18 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -23,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
@@ -86,22 +89,47 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidations(
 		return nil, err
 	}
 
-	g, errCtx := errgroup.WithContext(ctx)
+	// Run all pre-flight checks in parallel.  Errors are collected via mutex
+	// so that all checks run to completion and the caller sees every failure
+	// at once, rather than only the first one.
+	var (
+		mu      sync.Mutex
+		details []api.CloudErrorBody
+	)
+	collect := func(err error) {
+		if err == nil {
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		var ce *api.CloudError
+		if errors.As(err, &ce) && ce.CloudErrorBody != nil {
+			details = append(details, *ce.CloudErrorBody)
+		} else {
+			details = append(details, api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInternalServerError,
+				Message: err.Error(),
+			})
+		}
+	}
 
-	// SKU validation
-	g.Go(func() error {
-		return f.validateVMSKU(errCtx, doc, subscriptionDoc, vmSize, log)
-	})
+	var wg sync.WaitGroup
 
-	// API server health check
-	g.Go(func() error {
-		return f.validateAPIServerHealth(errCtx, k)
-	})
+	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, vmSize, log)) })
+	wg.Go(func() { collect(f.validateAPIServerHealth(ctx, k)) })
+	wg.Go(func() { collect(f.validateVMSP(ctx, k)) })
 
-	// TODO: Service Principal validity check (commit 3)
+	wg.Wait()
 
-	if err := g.Wait(); err != nil {
-		return nil, err
+	if len(details) > 0 {
+		return nil, &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInvalidParameter,
+				Message: "Pre-flight validation failed.",
+				Details: details,
+			},
+		}
 	}
 
 	return json.Marshal("All pre-flight checks passed")
@@ -205,6 +233,46 @@ func (f *frontend) validateAPIServerHealth(ctx context.Context, k adminactions.K
 	}
 
 	return nil
+}
+
+// validateVMSP queries the ARO Cluster CRD to check the ServicePrincipalValid
+// condition set by the serviceprincipalchecker operator controller.  The cluster
+// Service Principal is required for the implicit ARM VM PUT during resize; if
+// it is expired or lacks permissions the resize will fail with the node offline.
+func (f *frontend) validateVMSP(ctx context.Context, k adminactions.KubeActions) error {
+	rawCluster, err := k.KubeGet(ctx, "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName)
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "servicePrincipal",
+			fmt.Sprintf("Failed to retrieve ARO Cluster resource: %v", err))
+	}
+
+	var cluster arov1alpha1.Cluster
+	if err := json.Unmarshal(rawCluster, &cluster); err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "servicePrincipal",
+			fmt.Sprintf("Failed to parse ARO Cluster resource: %v", err))
+	}
+
+	for _, cond := range cluster.Status.Conditions {
+		if cond.Type == arov1alpha1.ServicePrincipalValid {
+			if cond.Status == operatorv1.ConditionTrue {
+				return nil
+			}
+			return api.NewCloudError(
+				http.StatusConflict,
+				api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
+				fmt.Sprintf("Cluster Service Principal is invalid: %s", cond.Message))
+		}
+	}
+
+	// Condition not found — the checker may not have run yet.
+	return api.NewCloudError(
+		http.StatusConflict,
+		api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
+		"ServicePrincipalValid condition not found on the ARO Cluster resource. The serviceprincipalchecker may not have run yet.")
 }
 
 // --- SKU availability and quota validation (Azure Compute queries) ---

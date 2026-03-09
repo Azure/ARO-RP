@@ -20,11 +20,13 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -51,10 +53,30 @@ func healthyKubeAPIServerJSON() []byte {
 	})
 }
 
-func kubeAPIServerHealthyMock(k *mock_adminactions.MockKubeActions) {
+func fakeAROClusterJSON(conditions []operatorv1.OperatorCondition) []byte {
+	cluster := arov1alpha1.Cluster{
+		Status: arov1alpha1.ClusterStatus{
+			Conditions: conditions,
+		},
+	}
+	b, _ := json.Marshal(cluster)
+	return b
+}
+
+func validServicePrincipalJSON() []byte {
+	return fakeAROClusterJSON([]operatorv1.OperatorCondition{
+		{Type: arov1alpha1.ServicePrincipalValid, Status: operatorv1.ConditionTrue},
+	})
+}
+
+func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	k.EXPECT().
 		KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 		Return(healthyKubeAPIServerJSON(), nil).
+		AnyTimes()
+	k.EXPECT().
+		KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+		Return(validServicePrincipalJSON(), nil).
 		AnyTimes()
 }
 
@@ -121,7 +143,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 			},
-			kubeMocks:      kubeAPIServerHealthyMock,
+			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`"All pre-flight checks passed"` + "\n"),
 		},
@@ -153,9 +175,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 				})
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			kubeMocks:      kubeAPIServerHealthyMock,
+			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: vmSize: The provided vmSize is empty.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The provided vmSize is empty.`,
 		},
 		{
 			name:       "unsupported master VM size",
@@ -185,9 +207,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 				})
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			kubeMocks:      kubeAPIServerHealthyMock,
+			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : The provided vmSize 'Standard_D2s_v3' is unsupported for master.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: : The provided vmSize 'Standard_D2s_v3' is unsupported for master.`,
 		},
 		{
 			name:       "cluster not found",
@@ -275,9 +297,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 			},
-			kubeMocks:      kubeAPIServerHealthyMock,
+			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is unavailable in region 'eastus'`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is unavailable in region 'eastus'`,
 		},
 		{
 			name:       "SKU restricted in subscription",
@@ -331,9 +353,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 			},
-			kubeMocks:      kubeAPIServerHealthyMock,
+			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -480,6 +502,79 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			tt.mocks(computeUsageClient)
 
 			err := checkResizeComputeQuota(ctx, computeUsageClient, "eastus", tt.vmSize)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateVMSP(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_adminactions.MockKubeActions)
+		wantErr string
+	}{
+		{
+			name: "valid service principal",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(validServicePrincipalJSON(), nil)
+			},
+		},
+		{
+			name: "invalid service principal",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{
+						{
+							Type:    arov1alpha1.ServicePrincipalValid,
+							Status:  operatorv1.ConditionFalse,
+							Message: "secret expired",
+						},
+					}), nil)
+			},
+			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: Cluster Service Principal is invalid: secret expired",
+		},
+		{
+			name: "condition not found",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{}), nil)
+			},
+			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: ServicePrincipalValid condition not found on the ARO Cluster resource. The serviceprincipalchecker may not have run yet.",
+		},
+		{
+			name: "KubeGet returns error",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(nil, fmt.Errorf("connection refused"))
+			},
+			wantErr: "500: InternalServerError: servicePrincipal: Failed to retrieve ARO Cluster resource: connection refused",
+		},
+		{
+			name: "KubeGet returns invalid JSON",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return([]byte(`{invalid`), nil)
+			},
+			wantErr: "500: InternalServerError: servicePrincipal: Failed to parse ARO Cluster resource: invalid character 'i' looking for beginning of object key string",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			k := mock_adminactions.NewMockKubeActions(controller)
+			tt.mocks(k)
+
+			f := &frontend{}
+			err := f.validateVMSP(ctx, k)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
