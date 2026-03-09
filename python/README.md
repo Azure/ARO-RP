@@ -1,6 +1,6 @@
 # ARO-RP/python
 
-[draft]
+TODO: migrate the rest of this content to `docs/az-aro-python-development.md`.
 
 Welcome to the ARO command-line extension.
 
@@ -10,7 +10,7 @@ Code in these directories make up the commands and logic for the `az aro` CLI.
 
 ### `python/az/aro/azext_aro`
 
-This is where the majority of human written code lives.
+This is where the majority of hand-written code lives.
 
 highlights:
 

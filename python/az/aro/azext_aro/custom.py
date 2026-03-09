@@ -773,13 +773,7 @@ def aro_identity_get_required(*,
     if version not in aro_get_versions(client, location):
         raise ValidationError("--version invalid")
 
-    role_set = None
-    for tset in client.platform_workload_identity_role_sets.list(location):
-        if version.startswith(tset.open_shift_version):
-            role_set = tset
-
-    if not role_set:
-        raise RuntimeError("Could not find identity requirements for provided version and location.")
+    role_set = _get_pwi_role_set(client, version, location)
 
     # NOTE: i (adprice) don't like that we're resorting to `logger.warning`
     # here rather than basic `print()`. it looks weird seeing a wall of yellow
@@ -789,9 +783,9 @@ def aro_identity_get_required(*,
     # displays that.
 
     logger.warning("Use the following commands to create the required managed identities:")
-    print_identity_create_cmd(resource_group_name, 'aro-cluster', location)
+    _print_identity_create_cmd(resource_group_name, 'aro-cluster', location)
     for role in role_set.platform_workload_identity_roles:
-        print_identity_create_cmd(resource_group_name, role.operator_name, location)
+        _print_identity_create_cmd(resource_group_name, role.operator_name, location)
 
     sub_id = get_subscription_id(cmd.cli_ctx)
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
@@ -809,7 +803,7 @@ def aro_identity_get_required(*,
                     break
 
         for scope in scopes:
-            print_role_assignment_create_cmd(
+            _print_role_assignment_create_cmd(
                 f"$(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query principalId -o tsv)",
                 # NOTE: i don't know why, but role.role_definition_id is not
                 # the full resource ID
@@ -820,14 +814,14 @@ def aro_identity_get_required(*,
     logger.warning("\nUse the following commands to create the required role assignments"
                    " over platform workload identities:")
     for role in role_set.platform_workload_identity_roles:
-        print_role_assignment_create_cmd(
+        _print_role_assignment_create_cmd(
             f"$(az identity show -g '{resource_group_name}' -n 'aro-cluster' --query principalId -o tsv)",
             ARO_FEDERATED_CREDENTIAL_ROLE,
             f"$(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query id -o tsv)"
         )
 
     logger.warning("\nUse the following command to create the required role assignment over the virtual network:")
-    print_role_assignment_create_cmd(
+    _print_role_assignment_create_cmd(
         "$(az ad sp list --display-name 'Azure Red Hat OpenShift RP' --query '[0].id' -o tsv)",
         FP_SERVICE_PRINCIPAL_ROLE,
         vnet
@@ -853,13 +847,7 @@ def aro_identity_create_required(*,
     if version not in aro_get_versions(client, location):
         raise ValidationError("--version invalid")
 
-    role_set = None
-    for _set in client.platform_workload_identity_role_sets.list(location):
-        if version.startswith(_set.open_shift_version):
-            role_set = _set
-
-    if not role_set:
-        raise RuntimeError("Could not find identity requirements for provided version and location.")
+    role_set = _get_pwi_role_set(client, version, location)
 
     idcreate = identity_create(cli_ctx=cmd.cli_ctx)
     racreate = roleassignment_create(cli_ctx=cmd.cli_ctx)
@@ -966,12 +954,20 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
                     assign_role_to_resource(cli_ctx, resource, sp_id, role)
 
 
-def print_identity_create_cmd(group, name, location):
+def _get_pwi_role_set(client, version, location):
+    for rset in client.platform_workload_identity_role_sets.list(location):
+        if version.startswith(rset.open_shift_version):
+            return rset
+
+    raise RuntimeError("Could not find identity requirements.")
+
+
+def _print_identity_create_cmd(group, name, location) -> None:
     msg = f"    az identity create -g \"{group}\" -n \"{name}\" -l \"{location}\""
     logger.warning(msg)
 
 
-def print_role_assignment_create_cmd(assignee, role, scope):
+def _print_role_assignment_create_cmd(assignee, role, scope) -> None:
     msg = [
         "    az role assignment create",
         f"--assignee-object-id \"{assignee}\"",
