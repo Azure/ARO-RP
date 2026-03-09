@@ -775,13 +775,6 @@ def aro_identity_get_required(*,
 
     role_set = _get_pwi_role_set(client, version, location)
 
-    # NOTE: i (adprice) don't like that we're resorting to `logger.warning`
-    # here rather than basic `print()`. it looks weird seeing a wall of yellow
-    # text.
-    #
-    # Can we return a list[str] instead? i'll experiment with how the printer
-    # displays that.
-
     logger.warning("Use the following commands to create the required managed identities:")
     _print_identity_create_cmd(resource_group_name, 'aro-cluster', location)
     for role in role_set.platform_workload_identity_roles:
