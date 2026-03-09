@@ -15,12 +15,16 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
+	configv1 "github.com/openshift/api/config/v1"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
@@ -76,6 +80,12 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidations(
 		return nil, err
 	}
 
+	// Create kubeActions once, shared by API server and SP checks.
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
+	if err != nil {
+		return nil, err
+	}
+
 	g, errCtx := errgroup.WithContext(ctx)
 
 	// SKU validation
@@ -83,7 +93,11 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidations(
 		return f.validateVMSKU(errCtx, doc, subscriptionDoc, vmSize, log)
 	})
 
-	// TODO: API server health check (commit 2)
+	// API server health check
+	g.Go(func() error {
+		return f.validateAPIServerHealth(errCtx, k)
+	})
+
 	// TODO: Service Principal validity check (commit 3)
 
 	if err := g.Wait(); err != nil {
@@ -159,6 +173,37 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 // integration tests, avoiding the need to create real FP-authorized Azure
 // clients.
 func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionDocument, _, _ string) error {
+	return nil
+}
+
+// validateAPIServerHealth queries the kube-apiserver ClusterOperator via the
+// cluster's Kubernetes API and verifies that it is healthy (Available=True,
+// Progressing=False, Degraded=False).
+func (f *frontend) validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
+	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver",
+			fmt.Sprintf("Failed to retrieve kube-apiserver ClusterOperator: %v", err))
+	}
+
+	var co configv1.ClusterOperator
+	if err := json.Unmarshal(rawCO, &co); err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver",
+			fmt.Sprintf("Failed to parse kube-apiserver ClusterOperator: %v", err))
+	}
+
+	if !clusteroperators.IsOperatorAvailable(&co) {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver",
+			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is degraded.",
+				clusteroperators.OperatorStatusText(&co)))
+	}
+
 	return nil
 }
 

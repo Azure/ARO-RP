@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -13,8 +14,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+
+	configv1 "github.com/openshift/api/config/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -27,6 +32,32 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
+func fakeClusterOperatorJSON(name string, conditions []configv1.ClusterOperatorStatusCondition) []byte {
+	co := configv1.ClusterOperator{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Status: configv1.ClusterOperatorStatus{
+			Conditions: conditions,
+		},
+	}
+	b, _ := json.Marshal(co)
+	return b
+}
+
+func healthyKubeAPIServerJSON() []byte {
+	return fakeClusterOperatorJSON("kube-apiserver", []configv1.ClusterOperatorStatusCondition{
+		{Type: configv1.OperatorAvailable, Status: configv1.ConditionTrue},
+		{Type: configv1.OperatorProgressing, Status: configv1.ConditionFalse},
+		{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
+	})
+}
+
+func kubeAPIServerHealthyMock(k *mock_adminactions.MockKubeActions) {
+	k.EXPECT().
+		KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+		Return(healthyKubeAPIServerJSON(), nil).
+		AnyTimes()
+}
+
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
@@ -38,6 +69,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 		vmSize         string
 		fixture        func(f *testdatabase.Fixture)
 		mocks          func(*test, *mock_adminactions.MockAzureActions)
+		kubeMocks      func(*mock_adminactions.MockKubeActions)
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
@@ -89,6 +121,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 			},
+			kubeMocks:      kubeAPIServerHealthyMock,
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`"All pre-flight checks passed"` + "\n"),
 		},
@@ -120,6 +153,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 				})
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			kubeMocks:      kubeAPIServerHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: vmSize: The provided vmSize is empty.`,
 		},
@@ -151,6 +185,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 				})
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			kubeMocks:      kubeAPIServerHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: : The provided vmSize 'Standard_D2s_v3' is unsupported for master.`,
 		},
@@ -240,6 +275,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 			},
+			kubeMocks:      kubeAPIServerHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is unavailable in region 'eastus'`,
 		},
@@ -295,6 +331,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 			},
+			kubeMocks:      kubeAPIServerHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
 		},
@@ -306,12 +343,19 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			a := mock_adminactions.NewMockAzureActions(ti.controller)
 			tt.mocks(tt, a)
 
+			k := mock_adminactions.NewMockKubeActions(ti.controller)
+			if tt.kubeMocks != nil {
+				tt.kubeMocks(k)
+			}
+
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
+				return k, nil
+			}, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 				return a, nil
 			}, nil, nil)
 			if err != nil {
@@ -436,6 +480,81 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			tt.mocks(computeUsageClient)
 
 			err := checkResizeComputeQuota(ctx, computeUsageClient, "eastus", tt.vmSize)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateAPIServerHealth(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_adminactions.MockKubeActions)
+		wantErr string
+	}{
+		{
+			name: "healthy kube-apiserver",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(healthyKubeAPIServerJSON(), nil)
+			},
+		},
+		{
+			name: "kube-apiserver degraded",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(fakeClusterOperatorJSON("kube-apiserver", []configv1.ClusterOperatorStatusCondition{
+						{Type: configv1.OperatorAvailable, Status: configv1.ConditionTrue},
+						{Type: configv1.OperatorProgressing, Status: configv1.ConditionFalse},
+						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
+					}), nil)
+			},
+			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False. Resize is not safe while the API server is degraded.",
+		},
+		{
+			name: "kube-apiserver unavailable",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(fakeClusterOperatorJSON("kube-apiserver", []configv1.ClusterOperatorStatusCondition{
+						{Type: configv1.OperatorAvailable, Status: configv1.ConditionFalse},
+						{Type: configv1.OperatorProgressing, Status: configv1.ConditionTrue},
+						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
+					}), nil)
+			},
+			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True. Resize is not safe while the API server is degraded.",
+		},
+		{
+			name: "KubeGet returns error",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(nil, fmt.Errorf("connection refused"))
+			},
+			wantErr: "500: InternalServerError: kube-apiserver: Failed to retrieve kube-apiserver ClusterOperator: connection refused",
+		},
+		{
+			name: "KubeGet returns invalid JSON",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return([]byte(`{invalid`), nil)
+			},
+			wantErr: "500: InternalServerError: kube-apiserver: Failed to parse kube-apiserver ClusterOperator: invalid character 'i' looking for beginning of object key string",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			k := mock_adminactions.NewMockKubeActions(controller)
+			tt.mocks(k)
+
+			f := &frontend{}
+			err := f.validateAPIServerHealth(ctx, k)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
