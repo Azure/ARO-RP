@@ -2,11 +2,13 @@
 # Licensed under the Apache License 2.0.
 
 import collections
-import random
+import enum
 import os
-from base64 import b64decode
+import random
 import textwrap
 import uuid
+
+from base64 import b64decode
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2025_07_25.models as openshiftcluster
 
@@ -58,6 +60,13 @@ FP_CLIENT_ID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 ARO_FEDERATED_CREDENTIAL_ROLE = "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
 FP_SERVICE_PRINCIPAL_ROLE = "42f3c60f-e7b1-46d7-ba56-6de681664342"
+
+
+class Scope(enum.Enum):
+    """Role Assignment Scope"""
+    VNET = enum.auto()
+    MASTER_SUBNET = enum.auto()
+    WORKER_SUBNET = enum.auto()
 
 
 def rp_mode_development():
@@ -770,9 +779,7 @@ def aro_identity_get_required(*,
                               worker_subnet,
                               vnet,
                               vnet_resource_group_name=None) -> None:
-    if version not in aro_get_versions(client, location):
-        raise ValidationError("--version invalid")
-
+    _validate_version(client, version, location)
     role_set = _get_pwi_role_set(client, version, location)
 
     logger.warning("Use the following commands to create the required managed identities:")
@@ -785,23 +792,21 @@ def aro_identity_get_required(*,
     logger.warning("\nUse the following commands to create the required role assignments"
                    " over virtual network and/or subnets:")
     for role in role_set.platform_workload_identity_roles:
-        definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
-        scopes: list[str] = []
-        for permissions in definition.permissions:
-            for action in permissions.actions:
-                if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
-                    scopes = [master_subnet, worker_subnet]
-                elif action.startswith("Microsoft.Network/virtualNetworks/"):
-                    scopes = [vnet]
-                    break
+        for scope in _determine_scopes(cmd, role):
+            match scope:
+                case Scope.MASTER_SUBNET:
+                    scopestr = master_subnet
+                case Scope.WORKER_SUBNET:
+                    scopestr = worker_subnet
+                case Scope.VNET:
+                    scopestr = vnet
 
-        for scope in scopes:
             _print_role_assignment_create_cmd(
                 f"$(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query principalId -o tsv)",
                 # NOTE: i don't know why, but role.role_definition_id is not
                 # the full resource ID
                 f"{resource_id(subscription=sub_id)}{role.role_definition_id}",
-                scope
+                scopestr
             )
 
     logger.warning("\nUse the following commands to create the required role assignments"
@@ -837,81 +842,53 @@ def aro_identity_create_required(*,
     created_identities = list()
     created_roleassignments = list()
 
-    if version not in aro_get_versions(client, location):
-        raise ValidationError("--version invalid")
-
+    _validate_version(client, version, location)
     role_set = _get_pwi_role_set(client, version, location)
 
-    idcreate = identity_create(cli_ctx=cmd.cli_ctx)
-    racreate = roleassignment_create(cli_ctx=cmd.cli_ctx)
-
     # cluster top-level identity
-    cluster_id = idcreate(command_args={
-        "location": location,
-        "resource_group": resource_group_name,
-        "resource_name": "aro-cluster",
-    })
+    cluster_id = _identity_create(cmd, location, resource_group_name, "aro-cluster")
     created_identities.append(cluster_id)
 
-    auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
+    sub_id = get_subscription_id(cmd.cli_ctx)
     for role in role_set.platform_workload_identity_roles:
         # cluster identities
-        identity = idcreate(command_args={
-            "location": location,
-            "resource_group": resource_group_name,
-            "resource_name": role.operator_name,
-        })
+        identity = _identity_create(cmd, location, resource_group_name, role.operator_name)
         created_identities.append(identity)
 
-        definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
-        scopes: list[str]
-        for permissions in definition.permissions:
-            for action in permissions.actions:
-                if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
-                    scopes = [master_subnet, worker_subnet]
-                elif action.startswith("Microsoft.Network/virtualNetworks/"):
-                    scopes = [vnet]
-                    break
-
         # vnet/subnet role assignments
-        for scope in scopes:
-            ra = racreate(command_args={
-                "principal_id": identity["principalId"],
-                "principal_type": "ServicePrincipal",
-                "role_definition_id": role.role_definition_id,
-                "scope": scope,
-                "role_assignment_name": str(uuid.uuid4()),
-            })
+        for scope in _determine_scopes(cmd, role):
+            match scope:
+                case Scope.MASTER_SUBNET:
+                    scopestr = master_subnet
+                case Scope.WORKER_SUBNET:
+                    scopestr = worker_subnet
+                case Scope.VNET:
+                    scopestr = vnet
+
+            id = identity["principalId"]
+            defn = f"{resource_id(subscription=sub_id)}{role.role_definition_id}"
+            ra = _roleassignment_create(cmd, id, defn, scopestr)
             created_roleassignments.append(ra)
 
         # platform workload identity role assignment
-        topra = racreate(command_args={
-            "principal_id": cluster_id["principalId"],
-            "principal_type": "ServicePrincipal",
-            "role_definition_id": resource_id(
-                subscription=get_subscription_id(cmd.cli_ctx),
-                namespace="Microsoft.Authorization",
-                type="roleDefinitions",
-                name=ARO_FEDERATED_CREDENTIAL_ROLE
-            ),
-            "scope": identity["id"],
-            "role_assignment_name": str(uuid.uuid4()),
-        })
-        created_roleassignments.append(topra)
-
-    aad = AADManager(cmd.cli_ctx)
-    spra = racreate(command_args={
-        "principal_id": aad.get_service_principal_id(FP_CLIENT_ID),
-        "principal_type": "ServicePrincipal",
-        "role_definition_id": resource_id(
+        id = cluster_id["principalId"]
+        defn = resource_id(
             subscription=get_subscription_id(cmd.cli_ctx),
             namespace="Microsoft.Authorization",
             type="roleDefinitions",
-            name=FP_SERVICE_PRINCIPAL_ROLE,
-        ),
-        "scope": vnet,
-        "role_assignment_name": str(uuid.uuid4())
-    })
+            name=ARO_FEDERATED_CREDENTIAL_ROLE
+        )
+        topra = _roleassignment_create(cmd, id, defn, identity["id"])
+        created_roleassignments.append(topra)
+
+    id = AADManager(cmd.cli_ctx).get_service_principal_id(FP_CLIENT_ID)
+    defn = resource_id(
+        subscription=get_subscription_id(cmd.cli_ctx),
+        namespace="Microsoft.Authorization",
+        type="roleDefinitions",
+        name=FP_SERVICE_PRINCIPAL_ROLE,
+    )
+    spra = _roleassignment_create(cmd, id, defn, vnet)
     created_roleassignments.append(spra)
 
     return created_identities + created_roleassignments
@@ -969,3 +946,43 @@ def _print_role_assignment_create_cmd(assignee, role, scope) -> None:
         f"--scope \"{scope}\"",
     ]
     logger.warning(" ".join(msg))
+
+
+def _validate_version(client, version, location) -> None:
+    if version not in aro_get_versions(client, location):
+        raise InvalidArgumentValueError("--version invalid")
+
+
+def _identity_create(cmd, location, group, name):
+    return identity_create(cli_ctx=cmd.cli_ctx)(command_args={
+        "location": location,
+        "resource_group": group,
+        "resource_name": name,
+    })
+
+
+def _roleassignment_create(cmd, principal_id, role_definition_id, scope, name=None):
+    if not name:
+        name = str(uuid.uuid4())
+
+    return roleassignment_create(cli_ctx=cmd.cli_ctx)(command_args={
+        "principal_id": principal_id,
+        "principal_type": "ServicePrincipal",
+        "role_definition_id": role_definition_id,
+        "scope": scope,
+        "role_assignment_name": name,
+    })
+
+
+def _determine_scopes(cmd, role) -> list[Scope]:
+    auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
+    definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
+
+    for permissions in definition.permissions:
+        for action in permissions.actions:
+            if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
+                return [Scope.MASTER_SUBNET, Scope.WORKER_SUBNET]
+            elif action.startswith("Microsoft.Network/virtualNetworks/"):
+                return [Scope.VNET]
+
+    raise RuntimeError("Could not determine permissions.")
