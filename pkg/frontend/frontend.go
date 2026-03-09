@@ -375,6 +375,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
+				r.Post("/exec", f.postAdminOpenShiftClusterExec)
 
 				// MIMO
 				r.Route("/maintenancemanifests", func(r chi.Router) {
