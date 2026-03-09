@@ -28,11 +28,8 @@ main() {
 
     # shellcheck disable=SC2034
     local -ra install_pkgs=(
-        clamav
-        azsec-clamav
         azure-cli
         azure-mdsd
-        azure-security
         podman
         podman-docker
         openssl-perl

@@ -1,0 +1,24 @@
+# This template is used to authenticate to Azure.
+# We cannot use the simpler Docker@2 push command because MSI does not support cross-tenant authentication.
+
+parameters:
+  - name: acrFQDN
+    type: string
+
+steps:
+  - task: AzureCLI@2
+    displayName: "Authenticate to Azure ACR"
+    inputs:
+      azureSubscription: "ado-pipeline-dev-image-push" # Service connection name
+      scriptType: bash
+      scriptLocation: "inlineScript"
+      inlineScript: |
+        set -xe
+
+        # Authenticate to Azure and ACR
+        echo "Authenticating to Azure and ACR..."
+        ACR_FQDN="${{ parameters.acrFQDN }}"
+        REGISTRY_NAME=$(echo $ACR_FQDN | cut -d'.' -f1)
+
+        # Login to ACR
+        az acr login --name $REGISTRY_NAME
