@@ -19,8 +19,8 @@ const (
 	adminActionCleanupTimeout = 30 * time.Second
 )
 
-// retryDelay is the delay between job status polls; pass 0 in tests.
-var retryDelay = 2 * time.Second
+// defaultJobRetryDelay is the delay between job status polls; pass 0 in tests.
+const defaultJobRetryDelay = 2 * time.Second
 
 // kubeRetryBackoff is the shared retry backoff for transient Kubernetes API errors.
 var kubeRetryBackoff = wait.Backoff{Steps: 3, Duration: 2 * time.Second, Factor: 1.0}
