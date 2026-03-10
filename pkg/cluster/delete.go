@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
@@ -609,7 +608,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	if !m.env.IsLocalDevelopmentMode() {
-		acrManager, err := acrtoken.NewManager(m.env, m.armRPTokensClient, m.armRPRegistriesClient)
+		acrManager, err := newACRTokenManager(m.env)
 		if err != nil {
 			return err
 		}
