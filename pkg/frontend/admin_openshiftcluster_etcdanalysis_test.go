@@ -136,17 +136,18 @@ func TestAdminPostEtcdAnalysis(t *testing.T) {
 			name:   "snapshot exec failure streams error and does not start job",
 			vmName: "master-0",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				// Snapshot exec fails
-				k.EXPECT().
-					KubeExecStream(gomock.Any(), namespaceEtcds, "etcd-master-0", etcdContainerName,
-						gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(errors.New("connection refused"))
-
-				// Snapshot cleanup still runs (defer registered before the exec)
-				k.EXPECT().
-					KubeExecStream(gomock.Any(), namespaceEtcds, "etcd-master-0", etcdContainerName,
-						gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
+				gomock.InOrder(
+					// Snapshot exec fails
+					k.EXPECT().
+						KubeExecStream(gomock.Any(), namespaceEtcds, "etcd-master-0", etcdContainerName,
+							gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(errors.New("connection refused")),
+					// Snapshot cleanup still runs (defer registered before the exec)
+					k.EXPECT().
+						KubeExecStream(gomock.Any(), namespaceEtcds, "etcd-master-0", etcdContainerName,
+							gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil),
+				)
 			},
 			wantStatusCode:          http.StatusOK,
 			wantResponseContentType: "text/plain",

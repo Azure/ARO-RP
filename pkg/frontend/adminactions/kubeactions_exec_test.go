@@ -36,9 +36,6 @@ func newExecTestServer(t *testing.T, serverFn func(*websocket.Conn)) (*httptest.
 	t.Helper()
 
 	wsServer := websocket.Server{
-		Config: websocket.Config{
-			Protocol: []string{"v4.channel.k8s.io"},
-		},
 		// Accept any origin so our synthetic origin passes the handshake.
 		Handshake: func(_ *websocket.Config, _ *http.Request) error {
 			return nil
@@ -249,9 +246,9 @@ func TestCheckContainerReady(t *testing.T) {
 	)
 
 	for _, tt := range []struct {
-		name      string
-		pod       *corev1.Pod
-		wantErr   string
+		name    string
+		pod     *corev1.Pod
+		wantErr string
 	}{
 		{
 			name: "ready container returns nil",
