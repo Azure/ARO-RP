@@ -59,6 +59,24 @@ Conversion files (`_convert.go`) bridge them with explicit casts. Getting casts 
 
 > Read `docs/agent-guides/package-deployment-context.md` for the full context map.
 
+## Admin API Handler Pattern ("Underscore Pattern")
+
+Admin API endpoints decouple HTTP parsing from business logic. The main handler extracts parameters and calls an underscore-prefixed function with raw values:
+
+```go
+func (f *frontend) postAdminFoo(w http.ResponseWriter, r *http.Request) {
+    // HTTP layer: extract params, get logger
+    err := f._postAdminFoo(log, ctx, r)
+    adminReply(log, w, nil, nil, err)
+}
+
+func (f *frontend) _postAdminFoo(log *logrus.Entry, ctx context.Context, r *http.Request) error {
+    // Business logic: testable without HTTP mocking
+}
+```
+
+This allows business logic to be invoked by other Go packages without HTTP mocking. When adding admin APIs, follow this pattern and register routes in `pkg/frontend/frontend.go`.
+
 ## Code Style (enforced by CI)
 
 - **Imports**: 9-tier ordering enforced by gci. See `.golangci.yml`.
