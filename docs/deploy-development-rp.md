@@ -123,11 +123,11 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
    - `go run ./cmd/aro update-role-sets`
 
-1. Add a new installable OCP version to your local RP instance. This version should be a 4.14.38+ or 4.15.35+ version and use one of the current aro-installer images in our INT repo
+1. Add a new installable OCP version to your local RP instance. This version should be a 4.14.38+ or 4.15.35+ version and use one of the current aro-installer images in our INT repo. You can add one or more versions - the first one (4.16) includes `"default": true` which sets it as the default version for cluster creation.
 
-   - for 4.16
+   - for 4.16 (with default set)
    ```
-   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.16.30", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:7aacace57ab6ec468dd98b0b3e0f3fc440b29afce21b90bd716fed0db487e9e9", "installerPullspec": "arosvc.azurecr.io/aro-installer:4.16@sha256:27871abbc88cdfda21c81ed1a00050e71df8c88b4bb53f96104f6d0661c0b9bf"}}'
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.16.30", "enabled": true, "default": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:7aacace57ab6ec468dd98b0b3e0f3fc440b29afce21b90bd716fed0db487e9e9", "installerPullspec": "arosvc.azurecr.io/aro-installer:4.16@sha256:27871abbc88cdfda21c81ed1a00050e71df8c88b4bb53f96104f6d0661c0b9bf"}}'
    ```
 
    - for 4.15
