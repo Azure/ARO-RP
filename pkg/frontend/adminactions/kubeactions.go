@@ -333,10 +333,14 @@ func dialExecWebSocket(ctx context.Context, rc *restclient.Config, execURL *url.
 	return wsConn, tlsConn, nil
 }
 
+// podLogFollowLimit is 1 byte above execOutputLimit so limitedWriter can emit its truncation notice.
+const podLogFollowLimit int64 = 1<<20 + 1
+
 func (k *kubeActions) KubeFollowPodLogs(ctx context.Context, namespace, podName, containerName string, w io.Writer) error {
 	opts := &corev1.PodLogOptions{
-		Container: containerName,
-		Follow:    true,
+		Container:  containerName,
+		Follow:     true,
+		LimitBytes: pointerutils.ToPtr(podLogFollowLimit),
 	}
 	stream, err := k.kubecli.CoreV1().Pods(namespace).GetLogs(podName, opts).Stream(ctx)
 	if err != nil {
