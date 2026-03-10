@@ -109,6 +109,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 							},
@@ -158,6 +161,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 							},
@@ -190,6 +196,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 							},
@@ -241,6 +250,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 							},
@@ -263,6 +275,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 							},
@@ -312,6 +327,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 							},
@@ -411,16 +429,20 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 	ctx := context.Background()
 
 	type test struct {
-		name    string
-		vmSize  string
-		mocks   func(*mock_compute.MockUsageClient)
-		wantErr string
+		name          string
+		currentVMSize string
+		vmSize        string
+		mocks         func(*mock_compute.MockUsageClient)
+		wantErr       string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:   "enough quota available",
-			vmSize: "Standard_D8s_v3",
+			// D8s_v3 (8 cores) → D16s_v3 (16 cores), same family.
+			// Delta per node = 8, total = 8 × 3 = 24.  76 in use, limit 100 → 24 remaining = exact fit.
+			name:          "same family upsize - enough quota for delta across all masters",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_D16s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -429,15 +451,18 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 							Name: &mgmtcompute.UsageName{
 								Value: pointerutils.ToPtr("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(10)),
+							CurrentValue: pointerutils.ToPtr(int32(76)),
 							Limit:        pointerutils.ToPtr(int64(100)),
 						},
 					}, nil)
 			},
 		},
 		{
-			name:   "exact quota available",
-			vmSize: "Standard_D8s_v3",
+			// D8s_v3 (8 cores) → D16s_v3 (16 cores), same family.
+			// Delta per node = 8, total = 8 × 3 = 24.  77 in use, limit 100 → 23 remaining < 24.
+			name:          "same family upsize - not enough quota for all masters",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_D16s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -446,33 +471,70 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 							Name: &mgmtcompute.UsageName{
 								Value: pointerutils.ToPtr("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(92)),
+							CurrentValue: pointerutils.ToPtr(int32(77)),
 							Limit:        pointerutils.ToPtr(int64(100)),
 						},
 					}, nil)
 			},
+			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardDSv3Family exceeded. Maximum allowed: 100, Current in use: 77, Additional requested: 24.",
 		},
 		{
-			name:   "not enough quota",
-			vmSize: "Standard_D8s_v3",
+			name:          "same family downsize - no quota check needed",
+			currentVMSize: "Standard_D16s_v3",
+			vmSize:        "Standard_D8s_v3",
+			mocks:         func(cuc *mock_compute.MockUsageClient) {},
+		},
+		{
+			name:          "same family same size - no quota check needed",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_D8s_v3",
+			mocks:         func(cuc *mock_compute.MockUsageClient) {},
+		},
+		{
+			// D8s_v3 → E8s_v3, cross family.  Full new cores: 8 × 3 = 24.
+			// 76 in use, limit 100 → 24 remaining = exact fit.
+			name:          "cross family - full new cores checked for all masters",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_E8s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: pointerutils.ToPtr("standardESv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(93)),
+							CurrentValue: pointerutils.ToPtr(int32(76)),
 							Limit:        pointerutils.ToPtr(int64(100)),
 						},
 					}, nil)
 			},
-			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardDSv3Family exceeded. Maximum allowed: 100, Current in use: 93, Additional requested: 8.",
 		},
 		{
-			name:   "family not in usage list - no quota limit",
-			vmSize: "Standard_D8s_v3",
+			// D8s_v3 → E8s_v3, cross family.  Full new cores: 8 × 3 = 24.
+			// 77 in use, limit 100 → 23 remaining < 24.
+			name:          "cross family - not enough quota for all masters",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_E8s_v3",
+			mocks: func(cuc *mock_compute.MockUsageClient) {
+				cuc.EXPECT().
+					List(ctx, "eastus").
+					Return([]mgmtcompute.Usage{
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("standardESv3Family"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(77)),
+							Limit:        pointerutils.ToPtr(int64(100)),
+						},
+					}, nil)
+			},
+			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardESv3Family exceeded. Maximum allowed: 100, Current in use: 77, Additional requested: 24.",
+		},
+		{
+			name:          "family not in usage list - no quota limit",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_D16s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -488,10 +550,11 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			},
 		},
 		{
-			name:    "unsupported VM size",
-			vmSize:  "Standard_Nonexistent_v99",
-			mocks:   func(cuc *mock_compute.MockUsageClient) {},
-			wantErr: "400: InvalidParameter: vmSize: The provided VM SKU 'Standard_Nonexistent_v99' is not supported.",
+			name:          "unsupported new VM size",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_Nonexistent_v99",
+			mocks:         func(cuc *mock_compute.MockUsageClient) {},
+			wantErr:       "400: InvalidParameter: vmSize: The provided VM SKU 'Standard_Nonexistent_v99' is not supported.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -501,7 +564,7 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			computeUsageClient := mock_compute.NewMockUsageClient(controller)
 			tt.mocks(computeUsageClient)
 
-			err := checkResizeComputeQuota(ctx, computeUsageClient, "eastus", tt.vmSize)
+			err := checkResizeComputeQuota(ctx, computeUsageClient, "eastus", tt.currentVMSize, tt.vmSize)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

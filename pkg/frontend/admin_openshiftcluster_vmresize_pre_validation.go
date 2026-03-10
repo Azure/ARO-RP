@@ -138,7 +138,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidations(
 // defaultValidateResizeQuota creates an FP-authorized compute usage client
 // scoped to the customer's subscription and delegates to checkResizeComputeQuota.
 // Injected via f.validateResizeQuota so tests can swap it with quotaCheckDisabled.
-func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, vmSize string) error {
+func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, currentVMSize, vmSize string) error {
 	tenantID := subscriptionDoc.Subscription.Properties.TenantID
 
 	// FPAuthorizer authenticates as the RP's first-party identity in the
@@ -149,27 +149,52 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 	}
 
 	spComputeUsage := compute.NewUsageClient(environment.Environment(), subscriptionDoc.ID, fpAuthorizer)
-	return checkResizeComputeQuota(ctx, spComputeUsage, location, vmSize)
+	return checkResizeComputeQuota(ctx, spComputeUsage, location, currentVMSize, vmSize)
 }
 
 // checkResizeComputeQuota verifies that the subscription has enough remaining
-// compute quota in the target VM family for at least one instance of the
-// requested size.  During resize the old VM is stopped first (releasing its
-// cores), so a single node's worth of new cores is the conservative
-// requirement.  This is a pure function for direct unit testing.
+// compute quota in the target VM family to resize all master nodes.  The resize
+// operation processes nodes sequentially (stop → resize → start), so after all
+// nodes are processed the total usage change is api.ControlPlaneNodeCount × delta.
+//
+//   - If the current and new VMs share the same family, only the per-node delta
+//     (newCores − currentCores) matters, multiplied by the number of masters.
+//     If the new size is equal or smaller, no additional quota is needed.
+//   - If the families differ, the full new core count × api.ControlPlaneNodeCount is
+//     required because stopping the old VM frees quota in a different family.
 //
 // NOTE: This checks subscription-level quota only, not Azure regional
 // datacenter capacity.  There is no public Azure API to pre-check whether
 // physical hardware is available; AllocationFailed errors can only be
 // detected at ARM PUT time.
-func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, vmSize string) error {
-	// Resolve the VM size name to its family and core count so we know which
-	// quota counter to check and how many cores are needed.
-	vmSizeStruct, ok := validate.VMSizeFromName(api.VMSize(vmSize))
+func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, currentVMSize, vmSize string) error {
+	// Resolve the new VM size name to its family and core count.
+	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(vmSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
 			fmt.Sprintf("The provided VM SKU '%s' is not supported.", vmSize))
 	}
+
+	// Resolve the current VM size to determine how many cores will be freed.
+	currentSizeStruct, ok := validate.VMSizeFromName(api.VMSize(currentVMSize))
+	if !ok {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
+			fmt.Sprintf("The current VM SKU '%s' could not be resolved.", currentVMSize))
+	}
+
+	// Compute the per-node core delta.  When both sizes belong to the same
+	// family, the old VM's cores are freed before the new VM is created, so
+	// only the delta matters.  Multiply by api.ControlPlaneNodeCount because all master
+	// nodes are resized sequentially and the peak quota is at the final state.
+	additionalCoresPerNode := newSizeStruct.CoreCount
+	if newSizeStruct.Family == currentSizeStruct.Family {
+		additionalCoresPerNode = newSizeStruct.CoreCount - currentSizeStruct.CoreCount
+		if additionalCoresPerNode <= 0 {
+			// Downsizing or same size within the same family — no extra quota needed.
+			return nil
+		}
+	}
+	totalAdditionalCores := additionalCoresPerNode * api.ControlPlaneNodeCount
 
 	usages, err := spComputeUsage.List(ctx, location)
 	if err != nil {
@@ -180,12 +205,12 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 		if usage.Name == nil || usage.Name.Value == nil {
 			continue
 		}
-		if *usage.Name.Value == vmSizeStruct.Family {
+		if *usage.Name.Value == newSizeStruct.Family {
 			remaining := *usage.Limit - int64(*usage.CurrentValue)
-			if int64(vmSizeStruct.CoreCount) > remaining {
+			if int64(totalAdditionalCores) > remaining {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "vmSize",
 					fmt.Sprintf("Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.",
-						vmSizeStruct.Family, *usage.Limit, *usage.CurrentValue, vmSizeStruct.CoreCount))
+						newSizeStruct.Family, *usage.Limit, *usage.CurrentValue, totalAdditionalCores))
 			}
 			return nil
 		}
@@ -200,7 +225,7 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 // quotaCheckDisabled is a no-op replacement for f.validateResizeQuota in
 // integration tests, avoiding the need to create real FP-authorized Azure
 // clients.
-func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionDocument, _, _ string) error {
+func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionDocument, _, _, _ string) error {
 	return nil
 }
 
@@ -331,8 +356,9 @@ func (f *frontend) validateVMSKU(
 
 	// Verify the subscription has enough remaining cores in the target VM
 	// family.  The resize operation stops the old VM first (releasing its
-	// cores), so we conservatively check for one node's worth of new cores.
-	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, vmSize)
+	// cores), so we only check the delta when both sizes share a family.
+	currentVMSize := string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize)
+	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSize, vmSize)
 	if err != nil {
 		return err
 	}
