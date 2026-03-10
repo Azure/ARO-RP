@@ -7,3 +7,6 @@ import _ "embed"
 
 //go:embed scripts/backupandfixetcd.sh
 var backupOrFixEtcd string
+
+//go:embed scripts/etcdkeycount.sh
+var etcdKeyCountScript string

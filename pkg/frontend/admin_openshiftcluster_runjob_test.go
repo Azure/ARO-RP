@@ -149,7 +149,7 @@ func TestAdminPostRunJob(t *testing.T) {
 			wantResponseContains:    []string{"Job failed.\n", "Cleanup complete.\n"},
 		},
 		{
-			name: "job result with no terminal condition streams Job result pending",
+			name: "job result with no terminal condition on first poll eventually succeeds",
 			body: minimalJobBody,
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				fakeWatcher := watch.NewFake()
@@ -173,15 +173,20 @@ func TestAdminPostRunJob(t *testing.T) {
 				k.EXPECT().KubeFollowPodLogs(gomock.Any(), runJobDefaultNamespace, "test-pod", "worker", gomock.Any()).
 					Return(nil)
 
-				k.EXPECT().KubeGet(gomock.Any(), "Job.batch", runJobDefaultNamespace, gomock.Any()).
-					Return([]byte(`{"status":{"conditions":[]}}`), nil)
+				// First poll returns no terminal conditions; second poll returns Complete.
+				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Job.batch", runJobDefaultNamespace, gomock.Any()).
+						Return([]byte(`{"status":{"conditions":[]}}`), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Job.batch", runJobDefaultNamespace, gomock.Any()).
+						Return([]byte(`{"status":{"conditions":[{"type":"Complete","status":"True"}]}}`), nil),
+				)
 
 				k.EXPECT().KubeDelete(gomock.Any(), "Job.batch", runJobDefaultNamespace, gomock.Any(), false, gomock.Any()).
 					Return(nil)
 			},
 			wantStatusCode:          http.StatusOK,
 			wantResponseContentType: "text/plain",
-			wantResponseContains:    []string{"Job result: pending\n"},
+			wantResponseContains:    []string{"Job succeeded.\n", "Cleanup complete.\n"},
 		},
 		{
 			name: "job creation failure streams error without cleanup",
