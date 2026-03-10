@@ -284,7 +284,7 @@ oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 
 Run aro operator from local code, cmd example:
 ```sh
-CLUSTER_NAME=jeff-test-aro go run -tags aro,containers_image_openpgp ./cmd/aro operator master
+go run -tags aro,containers_image_openpgp ./cmd/aro operator master
 ```
 
 Wait a couple of minutes until aro operator fully synchronized

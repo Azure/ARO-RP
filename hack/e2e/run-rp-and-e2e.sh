@@ -227,9 +227,6 @@ update_role_sets() {
     ./aro update-role-sets
 }
 
-# TODO: CLUSTER_NAME and is also recalculated in multiple places
-# in the billing pipelines :-(
-
 if [[ -z $CLUSTER_NAME ]]; then
     echo "CLUSTER_NAME is not set, aborting"
     return 1
