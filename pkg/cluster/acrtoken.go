@@ -15,20 +15,48 @@ import (
 	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
+
+func newACRTokenManager(_env env.Interface) (acrtoken.Manager, error) {
+	acrR, err := azure.ParseResourceID(_env.ACRResourceID())
+	if err != nil {
+		return nil, err
+	}
+
+	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	armRPTokensClient, err := armcontainerregistry.NewTokensClient(acrR.SubscriptionID, fpCredRPTenant, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, err
+	}
+
+	armRPRegistriesClient, err := armcontainerregistry.NewRegistriesClient(acrR.SubscriptionID, fpCredRPTenant, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, err
+	}
+
+	return acrtoken.NewManager(_env, armRPTokensClient, armRPRegistriesClient)
+}
 
 func (m *manager) ensureACRToken(ctx context.Context) error {
 	if m.env.IsLocalDevelopmentMode() {
 		return nil
 	}
 
-	token, err := acrtoken.NewManager(m.env, m.armRPTokensClient, m.armRPRegistriesClient)
+	token, err := newACRTokenManager(m.env)
 	if err != nil {
 		return err
 	}
@@ -77,7 +105,7 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return nil
 	}
 
-	token, err := acrtoken.NewManager(m.env, m.armRPTokensClient, m.armRPRegistriesClient)
+	token, err := newACRTokenManager(m.env)
 	if err != nil {
 		return err
 	}

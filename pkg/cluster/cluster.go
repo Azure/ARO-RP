@@ -36,7 +36,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
@@ -101,8 +100,6 @@ type manager struct {
 	armClusterPrivateLinkServices armnetwork.PrivateLinkServicesClient
 	armSubnets                    armnetwork.SubnetsClient
 	userAssignedIdentities        armmsi.UserAssignedIdentitiesClient
-	armRPTokensClient             armcontainerregistry.TokensClient
-	armRPRegistriesClient         armcontainerregistry.RegistriesClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -144,11 +141,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveClusterManager hive.ClusterManager, metricsEmitter metrics.Emitter,
 ) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	acrR, err := azure.ParseResourceID(_env.ACRResourceID())
 	if err != nil {
 		return nil, err
 	}
@@ -266,16 +258,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armRPTokensClient, err := armcontainerregistry.NewTokensClient(acrR.SubscriptionID, fpCredRPTenant, clientOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	armRPRegistriesClient, err := armcontainerregistry.NewRegistriesClient(acrR.SubscriptionID, fpCredRPTenant, clientOptions)
-	if err != nil {
-		return nil, err
-	}
-
 	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
 
 	m := &manager{
@@ -311,8 +293,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armRPPrivateLinkServices:      armRPPrivateLinkServices,
 		armClusterPrivateLinkServices: clusterRPPrivateLinkServices,
 		armSubnets:                    armSubnetsClient,
-		armRPTokensClient:             armRPTokensClient,
-		armRPRegistriesClient:         armRPRegistriesClient,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,
