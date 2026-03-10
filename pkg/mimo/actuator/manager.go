@@ -150,6 +150,14 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		})
 		taskLog.Info("begin processing manifest")
 
+		// Fetch a fresh OpenShift cluster document, in case the previous task/a
+		// concurrent action updated anything
+		oc, err := a.oc.Get(ctx, a.clusterResourceID)
+		if err != nil {
+			taskLog.Errorf("failed fetching cluster document: %s", err.Error())
+			return false, fmt.Errorf("failed getting cluster document: %w", err)
+		}
+
 		// Attempt a dequeue
 		doc, err = a.mmf.Lease(ctx, a.clusterResourceID, doc.ID)
 		if err != nil {
@@ -171,13 +179,6 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		}
 
 		taskLog.Info("executing manifest")
-
-		// Fetch a fresh OpenShift cluster document, in case the previous task/a
-		// concurrent action updated anything
-		oc, err := a.oc.Get(ctx, a.clusterResourceID)
-		if err != nil {
-			return false, fmt.Errorf("failed getting cluster document: %w", err)
-		}
 
 		// Create task context containing the environment, logger, cluster doc,
 		// etc -- this is the only way we pass information, to reduce the
