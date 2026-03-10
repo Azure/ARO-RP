@@ -91,6 +91,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
 			now:   now,
+
+			taskRunTimeout:           time.Second,
+			manifestQueryBatchLength: -1,
 		}
 		fixtures.Clear()
 		checker.Clear()
