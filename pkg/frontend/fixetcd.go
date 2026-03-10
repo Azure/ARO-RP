@@ -20,6 +20,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +34,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
@@ -365,13 +367,13 @@ func newClusterRole(usersAccount, cluster string) *unstructured.Unstructured {
 	return clusterRole
 }
 
-func newClusterRoleBinding(name, cluster string) *unstructured.Unstructured {
+func newClusterRoleBinding(name, cluster, usersAccount string) *unstructured.Unstructured {
 	crb := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"roleRef": map[string]interface{}{
-				"kind":      "ClusterRole",
-				"name":      kubeServiceAccount,
-				"apiGroups": "",
+				"kind":     "ClusterRole",
+				"name":     usersAccount,
+				"apiGroup": "rbac.authorization.k8s.io",
 			},
 			"subjects": []rbacv1.Subject{
 				{
@@ -412,6 +414,10 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 	return scc
 }
 
+// adminActionCleanupTimeout is the timeout for cleanup operations that use a
+// fresh context, independent of the caller's request context.
+const adminActionCleanupTimeout = 30 * time.Second
+
 // createPrivilegedServiceAccount creates the following objects and returns a cleanup function to delete them all after use
 //
 // - ServiceAccount
@@ -424,32 +430,43 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name, cluster, usersAccount string, kubeActions adminactions.KubeActions) (func() error, error, error) {
 	serviceAcc := newServiceAccount(name, cluster)
 	clusterRole := newClusterRole(usersAccount, cluster)
-	crb := newClusterRoleBinding(name, cluster)
+	crb := newClusterRoleBinding(name, cluster, usersAccount)
 	scc := newSecurityContextConstraint(name, cluster, usersAccount)
 
-	// cleanup is created here incase an error occurs while creating permissions
+	// Uses a fresh context so cancellation of the caller's request does not
+	// prevent privileged RBAC/SCC objects from being removed.
+	// Each delete is retried 3 times; not-found is treated as success.
 	cleanup := func() error {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), adminActionCleanupTimeout)
+		defer cancel()
+
+		kubeDeleteIgnoreNotFound := func(groupKind, namespace, name string) error {
+			return utilkubernetes.Retry(cleanupCtx, 3, func() error {
+				err := kubeActions.KubeDelete(cleanupCtx, groupKind, namespace, name, true, nil)
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			})
+		}
+
 		log.Infof("Deleting service account %s now", serviceAcc.GetName())
-		err := kubeActions.KubeDelete(ctx, serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil)
-		if err != nil {
+		if err := kubeDeleteIgnoreNotFound(serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName()); err != nil {
 			return err
 		}
 
-		log.Infof("Deleting security context contstraint %s now", scc.GetName())
-		err = kubeActions.KubeDelete(ctx, scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil)
-		if err != nil {
+		log.Infof("Deleting security context constraint %s now", scc.GetName())
+		if err := kubeDeleteIgnoreNotFound(scc.GetKind(), scc.GetNamespace(), scc.GetName()); err != nil {
 			return err
 		}
 
 		log.Infof("Deleting cluster role %s now", clusterRole.GetName())
-		err = kubeActions.KubeDelete(ctx, clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil)
-		if err != nil {
+		if err := kubeDeleteIgnoreNotFound(clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName()); err != nil {
 			return err
 		}
 
 		log.Infof("Deleting cluster role binding %s now", crb.GetName())
-		err = kubeActions.KubeDelete(ctx, crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil)
-		if err != nil {
+		if err := kubeDeleteIgnoreNotFound(crb.GetKind(), crb.GetNamespace(), crb.GetName()); err != nil {
 			return err
 		}
 
@@ -457,26 +474,22 @@ func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name
 	}
 
 	log.Infof("Creating Service Account %s now", serviceAcc.GetName())
-	err := kubeActions.KubeCreateOrUpdate(ctx, serviceAcc)
-	if err != nil {
+	if err := utilkubernetes.Retry(ctx, 3, func() error { return kubeActions.KubeCreateOrUpdate(ctx, serviceAcc) }); err != nil {
 		return nil, err, cleanup()
 	}
 
 	log.Infof("Creating Cluster Role %s now", clusterRole.GetName())
-	err = kubeActions.KubeCreateOrUpdate(ctx, clusterRole)
-	if err != nil {
+	if err := utilkubernetes.Retry(ctx, 3, func() error { return kubeActions.KubeCreateOrUpdate(ctx, clusterRole) }); err != nil {
 		return nil, err, cleanup()
 	}
 
 	log.Infof("Creating Cluster Role Binding %s now", crb.GetName())
-	err = kubeActions.KubeCreateOrUpdate(ctx, crb)
-	if err != nil {
+	if err := utilkubernetes.Retry(ctx, 3, func() error { return kubeActions.KubeCreateOrUpdate(ctx, crb) }); err != nil {
 		return nil, err, cleanup()
 	}
 
 	log.Infof("Creating Security Context Constraint %s now", name)
-	err = kubeActions.KubeCreateOrUpdate(ctx, scc)
-	if err != nil {
+	if err := utilkubernetes.Retry(ctx, 3, func() error { return kubeActions.KubeCreateOrUpdate(ctx, scc) }); err != nil {
 		return nil, err, cleanup()
 	}
 
