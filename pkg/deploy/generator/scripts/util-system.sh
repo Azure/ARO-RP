@@ -164,17 +164,21 @@ pull_container_images() {
         write_file REGISTRY_AUTH_FILE registry_conf true
     fi
 
-    log "logging into prod acr"
-    cmd=(
-        az
-        acr
-        login
-        --name
-        # TODO replace this with variable expansion
-        # Reference: https://www.shellcheck.net/wiki/SC2001
-        "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
-    )
+   log "logging into prod acr"
+   local -r ACR_NAME
+   ACR_NAME="$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+   local REGISTRY="${ACR_NAME}.azurecr.io"
 
+   acr_token_login() {
+       local token
+       token="$(az acr login --name "$ACR_NAME" --expose-token --output tsv --query accessToken)"
+       echo "$token" | podman login \
+           --username "00000000-0000-0000-0000-000000000000" \
+           --password-stdin \
+           "$REGISTRY"
+   }
+    # shellcheck disable=SC2034
+    cmd=(acr_token_login)
     retry cmd retry_time
 
     # shellcheck disable=SC2068
