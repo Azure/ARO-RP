@@ -97,7 +97,7 @@ func (f *frontend) _postAdminOpenShiftClusterRunJob(ctx context.Context, r *http
 	opCtx, opCancel := context.WithCancel(ctx)
 	go func() {
 		defer opCancel()
-		runJobStream(opCtx, log, k, job, writer)
+		runJobStream(opCtx, log, k, job, writer, defaultJobRetryDelay)
 	}()
 	return nil
 }
@@ -384,7 +384,7 @@ func waitForJobTerminal(ctx context.Context, log *logrus.Entry, k adminactions.K
 		case jobResultSucceeded, jobResultFailed:
 			return result
 		}
-		timer.Reset(retryDelay)
+		timer.Reset(delay)
 	}
 }
 
