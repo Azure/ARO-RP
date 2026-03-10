@@ -57,9 +57,11 @@ type KubeActions interface {
 	// the provided writers. command is passed directly to the container runtime;
 	// wrap in []string{"sh", "-c", cmd} for shell features.
 	//
-	// Returns ctx.Err() on context cancellation (after the inner goroutine has
-	// exited), a write error if a caller-supplied writer fails, or an error from
-	// the command's exit-status frame.
+	// Returns ctx.Err() on context cancellation, a write error if a caller-supplied
+	// writer fails, or an error from the command's exit-status frame. On cancellation,
+	// the underlying TLS connection is closed to unblock the receive goroutine, but
+	// callers must assume stdout/stderr may still be written briefly after cancellation
+	// is observed.
 	KubeExecStream(ctx context.Context, namespace, pod, container string, command []string, stdout, stderr io.Writer) error
 	// KubeFollowPodLogs streams the logs of a pod container to w. If containerName
 	// is empty, Kubernetes' default log selection applies and may fail when the
