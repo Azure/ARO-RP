@@ -25,10 +25,10 @@ main() {
                       kustomize_bin
     hive_repo_clone tmpdir
     hive_repo_hash_checkout tmpdir \
-                            hive_image_commit_hash
+                            "$hive_image_commit_hash"
     generate_hive_config kustomize_bin \
-                         hive_operator_namespace \
-                         hive_image \
+                         "$hive_operator_namespace" \
+                         "$hive_image" \
                          tmpdir
 
     log "Hive config generated."
@@ -81,7 +81,7 @@ hive_repo_clone() {
 
 hive_repo_hash_checkout() {
     local -n tmpd="$1"
-    local -n commit="$2"
+    local commit="$2"
     log "starting"
     log "Attempting to use commit: $commit"
 
@@ -94,10 +94,11 @@ hive_repo_hash_checkout() {
     popd 1> /dev/null
 }
 
+# generate_hive_config()
 generate_hive_config() {
     local -n kustomize="$1"
-    local -n namespace="$2"
-    local -n image="$3"
+    local namespace="$2"
+    local image="$3"
     local -n tmpd="$4"
     log "starting"
     
@@ -117,7 +118,7 @@ generate_hive_config() {
     mv "$tmpd/hive-deployment.yaml" ./hack/hive/hive-config/
 
     # ensure the hive deployment uses the pull secret
-    yq -yi 'select(.kind == "ServiceAccount").imagePullSecrets = [{"name": "hive-global-pull-secret"}]' ./hack/hive/hive-config/hive-deployment.yaml
+    yq -i 'select(.kind == "ServiceAccount").imagePullSecrets = [{"name": "hive-global-pull-secret"}]' ./hack/hive/hive-config/hive-deployment.yaml
 
     if [ -d ./hack/hive/hive-config/crds ]; then
         rm -rf ./hack/hive/hive-config/crds
@@ -125,20 +126,9 @@ generate_hive_config() {
     cp -R "$tmpd/config/crds" ./hack/hive/hive-config/
 }
 
-if [ ! -f go.mod ] || [ ! -d ".git" ]; then
-    echo "this script must by run from the repo's root directory"
-    exit 1
-fi
-
-declare -r util_script="hack/util.sh"
-if [ -f $util_script ]; then
-    # shellcheck source=util.sh
-    source "$util_script"
-fi
-
-cleanup() {
-    local tmpd="$1"
-    [ -d "$tmpd" ] && rm -fr "$tmpd"
-}
+declare -r util_lib="hack/util.sh"
+[ -f "$util_lib" ] || "$(echo "$util_lib not found. Are you in the ARO-RP repository root?"; exit 1)"
+# shellcheck source=../util.sh
+. "$util_lib"
 
 main "$@"
