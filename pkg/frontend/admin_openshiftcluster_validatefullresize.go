@@ -45,7 +45,7 @@ func convertErrorLineEndings(err error) error {
 	return fmt.Errorf("%s", errMsg)
 }
 
-func (f *frontend) getPostResizeControlPlaneVMs(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getControlPlaneStatusCheckAfterResize(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
@@ -80,11 +80,11 @@ func (f *frontend) getPostResizeControlPlaneVMs(w http.ResponseWriter, r *http.R
 		adminReply(log, w, nil, nil, err)
 		return
 	}
-	err = f._getPostResizeControlPlaneVMs(log, ctx, kubeActions, azureActions, doc)
+	err = f._getControlPlaneStatusCheckAfterResize(log, ctx, kubeActions, azureActions, doc)
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _getPostResizeControlPlaneVMs(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
+func (f *frontend) _getControlPlaneStatusCheckAfterResize(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
 	ocMachines, err := getClusterMachines(log, ctx, kubeActions)
 	if err != nil {
 		return convertErrorLineEndings(err)
