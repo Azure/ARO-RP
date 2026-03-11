@@ -164,9 +164,10 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 //     required because stopping the old VM frees quota in a different family.
 //
 // NOTE: This checks subscription-level quota only, not Azure regional
-// datacenter capacity.  There is no public Azure API to pre-check whether
-// physical hardware is available; AllocationFailed errors can only be
-// detected at ARM PUT time.
+// datacenter capacity.  Capacity reservations can guarantee hardware
+// availability in a region (see https://learn.microsoft.com/en-us/azure/virtual-machines/capacity-reservation-overview),
+// but this validation does not account for them.  Without a reservation,
+// AllocationFailed errors can only be detected at ARM PUT time.
 func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, currentVMSize, vmSize string) error {
 	// Resolve the new VM size name to its family and core count.
 	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(vmSize))
