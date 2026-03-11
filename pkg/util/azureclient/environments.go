@@ -141,7 +141,8 @@ func (e *AROEnvironment) ClientSecretCredentialOptions() *azidentity.ClientSecre
 
 func (e *AROEnvironment) DefaultAzureCredentialOptions() *azidentity.DefaultAzureCredentialOptions {
 	return &azidentity.DefaultAzureCredentialOptions{
-		ClientOptions: e.AzureClientOptions(),
+		ClientOptions:                e.AzureClientOptions(),
+		RequireAzureTokenCredentials: true,
 	}
 }
 
