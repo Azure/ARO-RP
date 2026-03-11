@@ -65,6 +65,35 @@ alias ll='ls -lhtr --color=auto'
             -d "{}"
     }' > ~/.bashrc.d/rp-recovery-etcd
     ```
+* run `yq` as a container
+    ```sh
+        echo 'yq() {
+        # log_level="${PODMAN_LOG_LEVEL:-warn}"
+        # 
+        # Useful for debugging podman runtime errors
+        log_level="${PODMAN_LOG_LEVEL:-warn}"
+
+        image="quay.io/konflux-ci/yq:latest"
+
+        # YQ_* environment variables are useful for passing variables to be parsed by yq
+        podman run \
+            --userns=keep-id \
+            --env '\''YQ_*'\'' \
+            --log-level="$log_level" \
+            --security-opt label=disable \
+            -i \
+            --rm \
+            -v=${PWD}:/workdir:rw,rshared \
+	    --workdir /workdir \
+            "$image" \
+                --exit-status=1 \
+                "$@"
+    }
+
+    # yq must be exported for scripts (or any subshell) to access it
+    export -f yq
+    ' > ~/.bashrc.d/yq
+    ```
 
 ## Bash rc config Drop-Ins
 
