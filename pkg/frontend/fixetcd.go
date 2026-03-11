@@ -57,7 +57,7 @@ func (e *podFailedError) Error() string {
 
 const (
 	serviceAccountName    = "etcd-recovery-privileged"
-	kubeServiceAccount    = "system:serviceaccount" + namespaceEtcds + ":" + serviceAccountName
+	kubeServiceAccount    = "system:serviceaccount:" + namespaceEtcds + ":" + serviceAccountName
 	namespaceEtcds        = "openshift-etcd"
 	image                 = "ubi9/ubi-minimal"
 	genericPodName        = "etcd-recovery-"
