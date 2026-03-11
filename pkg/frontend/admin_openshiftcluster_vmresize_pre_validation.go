@@ -47,7 +47,7 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 	vmSize := r.URL.Query().Get("vmSize")
 
-	b, err := f._getPreResizeControlPlaneVMsValidations(ctx, resType, resName, resGroupName, resourceID, vmSize, log)
+	b, err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, vmSize, log)
 
 	adminReply(log, w, nil, b, err)
 }
@@ -56,7 +56,7 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 // pass before the Geneva Action's ResizeControlPlaneVMs orchestration loop is
 // allowed to cordon/drain/stop any master node.  Failing early here prevents
 // leaving the cluster in a degraded state with reduced etcd quorum.
-func (f *frontend) _getPreResizeControlPlaneVMsValidations(
+func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	ctx context.Context,
 	resType, resName, resGroupName, resourceID, vmSize string,
 	log *logrus.Entry,
@@ -208,6 +208,9 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 			continue
 		}
 		if *usage.Name.Value == newSizeStruct.Family {
+			if usage.Limit == nil || usage.CurrentValue == nil {
+				continue
+			}
 			remaining := *usage.Limit - int64(*usage.CurrentValue)
 			if int64(totalAdditionalCores) > remaining {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "vmSize",
