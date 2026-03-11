@@ -32,8 +32,9 @@ import (
 )
 
 // getPreResizeControlPlaneVMsValidation is the HTTP handler that decouples URL
-// parameter extraction from business logic.  The underscore function below can
-// be invoked directly by other Go packages without mocking an HTTP request.
+// parameter extraction from business logic. The underscore method below
+// decouples HTTP parsing from logic so it can be invoked directly by internal
+// callers (for example, tests) without mocking an HTTP request.
 func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
