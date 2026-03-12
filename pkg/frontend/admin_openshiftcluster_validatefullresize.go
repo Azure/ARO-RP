@@ -85,7 +85,12 @@ func (f *frontend) getControlPlaneStatusCheckAfterResize(w http.ResponseWriter, 
 }
 
 func (f *frontend) _getControlPlaneStatusCheckAfterResize(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
-	ocMachines, err := getClusterMachines(log, ctx, kubeActions)
+	machines, err := getClusterMachines(log, ctx, kubeActions)
+	if err != nil {
+		return convertErrorLineEndings(err)
+	}
+
+	ocMachines, err := validateClusterMachines(log, machines)
 	if err != nil {
 		return convertErrorLineEndings(err)
 	}
@@ -109,9 +114,11 @@ func (f *frontend) _getControlPlaneStatusCheckAfterResize(log *logrus.Entry, ctx
 }
 
 type machineBasics struct {
-	labelZone string
-	specZone  string
-	size      string
+	labelZone         string
+	specZone          string
+	size              string
+	phase             string
+	labelInstanceType string
 }
 
 type azureVMBasics struct {
@@ -126,22 +133,20 @@ type nodeBasics struct {
 }
 
 func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineBasics, error) {
-	var validationErrs []error
-	filteredMachines := make(map[string]machineBasics)
-	foundMachineSize := ""
+	machines := make(map[string]machineBasics)
 
 	rawPods, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	machines := &machinev1beta1.MachineList{}
-	err = codec.NewDecoderBytes(rawPods, &codec.JsonHandle{}).Decode(machines)
+	machineList := &machinev1beta1.MachineList{}
+	err = codec.NewDecoderBytes(rawPods, &codec.JsonHandle{}).Decode(machineList)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode machines, %s", err.Error()))
 	}
 
-	for _, machine := range machines.Items {
+	for _, machine := range machineList.Items {
 		if role, ok := machine.Labels["machine.openshift.io/cluster-api-machine-role"]; ok && role == "master" {
 			providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
 			err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &providerSpec)
@@ -149,62 +154,84 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 				return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode provider spec, %s", err.Error()))
 			}
 
-			if machine.Status.Phase == nil || *machine.Status.Phase != "Running" {
-				phase := "nil"
-				if machine.Status.Phase != nil {
-					phase = *machine.Status.Phase
-				}
-				err := fmt.Errorf("machine %s status phase is not Running, current phase is %s", machine.Name, phase)
-				log.Info(err)
-				validationErrs = append(validationErrs, err)
-				continue
+			phase := ""
+			if machine.Status.Phase != nil {
+				phase = *machine.Status.Phase
 			}
 
-			filteredMachine := machineBasics{
-				labelZone: machine.Labels["machine.openshift.io/zone"],
-				specZone:  *providerSpec.Zone,
-				size:      providerSpec.VMSize,
+			machineBasic := machineBasics{
+				labelZone:         machine.Labels["machine.openshift.io/zone"],
+				specZone:          *providerSpec.Zone,
+				size:              providerSpec.VMSize,
+				phase:             phase,
+				labelInstanceType: machine.Labels["machine.openshift.io/instance-type"],
 			}
 
-			if filteredMachine.labelZone != filteredMachine.specZone {
-				err := fmt.Errorf("machine %v has a mismatch between label zone %v and spec zone %v. These values should match", machine.Name, filteredMachine.labelZone, filteredMachine.specZone)
-				log.Info(err)
-				validationErrs = append(validationErrs, err)
-				continue
-			}
-
-			machineLabelSize, ok := machine.Labels["machine.openshift.io/instance-type"]
-			if !ok || machineLabelSize != filteredMachine.size {
-				labelValue := machineLabelSize
-				if !ok {
-					labelValue = "<missing>"
-				}
-				err := fmt.Errorf("machine %s has a mismatch between label instance-type %s and instance type defined in the spec %s. These values should match", machine.Name, labelValue, filteredMachine.size)
-				log.Info(err)
-				validationErrs = append(validationErrs, err)
-				continue
-			}
-
-			if foundMachineSize == "" {
-				foundMachineSize = filteredMachine.size // we'll keep the machine size of the first machine to compare it with the rest
-			}
-
-			if filteredMachine.size != foundMachineSize {
-				err := fmt.Errorf("machine %s has size %s, however previous machines had %s. All machines should have the same size", machine.Name, filteredMachine.size, foundMachineSize)
-				log.Info(err)
-				validationErrs = append(validationErrs, err)
-				continue
-			}
-
-			filteredMachines[machine.Name] = filteredMachine
+			machines[machine.Name] = machineBasic
 		}
+	}
+
+	return machines, nil
+}
+
+func validateClusterMachines(log *logrus.Entry, machines map[string]machineBasics) (map[string]machineBasics, error) {
+	if len(machines) != 3 {
+		return nil, fmt.Errorf("expected 3 machines, got %d", len(machines))
+	}
+
+	var validationErrs []error
+	filteredMachines := make(map[string]machineBasics)
+	foundMachineSize := ""
+
+	for name, machine := range machines {
+		if machine.phase == "" || machine.phase != "Running" {
+			phase := "nil"
+			if machine.phase != "" {
+				phase = machine.phase
+			}
+			err := fmt.Errorf("machine %s status phase is not Running, current phase is %s", name, phase)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if machine.labelZone != machine.specZone {
+			err := fmt.Errorf("machine %v has a mismatch between label zone %v and spec zone %v. These values should match", name, machine.labelZone, machine.specZone)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if machine.labelInstanceType == "" || machine.labelInstanceType != machine.size {
+			labelValue := machine.labelInstanceType
+			if labelValue == "" {
+				labelValue = "<missing>"
+			}
+			err := fmt.Errorf("machine %s has a mismatch between label instance-type %s and instance type defined in the spec %s. These values should match", name, labelValue, machine.size)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if foundMachineSize == "" {
+			foundMachineSize = machine.size // we'll keep the machine size of the first machine to compare it with the rest
+		}
+
+		if machine.size != foundMachineSize {
+			err := fmt.Errorf("machine %s has size %s, however previous machines had %s. All machines should have the same size", name, machine.size, foundMachineSize)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		filteredMachines[name] = machine
 	}
 
 	if err := errors.Join(validationErrs...); err != nil {
 		return nil, err
 	}
 
-	err = validateZoneDistribution(filteredMachines, func(m machineBasics) string { return m.specZone })
+	err := validateZoneDistribution(filteredMachines, func(m machineBasics) string { return m.specZone })
 	if err != nil {
 		return nil, err
 	}
