@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -63,7 +62,7 @@ type kubeActions struct {
 
 // NewKubeActions returns a kubeActions
 func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (KubeActions, error) {
-	var restConfig *rest.Config
+	var restConfig *restclient.Config
 	var err error
 
 	if oc != nil {
