@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 
@@ -30,12 +31,16 @@ func newHiveK8sObjectManager(
 	}
 }
 
-// List Kubernetes objects in a Hive-managed AKS cluster
 func (m *hiveK8sObjectManager) List(
 	ctx context.Context,
 	resource string,
 	namespace string,
 ) ([]byte, error) {
+
+	if m == nil || m.kubeActionsFactory == nil {
+		return nil, fmt.Errorf("kube actions factory not configured")
+	}
+
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	// Reuse existing kube actions (same as other admin actions)
