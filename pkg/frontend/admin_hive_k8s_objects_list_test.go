@@ -25,38 +25,9 @@ func withChiRouteParam(req *http.Request, key, val string) *http.Request {
 	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
 }
 
-func TestAdminHiveK8sObjectsList_ManagerNil_DefaultBehavior(t *testing.T) {
+func TestAdminHiveK8sObjectsList_MockEnabled_ReturnsMock(t *testing.T) {
 
-	t.Setenv(envLocalDevMockHive, "")
-
-	f := &frontend{
-		hiveK8sObjectManager: nil,
-	}
-
-	req := httptest.NewRequest(
-		http.MethodGet,
-		"/admin/hive/k8sobjects/pods?namespace=default",
-		nil,
-	)
-
-	req = withChiRouteParam(req, "resource", "pods")
-	req = withLog(req)
-
-	rr := httptest.NewRecorder()
-
-	f.adminHiveK8sObjectsList(rr, req)
-
-	require.Equal(t, http.StatusNotImplemented, rr.Code)
-	require.Contains(t, rr.Body.String(), "hive k8s object manager not configured")
-}
-
-func TestAdminHiveK8sObjectsList_ManagerNil_MockEnabled_ReturnsMock(t *testing.T) {
-
-	t.Setenv(envLocalDevMockHive, "true")
-
-	f := &frontend{
-		hiveK8sObjectManager: nil,
-	}
+	f := &frontend{}
 
 	req := httptest.NewRequest(
 		http.MethodGet,

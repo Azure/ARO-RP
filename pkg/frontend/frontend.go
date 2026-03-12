@@ -93,7 +93,6 @@ type frontend struct {
 
 	hiveClusterManager    hive.ClusterManager
 	hiveSyncSetManager    hive.SyncSetManager
-	hiveK8sObjectManager  HiveK8sObjectManager
 	kubeActionsFactory    kubeActionsFactory
 	azureActionsFactory   azureActionsFactory
 	appLensActionsFactory appLensActionsFactory
@@ -179,7 +178,6 @@ func NewFrontend(ctx context.Context,
 		aead:                  aead,
 		hiveClusterManager:    hiveClusterManager,
 		hiveSyncSetManager:    hiveSyncSetManager,
-		hiveK8sObjectManager:  newHiveK8sObjectManager(_env, kubeActionsFactory),
 		kubeActionsFactory:    kubeActionsFactory,
 		azureActionsFactory:   azureActionsFactory,
 		appLensActionsFactory: appLensActionsFactory,
