@@ -145,7 +145,6 @@ func TestAdminVMResize(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				nil,
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 					return a, nil
 				},

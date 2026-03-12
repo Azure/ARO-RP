@@ -1,9 +1,8 @@
 package frontend
 
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
-
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -20,18 +19,58 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 	namespace := r.URL.Query().Get("namespace")
 	name := r.URL.Query().Get("name")
 
-	manager := newHiveK8sObjectManager(f.env, f.kubeActionsFactory)
-
 	var (
 		b   []byte
 		err error
 	)
 
 	if name != "" {
-		b, err = manager.Get(ctx, resource, namespace, name)
+		b, err = f.getHiveK8sObject(ctx, resource, namespace, name)
 	} else {
-		b, err = manager.List(ctx, resource, namespace)
+		b, err = f.listHiveK8sObjects(ctx, resource, namespace)
 	}
 
 	adminReply(log, w, nil, b, err)
+}
+
+func (f *frontend) listHiveK8sObjects(ctx context.Context, resource, namespace string) ([]byte, error) {
+
+	if f.kubeActionsFactory == nil {
+		return nil, fmt.Errorf("kube actions factory not configured")
+	}
+
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	k, err := f.kubeActionsFactory(log, f.env, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = k.ResolveGVR(resource, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return k.KubeList(ctx, resource, namespace)
+}
+
+func (f *frontend) getHiveK8sObject(ctx context.Context, resource, namespace, name string) ([]byte, error) {
+
+	if f.kubeActionsFactory == nil {
+		return nil, fmt.Errorf("kube actions factory not configured")
+	}
+
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	k, err := f.kubeActionsFactory(log, f.env, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = k.ResolveGVR(resource, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return k.KubeGet(ctx, resource, namespace, name)
 }

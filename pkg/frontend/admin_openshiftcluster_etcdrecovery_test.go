@@ -172,7 +172,6 @@ func TestAdminEtcdRecovery(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				nil,
 				kubeActionsFactory,
 				nil,
 				nil,
