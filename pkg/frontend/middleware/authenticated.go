@@ -68,6 +68,14 @@ func (a AuthMiddleware) Authenticate(h http.Handler) http.Handler {
 			return
 		}
 
+		// The client may have disconnected while authentication was in
+		// flight (MISE has up to a 5 s timeout with retries). Skip the
+		// handler if the context is already done to avoid running
+		// operations on a dead connection.
+		if r.Context().Err() != nil {
+			return
+		}
+
 		h.ServeHTTP(w, r)
 	})
 }
