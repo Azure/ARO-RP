@@ -524,11 +524,18 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 
 	// requestReceived lets us cancel only after the server has the request,
 	// preserving mid-flight cancellation semantics.
-	requestReceived := make(chan struct{}, 1)
+	requestReceived := make(chan struct{})
+
+	var handlerCalls atomic.Int32
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Blocking intentionally: a second send on retry hangs here,
-		// catching any regression where cancellation does not stop retries.
+		n := handlerCalls.Add(1)
+		if n > 1 {
+			// Retry detected: return immediately so IsAuthorized returns
+			// and the assertion below can report the failure.
+			http.Error(w, "unexpected retry after context cancellation", http.StatusInternalServerError)
+			return
+		}
 		requestReceived <- struct{}{}
 		// Block until the client aborts due to context cancellation.
 		// Never write a response — this guarantees the client always sees
@@ -567,6 +574,10 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 
 	if totalSleptMs != 0 {
 		t.Error("expected no retries on context cancellation")
+	}
+
+	if n := handlerCalls.Load(); n != 1 {
+		t.Errorf("expected handler called once, got %d (retried after cancellation)", n)
 	}
 }
 

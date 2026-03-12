@@ -73,6 +73,7 @@ func (a AuthMiddleware) Authenticate(h http.Handler) http.Handler {
 		// handler if the context is already done to avoid running
 		// operations on a dead connection.
 		if r.Context().Err() != nil {
+			log.Debugf("request context cancelled after auth, skipping handler: %v", r.Context().Err())
 			return
 		}
 
