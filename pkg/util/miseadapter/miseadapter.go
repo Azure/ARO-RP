@@ -6,7 +6,6 @@ package miseadapter
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -92,10 +91,6 @@ func (c Client) ValidateRequest(ctx context.Context, input Input, log *logrus.En
 	resp, respErr := c.httpClient.Do(req)
 	if respErr != nil {
 		return Result{}, respErr
-	}
-
-	if resp == nil {
-		return Result{}, fmt.Errorf("nil response from mise adapter")
 	}
 
 	defer resp.Body.Close()

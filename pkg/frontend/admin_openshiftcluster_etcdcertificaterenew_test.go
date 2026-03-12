@@ -541,7 +541,6 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				nil,
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
 					return k, nil
 				},
@@ -757,7 +756,6 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 				api.APIs,
 				&noop.Noop{},
 				&noop.Noop{},
-				nil,
 				nil,
 				nil,
 				nil,
