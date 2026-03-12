@@ -281,7 +281,7 @@ func TestGetClusterMachines(t *testing.T) {
 		wantCount int
 	}{
 		{
-			name: "success - 3 master nodes with matching zones",
+			name: "success - 3 master machines",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
 					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
@@ -305,54 +305,6 @@ func TestGetClusterMachines(t *testing.T) {
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3, // Only masters
-		},
-		{
-			name: "failure - zone mismatch between label and spec",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Label zone 1, spec zone 2
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "machine master-0 has a mismatch between label zone 1 and spec zone 2. These values should match",
-		},
-		{
-			name: "failure - multiple zone mismatches",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Mismatch
-					createMachine("master-1", "master", "2", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Mismatch
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // OK
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			// Should contain both errors since we collect all validation errors
-			wantErr: "master-0 has a mismatch",
-		},
-		{
-			name: "failure - only 2 master nodes (zone distribution fails)",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "expected 3 items, got 2",
-		},
-		{
-			name: "failure - 3 masters but only 2 zones",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Duplicate zone
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
 		},
 		{
 			name: "success - filters machines without role label",
@@ -381,7 +333,7 @@ func TestGetClusterMachines(t *testing.T) {
 			wantCount: 3, // Only masters with role=master
 		},
 		{
-			name: "failure - machine with nil phase",
+			name: "success - includes machines with nil phase",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
 					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
@@ -390,103 +342,30 @@ func TestGetClusterMachines(t *testing.T) {
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
-			wantErr: "machine master-1 status phase is not Running, current phase is nil",
+			wantCount: 3,
 		},
 		{
-			name: "failure - machine with Provisioning phase",
+			name: "success - includes machines with non-Running phases",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Provisioning"),
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Provisioning"),
+					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Failed"),
 					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
-			wantErr: "machine master-1 status phase is not Running, current phase is Provisioning",
+			wantCount: 3,
 		},
 		{
-			name: "failure - machine with Failed phase",
+			name: "success - only 2 master machines",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				machines := encodeMachineList(
 					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Failed"),
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
-			wantErr: "machine master-2 status phase is not Running, current phase is Failed",
-		},
-		{
-			name: "failure - multiple machines with wrong phase",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Deleting"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", ""),
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "master-0 status phase is not Running",
-		},
-		{
-			name: "failure - machine missing instance-type label",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "", "Running"), // Missing instance-type label
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "machine master-1 has a mismatch between label instance-type <missing> and instance type defined in the spec Standard_D8s_v3",
-		},
-		{
-			name: "failure - machine with mismatched instance-type label",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D16s_v3", "Running"), // Wrong label
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "machine master-1 has a mismatch between label instance-type Standard_D16s_v3 and instance type defined in the spec Standard_D8s_v3",
-		},
-		{
-			name: "failure - combination of instance-type and zone mismatches",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"), // Zone mismatch
-					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "", "Running"),                // Missing instance-type
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "master-0 has a mismatch",
-		},
-		{
-			name: "failure - machines have different sizes",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D16s_v3", "Standard_D16s_v3", "Running"), // Different size
-					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "machine master-1 has size Standard_D16s_v3, however previous machines had Standard_D8s_v3",
-		},
-		{
-			name: "failure - multiple machines with different sizes",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				machines := encodeMachineList(
-					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
-					createMachine("master-1", "master", "2", "2", "Standard_D16s_v3", "Standard_D16s_v3", "Running"), // Different size
-					createMachine("master-2", "master", "3", "3", "Standard_D32s_v3", "Standard_D32s_v3", "Running"), // Different size
-				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
-			},
-			wantErr: "master-1 has size Standard_D16s_v3",
+			wantCount: 2,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -497,6 +376,163 @@ func TestGetClusterMachines(t *testing.T) {
 			tt.mocks(kubeActions)
 
 			machines, err := getClusterMachines(log, ctx, kubeActions)
+
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("expected error to contain %q, got: %s", tt.wantErr, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if len(machines) != tt.wantCount {
+					t.Errorf("expected %d machines, got %d", tt.wantCount, len(machines))
+				}
+			}
+		})
+	}
+}
+
+func TestValidateClusterMachines(t *testing.T) {
+	_, log := testlog.New()
+
+	for _, tt := range []struct {
+		name      string
+		machines  map[string]machineBasics
+		wantErr   string
+		wantCount int
+	}{
+		{
+			name: "success - 3 machines all valid",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantCount: 3,
+		},
+		{
+			name: "failure - not 3 machines",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "expected 3 machines, got 2",
+		},
+		{
+			name: "failure - zone mismatch between label and spec",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "machine master-0 has a mismatch between label zone 1 and spec zone 2",
+		},
+		{
+			name: "failure - multiple zone mismatches",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "master-0 has a mismatch",
+		},
+		{
+			name: "failure - 3 masters but only 2 zones",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
+		},
+		{
+			name: "failure - machine with nil phase",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "machine master-1 status phase is not Running, current phase is nil",
+		},
+		{
+			name: "failure - machine with Provisioning phase",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Provisioning", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "machine master-1 status phase is not Running, current phase is Provisioning",
+		},
+		{
+			name: "failure - machine with Failed phase",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Failed", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "machine master-2 status phase is not Running, current phase is Failed",
+		},
+		{
+			name: "failure - multiple machines with wrong phase",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Deleting", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "master-0 status phase is not Running",
+		},
+		{
+			name: "failure - machine missing instance-type label",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: ""},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "machine master-1 has a mismatch between label instance-type <missing> and instance type defined in the spec Standard_D8s_v3",
+		},
+		{
+			name: "failure - machine with mismatched instance-type label",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "machine master-1 has a mismatch between label instance-type Standard_D16s_v3 and instance type defined in the spec Standard_D8s_v3",
+		},
+		{
+			name: "failure - combination of instance-type and zone mismatches",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: ""},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "master-0 has a mismatch",
+		},
+		{
+			name: "failure - machines have different sizes",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D16s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "has size",
+		},
+		{
+			name: "failure - multiple machines with different sizes",
+			machines: map[string]machineBasics{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D16s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D32s_v3", phase: "Running", labelInstanceType: "Standard_D32s_v3"},
+			},
+			wantErr: "has size",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			machines, err := validateClusterMachines(log, tt.machines)
 
 			if tt.wantErr != "" {
 				if err == nil {
