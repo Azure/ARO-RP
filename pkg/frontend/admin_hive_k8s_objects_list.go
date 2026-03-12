@@ -34,7 +34,6 @@ func (f *frontend) adminHiveK8sObjectsList(w http.ResponseWriter, r *http.Reques
 }
 
 func (f *frontend) listHiveK8sObjects(ctx context.Context, resource, namespace string) ([]byte, error) {
-
 	if f.kubeActionsFactory == nil {
 		return nil, fmt.Errorf("kube actions factory not configured")
 	}
@@ -55,7 +54,6 @@ func (f *frontend) listHiveK8sObjects(ctx context.Context, resource, namespace s
 }
 
 func (f *frontend) getHiveK8sObject(ctx context.Context, resource, namespace, name string) ([]byte, error) {
-
 	if f.kubeActionsFactory == nil {
 		return nil, fmt.Errorf("kube actions factory not configured")
 	}
