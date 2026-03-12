@@ -36,7 +36,6 @@ func (m *hiveK8sObjectManager) List(
 	resource string,
 	namespace string,
 ) ([]byte, error) {
-
 	if m == nil || m.kubeActionsFactory == nil {
 		return nil, fmt.Errorf("kube actions factory not configured")
 	}
@@ -66,6 +65,10 @@ func (m *hiveK8sObjectManager) Get(
 	namespace string,
 	name string,
 ) ([]byte, error) {
+	if m == nil || m.kubeActionsFactory == nil {
+		return nil, fmt.Errorf("kube actions factory not configured")
+	}
+
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	k, err := m.kubeActionsFactory(log, m.env, nil)
