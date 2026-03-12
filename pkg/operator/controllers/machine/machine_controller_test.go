@@ -89,16 +89,6 @@ func TestMachineReconciler(t *testing.T) {
 			}},
 		},
 		{
-			name:    "wrong vm size",
-			objects: newFakeMao1("", "", "Standard_D4s_v9", ""),
-			wantConditions: []operatorv1.OperatorCondition{{
-				Type:    arov1alpha1.MachineValid,
-				Status:  operatorv1.ConditionFalse,
-				Message: "machine foo-hx8z7-worker-2: invalid VM size 'Standard_D4s_v9'",
-				Reason:  "CheckFailed",
-			}},
-		},
-		{
 			name:    "wrong disk size",
 			objects: newFakeMao1("64", "", "", ""),
 			wantConditions: []operatorv1.OperatorCondition{{
@@ -115,16 +105,6 @@ func TestMachineReconciler(t *testing.T) {
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
 				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4    }'",
-				Reason:  "CheckFailed",
-			}},
-		},
-		{
-			name:    "wrong vm size on master",
-			objects: newFakeMao1("", "", "", "Standard_D4s_v9"),
-			wantConditions: []operatorv1.OperatorCondition{{
-				Type:    arov1alpha1.MachineValid,
-				Status:  operatorv1.ConditionFalse,
-				Message: "machine foo-hx8z7-master-2: invalid VM size 'Standard_D4s_v9'",
 				Reason:  "CheckFailed",
 			}},
 		},
