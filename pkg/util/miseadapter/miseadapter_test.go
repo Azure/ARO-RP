@@ -527,6 +527,8 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 	requestReceived := make(chan struct{}, 1)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Blocking intentionally: a second send on retry hangs here,
+		// catching any regression where cancellation does not stop retries.
 		requestReceived <- struct{}{}
 		// Block until the client aborts due to context cancellation.
 		// Never write a response — this guarantees the client always sees
@@ -556,7 +558,7 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 	}
 
 	if !errors.Is(err, context.Canceled) {
-		t.Logf("got unexpected error type: %v", err)
+		t.Errorf("got unexpected error type: %v", err)
 	}
 
 	if authorized {
