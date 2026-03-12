@@ -24,6 +24,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
+const (
+	boundServiceAccountSigningKeySecretName = "bound-service-account-signing-key"
+	boundServiceAccountSigningKeySecretKey  = "bound-service-account-signing-key.key"
+)
+
 var devEnvVars = []string{
 	"AZURE_FP_CLIENT_ID",
 	"AZURE_RP_CLIENT_ID",
@@ -65,7 +70,7 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 			return err
 		}),
 		steps.Action(func(context.Context) error { return m.createSecrets(ctx, doc, sub) }),
-		steps.Action(func(context.Context) error { return m.startContainer(ctx, version) }),
+		steps.Action(func(context.Context) error { return m.startContainer(ctx, doc, version) }),
 		steps.Condition(m.containerFinished, 60*time.Minute, false),
 		steps.Action(m.cleanupContainers),
 	}
@@ -88,7 +93,7 @@ func (m *manager) putSecret(secretName string) specgen.Secret {
 	}
 }
 
-func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVersion) error {
+func (m *manager) startContainer(ctx context.Context, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
 	s := specgen.NewSpecGenerator(version.Properties.InstallerPullspec, false)
 	s.Name = "installer-" + m.clusterUUID
 
@@ -98,6 +103,19 @@ func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVers
 		m.putSecret("proxy.crt"),
 		m.putSecret("proxy-client.crt"),
 		m.putSecret("proxy-client.key"),
+	}
+
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s.Secrets = append(s.Secrets, specgen.Secret{
+			Source: m.clusterUUID + "-" + boundServiceAccountSigningKeySecretName,
+			Target: "/boundsasigningkey/" + boundServiceAccountSigningKeySecretKey,
+			Mode:   0o644,
+		})
+		s.Mounts = append(s.Mounts, specs.Mount{
+			Destination: "/boundsasigningkey",
+			Type:        "tmpfs",
+			Source:      "",
+		})
 	}
 
 	s.Env = map[string]string{
@@ -116,7 +134,7 @@ func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVers
 		Type:        "tmpfs",
 		Source:      "",
 	})
-	s.WorkDir = "/.azure"
+	s.WorkDir = "/"
 	s.Entrypoint = []string{"/bin/bash", "-c", "/bin/openshift-install create manifests && /bin/openshift-install create cluster"}
 
 	_, err := runContainer(m.conn, m.log, s)
@@ -162,6 +180,18 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-99_sub.json"))
 	if err != nil {
 		return err
+	}
+
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		if doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey == nil {
+			return fmt.Errorf("properties.clusterProfile.boundServiceAccountSigningKey not set")
+		}
+		_, err = secrets.Create(
+			m.conn, bytes.NewBufferString(string(*doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey)),
+			(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-"+boundServiceAccountSigningKeySecretName))
+		if err != nil {
+			return err
+		}
 	}
 
 	basepath := os.Getenv("ARO_CHECKOUT_PATH")
@@ -220,7 +250,7 @@ func (m *manager) cleanupContainers(ctx context.Context) error {
 		m.log.Errorf("unable to remove container: %v", err)
 	}
 
-	for _, secretName := range []string{"99_aro.json", "99_sub.json", "proxy.crt", "proxy-client.crt", "proxy-client.key"} {
+	for _, secretName := range []string{"99_aro.json", "99_sub.json", "proxy.crt", "proxy-client.crt", "proxy-client.key", boundServiceAccountSigningKeySecretName} {
 		err = secrets.Remove(m.conn, m.clusterUUID+"-"+secretName)
 		if err != nil {
 			m.log.Debugf("unable to remove secret %s: %v", m.clusterUUID+"-"+secretName, err)
