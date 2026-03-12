@@ -235,13 +235,13 @@ func TestGetClusterMachines(t *testing.T) {
 		providerSpecRaw, _ := json.Marshal(providerSpec)
 
 		labels := map[string]string{
-			"machine.openshift.io/zone": labelZone,
+			machineLabelZone: labelZone,
 		}
 		if role != "" {
-			labels["machine.openshift.io/cluster-api-machine-role"] = role
+			labels[machineLabelClusterAPIRole] = role
 		}
 		if labelInstanceType != "" {
-			labels["machine.openshift.io/instance-type"] = labelInstanceType
+			labels[machineLabelInstanceType] = labelInstanceType
 		}
 
 		machine := machinev1beta1.Machine{
