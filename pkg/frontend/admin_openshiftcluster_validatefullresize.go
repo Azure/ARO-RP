@@ -31,7 +31,11 @@ import (
 )
 
 const (
-	machineNamespace = "openshift-machine-api"
+	machineNamespace           = "openshift-machine-api"
+	machineLabelClusterAPIRole = "machine.openshift.io/cluster-api-machine-role"
+	machineLabelZone           = "machine.openshift.io/zone"
+	machineLabelInstanceType   = "machine.openshift.io/instance-type"
+	machineRoleMaster          = "master"
 )
 
 // convertErrorLineEndings converts newlines to a clearer separator " | ", as it seems that the new lines are not being parsed in GA
@@ -147,7 +151,7 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 	}
 
 	for _, machine := range machineList.Items {
-		if role, ok := machine.Labels["machine.openshift.io/cluster-api-machine-role"]; ok && role == "master" {
+		if role, ok := machine.Labels[machineLabelClusterAPIRole]; ok && role == machineRoleMaster {
 			providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
 			err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &providerSpec)
 			if err != nil {
@@ -160,11 +164,11 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 			}
 
 			machineBasic := machineBasics{
-				labelZone:         machine.Labels["machine.openshift.io/zone"],
+				labelZone:         machine.Labels[machineLabelZone],
 				specZone:          *providerSpec.Zone,
 				size:              providerSpec.VMSize,
 				phase:             phase,
-				labelInstanceType: machine.Labels["machine.openshift.io/instance-type"],
+				labelInstanceType: machine.Labels[machineLabelInstanceType],
 			}
 
 			machines[machine.Name] = machineBasic
