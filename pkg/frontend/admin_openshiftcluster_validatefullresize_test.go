@@ -101,18 +101,18 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 
 	for _, tt := range []struct {
 		name           string
-		ocMachines     map[string]machineBasics
-		azureVMs       map[string]azureVMBasics
+		ocMachines     map[string]machineValidationData
+		azureVMs       map[string]azureVMValidationData
 		wantErrStrings []string
 	}{
 		{
 			name: "valid - all machines match Azure VMs",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			azureVMs: map[string]azureVMBasics{
+			azureVMs: map[string]azureVMValidationData{
 				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
 				"master-1": {zone: "2", vmSize: "Standard_D8s_v3"},
 				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
@@ -120,12 +120,12 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		},
 		{
 			name: "invalid - machine not found in Azure",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			azureVMs: map[string]azureVMBasics{
+			azureVMs: map[string]azureVMValidationData{
 				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
 				"master-1": {zone: "2", vmSize: "Standard_D8s_v3"},
 			},
@@ -133,12 +133,12 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		},
 		{
 			name: "invalid - zone mismatch",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			azureVMs: map[string]azureVMBasics{
+			azureVMs: map[string]azureVMValidationData{
 				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
 				"master-1": {zone: "3", vmSize: "Standard_D8s_v3"}, // Wrong zone
 				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
@@ -147,12 +147,12 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		},
 		{
 			name: "invalid - size mismatch",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			azureVMs: map[string]azureVMBasics{
+			azureVMs: map[string]azureVMValidationData{
 				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
 				"master-1": {zone: "2", vmSize: "Standard_D16s_v3"}, // Wrong size
 				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
@@ -161,12 +161,12 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		},
 		{
 			name: "invalid - multiple errors collected",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			azureVMs: map[string]azureVMBasics{
+			azureVMs: map[string]azureVMValidationData{
 				"master-0": {zone: "2", vmSize: "Standard_D16s_v3"}, // Both wrong
 				"master-1": {zone: "2", vmSize: "Standard_D8s_v3"},
 			},
@@ -178,12 +178,12 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		},
 		{
 			name: "invalid - zone and size mismatch for same machine",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			azureVMs: map[string]azureVMBasics{
+			azureVMs: map[string]azureVMValidationData{
 				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
 				"master-1": {zone: "3", vmSize: "Standard_D16s_v3"}, // Both wrong
 				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
@@ -195,8 +195,8 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 		},
 		{
 			name:       "valid - empty maps",
-			ocMachines: map[string]machineBasics{},
-			azureVMs:   map[string]azureVMBasics{},
+			ocMachines: map[string]machineValidationData{},
+			azureVMs:   map[string]azureVMValidationData{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -401,13 +401,13 @@ func TestValidateClusterMachines(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
-		machines  map[string]machineBasics
+		machines  map[string]machineValidationData
 		wantErr   string
 		wantCount int
 	}{
 		{
 			name: "success - 3 machines all valid",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -416,7 +416,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - not 3 machines",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 			},
@@ -424,7 +424,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - zone mismatch between label and spec",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -433,7 +433,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - multiple zone mismatches",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -442,7 +442,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - 3 masters but only 2 zones",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -451,7 +451,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - machine with nil phase",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -460,7 +460,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - machine with Provisioning phase",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Provisioning", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -469,7 +469,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - machine with Failed phase",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Failed", labelInstanceType: "Standard_D8s_v3"},
@@ -478,7 +478,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - multiple machines with wrong phase",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Deleting", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -487,7 +487,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - machine missing instance-type label",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: ""},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -496,7 +496,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - machine with mismatched instance-type label",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -505,7 +505,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - combination of instance-type and zone mismatches",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: ""},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -514,7 +514,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - machines have different sizes",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D16s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -523,7 +523,7 @@ func TestValidateClusterMachines(t *testing.T) {
 		},
 		{
 			name: "failure - multiple machines with different sizes",
-			machines: map[string]machineBasics{
+			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D16s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D32s_v3", phase: "Running", labelInstanceType: "Standard_D32s_v3"},
@@ -1159,18 +1159,18 @@ func TestValidateClusterMachinesAndNodes(t *testing.T) {
 
 	for _, tt := range []struct {
 		name           string
-		ocMachines     map[string]machineBasics
-		ocNodes        map[string]nodeBasics
+		ocMachines     map[string]machineValidationData
+		ocNodes        map[string]nodeValidationData
 		wantErrStrings []string
 	}{
 		{
 			name: "valid - all machines match nodes",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			ocNodes: map[string]nodeBasics{
+			ocNodes: map[string]nodeValidationData{
 				"master-0": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
 				"master-1": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
 				"master-2": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
@@ -1178,12 +1178,12 @@ func TestValidateClusterMachinesAndNodes(t *testing.T) {
 		},
 		{
 			name: "invalid - machine not found in nodes",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			ocNodes: map[string]nodeBasics{
+			ocNodes: map[string]nodeValidationData{
 				"master-0": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
 				"master-1": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
 			},
@@ -1191,12 +1191,12 @@ func TestValidateClusterMachinesAndNodes(t *testing.T) {
 		},
 		{
 			name: "invalid - instance-type mismatch",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			ocNodes: map[string]nodeBasics{
+			ocNodes: map[string]nodeValidationData{
 				"master-0": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
 				"master-1": {nodeInstanceType: "Standard_D16s_v3", betaInstanceType: "Standard_D16s_v3"}, // Wrong size
 				"master-2": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
@@ -1205,12 +1205,12 @@ func TestValidateClusterMachinesAndNodes(t *testing.T) {
 		},
 		{
 			name: "invalid - multiple errors collected",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			ocNodes: map[string]nodeBasics{
+			ocNodes: map[string]nodeValidationData{
 				"master-0": {nodeInstanceType: "Standard_D16s_v3", betaInstanceType: "Standard_D16s_v3"}, // Wrong size
 				"master-1": {nodeInstanceType: "Standard_D8s_v3", betaInstanceType: "Standard_D8s_v3"},
 			},
@@ -1221,12 +1221,12 @@ func TestValidateClusterMachinesAndNodes(t *testing.T) {
 		},
 		{
 			name: "invalid - all machines have mismatched nodes",
-			ocMachines: map[string]machineBasics{
+			ocMachines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3"},
 			},
-			ocNodes: map[string]nodeBasics{
+			ocNodes: map[string]nodeValidationData{
 				"master-0": {nodeInstanceType: "Standard_D16s_v3", betaInstanceType: "Standard_D16s_v3"},
 				"master-1": {nodeInstanceType: "Standard_D32s_v3", betaInstanceType: "Standard_D32s_v3"},
 				"master-2": {nodeInstanceType: "Standard_D64s_v3", betaInstanceType: "Standard_D64s_v3"},
@@ -1239,8 +1239,8 @@ func TestValidateClusterMachinesAndNodes(t *testing.T) {
 		},
 		{
 			name:       "valid - empty maps",
-			ocMachines: map[string]machineBasics{},
-			ocNodes:    map[string]nodeBasics{},
+			ocMachines: map[string]machineValidationData{},
+			ocNodes:    map[string]nodeValidationData{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

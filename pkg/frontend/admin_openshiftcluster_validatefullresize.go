@@ -117,7 +117,7 @@ func (f *frontend) _getControlPlaneStatusCheckAfterResize(log *logrus.Entry, ctx
 	return convertErrorLineEndings(err)
 }
 
-type machineBasics struct {
+type machineValidationData struct {
 	labelZone         string
 	specZone          string
 	size              string
@@ -125,19 +125,19 @@ type machineBasics struct {
 	labelInstanceType string
 }
 
-type azureVMBasics struct {
+type azureVMValidationData struct {
 	status []string
 	vmSize string
 	zone   string
 }
 
-type nodeBasics struct {
+type nodeValidationData struct {
 	nodeInstanceType string
 	betaInstanceType string
 }
 
-func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineBasics, error) {
-	machines := make(map[string]machineBasics)
+func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
+	machines := make(map[string]machineValidationData)
 
 	rawPods, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
 	if err != nil {
@@ -163,7 +163,7 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 				phase = *machine.Status.Phase
 			}
 
-			machineBasic := machineBasics{
+			machineBasic := machineValidationData{
 				labelZone:         machine.Labels[machineLabelZone],
 				specZone:          *providerSpec.Zone,
 				size:              providerSpec.VMSize,
@@ -178,13 +178,13 @@ func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions admi
 	return machines, nil
 }
 
-func validateClusterMachines(log *logrus.Entry, machines map[string]machineBasics) (map[string]machineBasics, error) {
+func validateClusterMachines(log *logrus.Entry, machines map[string]machineValidationData) (map[string]machineValidationData, error) {
 	if len(machines) != 3 {
 		return nil, fmt.Errorf("expected 3 machines, got %d", len(machines))
 	}
 
 	var validationErrs []error
-	filteredMachines := make(map[string]machineBasics)
+	filteredMachines := make(map[string]machineValidationData)
 	foundMachineSize := ""
 
 	for name, machine := range machines {
@@ -235,15 +235,15 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineBasic
 		return nil, err
 	}
 
-	err := validateZoneDistribution(filteredMachines, func(m machineBasics) string { return m.specZone })
+	err := validateZoneDistribution(filteredMachines, func(m machineValidationData) string { return m.specZone })
 	if err != nil {
 		return nil, err
 	}
 	return filteredMachines, nil
 }
 
-func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminactions.AzureActions, resGroupName string) (map[string]azureVMBasics, error) {
-	masterVMs := make(map[string]azureVMBasics)
+func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminactions.AzureActions, resGroupName string) (map[string]azureVMValidationData, error) {
+	masterVMs := make(map[string]azureVMValidationData)
 	clusterRGName := stringutils.LastTokenByte(resGroupName, '/')
 	subscriptionObjects, err := azureAction.GroupResourceList(ctx)
 	if err != nil {
@@ -293,7 +293,7 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 					validationErrs = append(validationErrs, err)
 				}
 
-				masterVM := azureVMBasics{
+				masterVM := azureVMValidationData{
 					vmSize: string(vm.HardwareProfile.VMSize),
 					status: vmStatuses,
 					zone:   vmZones[0],
@@ -308,14 +308,14 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 		return nil, err
 	}
 
-	err = validateZoneDistribution(masterVMs, func(m azureVMBasics) string { return m.zone })
+	err = validateZoneDistribution(masterVMs, func(m azureVMValidationData) string { return m.zone })
 	if err != nil {
 		return nil, err
 	}
 	return masterVMs, nil
 }
 
-func validateClusterMachinesAndVMs(log *logrus.Entry, ocMachines map[string]machineBasics, azureVMs map[string]azureVMBasics) error {
+func validateClusterMachinesAndVMs(log *logrus.Entry, ocMachines map[string]machineValidationData, azureVMs map[string]azureVMValidationData) error {
 	// assumptions: keys in both maps should match, azure VMs are named after Openshift VMs
 	var validationErrs []error
 
@@ -343,7 +343,7 @@ func validateClusterMachinesAndVMs(log *logrus.Entry, ocMachines map[string]mach
 	return errors.Join(validationErrs...)
 }
 
-func validateClusterMachinesAndNodes(log *logrus.Entry, ocMachines map[string]machineBasics, ocNodes map[string]nodeBasics) error {
+func validateClusterMachinesAndNodes(log *logrus.Entry, ocMachines map[string]machineValidationData, ocNodes map[string]nodeValidationData) error {
 	// assumptions: keys in both maps should match, nodes are named after machines
 	var validationErrs []error
 
@@ -405,7 +405,7 @@ func validateVMPowerState(log *logrus.Entry, vmStatuses []string, vmName string)
 	return nil
 }
 
-func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]nodeBasics, error) {
+func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]nodeValidationData, error) {
 	var validationErrs []error
 	rawNodes, err := kubeActions.KubeList(ctx, "Node", "")
 	if err != nil {
@@ -418,7 +418,7 @@ func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions ad
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode nodes, %s", err.Error()))
 	}
 
-	controlPlaneNodesFound := make(map[string]nodeBasics)
+	controlPlaneNodesFound := make(map[string]nodeValidationData)
 	for _, node := range nodeList.Items {
 		if role, ok := node.Labels["node-role.kubernetes.io/master"]; ok && role == "" {
 			if node.Spec.Unschedulable {
@@ -435,7 +435,7 @@ func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions ad
 				}
 			}
 
-			nodeInfo := nodeBasics{
+			nodeInfo := nodeValidationData{
 				nodeInstanceType: node.Labels["node.kubernetes.io/instance-type"],
 				betaInstanceType: node.Labels["beta.kubernetes.io/instance-type"],
 			}
