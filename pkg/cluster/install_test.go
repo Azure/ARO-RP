@@ -85,11 +85,22 @@ var ingressController = &operatorv1.IngressController{
 func TestStepRunnerWithInstaller(t *testing.T) {
 	ctx := context.Background()
 
+	installDoc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				Install: &api.Install{
+					Phase: api.InstallPhaseBootstrap,
+				},
+			},
+		},
+	}
+
 	for _, tt := range []struct {
 		name          string
 		steps         []steps.Step
 		wantEntries   []testlog.ExpectedLogEntry
 		wantErr       string
+		doc           *api.OpenShiftClusterDocument
 		kubernetescli *fake.Clientset
 		configcli     *configfake.Clientset
 		operatorcli   *operatorfake.Clientset
@@ -144,9 +155,18 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogLoadBalancers: load balancer or metrics client missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogBootstrapNode: lb or interface client missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterDeployment: null`),
 				},
 			},
+			doc:           installDoc,
 			kubernetescli: fake.NewSimpleClientset(node),
 			configcli:     configfake.NewSimpleClientset(clusterVersion, clusterOperator),
 			operatorcli:   operatorfake.NewSimpleClientset(ingressController),
@@ -238,9 +258,18 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogLoadBalancers: load balancer or metrics client missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogBootstrapNode: lb or interface client missing`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterDeployment: null`),
 				},
 			},
+			doc:           installDoc,
 			kubernetescli: fake.NewSimpleClientset(),
 			configcli:     configfake.NewSimpleClientset(),
 			operatorcli:   operatorfake.NewSimpleClientset(),
@@ -251,11 +280,13 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			controller := gomock.NewController(t)
 			mockEnv := mock_env.NewMockInterface(controller)
 			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+			mockEnv.EXPECT().IsCI().AnyTimes().Return(false)
 
 			h, log := testlog.New()
 			m := &manager{
 				env:           mockEnv,
 				log:           log,
+				doc:           tt.doc,
 				kubernetescli: tt.kubernetescli,
 				configcli:     tt.configcli,
 				operatorcli:   tt.operatorcli,
@@ -371,6 +402,7 @@ func TestInstallationTimeMetrics(t *testing.T) {
 
 			mockEnv := mock_env.NewMockInterface(controller)
 			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) })
+			mockEnv.EXPECT().IsCI().AnyTimes().Return(false)
 
 			m := &manager{
 				env:            mockEnv,
