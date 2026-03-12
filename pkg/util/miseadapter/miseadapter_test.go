@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -523,10 +522,16 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// requestReceived lets us cancel only after the server has the request,
+	// preserving mid-flight cancellation semantics.
+	requestReceived := make(chan struct{}, 1)
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// cancel the context
-		cancel()
-		w.WriteHeader(http.StatusOK)
+		requestReceived <- struct{}{}
+		// Block until the client aborts due to context cancellation.
+		// Never write a response — this guarantees the client always sees
+		// an error, eliminating the race with a 200 arriving first.
+		<-r.Context().Done()
 	}))
 	defer server.Close()
 
@@ -540,12 +545,17 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 	req.RemoteAddr = "1.2.3.4:12345"
 	req.Header.Set("Authorization", "Bearer token")
 
+	go func() {
+		<-requestReceived
+		cancel()
+	}()
+
 	authorized, err := adapter.IsAuthorized(log, req)
 	if err == nil {
-		t.Error("expected context error")
+		t.Fatal("expected context error")
 	}
 
-	if !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "deadline") {
+	if !errors.Is(err, context.Canceled) {
 		t.Logf("got unexpected error type: %v", err)
 	}
 
