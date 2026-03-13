@@ -134,7 +134,7 @@ func (m *manager) startContainer(ctx context.Context, doc *api.OpenShiftClusterD
 		Type:        "tmpfs",
 		Source:      "",
 	})
-	s.WorkDir = "/"
+	s.WorkDir = "/.azure"
 	s.Entrypoint = []string{"/bin/bash", "-c", "/bin/openshift-install create manifests && /bin/openshift-install create cluster"}
 
 	_, err := runContainer(m.conn, m.log, s)
