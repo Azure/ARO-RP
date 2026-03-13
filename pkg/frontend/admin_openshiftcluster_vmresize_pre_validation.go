@@ -42,9 +42,9 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-	vmSize := r.URL.Query().Get("vmSize")
+	desiredVMSize := r.URL.Query().Get("vmSize")
 
-	b, err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, vmSize, log)
+	b, err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, desiredVMSize, log)
 
 	adminReply(log, w, nil, b, err)
 }
@@ -54,7 +54,7 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 // leaving the cluster degraded with reduced etcd quorum.
 func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	ctx context.Context,
-	resType, resName, resGroupName, resourceID, vmSize string,
+	resType, resName, resGroupName, resourceID, desiredVMSize string,
 	log *logrus.Entry,
 ) ([]byte, error) {
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
@@ -107,7 +107,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, vmSize, log)) })
+	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
 	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
@@ -131,7 +131,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
 // delegates to checkResizeComputeQuota. Injected via f.validateResizeQuota so
 // tests can swap it with quotaCheckDisabled.
-func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, currentVMSize, vmSize string) error {
+func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, currentVMSize, desiredVMSize string) error {
 	tenantID := subscriptionDoc.Subscription.Properties.TenantID
 
 	fpAuthorizer, err := environment.FPAuthorizer(tenantID, nil, environment.Environment().ResourceManagerScope)
@@ -140,7 +140,7 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 	}
 
 	spComputeUsage := compute.NewUsageClient(environment.Environment(), subscriptionDoc.ID, fpAuthorizer)
-	return checkResizeComputeQuota(ctx, spComputeUsage, location, currentVMSize, vmSize)
+	return checkResizeComputeQuota(ctx, spComputeUsage, location, currentVMSize, desiredVMSize)
 }
 
 // checkResizeComputeQuota verifies that the subscription has enough remaining
@@ -155,11 +155,11 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 // This checks subscription-level quota only, not Azure regional datacenter
 // capacity — without a capacity reservation, AllocationFailed errors can only
 // be detected at ARM PUT time.
-func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, currentVMSize, vmSize string) error {
-	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(vmSize))
+func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, currentVMSize, desiredVMSize string) error {
+	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(desiredVMSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
-			fmt.Sprintf("The provided VM SKU '%s' is not supported.", vmSize))
+			fmt.Sprintf("The provided VM SKU '%s' is not supported.", desiredVMSize))
 	}
 
 	currentSizeStruct, ok := validate.VMSizeFromName(api.VMSize(currentVMSize))
@@ -320,14 +320,14 @@ func (f *frontend) validateVMSKU(
 	ctx context.Context,
 	doc *api.OpenShiftClusterDocument,
 	subscriptionDoc *api.SubscriptionDocument,
-	vmSize string,
+	desiredVMSize string,
 	log *logrus.Entry,
 ) error {
-	if vmSize == "" {
+	if desiredVMSize == "" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize", "The provided vmSize is empty.")
 	}
 
-	err := validateAdminMasterVMSize(vmSize)
+	err := validateAdminMasterVMSize(desiredVMSize)
 	if err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func (f *frontend) validateVMSKU(
 
 	filteredSkus := computeskus.FilterVMSizes(skus, location)
 
-	sku, err := checkSKUAvailability(filteredSkus, location, "vmSize", vmSize)
+	sku, err := checkSKUAvailability(filteredSkus, location, "vmSize", desiredVMSize)
 	if err != nil {
 		return err
 	}
@@ -357,7 +357,7 @@ func (f *frontend) validateVMSKU(
 	}
 
 	currentVMSize := string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize)
-	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSize, vmSize)
+	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSize, desiredVMSize)
 	if err != nil {
 		return err
 	}
