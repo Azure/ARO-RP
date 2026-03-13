@@ -225,6 +225,8 @@ services:
       - ./secrets:/workspace/secrets:ro,Z
     environment:
       AZURE_EXTENSION_DEV_SOURCES: /workspace/python
+      GOCACHE: /workspace/.cache/go-build
+      GOMODCACHE: /workspace/.cache/gomod
       USER: ${USER}
     security_opt:
       - label=disable

@@ -49,5 +49,5 @@ podmanlog
 ./venv
 /CLAUDE.md
 Session.vim
-.cache
+.cache/
 .DS_Store
