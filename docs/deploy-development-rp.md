@@ -508,17 +508,18 @@ export RESOURCEGROUP=<resource-group-name>
 This command adds the image to your cosmosDB. **openShiftPullspec** comes from [quay.io/repository/openshift-release-dev](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags) (in production we must use sha tag, but in dev we can use tag for simplicity) ; and **installerPullspec** from int to work in dev without having to set any secret, but you can use repo for installer if you configured secret for it.
 
   ```bash
-  OCP_VERSION=<x.y.z>
+  OS_CLUSTER_VERSION="${OS_CLUSTER_VERSION:-<x.y.z>}"
   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '
     {
-      "name": "'${OCP_VERSION}'",
+      "name": "'${OS_CLUSTER_VERSION}'",
       "type": "Microsoft.RedHatOpenShift/OpenShiftVersion",
       "properties":
       {
-        "version": "'${OCP_VERSION}'",
+        "version": "'${OS_CLUSTER_VERSION}'",
         "enabled": true,
-        "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release:'${OCP_VERSION}'-x86_64",
-        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'"
+        "default": true,
+        "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release:'${OS_CLUSTER_VERSION}'-x86_64",
+        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OS_CLUSTER_VERSION%.*}'"
       }
     }
   '
@@ -526,19 +527,20 @@ This command adds the image to your cosmosDB. **openShiftPullspec** comes from [
 
 If you want to run the installer version via hive and not in container, you will need to use sha instead of tag for OCP image, and you can use your docker connection for this:
   ```bash
-  docker login quay.io                                                                                                                                                                                                                                                                              16:36:10
-  OCP_VERSION=<x.y.z>
-  docker pull quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64
+  docker login quay.io
+  OS_CLUSTER_VERSION="${OS_CLUSTER_VERSION:-<x.y.z>}"
+  docker pull quay.io/openshift-release-dev/ocp-release:${OS_CLUSTER_VERSION}-x86_64
   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '
     {
-      "name": "'${OCP_VERSION}'",
+      "name": "'${OS_CLUSTER_VERSION}'",
       "type": "Microsoft.RedHatOpenShift/OpenShiftVersion",
       "properties":
       {
-        "version": "'${OCP_VERSION}'",
+        "version": "'${OS_CLUSTER_VERSION}'",
         "enabled": true,
-        "openShiftPullspec": "'$(docker inspect --format='{{index .RepoDigests 0}}' quay.io/openshift-release-dev/ocp-release:${OCP_VERSION}-x86_64)'",
-        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OCP_VERSION%.*}'"
+        "default": true,
+        "openShiftPullspec": "'$(docker inspect --format='{{index .RepoDigests 0}}' quay.io/openshift-release-dev/ocp-release:${OS_CLUSTER_VERSION}-x86_64)'",
+        "installerPullspec": "arointsvc.azurecr.io/aro-installer:release-'${OS_CLUSTER_VERSION%.*}'"
       }
     }
   '
