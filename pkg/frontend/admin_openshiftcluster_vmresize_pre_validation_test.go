@@ -649,7 +649,7 @@ func TestValidateVMSP(t *testing.T) {
 			tt.mocks(k)
 
 			f := &frontend{}
-			err := f.validateVMSP(ctx, k)
+			err := f.validateClusterSP(ctx, k)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

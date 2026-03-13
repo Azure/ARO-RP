@@ -119,7 +119,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, vmSize, log)) })
 	wg.Go(func() { collect(f.validateAPIServerHealth(ctx, k)) })
 	wg.Go(func() { collect(f.validateEtcdHealth(ctx, k)) })
-	wg.Go(func() { collect(f.validateVMSP(ctx, k)) })
+	wg.Go(func() { collect(f.validateClusterSP(ctx, k)) })
 
 	wg.Wait()
 
@@ -298,11 +298,11 @@ func (f *frontend) validateEtcdHealth(ctx context.Context, k adminactions.KubeAc
 	return nil
 }
 
-// validateVMSP queries the ARO Cluster CRD to check the ServicePrincipalValid
+// validateClusterSP queries the ARO Cluster CRD to check the ServicePrincipalValid
 // condition set by the serviceprincipalchecker operator controller.  The cluster
 // Service Principal is required for the implicit ARM VM PUT during resize; if
 // it is expired or lacks permissions the resize will fail with the node offline.
-func (f *frontend) validateVMSP(ctx context.Context, k adminactions.KubeActions) error {
+func (f *frontend) validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 	rawCluster, err := k.KubeGet(ctx, "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName)
 	if err != nil {
 		return api.NewCloudError(
