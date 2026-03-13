@@ -466,6 +466,13 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 							CurrentValue: pointerutils.ToPtr(int32(76)),
 							Limit:        pointerutils.ToPtr(int64(100)),
 						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(76)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
 					}, nil)
 			},
 		},
@@ -486,6 +493,13 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 							CurrentValue: pointerutils.ToPtr(int32(77)),
 							Limit:        pointerutils.ToPtr(int64(100)),
 						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(77)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
 					}, nil)
 			},
 			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardDSv3Family exceeded. Maximum allowed: 100, Current in use: 77, Additional requested: 24.",
@@ -504,7 +518,8 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 		},
 		{
 			// D8s_v3 → E8s_v3, cross family.  Full new cores: 8 × 3 = 24.
-			// 76 in use, limit 100 → 24 remaining = exact fit.
+			// Family: 76 in use, limit 100 → 24 remaining = exact fit.
+			// Regional cores delta = (8 - 8) × 3 = 0, no check needed.
 			name:          "cross family - full new cores checked for all masters",
 			currentVMSize: "Standard_D8s_v3",
 			vmSize:        "Standard_E8s_v3",
@@ -518,6 +533,13 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 							},
 							CurrentValue: pointerutils.ToPtr(int32(76)),
 							Limit:        pointerutils.ToPtr(int64(100)),
+						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(100)),
+							Limit:        pointerutils.ToPtr(int64(200)),
 						},
 					}, nil)
 			},
@@ -539,9 +561,73 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 							CurrentValue: pointerutils.ToPtr(int32(77)),
 							Limit:        pointerutils.ToPtr(int64(100)),
 						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(100)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
 					}, nil)
 			},
 			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardESv3Family exceeded. Maximum allowed: 100, Current in use: 77, Additional requested: 24.",
+		},
+		{
+			// D8s_v3 (8 cores) → E16s_v3 (16 cores), cross family upsize.
+			// Family quota: plenty of room (50 in use, limit 200).
+			// Regional cores delta = (16 - 8) × 3 = 24.  177 in use, limit 200 → 23 remaining < 24.
+			name:          "cross family - regional cores quota exceeded",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_E16s_v3",
+			mocks: func(cuc *mock_compute.MockUsageClient) {
+				cuc.EXPECT().
+					List(ctx, "eastus").
+					Return([]mgmtcompute.Usage{
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("standardESv3Family"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(50)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(177)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
+					}, nil)
+			},
+			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of cores exceeded. Maximum allowed: 200, Current in use: 177, Additional requested: 24.",
+		},
+		{
+			// D8s_v3 → E4s_v3, cross family downsize.
+			// Family: full new cores = 4 × 3 = 12.
+			// Regional cores delta = (4 - 8) × 3 = -12 → clamped to 0, no regional check.
+			name:          "cross family downsize - regional cores not checked",
+			currentVMSize: "Standard_D8s_v3",
+			vmSize:        "Standard_E4s_v3",
+			mocks: func(cuc *mock_compute.MockUsageClient) {
+				cuc.EXPECT().
+					List(ctx, "eastus").
+					Return([]mgmtcompute.Usage{
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("standardESv3Family"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(88)),
+							Limit:        pointerutils.ToPtr(int64(100)),
+						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(199)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
+					}, nil)
+			},
 		},
 		{
 			name:          "family not in usage list - no quota limit",

@@ -144,12 +144,13 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 }
 
 // checkResizeComputeQuota verifies that the subscription has enough remaining
-// compute quota in the target VM family to resize all master nodes.
+// compute quota (both per-family and overall regional "cores") to resize all
+// master nodes.
 //
 // Unlike validateQuota in quota_validation.go (which checks absolute totals for
 // cluster creation), this computes the incremental delta: same-family resizes
 // only need (newCores − currentCores) × nodeCount; cross-family resizes need
-// the full new cores for the target family.
+// the full new cores for the target family but only the net delta for "cores".
 //
 // This checks subscription-level quota only, not Azure regional datacenter
 // capacity — without a capacity reservation, AllocationFailed errors can only
@@ -177,6 +178,14 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 	}
 	totalAdditionalCores := additionalCoresPerNode * api.ControlPlaneNodeCount
 
+	// Regional "cores" delta accounts for freed cores from the old VM.
+	totalAdditionalRegionalCores := max((newSizeStruct.CoreCount-currentSizeStruct.CoreCount)*api.ControlPlaneNodeCount, 0)
+
+	requiredByQuota := map[string]int{
+		newSizeStruct.Family: totalAdditionalCores,
+		"cores":              totalAdditionalRegionalCores,
+	}
+
 	usages, err := spComputeUsage.List(ctx, location)
 	if err != nil {
 		return err
@@ -186,21 +195,22 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 		if usage.Name == nil || usage.Name.Value == nil {
 			continue
 		}
-		if *usage.Name.Value == newSizeStruct.Family {
-			if usage.Limit == nil || usage.CurrentValue == nil {
-				continue
-			}
-			remaining := *usage.Limit - int64(*usage.CurrentValue)
-			if int64(totalAdditionalCores) > remaining {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "vmSize",
-					fmt.Sprintf("Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.",
-						newSizeStruct.Family, *usage.Limit, *usage.CurrentValue, totalAdditionalCores))
-			}
-			return nil
+		required, ok := requiredByQuota[*usage.Name.Value]
+		if !ok || required <= 0 {
+			continue
+		}
+		if usage.Limit == nil || usage.CurrentValue == nil {
+			continue
+		}
+		remaining := *usage.Limit - int64(*usage.CurrentValue)
+		if int64(required) > remaining {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "vmSize",
+				fmt.Sprintf("Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.",
+					*usage.Name.Value, *usage.Limit, *usage.CurrentValue, required))
 		}
 	}
 
-	// If the family is not in the usage list, assume no limit applies.
+	// If a quota entry is not in the usage list, assume no limit applies.
 	return nil
 }
 
