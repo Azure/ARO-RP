@@ -1,0 +1,66 @@
+name: go-fix
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'go.mod'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  go-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 2
+
+      - name: Check if Go version changed
+        id: go-version
+        run: |
+          CURRENT=$(grep '^go ' go.mod | awk '{print $2}')
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            PREVIOUS=$(git show HEAD~1:go.mod | grep '^go ' | awk '{print $2}')
+            if [[ "$CURRENT" != "$PREVIOUS" ]]; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Set up Golang
+        if: steps.go-version.outputs.run == 'true'
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+
+      - name: Run go fix
+        if: steps.go-version.outputs.run == 'true'
+        run: make go-fix
+
+      - name: Create Pull Request
+        if: steps.go-version.outputs.run == 'true'
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          title: "go fix: apply Go ${{ steps.go-version.outputs.current }} fixes"
+          body: |
+            This PR was automatically created to apply `go fix` changes after bumping Go to `${{ steps.go-version.outputs.current }}`.
+
+            `go fix` rewrites source code to use newer Go APIs and idioms.
+          branch: automated/go-fix-${{ steps.go-version.outputs.current }}
+          commit-message: "run go fix for Go ${{ steps.go-version.outputs.current }}"
+          delete-branch: true
