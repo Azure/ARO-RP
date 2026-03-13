@@ -140,7 +140,7 @@ func (c *FakeBillingDocumentClient) apply(ctx context.Context, partitionkey stri
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if billingDocument.ETag != existingBillingDocument.ETag {
+		if !options.NoETag && billingDocument.ETag != existingBillingDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}
