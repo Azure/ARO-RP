@@ -52,7 +52,7 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 	adminReply(log, w, nil, b, err)
 }
 
-// _getPreResizeControlPlaneVMsValidation runs all pre-flight checks that must
+// _getPreResizeControlPlaneVMsValidations runs all pre-flight checks that must
 // pass before the Geneva Action's ResizeControlPlaneVMs orchestration loop is
 // allowed to cordon/drain/stop any master node.  Failing early here prevents
 // leaving the cluster in a degraded state with reduced etcd quorum.
