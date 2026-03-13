@@ -1,6 +1,11 @@
 # Containerized Development Environment
 
-This document describes how to set up and use a containerized development environment for ARO-RP using podman compose.
+This document describes how to set up and use a containerized development environment for ARO-RP.
+
+Choose the guide for your platform:
+
+- [Linux](containerized-dev-environment-linux.md)
+- [macOS (including Apple Silicon / ARM64)](containerized-dev-environment-macos.md)
 
 ## Files for this setup
 
@@ -8,6 +13,9 @@ The following files, located at the project root, are used for this setup:
 
 - `Dockerfile.dev-env`: Defines the container image with necessary dependencies and tools.
 - `docker-compose.yml`: Contains the definition for the `aro-dev-env` service.
+- `docker-compose.dev-env-linux.yml`: Linux-specific override (adds host Podman socket mount).
+- `docker-compose.dev-env-macos.yml`: macOS-specific override (privileged mode, no SELinux labels).
+- `hack/devtools/dev-env-entrypoint.sh`: Entrypoint script that auto-detects the Podman runtime.
 
 ## How the Local Workspace is Mounted
 
@@ -19,126 +27,3 @@ The containerized development environment mounts your local workspace and config
 - **Secrets**: Your local `./secrets` directory is mounted read-only to `/workspace/secrets` for RP configuration
 
 This means any changes you make to files in your local repository are immediately available inside the container, and vice versa. The container's working directory is set to `/workspace`, so you're working directly with your local code.
-
-## Prerequisites
-
-1.  Podman 4.7+ installed on your host system ([https://podman.io/docs/installation](https://podman.io/docs/installation)).
-2.  Azure CLI installed on your host system.
-3.  You've followed the steps to [prepare your development environment](prepare-your-dev-environment.md).
-
-## Setup Steps
-
-Follow these steps from the **root directory** of the ARO-RP repository:
-
-1.  **Set up your environment variables:**
-    Copy the example environment file and edit it with your specific configuration.
-
-    ```bash
-    cp env.example env
-    # Edit the newly created 'env' file with your settings
-    ```
-
-2.  **Get the required secrets and source your environment:**
-    Use the project's Makefile to fetch necessary secrets from Azure storage. The secrets will be downloaded and extracted to the `./secrets` directory.
-
-    ```bash
-    SECRET_SA_ACCOUNT_NAME=<secrets_storage_account_name> make secrets
-    ```
-    
-    Replace `<secrets_storage_account_name>` with the actual storage account name for your environment.
-    
-    Then source your environment file to load the configuration (including secrets):
-    
-    ```bash
-    . ./env
-    ```
-
-3.  **Enable the Podman socket** (required when not using Hive for cluster deployment):
-
-    ```bash
-    systemctl --user enable --now podman.socket
-    ```
-    
-    Verify the socket is running:
-    ```bash
-    systemctl --user status podman.socket
-    ```
-
-4.  **Build the container image:**
-
-    ```bash
-    make dev-env-build
-    ```
-
-5.  **Start the container:**
-
-    ```bash
-    make dev-env-start
-    ```
-    
-    **Note:** The container runs the command `. /workspace/env && make runlocal-rp`, which sources your environment variables and starts the RP in local development mode.
-    
-    Verify the container is running:
-    ```bash
-    podman compose ps
-    ```
-
-6.  **View RP Logs (Optional):**
-    Check the logs to see the RP startup output.
-
-    ```bash
-    podman compose logs aro-dev-env
-    ```
-
-7.  **Enter the container shell:**
-    To interact with the environment inside the container (e.g., run other commands, debug).
-
-    ```bash
-    podman compose exec aro-dev-env bash
-    ```
-
-8.  **Run other development commands (Inside container shell):**
-    From inside the container, you can run project-specific `make` commands or scripts that expect the Go environment to be set up.
-
-    ```bash
-    # Example: Run tests
-    make test-go
-    
-    # Example: Build all components
-    make build-all
-    ```
-
-## Using Local Azure CLI with the Development RP
-
-To use your local Azure CLI (`az`) to interact with the RP running in the container, you need to configure your local environment:
-
-1.  **Exit the container shell** if you are in it.
-2.  **Set the `RP_MODE` environment variable** in your local host terminal:
-
-    ```bash
-    export RP_MODE="development"
-    # Or set it in your local .env file if your local az setup loads it
-    ```
-
-3.  **Install the development `az aro` extension** from your local source code:
-
-    ```bash
-    make az
-    ```
-    This should build the extension and configure your local `az` to use it when `RP_MODE` is set to `development`.
-
-Now, when you run `az aro` commands on your local host (from the project root), they should be directed to the RP running in your container (accessible via `localhost:8443`).
-
-## Cleanup
-
-To stop and remove the containerized development environment:
-
-```bash
-make dev-env-stop
-```
-
-If you also want to remove the built image:
-
-```bash
-podman rmi aro-rp_aro-dev
-```
