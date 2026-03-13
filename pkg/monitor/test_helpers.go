@@ -52,7 +52,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	// Create databases
 	openShiftClusterDB, openShiftClusterClient := testdatabase.NewFakeOpenShiftClusters()
 	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
-	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
+	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors(time.Now)
 
 	// Create mocks
 	ctrl := gomock.NewController(t)
@@ -71,14 +71,6 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 		WithMonitors(monitorsDB).
 		WithOpenShiftClusters(openShiftClusterDB).
 		WithSubscriptions(subscriptionsDB)
-
-	// Create master monitor document
-	monitorsDB.Create(context.TODO(), &api.MonitorDocument{
-		ID: "master",
-		Monitor: &api.Monitor{
-			Buckets: make([]string, 256),
-		},
-	})
 
 	// Initialize database fixtures
 	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
@@ -103,10 +95,15 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 
 // CreateTestMonitor creates a single monitor with test configuration
 func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
+	uniqueMonitorsDB := testdatabase.NewFakeMonitorWithExistingClient(env.FakeMonitorsDBClient)
+	nDBs := database.NewDBGroup().WithMonitors(uniqueMonitorsDB).
+		WithOpenShiftClusters(env.OpenShiftClusterDB).
+		WithSubscriptions(env.SubscriptionsDB)
+
 	mon := NewMonitor(
 		env.TestLogger.WithField("test", loggerField),
 		env.Dialer,
-		env.DBGroup,
+		nDBs,
 		&env.NoopMetricsEmitter,
 		&env.NoopClusterMetrics,
 		env.MockEnv,
@@ -119,6 +116,7 @@ func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
 	mon.delay = time.Second
 	mon.interval = 2 * time.Second
 	mon.changefeedInterval = time.Second
+	mon.readyDelay = 1 * time.Second
 
 	return mon
 }
