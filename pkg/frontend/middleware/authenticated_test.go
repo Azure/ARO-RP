@@ -32,6 +32,35 @@ func (m *MockClientAuthorizer) IsReady() bool {
 	return true
 }
 
+func TestAuthenticateCancelledContext(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	handlerCalled := false
+	m := AuthMiddleware{
+		Log:         log,
+		EnableMISE:  true,
+		EnforceMISE: true,
+		AdminAuth:   &MockClientAuthorizer{},
+		ArmAuth:     &MockClientAuthorizer{},
+		MiseAuth:    miseadapter.NewFakeAuthorizer(true, true),
+	}
+
+	handler := m.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handlerCalled = true
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequestWithContext(ctx, http.MethodGet, "http://localhost/", nil)
+	handler.ServeHTTP(httptest.NewRecorder(), r)
+
+	if handlerCalled {
+		t.Error("handler must not be called when request context is already cancelled")
+	}
+}
+
 func TestAuthenticate(t *testing.T) {
 	tests := []struct {
 		name         string
