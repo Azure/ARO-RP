@@ -331,11 +331,11 @@ func (f *frontend) validateClusterSP(ctx context.Context, k adminactions.KubeAct
 		}
 	}
 
-	// Condition not found — the checker may not have run yet.
+	// Condition not found — the ARO operator may not have reconciled yet.
 	return api.NewCloudError(
 		http.StatusConflict,
 		api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
-		"ServicePrincipalValid condition not found on the ARO Cluster resource. The serviceprincipalchecker may not have run yet.")
+		"ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.")
 }
 
 // --- SKU availability and quota validation (Azure Compute queries) ---

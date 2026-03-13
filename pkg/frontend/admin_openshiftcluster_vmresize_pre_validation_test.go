@@ -620,7 +620,7 @@ func TestValidateVMSP(t *testing.T) {
 					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
 					Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{}), nil)
 			},
-			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: ServicePrincipalValid condition not found on the ARO Cluster resource. The serviceprincipalchecker may not have run yet.",
+			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.",
 		},
 		{
 			name: "KubeGet returns error",
