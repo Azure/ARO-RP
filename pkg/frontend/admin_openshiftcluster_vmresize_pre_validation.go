@@ -31,16 +31,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
-// getPreResizeControlPlaneVMsValidation is the HTTP handler that decouples URL
-// parameter extraction from business logic. The underscore method below
-// decouples HTTP parsing from logic so it can be invoked directly by internal
-// callers (for example, tests) without mocking an HTTP request.
+// getPreResizeControlPlaneVMsValidation is the HTTP handler; the underscore
+// method below decouples HTTP parsing from logic for testability.
 func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	// Strip the trailing path segment (e.g. "/preresizevalidation") so that
-	// r.URL.Path ends at the resource name, matching the admin resourceID format.
+	// Strip trailing segment (e.g. "/preresizevalidation") to match the admin resourceID format.
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
@@ -52,10 +49,9 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 	adminReply(log, w, nil, b, err)
 }
 
-// _getPreResizeControlPlaneVMsValidation runs all pre-flight checks that must
-// pass before the Geneva Action's ResizeControlPlaneVMs orchestration loop is
-// allowed to cordon/drain/stop any master node.  Failing early here prevents
-// leaving the cluster in a degraded state with reduced etcd quorum.
+// _getPreResizeControlPlaneVMsValidation runs all pre-flight checks before
+// the ResizeControlPlaneVMs orchestration loop starts. Failing early prevents
+// leaving the cluster degraded with reduced etcd quorum.
 func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	ctx context.Context,
 	resType, resName, resGroupName, resourceID, vmSize string,
@@ -77,22 +73,17 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return nil, err
 	}
 
-	// Subscription doc carries the tenant ID needed to authenticate against the
-	// customer's Azure subscription for SKU and quota queries.
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create kubeActions once, shared by API server and SP checks.
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
 	}
 
-	// Run all pre-flight checks in parallel.  Errors are collected via mutex
-	// so that all checks run to completion and the caller sees every failure
-	// at once, rather than only the first one.
+	// Run checks in parallel, collecting all errors so the caller sees every failure at once.
 	var (
 		mu      sync.Mutex
 		details []api.CloudErrorBody
@@ -137,14 +128,12 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	return json.Marshal("All pre-flight checks passed")
 }
 
-// defaultValidateResizeQuota creates an FP-authorized compute usage client
-// scoped to the customer's subscription and delegates to checkResizeComputeQuota.
-// Injected via f.validateResizeQuota so tests can swap it with quotaCheckDisabled.
+// defaultValidateResizeQuota creates an FP-authorized compute usage client and
+// delegates to checkResizeComputeQuota. Injected via f.validateResizeQuota so
+// tests can swap it with quotaCheckDisabled.
 func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, currentVMSize, vmSize string) error {
 	tenantID := subscriptionDoc.Subscription.Properties.TenantID
 
-	// FPAuthorizer authenticates as the RP's first-party identity in the
-	// customer's tenant, which has reader access to compute usage.
 	fpAuthorizer, err := environment.FPAuthorizer(tenantID, nil, environment.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
@@ -155,45 +144,34 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 }
 
 // checkResizeComputeQuota verifies that the subscription has enough remaining
-// compute quota in the target VM family to resize all master nodes.  The resize
-// operation processes nodes sequentially (stop → resize → start), so after all
-// nodes are processed the total usage change is api.ControlPlaneNodeCount × delta.
+// compute quota in the target VM family to resize all master nodes.
 //
-//   - If the current and new VMs share the same family, only the per-node delta
-//     (newCores − currentCores) matters, multiplied by the number of masters.
-//     If the new size is equal or smaller, no additional quota is needed.
-//   - If the families differ, the full new core count × api.ControlPlaneNodeCount is
-//     required because stopping the old VM frees quota in a different family.
+// Unlike validateQuota in quota_validation.go (which checks absolute totals for
+// cluster creation), this computes the incremental delta: same-family resizes
+// only need (newCores − currentCores) × nodeCount; cross-family resizes need
+// the full new cores for the target family.
 //
-// NOTE: This checks subscription-level quota only, not Azure regional
-// datacenter capacity.  Capacity reservations can guarantee hardware
-// availability in a region (see https://learn.microsoft.com/en-us/azure/virtual-machines/capacity-reservation-overview),
-// but this validation does not account for them.  Without a reservation,
-// AllocationFailed errors can only be detected at ARM PUT time.
+// This checks subscription-level quota only, not Azure regional datacenter
+// capacity — without a capacity reservation, AllocationFailed errors can only
+// be detected at ARM PUT time.
 func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, currentVMSize, vmSize string) error {
-	// Resolve the new VM size name to its family and core count.
 	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(vmSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
 			fmt.Sprintf("The provided VM SKU '%s' is not supported.", vmSize))
 	}
 
-	// Resolve the current VM size to determine how many cores will be freed.
 	currentSizeStruct, ok := validate.VMSizeFromName(api.VMSize(currentVMSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
 			fmt.Sprintf("The current VM SKU '%s' could not be resolved.", currentVMSize))
 	}
 
-	// Compute the per-node core delta.  When both sizes belong to the same
-	// family, the old VM's cores are freed before the new VM is created, so
-	// only the delta matters.  Multiply by api.ControlPlaneNodeCount because all master
-	// nodes are resized sequentially and the peak quota is at the final state.
+	// Same family: only the delta matters. Cross-family: full new cores needed.
 	additionalCoresPerNode := newSizeStruct.CoreCount
 	if newSizeStruct.Family == currentSizeStruct.Family {
 		additionalCoresPerNode = newSizeStruct.CoreCount - currentSizeStruct.CoreCount
 		if additionalCoresPerNode <= 0 {
-			// Downsizing or same size within the same family — no extra quota needed.
 			return nil
 		}
 	}
@@ -222,22 +200,17 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 		}
 	}
 
-	// If the family is not in the usage list, assume no quota limit applies.
-	// This matches the existing validateQuota behavior—the Usage API may omit
-	// families that have no enforced cap.
+	// If the family is not in the usage list, assume no limit applies.
 	return nil
 }
 
-// quotaCheckDisabled is a no-op replacement for f.validateResizeQuota in
-// integration tests, avoiding the need to create real FP-authorized Azure
-// clients.
+// quotaCheckDisabled is a no-op replacement for f.validateResizeQuota in tests.
 func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionDocument, _, _, _ string) error {
 	return nil
 }
 
-// validateAPIServerHealth queries the kube-apiserver ClusterOperator via the
-// cluster's Kubernetes API and verifies that it is healthy (Available=True,
-// Progressing=False, Degraded=False).
+// validateAPIServerHealth verifies that the kube-apiserver ClusterOperator is
+// healthy (Available=True, Progressing=False, Degraded=False).
 func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
 	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
 	if err != nil {
@@ -266,10 +239,8 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 	return nil
 }
 
-// validateEtcdHealth queries the etcd ClusterOperator and verifies that it is
-// healthy (Available=True, Progressing=False, Degraded=False).  Etcd quorum
-// requires at least 2 of 3 members; resizing a master takes a node offline, so
-// all members must be healthy before proceeding.
+// validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
+// Resizing takes a master offline, so all etcd members must be healthy.
 func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "etcd")
 	if err != nil {
@@ -298,10 +269,8 @@ func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 	return nil
 }
 
-// validateClusterSP queries the ARO Cluster CRD to check the ServicePrincipalValid
-// condition set by the serviceprincipalchecker operator controller.  The cluster
-// Service Principal is required for the implicit ARM VM PUT during resize; if
-// it is expired or lacks permissions the resize will fail with the node offline.
+// validateClusterSP checks the ServicePrincipalValid condition on the ARO
+// Cluster CRD. The SP is required for the ARM VM PUT during resize.
 func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 	rawCluster, err := k.KubeGet(ctx, "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName)
 	if err != nil {
@@ -331,14 +300,12 @@ func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 		}
 	}
 
-	// Condition not found — the ARO operator may not have reconciled yet.
 	return api.NewCloudError(
 		http.StatusConflict,
 		api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
 		"ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.")
 }
 
-// --- SKU availability and quota validation (Azure Compute queries) ---
 func (f *frontend) validateVMSKU(
 	ctx context.Context,
 	doc *api.OpenShiftClusterDocument,
@@ -350,22 +317,16 @@ func (f *frontend) validateVMSKU(
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize", "The provided vmSize is empty.")
 	}
 
-	// Reject early if the requested size is not in the ARO-supported master VM
-	// sizes list, before making any Azure API calls.
 	err := validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
 	}
 
-	// AzureActions wraps FP-authenticated clients scoped to the cluster's
-	// subscription and resource group.
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}
 
-	// VMSizeList queries the Azure Compute Resource SKUs API filtered by the RP
-	// region.  The raw list includes all resource types, not just VMs.
 	skus, err := a.VMSizeList(ctx)
 	if err != nil {
 		return err
@@ -373,28 +334,18 @@ func (f *frontend) validateVMSKU(
 
 	location := doc.OpenShiftCluster.Location
 
-	// FilterVMSizes narrows the raw SKU list to virtualMachines in the cluster's
-	// region and returns a map keyed by SKU name for O(1) lookups.
 	filteredSkus := computeskus.FilterVMSizes(skus, location)
 
-	// Verify the target SKU actually exists in this region—zone restrictions or
-	// region-specific unavailability would cause the ARM PUT to fail.
 	sku, err := checkSKUAvailability(filteredSkus, location, "vmSize", vmSize)
 	if err != nil {
 		return err
 	}
 
-	// Restrictions are subscription-specific (e.g. enterprise agreement
-	// limitations, policy-based blocks).  A restricted SKU would silently fail
-	// during the resize ARM call.
 	err = checkSKURestriction(sku, location, "vmSize")
 	if err != nil {
 		return err
 	}
 
-	// Verify the subscription has enough remaining cores in the target VM
-	// family.  The resize operation stops the old VM first (releasing its
-	// cores), so we only check the delta when both sizes share a family.
 	currentVMSize := string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize)
 	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSize, vmSize)
 	if err != nil {
