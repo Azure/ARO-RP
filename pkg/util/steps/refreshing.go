@@ -27,18 +27,20 @@ var ErrWantRefresh = errors.New("want refresh")
 // `authorizer` if the step returns an Azure AuthenticationError and rerun it.
 // The step will be retried until `retryTimeout` is hit. Any other error will be
 // returned directly.
-func AuthorizationRetryingAction(r refreshable.Authorizer, action actionFunction) Step {
+func AuthorizationRetryingAction(r refreshable.Authorizer, action actionFunction, managedRGName string) Step {
 	return &authorizationRefreshingActionStep{
-		auth: r,
-		f:    action,
+		auth:          r,
+		f:             action,
+		managedRGName: managedRGName,
 	}
 }
 
 type authorizationRefreshingActionStep struct {
-	f            actionFunction
-	auth         refreshable.Authorizer
-	retryTimeout time.Duration
-	pollInterval time.Duration
+	f             actionFunction
+	auth          refreshable.Authorizer
+	retryTimeout  time.Duration
+	pollInterval  time.Duration
+	managedRGName string
 }
 
 func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.Entry) error {
@@ -93,7 +95,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		return true, err
 	}, timeoutCtx.Done())
 
-	return CreateActionableError(err)
+	return CreateActionableError(err, s.managedRGName)
 }
 
 func (s *authorizationRefreshingActionStep) String() string {
@@ -121,12 +123,21 @@ func newServicePrincipalCloudError(message string, statusCode int) error {
 // Creates a user-actionable error from an error.
 // NOTE: the resultant error must be user-friendly
 // as this may be potentially be presented to a user.
-func CreateActionableError(err error) error {
+func CreateActionableError(err error, managedRGName string) error {
 	// Log this error for debugging new error types.
 	log.Printf("Converting to user actionable error: %v [%T]", err, err)
 
 	if err == nil {
 		return err
+	}
+
+	if managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, managedRGName) {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"",
+			"Internal server error.",
+		)
 	}
 
 	switch {
@@ -139,7 +150,14 @@ func CreateActionableError(err error) error {
 			"value are correct."),
 			http.StatusBadRequest,
 		)
-	case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
+	case azureerrors.HasAuthorizationFailedError(err):
+		return newServicePrincipalCloudError(make_one_line_str(
+			"Authorization using provided credentials failed.",
+			"Please ensure that the provided application (client)",
+			"id and client secret value are correct."),
+			http.StatusBadRequest,
+		)
+	case azureerrors.IsInvalidSecretError(err):
 		return newServicePrincipalCloudError(make_one_line_str(
 			"Authorization using provided credentials failed.",
 			"Please ensure that the provided application (client)",
