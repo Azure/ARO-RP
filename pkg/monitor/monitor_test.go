@@ -17,6 +17,7 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -36,14 +37,14 @@ func TestMonitor(t *testing.T) {
 	env := SetupTestEnvironment(t)
 	defer env.Cleanup()
 
-	// Create multiple monitors for worker testing
-	workers := make([]Runnable, numWorker)
-	for i := 0; i < numWorker; i++ {
+	// Create multiple monitors for worker testing (simulating three VMSSes running workers)
+	workers := make([]*monitor, numWorker)
+	for i := range numWorker {
 		mon := env.CreateTestMonitor(fmt.Sprintf("worker-%d", i))
 		workers[i] = mon
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		subDoc := newFakeSubscription()
 		clusterDoc := newFakeCluster(subDoc.ResourceID)
 		_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
@@ -65,19 +66,32 @@ func TestMonitor(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	for _, mon := range workers {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			err := mon.Run(ctx)
 			if err != nil && err != context.DeadlineExceeded {
 				t.Logf("Unexpected error: %v", err)
 			}
-			wg.Done()
-		}()
+		})
 	}
 
 	time.Sleep(5 * time.Second)
-	// add a new cluster
 
+	// Buckets should be distributed amongst the workers
+	totalBuckets := 0
+	for _, w := range workers {
+		// bucketcount is the total number of buckets that should be across all
+		// workers, each one should have less than that
+		require.Less(t, len(w.buckets), w.bucketCount)
+		totalBuckets += len(w.buckets)
+	}
+	require.Equal(t, 256, totalBuckets)
+
+	// The monitors should now be classed as ready
+	for _, w := range workers {
+		require.True(t, w.checkReady(), "worker was not ready")
+	}
+
+	// add a new cluster
 	subDoc := newFakeSubscription()
 	clusterDoc := newFakeCluster(subDoc.ResourceID)
 	_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
@@ -103,6 +117,11 @@ func TestMonitor(t *testing.T) {
 	if *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] < 1 {
 		t.Errorf("Last added cluster %s didn't get any visit: %v", clusterDoc.ResourceID, fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
 	}
+
+	// The monitors should still be ready
+	for _, w := range workers {
+		require.True(t, w.checkReady(), "worker was not ready")
+	}
 }
 
 func newFakeSubscription() *api.SubscriptionDocument {
@@ -110,7 +129,7 @@ func newFakeSubscription() *api.SubscriptionDocument {
 	return &api.SubscriptionDocument{
 		ID:         subID,
 		ResourceID: subID,
-		Metadata:   map[string]interface{}{},
+		Metadata:   map[string]any{},
 		Deleting:   false,
 		Subscription: &api.Subscription{
 			State: api.SubscriptionStateRegistered,
@@ -158,7 +177,7 @@ func newFakeCluster(subscriptionID string) *api.OpenShiftClusterDocument {
 		MissingFields: api.MissingFields{},
 		ID:            uuid.DefaultGenerator.Generate(),
 		ResourceID:    lowercaseResourceID,
-		Metadata:      map[string]interface{}{},
+		Metadata:      map[string]any{},
 		Key:           lowercaseResourceID,
 		Bucket:        bucketNumber,
 		OpenShiftCluster: &api.OpenShiftCluster{
