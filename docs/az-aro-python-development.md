@@ -1,36 +1,34 @@
 # `az aro` Python development
 
-There are currently two codebases for the `az aro` command:
+There are two codebases for the `az aro` command:
 
-* The [downstream](https://github.com/Azure/ARO-RP/tree/master/python/az/aro) `az
-  aro` extension in this repo
+- the [downstream] `az aro` extension in this repo, and
+- the [upstream] `az aro` module
 
-* The
-  [upstream](https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro)
-  `az aro` module.
+[upstream]: https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro
+[downstream]: https://github.com/Azure/ARO-RP/tree/master/python/az/aro
 
-The upstream `az aro` command module is distributed with `az` and is
-automatically present in the Azure cloud shell. Development/maintenance of this
-module within the Azure CLI is handled the same as any other first-party Azure
-CLI module. You can read more about how command modules are authored and
-maintained [here](https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules).
+The upstream `az aro` command module is distributed with `az` and is present in
+the Azure cloud shell. Development/maintenance of this module within the Azure
+CLI is treated as a first-party Azure CLI module. Please see [upstream
+documentation] for more info on command module authoring and maintenance.
 
-The downstream extension can be installed by an end user to override the module
-(e.g. to use preview features).  We also use the extension directly from this
-codebase for development and testing of new API versions.  Customers are
+[upstream documentation]: https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules
+
+The downstream extension may be installed by an end user to override the command module
+(for example: to use preview features). We use the extension directly from this
+codebase for development and testing of new API versions. Customers are
 advised to use the upstream CLI. You can read more about how extensions are
 authored [here](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/authoring.md),
 and some of the differences between extensions and command modules
 [here](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/faq.md).
 
-
-We aim for the upstream and downstream codebase to be as closely in sync as
+We aim for the upstream and downstream codebase to be as synchronized as
 possible.
 
+## Dev environment setup for the `az aro` **command**
 
-## Dev environment setup for the `az aro` command
-
-```bash
+```sh
 git clone https://github.com/Azure/azure-cli.git
 cd azure-cli
 
@@ -41,12 +39,12 @@ azdev setup -c
 ```
 
 The `az aro` command is located in `src/azure-cli/azure/cli/command_modules/aro`
-with tests in corresponding `tests` folder.
+with tests in the corresponding `tests` folder.
 
 
-## Dev environment setup for the `az aro` extension
+## Dev environment setup for the `az aro` **extension**
 
-```bash
+```sh
 git clone https://github.com/Azure/ARO-RP.git
 cd ARO-RP
 
@@ -54,9 +52,9 @@ make pyenv
 ```
 
 The `az aro` extension is located in `python/az/aro/azext_aro` with tests in
-corresponding `tests` folder.
+the corresponding `tests` folder.
 
-There is a very useful guide for authoring commands in the
+There is a useful guide for authoring commands in the
 [azure-cli](https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules)
 repository.
 
@@ -101,12 +99,9 @@ Recorded tests are run when the `--live` flag is not passed.
 ## Contributing
 
 Changes made to the `az aro` command will be made to `Azure/ARO-RP` **before**
-being contributed
-[upstream](https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro).
-This will allow synchronization between the two repositories to be consistent.
-Once changes are made and approved to
-[downstream](https://github.com/Azure/ARO-RP/tree/master/python/az/aro), pull
-requests to upstream can then be opened.
+being contributed [upstream]. This will allow synchronization between the two
+repositories to be consistent. Once changes are made and approved to
+[downstream], pull requests to upstream can then be opened.
 
 When contributing to the `az aro` command upstream, imports will be different
 for testing. When submitting pull requests, tests that include `azdev style`,
@@ -120,7 +115,7 @@ documentation.
 
 When upstream azure-cli releases a new version that we need to adopt, follow these steps to regenerate `requirements.txt`:
 
-```bash
+```sh
 # 1. Remove existing pyenv
 rm -rf pyenv
 
