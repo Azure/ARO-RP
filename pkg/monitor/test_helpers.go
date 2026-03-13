@@ -72,14 +72,6 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 		WithOpenShiftClusters(openShiftClusterDB).
 		WithSubscriptions(subscriptionsDB)
 
-	// Create master monitor document
-	monitorsDB.Create(context.TODO(), &api.MonitorDocument{
-		ID: "master",
-		Monitor: &api.Monitor{
-			Buckets: make([]string, 256),
-		},
-	})
-
 	// Initialize database fixtures
 	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
 	f.Create()
