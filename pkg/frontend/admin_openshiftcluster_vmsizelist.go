@@ -26,15 +26,15 @@ func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-	b, err := f._getAdminOpenShiftClusterVMResizeOptions(ctx, r, log)
+
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+
+	b, err := f._getAdminOpenShiftClusterVMResizeOptions(ctx, resType, resName, resGroupName, resourceID, log)
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
-
-	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-
+func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, resType, resName, resGroupName, resourceID string, log *logrus.Entry) ([]byte, error) {
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
