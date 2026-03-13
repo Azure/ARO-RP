@@ -52,7 +52,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	// Create databases
 	openShiftClusterDB, openShiftClusterClient := testdatabase.NewFakeOpenShiftClusters()
 	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
-	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
+	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors(time.Now)
 
 	// Create mocks
 	ctrl := gomock.NewController(t)

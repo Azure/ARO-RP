@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -148,7 +149,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 	}
 	go mon.changefeedMetrics(nil)
 
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(mon.changefeedInterval)
 	defer t.Stop()
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
@@ -157,19 +158,19 @@ func (mon *monitor) Run(ctx context.Context) error {
 		// register ourself as a monitor
 		err = dbMonitors.MonitorHeartbeat(ctx)
 		if err != nil {
-			mon.baseLog.Error(err)
+			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %s", err))
 		}
 
 		// try to become master and share buckets across registered monitors
 		err = mon.master(ctx)
 		if err != nil {
-			mon.baseLog.Error(err)
+			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %s", err))
 		}
 
 		// read our bucket allocation from the master
 		err = mon.listBuckets(ctx)
 		if err != nil {
-			mon.baseLog.Error(err)
+			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %s", err))
 		} else {
 			mon.lastBucketlist.Store(time.Now())
 		}
