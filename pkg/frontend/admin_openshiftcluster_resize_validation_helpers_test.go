@@ -881,6 +881,215 @@ func TestGetAzureVMs(t *testing.T) {
 			},
 			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
 		},
+		{
+			name: "handles nil InstanceView gracefully",
+			mocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
+					{
+						Name: pointerutils.ToPtr("master-0"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+					{
+						Name: pointerutils.ToPtr("master-1"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+					{
+						Name: pointerutils.ToPtr("master-2"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+				}, nil)
+
+				zones0 := []string{"1"}
+				zones1 := []string{"2"}
+				zones2 := []string{"3"}
+
+				// master-0 has nil InstanceView
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: nil, // nil InstanceView
+						},
+						Zones: &zones0,
+					}, nil)
+
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: &[]mgmtcompute.InstanceViewStatus{
+									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+									{Code: pointerutils.ToPtr("PowerState/running")},
+								},
+							},
+						},
+						Zones: &zones1,
+					}, nil)
+
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: &[]mgmtcompute.InstanceViewStatus{
+									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+									{Code: pointerutils.ToPtr("PowerState/running")},
+								},
+							},
+						},
+						Zones: &zones2,
+					}, nil)
+			},
+			wantErr: "expected 2 statuses for VM master-0, but found 0: ",
+		},
+		{
+			name: "handles nil InstanceView.Statuses gracefully",
+			mocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
+					{
+						Name: pointerutils.ToPtr("master-0"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+					{
+						Name: pointerutils.ToPtr("master-1"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+					{
+						Name: pointerutils.ToPtr("master-2"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+				}, nil)
+
+				zones0 := []string{"1"}
+				zones1 := []string{"2"}
+				zones2 := []string{"3"}
+
+				// master-0 has nil Statuses
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: nil, // nil Statuses
+							},
+						},
+						Zones: &zones0,
+					}, nil)
+
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: &[]mgmtcompute.InstanceViewStatus{
+									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+									{Code: pointerutils.ToPtr("PowerState/running")},
+								},
+							},
+						},
+						Zones: &zones1,
+					}, nil)
+
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: &[]mgmtcompute.InstanceViewStatus{
+									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+									{Code: pointerutils.ToPtr("PowerState/running")},
+								},
+							},
+						},
+						Zones: &zones2,
+					}, nil)
+			},
+			wantErr: "expected 2 statuses for VM master-0, but found 0: ",
+		},
+		{
+			name: "handles nil HardwareProfile gracefully",
+			mocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
+					{
+						Name: pointerutils.ToPtr("master-0"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+					{
+						Name: pointerutils.ToPtr("master-1"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+					{
+						Name: pointerutils.ToPtr("master-2"),
+						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
+					},
+				}, nil)
+
+				zones0 := []string{"1"}
+				zones1 := []string{"2"}
+				zones2 := []string{"3"}
+
+				// master-0 has nil HardwareProfile
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: nil, // nil HardwareProfile
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: &[]mgmtcompute.InstanceViewStatus{
+									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+									{Code: pointerutils.ToPtr("PowerState/running")},
+								},
+							},
+						},
+						Zones: &zones0,
+					}, nil)
+
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: &[]mgmtcompute.InstanceViewStatus{
+									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+									{Code: pointerutils.ToPtr("PowerState/running")},
+								},
+							},
+						},
+						Zones: &zones1,
+					}, nil)
+
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+							HardwareProfile: &mgmtcompute.HardwareProfile{
+								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+							},
+							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+								Statuses: &[]mgmtcompute.InstanceViewStatus{
+									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+									{Code: pointerutils.ToPtr("PowerState/running")},
+								},
+							},
+						},
+						Zones: &zones2,
+					}, nil)
+			},
+			wantCount: 3, // All 3 VMs are added, but master-0 will have empty vmSize
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
