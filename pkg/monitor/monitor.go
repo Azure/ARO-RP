@@ -39,9 +39,11 @@ type monitorDBs interface {
 
 // Defaults for the different durations. We use different values in tests to speed them up.
 var (
-	defaultMonitorDelay      = time.Duration(rand.Intn(60)) * time.Second
-	defaultMonitorInterval   = time.Minute
-	defaultChangefeedInteval = 10 * time.Second
+	defaultMonitorDelay                = time.Duration(rand.Intn(60)) * time.Second
+	defaultMonitorInterval             = time.Minute
+	defaultMonitorReadinessDelay       = 2 * time.Minute
+	defaultChangefeedInteval           = 10 * time.Second
+	defaultChangefeedReadinessInterval = time.Minute
 )
 
 type monitor struct {
