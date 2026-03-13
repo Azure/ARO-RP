@@ -103,10 +103,15 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 
 // CreateTestMonitor creates a single monitor with test configuration
 func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
+	uniqueMonitorsDB := testdatabase.NewFakeMonitorWithExistingClient(env.FakeMonitorsDBClient)
+	nDBs := database.NewDBGroup().WithMonitors(uniqueMonitorsDB).
+		WithOpenShiftClusters(env.OpenShiftClusterDB).
+		WithSubscriptions(env.SubscriptionsDB)
+
 	mon := NewMonitor(
 		env.TestLogger.WithField("test", loggerField),
 		env.Dialer,
-		env.DBGroup,
+		nDBs,
 		&env.NoopMetricsEmitter,
 		&env.NoopClusterMetrics,
 		env.MockEnv,
