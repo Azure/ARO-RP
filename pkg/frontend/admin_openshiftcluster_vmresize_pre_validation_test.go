@@ -69,10 +69,22 @@ func validServicePrincipalJSON() []byte {
 	})
 }
 
+func healthyEtcdJSON() []byte {
+	return fakeClusterOperatorJSON("etcd", []configv1.ClusterOperatorStatusCondition{
+		{Type: configv1.OperatorAvailable, Status: configv1.ConditionTrue},
+		{Type: configv1.OperatorProgressing, Status: configv1.ConditionFalse},
+		{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
+	})
+}
+
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	k.EXPECT().
 		KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 		Return(healthyKubeAPIServerJSON(), nil).
+		AnyTimes()
+	k.EXPECT().
+		KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+		Return(healthyEtcdJSON(), nil).
 		AnyTimes()
 	k.EXPECT().
 		KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
@@ -713,6 +725,81 @@ func TestValidateAPIServerHealth(t *testing.T) {
 
 			f := &frontend{}
 			err := f.validateAPIServerHealth(ctx, k)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateEtcdHealth(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_adminactions.MockKubeActions)
+		wantErr string
+	}{
+		{
+			name: "healthy etcd",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(healthyEtcdJSON(), nil)
+			},
+		},
+		{
+			name: "etcd degraded",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(fakeClusterOperatorJSON("etcd", []configv1.ClusterOperatorStatusCondition{
+						{Type: configv1.OperatorAvailable, Status: configv1.ConditionTrue},
+						{Type: configv1.OperatorProgressing, Status: configv1.ConditionFalse},
+						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
+					}), nil)
+			},
+			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=True, Progressing=False. Resize is not safe while etcd quorum is at risk.",
+		},
+		{
+			name: "etcd unavailable",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(fakeClusterOperatorJSON("etcd", []configv1.ClusterOperatorStatusCondition{
+						{Type: configv1.OperatorAvailable, Status: configv1.ConditionFalse},
+						{Type: configv1.OperatorProgressing, Status: configv1.ConditionTrue},
+						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
+					}), nil)
+			},
+			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=False, Progressing=True. Resize is not safe while etcd quorum is at risk.",
+		},
+		{
+			name: "KubeGet returns error",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(nil, fmt.Errorf("connection refused"))
+			},
+			wantErr: "500: InternalServerError: etcd: Failed to retrieve etcd ClusterOperator: connection refused",
+		},
+		{
+			name: "KubeGet returns invalid JSON",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return([]byte(`{invalid`), nil)
+			},
+			wantErr: "500: InternalServerError: etcd: Failed to parse etcd ClusterOperator: invalid character 'i' looking for beginning of object key string",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			k := mock_adminactions.NewMockKubeActions(controller)
+			tt.mocks(k)
+
+			f := &frontend{}
+			err := f.validateEtcdHealth(ctx, k)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

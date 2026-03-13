@@ -118,6 +118,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 
 	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, vmSize, log)) })
 	wg.Go(func() { collect(f.validateAPIServerHealth(ctx, k)) })
+	wg.Go(func() { collect(f.validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(f.validateVMSP(ctx, k)) })
 
 	wg.Wait()
@@ -259,6 +260,38 @@ func (f *frontend) validateAPIServerHealth(ctx context.Context, k adminactions.K
 			http.StatusConflict,
 			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver",
 			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is degraded.",
+				clusteroperators.OperatorStatusText(&co)))
+	}
+
+	return nil
+}
+
+// validateEtcdHealth queries the etcd ClusterOperator and verifies that it is
+// healthy (Available=True, Progressing=False, Degraded=False).  Etcd quorum
+// requires at least 2 of 3 members; resizing a master takes a node offline, so
+// all members must be healthy before proceeding.
+func (f *frontend) validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
+	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "etcd")
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "etcd",
+			fmt.Sprintf("Failed to retrieve etcd ClusterOperator: %v", err))
+	}
+
+	var co configv1.ClusterOperator
+	if err := json.Unmarshal(rawCO, &co); err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "etcd",
+			fmt.Sprintf("Failed to parse etcd ClusterOperator: %v", err))
+	}
+
+	if !clusteroperators.IsOperatorAvailable(&co) {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "etcd",
+			fmt.Sprintf("etcd is not healthy: %s. Resize is not safe while etcd quorum is at risk.",
 				clusteroperators.OperatorStatusText(&co)))
 	}
 
