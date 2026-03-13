@@ -140,7 +140,7 @@ func (c *FakeMaintenanceManifestDocumentClient) apply(ctx context.Context, parti
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if maintenanceManifestDocument.ETag != existingMaintenanceManifestDocument.ETag {
+		if !options.NoETag && maintenanceManifestDocument.ETag != existingMaintenanceManifestDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}

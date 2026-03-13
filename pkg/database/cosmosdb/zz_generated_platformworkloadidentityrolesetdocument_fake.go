@@ -140,7 +140,7 @@ func (c *FakePlatformWorkloadIdentityRoleSetDocumentClient) apply(ctx context.Co
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if platformWorkloadIdentityRoleSetDocument.ETag != existingPlatformWorkloadIdentityRoleSetDocument.ETag {
+		if !options.NoETag && platformWorkloadIdentityRoleSetDocument.ETag != existingPlatformWorkloadIdentityRoleSetDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}

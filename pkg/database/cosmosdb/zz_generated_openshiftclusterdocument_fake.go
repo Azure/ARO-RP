@@ -140,7 +140,7 @@ func (c *FakeOpenShiftClusterDocumentClient) apply(ctx context.Context, partitio
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if openShiftClusterDocument.ETag != existingOpenShiftClusterDocument.ETag {
+		if !options.NoETag && openShiftClusterDocument.ETag != existingOpenShiftClusterDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}
