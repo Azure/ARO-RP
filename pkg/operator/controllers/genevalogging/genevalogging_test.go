@@ -119,6 +119,53 @@ func TestGenevaLoggingNamespaceLabels(t *testing.T) {
 	}
 }
 
+// validateEnvironmentVars validates that both fluentbit and mdsd containers have the correct environment variables
+func validateEnvironmentVars(d *appsv1.DaemonSet, expectedValue string) []error {
+	var errs []error
+
+	// verify fluentbit has ENVIRONMENT env var
+	fluentbit, err := getContainer(d, "fluentbit")
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to get fluentbit container: %w", err))
+		return errs
+	}
+	foundFluentbitEnv := false
+	for _, env := range fluentbit.Env {
+		if env.Name == "ENVIRONMENT" {
+			if env.Value != expectedValue {
+				errs = append(errs, fmt.Errorf("fluentbit ENVIRONMENT env var has value '%s', expected '%s'", env.Value, expectedValue))
+			}
+			foundFluentbitEnv = true
+			break
+		}
+	}
+	if !foundFluentbitEnv {
+		errs = append(errs, fmt.Errorf("fluentbit container missing ENVIRONMENT env var (expected value: '%s')", expectedValue))
+	}
+
+	// verify mdsd has MONITORING_ENVIRONMENT env var
+	mdsd, err := getContainer(d, "mdsd")
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to get mdsd container: %w", err))
+		return errs
+	}
+	foundMdsdEnv := false
+	for _, env := range mdsd.Env {
+		if env.Name == "MONITORING_ENVIRONMENT" {
+			if env.Value != expectedValue {
+				errs = append(errs, fmt.Errorf("mdsd MONITORING_ENVIRONMENT env var has value '%s', expected '%s'", env.Value, expectedValue))
+			}
+			foundMdsdEnv = true
+			break
+		}
+	}
+	if !foundMdsdEnv {
+		errs = append(errs, fmt.Errorf("mdsd container missing MONITORING_ENVIRONMENT env var (expected value: '%s')", expectedValue))
+	}
+
+	return errs
+}
+
 func TestGenevaLoggingDaemonset(t *testing.T) {
 	nominalMocks := func(mockDh *mock_dynamichelper.MockInterface) {
 		mockDh.EXPECT().Ensure(
@@ -299,6 +346,56 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 				utilconditions.ControllerDefaultDegraded(ControllerName),
 			},
 		},
+		{
+			name: "ENVIRONMENT env var set to 'prod' from aro.environment operator flag",
+			operatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+				"aro.environment":             "prod",
+			},
+			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
+				if len(d.Spec.Template.Spec.Containers) != 2 {
+					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
+				}
+				errs = append(errs, validateEnvironmentVars(d, "prod")...)
+				return
+			},
+			mocks:          nominalMocks,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			name: "ENVIRONMENT env var set to 'int' from aro.environment operator flag",
+			operatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+				"aro.environment":             "int",
+			},
+			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
+				if len(d.Spec.Template.Spec.Containers) != 2 {
+					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
+				}
+				errs = append(errs, validateEnvironmentVars(d, "int")...)
+				return
+			},
+			mocks:          nominalMocks,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			name: "ENVIRONMENT env var empty when aro.environment flag not set",
+			operatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+			},
+			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
+				if len(d.Spec.Template.Spec.Containers) != 2 {
+					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
+				}
+				errs = append(errs, validateEnvironmentVars(d, "")...)
+				return
+			},
+			mocks:          nominalMocks,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -368,6 +465,9 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 }
 
 func TestGenevaConfigMapResources(t *testing.T) {
+	// Expected number of ENVIRONMENT filters in fluent.conf (one per log input type: journald, containers, audit)
+	const expectedEnvironmentFilterCount = 3
+
 	tests := []struct {
 		name          string
 		request       ctrl.Request
@@ -389,17 +489,28 @@ func TestGenevaConfigMapResources(t *testing.T) {
 
 				c, ok := maps["fluent-config"]
 				if !ok {
-					errs = append(errs, errors.New("missing fluent-config"))
+					errs = append(errs, errors.New("missing fluent-config ConfigMap"))
 				} else {
 					fConf := c.Data["fluent.conf"]
 					pConf := c.Data["parsers.conf"]
 
 					if !strings.Contains(fConf, "[INPUT]") {
-						errs = append(errs, errors.New("incorrect fluent-config fluent.conf"))
+						errs = append(errs, errors.New("fluent.conf missing required [INPUT] section"))
 					}
 
 					if !strings.Contains(pConf, "[PARSER]") {
-						errs = append(errs, errors.New("incorrect fluent-config parser.conf"))
+						errs = append(errs, errors.New("parsers.conf missing required [PARSER] section"))
+					}
+
+					// verify ENVIRONMENT filters are present for all log types
+					if !strings.Contains(fConf, "Add ENVIRONMENT ${ENVIRONMENT}") {
+						errs = append(errs, errors.New("fluent.conf missing ENVIRONMENT filter - logs will not include environment field"))
+					}
+
+					// count how many times the ENVIRONMENT filter appears (should match expectedEnvironmentFilterCount)
+					environmentFilterCount := strings.Count(fConf, "Add ENVIRONMENT ${ENVIRONMENT}")
+					if environmentFilterCount != expectedEnvironmentFilterCount {
+						errs = append(errs, fmt.Errorf("expected %d ENVIRONMENT filters in fluent.conf (journald, containers, audit), got %d", expectedEnvironmentFilterCount, environmentFilterCount))
 					}
 				}
 
