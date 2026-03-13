@@ -56,13 +56,13 @@ type nodeValidationData struct {
 func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
 	machines := make(map[string]machineValidationData)
 
-	rawPods, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
+	rawMachines, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
 	machineList := &machinev1beta1.MachineList{}
-	err = codec.NewDecoderBytes(rawPods, &codec.JsonHandle{}).Decode(machineList)
+	err = codec.NewDecoderBytes(rawMachines, &codec.JsonHandle{}).Decode(machineList)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode machines, %s", err.Error()))
 	}
@@ -187,11 +187,13 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 					return nil, err
 				}
 
-				for _, status := range *vm.InstanceView.Statuses {
-					if status.Code == nil {
-						continue
+				if vm.InstanceView != nil && vm.InstanceView.Statuses != nil {
+					for _, status := range *vm.InstanceView.Statuses {
+						if status.Code == nil {
+							continue
+						}
+						vmStatuses = append(vmStatuses, *status.Code)
 					}
-					vmStatuses = append(vmStatuses, *status.Code)
 				}
 
 				if vm.Zones != nil {
@@ -210,8 +212,13 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 					validationErrs = append(validationErrs, err)
 				}
 
+				vmSize := ""
+				if vm.HardwareProfile != nil {
+					vmSize = string(vm.HardwareProfile.VMSize)
+				}
+
 				masterVM := azureVMValidationData{
-					vmSize: string(vm.HardwareProfile.VMSize),
+					vmSize: vmSize,
 					status: vmStatuses,
 					zone:   vmZones[0],
 				}

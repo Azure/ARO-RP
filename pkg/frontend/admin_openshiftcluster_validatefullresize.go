@@ -41,6 +41,7 @@ func (f *frontend) getControlPlaneStatusCheckAfterResize(w http.ResponseWriter, 
 	if err != nil {
 		apiErr := api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 		adminReply(log, w, nil, nil, apiErr)
+		return
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
