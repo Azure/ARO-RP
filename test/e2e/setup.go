@@ -563,7 +563,7 @@ func setupE2EInfrastructure(ctx context.Context) error {
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
-		"CLUSTER",
+		"CLUSTER_NAME",
 		"LOCATION"); err != nil {
 		return err
 	}
