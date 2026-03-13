@@ -117,9 +117,9 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	var wg sync.WaitGroup
 
 	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, vmSize, log)) })
-	wg.Go(func() { collect(f.validateAPIServerHealth(ctx, k)) })
-	wg.Go(func() { collect(f.validateEtcdHealth(ctx, k)) })
-	wg.Go(func() { collect(f.validateClusterSP(ctx, k)) })
+	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
+	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
+	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
 
 	wg.Wait()
 
@@ -238,7 +238,7 @@ func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionD
 // validateAPIServerHealth queries the kube-apiserver ClusterOperator via the
 // cluster's Kubernetes API and verifies that it is healthy (Available=True,
 // Progressing=False, Degraded=False).
-func (f *frontend) validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
+func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
 	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
 	if err != nil {
 		return api.NewCloudError(
@@ -270,7 +270,7 @@ func (f *frontend) validateAPIServerHealth(ctx context.Context, k adminactions.K
 // healthy (Available=True, Progressing=False, Degraded=False).  Etcd quorum
 // requires at least 2 of 3 members; resizing a master takes a node offline, so
 // all members must be healthy before proceeding.
-func (f *frontend) validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
+func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "etcd")
 	if err != nil {
 		return api.NewCloudError(
@@ -302,7 +302,7 @@ func (f *frontend) validateEtcdHealth(ctx context.Context, k adminactions.KubeAc
 // condition set by the serviceprincipalchecker operator controller.  The cluster
 // Service Principal is required for the implicit ARM VM PUT during resize; if
 // it is expired or lacks permissions the resize will fail with the node offline.
-func (f *frontend) validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
+func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 	rawCluster, err := k.KubeGet(ctx, "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName)
 	if err != nil {
 		return api.NewCloudError(

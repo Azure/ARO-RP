@@ -648,8 +648,7 @@ func TestValidateVMSP(t *testing.T) {
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
 
-			f := &frontend{}
-			err := f.validateClusterSP(ctx, k)
+			err := validateClusterSP(ctx, k)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -723,8 +722,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
 
-			f := &frontend{}
-			err := f.validateAPIServerHealth(ctx, k)
+			err := validateAPIServerHealth(ctx, k)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -798,8 +796,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
 
-			f := &frontend{}
-			err := f.validateEtcdHealth(ctx, k)
+			err := validateEtcdHealth(ctx, k)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
