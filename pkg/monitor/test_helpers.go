@@ -119,6 +119,7 @@ func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
 	mon.delay = time.Second
 	mon.interval = 2 * time.Second
 	mon.changefeedInterval = time.Second
+	mon.readyDelay = 1 * time.Second
 
 	return mon
 }
