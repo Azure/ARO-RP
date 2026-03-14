@@ -23,6 +23,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -31,6 +32,11 @@ import (
 const degradedNode = "master-2"
 
 func TestFixEtcd(t *testing.T) {
+	// Speed up retries so failure-path tests do not sleep between attempts.
+	oldRetryDelay := utilkubernetes.RetryDelay
+	utilkubernetes.RetryDelay = 0
+	t.Cleanup(func() { utilkubernetes.RetryDelay = oldRetryDelay })
+
 	// Context leak is intentional to make use of cancel function, and make it to our error check
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	const (
@@ -108,7 +114,7 @@ func TestFixEtcd(t *testing.T) {
 				// createPrivilegedServiceAccount
 				serviceAcc := newServiceAccount(serviceAccountName, doc.OpenShiftCluster.Name)
 				clusterRole := newClusterRole(kubeServiceAccount, doc.OpenShiftCluster.Name)
-				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name)
+				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 				scc := newSecurityContextConstraint(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 
 				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).Times(1).Return(nil)
@@ -136,10 +142,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeDelete(ctx, podFixPeers.GetKind(), namespaceEtcds, podFixPeers.GetName(), true, &propPolicy).Times(1).Return(nil)
 
 				// cleanup
-				k.EXPECT().KubeDelete(ctx, serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil).Times(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil).Times(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).Times(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).Times(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil).Times(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil).Times(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).Times(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).Times(1).Return(nil)
 
 				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1fake.FakeEtcds{})
 				if err != nil {
@@ -179,7 +185,7 @@ func TestFixEtcd(t *testing.T) {
 				// createPrivilegedServiceAccount
 				serviceAcc := newServiceAccount(serviceAccountName, doc.OpenShiftCluster.Name)
 				clusterRole := newClusterRole(kubeServiceAccount, doc.OpenShiftCluster.Name)
-				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name)
+				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 				scc := newSecurityContextConstraint(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 
 				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(1).Return(nil)
@@ -206,10 +212,10 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeDelete(ctx, podFixPeers.GetKind(), namespaceEtcds, podFixPeers.GetName(), true, &propPolicy).MaxTimes(1).Return(nil)
 
 				// cleanup
-				k.EXPECT().KubeDelete(ctx, serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).MaxTimes(1).Return(nil)
 
 				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1fake.FakeEtcds{})
 				if err != nil {
@@ -296,7 +302,7 @@ func TestFixEtcd(t *testing.T) {
 				// createPrivilegedServiceAccount
 				serviceAcc := newServiceAccount(serviceAccountName, doc.OpenShiftCluster.Name)
 				clusterRole := newClusterRole(kubeServiceAccount, doc.OpenShiftCluster.Name)
-				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name)
+				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 				scc := newSecurityContextConstraint(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 
 				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(1).Return(nil)
@@ -321,10 +327,10 @@ func TestFixEtcd(t *testing.T) {
 				expectWatchEvent(gomock.Any(), podFixPeers, k, "app", corev1.PodSucceeded, false)()
 
 				// cleanup
-				k.EXPECT().KubeDelete(ctx, serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).MaxTimes(1).Return(nil)
 			},
 		},
 		{
@@ -352,14 +358,14 @@ func TestFixEtcd(t *testing.T) {
 				serviceAcc := newServiceAccount(serviceAccountName, doc.OpenShiftCluster.Name)
 
 				// k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(1).Return(errors.New(tt.wantErr))
-				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(1).Return(errors.New("oh no, can't create service account"))
+				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(3).Return(errors.New("oh no, can't create service account"))
 
 				// nested cleanup
 				propPolicy := metav1.DeletePropagationBackground
-				k.EXPECT().KubeDelete(ctx, "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRole", "", "system:serviceaccountopenshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRole", "", "system:serviceaccount:openshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(ctx, podBackupEtcd.GetKind(), namespaceEtcds, podBackupEtcd.GetName(), true, &propPolicy).MaxTimes(1).Return(nil)
 			},
 		},
@@ -392,11 +398,11 @@ func TestFixEtcd(t *testing.T) {
 				clusterRole := newClusterRole(kubeServiceAccount, doc.OpenShiftCluster.Name)
 
 				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeCreateOrUpdate(ctx, clusterRole).MaxTimes(1).Return(errors.New("oh no, can't create job fix peers"))
-				k.EXPECT().KubeDelete(ctx, "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRole", "", "system:serviceaccountopenshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeCreateOrUpdate(ctx, clusterRole).MaxTimes(3).Return(errors.New("oh no, can't create job fix peers"))
+				k.EXPECT().KubeDelete(gomock.Any(), "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRole", "", "system:serviceaccount:openshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(ctx, podBackupEtcd.GetKind(), namespaceEtcds, podBackupEtcd.GetName(), true, &propPolicy).MaxTimes(1).Return(nil)
 			},
 		},
@@ -427,16 +433,16 @@ func TestFixEtcd(t *testing.T) {
 				// createPrivilegedServiceAccount
 				serviceAcc := newServiceAccount(serviceAccountName, doc.OpenShiftCluster.Name)
 				clusterRole := newClusterRole(kubeServiceAccount, doc.OpenShiftCluster.Name)
-				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name)
+				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 
 				// cleanup
 				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeCreateOrUpdate(ctx, clusterRole).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeCreateOrUpdate(ctx, crb).MaxTimes(1).Return(errors.New("oh no, can't create cluster role binding"))
-				k.EXPECT().KubeDelete(ctx, "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRole", "", "system:serviceaccountopenshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeCreateOrUpdate(ctx, crb).MaxTimes(3).Return(errors.New("oh no, can't create cluster role binding"))
+				k.EXPECT().KubeDelete(gomock.Any(), "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRole", "", "system:serviceaccount:openshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(ctx, podBackupEtcd.GetKind(), namespaceEtcds, podBackupEtcd.GetName(), true, &propPolicy).MaxTimes(1).Return(nil)
 			},
 		},
@@ -467,19 +473,19 @@ func TestFixEtcd(t *testing.T) {
 				// createPrivilegedServiceAccount
 				serviceAcc := newServiceAccount(serviceAccountName, doc.OpenShiftCluster.Name)
 				clusterRole := newClusterRole(kubeServiceAccount, doc.OpenShiftCluster.Name)
-				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name)
+				crb := newClusterRoleBinding(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 				scc := newSecurityContextConstraint(serviceAccountName, doc.OpenShiftCluster.Name, kubeServiceAccount)
 
 				k.EXPECT().KubeCreateOrUpdate(ctx, serviceAcc).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeCreateOrUpdate(ctx, clusterRole).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeCreateOrUpdate(ctx, crb).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeCreateOrUpdate(ctx, scc).MaxTimes(1).Return(errors.New("oh no, can't create security context constraint"))
+				k.EXPECT().KubeCreateOrUpdate(ctx, scc).MaxTimes(3).Return(errors.New("oh no, can't create security context constraint"))
 
 				// cleanup
-				k.EXPECT().KubeDelete(ctx, "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRole", "", "system:serviceaccountopenshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
-				k.EXPECT().KubeDelete(ctx, "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ServiceAccount", namespaceEtcds, serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "SecurityContextConstraints", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRole", "", "system:serviceaccount:openshift-etcd:etcd-recovery-privileged", true, nil).MaxTimes(1).Return(nil)
+				k.EXPECT().KubeDelete(gomock.Any(), "ClusterRoleBinding", "", serviceAcc.GetName(), true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(ctx, podBackupEtcd.GetKind(), namespaceEtcds, podBackupEtcd.GetName(), true, &propPolicy).MaxTimes(1).Return(nil)
 			},
 		},
