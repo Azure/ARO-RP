@@ -28,7 +28,7 @@ type diagnosticStep struct {
 }
 
 func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
-	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
+	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines, m.armInterfaces, m.armLoadBalancers, m.metrics)
 
 	s := []diagnosticStep{
 		{f: m.logClusterVersion, isJSON: true},
@@ -38,9 +38,19 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 		{f: m.logPodLogs, isJSON: false},
 	}
 
-	// only log serial consoles and Hive CD on an install, not on updates/adminUpdates
+	// only log install-specific diagnostics (VM serial consoles, ILB metrics,
+	// bootstrap VM state and MCS health via SSH, and Hive CD) on an install,
+	// not on updates/adminUpdates
 	if runType == "install" {
 		s = append(s, diagnosticStep{f: d.LogVMSerialConsole, isJSON: false})
+		s = append(s, diagnosticStep{f: d.LogLoadBalancers, isJSON: false})
+		// Bootstrap node diagnostics connect via SSH by JIT-adding a port-2199
+		// rule to the internal load balancer. The bootstrap node exists for the
+		// entire InstallPhaseBootstrap and is only deleted at the start of
+		// InstallPhaseRemoveBootstrap, so this is safe to call from either
+		// phase. If the node or NIC has already been removed, or if the ILB/NIC
+		// update or SSH connection fails, the error is logged and skipped.
+		s = append(s, diagnosticStep{f: d.LogBootstrapNode, isJSON: false})
 		s = append(s, diagnosticStep{f: m.logClusterDeployment, isJSON: true})
 	}
 

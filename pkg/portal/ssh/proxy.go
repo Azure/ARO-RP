@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -171,11 +172,11 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 		},
 		HostKeyCallback: cryptossh.InsecureIgnoreHostKey(),
 		Config: cryptossh.Config{
-			KeyExchanges: sshKexAlgorithms(),
-			Ciphers:      sshCiphers(),
-			MACs:         sshMACs(),
+			KeyExchanges: utilssh.KexAlgorithms(),
+			Ciphers:      utilssh.Ciphers(),
+			MACs:         utilssh.MACs(),
 		},
-		HostKeyAlgorithms: sshHostKeyAlgorithms(),
+		HostKeyAlgorithms: utilssh.HostKeyAlgorithms(),
 	})
 	if err != nil {
 		return err
