@@ -54,13 +54,24 @@ jobs:
 
       - name: Create Pull Request
         if: steps.go-version.outputs.run == 'true'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
-        with:
-          title: "go fix: apply Go ${{ steps.go-version.outputs.current }} fixes"
-          body: |
-            This PR was automatically created to apply `go fix` changes after bumping Go to `${{ steps.go-version.outputs.current }}`.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="automated/go-fix-${{ steps.go-version.outputs.current }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes from go fix, skipping PR creation."
+            exit 0
+          fi
+          git commit -m "run go fix for Go ${{ steps.go-version.outputs.current }}"
+          git push --force-with-lease origin "$BRANCH"
+          gh pr create \
+            --title "go fix: apply Go ${{ steps.go-version.outputs.current }} fixes" \
+            --body "This PR was automatically created to apply \`go fix\` changes after bumping Go to \`${{ steps.go-version.outputs.current }}\`.
 
-            `go fix` rewrites source code to use newer Go APIs and idioms.
-          branch: automated/go-fix-${{ steps.go-version.outputs.current }}
-          commit-message: "run go fix for Go ${{ steps.go-version.outputs.current }}"
-          delete-branch: true
+          \`go fix\` rewrites source code to use newer Go APIs and idioms." \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$BRANCH"
