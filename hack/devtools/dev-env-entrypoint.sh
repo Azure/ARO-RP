@@ -25,6 +25,18 @@ fi
 # macOS path: start Podman inside the container and manage both processes.
 # We must NOT exec into the RP here — the shell needs to stay as PID 1 so
 # the EXIT trap can terminate the background Podman service on shutdown.
+cleanup() {
+	if [ -n "${RP_PID:-}" ]; then
+		kill "$RP_PID" 2>/dev/null || true
+		wait "$RP_PID" 2>/dev/null || true
+	fi
+	if [ -n "${PODMAN_PID:-}" ]; then
+		kill "$PODMAN_PID" 2>/dev/null || true
+		wait "$PODMAN_PID" 2>/dev/null || true
+	fi
+}
+trap cleanup EXIT INT TERM
+
 echo "No host Podman socket found, starting Podman service inside container..."
 podman system service --time=0 "unix://${PODMAN_SOCK_DIR}/podman.sock" &
 PODMAN_PID=$!
@@ -47,5 +59,4 @@ export ARO_PODMAN_SOCKET="unix://${PODMAN_SOCK_DIR}/podman.sock"
 make runlocal-rp &
 RP_PID=$!
 
-trap "kill $RP_PID $PODMAN_PID 2>/dev/null; wait $RP_PID 2>/dev/null" EXIT INT TERM
-wait $RP_PID
+wait "$RP_PID"
