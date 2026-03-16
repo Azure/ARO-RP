@@ -4,3 +4,9 @@ services:
   aro-dev-env:
     volumes:
       - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock:z
+      - .:/workspace:Z
+      - ~/.azure:/root/.azure:ro,Z
+      - ~/.ssh:/root/.ssh:ro,Z
+      - ./secrets:/workspace/secrets:ro,Z
+    security_opt:
+      - label=disable

@@ -218,18 +218,14 @@ services:
         - USERID=${USERID:-1000}
     image: localhost/aro-rp_aro-dev
     platform: ${PLATFORM:-linux/amd64}
-    volumes:
-      - .:/workspace:Z
-      - ~/.azure:/root/.azure:ro,Z
-      - ~/.ssh:/root/.ssh:ro,Z
-      - ./secrets:/workspace/secrets:ro,Z
+    # Volumes are mounted in the overrides file to manage SELinux labels
+    volumes: []
     environment:
       AZURE_EXTENSION_DEV_SOURCES: /workspace/python
       GOCACHE: /workspace/.cache/go-build
       GOMODCACHE: /workspace/.cache/gomod
       USER: ${USER}
-    security_opt:
-      - label=disable
+    security_opt: []
     network_mode: "host"
     command: /bin/bash /workspace/hack/devtools/dev-env-entrypoint.sh
 
