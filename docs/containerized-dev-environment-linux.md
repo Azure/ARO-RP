@@ -134,5 +134,5 @@ make dev-env-stop
 If you also want to remove the built image:
 
 ```bash
-podman rmi aro-rp_aro-dev
+podman rmi localhost/aro-rp_aro-dev
 ```

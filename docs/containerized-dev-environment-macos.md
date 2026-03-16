@@ -216,5 +216,5 @@ make dev-env-stop
 If you also want to remove the built image:
 
 ```bash
-docker rmi aro-rp_aro-dev
+docker rmi localhost/aro-rp_aro-dev
 ```
