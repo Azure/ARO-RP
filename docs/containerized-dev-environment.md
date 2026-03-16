@@ -22,8 +22,8 @@ The following files, located at the project root, are used for this setup:
 The containerized development environment mounts your local workspace and configuration into the container for seamless development:
 
 - **Local repository**: Your entire ARO-RP repository (`.`) is mounted to `/workspace` inside the container
-- **Azure CLI config**: Your local `~/.azure` directory is mounted read-only to `/root/.azure` for authentication
-- **SSH keys**: Your local `~/.ssh` directory is mounted read-only to `/root/.ssh` for Git operations
+- **Azure CLI config**: Your local `~/.azure` directory is mounted read-only to `/home/aro-dev/.azure` for authentication
+- **SSH keys**: Your local `~/.ssh` directory is mounted read-only to `/home/aro-dev/.ssh` for Git operations
 - **Secrets**: Your local `./secrets` directory is mounted read-only to `/workspace/secrets` for RP configuration
 
 This means any changes you make to files in your local repository are immediately available inside the container, and vice versa. The container's working directory is set to `/workspace`, so you're working directly with your local code.
