@@ -21,6 +21,8 @@ if [ -S "${PODMAN_SOCK_DIR}/podman.sock" ]; then
 else
 	echo "No host Podman socket found, starting Podman service inside container..."
 	podman system service --time=0 "unix://${PODMAN_SOCK_DIR}/podman.sock" &
+	PODMAN_PID=$!
+	trap "kill $PODMAN_PID 2>/dev/null" EXIT
 	for i in $(seq 1 30); do
 		if [ -S "${PODMAN_SOCK_DIR}/podman.sock" ]; then
 			break
@@ -36,5 +38,5 @@ fi
 
 export ARO_PODMAN_SOCKET="unix://${PODMAN_SOCK_DIR}/podman.sock"
 
-# Source environment and run the RP
-. /workspace/env && make runlocal-rp
+# Source environment and exec the RP so it becomes PID 1 and receives signals
+. /workspace/env && exec make runlocal-rp
