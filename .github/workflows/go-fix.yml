@@ -33,6 +33,8 @@ jobs:
           ROOT_CURRENT=$(grep '^go ' go.mod | awk '{print $2}')
           API_CURRENT=$(grep '^go ' pkg/api/go.mod | awk '{print $2}')
           echo "current=$ROOT_CURRENT" >> "$GITHUB_OUTPUT"
+          echo "api-current=$API_CURRENT" >> "$GITHUB_OUTPUT"
+          echo "branch-id=${ROOT_CURRENT}-api-${API_CURRENT}" >> "$GITHUB_OUTPUT"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
@@ -60,7 +62,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="automated/go-fix-${{ steps.go-version.outputs.current }}"
+          BRANCH="automated/go-fix-${{ steps.go-version.outputs.branch-id }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
