@@ -324,12 +324,25 @@ func (m *manager) runPodmanInstaller(ctx context.Context) error {
 		return err
 	}
 
+	customManifests := map[string]kruntime.Object{}
+	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		workloadIdentityManifests, err := m.generateWorkloadIdentityResources()
+		if err != nil {
+			return err
+		}
+		maps.Copy(customManifests, workloadIdentityManifests)
+	}
+
+	if m.shouldDisableSamples() {
+		customManifests["cluster-config-samples.yaml"] = bootstrapDisabledSamplesConfig()
+	}
+
 	i, err := containerinstall.New(ctx, m.log, m.env, m.doc.ID)
 	if err != nil {
 		return err
 	}
 
-	return i.Install(ctx, m.subscriptionDoc, m.doc, version)
+	return i.Install(ctx, m.subscriptionDoc, m.doc, version, customManifests)
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {

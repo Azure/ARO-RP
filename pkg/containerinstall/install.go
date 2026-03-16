@@ -20,6 +20,10 @@ import (
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	"sigs.k8s.io/yaml"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
@@ -43,7 +47,7 @@ var devEnvVars = []string{
 	"RESOURCEGROUP",
 }
 
-func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
+func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]kruntime.Object) error {
 	pullPolicy := os.Getenv("ARO_PODMAN_PULL_POLICY")
 	if pullPolicy == "" {
 		pullPolicy = "always"
@@ -69,8 +73,8 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
 		}),
-		steps.Action(func(context.Context) error { return m.createSecrets(ctx, doc, sub) }),
-		steps.Action(func(context.Context) error { return m.startContainer(ctx, doc, version) }),
+		steps.Action(func(context.Context) error { return m.createSecrets(ctx, doc, sub, customManifests) }),
+		steps.Action(func(context.Context) error { return m.startContainer(ctx, doc, version, customManifests) }),
 		steps.Condition(m.containerFinished, 60*time.Minute, false),
 		steps.Action(m.cleanupContainers),
 	}
@@ -93,7 +97,7 @@ func (m *manager) putSecret(secretName string) specgen.Secret {
 	}
 }
 
-func (m *manager) startContainer(ctx context.Context, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
+func (m *manager) startContainer(ctx context.Context, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]kruntime.Object) error {
 	s := specgen.NewSpecGenerator(version.Properties.InstallerPullspec, false)
 	s.Name = "installer-" + m.clusterUUID
 
@@ -118,6 +122,15 @@ func (m *manager) startContainer(ctx context.Context, doc *api.OpenShiftClusterD
 		})
 	}
 
+	// Mount custom ARO manifests
+	for key := range customManifests {
+		s.Secrets = append(s.Secrets, specgen.Secret{
+			Source: m.clusterUUID + "-" + key,
+			Target: "/manifests/" + key,
+			Mode:   0o644,
+		})
+	}
+
 	s.Env = map[string]string{
 		"ARO_RP_MODE":               "development",
 		"ARO_UUID":                  m.clusterUUID,
@@ -129,11 +142,22 @@ func (m *manager) startContainer(ctx context.Context, doc *api.OpenShiftClusterD
 		s.Env["ARO_"+envvar] = os.Getenv(envvar)
 	}
 
-	s.Mounts = append(s.Mounts, specs.Mount{
-		Destination: "/.azure",
-		Type:        "tmpfs",
-		Source:      "",
-	})
+	s.Mounts = append(s.Mounts,
+		specs.Mount{
+			Destination: "/.azure",
+			Type:        "tmpfs",
+			Source:      "",
+		},
+		specs.Mount{
+			Destination: "/manifests",
+			Type:        "tmpfs",
+			Source:      "",
+		},
+		specs.Mount{
+			Destination: "/output",
+			Type:        "tmpfs",
+			Source:      "",
+		})
 	s.WorkDir = "/.azure"
 	s.Entrypoint = []string{"/bin/bash", "-c", "/bin/openshift-install create manifests && /bin/openshift-install create cluster"}
 
@@ -159,7 +183,7 @@ func (m *manager) containerFinished(context.Context) (bool, error) {
 	return false, nil
 }
 
-func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {
+func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, customManifests map[string]kruntime.Object) error {
 	encCluster, err := json.Marshal(doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -189,6 +213,20 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 		_, err = secrets.Create(
 			m.conn, bytes.NewBufferString(string(*doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey)),
 			(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-"+boundServiceAccountSigningKeySecretName))
+		if err != nil {
+			return err
+		}
+	}
+
+	for key, manifest := range customManifests {
+		b, err := yaml.Marshal(manifest)
+		if err != nil {
+			return err
+		}
+
+		_, err = secrets.Create(
+			m.conn, bytes.NewBuffer(b),
+			(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-"+key))
 		if err != nil {
 			return err
 		}
