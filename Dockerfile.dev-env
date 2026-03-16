@@ -60,7 +60,6 @@ ENV PATH="/workspace/.bingo/bin:${PATH}"
 # have the correct owner.
 ARG USERID=1000
 RUN useradd -l -m -u "${USERID}" -s /bin/bash aro-dev \
-    && chown -R aro-dev:aro-dev /workspace \
     && mkdir -p /run/podman \
     && chown aro-dev:aro-dev /run/podman
 
