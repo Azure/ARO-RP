@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'go.mod'
+      - 'pkg/api/go.mod'
   workflow_dispatch:
 
 permissions:
@@ -29,13 +30,15 @@ jobs:
       - name: Check if Go version changed
         id: go-version
         run: |
-          CURRENT=$(grep '^go ' go.mod | awk '{print $2}')
-          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          ROOT_CURRENT=$(grep '^go ' go.mod | awk '{print $2}')
+          API_CURRENT=$(grep '^go ' pkg/api/go.mod | awk '{print $2}')
+          echo "current=$ROOT_CURRENT" >> "$GITHUB_OUTPUT"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
-            PREVIOUS=$(git show HEAD~1:go.mod | grep '^go ' | awk '{print $2}')
-            if [[ "$CURRENT" != "$PREVIOUS" ]]; then
+            ROOT_PREVIOUS=$(git show HEAD~1:go.mod | grep '^go ' | awk '{print $2}')
+            API_PREVIOUS=$(git show HEAD~1:pkg/api/go.mod | grep '^go ' | awk '{print $2}')
+            if [[ "$ROOT_CURRENT" != "$ROOT_PREVIOUS" ]] || [[ "$API_CURRENT" != "$API_PREVIOUS" ]]; then
               echo "run=true" >> "$GITHUB_OUTPUT"
             else
               echo "run=false" >> "$GITHUB_OUTPUT"
