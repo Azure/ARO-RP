@@ -2,11 +2,12 @@
 # Adds the host Podman socket mount for container operations.
 services:
   aro-dev-env:
+    userns_mode: keep-id
     volumes:
       - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock:z
       - .:/workspace:Z
-      - ~/.azure:/root/.azure:ro,Z
-      - ~/.ssh:/root/.ssh:ro,Z
+      - ~/.azure:/home/aro-dev/.azure:ro,Z
+      - ~/.ssh:/home/aro-dev/.ssh:ro,Z
       - ./secrets:/workspace/secrets:ro,Z
     security_opt:
       - label=disable

@@ -55,10 +55,13 @@ RUN export PATH="/usr/local/go/bin:/root/go/bin:$PATH" && \
 ENV PATH="/workspace/.bingo/bin:${PATH}"
 
 # Create a non-root user matching the host UID for bind-mount permissions.
-# On Linux with Podman userns=keep-id this is a no-op; on macOS/Docker it
-# ensures files written inside the container have the correct owner.
+# On Linux with Podman userns=keep-id the UID mapping preserves file
+# ownership; on macOS/Docker it ensures files written inside the container
+# have the correct owner.
 ARG USERID=1000
-RUN if [ "${USERID}" != "0" ]; then \
-        useradd -l -m -u "${USERID}" -s /bin/bash aro-dev \
-        && chown -R aro-dev:aro-dev /workspace; \
-    fi
+RUN useradd -l -m -u "${USERID}" -s /bin/bash aro-dev \
+    && chown -R aro-dev:aro-dev /workspace \
+    && mkdir -p /run/podman \
+    && chown aro-dev:aro-dev /run/podman
+
+USER aro-dev

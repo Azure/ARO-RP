@@ -5,6 +5,6 @@ services:
     privileged: true
     volumes:
       - .:/workspace
-      - ~/.azure:/root/.azure:ro
-      - ~/.ssh:/root/.ssh:ro
+      - ~/.azure:/home/aro-dev/.azure:ro
+      - ~/.ssh:/home/aro-dev/.ssh:ro
       - ./secrets:/workspace/secrets:ro
