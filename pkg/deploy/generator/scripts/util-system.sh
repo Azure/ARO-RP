@@ -219,12 +219,20 @@ pull_container_images() {
 configure_certs_general() {
     log "starting"
 
+    xtrace_set_capture
+    xtrace_unset
+
     # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
     # to honour SSL_CERT_FILE any more, heaven only knows why.
     local -r ssl_certs_basedir="/usr/lib/ssl/certs"
     mkdir -p "$ssl_certs_basedir"
-    csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" 1>/dev/null
+
+    ca_bundle="/etc/pki/tls/certs/ca-bundle.crt"
+    log "Configuring $ca_bundle"
+    csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem "$ca_bundle" /^$/1 "{*}" 1>/dev/null
     c_rehash "$ssl_certs_basedir"
+
+    xtrace_set
 }
 
 # configure_certs_rp Configure system certificates for RP VMSS
@@ -233,6 +241,8 @@ configure_certs_rp() {
     log "starting"
 
     verify_role role_rp
+    xtrace_set_capture
+    xtrace_unset
 
     local -r rp_certs_basedir="/etc/aro-rp"
     mkdir -p "$rp_certs_basedir"
@@ -242,6 +252,8 @@ configure_certs_rp() {
     fi
     chown -R 1000:1000 "$rp_certs_basedir"
 
+
+    xtrace_set
     configure_certs_general
 }
 
@@ -258,6 +270,8 @@ configure_certs_devproxy() {
     log "starting"
 
     verify_role role_devproxy
+    xtrace_set_capture
+    xtrace_unset
 
     local -r proxy_certs_basedir="/etc/proxy"
     mkdir -p "$proxy_certs_basedir"
@@ -266,6 +280,8 @@ configure_certs_devproxy() {
     base64 -d <<<"$PROXYCLIENTCERT" > "$proxy_certs_basedir/proxy-client.crt"
     chown -R 1000:1000 /etc/proxy
     chmod 0600 "$proxy_certs_basedir/proxy.key"
+
+    xtrace_set
 }
 
 configure_azsecd_scan() {
