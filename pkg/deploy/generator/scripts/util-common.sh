@@ -1,25 +1,76 @@
 #!/bin/bash
 # Internal Functions and Constants
 
+# declare -r empty_str=""
+#
 # empty_str - constant; used by functions for optional nameref string arguements
-# empty_str=""
 # shellcheck disable=SC2034
 declare -r empty_str=""
 
-# role_gateway - constant; Is used to determine which VMSS is being bootstrapped
+# declare -r role_gateway="gateway"
+#
 # this should be referenced by scripts sourcing this file
 # role_gateway="gateway"
 declare -r role_gateway="gateway"
-# role_rp - constant; Is used to determine which VMSS is being bootstrapped
+
+# declare -r role_rp="rp"
+#
 # this should be referenced by scripts sourcing this file
 # role_rp="rp"
 declare -r role_rp="rp"
+
+# declare -r role_devproxy="devproxy"
+#
 # role_devproxy - constant; Is used to determine which VMSS is being bootstrapped
-# role_devproxy="devproxy"
 declare -r role_devproxy="devproxy"
+
+# declare -r us_gov_cloud="AzureUSGovernment"
+#
 # us_gov_cloud - constant; Is the name of AZURECLOUDNAME for US government cloud
-# us_gov_cloud="AzureUSGovernment"
 declare -r us_gov_cloud="AzureUSGovernment"
+
+# declare -i XTRACE_SET=1
+#
+# constant value signifying xtrace shell value is/should be set
+declare -ir XTRACE_SET=1
+
+# declare -i XTRACE_UNSET=0
+#
+# constant value signifying xtrace shell value is/should be unset
+declare -ir XTRACE_UNSET=0
+
+# xtrace_is_set()
+#
+# Check if xtrace shell option is enabled/disabled
+#   * Returns XTRACE_SET value if set
+#   * Returns XTRACE_UNSET value if unset
+xtrace_is_set() {
+    if [[ $- =~ "x" ]]; then
+        echo XTRACE_SET
+    fi
+    
+    echo XTRACE_UNSET
+}
+
+# xtrace_toggle()
+#
+# sets/unsets xtrace shell option
+# args:
+#   1) string - nameref
+#       * Must be XTRACE_SET or XTRACE_UNSET
+xtrace_toggle() {
+    if ! [[ $1 =~ ("XTRACE_SET"|"XTRACE_UNSET") ]]; then
+        log "\$1 invalid; \$1 must be XTRACE_SET or XTRACE_UNSET. \$1: $1"
+        return 1
+    fi
+
+    if (( $1 == XTRACE_SET )); then
+        set -x 
+    elif
+        (( $1 == XTRACE_UNSET )); then
+        set +x
+    fi
+}
 
 # log is a wrapper for echo that includes the function name
 # Args

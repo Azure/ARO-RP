@@ -141,7 +141,7 @@ pull_container_images() {
     log "starting"
 
     # shellcheck disable=SC2034
-    local -ri retry_time=30
+    local -ir retry_time=30
     cmd=(
         az
         login
@@ -157,24 +157,39 @@ pull_container_images() {
     mkdir -p /root/.docker
     touch /etc/containers/nodocker
 
+    [ -n "${registry_conf}" ] && write_file REGISTRY_AUTH_FILE registry_conf "true"
+
     # This name is used in the case that az acr login searches for this in it's environment
+    # exported here as it's used by podman login and subsequent podman pull
     export REGISTRY_AUTH_FILE="/root/.docker/config.json"
 
-    if [ -n "${registry_conf}" ]; then
-        write_file REGISTRY_AUTH_FILE registry_conf true
-    fi
+   # shellcheck disable=SC2329
+   _() {
+        local -r acr="$1"
+        local -r registry="$2"
 
-    log "logging into prod acr"
-    cmd=(
-        az
-        acr
-        login
-        --name
-        # TODO replace this with variable expansion
-        # Reference: https://www.shellcheck.net/wiki/SC2001
-        "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
-    )
+        local -r xtrace_initial_set="$(xtrace_is_set)"
+        xtrace_toggle XTRACE_UNSET
 
+        log "logging into container registry $2"
+        az acr login \
+            --name "$acr" \
+            --expose-token \
+            --output tsv \
+            --query accessToken \
+            | podman login \
+                --username "00000000-0000-0000-0000-000000000000" \
+                --password-stdin \
+                "$registry"
+        local -ir status=$?
+
+        xtrace_toggle "$xtrace_initial_set"
+        return "$status"
+   }
+
+    local -r acr_name="${ACRRESOURCEID##*/}"
+    local -r registry_name="${acr_name}.azurecr.io"
+    cmd=(_ "$acr_name" "$registry_name")
     retry cmd retry_time
 
     # shellcheck disable=SC2068
@@ -204,12 +219,17 @@ pull_container_images() {
 configure_certs_general() {
     log "starting"
 
+    local -r xtrace_initial_value="$(xtrace_is_set)"
+    xtrace_toggle XTRACE_UNSET
+
     # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
     # to honour SSL_CERT_FILE any more, heaven only knows why.
     local -r ssl_certs_basedir="/usr/lib/ssl/certs"
     mkdir -p "$ssl_certs_basedir"
     csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" 1>/dev/null
     c_rehash "$ssl_certs_basedir"
+
+    xtrace_toggle "$xtrace_initial_value"
 }
 
 # configure_certs_rp Configure system certificates for RP VMSS
@@ -219,6 +239,10 @@ configure_certs_rp() {
 
     verify_role role_rp
 
+    local -r xtrace_initial_value="$(xtrace_is_set)"
+    xtrace_toggle XTRACE_UNSET
+
+
     local -r rp_certs_basedir="/etc/aro-rp"
     mkdir -p "$rp_certs_basedir"
     base64 -d <<<"$ADMINAPICABUNDLE" > "$rp_certs_basedir/admin-ca-bundle.pem"
@@ -227,7 +251,9 @@ configure_certs_rp() {
     fi
     chown -R 1000:1000 "$rp_certs_basedir"
 
-    configure_certs_general
+
+    xtrace_toggle "$xtrace_initial_value"
+    configure_ca_bundle
 }
 
 # configure_certs_gateway Configure system certificates for Gateway VMSS instances
@@ -243,6 +269,8 @@ configure_certs_devproxy() {
     log "starting"
 
     verify_role role_devproxy
+    xtrace_initial_value="$(xtrace_is_set)"
+    xtrace_toggle XTRACE_UNSET
 
     local -r proxy_certs_basedir="/etc/proxy"
     mkdir -p "$proxy_certs_basedir"
@@ -251,6 +279,8 @@ configure_certs_devproxy() {
     base64 -d <<<"$PROXYCLIENTCERT" > "$proxy_certs_basedir/proxy-client.crt"
     chown -R 1000:1000 /etc/proxy
     chmod 0600 "$proxy_certs_basedir/proxy.key"
+
+    xtrace_toggle "$xtrace_initial_value"
 }
 
 configure_azsecd_scan() {
