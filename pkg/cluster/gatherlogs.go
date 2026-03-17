@@ -28,7 +28,7 @@ type diagnosticStep struct {
 }
 
 func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
-	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines, m.armInterfaces, m.armLoadBalancers, m.metrics)
+	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines, m.armInterfaces, m.armLoadBalancers, m.armMonitor)
 
 	s := []diagnosticStep{
 		{f: m.logClusterVersion, isJSON: true},

@@ -52,8 +52,8 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmonitor"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azmetrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -105,7 +105,7 @@ type clientSet struct {
 	Subnet                armnetwork.SubnetsClient
 	VirtualNetworks       armnetwork.VirtualNetworksClient
 	Storage               storage.AccountsClient
-	Metrics               azmetrics.MetricsClient
+	Metrics               armmonitor.MetricsClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -525,7 +525,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	metricsClient, err := azmetrics.NewMetricsClient(_env.Location(), tokenCredential, clientOptions)
+	metricsClient, err := armmonitor.NewMetricsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
 	if err != nil {
 		log.WithError(err).Warn("failed to create metrics client; continuing without metrics")
 	}
