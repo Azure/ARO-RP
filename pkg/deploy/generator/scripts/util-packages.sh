@@ -71,7 +71,7 @@ dnf_install_pkgs() {
 #   2) wait_time - nameref, integer
 #       * Time to wait before retrying command
 #   3) retries - integer, optional
-#       * Ammount of times to retry command, defaults to 5
+#       * Amount of times to retry command, defaults to 5
 dnf_update_pkgs() {
     local -n excludes="${1:-empty_str}"
     log "starting"
