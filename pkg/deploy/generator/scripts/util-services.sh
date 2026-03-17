@@ -26,7 +26,7 @@ enable_services() {
 # configure_service_aro_gateway
 #
 # args:
-#   1) image - nameref, string;
+#   1) image - nameref, string
 #       * container image
 #   2) role - nameref, string
 #       * VMSS role
@@ -42,6 +42,7 @@ configure_service_aro_gateway() {
     log "starting"
     log "Configuring aro-gateway service"
 
+    # shellcheck disable=SC2034
     local -r aro_gateway_conf_filename='/etc/sysconfig/aro-gateway'
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
@@ -55,6 +56,7 @@ ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'"
     local -r aro_gateway_service_filename='/etc/systemd/system/aro-gateway.service'
 
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_gateway_service_file='[Unit]
@@ -391,7 +393,10 @@ configure_service_aro_mimo_actuator() {
     log "starting"
     log "Configuring aro-mimo-actuator service"
 
+    # shellcheck disable=SC2034
     local -r aro_mimo_actuator_conf_filename='/etc/sysconfig/aro-mimo-actuator'
+
+    # shellcheck disable=SC2034
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
 ARO_LOG_LEVEL='$MIMOACTUATORLOGLEVEL'"
@@ -1088,22 +1093,41 @@ configure_vmss_aro_services() {
     verify_role "$1"
 
     if [ "$r" == "$role_gateway" ]; then
-        configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["static_ip_address"]}["gateway"]"
+        configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["static_ip_address"]}[gateway]"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
-        configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}" "${configs["static_ip_address"]}["rp"]"
-        configure_service_aro_mimo_actuator "${images["rp"]}" "${configs["rp_config"]}" "${configs["static_ip_address"]}["mimo_actuator"]"
-        configure_service_aro_monitor "${images["rp"]}" "${configs["static_ip_address"]}["monitor"]"
-        configure_service_aro_portal "${images["rp"]}" "${configs["static_ip_address"]}["portal"]"
-        configure_service_aro_mise "${images["mise"]}" "${configs["static_ip_address"]}["mise"]"
-        configure_service_aro_otel_collector "${images["otel"]}" "${configs["static_ip_address"]}" "${configs["static_ip_address"]}["otel_collector"]"
+        configure_service_aro_rp "${images["rp"]}" \
+            "$1" \
+            "${configs[rp_config]}" \
+            "${configs[static_ip_address]}[rp]"
+
+        configure_service_aro_mimo_actuator "${images[rp]}" \
+            "${configs[rp_config]}" \
+            "${configs[static_ip_address]}[mimo_actuator]"
+
+        configure_service_aro_monitor "${images[rp]}" "${configs[static_ip_address]}[monitor]"
+
+        configure_service_aro_portal "${images[rp]}" "${configs[static_ip_address]}[portal]"
+
+        configure_service_aro_mise "${images[mise]}" "${configs[static_ip_address]}[mise]"
+
+        configure_service_aro_otel_collector "${images[otel]}" \
+            "${configs[static_ip_address]}" \
+            "${configs["static_ip_address"]}[otel_collector]"
+
         configure_certs_rp
     fi
 
-    configure_service_fluentbit "${configs["fluentbit"]}" "${images["fluentbit"]}"
+    configure_service_fluentbit "${configs[fluentbit]}" "${images[fluentbit]}"
+
     configure_timers_mdm_mdsd "$1"
-    configure_service_mdm "$1" "${images["mdm"]}" "${configs["static_ip_address"]}["mdm"]"
-    configure_service_mdsd "$1" "${configs["mdsd"]}"
+
+    configure_service_mdm "$1" \
+        "${images[mdm]}" \
+        "${configs["static_ip_address"]}[mdm]"
+
+    configure_service_mdsd "$1" "${configs[mdsd]}"
+
     run_azsecd_config_scan
 }
 

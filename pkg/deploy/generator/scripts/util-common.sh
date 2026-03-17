@@ -3,7 +3,8 @@
 
 # declare -r empty_str=""
 #
-# empty_str - constant; used by functions for optional nameref string arguements
+# empty_str - constant
+#   * used by functions for optional nameref string arguments
 # shellcheck disable=SC2034
 declare -r empty_str=""
 
@@ -21,12 +22,14 @@ declare -r role_rp="rp"
 
 # declare -r role_devproxy="devproxy"
 #
-# role_devproxy - constant; Is used to determine which VMSS is being bootstrapped
+# role_devproxy - constant
+#   * Is used to determine which VMSS is being bootstrapped
 declare -r role_devproxy="devproxy"
 
 # declare -r us_gov_cloud="AzureUSGovernment"
 #
-# us_gov_cloud - constant; Is the name of AZURECLOUDNAME for US government cloud
+# us_gov_cloud - constant
+#   * Is the name of AZURECLOUDNAME for US government cloud
 declare -r us_gov_cloud="AzureUSGovernment"
 
 # declare -i XTRACE_IS_SET
@@ -72,7 +75,8 @@ xtrace_set() {
 # Wrapper for echo that includes the function name
 # args:
 #   1) msg - string
-#   2) stack_level - int; optional
+#   2) stack_level - int
+#       * optional
 #       * defaults to the function at the bottom of the call stack
 log() {
     local -r msg="${1:-"log message is empty"}"
@@ -95,8 +99,8 @@ abort() {
 # args:
 #   1) filename - string
 #   2) file_contents - string
-#   3) clobber - boolean; optional
-#       * defaults to false
+#   3) clobber - boolean
+#       * Optional; defaults to false
 write_file() {
     local -n filename="$1"
     local -n file_contents="$2"
@@ -158,11 +162,11 @@ verify_role() {
 # get_keyvault_suffix()
 #
 # args:
-#   1) rl - nameref, string;
+#   1) rl - nameref, string
 #       * role to get short role for
-#   2) kv_suffix - nameref, string;
+#   2) kv_suffix - nameref, string
 #       * short role will be assigned to this nameref
-#   3) sec_prefix - nameref, string;
+#   3) sec_prefix - nameref, string
 #       * keyvault certificate prefix will be assigned to this nameref
 get_keyvault_suffix() {
     local -n rl="$1"
@@ -182,7 +186,7 @@ get_keyvault_suffix() {
             sec_prefix="$role_rp"
             ;;
         *)
-            abort "unkown role $rl"
+            abort "unknown role $rl"
             ;;
     esac
 }
