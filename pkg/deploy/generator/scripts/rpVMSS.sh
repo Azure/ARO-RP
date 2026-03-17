@@ -8,10 +8,12 @@ main() {
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
-    local -ri pkg_retry_count=60
 
     create_required_dirs
+
     configure_sshd
+
+    local -ri pkg_retry_count=60
     configure_rpm_repos retry_wait_time \
                         "$pkg_retry_count"
 
@@ -53,10 +55,16 @@ main() {
     # shellcheck disable=SC2153 disable=SC2034
     local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
     local -r rpimage="$RPIMAGE"
+
+    # shellcheck disable=SC2034
     local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
+
+    # shellcheck disable=SC2034
     local -r otelimage="$OTELIMAGE"
+
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
+
     # shellcheck disable=SC2034
     local -rA aro_images=(
         ["mdm"]="mdmimage"
@@ -214,11 +222,15 @@ MSI_RP_ENDPOINT='$MSIRPENDPOINT'
     reboot_vm
 }
 
+# export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
+#
 # This variable is used by az-cli
 # It's assumed that if this variable hasn't been carried over, that others are also not present, so we fail early by returning an error
 # This was mostly helpful when testing on a development VM, but is still applicable
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
+# util="util.sh"
+#
 # util.sh does not exist when deployed to VMSS via VMSS extensions
 # Provides shellcheck definitions
 util="util.sh"

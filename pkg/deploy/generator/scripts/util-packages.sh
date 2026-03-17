@@ -1,6 +1,7 @@
 #!/bin/bash
 # Repository and package management related functions
 
+# configure_repo_mariner_extended()
 configure_repo_mariner_extended() {
     local -r extended_repo_config="https://packages.microsoft.com/cbl-mariner/2.0/prod/extended/x86_64/config.repo"
     curl -sSL "$extended_repo_config" -o /etc/yum.repos.d/mariner-extended.repo
@@ -19,10 +20,13 @@ configure_repo_mariner_extended() {
 }
 
 # configure_rpm_repos
+#
 # New repositories should be added in their own functions, and called here
 # args:
-# 1) wait_time - nameref, integer; Time to wait before retrying command
-# 2) retries - integer, optional; Amount of times to retry command, defaults to 5
+#   1) wait_time - nameref, integer
+#       * Time to wait before retrying command
+#   2) retries - integer, optional
+#       * Amount of times to retry command, defaults to 5
 configure_rpm_repos() {
     log "starting"
 
@@ -30,10 +34,14 @@ configure_rpm_repos() {
 }
 
 # dnf_install_pkgs
+#
 # args:
-# 1) pkgs - nameref, string array; Packages to be installed
-# 2) wait_time - nameref, integer; Time to wait before retrying command
-# 3) retries - integer, optional; Amount of times to retry command, defaults to 5
+#   1) pkgs - nameref, string array
+#       * Packages to be installed
+#   2) wait_time - nameref, integer
+#       * Time to wait before retrying command
+#   3) retries - integer, optional
+#       * Amount of times to retry command, defaults to 5
 dnf_install_pkgs() {
     local -n pkgs="$1"
     log "starting"
@@ -55,11 +63,15 @@ dnf_install_pkgs() {
 
 
 # dnf_update_pkgs
+#
 # args:
-# 1) excludes - nameref, string array, optional; Packages to exclude from updating
-#       Each index must be prefixed with -x 
-# 2) wait_time - nameref, integer; Time to wait before retrying command
-# 3) retries - integer, optional; Ammount of times to retry command, defaults to 5
+#   1) excludes - nameref, string array, optional
+#       * Packages to exclude from updating
+#       * Each index must be prefixed with -x 
+#   2) wait_time - nameref, integer
+#       * Time to wait before retrying command
+#   3) retries - integer, optional
+#       * Ammount of times to retry command, defaults to 5
 dnf_update_pkgs() {
     local -n excludes="${1:-empty_str}"
     log "starting"
@@ -87,9 +99,12 @@ dnf_update_pkgs() {
 }
 
 # rpm_import_keys
+#
 # args:
-# 1) keys - nameref, string array; rpm keys to be imported
-# 2) wait_time - nameref, integer; Time to wait before retrying command
+#   1) keys - nameref, string array
+#       * rpm keys to be imported
+#   2) wait_time - nameref, integer
+#       * Time to wait before retrying command
 rpm_import_keys() {
     local -n keys="$1"
     log "starting"
@@ -112,6 +127,8 @@ rpm_import_keys() {
     done
 }
 
+# util_common="util-common.sh"
+#
 # util-common.sh does not exist when deployed to VMSS via VMSS extensions
 # Provides shellcheck definitions
 util_common="util-common.sh"

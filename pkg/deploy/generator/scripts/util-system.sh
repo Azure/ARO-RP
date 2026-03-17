@@ -2,10 +2,15 @@
 # This file is intended to be sourced by bootstrapping scripts for commonly used functions
 
 # get_boot_dev_uuid
+#
 # Get the boot devices uuid
 # args:
-# 1) boot_dev_uuid - nameref, string; Empty variable for boot device uuid assignment
+#
+#   * 1) boot_dev_uuid - nameref, string; Empty variable for boot device uuid assignment
+#
 # Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
+# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
+#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
 get_boot_dev_uuid() {
     local -n boot_dev_uuid="$1"
     # Set boot_uuid variable for the boot partition if different from the root
@@ -20,8 +25,12 @@ get_boot_dev_uuid() {
 }
 
 # fips_verify
+#
 # Verify that fips mode is enabled
+#
 # Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
+# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
+#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
 fips_verify() {
     fips_enabled_proc="$(cat /proc/sys/crypto/fips_enabled)"
     fips_enabled_sysctl="$(sysctl -n crypto.fips_enabled)"
@@ -33,10 +42,12 @@ fips_verify() {
 }
 
 # fips_configure
+#
 # Configures VM to run with fips mode enabled
+#
 # Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
 # TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-# Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
+#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
 fips_configure() {
     # shellcheck disable=SC2034
     local boot_uuid
@@ -54,6 +65,7 @@ fips_configure() {
 }
 
 # configure_sshd
+#
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
 configure_sshd() {
     log "starting"
@@ -66,9 +78,12 @@ configure_sshd() {
 }
 
 # configure_logrotate clobbers /etc/logrotate.conf
+#
 # args:
-# 1) dropin_files - nameref, associative array, optional; logrotate files to write to /etc/logrotate.d
-#       Key name dictates filenames written to /etc/logrotate.d.
+#   1) dropin_files - nameref, associative array; optional
+#       * logrotate files to write to /etc/logrotate.d
+#       * Key name dictates filenames written to /etc/logrotate.d.
+#
 # Example:
 #   Key dictates the filename written in /etc/logrotate.d
 #   shellcheck disable=SC2034
@@ -132,9 +147,12 @@ include /etc/logrotate.d
 }
 
 # pull_container_images
+#
 # args:
-# 1) pull_images - nameref, string array
-# 2) registry_conf - nameref, string, optional; path to docker/podman configuration file
+#   1) pull_images - nameref, string array
+#       * array of strings. Each string is an image to be pulled.
+#   2) registry_conf - nameref, string, optional
+#       * path to docker/podman configuration file.
 pull_container_images() {
     local -n pull_images="$1"
     local -n registry_conf="${2:-empty_str}"
@@ -215,8 +233,10 @@ pull_container_images() {
     retry cmd retry_time
 }
 
-# configure_certs_general Configure system certificates common to all VMSS instances
-configure_certs_general() {
+# configure_ca_bundle()
+#
+# Configures system ca-bundle certificates common to all VMSS instances.
+configure_ca_bundle() {
     log "starting"
 
     xtrace_set_capture
@@ -235,8 +255,9 @@ configure_certs_general() {
     xtrace_set
 }
 
-# configure_certs_rp Configure system certificates for RP VMSS
-# args:
+# configure_certs_rp()
+#
+# Configures RP system certificates
 configure_certs_rp() {
     log "starting"
 
@@ -254,18 +275,22 @@ configure_certs_rp() {
 
 
     xtrace_set
-    configure_certs_general
+    configure_ca_bundle
 }
 
-# configure_certs_gateway Configure system certificates for Gateway VMSS instances
+# configure_certs_gateway()
+#
+# Configures system tls certificates for Gateway VMSS instances
 configure_certs_gateway() {
     log "starting"
 
     verify_role role_gateway
-    configure_certs_general
+    configure_ca_bundle
 }
 
-# configure_certs_devproxy Configure system certificates for devproxy VMSS instances
+# configure_certs_devproxy()
+#
+# Configures system certificates for devproxy VMSS instances
 configure_certs_devproxy() {
     log "starting"
 
@@ -284,6 +309,7 @@ configure_certs_devproxy() {
     xtrace_set
 }
 
+# configure_azsecd_scan()
 configure_azsecd_scan() {
     log "starting"
 
@@ -351,9 +377,10 @@ firewalld_configure_backend() {
 }
 
 # firewalld_configure
+#
 # args:
 # 1) ports - nameref, string array; ports to be enabled.
-#       Ports must be postfixed with /tcp or /udp
+#       * Ports must be postfixed with /tcp or /udp
 firewalld_configure() {
     local -n ports="$1"
     log "starting"
