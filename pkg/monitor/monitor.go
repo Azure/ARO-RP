@@ -5,7 +5,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -42,8 +41,8 @@ type monitorDBs interface {
 var (
 	defaultMonitorDelay                = time.Duration(rand.Intn(60)) * time.Second
 	defaultMonitorInterval             = time.Minute
-	defaultMonitorReadinessDelay       = 2 * time.Minute
 	defaultChangefeedInteval           = 10 * time.Second
+	defaultMonitorReadinessDelay       = 2 * time.Minute
 	defaultChangefeedReadinessInterval = time.Minute
 )
 
@@ -56,15 +55,17 @@ type monitor struct {
 	m        metrics.Emitter
 	clusterm metrics.Emitter
 	mu       sync.RWMutex
-	clusters *clusterChangeFeedResponder
+	docs     map[string]*cacheDoc
 	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
 	isMaster    bool
 	bucketCount int
+	buckets     map[int]struct{}
 
-	lastBucketlist atomic.Value // time.Time
-	startTime      time.Time
+	lastBucketlist        atomic.Value // time.Time
+	lastClusterChangefeed atomic.Value // time.Time
+	startTime             time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
 
@@ -84,7 +85,7 @@ type Runnable interface {
 }
 
 func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, e env.Interface) Runnable {
-	mon := &monitor{
+	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
 
@@ -92,10 +93,12 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 
 		m:        m,
 		clusterm: clusterm,
-		subs:     changefeed.NewSubscriptionsChangefeedCache(m, true),
+		docs:     map[string]*cacheDoc{},
+		subs:     changefeed.NewSubscriptionsChangefeedCache(true),
 		env:      e,
 
 		bucketCount: bucket.Buckets,
+		buckets:     map[int]struct{}{},
 
 		startTime: time.Now(),
 
@@ -111,9 +114,6 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		readyIfChangefeedWithin: defaultChangefeedReadinessInterval,
 		readyDelay:              defaultMonitorReadinessDelay,
 	}
-
-	mon.clusters = NewClusterChangefeedResponder(log, mon.worker)
-	return mon
 }
 
 func (mon *monitor) Run(ctx context.Context) error {
@@ -134,47 +134,42 @@ func (mon *monitor) Run(ctx context.Context) error {
 		mon.hiveClusterManagers[1] = cl
 	}
 
-	// We always need a master document to exist so that we can attempt to
-	// dequeue it. If it already exists we will get a StatusPreconditionFailed
-	// error, which is expected and we can ignore. The leasing of the master
-	// document is in `mon.master()`.
 	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
 		ID: "master",
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-		mon.baseLog.Error(fmt.Errorf("error bootstrapping master MonitorDocument (not a 412): %w", err))
 		return err
 	}
 
 	err = mon.startChangefeeds(ctx, nil)
 	if err != nil {
-		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
+		mon.baseLog.Errorf("failed to start changefeed subscriber: %s", err.Error())
 		return err
 	}
 	go mon.changefeedMetrics(nil)
 
-	t := time.NewTicker(mon.changefeedInterval)
+	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
 	for {
-		// register ourself as a monitor, ttl of 60s default
-		err = dbMonitors.MonitorHeartbeat(ctx, int(mon.changefeedInterval.Seconds()*6))
+		// register ourself as a monitor
+		err = dbMonitors.MonitorHeartbeat(ctx)
 		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %w", err))
+			mon.baseLog.Error(err)
 		}
 
 		// try to become master and share buckets across registered monitors
 		err = mon.master(ctx)
 		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %w", err))
+			mon.baseLog.Error(err)
 		}
 
 		// read our bucket allocation from the master
 		err = mon.listBuckets(ctx)
 		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
+			mon.baseLog.Error(err)
 		} else {
 			mon.lastBucketlist.Store(time.Now())
 		}
@@ -198,12 +193,13 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 	}
 
 	// fill the cache from the database change feed
+	clusterResponder := &clusterChangeFeedResponder{mon: mon}
 	go changefeed.RunChangefeed(
 		ctx, mon.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
 		// Align this time with the deletion mechanism.
 		// Go to docs/monitoring.md for the details.
 		mon.changefeedInterval,
-		changefeedBatchSize, mon.clusters, stop,
+		changefeedBatchSize, clusterResponder, stop,
 	)
 
 	// fill the cache from the database change feed
@@ -225,7 +221,7 @@ func (mon *monitor) checkReady() bool {
 	if !ok {
 		return false
 	}
-	lastClusterChangefeedTime, ok := mon.clusters.GetLastProcessed()
+	lastClusterChangefeedTime, ok := mon.lastClusterChangefeed.Load().(time.Time)
 	if !ok {
 		return false
 	}
