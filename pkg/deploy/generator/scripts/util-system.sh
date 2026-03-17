@@ -226,7 +226,10 @@ configure_certs_general() {
     # to honour SSL_CERT_FILE any more, heaven only knows why.
     local -r ssl_certs_basedir="/usr/lib/ssl/certs"
     mkdir -p "$ssl_certs_basedir"
-    csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" 1>/dev/null
+
+    ca_bundle="/etc/pki/tls/certs/ca-bundle.crt"
+    log "Configuring $ca_bundle"
+    csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem "$ca_bundle" /^$/1 "{*}" 1>/dev/null
     c_rehash "$ssl_certs_basedir"
 
     xtrace_toggle "$xtrace_initial_value"
@@ -241,7 +244,6 @@ configure_certs_rp() {
 
     local -r xtrace_initial_value="$(xtrace_is_set)"
     xtrace_toggle XTRACE_UNSET
-
 
     local -r rp_certs_basedir="/etc/aro-rp"
     mkdir -p "$rp_certs_basedir"
