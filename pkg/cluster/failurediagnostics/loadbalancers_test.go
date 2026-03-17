@@ -15,12 +15,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	sdkazmetrics "github.com/Azure/azure-sdk-for-go/sdk/monitor/query/azmetrics"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_armmonitor "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmonitor"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	mock_azmetrics "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azmetrics"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -62,7 +62,7 @@ func TestLogLoadBalancers(t *testing.T) {
 		name        string
 		doc         *api.OpenShiftClusterDocument
 		mockLB      func(*mock_armnetwork.MockLoadBalancersClient)
-		mockMetrics func(*mock_azmetrics.MockMetricsClient)
+		mockMetrics func(*mock_armmonitor.MockMetricsClient)
 		wantOutput  []interface{}
 		wantErr     string
 		wantLogs    []testlog.ExpectedLogEntry
@@ -73,24 +73,13 @@ func TestLogLoadBalancers(t *testing.T) {
 			wantOutput: []interface{}{"load balancer or metrics client missing"},
 		},
 		{
-			name: "invalid cluster ID returns error",
-			doc: func() *api.OpenShiftClusterDocument {
-				doc := newLBTestDoc(lbTestResourceGroupID, lbTestInfraID)
-				doc.OpenShiftCluster.ID = "not-a-valid-resource-id"
-				return doc
-			}(),
-			mockLB:      func(m *mock_armnetwork.MockLoadBalancersClient) {},
-			mockMetrics: func(m *mock_azmetrics.MockMetricsClient) {},
-			wantErr:     "failed to parse cluster resource ID",
-		},
-		{
 			name: "LB Get failure returns error",
 			doc:  newLBTestDoc(lbTestResourceGroupID, lbTestInfraID),
 			mockLB: func(m *mock_armnetwork.MockLoadBalancersClient) {
 				m.EXPECT().Get(gomock.Any(), lbTestResourceGroup, lbName, nil).
 					Return(armnetwork.LoadBalancersClientGetResponse{}, errors.New("lb explod"))
 			},
-			mockMetrics: func(m *mock_azmetrics.MockMetricsClient) {},
+			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {},
 			wantErr:     "lb explod",
 		},
 		{
@@ -102,7 +91,7 @@ func TestLogLoadBalancers(t *testing.T) {
 						LoadBalancer: armnetwork.LoadBalancer{},
 					}, nil)
 			},
-			mockMetrics: func(m *mock_azmetrics.MockMetricsClient) {},
+			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {},
 			wantLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -125,11 +114,9 @@ func TestLogLoadBalancers(t *testing.T) {
 						LoadBalancer: armnetwork.LoadBalancer{ID: pointerutils.ToPtr(lbID)},
 					}, nil)
 			},
-			mockMetrics: func(m *mock_azmetrics.MockMetricsClient) {
-				m.EXPECT().QueryResources(gomock.Any(), lbTestSubscriptionID, "Microsoft.Network/loadBalancers",
-					[]string{"DipAvailability", "VipAvailability"},
-					gomock.Any(), gomock.Any()).
-					Return(sdkazmetrics.QueryResourcesResponse{}, errors.New("metrics explod"))
+			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {
+				m.EXPECT().List(gomock.Any(), lbID, gomock.Any()).
+					Return(armmonitor.MetricsClientListResponse{}, errors.New("metrics explod"))
 			},
 			wantErr: "metrics explod",
 			wantLogs: []testlog.ExpectedLogEntry{
@@ -149,22 +136,18 @@ func TestLogLoadBalancers(t *testing.T) {
 						LoadBalancer: armnetwork.LoadBalancer{ID: pointerutils.ToPtr(lbID)},
 					}, nil)
 			},
-			mockMetrics: func(m *mock_azmetrics.MockMetricsClient) {
-				m.EXPECT().QueryResources(gomock.Any(), lbTestSubscriptionID, "Microsoft.Network/loadBalancers",
-					[]string{"DipAvailability", "VipAvailability"},
-					gomock.Any(), gomock.Any()).
-					Return(sdkazmetrics.QueryResourcesResponse{
-						MetricResults: sdkazmetrics.MetricResults{
-							Values: []sdkazmetrics.MetricData{{
-								Values: []sdkazmetrics.Metric{{
-									Name: &sdkazmetrics.LocalizableString{Value: pointerutils.ToPtr("DipAvailability")},
-									TimeSeries: []sdkazmetrics.TimeSeriesElement{{
-										Data: []sdkazmetrics.MetricValue{
-											{TimeStamp: &t0, Average: pointerutils.ToPtr(100.0)},
-											{TimeStamp: &t1, Average: pointerutils.ToPtr(100.0)},
-											{TimeStamp: &t2, Average: pointerutils.ToPtr(100.0)},
-										},
-									}},
+			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {
+				m.EXPECT().List(gomock.Any(), lbID, gomock.Any()).
+					Return(armmonitor.MetricsClientListResponse{
+						Response: armmonitor.Response{
+							Value: []*armmonitor.Metric{{
+								Name: &armmonitor.LocalizableString{Value: pointerutils.ToPtr("DipAvailability")},
+								Timeseries: []*armmonitor.TimeSeriesElement{{
+									Data: []*armmonitor.MetricValue{
+										{TimeStamp: &t0, Average: pointerutils.ToPtr(100.0)},
+										{TimeStamp: &t1, Average: pointerutils.ToPtr(100.0)},
+										{TimeStamp: &t2, Average: pointerutils.ToPtr(100.0)},
+									},
 								}},
 							}},
 						},
@@ -192,22 +175,18 @@ func TestLogLoadBalancers(t *testing.T) {
 						LoadBalancer: armnetwork.LoadBalancer{ID: pointerutils.ToPtr(lbID)},
 					}, nil)
 			},
-			mockMetrics: func(m *mock_azmetrics.MockMetricsClient) {
-				m.EXPECT().QueryResources(gomock.Any(), lbTestSubscriptionID, "Microsoft.Network/loadBalancers",
-					[]string{"DipAvailability", "VipAvailability"},
-					gomock.Any(), gomock.Any()).
-					Return(sdkazmetrics.QueryResourcesResponse{
-						MetricResults: sdkazmetrics.MetricResults{
-							Values: []sdkazmetrics.MetricData{{
-								Values: []sdkazmetrics.Metric{{
-									Name: &sdkazmetrics.LocalizableString{Value: pointerutils.ToPtr("DipAvailability")},
-									TimeSeries: []sdkazmetrics.TimeSeriesElement{{
-										Data: []sdkazmetrics.MetricValue{
-											{TimeStamp: &t0, Average: pointerutils.ToPtr(100.0)},
-											{TimeStamp: &t1, Average: pointerutils.ToPtr(0.0)},
-											{TimeStamp: &t2, Average: pointerutils.ToPtr(0.0)},
-										},
-									}},
+			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {
+				m.EXPECT().List(gomock.Any(), lbID, gomock.Any()).
+					Return(armmonitor.MetricsClientListResponse{
+						Response: armmonitor.Response{
+							Value: []*armmonitor.Metric{{
+								Name: &armmonitor.LocalizableString{Value: pointerutils.ToPtr("DipAvailability")},
+								Timeseries: []*armmonitor.TimeSeriesElement{{
+									Data: []*armmonitor.MetricValue{
+										{TimeStamp: &t0, Average: pointerutils.ToPtr(100.0)},
+										{TimeStamp: &t1, Average: pointerutils.ToPtr(0.0)},
+										{TimeStamp: &t2, Average: pointerutils.ToPtr(0.0)},
+									},
 								}},
 							}},
 						},
@@ -250,11 +229,11 @@ func TestLogLoadBalancers(t *testing.T) {
 
 			if tt.mockLB != nil && tt.mockMetrics != nil {
 				lbClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
-				metricsClient := mock_azmetrics.NewMockMetricsClient(controller)
+				metricsClient := mock_armmonitor.NewMockMetricsClient(controller)
 				tt.mockLB(lbClient)
 				tt.mockMetrics(metricsClient)
 				m.loadBalancers = lbClient
-				m.metrics = metricsClient
+				m.armMonitor = metricsClient
 			}
 
 			out, err := m.LogLoadBalancers(ctx)

@@ -36,9 +36,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmonitor"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azmetrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -101,7 +101,7 @@ type manager struct {
 	armClusterPrivateLinkServices armnetwork.PrivateLinkServicesClient
 	armSubnets                    armnetwork.SubnetsClient
 	userAssignedIdentities        armmsi.UserAssignedIdentitiesClient
-	metrics                       azmetrics.MetricsClient
+	armMonitor                    armmonitor.MetricsClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -260,10 +260,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	azmetricsClient, err := azmetrics.NewMetricsClient(_env.Location(), fpCredClusterTenant, clientOptions)
+	armMonitorClient, err := armmonitor.NewMetricsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
 	if err != nil {
 		log.WithError(err).Warn("failed to create Azure Monitor metrics client; continuing without metrics")
-		azmetricsClient = nil
+		armMonitorClient = nil
 	}
 
 	platformWorkloadIdentityRolesByVersion := platformworkloadidentity.NewPlatformWorkloadIdentityRolesByVersionService()
@@ -301,7 +301,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armRPPrivateLinkServices:      armRPPrivateLinkServices,
 		armClusterPrivateLinkServices: clusterRPPrivateLinkServices,
 		armSubnets:                    armSubnetsClient,
-		metrics:                       azmetricsClient,
+		armMonitor:                    armMonitorClient,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,

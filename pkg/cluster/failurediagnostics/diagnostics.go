@@ -9,8 +9,8 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmonitor"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azmetrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
@@ -22,7 +22,7 @@ type manager struct {
 	virtualMachines compute.VirtualMachinesClient
 	armInterfaces   armnetwork.InterfacesClient
 	loadBalancers   armnetwork.LoadBalancersClient
-	metrics         azmetrics.MetricsClient
+	armMonitor      armmonitor.MetricsClient
 
 	// bootstrapNodeHostKey holds the SSH host key recorded on the first
 	// connection to the bootstrap node (TOFU). Subsequent connections verify
@@ -36,7 +36,7 @@ func NewFailureDiagnostics(log *logrus.Entry, _env env.Interface,
 	virtualMachines compute.VirtualMachinesClient,
 	armInterfaces armnetwork.InterfacesClient,
 	loadBalancers armnetwork.LoadBalancersClient,
-	metrics azmetrics.MetricsClient,
+	armMonitor armmonitor.MetricsClient,
 ) *manager {
 	return &manager{
 		log:             log,
@@ -45,6 +45,6 @@ func NewFailureDiagnostics(log *logrus.Entry, _env env.Interface,
 		virtualMachines: virtualMachines,
 		armInterfaces:   armInterfaces,
 		loadBalancers:   loadBalancers,
-		metrics:         metrics,
+		armMonitor:      armMonitor,
 	}
 }
