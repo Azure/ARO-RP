@@ -141,7 +141,7 @@ pull_container_images() {
     log "starting"
 
     # shellcheck disable=SC2034
-    local -ri retry_time=30
+    local -ir retry_time=30
     cmd=(
         az
         login
@@ -157,24 +157,39 @@ pull_container_images() {
     mkdir -p /root/.docker
     touch /etc/containers/nodocker
 
+    [ -n "${registry_conf}" ] && write_file REGISTRY_AUTH_FILE registry_conf "true"
+
     # This name is used in the case that az acr login searches for this in it's environment
+    # exported here as it's used by podman login and subsequent podman pull
     export REGISTRY_AUTH_FILE="/root/.docker/config.json"
 
-    if [ -n "${registry_conf}" ]; then
-        write_file REGISTRY_AUTH_FILE registry_conf true
-    fi
+   # shellcheck disable=SC2329
+   _() {
+        local -r acr="$1"
+        local -r registry="$2"
 
-    log "logging into prod acr"
-    cmd=(
-        az
-        acr
-        login
-        --name
-        # TODO replace this with variable expansion
-        # Reference: https://www.shellcheck.net/wiki/SC2001
-        "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
-    )
+        xtrace_set_capture
+        xtrace_unset
 
+        log "logging into container registry $2"
+        az acr login \
+            --name "$acr" \
+            --expose-token \
+            --output tsv \
+            --query accessToken \
+            | podman login \
+                --username "00000000-0000-0000-0000-000000000000" \
+                --password-stdin \
+                "$registry"
+        local -ir status=$?
+
+        xtrace_set
+        return "$status"
+   }
+
+    local -r acr_name="${ACRRESOURCEID##*/}"
+    local -r registry_name="${acr_name}.azurecr.io"
+    cmd=(_ "$acr_name" "$registry_name")
     retry cmd retry_time
 
     # shellcheck disable=SC2068

@@ -1,25 +1,71 @@
 #!/bin/bash
 # Internal Functions and Constants
 
+# declare -r empty_str=""
+#
 # empty_str - constant; used by functions for optional nameref string arguements
-# empty_str=""
 # shellcheck disable=SC2034
 declare -r empty_str=""
 
-# role_gateway - constant; Is used to determine which VMSS is being bootstrapped
+# declare -r role_gateway="gateway"
+#
 # this should be referenced by scripts sourcing this file
 # role_gateway="gateway"
 declare -r role_gateway="gateway"
-# role_rp - constant; Is used to determine which VMSS is being bootstrapped
+
+# declare -r role_rp="rp"
+#
 # this should be referenced by scripts sourcing this file
 # role_rp="rp"
 declare -r role_rp="rp"
+
+# declare -r role_devproxy="devproxy"
+#
 # role_devproxy - constant; Is used to determine which VMSS is being bootstrapped
-# role_devproxy="devproxy"
 declare -r role_devproxy="devproxy"
+
+# declare -r us_gov_cloud="AzureUSGovernment"
+#
 # us_gov_cloud - constant; Is the name of AZURECLOUDNAME for US government cloud
-# us_gov_cloud="AzureUSGovernment"
 declare -r us_gov_cloud="AzureUSGovernment"
+
+# declare -i XTRACE_IS_SET
+#
+# Global variable used to keep track of if xtrace was/is set.
+declare -i XTRACE_IS_SET
+
+# declare -i XTRACE_SET=1
+#
+# constant value used to set XTRACE_IS_SET
+declare -ir XTRACE_SET=1
+
+# declare -i XTRACE_UNSET=0
+#
+# constant value used to set XTRACE_IS_SET
+declare -ir XTRACE_UNSET=0
+
+# xtrace_set_capture()
+#
+# Captures if xtrace is set in the current shell using global variable XTRACE_IS_SET.
+#   * Used for reapplying xtrace setting after disabling.
+#   * Sets XTRACE_IS_SET=XTRACE_SET (if true) or XTRACE_IS_SET=XTRACE_UNSET (if false).
+xtrace_set_capture() {
+    [[ $- =~ "x" ]] && XTRACE_IS_SET=$XTRACE_SET || XTRACE_IS_SET=$XTRACE_UNSET
+}
+
+# xtrace_unset()
+#
+# Un-sets xtrace (if set)
+xtrace_unset() {
+    (( XTRACE_IS_SET == XTRACE_SET )) && set +x
+}
+
+# xtrace_set()
+#
+# Sets xtrace (if unset)
+xtrace_set() {
+    (( XTRACE_IS_SET == XTRACE_UNSET )) && set -x
+}
 
 # log is a wrapper for echo that includes the function name
 # Args
