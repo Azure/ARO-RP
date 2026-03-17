@@ -65,23 +65,22 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 	var restConfig *restclient.Config
 	var err error
 
-	if oc != nil {
-		// normal RP path (non-local)
+	kubeconfig := os.Getenv("HIVE_KUBE_CONFIG_PATH")
+
+	if kubeconfig != "" {
+		// use env-based kubeconfig (works for both dev and prod)
+		restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, err
+		}
+	} else if oc != nil {
+		// fallback to RP-managed cluster config
 		restConfig, err = restconfig.RestConfig(env, oc)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		// local development fallback
-		kubeconfig := os.Getenv("HIVE_KUBE_CONFIG_PATH")
-		if kubeconfig == "" {
-			return nil, fmt.Errorf("HIVE_KUBE_CONFIG_PATH not set")
-		}
-
-		restConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("HIVE_KUBE_CONFIG_PATH not set")
 	}
 
 	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
