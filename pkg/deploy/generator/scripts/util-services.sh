@@ -1,9 +1,12 @@
 #!/bin/bash
 # ARO service setup functions
 
-# enable_services enables the systemd services that are passed in
+# enable_services
+#
+# enables the systemd services that are passed in
 # args:
-# 1) services - array; services to be enabled
+#   * 1) services - array
+#       * services to be enabled
 enable_services() {
     local -n svcs="$1"
     log "starting"
@@ -21,11 +24,16 @@ enable_services() {
 }
 
 # configure_service_aro_gateway
+#
 # args:
-# 1) image - nameref, string; container image
-# 2) role - nameref, string; VMSS role
-# 3) conf_file - nameref, string; aro gateway environment file
-# 4) ipaddress - nameref, string; static ip of podman network to be attached
+#   1) image - nameref, string;
+#       * container image
+#   2) role - nameref, string
+#       * VMSS role
+#   3) conf_file - nameref, string
+#       * aro gateway environment file
+#   4) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_aro_gateway() {
     local -n image="$1"
     local -n role="$2"
@@ -92,11 +100,16 @@ WantedBy=multi-user.target
 }
 
 # configure_service_aro_rp
+#
 # args:
-# 1) image - nameref, string; RP container image
-# 2) role - nameref, string; VMSS role
-# 3) conf_file - nameref, string; aro rp environment file
-# 4) ipaddress - nameref, string; static ip of podman network to be attached
+#   * 1) image - nameref, string
+#       * RP container image
+#   * 2) role - nameref, string
+#       * VMSS role
+#   * 3) conf_file - nameref, string
+#       * aro rp environment file
+#   * 4) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_aro_rp() {
     local -n image="$1"
     local -n role="$2"
@@ -105,6 +118,7 @@ configure_service_aro_rp() {
     log "starting"
     log "Configuring aro-rp service"
 
+    # shellcheck disable=SC2034
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
@@ -116,7 +130,9 @@ ARO_LOG_LEVEL='$RPLOGLEVEL'"
 
     # shellcheck disable=SC2034
     local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_rp_service_file='[Unit]
@@ -182,9 +198,12 @@ WantedBy=multi-user.target'
 }
 
 # configure_service_aro_monitor
+#
 # args:
-# 1) image - nameref, string; RP container image
-# 2) ipaddress - nameref, string; static ip of podman network to be attached
+#   1) image - nameref, string
+#       * RP container image
+#   2) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_aro_monitor() {
     local -n image="$1"
     local -n ipaddress="$2"
@@ -195,6 +214,7 @@ configure_service_aro_monitor() {
     # are not used, but can't easily be refactored out. Should be revisited in the future.
     # shellcheck disable=SC2034
     local -r aro_monitor_service_conf_filename='/etc/sysconfig/aro-monitor'
+
     # shellcheck disable=SC2034
     local -r aro_monitor_service_conf_file="AZURE_FP_CLIENT_ID='$FPCLIENTID'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
@@ -222,7 +242,9 @@ ARO_LOG_LEVEL='$MONITORLOGLEVEL'"
 
     # shellcheck disable=SC2034
     local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_monitor_service_file='[Unit]
@@ -273,9 +295,12 @@ WantedBy=multi-user.target'
 }
 
 # configure_service_aro_portal
+#
 # args:
-# 1) image - nameref, string; RP container image
-# 2) ipaddress - nameref, string; static ip of podman network to be attached
+#   * 1) image - nameref, string
+#       * RP container image
+#   * 2) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_aro_portal() {
     local -n image="$1"
     local -n ipaddress="$2"
@@ -303,7 +328,9 @@ ARO_LOG_LEVEL='$PORTALLOGLEVEL'"
 
     # shellcheck disable=SC2034
     local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_portal_service_file='[Unit]
@@ -349,10 +376,14 @@ WantedBy=multi-user.target'
 }
 
 # configure_service_aro_mimo_actuator
+#
 # args:
-# 1) image - nameref, string; RP container image
-# 2) conf_file - nameref, string; aro rp environment file
-# 3) ipaddress - nameref, string; static ip of podman network to be attached
+#   1) image - nameref, string
+#       * RP container image
+#   2) conf_file - nameref, string
+#       * aro rp environment file
+#   3) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_aro_mimo_actuator() {
     local -n image="$1"
     local -n conf_file="$2"
@@ -370,7 +401,9 @@ ARO_LOG_LEVEL='$MIMOACTUATORLOGLEVEL'"
 
     # shellcheck disable=SC2034
     local -r aro_mimo_actuator_service_filename='/etc/systemd/system/aro-mimo-actuator.service'
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_mimo_actuator_service_file='[Unit]
@@ -433,9 +466,12 @@ WantedBy=multi-user.target'
 }
 
 # configure_service_aro_mise
+#
 # args:
-# 1) image - nameref, string; MISE container image
-# 2) ipaddress - nameref, string; static ip of podman network to be attached
+#   1) image - nameref, string
+#       * MISE container image
+#   2) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_aro_mise() {
     local -n image="$1"
     local -n ipaddress="$2"
@@ -531,7 +567,9 @@ IPADDRESS='$ipaddress'"
 
     # shellcheck disable=SC2034
     local -r aro_mise_service_filename='/etc/systemd/system/aro-mise.service'
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_mise_service_file='[Unit]
@@ -560,11 +598,16 @@ WantedBy=multi-user.target'
 
     write_file aro_mise_service_filename aro_mise_service_file true
 }
+
 # configure_service_aro_otel_collector
+#
 # args:
-# 1) image - nameref, string; OTEL container image
-# 2) static_ip_address - nameref, array; static ips of all services
-# 3) ipaddress - nameref, string; static ip of podman network to be attached
+#   1) image - nameref, string
+#       * OTEL container image
+#   2) static_ip_address - nameref, array
+#       * static ips of all services
+#   3) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_aro_otel_collector() {
     local -n image="$1"
     local -n static_ip_address="$2"
@@ -630,7 +673,9 @@ service:
 
     # shellcheck disable=SC2034
     local -r aro_otel_collector_service_filename='/etc/systemd/system/aro-otel-collector.service'
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r aro_otel_collector_service_file='[Unit]
@@ -661,9 +706,12 @@ WantedBy=multi-user.target'
 }
 
 # configure_service_mdsd
+#
 # args:
-# 1) monitoring_role - nameref, string; can be "gateway" or "rp"
-# 2) monitor_config_version - nameref, string; mdsd config version
+#   1) monitoring_role - nameref, string
+#       * can be "gateway" or "rp"
+#   2) monitor_config_version - nameref, string
+#       * mdsd config version
 configure_service_mdsd() {
     local -n role="$1"
     local -n monitor_config_version="$2"
@@ -709,10 +757,14 @@ export MDSD_MSGPACK_SORT_COLUMNS=\"1\""
 }
 
 # configure_service_fluentbit
+#
 # args:
-# 1) conf_file - string; fluenbit configuration file
-# 2) image - string; fluentbit container image to run
-# 3) ipaddress - nameref, string; static ip of podman network to be attached
+#   1) conf_file - string
+#       * fluenbit configuration file
+#   2) image - string
+#       * fluentbit container image to run
+#   3) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -n conf_file="$1"
@@ -736,7 +788,9 @@ configure_service_fluentbit() {
 
     # shellcheck disable=SC2034
     local -r service_filename='/etc/systemd/system/fluentbit.service'
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r service_file='[Unit]
@@ -775,8 +829,10 @@ WantedBy=multi-user.target'
 }
 
 # configure_timers_mdm_mdsd
+#
 # args:
-# 1) role - string; can be "gateway" or "rp"
+#   1) role - string
+#       * can be "gateway" or "rp"
 configure_timers_mdm_mdsd() {
     local -n role="$1"
     log "starting"
@@ -931,10 +987,14 @@ WantedBy=multi-user.target'
 }
 
 # configure_service_mdm
+#
 # args:
-# 1) role - nameref, string; can be "gateway" or "rp"
-# 2) image - nameref, string; mdm container image to run
-# 3) ipaddress - nameref, string; static ip of podman network to be attached
+#   1) role - nameref, string
+#       * can be "gateway" or "rp"
+#   2) image - nameref, string
+#       * mdm container image to run
+#   3) ipaddress - nameref, string
+#       * static ip of podman network to be attached
 configure_service_mdm() {
     local -n role="$1"
     local -n image="$2"
@@ -963,7 +1023,9 @@ IPADDRESS='$ipaddress'"
     mkdir -p /var/etw
     # shellcheck disable=SC2034
     local -r mdm_service_filename="/etc/systemd/system/mdm.service"
+
     # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r mdm_service_file='[Unit]
@@ -1008,11 +1070,16 @@ WantedBy=multi-user.target'
 }
 
 # configure_vmss_aro_service
+#
 # args:
-# 1) r - nameref, string; role of VMSS
-# 2) images - nameref, associative array; ARO container images
-# 3) configs - nameref, associative array; configuration files and versions. The values should be a reference to variables, not dereferenced.
-#                                          This is because the value is used when creating nameref variables by helper functions.
+#   1) r - nameref, string
+#       * role of VMSS
+#   2) images - nameref, associative array
+#       * ARO container images
+#   3) configs - nameref, associative array
+#       * configuration files and versions.
+#       * The values should be a reference to variables, not dereferenced.
+#       * This is because the value is used when creating nameref variables by helper functions.
 configure_vmss_aro_services() {
     local -n r="$1"
     local -n images="$2"
@@ -1040,6 +1107,8 @@ configure_vmss_aro_services() {
     run_azsecd_config_scan
 }
 
+# util_common="util-common.sh"
+#
 # util-common.sh does not exist when deployed to VMSS via VMSS extensions
 # Provides shellcheck definitions
 util_common="util-common.sh"
@@ -1048,6 +1117,8 @@ if [ -f "$util_common" ]; then
     source "$util_common"
 fi
 
+# util_system="util-system.sh"
+#
 # util-system.sh does not exist when deployed to VMSS via VMSS extensions
 # Provides shellcheck definitions
 util_system="util-system.sh"
