@@ -116,8 +116,7 @@ func TestUpdateCorrelationDataAndEnrichLogWithResponse(t *testing.T) {
 			},
 			expecetdCorrelationIDUpdated: "CorrelationID",
 			expectedSubfields: logrus.Fields{
-				"response_status_code":  "0",
-				"duration_milliseconds": time.Since(startTime).Milliseconds(),
+				"response_status_code": "0",
 			},
 		},
 		{
@@ -154,6 +153,11 @@ func TestUpdateCorrelationDataAndEnrichLogWithResponse(t *testing.T) {
 
 			if !fieldsContainsSubfields(l.Data, tc.expectedSubfields) {
 				t.Fatal("logrus entry does not contain all expectedSubfields")
+			}
+
+			dur, ok := l.Data[durationMilliseconds].(int64)
+			if !ok || dur < 0 {
+				t.Fatalf("expected non-negative duration_milliseconds, got %v", l.Data[durationMilliseconds])
 			}
 		})
 	}
