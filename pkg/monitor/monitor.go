@@ -135,16 +135,21 @@ func (mon *monitor) Run(ctx context.Context) error {
 		mon.hiveClusterManagers[1] = cl
 	}
 
+	// We always need a master document to exist so that we can attempt to
+	// dequeue it. If it already exists we will get a StatusPreconditionFailed
+	// error, which is expected and we can ignore. The leasing of the master
+	// document is in `mon.master()`.
 	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
 		ID: "master",
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
+		mon.baseLog.Error(fmt.Errorf("error bootstrapping master MonitorDocument (not a 412): %w", err))
 		return err
 	}
 
 	err = mon.startChangefeeds(ctx, nil)
 	if err != nil {
-		mon.baseLog.Errorf("failed to start changefeed subscriber: %s", err.Error())
+		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
 		return err
 	}
 	go mon.changefeedMetrics(nil)
@@ -158,19 +163,19 @@ func (mon *monitor) Run(ctx context.Context) error {
 		// register ourself as a monitor
 		err = dbMonitors.MonitorHeartbeat(ctx)
 		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %s", err))
+			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %w", err))
 		}
 
 		// try to become master and share buckets across registered monitors
 		err = mon.master(ctx)
 		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %s", err))
+			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %w", err))
 		}
 
 		// read our bucket allocation from the master
 		err = mon.listBuckets(ctx)
 		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %s", err))
+			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
 		} else {
 			mon.lastBucketlist.Store(time.Now())
 		}

@@ -53,10 +53,7 @@ func fakeMonitorGetAllButMasterHandler(client cosmosdb.MonitorDocumentClient, _ 
 		if r.ID == "master" {
 			continue
 		}
-		// Monitor docs only last (by default) 60s
-		if time.Unix(int64(r.Timestamp)+int64(r.TTL), 0).After(now()) {
-			continue
-		}
+		// XXX: This does not test for TTL -- we need to add saving a Timestamp to gocosmosdb
 		out = append(out, r)
 	}
 	return cosmosdb.NewFakeMonitorDocumentIterator(out, 0)
