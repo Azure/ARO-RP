@@ -13,6 +13,7 @@ import (
 	"net"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	cryptossh "golang.org/x/crypto/ssh"
@@ -226,17 +227,25 @@ func (m *manager) runSSHCommand(client *cryptossh.Client, cmd string) error {
 	sess.Stderr = &stderr
 
 	// Close the session after commandTimeout to prevent indefinite hangs.
+	// timedOut is set before sess.Close() in the timer goroutine; the
+	// session close causes sess.Run to return, establishing the
+	// happens-before edge so timedOut can be read safely afterwards.
+	var timedOut atomic.Bool
 	timer := time.AfterFunc(commandTimeout, func() {
+		timedOut.Store(true)
 		sess.Close()
 	})
 	runErr := sess.Run("bash -c " + bashQuote(cmd))
 	timer.Stop()
 	var exitErr *cryptossh.ExitError
-	if runErr != nil && !errors.As(runErr, &exitErr) {
+	if runErr != nil && !timedOut.Load() && !errors.As(runErr, &exitErr) {
 		return runErr
 	}
 
 	logEntry := m.log.WithField("cmd", cmd)
+	if timedOut.Load() {
+		logEntry.Warn("command timed out")
+	}
 	for _, line := range strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n") {
 		if line != "" {
 			logEntry.WithField("stream", "stdout").Info(line)
