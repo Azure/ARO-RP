@@ -4,3 +4,5 @@ github.com/bennerv/go-cosmosdb v0.0.0-20251002164525-db0ff9dc7ecc h1:8dxpP7yHdHQ
 github.com/bennerv/go-cosmosdb v0.0.0-20251002164525-db0ff9dc7ecc/go.mod h1:4bSvv83quaEsAsIBxUGczXmMep28F+/pi7mbSoZkBxs=
 github.com/bennerv/go-cosmosdb v0.0.0-20260313173900-2523aa951bd1 h1:FKiA++jcX4S/ZDoyOKCwfYL1hQ/jMWfE48NtE5sTAOg=
 github.com/bennerv/go-cosmosdb v0.0.0-20260313173900-2523aa951bd1/go.mod h1:4bSvv83quaEsAsIBxUGczXmMep28F+/pi7mbSoZkBxs=
+github.com/bennerv/go-cosmosdb v0.0.0-20260318032027-4ed41099e61c h1:qsHNAeWS0eKexZ5tgu9D8V6hVPOYlHWVBOzaa6IQHLs=
+github.com/bennerv/go-cosmosdb v0.0.0-20260318032027-4ed41099e61c/go.mod h1:4bSvv83quaEsAsIBxUGczXmMep28F+/pi7mbSoZkBxs=
