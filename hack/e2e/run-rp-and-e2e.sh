@@ -12,7 +12,6 @@ if [[ $CI ]]; then
     set -a
     LOCATION="${LOCATION:-eastus}"
     VPN="${VPN:-vpn-${LOCATION}.ovpn}"
-    HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
     HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
     CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     CLUSTER_RESOURCEGROUP="$CLUSTER"
