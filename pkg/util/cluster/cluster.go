@@ -191,12 +191,13 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	if len(conf.WorkerVMSizes) == 0 {
 		if conf.WorkerVMSize == "" {
 			// No explicit worker VM size set - use defaults.
-			// In local dev mode, prepend a smaller size for cost savings.
+			// In local dev mode, use D2s sizes only (RequireD2sWorkers feature flag).
 			if conf.IsLocalDevelopmentMode() {
-				conf.WorkerVMSizes = append(
-					[]string{api.VMSizeStandardD2sV3.String()},
-					DefaultWorkerVmSizes()...,
-				)
+				conf.WorkerVMSizes = []string{
+					api.VMSizeStandardD2sV5.String(),
+					api.VMSizeStandardD2sV4.String(),
+					api.VMSizeStandardD2sV3.String(),
+				}
 			} else {
 				conf.WorkerVMSizes = DefaultWorkerVmSizes()
 			}
