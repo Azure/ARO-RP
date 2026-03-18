@@ -60,14 +60,18 @@ xtrace_set_capture() {
 #
 # Un-sets xtrace (if set)
 xtrace_unset() {
-    (( XTRACE_IS_SET == XTRACE_SET )) && set +x
+    if (( XTRACE_IS_SET == XTRACE_SET )); then
+        set +x
+    fi
 }
 
 # xtrace_set()
 #
-# Sets xtrace (if unset)
+# Restores xtrace to state captured by xtrace_set_capture (if it was set)
 xtrace_set() {
-    (( XTRACE_IS_SET == XTRACE_UNSET )) && set -x
+    if (( XTRACE_IS_SET == XTRACE_SET )); then
+        set -x
+    fi
 }
 
 # log()
