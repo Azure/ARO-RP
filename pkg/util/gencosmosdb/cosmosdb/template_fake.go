@@ -136,7 +136,7 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if !options.NoETag && template.ETag != existingTemplate.ETag {
+		if (options == nil || !options.NoETag) && template.ETag != existingTemplate.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}
