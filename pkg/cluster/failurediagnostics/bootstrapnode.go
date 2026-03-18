@@ -122,7 +122,10 @@ func (m *manager) setupBootstrapNodeSSH(ctx context.Context) (*cryptossh.Client,
 		return nil, fmt.Errorf("establishing SSH connection to bootstrap node: %w", err)
 	}
 	// Clear the handshake deadline so it doesn't affect subsequent sessions.
-	conn.SetDeadline(time.Time{})
+	if err := conn.SetDeadline(time.Time{}); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("clearing SSH handshake deadline: %w", err)
+	}
 
 	return cryptossh.NewClient(sshConn, chans, reqs), nil
 }
