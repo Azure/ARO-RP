@@ -8,7 +8,9 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math/big"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -75,22 +77,29 @@ func TestMonitor(t *testing.T) {
 		})
 	}
 
-	time.Sleep(5 * time.Second)
+	// Wait for the workers to go ready
+	require.Eventually(t, func() bool {
+		ready := true
+		for _, w := range workers {
+			if !w.checkReady() {
+				ready = false
+			}
+		}
+		return ready
+	}, time.Second*5, time.Millisecond*500, "workers did not go ready after 5s")
 
 	// Buckets should be distributed amongst the workers
-	totalBuckets := 0
+	buckets := []int{}
 	for _, w := range workers {
 		// bucketcount is the total number of buckets that should be across all
 		// workers, each one should have less than that
 		require.Less(t, len(w.buckets), w.bucketCount)
-		totalBuckets += len(w.buckets)
+		buckets = slices.AppendSeq(buckets, maps.Keys(w.buckets))
 	}
-	require.Equal(t, 256, totalBuckets)
-
-	// The monitors should now be classed as ready
-	for _, w := range workers {
-		require.True(t, w.checkReady(), "worker was not ready")
-	}
+	require.Len(t, buckets, 256)
+	// Sort + compact to remove any dupes to ensure there isn't any
+	slices.Sort(buckets)
+	require.Len(t, slices.Compact(buckets), 256, "buckets contained duplicates")
 
 	// add a new cluster
 	subDoc := newFakeSubscription()
@@ -107,17 +116,15 @@ func TestMonitor(t *testing.T) {
 	}
 	fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
 
-	wg.Wait()
-
-	for k, v := range fakeClusterVisitMonitoringAttempts {
-		if *v < 1 {
-			t.Errorf("Expected that cluster %s got visits, but it got %v", k, v)
+	require.Eventually(t, func() bool {
+		for _, v := range fakeClusterVisitMonitoringAttempts {
+			if *v < 1 {
+				// Cluster should have visits
+				return false
+			}
 		}
-	}
-
-	if *fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] < 1 {
-		t.Errorf("Last added cluster %s didn't get any visit: %v", clusterDoc.ResourceID, fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID])
-	}
+		return true
+	}, time.Second*5, time.Millisecond*500, "not all clusters were visited at least once")
 
 	// The monitors should still be ready
 	for _, w := range workers {
