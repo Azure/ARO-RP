@@ -5,12 +5,15 @@ package failurediagnostics
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"errors"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"go.uber.org/mock/gomock"
+	cryptossh "golang.org/x/crypto/ssh"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
@@ -291,6 +294,93 @@ func TestEnsureNICInBootstrapPool(t *testing.T) {
 				}
 				if !found {
 					t.Errorf("pool %q not found in NIC after update", poolID)
+				}
+			}
+		})
+	}
+}
+
+func TestBashQuote(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "plain string",
+			input: "hello world",
+			want:  "'hello world'",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			want:  "''",
+		},
+		{
+			name:  "embedded single quote",
+			input: "it's",
+			want:  "'it'\"'\"'s'",
+		},
+		{
+			name:  "multiple embedded single quotes",
+			input: "it's a 'test'",
+			want:  "'it'\"'\"'s a '\"'\"'test'\"'\"''",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := bashQuote(tt.input)
+			if got != tt.want {
+				t.Errorf("bashQuote(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTOFUHostKeyCallback(t *testing.T) {
+	newSSHKey := func(t *testing.T) cryptossh.PublicKey {
+		t.Helper()
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			t.Fatalf("generating ed25519 key: %v", err)
+		}
+		pub, err := cryptossh.NewPublicKey(priv.Public())
+		if err != nil {
+			t.Fatalf("converting to ssh public key: %v", err)
+		}
+		return pub
+	}
+
+	key1 := newSSHKey(t)
+	key2 := newSSHKey(t)
+
+	for _, tt := range []struct {
+		name      string
+		calls     []cryptossh.PublicKey // keys presented in sequence
+		wantErrs  []bool               // whether each call should return an error
+	}{
+		{
+			name:     "first key is accepted and recorded",
+			calls:    []cryptossh.PublicKey{key1},
+			wantErrs: []bool{false},
+		},
+		{
+			name:     "same key accepted on second call",
+			calls:    []cryptossh.PublicKey{key1, key1},
+			wantErrs: []bool{false, false},
+		},
+		{
+			name:     "different key rejected on second call",
+			calls:    []cryptossh.PublicKey{key1, key2},
+			wantErrs: []bool{false, true},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &manager{}
+			cb := m.toFUHostKeyCallback()
+			for i, key := range tt.calls {
+				err := cb("", nil, key)
+				if (err != nil) != tt.wantErrs[i] {
+					t.Errorf("call %d: got err=%v, wantErr=%v", i, err, tt.wantErrs[i])
 				}
 			}
 		})
