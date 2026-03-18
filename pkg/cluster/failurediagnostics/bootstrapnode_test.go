@@ -354,9 +354,9 @@ func TestTOFUHostKeyCallback(t *testing.T) {
 	key2 := newSSHKey(t)
 
 	for _, tt := range []struct {
-		name      string
-		calls     []cryptossh.PublicKey // keys presented in sequence
-		wantErrs  []bool               // whether each call should return an error
+		name     string
+		calls    []cryptossh.PublicKey // keys presented in sequence
+		wantErrs []bool                // whether each call should return an error
 	}{
 		{
 			name:     "first key is accepted and recorded",
