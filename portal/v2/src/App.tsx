@@ -250,6 +250,7 @@ function App() {
 
   return (
     <>
+      <title>ARO Portal {data.location ? "(" + data.location + ")" : ""}</title>
       <Stack styles={stackStyles} tokens={containerStackTokens} horizontalAlign={"stretch"}>
         <Panel
           id="RegionsPanel"
