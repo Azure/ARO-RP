@@ -137,7 +137,7 @@ func (c *monitors) TryLease(ctx context.Context) (*api.MonitorDocument, error) {
 
 func (c *monitors) ListBuckets(ctx context.Context) (buckets []int, err error) {
 	doc, err := c.get(ctx, "master")
-	if err != nil || doc == nil {
+	if err != nil || doc == nil || doc.Monitor == nil {
 		return nil, err
 	}
 
