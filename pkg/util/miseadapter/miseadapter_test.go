@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -523,10 +522,25 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// requestReceived lets us cancel only after the server has the request,
+	// preserving mid-flight cancellation semantics.
+	requestReceived := make(chan struct{})
+
+	var handlerCalls atomic.Int32
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// cancel the context
-		cancel()
-		w.WriteHeader(http.StatusOK)
+		n := handlerCalls.Add(1)
+		if n > 1 {
+			// Retry detected: return immediately so IsAuthorized returns
+			// and the assertion below can report the failure.
+			http.Error(w, "unexpected retry after context cancellation", http.StatusInternalServerError)
+			return
+		}
+		requestReceived <- struct{}{}
+		// Block until the client aborts due to context cancellation.
+		// Never write a response — this guarantees the client always sees
+		// an error, eliminating the race with a 200 arriving first.
+		<-r.Context().Done()
 	}))
 	defer server.Close()
 
@@ -540,13 +554,18 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 	req.RemoteAddr = "1.2.3.4:12345"
 	req.Header.Set("Authorization", "Bearer token")
 
+	go func() {
+		<-requestReceived
+		cancel()
+	}()
+
 	authorized, err := adapter.IsAuthorized(log, req)
 	if err == nil {
-		t.Error("expected context error")
+		t.Fatal("expected context error")
 	}
 
-	if !strings.Contains(err.Error(), "context") && !strings.Contains(err.Error(), "deadline") {
-		t.Logf("got unexpected error type: %v", err)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("got unexpected error type: %v", err)
 	}
 
 	if authorized {
@@ -555,6 +574,10 @@ func TestMiseAdapterIsAuthorizedContextCancellation(t *testing.T) {
 
 	if totalSleptMs != 0 {
 		t.Error("expected no retries on context cancellation")
+	}
+
+	if n := handlerCalls.Load(); n != 1 {
+		t.Errorf("expected handler called once, got %d (retried after cancellation)", n)
 	}
 }
 

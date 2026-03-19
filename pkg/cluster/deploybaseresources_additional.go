@@ -202,9 +202,10 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 			Name: "Standard_LRS",
 		},
 		AccountProperties: &mgmtstorage.AccountProperties{
-			AllowBlobPublicAccess:  pointerutils.ToPtr(false),
-			EnableHTTPSTrafficOnly: pointerutils.ToPtr(true),
-			MinimumTLSVersion:      mgmtstorage.MinimumTLSVersionTLS12,
+			AllowBlobPublicAccess:       pointerutils.ToPtr(false),
+			AllowCrossTenantReplication: pointerutils.ToPtr(false),
+			EnableHTTPSTrafficOnly:      pointerutils.ToPtr(true),
+			MinimumTLSVersion:           mgmtstorage.MinimumTLSVersionTLS12,
 			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
 				Bypass:              mgmtstorage.BypassAzureServices,
 				VirtualNetworkRules: &virtualNetworkRules,
