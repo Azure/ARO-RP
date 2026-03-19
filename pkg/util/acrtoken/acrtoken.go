@@ -5,6 +5,7 @@ package acrtoken
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	sdkarmcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry/v2"
@@ -129,27 +130,38 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 		tokenPasswords = tokenProperties.Credentials.Passwords
 	}
 
+	for i, p := range tokenPasswords {
+		if p.Name == nil {
+			return fmt.Errorf("token password %d did not have a name (should be password1 or password2)", i)
+		}
+	}
+
 	var passwordToRenew sdkarmcontainerregistry.TokenPasswordName
 	switch {
 	// Passwords only has one entry: renew password that isn't present
 	case len(tokenPasswords) == 1:
-		if tokenPasswords[0].Name != nil && *tokenPasswords[0].Name == sdkarmcontainerregistry.TokenPasswordNamePassword1 {
+		if *tokenPasswords[0].Name == sdkarmcontainerregistry.TokenPasswordNamePassword1 {
 			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword2
 		} else {
 			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 		}
 	// Passwords has two entries: compare creation dates, renew oldest
 	case len(tokenPasswords) == 2:
-		if tokenPasswords[0].CreationTime == nil {
-			// if password1 has no creation time, renew that
-			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
-		} else if tokenPasswords[0].CreationTime != nil &&
-			tokenPasswords[1].CreationTime != nil &&
-			tokenPasswords[0].CreationTime.Before(*tokenPasswords[1].CreationTime) {
-			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
-		} else {
-			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword2
+		var oldest *sdkarmcontainerregistry.TokenPassword
+		for _, p := range tokenPasswords {
+			if p.CreationTime == nil {
+				oldest = p
+				break
+			}
 		}
+		if oldest == nil {
+			if tokenPasswords[0].CreationTime.Before(*tokenPasswords[1].CreationTime) {
+				oldest = tokenPasswords[0]
+			} else {
+				oldest = tokenPasswords[1]
+			}
+		}
+		passwordToRenew = *oldest.Name
 	// default case, including passwords having zero entries: generate password 1
 	// this shouldn't ever happen, which guarantees it will happen
 	default:

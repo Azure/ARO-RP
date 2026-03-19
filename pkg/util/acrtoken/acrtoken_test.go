@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	sdkarmcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry/v2"
@@ -30,9 +30,7 @@ const (
 
 func TestEnsureTokenAndPassword(t *testing.T) {
 	ctx := context.Background()
-
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
@@ -130,6 +128,20 @@ func TestRotateTokenPassword(t *testing.T) {
 			wantPassword:    "foo",
 		},
 		{
+			name: "renews password2 when it has no creation time",
+			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+				{
+					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: pointerutils.ToPtr(time.Now()),
+				},
+				{
+					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+				},
+			},
+			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
+			wantPassword:    "bar",
+		},
+		{
 			name: "renews password1 when it is the oldest password",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
@@ -154,6 +166,21 @@ func TestRotateTokenPassword(t *testing.T) {
 				{
 					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
 					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+				},
+			},
+			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
+			wantPassword:    "bar",
+		},
+		{
+			name: "renews password2 when it is the oldest password, even if in reverse order",
+			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+				{
+					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+				},
+				{
+					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: pointerutils.ToPtr(time.Now()),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -214,6 +241,33 @@ func TestRotateTokenPasswordNilStruct(t *testing.T) {
 	}
 }
 
+func TestRotateTokenPasswordNeedsName(t *testing.T) {
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
+	registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
+
+	tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(
+		fakeTokenProperties([]*sdkarmcontainerregistry.TokenPassword{
+			{
+				CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+			},
+			{
+				Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+				CreationTime: pointerutils.ToPtr(time.Now()),
+			},
+		}), nil)
+
+	m := setupManager(controller, tokens, registries)
+
+	registryProfile := api.RegistryProfile{
+		Username: tokenName,
+	}
+
+	err := m.RotateTokenPassword(ctx, &registryProfile)
+	require.ErrorContains(t, err, "token password 0 did not have a name")
+}
+
 func setupManager(controller *gomock.Controller, tc *mock_armcontainerregistry.MockTokensClient, rc *mock_armcontainerregistry.MockRegistriesClient) *manager {
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
@@ -262,7 +316,7 @@ func generateCredentialsParameters(tpn sdkarmcontainerregistry.TokenPasswordName
 }
 
 func TestGetRegistryProfiles(t *testing.T) {
-	a := assert.New(t)
+	a := require.New(t)
 	controller := gomock.NewController(t)
 	mgr := setupManager(controller, nil, nil)
 
@@ -313,7 +367,7 @@ func TestGetRegistryProfiles(t *testing.T) {
 }
 
 func TestNewAndPutRegistryProfile(t *testing.T) {
-	a := assert.New(t)
+	a := require.New(t)
 	controller := gomock.NewController(t)
 	mgr := setupManager(controller, nil, nil)
 
