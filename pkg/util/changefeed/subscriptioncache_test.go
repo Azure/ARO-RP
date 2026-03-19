@@ -70,7 +70,7 @@ func TestSubscriptionChangefeed(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			startedTime := time.Now().UnixNano()
-			subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
+			subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
 			_, log := testlog.LogForTesting(t)
 
 			// need to register the changefeed before making documents
@@ -147,7 +147,6 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			go RunChangefeed(t.Context(), log, subscriptionChangefeed, 100*time.Microsecond, 1, cache, stop)
 
 			cache.WaitForInitialPopulation()
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
 
 			// Create some after initially populated
 			_, err := subscriptionsDB.Create(t.Context(), &api.SubscriptionDocument{
@@ -185,7 +184,21 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			// Require two GetLastProcessed() advancements; one sweep may fire OnAllPendingProcessed() before the mutation is visible.
+			seen := false
+			before, _ := cache.GetLastProcessed()
+			assert.Eventually(t, func() bool {
+				last, ok := cache.GetLastProcessed()
+				if !ok || !last.After(before) {
+					return false
+				}
+				if !seen {
+					seen = true
+					before = last
+					return false
+				}
+				return true
+			}, time.Second, 1*time.Millisecond)
 
 			// Switch a registered to suspended
 			old2, err := subscriptionsDB.Get(t.Context(), "8c90b62a-3783-4ea6-a8c8-cbaee4667ffd")
@@ -201,7 +214,20 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			seen = false
+			before, _ = cache.GetLastProcessed()
+			assert.Eventually(t, func() bool {
+				last, ok := cache.GetLastProcessed()
+				if !ok || !last.After(before) {
+					return false
+				}
+				if !seen {
+					seen = true
+					before = last
+					return false
+				}
+				return true
+			}, time.Second, 1*time.Millisecond)
 
 			// Switch a registered to deleted
 			old3, err := subscriptionsDB.Get(t.Context(), "4e07b0f5-c789-4817-9079-94012b04e1c9")
@@ -217,7 +243,20 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			seen = false
+			before, _ = cache.GetLastProcessed()
+			assert.Eventually(t, func() bool {
+				last, ok := cache.GetLastProcessed()
+				if !ok || !last.After(before) {
+					return false
+				}
+				if !seen {
+					seen = true
+					before = last
+					return false
+				}
+				return true
+			}, time.Second, 1*time.Millisecond)
 
 			// Validate the expected cache contents
 			assert.Equal(t, tC.expected, maps.Collect(cache.subs.All()))

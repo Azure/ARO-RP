@@ -340,6 +340,10 @@ unit-test-go: $(GOTESTSUM)
 unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
+.PHONY: test-go-race
+test-go-race:
+	go test -count=50 -race ./...
+
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (gci, gofumpt)
 	$(GOLANGCI_LINT) fmt

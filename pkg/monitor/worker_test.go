@@ -138,13 +138,44 @@ func TestChangefeedOperations(t *testing.T) {
 				}
 			}
 
-			// Wait for changefeeds to be consumed
-			assert.Eventually(t, env.OpenShiftClusterClient.AllIteratorsConsumed, time.Second, 10*time.Millisecond)
-			assert.Eventually(t, env.SubscriptionsClient.AllIteratorsConsumed, time.Second, 10*time.Millisecond)
+			// Require two GetLastProcessed() advancements; one sweep may fire OnAllPendingProcessed() before the mutation is visible.
+			beforeCluster, _ := mon.lastClusterChangefeed.Load().(time.Time)
+			beforeSubs, _ := mon.subs.GetLastProcessed()
+
+			seenClusterAdvance := false
+			assert.Eventually(t, func() bool {
+				ts, ok := mon.lastClusterChangefeed.Load().(time.Time)
+				if !ok || !ts.After(beforeCluster) {
+					return false
+				}
+				if !seenClusterAdvance {
+					seenClusterAdvance = true
+					beforeCluster = ts
+					return false
+				}
+				return true
+			}, time.Second, 10*time.Millisecond)
+
+			seenSubsAdvance := false
+			assert.Eventually(t, func() bool {
+				last, ok := mon.subs.GetLastProcessed()
+				if !ok || !last.After(beforeSubs) {
+					return false
+				}
+				if !seenSubsAdvance {
+					seenSubsAdvance = true
+					beforeSubs = last
+					return false
+				}
+				return true
+			}, time.Second, 10*time.Millisecond)
 
 			// Validate expected results
-			if len(mon.docs) != op.expectDocs {
-				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, len(mon.docs))
+			mon.mu.RLock()
+			nDocs := len(mon.docs)
+			mon.mu.RUnlock()
+			if nDocs != op.expectDocs {
+				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, nDocs)
 			}
 			if mon.subs.GetCacheSize() != op.expectSubs {
 				t.Errorf("%s: expected %d subscriptions in cache, got %d", op.name, op.expectSubs, mon.subs.GetCacheSize())

@@ -32,26 +32,24 @@ var fakeClusterVisitMonitoringAttempts = map[string]*int{}
 
 // TestEnvironment contains all the test setup components
 type TestEnvironment struct {
-	OpenShiftClusterDB     database.OpenShiftClusters
-	SubscriptionsDB        database.Subscriptions
-	MonitorsDB             database.Monitors
-	OpenShiftClusterClient *cosmosdb.FakeOpenShiftClusterDocumentClient
-	SubscriptionsClient    *cosmosdb.FakeSubscriptionDocumentClient
-	FakeMonitorsDBClient   *cosmosdb.FakeMonitorDocumentClient
-	Controller             *gomock.Controller
-	TestLogger             *logrus.Entry
-	Dialer                 *mock_proxy.MockDialer
-	MockEnv                *mock_env.MockInterface
-	NoopMetricsEmitter     noop.Noop
-	NoopClusterMetrics     noop.Noop
-	DBGroup                monitorDBs
+	OpenShiftClusterDB   database.OpenShiftClusters
+	SubscriptionsDB      database.Subscriptions
+	MonitorsDB           database.Monitors
+	FakeMonitorsDBClient *cosmosdb.FakeMonitorDocumentClient
+	Controller           *gomock.Controller
+	TestLogger           *logrus.Entry
+	Dialer               *mock_proxy.MockDialer
+	MockEnv              *mock_env.MockInterface
+	NoopMetricsEmitter   noop.Noop
+	NoopClusterMetrics   noop.Noop
+	DBGroup              monitorDBs
 }
 
 // SetupTestEnvironment creates a common test environment for monitor tests
 func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	// Create databases
-	openShiftClusterDB, openShiftClusterClient := testdatabase.NewFakeOpenShiftClusters()
-	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
+	openShiftClusterDB, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
 	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
 
 	// Create mocks
@@ -85,19 +83,17 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	f.Create()
 
 	return &TestEnvironment{
-		OpenShiftClusterDB:     openShiftClusterDB,
-		SubscriptionsDB:        subscriptionsDB,
-		MonitorsDB:             monitorsDB,
-		OpenShiftClusterClient: openShiftClusterClient,
-		SubscriptionsClient:    subscriptionsClient,
-		FakeMonitorsDBClient:   fakeMonitorsDBClient,
-		Controller:             ctrl,
-		TestLogger:             testlogger,
-		Dialer:                 dialer,
-		MockEnv:                mockEnv,
-		NoopMetricsEmitter:     noopMetricsEmitter,
-		NoopClusterMetrics:     noopClusterMetricsEmitter,
-		DBGroup:                dbs,
+		OpenShiftClusterDB:   openShiftClusterDB,
+		SubscriptionsDB:      subscriptionsDB,
+		MonitorsDB:           monitorsDB,
+		FakeMonitorsDBClient: fakeMonitorsDBClient,
+		Controller:           ctrl,
+		TestLogger:           testlogger,
+		Dialer:               dialer,
+		MockEnv:              mockEnv,
+		NoopMetricsEmitter:   noopMetricsEmitter,
+		NoopClusterMetrics:   noopClusterMetricsEmitter,
+		DBGroup:              dbs,
 	}
 }
 
