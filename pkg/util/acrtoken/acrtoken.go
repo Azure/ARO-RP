@@ -123,20 +123,29 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 	if err != nil {
 		return err
 	}
-	tokenPasswords := tokenProperties.Credentials.Passwords
+
+	var tokenPasswords []*sdkarmcontainerregistry.TokenPassword
+	if tokenProperties.Credentials != nil {
+		tokenPasswords = tokenProperties.Credentials.Passwords
+	}
 
 	var passwordToRenew sdkarmcontainerregistry.TokenPasswordName
 	switch {
 	// Passwords only has one entry: renew password that isn't present
 	case len(tokenPasswords) == 1:
-		if *tokenPasswords[0].Name == sdkarmcontainerregistry.TokenPasswordNamePassword1 {
+		if tokenPasswords[0].Name != nil && *tokenPasswords[0].Name == sdkarmcontainerregistry.TokenPasswordNamePassword1 {
 			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword2
 		} else {
 			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 		}
 	// Passwords has two entries: compare creation dates, renew oldest
 	case len(tokenPasswords) == 2:
-		if tokenPasswords[0].CreationTime.Before(*tokenPasswords[1].CreationTime) {
+		if tokenPasswords[0].CreationTime == nil {
+			// if password1 has no creation time, renew that
+			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
+		} else if tokenPasswords[0].CreationTime != nil &&
+			tokenPasswords[1].CreationTime != nil &&
+			tokenPasswords[0].CreationTime.Before(*tokenPasswords[1].CreationTime) {
 			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 		} else {
 			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword2

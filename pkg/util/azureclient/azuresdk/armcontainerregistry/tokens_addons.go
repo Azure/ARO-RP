@@ -43,5 +43,9 @@ func (c *tokensClient) GetTokenProperties(ctx context.Context, resourceGroupName
 	if err != nil {
 		return nil, err
 	}
+	if resp.Properties == nil {
+		// Handle nil property response (shouldn't ever happen, buuuut...)
+		return &armcontainerregistry.TokenProperties{}, nil
+	}
 	return resp.Properties, nil
 }

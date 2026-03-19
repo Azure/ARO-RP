@@ -116,6 +116,20 @@ func TestRotateTokenPassword(t *testing.T) {
 			wantPassword:    "bar",
 		},
 		{
+			name: "renews password1 when it has no creation time",
+			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+				{
+					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+				},
+				{
+					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: pointerutils.ToPtr(time.Now()),
+				},
+			},
+			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
+			wantPassword:    "foo",
+		},
+		{
 			name: "renews password1 when it is the oldest password",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
@@ -172,6 +186,31 @@ func TestRotateTokenPassword(t *testing.T) {
 				t.Errorf("got '%s', want '%s'", registryProfile.Password, tt.wantPassword)
 			}
 		})
+	}
+}
+
+func TestRotateTokenPasswordNilStruct(t *testing.T) {
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
+	registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
+
+	tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(&sdkarmcontainerregistry.TokenProperties{}, nil)
+
+	registries.EXPECT().GenerateCredentialsAndWait(ctx, "global", "arointsvc", generateCredentialsParameters(sdkarmcontainerregistry.TokenPasswordNamePassword1)).Return(fakeCredentialResult(), nil)
+
+	m := setupManager(controller, tokens, registries)
+
+	registryProfile := api.RegistryProfile{
+		Username: tokenName,
+	}
+
+	err := m.RotateTokenPassword(ctx, &registryProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if registryProfile.Password != api.SecureString("foo") {
+		t.Errorf("got '%s', want '%s'", registryProfile.Password, "foo")
 	}
 }
 
