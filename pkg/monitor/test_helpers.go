@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ import (
 )
 
 // Global test variables
-var fakeClusterVisitMonitoringAttempts = map[string]*int{}
+var fakeClusterVisitMonitoringAttempts = map[string]*atomic.Int64{}
 
 // TestEnvironment contains all the test setup components
 type TestEnvironment struct {
@@ -144,12 +145,12 @@ func fakeNsgMonitoringBuilder(log *logrus.Entry, oc *api.OpenShiftCluster, e env
 
 type fakeMonitor struct {
 	timeout        time.Duration
-	clusterCounter *int
+	clusterCounter *atomic.Int64
 }
 
 func (fm *fakeMonitor) Monitor(ctx context.Context) error {
 	time.Sleep(fm.timeout)
-	*fm.clusterCounter++
+	fm.clusterCounter.Add(1)
 	return nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -24,7 +25,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -60,7 +60,7 @@ func TestMonitor(t *testing.T) {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
 		}
-		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
+		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = &atomic.Int64{}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -93,8 +93,10 @@ func TestMonitor(t *testing.T) {
 	for _, w := range workers {
 		// bucketcount is the total number of buckets that should be across all
 		// workers, each one should have less than that
+		w.mu.RLock()
 		require.Less(t, len(w.buckets), w.bucketCount)
 		buckets = slices.AppendSeq(buckets, maps.Keys(w.buckets))
+		w.mu.RUnlock()
 	}
 	require.Len(t, buckets, 256)
 	// Sort + compact to remove any dupes to ensure there isn't any
@@ -114,11 +116,11 @@ func TestMonitor(t *testing.T) {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
 	}
-	fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
+	fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = &atomic.Int64{}
 
 	require.Eventually(t, func() bool {
 		for _, v := range fakeClusterVisitMonitoringAttempts {
-			if *v < 1 {
+			if v.Load() < 1 {
 				// Cluster should have visits
 				return false
 			}

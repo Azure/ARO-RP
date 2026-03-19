@@ -31,7 +31,7 @@ type Monitors interface {
 	TryLease(context.Context) (*api.MonitorDocument, error)
 	ListBuckets(context.Context) ([]int, error)
 	ListMonitors(context.Context) (*api.MonitorDocuments, error)
-	MonitorHeartbeat(context.Context) error
+	MonitorHeartbeat(context.Context, int) error
 }
 
 // NewMonitors returns a new Monitors
@@ -156,10 +156,10 @@ func (c *monitors) ListMonitors(ctx context.Context) (*api.MonitorDocuments, err
 	}, nil)
 }
 
-func (c *monitors) MonitorHeartbeat(ctx context.Context) error {
+func (c *monitors) MonitorHeartbeat(ctx context.Context, ttl int) error {
 	doc := &api.MonitorDocument{
 		ID:  c.uuid,
-		TTL: 60,
+		TTL: ttl,
 	}
 	_, err := c.update(ctx, doc, &cosmosdb.Options{NoETag: true})
 	if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
