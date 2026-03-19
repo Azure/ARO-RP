@@ -435,19 +435,34 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
 	)
 
+	waitForMUODeploymentReady := func(ctx context.Context) {
+		Eventually(func(g Gomega, ctx context.Context) {
+			d, err := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Get(ctx, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(ready.DeploymentIsReady(d)).To(BeTrue(), "expected MUO deployment to be ready")
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	}
+
 	It("must be restored if deleted", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MuoEnabled) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MuoManaged) {
+			Skip("Managed Upgrade Operator controller is not enabled and managed, skipping test")
+		}
+
 		deleteFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Delete
-		getFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Get
 
 		By("waiting for the MUO deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+		waitForMUODeploymentReady(ctx)
 
 		By("deleting the MUO deployment")
 		DeleteK8sObjectWithRetry(ctx, deleteFunc, managedUpgradeOperatorDeployment, metav1.DeleteOptions{})
 
-		By("waiting for the MUO deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
-	}, SpecTimeout(2*time.Minute))
+		By("waiting for the MUO deployment to be reconciled and ready")
+		waitForMUODeploymentReady(ctx)
+	})
 })
 
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
@@ -730,6 +745,14 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		gkAuditDeployment             = "gatekeeper-audit"
 	)
 
+	waitForGatekeeperDeploymentReady := func(ctx context.Context, deploymentName string) {
+		Eventually(func(g Gomega, ctx context.Context) {
+			d, err := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get(ctx, deploymentName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(ready.DeploymentIsReady(d)).To(BeTrue(), "expected %q deployment to be ready", deploymentName)
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	}
+
 	It("Controller Manager must be restored if deleted", func(ctx context.Context) {
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -739,17 +762,16 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 			Skip("Guardrails Controller is not enabled, skipping test")
 		}
 
-		getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
 		deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
 
 		By("waiting for the gatekeeper Controller Manager deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
+		waitForGatekeeperDeploymentReady(ctx, gkControllerManagerDeployment)
 
 		By("deleting the gatekeeper Controller Manager deployment")
 		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkControllerManagerDeployment, metav1.DeleteOptions{})
 
-		By("waiting for the gatekeeper Controller Manager deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
+		By("waiting for the gatekeeper Controller Manager deployment to be reconciled and ready")
+		waitForGatekeeperDeploymentReady(ctx, gkControllerManagerDeployment)
 	})
 
 	It("Audit must be restored if deleted", func(ctx context.Context) {
@@ -761,17 +783,16 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 			Skip("Guardrails Controller is not enabled, skipping test")
 		}
 
-		getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
 		deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
 
 		By("waiting for the gatekeeper Audit deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+		waitForGatekeeperDeploymentReady(ctx, gkAuditDeployment)
 
 		By("deleting the gatekeeper Audit deployment")
 		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkAuditDeployment, metav1.DeleteOptions{})
 
-		By("waiting for the gatekeeper Audit deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+		By("waiting for the gatekeeper Audit deployment to be reconciled and ready")
+		waitForGatekeeperDeploymentReady(ctx, gkAuditDeployment)
 	})
 })
 
