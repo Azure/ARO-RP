@@ -5,6 +5,7 @@ package azureclient
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -140,10 +141,21 @@ func (e *AROEnvironment) ClientSecretCredentialOptions() *azidentity.ClientSecre
 }
 
 func (e *AROEnvironment) DefaultAzureCredentialOptions() *azidentity.DefaultAzureCredentialOptions {
-	return &azidentity.DefaultAzureCredentialOptions{
-		ClientOptions:                e.AzureClientOptions(),
-		RequireAzureTokenCredentials: true,
+	opts := &azidentity.DefaultAzureCredentialOptions{
+		ClientOptions: e.AzureClientOptions(),
 	}
+
+	// Only require Azure token credentials in production environments.
+	// In CI/dev environments, allow fallback to AzureCLICredential (az login).
+	// This is needed because:
+	// - CI pipelines use az login for authentication
+	// - Local development uses az login
+	// - E2E tests may run in environments without managed identity
+	if os.Getenv("CI") == "" {
+		opts.RequireAzureTokenCredentials = true
+	}
+
+	return opts
 }
 
 func (e *AROEnvironment) EnvironmentCredentialOptions() *azidentity.EnvironmentCredentialOptions {
