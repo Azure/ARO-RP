@@ -116,10 +116,10 @@ func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
 	mon.nsgMonitorBuilder = fakeNsgMonitoringBuilder
 	mon.hiveMonitorBuilder = fakeHiveMonitoringBuilder
 	mon.clusterMonitorBuilder = fakeClusterMonitorBuilder
-	mon.delay = time.Second
-	mon.interval = 2 * time.Second
-	mon.changefeedInterval = time.Second
-	mon.readyDelay = 1 * time.Second
+	mon.delay = 50 * time.Millisecond
+	mon.interval = 250 * time.Millisecond
+	mon.changefeedInterval = 100 * time.Millisecond
+	mon.readyDelay = 250 * time.Millisecond
 
 	return mon
 }

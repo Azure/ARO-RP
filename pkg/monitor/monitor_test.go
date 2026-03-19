@@ -73,7 +73,7 @@ func TestMonitor(t *testing.T) {
 	for _, mon := range workers {
 		wg.Go(func() {
 			err := mon.Run(ctx)
-			if err != nil && err != context.DeadlineExceeded {
+			if err != nil && err != context.DeadlineExceeded && err != context.Canceled {
 				t.Logf("Unexpected error: %v", err)
 			}
 		})
@@ -88,7 +88,7 @@ func TestMonitor(t *testing.T) {
 			}
 		}
 		return ready
-	}, time.Second*5, time.Millisecond*500, "workers did not go ready after 5s")
+	}, time.Second*5, time.Millisecond*100, "workers did not go ready after 5s")
 
 	// Buckets should be distributed amongst the workers
 	buckets := []int{}
@@ -128,7 +128,7 @@ func TestMonitor(t *testing.T) {
 			}
 		}
 		return true
-	}, time.Second*5, time.Millisecond*500, "not all clusters were visited at least once")
+	}, time.Second*5, time.Millisecond*100, "not all clusters were visited at least once")
 
 	// The monitors should still be ready
 	for _, w := range workers {
