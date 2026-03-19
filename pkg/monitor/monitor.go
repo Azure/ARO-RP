@@ -161,7 +161,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	for {
 		// register ourself as a monitor, ttl of 60s default
-		err = dbMonitors.MonitorHeartbeat(ctx, int(mon.changefeedInterval*6))
+		err = dbMonitors.MonitorHeartbeat(ctx, int(mon.changefeedInterval.Seconds()*6))
 		if err != nil {
 			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %w", err))
 		}

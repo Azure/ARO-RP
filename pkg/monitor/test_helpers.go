@@ -5,10 +5,12 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -29,7 +31,7 @@ import (
 )
 
 // Global test variables
-var fakeClusterVisitMonitoringAttempts = map[string]*atomic.Int64{}
+var fakeClusterVisitMonitoringAttempts = xsync.NewMap[string, *atomic.Int64]()
 
 // TestEnvironment contains all the test setup components
 type TestEnvironment struct {
@@ -129,9 +131,14 @@ func (env *TestEnvironment) Cleanup() {
 
 // Fake monitoring builders for testing
 func fakeClusterMonitorBuilder(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error) {
+	counter, ok := fakeClusterVisitMonitoringAttempts.Load(oc.ID)
+	if !ok {
+		return nil, fmt.Errorf("didn't find counter for %s", oc.ID)
+	}
+
 	return &fakeMonitor{
 		timeout:        2 * time.Second,
-		clusterCounter: fakeClusterVisitMonitoringAttempts[oc.ID],
+		clusterCounter: counter,
 	}, nil
 }
 

@@ -60,7 +60,7 @@ func TestMonitor(t *testing.T) {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
 		}
-		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = &atomic.Int64{}
+		fakeClusterVisitMonitoringAttempts.Store(clusterDoc.ResourceID, &atomic.Int64{})
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -118,10 +118,10 @@ func TestMonitor(t *testing.T) {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
 	}
-	fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = &atomic.Int64{}
+	fakeClusterVisitMonitoringAttempts.Store(clusterDoc.ResourceID, &atomic.Int64{})
 
 	require.Eventually(t, func() bool {
-		for _, v := range fakeClusterVisitMonitoringAttempts {
+		for _, v := range fakeClusterVisitMonitoringAttempts.All() {
 			if v.Load() < 1 {
 				// Cluster should have visits
 				return false
