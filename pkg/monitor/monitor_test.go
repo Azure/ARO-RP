@@ -64,9 +64,11 @@ func TestMonitor(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	wg := sync.WaitGroup{}
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
 
 	for _, mon := range workers {
 		wg.Go(func() {
