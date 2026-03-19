@@ -5,5 +5,7 @@
   "sudo podman ps --all",
   "sudo ss -tlnp",
   "MCS_CID=$(sudo crictl ps -a --name machine-config-server -q | head -1); [ -n \"$MCS_CID\" ] && sudo crictl logs --tail 100 \"$MCS_CID\" || echo 'machine-config-server container not found'",
-  "curl -vs --insecure --connect-timeout 10 --max-time 30 --head https://localhost:22623/config/master"
+  "curl -vs --insecure --connect-timeout 10 --max-time 30 --head https://localhost:22623/config/master",
+  "sudo journalctl --no-pager -u bootkube",
+  "sudo journalctl --no-pager -n 100"
 ]
