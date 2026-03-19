@@ -179,7 +179,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 				clusterLog.Errorf("error when consuming matching tasks for cluster: %s", err.Error())
 				break
 			}
-			if docs.GetCount() == 0 {
+			if docs == nil || docs.GetCount() == 0 {
 				success = true
 				break
 			}
