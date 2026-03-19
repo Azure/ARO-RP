@@ -2,7 +2,7 @@
 set -e
 LC_ALL=C
 
-echo "Before committing, ensure you've run the required make commands:"
+echo "Before pushing commits, ensure you've run the required make commands:"
 echo "  - make generate"
 echo "  - make imports"
 read -r -p "Have you run all required make commands? [y/N] " run_make_commands
