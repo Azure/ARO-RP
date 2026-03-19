@@ -49,3 +49,4 @@ podmanlog
 ./venv
 /CLAUDE.md
 Session.vim
+.cache
