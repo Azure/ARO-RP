@@ -145,6 +145,16 @@ func (e *AROEnvironment) DefaultAzureCredentialOptions() *azidentity.DefaultAzur
 		ClientOptions: e.AzureClientOptions(),
 	}
 
+	// Only require Azure token credentials in production environments.
+	// In CI/dev environments, allow fallback to AzureCLICredential (az login).
+	// This is needed because:
+	// - CI pipelines use az login for authentication
+	// - Local development uses az login
+	// - E2E tests may run in environments without managed identity
+	if os.Getenv("CI") == "" {
+		opts.RequireAzureTokenCredentials = true
+	}
+
 	return opts
 }
 
