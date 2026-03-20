@@ -295,7 +295,7 @@
             "location": "[resourceGroup().location]",
             "name": "rp-pip-tagged",
             "properties": {
-                "ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpLbIpTags')[0].type, 'tag', parameters('rpLbIpTags')[0].value)))]",
+                "ipTags": "[if(or(contains(parameters('rpVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpVmssIpTags')[0].type, 'tag', parameters('rpVmssIpTags')[0].value)))]",
                 "publicIPAllocationMethod": "Static"
             },
             "sku": {
@@ -309,7 +309,7 @@
             "location": "[resourceGroup().location]",
             "name": "portal-pip-tagged",
             "properties": {
-                "ipTags": "[if(or(contains(parameters('lbIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('portalLbIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('portalLbIpTags')[0].type, 'tag', parameters('portalLbIpTags')[0].value)))]",
+                "ipTags": "[if(or(contains(parameters('rpVmssIpTagsDisabledRegions'), resourceGroup().location), equals(length(parameters('rpVmssIpTags')), 0)), createArray(), createArray(createObject('ipTagType', parameters('rpVmssIpTags')[0].type, 'tag', parameters('rpVmssIpTags')[0].value)))]",
                 "publicIPAllocationMethod": "Static"
             },
             "sku": {
