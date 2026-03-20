@@ -19,8 +19,9 @@ import (
 type ChangefeedConsumer[F any] interface {
 	// OnDoc is called with each document returned from the list from Next()
 	OnDoc(F)
-	// OnAllPendingProcessed is when no more pages are returned from Next()
-	OnAllPendingProcessed()
+	// OnAllPendingProcessed is when no more pages are returned from Next() with
+	// whether any documents were retrieved during this timer iteration
+	OnAllPendingProcessed(bool)
 	// Lock is called before a page is processed
 	Lock()
 	// Unlock is called after a page is processed
@@ -42,6 +43,7 @@ func RunChangefeed[F any, X api.DocumentList[F]](
 	defer t.Stop()
 
 	for {
+		documentsRetrieved := false
 		successful := true
 		for {
 			docs, err := iterator.Next(ctx, changefeedBatchSize)
@@ -61,10 +63,11 @@ func RunChangefeed[F any, X api.DocumentList[F]](
 				responder.OnDoc(doc)
 			}
 			responder.Unlock()
+			documentsRetrieved = true
 		}
 
 		if successful {
-			responder.OnAllPendingProcessed()
+			responder.OnAllPendingProcessed(documentsRetrieved)
 		}
 
 		select {

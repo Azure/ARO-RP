@@ -51,7 +51,7 @@ type fakeResponder struct {
 	unlocks             int
 }
 
-func (f *fakeResponder) OnAllPendingProcessed() {
+func (f *fakeResponder) OnAllPendingProcessed(gotAny bool) {
 	f.allPendingProcessed += 1
 }
 func (f *fakeResponder) Lock()   { f.locks += 1 }
