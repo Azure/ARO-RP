@@ -96,8 +96,8 @@ func TestMonitor(t *testing.T) {
 		// bucketcount is the total number of buckets that should be across all
 		// workers, each one should have less than that
 		w.mu.RLock()
-		require.Less(t, len(w.buckets), w.bucketCount)
-		buckets = slices.AppendSeq(buckets, maps.Keys(w.buckets))
+		require.Less(t, len(w.clusters.buckets), w.bucketCount)
+		buckets = slices.AppendSeq(buckets, maps.Keys(w.clusters.buckets))
 		w.mu.RUnlock()
 	}
 	require.Len(t, buckets, 256)
