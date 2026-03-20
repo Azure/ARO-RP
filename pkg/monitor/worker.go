@@ -6,6 +6,7 @@ package monitor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -42,6 +43,13 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 	}
 
 	buckets, err := dbMonitors.ListBuckets(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(buckets) == 0 {
+		return fmt.Errorf("bucket allocation contained no buckets")
+	}
 
 	mon.mu.Lock()
 	defer mon.mu.Unlock()

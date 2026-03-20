@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -39,9 +40,11 @@ type monitorDBs interface {
 
 // Defaults for the different durations. We use different values in tests to speed them up.
 var (
-	defaultMonitorDelay      = time.Duration(rand.Intn(60)) * time.Second
-	defaultMonitorInterval   = time.Minute
-	defaultChangefeedInteval = 10 * time.Second
+	defaultMonitorDelay                = time.Duration(rand.Intn(60)) * time.Second
+	defaultMonitorInterval             = time.Minute
+	defaultMonitorReadinessDelay       = 2 * time.Minute
+	defaultChangefeedInteval           = 10 * time.Second
+	defaultChangefeedReadinessInterval = time.Minute
 )
 
 type monitor struct {
@@ -61,10 +64,9 @@ type monitor struct {
 	bucketCount int
 	buckets     map[int]struct{}
 
-	lastBucketlist             atomic.Value // time.Time
-	lastSubscriptionChangefeed atomic.Value // time.Time
-	lastClusterChangefeed      atomic.Value // time.Time
-	startTime                  time.Time
+	lastBucketlist        atomic.Value // time.Time
+	lastClusterChangefeed atomic.Value // time.Time
+	startTime             time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
 
@@ -72,9 +74,11 @@ type monitor struct {
 	nsgMonitorBuilder     func(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor
 	hiveMonitorBuilder    func(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error)
 
-	delay              time.Duration // Time until the monitor starts running
-	interval           time.Duration // Interval between monitor runs
-	changefeedInterval time.Duration // Interval between changefeed runs (updates to cluster docs)
+	delay                   time.Duration // Time until the monitor starts running
+	interval                time.Duration // Interval between monitor runs
+	changefeedInterval      time.Duration // Interval between changefeed runs (updates to cluster docs)
+	readyIfChangefeedWithin time.Duration // Time that the changefeed should have been changed within to be healthy
+	readyDelay              time.Duration // Minimal time until the monitor will allow itself to be marked ready
 }
 
 type Runnable interface {
@@ -105,9 +109,11 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		nsgMonitorBuilder:     nsg.NewMonitor,
 		hiveMonitorBuilder:    hivemon.NewHiveMonitor,
 
-		delay:              defaultMonitorDelay,
-		interval:           defaultMonitorInterval,
-		changefeedInterval: defaultChangefeedInteval,
+		delay:                   defaultMonitorDelay,
+		interval:                defaultMonitorInterval,
+		changefeedInterval:      defaultChangefeedInteval,
+		readyIfChangefeedWithin: defaultChangefeedReadinessInterval,
+		readyDelay:              defaultMonitorReadinessDelay,
 	}
 }
 
@@ -129,42 +135,47 @@ func (mon *monitor) Run(ctx context.Context) error {
 		mon.hiveClusterManagers[1] = cl
 	}
 
+	// We always need a master document to exist so that we can attempt to
+	// dequeue it. If it already exists we will get a StatusPreconditionFailed
+	// error, which is expected and we can ignore. The leasing of the master
+	// document is in `mon.master()`.
 	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
 		ID: "master",
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
+		mon.baseLog.Error(fmt.Errorf("error bootstrapping master MonitorDocument (not a 412): %w", err))
 		return err
 	}
 
 	err = mon.startChangefeeds(ctx, nil)
 	if err != nil {
-		mon.baseLog.Errorf("failed to start changefeed subscriber: %s", err.Error())
+		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
 		return err
 	}
 	go mon.changefeedMetrics(nil)
 
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(mon.changefeedInterval)
 	defer t.Stop()
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
 	for {
-		// register ourself as a monitor
-		err = dbMonitors.MonitorHeartbeat(ctx)
+		// register ourself as a monitor, ttl of 60s default
+		err = dbMonitors.MonitorHeartbeat(ctx, int(mon.changefeedInterval.Seconds()*6))
 		if err != nil {
-			mon.baseLog.Error(err)
+			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %w", err))
 		}
 
 		// try to become master and share buckets across registered monitors
 		err = mon.master(ctx)
 		if err != nil {
-			mon.baseLog.Error(err)
+			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %w", err))
 		}
 
 		// read our bucket allocation from the master
 		err = mon.listBuckets(ctx)
 		if err != nil {
-			mon.baseLog.Error(err)
+			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
 		} else {
 			mon.lastBucketlist.Store(time.Now())
 		}
@@ -220,12 +231,12 @@ func (mon *monitor) checkReady() bool {
 	if !ok {
 		return false
 	}
-	lastSubscriptionChangefeedTime, ok := mon.lastSubscriptionChangefeed.Load().(time.Time)
+	lastSubscriptionChangefeedTime, ok := mon.subs.GetLastProcessed()
 	if !ok {
 		return false
 	}
-	return (time.Since(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
-		(time.Since(lastClusterChangefeedTime) < time.Minute) && // did we process the cluster change feed recently?
-		(time.Since(lastSubscriptionChangefeedTime) < time.Minute) && // did we process the subscription change feed recently?
-		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+	return (time.Since(lastBucketTime) < mon.readyIfChangefeedWithin) && // did we list buckets successfully recently?
+		(time.Since(lastClusterChangefeedTime) < mon.readyIfChangefeedWithin) && // did we process the cluster change feed recently?
+		(time.Since(lastSubscriptionChangefeedTime) < mon.readyIfChangefeedWithin) && // did we process the subscription change feed recently?
+		(time.Since(mon.startTime) > mon.readyDelay) // are we running for at least (the default) 2 minutes?
 }

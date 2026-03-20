@@ -40,9 +40,9 @@ func NewFakeSubscriptions() (db database.Subscriptions, client *cosmosdb.FakeSub
 	return db, client
 }
 
-func NewFakeMonitors() (db database.Monitors, client *cosmosdb.FakeMonitorDocumentClient) {
+func NewFakeMonitors(now func() time.Time) (db database.Monitors, client *cosmosdb.FakeMonitorDocumentClient) {
 	client = cosmosdb.NewFakeMonitorDocumentClient(jsonHandle)
-	injectMonitors(client)
+	injectMonitors(client, now)
 	db = database.NewMonitorsWithProvidedClient(client, uuid.DefaultGenerator.Generate())
 	return db, client
 }
