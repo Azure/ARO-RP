@@ -38,7 +38,7 @@ type Stream struct {
 	PullSpec string  `json:"-"`
 }
 
-// DefaultInstallStream doesn not wrap data for production and INT which has moved to RP-Config.
+// DefaultInstallStream does not wrap data for production and INT which has moved to RP-Config.
 // This default is left here ONLY for use by local development mode,
 // until we can come up with a better solution.
 var DefaultInstallStream = Stream{
