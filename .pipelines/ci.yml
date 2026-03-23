@@ -223,17 +223,6 @@ stages:
           # Checkout the code
           - template: ./templates/template-checkout.yml
 
-          - bash: |
-              go_version="$( grep -Po '(?<=^go )[0-9]+\.[0-9]+\.[0-9]+$' go.mod )"
-              echo "##vso[task.setvariable variable=goVersion]${go_version}"
-            workingDirectory: $(ARO_CHECKOUT_PATH)
-            displayName: Determine Go version
-
-          - task: GoTool@0
-            displayName: Install Go
-            inputs:
-              version: $(goVersion)
-
           # Install Docker, Docker Compose, and dependencies
           - bash: |
               . ./hack/e2e/utils.sh
@@ -319,10 +308,10 @@ stages:
 
           # Collect must-gather logs
           - bash: |
-              # The script calls ./db <resource-id> which connects to the CosmosDB to fetch cluster details.
-              # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
-              go build ./hack/db
+              container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
+              docker cp ${container_id}:/usr/local/bin/db ./db
+              docker rm ${container_id}
               ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=$(pwd)/admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
@@ -360,17 +349,6 @@ stages:
         steps:
           # Checkout the code
           - template: ./templates/template-checkout.yml
-
-          - bash: |
-              go_version="$( grep -Po '(?<=^go )[0-9]+\.[0-9]+\.[0-9]+$' go.mod )"
-              echo "##vso[task.setvariable variable=goVersion]${go_version}"
-            workingDirectory: $(ARO_CHECKOUT_PATH)
-            displayName: Determine Go version
-
-          - task: GoTool@0
-            displayName: Install Go
-            inputs:
-              version: $(goVersion)
 
           # Install Docker, Docker Compose, and dependencies
           - bash: |
@@ -478,10 +456,10 @@ stages:
 
           # Collect must-gather logs
           - bash: |
-              # The script calls ./db <resource-id> which connects to the CosmosDB to fetch cluster details.
-              # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
-              go build ./hack/db
+              container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
+              docker cp ${container_id}:/usr/local/bin/db ./db
+              docker rm ${container_id}
               ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=$(pwd)/admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
