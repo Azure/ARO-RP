@@ -1,36 +1,37 @@
-ARG FEDORA_REGISTRY
+ARG FEDORA_REGISTRY=registry.fedoraproject.org
 FROM ${FEDORA_REGISTRY}/fedora:42
 
 # Install system dependencies
 RUN dnf update -y && dnf install -y \
+    binutils-gold \
+    bzip2-devel \
+    curl \
+    gcc \
+    git \
+    golang-github-containerd-btrfs-devel \
     gpgme-devel \
+    jq \
     libassuan-devel \
+    libffi-devel \
+    lvm2 \
+    lvm2-devel \
+    make \
+    ncurses-devel \
     openssl \
     openssl-devel \
     openssl-libs \
-    lvm2 \
-    lvm2-devel \
-    golang-github-containerd-btrfs-devel \
-    bzip2-devel \
-    ncurses-devel \
-    libffi-devel \
+    openvpn \
+    patch \
+    podman \
+    podman-docker \
+    python3-pip \
     readline-devel \
     sqlite-devel \
     tk-devel \
+    wget \
+    which \
     xz-devel \
     zlib-devel \
-    gcc \
-    make \
-    patch \
-    openvpn \
-    podman \
-    podman-docker \
-    git \
-    curl \
-    wget \
-    python3-pip \
-    which \
-    binutils-gold \
     && dnf clean all
 
 WORKDIR /workspace
@@ -52,3 +53,14 @@ COPY .bingo/ .bingo/
 RUN export PATH="/usr/local/go/bin:/root/go/bin:$PATH" && \
     /root/go/bin/bingo get
 ENV PATH="/workspace/.bingo/bin:${PATH}"
+
+# Create a non-root user matching the host UID for bind-mount permissions.
+# On Linux with Podman userns=keep-id the UID mapping preserves file
+# ownership; on macOS/Docker it ensures files written inside the container
+# have the correct owner.
+ARG USERID=1000
+RUN useradd -l -m -u "${USERID}" -s /bin/bash aro-dev \
+    && mkdir -p /run/podman \
+    && chown aro-dev:aro-dev /run/podman
+
+USER aro-dev

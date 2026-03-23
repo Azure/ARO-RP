@@ -48,5 +48,5 @@ podmanlog
 .tool-versions
 ./venv
 Session.vim
-.cache
+.cache/
 .DS_Store
