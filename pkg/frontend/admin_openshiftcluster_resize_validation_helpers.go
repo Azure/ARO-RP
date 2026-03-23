@@ -53,7 +53,7 @@ type nodeValidationData struct {
 	betaInstanceType string
 }
 
-func getClusterMachines(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
+func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
 	machines := make(map[string]machineValidationData)
 
 	rawMachines, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
@@ -105,7 +105,7 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 	foundMachineSize := ""
 
 	for name, machine := range machines {
-		if machine.phase == "" || machine.phase != "Running" {
+		if machine.phase != "Running" {
 			phase := "nil"
 			if machine.phase != "" {
 				phase = machine.phase

@@ -71,7 +71,7 @@ func (f *frontend) getControlPlaneStatusCheckAfterResize(w http.ResponseWriter, 
 }
 
 func (f *frontend) _getControlPlaneStatusCheckAfterResize(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
-	machines, err := getClusterMachines(log, ctx, kubeActions)
+	machines, err := getClusterMachines(ctx, kubeActions)
 	if err != nil {
 		return convertErrorLineEndings(err)
 	}

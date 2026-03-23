@@ -221,7 +221,6 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 
 // TestGetClusterMachines tests the getClusterMachines function with various scenarios
 func TestGetClusterMachines(t *testing.T) {
-	_, log := testlog.New()
 	ctx := context.Background()
 
 	// Helper to create a machine object
@@ -375,7 +374,7 @@ func TestGetClusterMachines(t *testing.T) {
 			kubeActions := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(kubeActions)
 
-			machines, err := getClusterMachines(log, ctx, kubeActions)
+			machines, err := getClusterMachines(ctx, kubeActions)
 
 			if tt.wantErr != "" {
 				if err == nil {
