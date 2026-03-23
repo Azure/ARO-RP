@@ -223,11 +223,7 @@ stages:
           # Checkout the code
           - template: ./templates/template-checkout.yml
 
-          # E2E must-gather runs `go build ./hack/db`; pool agents may not have go on PATH.
-          - task: GoTool@0
-            inputs:
-              version: "1.25.3"
-            displayName: Install Go
+          - template: ./templates/template-install-go.yml
 
           # Install Docker, Docker Compose, and dependencies
           - bash: |
@@ -356,11 +352,7 @@ stages:
           # Checkout the code
           - template: ./templates/template-checkout.yml
 
-          # E2E must-gather runs `go build ./hack/db`; pool agents may not have go on PATH.
-          - task: GoTool@0
-            inputs:
-              version: "1.25.3"
-            displayName: Install Go
+          - template: ./templates/template-install-go.yml
 
           # Install Docker, Docker Compose, and dependencies
           - bash: |
