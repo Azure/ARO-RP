@@ -80,7 +80,7 @@ func (f *frontend) _getControlPlaneStatusCheckAfterResize(log *logrus.Entry, ctx
 	if err != nil {
 		return convertErrorLineEndings(err)
 	}
-	azureVMs, err := getAzureVMs(log, ctx, azureActions, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+	azureVMs, err := getAzureVMs(log, ctx, azureActions, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, ocMachines)
 	if err != nil {
 		return convertErrorLineEndings(err)
 	}

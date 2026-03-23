@@ -22,7 +22,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -159,80 +158,64 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 	return filteredMachines, nil
 }
 
-func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminactions.AzureActions, resGroupName string) (map[string]azureVMValidationData, error) {
+func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminactions.AzureActions, resGroupName string, machines map[string]machineValidationData) (map[string]azureVMValidationData, error) {
 	masterVMs := make(map[string]azureVMValidationData)
 	clusterRGName := stringutils.LastTokenByte(resGroupName, '/')
-	subscriptionObjects, err := azureAction.GroupResourceList(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	var validationErrs []error
-	// To-Do: deal with high number of objects
-	for _, object := range subscriptionObjects {
+	for machineName := range machines {
 		vmStatuses := []string{}
 		vmZones := []string{}
-		apiVersion := azureclient.APIVersion(*object.Type)
-		if apiVersion == "" {
-			// If custom resource types, or any we don't have listed in pkg/util/azureclient/apiversions.go,
-			// are returned, then skip over them instead of returning an error, otherwise it results in an
-			// HTTP 500 and prevents the known resource types from being returned.
-			// a.log.Warnf("API version not found for type %q", *res.Type)
-			continue
+
+		vm, err := azureAction.GetVirtualMachine(ctx, clusterRGName, machineName, mgmtcompute.InstanceView)
+		if err != nil {
+			return nil, err
 		}
-		if *object.Type == "Microsoft.Compute/virtualMachines" {
-			if strings.Contains(*object.Name, "master-") {
-				vm, err := azureAction.GetVirtualMachine(ctx, clusterRGName, *object.Name, mgmtcompute.InstanceView)
-				if err != nil {
-					return nil, err
-				}
 
-				if vm.InstanceView != nil && vm.InstanceView.Statuses != nil {
-					for _, status := range *vm.InstanceView.Statuses {
-						if status.Code == nil {
-							continue
-						}
-						vmStatuses = append(vmStatuses, *status.Code)
-					}
-				}
-
-				if vm.Zones != nil {
-					vmZones = *vm.Zones
-				}
-
-				if len(vmZones) == 0 {
-					err := fmt.Errorf("azure VM %v has no availability zone configured", *object.Name)
-					log.Info(err)
-					validationErrs = append(validationErrs, err)
+		if vm.InstanceView != nil && vm.InstanceView.Statuses != nil {
+			for _, status := range *vm.InstanceView.Statuses {
+				if status.Code == nil {
 					continue
 				}
-
-				err = validateVMPowerState(log, vmStatuses, *object.Name)
-				if err != nil {
-					validationErrs = append(validationErrs, err)
-				}
-
-				vmSize := ""
-				if vm.HardwareProfile != nil {
-					vmSize = string(vm.HardwareProfile.VMSize)
-				}
-
-				masterVM := azureVMValidationData{
-					vmSize: vmSize,
-					status: vmStatuses,
-					zone:   vmZones[0],
-				}
-
-				masterVMs[*object.Name] = masterVM
+				vmStatuses = append(vmStatuses, *status.Code)
 			}
 		}
+
+		if vm.Zones != nil {
+			vmZones = *vm.Zones
+		}
+
+		if len(vmZones) == 0 {
+			err := fmt.Errorf("azure VM %v has no availability zone configured", machineName)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		err = validateVMPowerState(log, vmStatuses, machineName)
+		if err != nil {
+			validationErrs = append(validationErrs, err)
+		}
+
+		vmSize := ""
+		if vm.HardwareProfile != nil {
+			vmSize = string(vm.HardwareProfile.VMSize)
+		}
+
+		masterVM := azureVMValidationData{
+			vmSize: vmSize,
+			status: vmStatuses,
+			zone:   vmZones[0],
+		}
+
+		masterVMs[machineName] = masterVM
 	}
 
 	if err := errors.Join(validationErrs...); err != nil {
 		return nil, err
 	}
 
-	err = validateZoneDistribution(masterVMs, func(m azureVMValidationData) string { return m.zone })
+	err := validateZoneDistribution(masterVMs, func(m azureVMValidationData) string { return m.zone })
 	if err != nil {
 		return nil, err
 	}

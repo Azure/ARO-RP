@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -16,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
@@ -669,34 +669,32 @@ func TestGetAzureVMs(t *testing.T) {
 	_, log := testlog.New()
 	ctx := context.Background()
 
+	// Helper to create a simple machines map with master nodes
+	createMachinesMap := func(names ...string) map[string]machineValidationData {
+		machines := make(map[string]machineValidationData)
+		for _, name := range names {
+			machines[name] = machineValidationData{
+				labelZone:         "1",
+				specZone:          "1",
+				size:              "Standard_D8s_v3",
+				phase:             "Running",
+				labelInstanceType: "Standard_D8s_v3",
+			}
+		}
+		return machines
+	}
+
 	for _, tt := range []struct {
 		name      string
+		machines  map[string]machineValidationData
 		mocks     func(*mock_adminactions.MockAzureActions)
 		wantErr   string
 		wantCount int // expected number of VMs returned
 	}{
 		{
-			name: "success - 3 master VMs in 3 zones",
+			name:     "success - 3 master VMs in 3 zones",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: pointerutils.ToPtr("master-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-1"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-2"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("worker-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-				}, nil)
-
 				zones0 := []string{"1"}
 				zones1 := []string{"2"}
 				zones2 := []string{"3"}
@@ -752,15 +750,18 @@ func TestGetAzureVMs(t *testing.T) {
 			wantCount: 3, // All 3 master VMs
 		},
 		{
-			name: "failure - VM with no zones",
+			name:     "failure - VM not found in Azure",
+			machines: createMachinesMap("master-0"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: pointerutils.ToPtr("master-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-				}, nil)
-
+				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
+					mgmtcompute.VirtualMachine{}, fmt.Errorf("VM not found"))
+			},
+			wantErr: "VM not found",
+		},
+		{
+			name:     "failure - VM with no zones",
+			machines: createMachinesMap("master-0"),
+			mocks: func(a *mock_adminactions.MockAzureActions) {
 				emptyZones := []string{}
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -781,15 +782,9 @@ func TestGetAzureVMs(t *testing.T) {
 			wantErr: "azure VM master-0 has no availability zone configured",
 		},
 		{
-			name: "failure - VM with nil zones",
+			name:     "failure - VM with nil zones",
+			machines: createMachinesMap("master-0"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: pointerutils.ToPtr("master-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-				}, nil)
-
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
@@ -809,23 +804,9 @@ func TestGetAzureVMs(t *testing.T) {
 			wantErr: "azure VM master-0 has no availability zone configured",
 		},
 		{
-			name: "failure - wrong zone distribution (only 2 zones)",
+			name:     "failure - wrong zone distribution (only 2 zones)",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: pointerutils.ToPtr("master-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-1"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-2"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-				}, nil)
-
 				zones0 := []string{"1"}
 				zones1 := []string{"2"}
 				zones2 := []string{"1"} // Duplicate zone
@@ -881,23 +862,9 @@ func TestGetAzureVMs(t *testing.T) {
 			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
 		},
 		{
-			name: "handles nil InstanceView gracefully",
+			name:     "handles nil InstanceView gracefully",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: pointerutils.ToPtr("master-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-1"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-2"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-				}, nil)
-
 				zones0 := []string{"1"}
 				zones1 := []string{"2"}
 				zones2 := []string{"3"}
@@ -949,23 +916,9 @@ func TestGetAzureVMs(t *testing.T) {
 			wantErr: "expected 2 statuses for VM master-0, but found 0: ",
 		},
 		{
-			name: "handles nil InstanceView.Statuses gracefully",
+			name:     "handles nil InstanceView.Statuses gracefully",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: pointerutils.ToPtr("master-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-1"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-2"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-				}, nil)
-
 				zones0 := []string{"1"}
 				zones1 := []string{"2"}
 				zones2 := []string{"3"}
@@ -1019,23 +972,9 @@ func TestGetAzureVMs(t *testing.T) {
 			wantErr: "expected 2 statuses for VM master-0, but found 0: ",
 		},
 		{
-			name: "handles nil HardwareProfile gracefully",
+			name:     "handles nil HardwareProfile gracefully",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GroupResourceList(ctx).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: pointerutils.ToPtr("master-0"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-1"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: pointerutils.ToPtr("master-2"),
-						Type: pointerutils.ToPtr("Microsoft.Compute/virtualMachines"),
-					},
-				}, nil)
-
 				zones0 := []string{"1"}
 				zones1 := []string{"2"}
 				zones2 := []string{"3"}
@@ -1097,7 +1036,7 @@ func TestGetAzureVMs(t *testing.T) {
 			azureAction := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(azureAction)
 
-			vms, err := getAzureVMs(log, ctx, azureAction, "/subscriptions/test/resourceGroups/test-cluster")
+			vms, err := getAzureVMs(log, ctx, azureAction, "/subscriptions/test/resourceGroups/test-cluster", tt.machines)
 
 			if tt.wantErr != "" {
 				utilerror.AssertErrorMessage(t, err, tt.wantErr)
