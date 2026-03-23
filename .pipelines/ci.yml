@@ -226,6 +226,7 @@ stages:
           - bash: |
               go_version="$( grep -Po '(?<=^go )[0-9]+\.[0-9]+\.[0-9]+$' go.mod )"
               echo "##vso[task.setvariable variable=goVersion]${go_version}"
+            workingDirectory: $(ARO_CHECKOUT_PATH)
             displayName: Determine Go version
 
           - task: GoTool@0
@@ -363,6 +364,7 @@ stages:
           - bash: |
               go_version="$( grep -Po '(?<=^go )[0-9]+\.[0-9]+\.[0-9]+$' go.mod )"
               echo "##vso[task.setvariable variable=goVersion]${go_version}"
+            workingDirectory: $(ARO_CHECKOUT_PATH)
             displayName: Determine Go version
 
           - task: GoTool@0
