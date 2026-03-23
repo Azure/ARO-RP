@@ -33,6 +33,7 @@ main() {
     local -ra install_pkgs=(
         azure-cli
         azure-mdsd
+        crun
         podman
         podman-docker
         openssl-perl
