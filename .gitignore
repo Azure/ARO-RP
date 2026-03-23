@@ -47,7 +47,6 @@ podmanlog
 .python-version
 .tool-versions
 ./venv
-/CLAUDE.md
 Session.vim
 .cache
 .DS_Store
