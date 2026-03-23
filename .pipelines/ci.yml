@@ -223,6 +223,16 @@ stages:
           # Checkout the code
           - template: ./templates/template-checkout.yml
 
+          - bash: |
+              go_version="$( grep -Po '(?<=^go )[0-9]+\.[0-9]+\.[0-9]+$' go.mod )"
+              echo "##vso[task.setvariable variable=goVersion]${go_version}"
+            displayName: Determine Go version
+
+          - task: GoTool@0
+            displayName: Install Go
+            inputs:
+              version: $(goVersion)
+
           # Install Docker, Docker Compose, and dependencies
           - bash: |
               . ./hack/e2e/utils.sh
@@ -349,6 +359,16 @@ stages:
         steps:
           # Checkout the code
           - template: ./templates/template-checkout.yml
+
+          - bash: |
+              go_version="$( grep -Po '(?<=^go )[0-9]+\.[0-9]+\.[0-9]+$' go.mod )"
+              echo "##vso[task.setvariable variable=goVersion]${go_version}"
+            displayName: Determine Go version
+
+          - task: GoTool@0
+            displayName: Install Go
+            inputs:
+              version: $(goVersion)
 
           # Install Docker, Docker Compose, and dependencies
           - bash: |
