@@ -31,7 +31,8 @@ const (
 //     If target capacity is unavailable the rollback is simple: delete reservations + CRG.
 //  4. Associate all master VMs with the CRG.
 //  5. Resize each VM one at a time (deallocate → resize → start) to preserve quorum.
-//  6. Disassociate VMs, delete all reservations, delete the CRG.
+//  6. Cleanup: set target reservations to capacity 0, disassociate VMs,
+//     delete all reservations, delete the CRG.
 //     Cleanup errors are returned — lingering reservations incur ongoing Azure costs.
 func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targetVMSize string) error {
 	clusterRG := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -73,16 +74,20 @@ func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targ
 	// Step 3a: create one current-SKU reservation per zone, using each VM's actual
 	// hardware SKU. This handles the case where a previous partial resize left one
 	// or more masters on a different family.
+	// Capture zoneCurrentSKU now — after resize the VMs will report the target SKU.
+	zoneCurrentSKU := make(map[string]string, len(masterVMs))
 	a.log.Info("creating current-SKU capacity reservations")
 	for _, vm := range masterVMs {
 		zone := vmZone(vm)
 		if vm.Properties == nil || vm.Properties.HardwareProfile == nil || vm.Properties.HardwareProfile.VMSize == nil {
-			if cleanupErr := a.cleanupReservationsAndCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupReservationsAndCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after SKU read failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf("VM %s has no hardware profile SKU", *vm.Name)
 		}
 		actualVMSize := string(*vm.Properties.HardwareProfile.VMSize)
+		zoneCurrentSKU[zone] = actualVMSize
+
 		crName := fmt.Sprintf(currentReservationNameFmt, zone)
 		a.log.Infof("creating current-SKU reservation %s (SKU %s) in zone %s", crName, actualVMSize, zone)
 		err = a.armCapacityReservations.CreateOrUpdateAndWait(ctx, clusterRG, capacityReservationGroupName, crName,
@@ -92,7 +97,7 @@ func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targ
 				Zones:    []*string{pointerutils.ToPtr(zone)},
 			})
 		if err != nil {
-			if cleanupErr := a.cleanupReservationsAndCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupReservationsAndCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after current-SKU reservation failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf("creating current-SKU reservation for VM %s in zone %s: %w", *vm.Name, zone, err)
@@ -112,7 +117,7 @@ func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targ
 				Zones:    []*string{pointerutils.ToPtr(zone)},
 			})
 		if err != nil {
-			if cleanupErr := a.cleanupReservationsAndCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupReservationsAndCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after target-SKU reservation failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf(
@@ -129,7 +134,7 @@ func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targ
 			CapacityReservationGroup: &armcompute.SubResource{ID: crg.ID},
 		}
 		if err = a.armVirtualMachines.CreateOrUpdateAndWait(ctx, clusterRG, *masterVMs[i].Name, masterVMs[i]); err != nil {
-			if cleanupErr := a.cleanupCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after association failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf("associating VM %s with capacity reservation group: %w", *masterVMs[i].Name, err)
@@ -142,7 +147,7 @@ func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targ
 		a.log.Infof("resizing VM %s to %s", vmName, targetVMSize)
 
 		if err = a.armVirtualMachines.DeallocateAndWait(ctx, clusterRG, vmName); err != nil {
-			if cleanupErr := a.cleanupCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after deallocate failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf("deallocating VM %s: %w", vmName, err)
@@ -151,7 +156,7 @@ func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targ
 		// Re-read to get the latest VM state after deallocate.
 		masterVMs[i], err = a.armVirtualMachines.Get(ctx, clusterRG, vmName)
 		if err != nil {
-			if cleanupErr := a.cleanupCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after VM read failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf("reading VM %s after deallocate: %w", vmName, err)
@@ -159,24 +164,24 @@ func (a *azureActions) VMResizeWithCapacityReservation(ctx context.Context, targ
 		masterVMs[i].Properties.HardwareProfile.VMSize = (*armcompute.VirtualMachineSizeTypes)(&targetVMSize)
 
 		if err = a.armVirtualMachines.CreateOrUpdateAndWait(ctx, clusterRG, vmName, masterVMs[i]); err != nil {
-			if cleanupErr := a.cleanupCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after resize failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf("resizing VM %s: %w", vmName, err)
 		}
 
 		if err = a.armVirtualMachines.StartAndWait(ctx, clusterRG, vmName); err != nil {
-			if cleanupErr := a.cleanupCRG(ctx, clusterRG, masterVMs); cleanupErr != nil {
+			if cleanupErr := a.cleanupCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); cleanupErr != nil {
 				a.log.Warnf("cleanup after start failure also failed: %v", cleanupErr)
 			}
 			return fmt.Errorf("starting VM %s after resize: %w", vmName, err)
 		}
 	}
 
-	// Step 6: success path — disassociate VMs and delete all reservation resources.
+	// Step 6: success — disassociate VMs and delete all reservation resources.
 	// Errors are returned: lingering reservations incur ongoing Azure costs.
 	a.log.Info("resize complete, cleaning up capacity reservation resources")
-	if err := a.cleanupCRG(ctx, clusterRG, masterVMs); err != nil {
+	if err := a.cleanupCRG(ctx, location, clusterRG, targetVMSize, zoneCurrentSKU, masterVMs); err != nil {
 		return fmt.Errorf("resize succeeded but failed to clean up capacity reservation resources (manual cleanup required to avoid ongoing costs): %w", err)
 	}
 	return nil
@@ -205,31 +210,76 @@ func vmZone(vm armcompute.VirtualMachine) string {
 	return ""
 }
 
+// setReservationCapacityZero updates a capacity reservation's capacity to 0.
+// Azure requires this before a reservation can be deleted.
+func (a *azureActions) setReservationCapacityZero(ctx context.Context, location, clusterRG, crName, zone, skuName string) error {
+	return a.armCapacityReservations.CreateOrUpdateAndWait(ctx, clusterRG, capacityReservationGroupName, crName,
+		armcompute.CapacityReservation{
+			Location: &location,
+			SKU:      &armcompute.SKU{Name: &skuName, Capacity: pointerutils.ToPtr(int64(0))},
+			Zones:    []*string{pointerutils.ToPtr(zone)},
+		})
+}
+
 // cleanupReservationsAndCRG deletes all capacity reservations (current and target) and
 // the CRG. Used when VMs have NOT been associated with the CRG — no VM disassociation needed.
-// Returns a joined error of all failures so the caller can decide how to handle them.
-func (a *azureActions) cleanupReservationsAndCRG(ctx context.Context, clusterRG string, masterVMs []armcompute.VirtualMachine) error {
+// Each reservation's capacity is set to 0 before deletion as required by Azure.
+// Returns a joined error of all failures.
+func (a *azureActions) cleanupReservationsAndCRG(ctx context.Context, location, clusterRG, targetVMSize string, zoneCurrentSKU map[string]string, masterVMs []armcompute.VirtualMachine) error {
 	var errs []error
+
 	for _, vm := range masterVMs {
 		zone := vmZone(vm)
-		for _, nameFmt := range []string{currentReservationNameFmt, targetReservationNameFmt} {
-			crName := fmt.Sprintf(nameFmt, zone)
-			if err := a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, crName); err != nil {
-				errs = append(errs, fmt.Errorf("delete reservation %s: %w", crName, err))
+
+		// Set target reservation capacity to 0 then delete.
+		targetCRName := fmt.Sprintf(targetReservationNameFmt, zone)
+		if err := a.setReservationCapacityZero(ctx, location, clusterRG, targetCRName, zone, targetVMSize); err != nil {
+			errs = append(errs, fmt.Errorf("set target reservation %s capacity to 0: %w", targetCRName, err))
+		}
+		if err := a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, targetCRName); err != nil {
+			errs = append(errs, fmt.Errorf("delete target reservation %s: %w", targetCRName, err))
+		}
+
+		// Set current reservation capacity to 0 then delete.
+		currentCRName := fmt.Sprintf(currentReservationNameFmt, zone)
+		if currentSKU, ok := zoneCurrentSKU[zone]; ok {
+			if err := a.setReservationCapacityZero(ctx, location, clusterRG, currentCRName, zone, currentSKU); err != nil {
+				errs = append(errs, fmt.Errorf("set current reservation %s capacity to 0: %w", currentCRName, err))
 			}
 		}
+		if err := a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, currentCRName); err != nil {
+			errs = append(errs, fmt.Errorf("delete current reservation %s: %w", currentCRName, err))
+		}
 	}
+
 	if err := a.armCapacityReservationGroups.Delete(ctx, clusterRG, capacityReservationGroupName); err != nil {
 		errs = append(errs, fmt.Errorf("delete capacity reservation group: %w", err))
 	}
 	return errors.Join(errs...)
 }
 
-// cleanupCRG disassociates all master VMs from the CRG, then delegates to
-// cleanupReservationsAndCRG to delete all reservations and the CRG.
-// Used when VMs have already been associated. Returns a joined error of all failures.
-func (a *azureActions) cleanupCRG(ctx context.Context, clusterRG string, masterVMs []armcompute.VirtualMachine) error {
+// cleanupCRG handles cleanup when VMs are already associated with the CRG.
+// Sequence per Azure requirements:
+//  1. Set target reservation capacity to 0 (per zone).
+//  2. Disassociate each VM from the CRG.
+//  3. Delete target reservations.
+//  4. Set current reservation capacity to 0 (per zone) and delete.
+//  5. Delete the CRG.
+//
+// Returns a joined error of all failures.
+func (a *azureActions) cleanupCRG(ctx context.Context, location, clusterRG, targetVMSize string, zoneCurrentSKU map[string]string, masterVMs []armcompute.VirtualMachine) error {
 	var errs []error
+
+	// Step 1: set target reservation capacity to 0 before disassociating VMs.
+	for _, vm := range masterVMs {
+		zone := vmZone(vm)
+		crName := fmt.Sprintf(targetReservationNameFmt, zone)
+		if err := a.setReservationCapacityZero(ctx, location, clusterRG, crName, zone, targetVMSize); err != nil {
+			errs = append(errs, fmt.Errorf("set target reservation %s capacity to 0: %w", crName, err))
+		}
+	}
+
+	// Step 2: disassociate each VM from the CRG.
 	for i := range masterVMs {
 		vmName := *masterVMs[i].Name
 		masterVMs[i].Properties.CapacityReservation = nil
@@ -237,8 +287,34 @@ func (a *azureActions) cleanupCRG(ctx context.Context, clusterRG string, masterV
 			errs = append(errs, fmt.Errorf("disassociate VM %s from CRG: %w", vmName, err))
 		}
 	}
-	if err := a.cleanupReservationsAndCRG(ctx, clusterRG, masterVMs); err != nil {
-		errs = append(errs, err)
+
+	// Step 3: delete target reservations (capacity is already 0).
+	for _, vm := range masterVMs {
+		zone := vmZone(vm)
+		crName := fmt.Sprintf(targetReservationNameFmt, zone)
+		if err := a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, crName); err != nil {
+			errs = append(errs, fmt.Errorf("delete target reservation %s: %w", crName, err))
+		}
+	}
+
+	// Step 4: set current reservation capacity to 0 then delete.
+	// No VMs are consuming these (all VMs were resized to the target SKU).
+	for _, vm := range masterVMs {
+		zone := vmZone(vm)
+		crName := fmt.Sprintf(currentReservationNameFmt, zone)
+		if currentSKU, ok := zoneCurrentSKU[zone]; ok {
+			if err := a.setReservationCapacityZero(ctx, location, clusterRG, crName, zone, currentSKU); err != nil {
+				errs = append(errs, fmt.Errorf("set current reservation %s capacity to 0: %w", crName, err))
+			}
+		}
+		if err := a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, crName); err != nil {
+			errs = append(errs, fmt.Errorf("delete current reservation %s: %w", crName, err))
+		}
+	}
+
+	// Step 5: delete the CRG last.
+	if err := a.armCapacityReservationGroups.Delete(ctx, clusterRG, capacityReservationGroupName); err != nil {
+		errs = append(errs, fmt.Errorf("delete capacity reservation group: %w", err))
 	}
 	return errors.Join(errs...)
 }
