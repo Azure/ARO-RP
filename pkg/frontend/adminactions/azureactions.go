@@ -48,19 +48,19 @@ type azureActions struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	networkInterfaces           armnetwork.InterfacesClient
-	diskEncryptionSets          compute.DiskEncryptionSetsClient
-	loadBalancers               armnetwork.LoadBalancersClient
-	resources                   features.ResourcesClient
-	resourceSkus                armcompute.ResourceSKUsClient
-	routeTables                 armnetwork.RouteTablesClient
-	securityGroups              armnetwork.SecurityGroupsClient
-	storageAccounts             storage.AccountsClient
-	virtualMachines             compute.VirtualMachinesClient
-	virtualNetworks             armnetwork.VirtualNetworksClient
-	armVirtualMachines          armcompute.VirtualMachinesClient
+	networkInterfaces            armnetwork.InterfacesClient
+	diskEncryptionSets           compute.DiskEncryptionSetsClient
+	loadBalancers                armnetwork.LoadBalancersClient
+	resources                    features.ResourcesClient
+	resourceSkus                 armcompute.ResourceSKUsClient
+	routeTables                  armnetwork.RouteTablesClient
+	securityGroups               armnetwork.SecurityGroupsClient
+	storageAccounts              storage.AccountsClient
+	virtualMachines              compute.VirtualMachinesClient
+	virtualNetworks              armnetwork.VirtualNetworksClient
+	armVirtualMachines           armcompute.VirtualMachinesClient
 	armCapacityReservationGroups armcompute.CapacityReservationGroupsClient
-	armCapacityReservations     armcompute.CapacityReservationsClient
+	armCapacityReservations      armcompute.CapacityReservationsClient
 }
 
 // NewAzureActions returns an azureActions
