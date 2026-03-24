@@ -31,25 +31,24 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	flag.Parse()
 
 	var (
-		file   io.Reader
-		closer io.Closer
-		err    error
-		v      string
+		file io.Reader
+		err  error
+		v    string
 	)
 
 	if *fileName == "-" {
 		file = os.Stdin
 	} else {
-		openedFile, openErr := os.Open(*fileName)
-		err = openErr
+		openedFile, err := os.Open(*fileName)
 		if err != nil {
 			return err
 		}
+		defer func() {
+			if closeErr := openedFile.Close(); closeErr != nil {
+				log.WithError(closeErr).Warn("failed to close file")
+			}
+		}()
 		file = openedFile
-		closer = openedFile
-	}
-	if closer != nil {
-		defer closer.Close() //nolint:errcheck // best-effort cleanup for a short-lived helper
 	}
 
 	scanner := bufio.NewScanner(file)

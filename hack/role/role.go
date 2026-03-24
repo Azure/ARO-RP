@@ -340,7 +340,9 @@ func (m *manager) GetAzureProviderSpec(manifest string) (*cloudcredentialv1.Azur
 	if err != nil {
 		return nil, fmt.Errorf("failed to open manifest: %w", err)
 	}
-	defer f.Close() //nolint:errcheck // best-effort cleanup after parsing a short-lived file
+	defer func() {
+		_ = f.Close()
+	}()
 
 	credreq, err := GetAzureCredentialsRequest(f)
 	if err != nil {
