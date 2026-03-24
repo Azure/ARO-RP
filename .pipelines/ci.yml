@@ -309,6 +309,7 @@ stages:
           # Collect must-gather logs
           - bash: |
               . secrets/env
+              . ./hack/e2e/run-rp-and-e2e.sh
               container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
               docker cp ${container_id}:/usr/local/bin/db ./db
               docker rm ${container_id}
@@ -457,6 +458,7 @@ stages:
           # Collect must-gather logs
           - bash: |
               . secrets/env
+              . ./hack/e2e/run-rp-and-e2e.sh
               container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
               docker cp ${container_id}:/usr/local/bin/db ./db
               docker rm ${container_id}
