@@ -18,6 +18,7 @@ import (
 	gomock "go.uber.org/mock/gomock"
 
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
+	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 )
 
@@ -58,6 +59,21 @@ func (m *MockAzureActions) GetEffectiveRouteTable(ctx context.Context, nicName s
 func (mr *MockAzureActionsMockRecorder) GetEffectiveRouteTable(ctx, nicName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffectiveRouteTable", reflect.TypeOf((*MockAzureActions)(nil).GetEffectiveRouteTable), ctx, nicName)
+}
+
+// GetVirtualMachine mocks base method.
+func (m *MockAzureActions) GetVirtualMachine(ctx context.Context, resourceGroupName, VMName string, expand compute.InstanceViewTypes) (compute.VirtualMachine, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVirtualMachine", ctx, resourceGroupName, VMName, expand)
+	ret0, _ := ret[0].(compute.VirtualMachine)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVirtualMachine indicates an expected call of GetVirtualMachine.
+func (mr *MockAzureActionsMockRecorder) GetVirtualMachine(ctx, resourceGroupName, VMName, expand any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVirtualMachine", reflect.TypeOf((*MockAzureActions)(nil).GetVirtualMachine), ctx, resourceGroupName, VMName, expand)
 }
 
 // GroupResourceList mocks base method.
