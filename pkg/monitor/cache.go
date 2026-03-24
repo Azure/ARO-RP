@@ -14,33 +14,22 @@ type cacheDoc struct {
 
 // deleteDoc deletes the given document from mon.docs, signalling the associated
 // monitoring goroutine to stop if it exists.  Caller must hold mon.mu.Lock.
-func (mon *monitor) deleteDoc(doc *api.OpenShiftClusterDocument) {
-	v := mon.docs[doc.ID]
-
-	if v != nil {
-		if v.stop != nil {
-			close(mon.docs[doc.ID].stop)
-		}
-
-		delete(mon.docs, doc.ID)
+func (mon *clusterChangeFeedResponder) deleteDoc(doc *api.OpenShiftClusterDocument) {
+	v, loaded := mon.docs.LoadAndDelete(doc.ID)
+	if loaded {
+		close(v.stop)
 	}
 }
 
 // upsertDoc inserts or updates the given document into mon.docs, starting an
 // associated monitoring goroutine if the document is in a bucket owned by us.
 // Caller must hold mon.mu.Lock.
-func (mon *monitor) upsertDoc(doc *api.OpenShiftClusterDocument) {
-	v := mon.docs[doc.ID]
-
-	if v == nil {
-		v = &cacheDoc{}
-		mon.docs[doc.ID] = v
+func (mon *clusterChangeFeedResponder) upsertDoc(doc *api.OpenShiftClusterDocument) {
+	v, loaded := mon.docs.LoadOrStore(doc.ID, &cacheDoc{doc: stripUnusedFields(doc)})
+	if loaded {
+		v.doc = stripUnusedFields(doc)
 	}
-
-	// Strip unused fields to reduce memory usage. The monitor only needs
-	// a subset of the document fields for monitoring operations.
-	v.doc = stripUnusedFields(doc)
-	mon.fixDoc(v.doc)
+	mon.fixDoc(v)
 }
 
 // stripUnusedFields creates a copy of the document with only the fields
@@ -149,17 +138,16 @@ func stripUnusedFields(doc *api.OpenShiftClusterDocument) *api.OpenShiftClusterD
 }
 
 // fixDocs ensures that there is a monitoring goroutine for all documents in all
-// buckets owned by us.  Caller must hold mon.mu.Lock.
-func (mon *monitor) fixDocs() {
-	for _, v := range mon.docs {
-		mon.fixDoc(v.doc)
+// buckets owned by us.
+func (mon *clusterChangeFeedResponder) fixDocs() {
+	for _, v := range mon.docs.All() {
+		mon.fixDoc(v)
 	}
 }
 
 // fixDoc ensures that there is a monitoring goroutine for the given document
-// iff it is in a bucket owned by us.  Caller must hold mon.mu.Lock.
-func (mon *monitor) fixDoc(doc *api.OpenShiftClusterDocument) {
-	v := mon.docs[doc.ID]
+// iff it is in a bucket owned by us.
+func (mon *clusterChangeFeedResponder) fixDoc(v *cacheDoc) {
 	_, ours := mon.buckets[v.doc.Bucket]
 
 	if !ours && v.stop != nil {
@@ -168,6 +156,6 @@ func (mon *monitor) fixDoc(doc *api.OpenShiftClusterDocument) {
 	} else if ours && v.stop == nil {
 		ch := make(chan struct{})
 		v.stop = ch
-		go mon.worker(ch, doc.ID)
+		go mon.newWorker(ch, v.doc.ID)
 	}
 }

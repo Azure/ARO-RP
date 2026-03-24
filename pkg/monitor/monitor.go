@@ -56,17 +56,15 @@ type monitor struct {
 	m        metrics.Emitter
 	clusterm metrics.Emitter
 	mu       sync.RWMutex
-	docs     map[string]*cacheDoc
+	clusters *clusterChangeFeedResponder
 	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
 	isMaster    bool
 	bucketCount int
-	buckets     map[int]struct{}
 
-	lastBucketlist        atomic.Value // time.Time
-	lastClusterChangefeed atomic.Value // time.Time
-	startTime             time.Time
+	lastBucketlist atomic.Value // time.Time
+	startTime      time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
 
@@ -86,7 +84,7 @@ type Runnable interface {
 }
 
 func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, e env.Interface) Runnable {
-	return &monitor{
+	mon := &monitor{
 		baseLog: log,
 		dialer:  dialer,
 
@@ -94,12 +92,10 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 
 		m:        m,
 		clusterm: clusterm,
-		docs:     map[string]*cacheDoc{},
 		subs:     changefeed.NewSubscriptionsChangefeedCache(true),
 		env:      e,
 
 		bucketCount: bucket.Buckets,
-		buckets:     map[int]struct{}{},
 
 		startTime: time.Now(),
 
@@ -115,6 +111,9 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		readyIfChangefeedWithin: defaultChangefeedReadinessInterval,
 		readyDelay:              defaultMonitorReadinessDelay,
 	}
+
+	mon.clusters = NewClusterChangefeedResponder(log, mon.worker)
+	return mon
 }
 
 func (mon *monitor) Run(ctx context.Context) error {
@@ -199,13 +198,12 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 	}
 
 	// fill the cache from the database change feed
-	clusterResponder := &clusterChangeFeedResponder{mon: mon}
 	go changefeed.RunChangefeed(
 		ctx, mon.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
 		// Align this time with the deletion mechanism.
 		// Go to docs/monitoring.md for the details.
 		mon.changefeedInterval,
-		changefeedBatchSize, clusterResponder, stop,
+		changefeedBatchSize, mon.clusters, stop,
 	)
 
 	// fill the cache from the database change feed
@@ -227,7 +225,7 @@ func (mon *monitor) checkReady() bool {
 	if !ok {
 		return false
 	}
-	lastClusterChangefeedTime, ok := mon.lastClusterChangefeed.Load().(time.Time)
+	lastClusterChangefeedTime, ok := mon.clusters.GetLastProcessed()
 	if !ok {
 		return false
 	}

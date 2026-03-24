@@ -29,6 +29,7 @@ type SubscriptionsCache interface {
 	GetCacheSize() int
 	GetSubscription(string) (subscriptionInfo, bool)
 	GetLastProcessed() (time.Time, bool)
+	GetLastDataUpdate() (time.Time, bool)
 	WaitForInitialPopulation()
 }
 
@@ -47,6 +48,7 @@ type subscriptionsChangeFeedResponder struct {
 	// Do we want to only include valid (i.e. not suspended) subscriptions?
 	onlyValidSubscriptions bool
 
+	lastChangefeedDataUpdate   atomic.Value // time.Time
 	lastChangefeedProcessed    atomic.Value // time.Time
 	initialPopulationWaitGroup *sync.WaitGroup
 
@@ -70,6 +72,11 @@ func (c *subscriptionsChangeFeedResponder) GetCacheSize() int {
 
 func (c *subscriptionsChangeFeedResponder) GetLastProcessed() (time.Time, bool) {
 	t, ok := c.lastChangefeedProcessed.Load().(time.Time)
+	return t, ok
+}
+
+func (c *subscriptionsChangeFeedResponder) GetLastDataUpdate() (time.Time, bool) {
+	t, ok := c.lastChangefeedDataUpdate.Load().(time.Time)
 	return t, ok
 }
 
@@ -106,8 +113,12 @@ func (r *subscriptionsChangeFeedResponder) OnDoc(sub *api.SubscriptionDocument) 
 	})
 }
 
-func (c *subscriptionsChangeFeedResponder) OnAllPendingProcessed() {
-	old := c.lastChangefeedProcessed.Swap(time.Now())
+func (c *subscriptionsChangeFeedResponder) OnAllPendingProcessed(gotAny bool) {
+	now := time.Now()
+	old := c.lastChangefeedProcessed.Swap(now)
+	if gotAny {
+		c.lastChangefeedDataUpdate.Store(now)
+	}
 	// we've consumed the initial documents, unlock the waitgroup
 	if old == nil {
 		c.initialPopulationWaitGroup.Done()
