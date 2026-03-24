@@ -36,7 +36,8 @@ type expectedMetric struct {
 }
 
 func TestMonitor(t *testing.T) {
-	ctx := context.Background()
+	var _ctx context.Context
+	var _cancel context.CancelFunc
 
 	innerFailure := errors.New("failure inside")
 
@@ -392,6 +393,71 @@ func TestMonitor(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "timeout during collector means other collectors are skipped",
+			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
+			collectors: func(m *Monitor) []collectorFunc {
+				return []collectorFunc{
+					func(ctx context.Context) error {
+						_cancel()
+						return nil
+					},
+					func(ctx context.Context) error {
+						return nil
+					},
+				}
+			},
+			expectedErrors: []error{
+				&failureToRunClusterCollector{collectorName: "2"},
+				context.Canceled,
+			},
+			expectedGauges: []expectedMetric{
+				{
+					name:  "apiserver.healthz.code",
+					value: int64(1),
+					labels: map[string]string{
+						"code": "200",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.skipped",
+					value: int64(1),
+					labels: map[string]string{
+						"collector": "2",
+					},
+				},
+			},
+			expectedFloats: []expectedMetric{
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "fetchManagedNamespaces",
+					},
+				},
+				{
+					name:  "monitor.cluster.collector.duration",
+					value: gomock.Any(),
+					labels: map[string]string{
+						"collector": "1",
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := []client.Object{
@@ -449,6 +515,9 @@ func TestMonitor(t *testing.T) {
 				},
 			}
 
+			_ctx, _cancel = context.WithCancel(t.Context())
+			defer _cancel()
+
 			_, log := testlog.New()
 			controller := gomock.NewController(t)
 			m := mock_metrics.NewMockEmitter(controller)
@@ -475,6 +544,7 @@ func TestMonitor(t *testing.T) {
 				ocpclientset: ocpclientset,
 				m:            m,
 				queryLimit:   1,
+				parallelism:  1,
 			}
 
 			if tt.collectors != nil {
@@ -493,7 +563,7 @@ func TestMonitor(t *testing.T) {
 				m.EXPECT().EmitFloat("monitor.cluster.duration", gomock.Any(), gomock.Any()).Times(1)
 			}
 
-			err := mon.Monitor(ctx)
+			err := mon.Monitor(_ctx)
 			utilerror.AssertErrorMatchesAll(t, err, tt.expectedErrors)
 		})
 	}

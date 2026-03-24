@@ -72,6 +72,8 @@ type Monitor struct {
 
 	// Limit for items per pagination query
 	queryLimit int
+	// Limit for goroutines per cluster Monitor instance
+	parallelism int
 }
 
 func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error) {
@@ -160,6 +162,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
+		parallelism:         MONITOR_GOROUTINES_PER_CLUSTER,
 	}
 	mon.collectors = []collectorFunc{
 		mon.emitAroOperatorHeartbeat,
@@ -196,8 +199,16 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 }
 
 func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error) (err error) {
-	innerNow := time.Now()
 	collectorName := steps.ShortName(f)
+
+	// Don't run collectors if we have already timed out
+	if ctx.Err() != nil {
+		mon.log.Debugf("skipping %s because %s:", collectorName, ctx.Err())
+		mon.emitMonitorCollectorSkipped(collectorName)
+		return &failureToRunClusterCollector{collectorName: collectorName, inner: ctx.Err()}
+	}
+
+	innerNow := time.Now()
 	mon.log.Debugf("running %s", collectorName)
 
 	// If the collector panics we should return the error (so that it bubbles
@@ -272,10 +283,10 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 		return errors.Join(errs...)
 	}
 
-	// Run up to MONITOR_GOROUTINES_PER_CLUSTER goroutines for collecting
-	// metrics
+	// Run up to mon.parallelism (default: MONITOR_GOROUTINES_PER_CLUSTER)
+	// goroutines for collecting metrics
 	wg := new(errgroup.Group)
-	wg.SetLimit(MONITOR_GOROUTINES_PER_CLUSTER)
+	wg.SetLimit(mon.parallelism)
 
 	// Create a channel capable of buffering one error from every collector
 	errChan := make(chan error, len(mon.collectors))
@@ -305,7 +316,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 	}
 
 	// emit a metric with how long we took when we have no errors
-	if len(errs) == 0 {
+	if len(errs) == 0 && ctx.Err() == nil {
 		mon.emitFloat("monitor.cluster.duration", time.Since(now).Seconds(), map[string]string{})
 	}
 
@@ -314,6 +325,10 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 
 func (mon *Monitor) emitMonitorCollectorError(collectorName string) {
 	emitter.EmitGauge(mon.m, "monitor.cluster.collector.error", 1, mon.dims, map[string]string{"collector": collectorName})
+}
+
+func (mon *Monitor) emitMonitorCollectorSkipped(collectorName string) {
+	emitter.EmitGauge(mon.m, "monitor.cluster.collector.skipped", 1, mon.dims, map[string]string{"collector": collectorName})
 }
 
 func (mon *Monitor) emitMonitorCollectionTiming(collectorName string, duration float64) {
