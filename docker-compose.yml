@@ -171,7 +171,7 @@ services:
           "-k",
           "-sS",
           "-f",
-          "https://localhost:8445/healthz/ready",
+          "http://localhost:8445/healthz/ready",
         ]
       interval: 90s
       timeout: 30s
