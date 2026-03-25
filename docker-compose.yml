@@ -142,7 +142,7 @@ services:
     depends_on:
       vpn:
         condition: service_healthy
-    command: ["mimo-actuator"]
+    command: ["-loglevel", "debug", "mimo-actuator"]
     volumes:
       - ${PWD}/secrets:/aro/secrets:z
     environment:
