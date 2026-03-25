@@ -250,6 +250,10 @@ stages:
               echo "##vso[task.setvariable variable=CI]true"
             displayName: Set CI=true
 
+          - bash: |
+              echo "##vso[task.setvariable variable=ARO_E2E_MIMO]true"
+            displayName: Set ARO_E2E_MIMO=true
+
           # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
           # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
           - bash: |
@@ -376,6 +380,10 @@ stages:
           - bash: |
               echo "##vso[task.setvariable variable=CI]true"
             displayName: Set CI=true
+
+          - bash: |
+              echo "##vso[task.setvariable variable=ARO_E2E_MIMO]true"
+            displayName: Set ARO_E2E_MIMO=true
 
           # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
           # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
