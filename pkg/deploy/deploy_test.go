@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -14,12 +15,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
@@ -569,5 +573,148 @@ func TestRunCommandWithRetryContextCancelled(t *testing.T) {
 func newOperationPreemptedError() error {
 	return &autorest.DetailedError{
 		Original: &azure.ServiceError{Code: OperationPreemptedCode},
+	}
+}
+
+func TestCleanupOrphanedTaggedPIPs(t *testing.T) {
+	ctx := context.Background()
+	rgName := "testRG"
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_armnetwork.MockPublicIPAddressesClient)
+		wantErr string
+	}{
+		{
+			name: "no orphaned PIPs - both return 404",
+			mocks: func(pip *mock_armnetwork.MockPublicIPAddressesClient) {
+				pip.EXPECT().Get(ctx, rgName, "rp-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{},
+					&azcore.ResponseError{StatusCode: http.StatusNotFound},
+				)
+				pip.EXPECT().Get(ctx, rgName, "portal-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{},
+					&azcore.ResponseError{StatusCode: http.StatusNotFound},
+				)
+			},
+		},
+		{
+			name: "PIPs exist and attached to LB - no deletion",
+			mocks: func(pip *mock_armnetwork.MockPublicIPAddressesClient) {
+				pip.EXPECT().Get(ctx, rgName, "rp-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{
+						PublicIPAddress: armnetwork.PublicIPAddress{
+							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+								IPConfiguration: &armnetwork.IPConfiguration{
+									ID: pointerutils.ToPtr("/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Network/loadBalancers/rp-lb/frontendIPConfigurations/rp-frontend-tagged"),
+								},
+							},
+						},
+					}, nil,
+				)
+				pip.EXPECT().Get(ctx, rgName, "portal-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{
+						PublicIPAddress: armnetwork.PublicIPAddress{
+							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+								IPConfiguration: &armnetwork.IPConfiguration{
+									ID: pointerutils.ToPtr("/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Network/loadBalancers/rp-lb/frontendIPConfigurations/portal-frontend-tagged"),
+								},
+							},
+						},
+					}, nil,
+				)
+			},
+		},
+		{
+			name: "PIPs exist and orphaned - both deleted",
+			mocks: func(pip *mock_armnetwork.MockPublicIPAddressesClient) {
+				pip.EXPECT().Get(ctx, rgName, "rp-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{
+						PublicIPAddress: armnetwork.PublicIPAddress{
+							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+								IPConfiguration: nil,
+							},
+						},
+					}, nil,
+				)
+				pip.EXPECT().DeleteAndWait(ctx, rgName, "rp-pip-tagged", nil).Return(nil)
+
+				pip.EXPECT().Get(ctx, rgName, "portal-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{
+						PublicIPAddress: armnetwork.PublicIPAddress{
+							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+								IPConfiguration: nil,
+							},
+						},
+					}, nil,
+				)
+				pip.EXPECT().DeleteAndWait(ctx, rgName, "portal-pip-tagged", nil).Return(nil)
+			},
+		},
+		{
+			name: "first PIP orphaned and deleted, second returns 404",
+			mocks: func(pip *mock_armnetwork.MockPublicIPAddressesClient) {
+				pip.EXPECT().Get(ctx, rgName, "rp-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{
+						PublicIPAddress: armnetwork.PublicIPAddress{
+							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+								IPConfiguration: nil,
+							},
+						},
+					}, nil,
+				)
+				pip.EXPECT().DeleteAndWait(ctx, rgName, "rp-pip-tagged", nil).Return(nil)
+
+				pip.EXPECT().Get(ctx, rgName, "portal-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{},
+					&azcore.ResponseError{StatusCode: http.StatusNotFound},
+				)
+			},
+		},
+		{
+			name: "Get returns non-404 error",
+			mocks: func(pip *mock_armnetwork.MockPublicIPAddressesClient) {
+				pip.EXPECT().Get(ctx, rgName, "rp-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{},
+					&azcore.ResponseError{StatusCode: http.StatusInternalServerError},
+				)
+			},
+			wantErr: "GET ",
+		},
+		{
+			name: "DeleteAndWait fails",
+			mocks: func(pip *mock_armnetwork.MockPublicIPAddressesClient) {
+				pip.EXPECT().Get(ctx, rgName, "rp-pip-tagged", nil).Return(
+					armnetwork.PublicIPAddressesClientGetResponse{
+						PublicIPAddress: armnetwork.PublicIPAddress{
+							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
+								IPConfiguration: nil,
+							},
+						},
+					}, nil,
+				)
+				pip.EXPECT().DeleteAndWait(ctx, rgName, "rp-pip-tagged", nil).Return(errors.New("delete failed"))
+			},
+			wantErr: "delete failed",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockPIP := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
+			tt.mocks(mockPIP)
+
+			d := deployer{
+				log:               logrus.NewEntry(logrus.StandardLogger()),
+				publicipaddresses: mockPIP,
+				config: &RPConfig{
+					RPResourceGroupName: rgName,
+				},
+			}
+
+			err := d.cleanupOrphanedTaggedPIPs(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
 	}
 }
