@@ -146,11 +146,10 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 	// key the decision to deploy NSGs on the existence of the gateway
 	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
 	// is deployed for the first time.
-	// When DEPLOY_NSGS_ONLY is set, force NSG deployment and skip secret
+	// When forceNSGs is true, force NSG deployment and skip secret
 	// rotation / VMSS restart to avoid the restartOldScalesets() side effect.
-	forceNSGs := true
 	isCreate := false
-	if !forceNSGs {
+	if !d.forceNSGs {
 		_, err = d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))
 		if isDeploymentNotFoundError(err) {
 			isCreate = true
@@ -161,17 +160,17 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		}
 	}
 
-	err = d.deployPreDeploy(ctx, d.config.GatewayResourceGroupName, generator.FileGatewayProductionPredeploy, "gatewayServicePrincipalId", gwMSI.PrincipalID.String(), isCreate || forceNSGs)
+	err = d.deployPreDeploy(ctx, d.config.GatewayResourceGroupName, generator.FileGatewayProductionPredeploy, "gatewayServicePrincipalId", gwMSI.PrincipalID.String(), isCreate || d.forceNSGs)
 	if err != nil {
 		return err
 	}
 
-	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate || forceNSGs)
+	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate || d.forceNSGs)
 	if err != nil {
 		return err
 	}
 
-	if forceNSGs {
+	if d.forceNSGs {
 		d.log.Info("forceNSGs set, skipping secret configuration and VMSS restart")
 		return nil
 	}
