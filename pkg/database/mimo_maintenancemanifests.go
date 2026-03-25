@@ -201,7 +201,7 @@ func (c *maintenanceManifests) GetByClusterResourceID(ctx context.Context, clust
 		return nil, fmt.Errorf("clusterResourceID %q is not lower case", clusterResourceID)
 	}
 
-	return c.c.Query("", &cosmosdb.Query{
+	return c.c.Query(clusterResourceID, &cosmosdb.Query{
 		Query: MaintenanceManifestQueryForCluster,
 		Parameters: []cosmosdb.Parameter{
 			{
@@ -217,7 +217,7 @@ func (c *maintenanceManifests) GetFutureTasksForClusterAndScheduleID(ctx context
 		return nil, fmt.Errorf("clusterResourceID %q is not lower case", clusterResourceID)
 	}
 
-	return c.c.Query("", &cosmosdb.Query{
+	return c.c.Query(clusterResourceID, &cosmosdb.Query{
 		Query: MaintenanceManifestGetFutureForScheduleIDAndCluster,
 		Parameters: []cosmosdb.Parameter{
 			{
@@ -249,7 +249,7 @@ func (c *maintenanceManifests) GetQueuedByClusterResourceID(ctx context.Context,
 		return nil, fmt.Errorf("clusterResourceID %q is not lower case", clusterResourceID)
 	}
 
-	return c.c.Query("", &cosmosdb.Query{
+	return c.c.Query(clusterResourceID, &cosmosdb.Query{
 		Query: MaintenanceManifestDequeueQueryForCluster,
 		Parameters: []cosmosdb.Parameter{
 			{
