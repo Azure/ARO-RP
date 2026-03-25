@@ -679,7 +679,7 @@ func TestCleanupOrphanedTaggedPIPs(t *testing.T) {
 					&azcore.ResponseError{StatusCode: http.StatusInternalServerError},
 				)
 			},
-			wantErr: "GET ",
+			wantErr: "Missing RawResponse",
 		},
 		{
 			name: "DeleteAndWait fails",
