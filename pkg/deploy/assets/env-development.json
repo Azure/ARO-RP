@@ -307,8 +307,8 @@
                     "storageProfile": {
                         "imageReference": {
                             "publisher": "MicrosoftCBLMariner",
-                            "offer": "cbl-mariner",
-                            "sku": "cbl-mariner-2-gen2",
+                            "offer": "azure-linux-3",
+                            "sku": "azure-linux-3-gen2",
                             "version": "latest"
                         },
                         "osDisk": {
