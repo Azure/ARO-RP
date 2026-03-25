@@ -164,15 +164,7 @@ services:
     ports:
       - "8445:8445"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-k",
-          "-sS",
-          "-f",
-          "http://localhost:8445/healthz/ready",
-        ]
+      test: ["CMD", "curl", "-sS", "-f", "http://localhost:8445/healthz/ready"]
       interval: 90s
       timeout: 30s
       retries: 3
