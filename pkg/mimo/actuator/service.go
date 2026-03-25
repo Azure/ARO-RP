@@ -55,11 +55,11 @@ type service struct {
 
 	changefeedBatchSize int
 	changefeedInterval  time.Duration
+	taskPollTime        time.Duration
 
 	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
 
-	pollTime    time.Duration
 	now         func() time.Time
 	workerDelay func() time.Duration
 
@@ -90,10 +90,19 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		startTime:   time.Now(),
 		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
 		now:         time.Now,
-		pollTime:    time.Minute,
 
-		changefeedBatchSize: 50,
-		changefeedInterval:  10 * time.Second,
+		// For the OpenShiftClusterDocument polling we temporarily use a query
+		// which retrieves ID and bucket rather than polling an incremental
+		// feed. This means that we don't need to worry about a large batch size
+		// being a huge amount of mostly-unneeded JSON (since you can't filter a
+		// changefeed) or needing to align with the deletion timer like the
+		// Monitor.
+		changefeedBatchSize: 200,
+		changefeedInterval:  10 * time.Minute,
+
+		// The polling time for MaintenanceManifests is kept lower because we
+		// prioritise responsiveness
+		taskPollTime: 90 * time.Second,
 
 		serveHealthz: true,
 	}
@@ -308,7 +317,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	// load in the tasks for the Actuator from the controller
 	a.AddMaintenanceTasks(s.tasks)
 
-	t := time.NewTicker(s.pollTime)
+	t := time.NewTicker(s.taskPollTime)
 	defer func() {
 		log.Debugf("stopping worker for %s...", id)
 		t.Stop()

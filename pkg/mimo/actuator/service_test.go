@@ -377,7 +377,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		})
 
 		It("expires them", func() {
-			svc.pollTime = time.Millisecond
+			svc.taskPollTime = time.Millisecond
 
 			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
@@ -399,7 +399,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		})
 
 		It("loads the full cluster document", func() {
-			svc.pollTime = time.Millisecond
+			svc.taskPollTime = time.Millisecond
 
 			svc.SetMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
