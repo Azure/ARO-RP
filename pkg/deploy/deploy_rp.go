@@ -7,7 +7,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -109,6 +112,11 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		}
 	}
 
+	err = d.cleanupOrphanedTaggedPIPs(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = d.deploy(ctx, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version,
 		mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
@@ -123,6 +131,32 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	}
 
 	return d.configureDNS(ctx)
+}
+
+// cleanupOrphanedTaggedPIPs deletes tagged public IPs that exist but are not
+// attached to any load balancer frontend. Azure does not allow modifying IP tags
+// on existing static public IPs, so orphaned PIPs from a previous rollback must
+// be deleted before the ARM template can recreate them with correct tags.
+func (d *deployer) cleanupOrphanedTaggedPIPs(ctx context.Context) error {
+	for _, pipName := range []string{"rp-pip-tagged", "portal-pip-tagged"} {
+		pip, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, pipName, nil)
+		if err != nil {
+			var respErr *azcore.ResponseError
+			if errors.As(err, &respErr) && respErr.StatusCode == http.StatusNotFound {
+				continue
+			}
+			return err
+		}
+
+		if pip.Properties != nil && pip.Properties.IPConfiguration == nil {
+			d.log.Infof("deleting orphaned tagged PIP %s (not attached to any LB frontend)", pipName)
+			err = d.publicipaddresses.DeleteAndWait(ctx, d.config.RPResourceGroupName, pipName, nil)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
