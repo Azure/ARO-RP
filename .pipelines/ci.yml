@@ -305,6 +305,7 @@ stages:
               docker compose logs vpn
               docker compose logs selenium
               docker compose logs rp
+              docker compose logs mimoactuator
               docker compose logs portal
               docker compose logs e2e
             displayName: Log Service Output
@@ -457,6 +458,7 @@ stages:
               docker compose logs vpn
               docker compose logs selenium
               docker compose logs rp
+              docker compose logs mimoactuator
               docker compose logs portal
               docker compose logs e2e
             displayName: Log Service Output
