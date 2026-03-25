@@ -53,9 +53,10 @@ type service struct {
 
 	b buckets.BucketWorker[*api.OpenShiftClusterDocument]
 
-	changefeedBatchSize int
-	changefeedInterval  time.Duration
-	taskPollTime        time.Duration
+	changefeedBatchSize         int
+	changefeedInterval          time.Duration
+	changefeedReadinessInterval time.Duration
+	taskPollTime                time.Duration
 
 	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
@@ -97,8 +98,9 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		// being a huge amount of mostly-unneeded JSON (since you can't filter a
 		// changefeed) or needing to align with the deletion timer like the
 		// Monitor.
-		changefeedBatchSize: 200,
-		changefeedInterval:  10 * time.Minute,
+		changefeedBatchSize:         200,
+		changefeedInterval:          10 * time.Minute,
+		changefeedReadinessInterval: 12 * time.Minute,
 
 		// The polling time for MaintenanceManifests is kept lower because we
 		// prioritise responsiveness
@@ -273,9 +275,9 @@ func (s *service) checkReady() bool {
 	}
 
 	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < time.Minute) // did we update our list of clusters recently?
+		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) // did we update our list of clusters recently?
 	} else {
-		return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
+		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
 			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
 	}
 }

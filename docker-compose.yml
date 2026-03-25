@@ -5,6 +5,7 @@ x-aro-common-env:
   environment: &common-env
     ARO_ADOPT_BY_HIVE: "true"
     ARO_IMAGE:
+    ARO_E2E_MIMO:
     ARO_CHECKOUT_PATH: /aro
     ARO_INSTALL_VIA_HIVE: "true"
     AZURE_ARM_CLIENT_ID:
