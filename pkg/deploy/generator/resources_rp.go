@@ -404,6 +404,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"monitorLogLevel",
 		"portalLogLevel",
 		"mimoActuatorLogLevel",
+		"mimoSchedulerLogLevel",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
@@ -817,7 +818,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		},
 	}
 
-	mimo := &arm.Resource{
+	mimoManifests := &arm.Resource{
 		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 				Resource: &sdkcosmos.SQLContainerResource{
@@ -844,6 +845,33 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		},
 	}
 
+	mimoSchedules := &arm.Resource{
+		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLContainerResource{
+					ID: pointerutils.ToPtr("MaintenanceSchedules"),
+					PartitionKey: &sdkcosmos.ContainerPartitionKey{
+						Paths: []*string{
+							pointerutils.ToPtr("/id"),
+						},
+						Kind: &hashPartitionKey,
+					},
+					DefaultTTL: pointerutils.ToPtr(int32(-1)),
+				},
+				Options: &sdkcosmos.CreateUpdateOptions{
+					Throughput: pointerutils.ToPtr(int32(cosmosDbGatewayProvisionedThroughputHack)),
+				},
+			},
+			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/MaintenanceSchedules')]"),
+			Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+		},
+	}
+
 	if !g.production {
 		database.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{
 			AutoscaleSettings: &sdkcosmos.AutoscaleSettings{
@@ -852,7 +880,8 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		}
 		portal.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
 		gateway.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
-		mimo.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
+		mimoManifests.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
+		mimoSchedules.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
 	}
 
 	rs := []*arm.Resource{
@@ -1043,7 +1072,8 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
 		},
-		mimo,
+		mimoManifests,
+		mimoSchedules,
 	}
 
 	// Adding Triggers

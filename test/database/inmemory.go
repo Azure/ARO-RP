@@ -100,11 +100,11 @@ func NewFakeMaintenanceManifests(now func() time.Time) (db database.MaintenanceM
 	return db, client
 }
 
-func NewFakeMaintenanceSchedules(now func() time.Time) (db database.MaintenanceSchedules, client *cosmosdb.FakeMaintenanceScheduleDocumentClient) {
+func NewFakeMaintenanceSchedules() (db database.MaintenanceSchedules, client *cosmosdb.FakeMaintenanceScheduleDocumentClient) {
 	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.MAINTENANCE_SCHEDULES)
 	coll := &fakeCollectionClient{}
 	client = cosmosdb.NewFakeMaintenanceScheduleDocumentClient(jsonHandle)
-	injectMaintenanceSchedules(client, now)
+	injectMaintenanceSchedules(client)
 	db = database.NewMaintenanceSchedulesWithProvidedClient(client, coll, "", uuid)
 	return db, client
 }

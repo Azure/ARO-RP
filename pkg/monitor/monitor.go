@@ -95,7 +95,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		m:        m,
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
-		subs:     changefeed.NewSubscriptionsChangefeedCache(true),
+		subs:     changefeed.NewSubscriptionsChangefeedCache(m, true),
 		env:      e,
 
 		bucketCount: bucket.Buckets,
