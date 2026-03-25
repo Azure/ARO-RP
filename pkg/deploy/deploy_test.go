@@ -676,10 +676,10 @@ func TestCleanupOrphanedTaggedPIPs(t *testing.T) {
 			mocks: func(pip *mock_armnetwork.MockPublicIPAddressesClient) {
 				pip.EXPECT().Get(ctx, rgName, "rp-pip-tagged", nil).Return(
 					armnetwork.PublicIPAddressesClientGetResponse{},
-					&azcore.ResponseError{StatusCode: http.StatusInternalServerError},
+					errors.New("internal server error"),
 				)
 			},
-			wantErr: "Missing RawResponse",
+			wantErr: "internal server error",
 		},
 		{
 			name: "DeleteAndWait fails",
