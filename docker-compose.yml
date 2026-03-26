@@ -5,6 +5,7 @@ x-aro-common-env:
   environment: &common-env
     ARO_ADOPT_BY_HIVE: "true"
     ARO_IMAGE:
+    ARO_E2E_MIMO:
     ARO_CHECKOUT_PATH: /aro
     ARO_INSTALL_VIA_HIVE: "true"
     AZURE_ARM_CLIENT_ID:
@@ -125,6 +126,50 @@ services:
       retries: 3
     restart: on-failure:3
 
+  mimoactuator:
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION} # Using localhost/aro for local image
+    build:
+      context: .
+      dockerfile: Dockerfile.ci-rp
+      args:
+        - REGISTRY=${REGISTRY}
+        - ARO_VERSION=${VERSION}
+      ulimits:
+        nofile:
+          soft: 4096
+          hard: 4096
+    container_name: aro-mimo-actuator
+    depends_on:
+      vpn:
+        condition: service_healthy
+    command: ["-loglevel", "debug", "mimo-actuator"]
+    volumes:
+      - ${PWD}/secrets:/aro/secrets:z
+    environment:
+      <<: *common-env
+      ADMIN_OBJECT_ID:
+      AZURE_GATEWAY_CLIENT_ID:
+      AZURE_GATEWAY_CLIENT_SECRET:
+      AZURE_GATEWAY_SERVICE_PRINCIPAL_ID:
+      HIVE_KUBE_CONFIG_PATH: /aro/secrets/aks.kubeconfig
+      KUBECONFIG: /aro/secrets/aks.kubeconfig
+      MOCK_MSI_CERT:
+      MOCK_MSI_CLIENT_ID:
+      MOCK_MSI_OBJECT_ID:
+      MOCK_MSI_TENANT_ID:
+      OIDC_STORAGE_ACCOUNT_NAME:
+      PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:
+      SKIP_MIWI_ROLE_ASSIGNMENT:
+      USE_WI:
+    ports:
+      - "8445:8445"
+    healthcheck:
+      test: ["CMD", "curl", "-sS", "-f", "http://localhost:8445/healthz/ready"]
+      interval: 90s
+      timeout: 30s
+      retries: 3
+    restart: on-failure:3
+
   portal:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
     container_name: aro-portal
@@ -175,6 +220,8 @@ services:
       vpn:
         condition: service_healthy
       rp:
+        condition: service_healthy
+      mimoactuator:
         condition: service_healthy
       portal:
         condition: service_healthy

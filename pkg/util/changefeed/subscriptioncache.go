@@ -114,7 +114,7 @@ func (c *subscriptionsChangeFeedResponder) OnAllPendingProcessed() {
 	old := c.lastChangefeedProcessed.Swap(time.Now())
 	// we've consumed the initial documents, unlock the waitgroup
 	if old == nil {
-		c.initialPopulationWaitGroup.Done()
+		defer c.initialPopulationWaitGroup.Done()
 	}
 	c.m.EmitGauge("changefeed.caches.size", int64(c.subs.Size()), map[string]string{
 		"name": "SubscriptionDocument",
