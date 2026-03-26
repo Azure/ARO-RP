@@ -428,11 +428,11 @@
 
 1. Create the cluster
     ```bash
-    export CLUSTER=$USER
+    export CLUSTER_NAME=$USER
 
     az aro create \
         --resource-group $RESOURCEGROUP \
-        --name $CLUSTER \
+        --name $CLUSTER_NAME \
         --vnet aro-vnet \
         --master-subnet master-subnet \
         --worker-subnet worker-subnet

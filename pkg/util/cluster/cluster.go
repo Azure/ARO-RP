@@ -57,7 +57,7 @@ import (
 )
 
 type ClusterConfig struct {
-	ClusterName           string `mapstructure:"CLUSTER"`
+	ClusterName           string `mapstructure:"CLUSTER_NAME"`
 	SubscriptionID        string `mapstructure:"AZURE_SUBSCRIPTION_ID"`
 	TenantID              string `mapstructure:"AZURE_TENANT_ID"`
 	Location              string `mapstructure:"LOCATION"`

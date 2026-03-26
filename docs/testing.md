@@ -79,8 +79,8 @@ End to end tests are run using ginkgo. You can run subsets of tests or ignore so
 # source your environment file
 . ./secrets/env
 
-# set the CLUSTER env if you are testing locally
-export CLUSTER=<cluster-name>
+# set the CLUSTER_NAME env if you are testing locally
+export CLUSTER_NAME=<cluster-name>
 
 # source the e2e helper file
 . ./hack/e2e/run-rp-and-e2e.sh
@@ -119,13 +119,13 @@ clean_e2e_db
 If you already created a dev cluster, you can run the e2e tests just by running the following command:
 
 ```bash
-CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
+CLUSTER_NAME=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
 ```
 
 For smoke tests:
 
 ```bash
-CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> E2E_LABEL=smoke make test-e2e
+CLUSTER_NAME=<cluster-name> RESOURCEGROUP=<resource-group> E2E_LABEL=smoke make test-e2e
 ```
 
 ### Run tests to private clusters
@@ -141,7 +141,7 @@ sudo openvpn secrets/vpn-eastus.ovpn  # for eastus
 # sudo openvpn secrets/vpn-aks-westeurope.ovpn  # for westeurope
 # sudo openvpn secrets/vpn-aks-australiaeast.ovpn  # for australiaeast
 
-CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
+CLUSTER_NAME=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
 ```
 
 #### az cli
@@ -210,7 +210,7 @@ After creating the VPN gateway, you can connect to it using the following comman
 
 ```bash
 sudo openvpn --config $VPN_CLIENT.ovpn
-CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
+CLUSTER_NAME=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
 ```
 
 ### Run tests to upgraded clusters

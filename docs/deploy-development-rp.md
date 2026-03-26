@@ -203,13 +203,13 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
       ```bash
       # Create the cluster
-      CLUSTER=<cluster-name> go run ./hack/cluster create
+      CLUSTER_NAME=<cluster-name> go run ./hack/cluster create
       ```
 
       Later the cluster can be deleted as follows:
 
       ```bash
-      CLUSTER=<cluster-name> go run ./hack/cluster delete
+      CLUSTER_NAME=<cluster-name> go run ./hack/cluster delete
       ```
 
       By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.
@@ -365,7 +365,7 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
 ## Make Admin-Action API call(s) to a running local-rp
 
 ```bash
-export CLUSTER=<cluster-name>
+export CLUSTER_NAME=<cluster-name>
 export AZURE_SUBSCRIPTION_ID=<subscription-id>
 export RESOURCEGROUP=<resource-group-name>
   [OR]
@@ -375,54 +375,54 @@ export RESOURCEGROUP=<resource-group-name>
 - Perform AdminUpdate on a dev cluster
 
   ```bash
-  curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
+  curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME?api-version=admin" --header "Content-Type: application/json" -d "{}"
   ```
 
 - Get Cluster details of a dev cluster
 
   ```bash
-  curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
+  curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME?api-version=admin" --header "Content-Type: application/json" -d "{}"
   ```
 
 - Get SerialConsole logs of a VM of dev cluster
 
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
-  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/serialconsole?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/serialconsole?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
 - Redeploy a VM in a dev cluster
 
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/redeployvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/redeployvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
 - Stop a VM in a dev cluster
 
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
 - Stop and [deallocate a VM](https://learn.microsoft.com/en-us/azure/virtual-machines/states-billing) in a dev cluster
 
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME&deallocateVM=True" --header "Content-Type: application/json" -d "{}"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/stopvm?vmName=$VMNAME&deallocateVM=True" --header "Content-Type: application/json" -d "{}"
   ```
 
 - Start a VM in a dev cluster
 
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/startvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/startvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
 - List VM Resize Options for a master node of dev cluster
 
   ```bash
-  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/skus" --header "Content-Type: application/json" -d "{}"
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/skus" --header "Content-Type: application/json" -d "{}"
   ```
 
 - Resize master node of a dev cluster
@@ -430,7 +430,7 @@ export RESOURCEGROUP=<resource-group-name>
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   VMSIZE="Standard_D16s_v3"
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resize?vmName=$VMNAME&vmSize=$VMSIZE" --header "Content-Type: application/json" -d "{}"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/resize?vmName=$VMNAME&vmSize=$VMSIZE" --header "Content-Type: application/json" -d "{}"
   ```
 
 - List Clusters of a local-rp
@@ -442,13 +442,13 @@ export RESOURCEGROUP=<resource-group-name>
 - List cluster Azure Resources of a dev cluster
 
   ```bash
-  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resources"
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/resources"
   ```
 
 - Perform Cluster Upgrade on a dev cluster
 
   ```bash
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/upgrade"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/upgrade"
   ```
 
 - Get container logs from an OpenShift pod in a cluster
@@ -457,7 +457,7 @@ export RESOURCEGROUP=<resource-group-name>
   NAMESPACE=<namespace-name>
   POD=<pod-name>
   CONTAINER=<container-name>
-  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
   ```
 
 - List Supported VM Sizes
@@ -470,27 +470,27 @@ export RESOURCEGROUP=<resource-group-name>
 - Perform Etcd Recovery Operation on a cluster
 
   ```bash
-  curl -X PATCH -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/etcdrecovery"
+  curl -X PATCH -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/etcdrecovery"
   ```
 
 - Delete a managed resource
   ```bash
   MANAGED_RESOURCEID=<id of managed resource to delete>
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/deletemanagedresource?managedResourceID=$MANAGED_RESOURCEID"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/deletemanagedresource?managedResourceID=$MANAGED_RESOURCEID"
   ```
 
 - Get top pod metrics for a dev cluster:
 
   ```bash
   curl -X GET -k \
-    "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/pods" 
+    "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/top/pods" 
   ```
 
 - Get top node metrics for a dev cluster
   
   ```bash
   curl -X GET -k \
-  "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/top/nodes"
+  "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER_NAME/top/nodes"
   ```
 
 ## OpenShift Version
@@ -557,13 +557,13 @@ If you want to run the installer version via hive and not in container, you will
 
   ```bash
   sudo openvpn secrets/vpn-$LOCATION.ovpn &
-  CLUSTER=cluster hack/ssh-agent.sh bootstrap
+  CLUSTER_NAME=cluster hack/ssh-agent.sh bootstrap
   ```
 
 - Get an admin kubeconfig:
 
   ```bash
-  CLUSTER=cluster make admin.kubeconfig
+  CLUSTER_NAME=cluster make admin.kubeconfig
   export KUBECONFIG=admin.kubeconfig
   ```
 
@@ -584,11 +584,11 @@ If you want to run the installer version via hive and not in container, you will
   aro-dev-abc123-worker-eastus3-cbqs2   Ready      worker   47h   v1.19.0+2f3101c
 
 
-  CLUSTER=cluster hack/ssh-agent.sh master0 # master node aro-dev-abc123-master-0
-  CLUSTER=cluster hack/ssh-agent.sh aro-dev-abc123-worker-eastus1-2s5rb # worker aro-dev-abc123-worker-eastus1-2s5rb
-  CLUSTER=cluster hack/ssh-agent.sh eastus1 # worker aro-dev-abc123-worker-eastus1-2s5rb
-  CLUSTER=cluster hack/ssh-agent.sh 2s5rb  # worker aro-dev-abc123-worker-eastus1-2s5rb
-  CLUSTER=cluster hack/ssh-agent.sh bootstrap # the bootstrap node used to provision cluster
+  CLUSTER_NAME=cluster hack/ssh-agent.sh master0 # master node aro-dev-abc123-master-0
+  CLUSTER_NAME=cluster hack/ssh-agent.sh aro-dev-abc123-worker-eastus1-2s5rb # worker aro-dev-abc123-worker-eastus1-2s5rb
+  CLUSTER_NAME=cluster hack/ssh-agent.sh eastus1 # worker aro-dev-abc123-worker-eastus1-2s5rb
+  CLUSTER_NAME=cluster hack/ssh-agent.sh 2s5rb  # worker aro-dev-abc123-worker-eastus1-2s5rb
+  CLUSTER_NAME=cluster hack/ssh-agent.sh bootstrap # the bootstrap node used to provision cluster
   ```
 
 # Debugging AKS Cluster

@@ -42,7 +42,7 @@ The desired instance types should be free of any restrictions. The subscription 
 3) Follow steps in https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster to create a cluster, specifying `-worker-vm-size` and/or `--master-vm-size` in the `az aro create` step to specify an alternate sku:
 
 ~~~
-az aro create   --resource-group $RESOURCEGROUP   --name $CLUSTER   --vnet aro-lseries   --master-subnet master-subnet   --worker-subnet worker-subnet   --worker-vm-size "Standard_L8s_v2"
+az aro create   --resource-group $RESOURCEGROUP   --name $CLUSTER_NAME   --vnet aro-lseries   --master-subnet master-subnet   --worker-subnet worker-subnet   --worker-vm-size "Standard_L8s_v2"
 ~~~
 
 4) Once an install with an alternate size is successful, a basic check of cluster health can be conducted, as well as local e2e tests to confirm supportability.

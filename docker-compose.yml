@@ -230,7 +230,7 @@ services:
     environment:
       <<: *common-env
       ARO_SELENIUM_HOSTNAME:
-      CLUSTER:
+      CLUSTER_NAME:
       E2E_DELETE_CLUSTER:
       E2E_LABEL:
       OS_CLUSTER_VERSION:
