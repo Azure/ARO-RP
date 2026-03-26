@@ -6,6 +6,7 @@ package generator
 import (
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -248,7 +249,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		scriptUtilServices +
 		scriptUtilSystem +
 		scriptGatewayVMSS
-	trailer := base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
+	regex := regexp.MustCompile(`# *`)
+	trailer := regex.ReplaceAllString(bootstrapScript, "")
+
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
