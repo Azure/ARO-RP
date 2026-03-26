@@ -28,7 +28,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
-	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
 // getPreResizeControlPlaneVMsValidation is the HTTP handler; the underscore
@@ -337,15 +336,12 @@ func (f *frontend) validateVMSKU(
 		return err
 	}
 
-	skus, err := a.VMSizeList(ctx)
+	filteredSkus, err := a.VMGetSKUs(ctx, []string{desiredVMSize})
 	if err != nil {
 		return err
 	}
 
 	location := doc.OpenShiftCluster.Location
-
-	filteredSkus := computeskus.FilterVMSizes(skus, location)
-
 	sku, err := checkSKUAvailability(filteredSkus, location, "vmSize", desiredVMSize)
 	if err != nil {
 		return err
