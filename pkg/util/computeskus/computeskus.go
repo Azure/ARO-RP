@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	sdkcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
@@ -55,9 +56,11 @@ func HasCapability(sku *sdkcompute.ResourceSKU, capabilityName string) bool {
 // IsRestricted checks whether given resource SKU is restricted in a given location
 func IsRestricted(sku *sdkcompute.ResourceSKU, location string) bool {
 	for _, restriction := range sku.Restrictions {
-		for _, restrictedLocation := range restriction.RestrictionInfo.Locations {
-			if *restrictedLocation == location {
-				return true
+		if restriction.RestrictionInfo != nil {
+			for _, restrictedLocation := range restriction.RestrictionInfo.Locations {
+				if restrictedLocation != nil && strings.EqualFold(*restrictedLocation, location) {
+					return true
+				}
 			}
 		}
 	}
@@ -92,12 +95,12 @@ func SelectVMSkusInCurrentRegion(ctx context.Context, resourceSkusClient armcomp
 			continue
 		}
 
-		if slices.Contains(skuNames, *sku.Name) {
-			// Make sure it's actually in our location
-			if !slices.ContainsFunc(sku.Locations, func(s *string) bool { return *s == location }) {
-				continue
-			}
+		// Make sure it's actually in our location
+		if !slices.ContainsFunc(sku.Locations, func(s *string) bool { return s != nil && strings.EqualFold(*s, location) }) {
+			continue
+		}
 
+		if slices.Contains(skuNames, *sku.Name) {
 			vmskus[*sku.Name] = sku
 		}
 
@@ -126,7 +129,7 @@ func ListUnrestrictedVMSkusInCurrentRegion(ctx context.Context, resourceSkusClie
 		}
 
 		// Make sure it's actually in our location
-		if !slices.ContainsFunc(sku.Locations, func(s *string) bool { return *s == location }) {
+		if !slices.ContainsFunc(sku.Locations, func(s *string) bool { return s != nil && strings.EqualFold(*s, location) }) {
 			continue
 		}
 

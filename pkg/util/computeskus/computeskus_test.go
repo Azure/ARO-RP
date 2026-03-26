@@ -254,6 +254,17 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 								},
 							},
 						}: nil,
+						// Nil region
+						{
+							Name:         pointerutils.ToPtr("smallmachine_v6"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    []*string{nil},
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("northus2"),
+								},
+							},
+						}: nil,
 						// Machine that has no locations/locationinfo
 						{
 							Name:         pointerutils.ToPtr("smallmachine_v3"),
@@ -333,7 +344,6 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 									Location: pointerutils.ToPtr("northus2"),
 								},
 							},
-							Restrictions: []*armcompute.ResourceSKURestrictions{},
 						}: nil,
 						// Machine that has no locations/locationinfo
 						{
@@ -460,6 +470,17 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 								},
 							},
 						}: nil,
+						// Capitalisation of region
+						{
+							Name:         pointerutils.ToPtr("smallmachine_v10"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"Northus2"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("Northus2"),
+								},
+							},
+						}: nil,
 						// Duplicated struct, in case we get two
 						{
 							Name:         pointerutils.ToPtr("smallmachine_v4"),
@@ -483,6 +504,17 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 								},
 							},
 						}: nil,
+						// Nil region
+						{
+							Name:         pointerutils.ToPtr("smallmachine_v11"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    []*string{nil},
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("northus2"),
+								},
+							},
+						}: nil,
 						// Restricted in this region
 						{
 							Name:         pointerutils.ToPtr("smallmachine_v2"),
@@ -496,9 +528,46 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 							Restrictions: []*armcompute.ResourceSKURestrictions{
 								{
 									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+										Locations: pointerutils.ToSlicePtr([]string{"somewhereelse"}),
+									},
+								},
+								{
+									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
 										Locations: pointerutils.ToSlicePtr([]string{"northus2"}),
 									},
 								},
+							},
+						}: nil,
+						// Restricted in this region, equal fold
+						{
+							Name:         pointerutils.ToPtr("smallmachine_v20"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("northus2"),
+								},
+							},
+							Restrictions: []*armcompute.ResourceSKURestrictions{
+								{
+									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+										Locations: pointerutils.ToSlicePtr([]string{"Northus2"}),
+									},
+								},
+							},
+						}: nil,
+						// Nil restriction info
+						{
+							Name:         pointerutils.ToPtr("smallmachine_v1"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("northus2"),
+								},
+							},
+							Restrictions: []*armcompute.ResourceSKURestrictions{
+								{},
 							},
 						}: nil,
 						// Machine that has no locations/locationinfo
@@ -522,7 +591,7 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 					}),
 				)
 			},
-			desired: []string{"bigmachine_v1", "smallmachine_v4"},
+			desired: []string{"bigmachine_v1", "smallmachine_v1", "smallmachine_v10", "smallmachine_v4"},
 		},
 		{
 			name: "duplicate VM structs don't lead to duplicated names",
