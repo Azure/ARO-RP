@@ -119,6 +119,40 @@ func TestAdminVMResize(t *testing.T) {
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: NotFound: : "The VirtualMachine 'aro-fake-node-master-0' under resource group 'resourcegroup' was not found."`,
 		},
+		{
+			name:       "resize fails, poweron succeeds",
+			vmName:     "aro-fake-node-master-0",
+			vmSize:     "Standard_D8s_v3",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
+				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(fmt.Errorf("resize failed"))
+				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : resize failed`,
+		},
+		{
+			name:       "resize fails, poweron also fails",
+			vmName:     "aro-fake-node-master-0",
+			vmSize:     "Standard_D8s_v3",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
+				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(fmt.Errorf("resize failed"))
+				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(fmt.Errorf("poweron failed"))
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : resize failed` + "\n" + `poweron failed`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()

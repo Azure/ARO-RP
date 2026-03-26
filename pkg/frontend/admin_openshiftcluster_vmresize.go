@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -54,5 +55,16 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 				vmName, resourceGroupName))
 	}
 
-	return action.VMResize(ctx, vmName, vmSize)
+	err = action.VMResize(ctx, vmName, vmSize)
+	if err != nil {
+		// Before sending the error to the resize GA, we'll attempt to power the VM on
+		poweronErr := action.VMStartAndWait(ctx, vmName)
+
+		if poweronErr != nil {
+			err = errors.Join(err, poweronErr)
+		}
+
+		// TO-DO: uncordon the node (requires a kubeclient)
+	}
+	return err
 }
