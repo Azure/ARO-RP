@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -46,13 +47,15 @@ type KubeActions interface {
 	// Fetch top pods and nodes metrics
 	TopPods(ctx context.Context, restConfig *restclient.Config, allNamespaces bool) ([]PodMetrics, error)
 	TopNodes(ctx context.Context, restConfig *restclient.Config) ([]NodeMetrics, error)
+	CheckAPIServerHealthz(ctx context.Context) error
 }
 
 type kubeActions struct {
 	log *logrus.Entry
 	oc  *api.OpenShiftCluster
 
-	mapper meta.RESTMapper
+	mapper     meta.RESTMapper
+	restConfig *restclient.Config
 
 	dyn     dynamic.Interface
 	kubecli kubernetes.Interface
@@ -84,7 +87,8 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		log: log,
 		oc:  oc,
 
-		mapper: mapper,
+		mapper:     mapper,
+		restConfig: restConfig,
 
 		dyn:     dyn,
 		kubecli: kubecli,
@@ -186,4 +190,33 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 	}
 
 	return k.dyn.Resource(gvr).Namespace(namespace).Delete(ctx, name, resourceDeleteOptions)
+}
+
+func (k *kubeActions) CheckAPIServerHealthz(ctx context.Context) error {
+	rawClientConfig := *k.restConfig
+	rawClientConfig.GroupVersion = &schema.GroupVersion{}
+	rawClientConfig.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	rawClientConfig.UserAgent = restclient.DefaultKubernetesUserAgent()
+
+	rawClient, err := restclient.RESTClientFor(&rawClientConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create raw REST client: %w", err)
+	}
+
+	var statusCode int
+	err = rawClient.
+		Get().
+		AbsPath("/healthz").
+		Do(ctx).
+		StatusCode(&statusCode).
+		Error()
+	if err != nil {
+		return fmt.Errorf("API server healthz check failed: %w", err)
+	}
+
+	if statusCode != http.StatusOK {
+		return fmt.Errorf("API server healthz returned non-OK status: %d", statusCode)
+	}
+
+	return nil
 }

@@ -16,6 +16,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
+
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -109,6 +111,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 
 	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
 	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
+	wg.Go(func() { collect(validateAPIServerPods(ctx, k)) })
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
 
@@ -219,9 +222,17 @@ func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionD
 	return nil
 }
 
-// validateAPIServerHealth verifies that the kube-apiserver ClusterOperator is
-// healthy (Available=True, Progressing=False, Degraded=False).
+// validateAPIServerHealth verifies that:
+// 1. The API server is reachable from the RP (via /healthz)
+// 2. The kube-apiserver ClusterOperator is healthy (Available=True, Progressing=False, Degraded=False)
 func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
+	if err := k.CheckAPIServerHealthz(ctx); err != nil {
+		return api.NewCloudError(
+			http.StatusServiceUnavailable,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver",
+			fmt.Sprintf("API server is not reachable: %v", err))
+	}
+
 	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
 	if err != nil {
 		return api.NewCloudError(
@@ -247,6 +258,76 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 	}
 
 	return nil
+}
+
+func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) error {
+	const (
+		kubeAPIServerNamespace = "openshift-kube-apiserver"
+		kubeAPIServerAppLabel  = "openshift-kube-apiserver"
+	)
+
+	rawPods, err := k.KubeList(ctx, "Pod", kubeAPIServerNamespace)
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
+			fmt.Sprintf("Failed to list pods in %s namespace: %v", kubeAPIServerNamespace, err))
+	}
+
+	var podList corev1.PodList
+	if err := json.Unmarshal(rawPods, &podList); err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
+			fmt.Sprintf("Failed to parse pod list: %v", err))
+	}
+
+	var apiServerPodCount int
+	var unhealthyPods []string
+	for _, pod := range podList.Items {
+		if pod.Labels["app"] != kubeAPIServerAppLabel {
+			continue
+		}
+
+		apiServerPodCount++
+
+		if healthy, reason := isPodHealthy(&pod); !healthy {
+			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, reason))
+		}
+	}
+
+	if apiServerPodCount != api.ControlPlaneNodeCount {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
+			fmt.Sprintf("Expected %d kube-apiserver pods, found %d. Resize is not safe without full API server redundancy.",
+				api.ControlPlaneNodeCount, apiServerPodCount))
+	}
+
+	if len(unhealthyPods) > 0 {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
+			fmt.Sprintf("Unhealthy kube-apiserver pods: %v. Resize is not safe without full API server redundancy.",
+				unhealthyPods))
+	}
+
+	return nil
+}
+
+func isPodHealthy(pod *corev1.Pod) (healthy bool, reason string) {
+	if pod.Status.Phase != corev1.PodRunning {
+		return false, fmt.Sprintf("phase: %s", pod.Status.Phase)
+	}
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady {
+			if cond.Status != corev1.ConditionTrue {
+				return false, "not ready"
+			}
+			return true, ""
+		}
+	}
+	return false, "Ready condition not found"
 }
 
 // validateEtcdHealth verifies that the etcd ClusterOperator is healthy.

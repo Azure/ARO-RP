@@ -13,15 +13,13 @@ import (
 	context "context"
 	reflect "reflect"
 
+	adminactions "github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	gomock "go.uber.org/mock/gomock"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
-
-	adminactions "github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 )
 
 // MockKubeActions is a mock of KubeActions interface.
@@ -74,6 +72,20 @@ func (m *MockKubeActions) ApproveCsr(ctx context.Context, csrName string) error 
 func (mr *MockKubeActionsMockRecorder) ApproveCsr(ctx, csrName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveCsr", reflect.TypeOf((*MockKubeActions)(nil).ApproveCsr), ctx, csrName)
+}
+
+// CheckAPIServerHealthz mocks base method.
+func (m *MockKubeActions) CheckAPIServerHealthz(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckAPIServerHealthz", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckAPIServerHealthz indicates an expected call of CheckAPIServerHealthz.
+func (mr *MockKubeActionsMockRecorder) CheckAPIServerHealthz(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAPIServerHealthz", reflect.TypeOf((*MockKubeActions)(nil).CheckAPIServerHealthz), ctx)
 }
 
 // CordonNode mocks base method.
