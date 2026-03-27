@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
-func fakePoolWorkeringRenewLeaseTrigger(_ context.Context, doc *api.PoolWorkerDocument, now func() time.Time) error {
+func fakePoolWorkerRenewLeaseTrigger(_ context.Context, doc *api.PoolWorkerDocument, now func() time.Time) error {
 	doc.LeaseExpires = int(now().Unix()) + 60
 	return nil
 }
@@ -74,7 +74,7 @@ func injectPoolWorkers(c *cosmosdb.FakePoolWorkerDocumentClient, now func() time
 		return fakePoolWorkerGetAllButMasterHandler(client, query, opts, now)
 	})
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.PoolWorkerDocument) error {
-		return fakePoolWorkeringRenewLeaseTrigger(ctx, doc, now)
+		return fakePoolWorkerRenewLeaseTrigger(ctx, doc, now)
 	})
 	c.SetSorter(func(in []*api.PoolWorkerDocument) {
 		slices.SortFunc(in, func(a, b *api.PoolWorkerDocument) int { return CompareIDable(a, b) })

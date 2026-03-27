@@ -114,8 +114,8 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		taskPollTime: 90 * time.Second,
 
 		// Bucket timing is set lower to prioritise responsiveness to VM changes
-		bucketRefreshInterval:          30 * time.Second,
-		bucketRefreshReadinessInterval: 45 * time.Second,
+		bucketRefreshInterval:          10 * time.Second,
+		bucketRefreshReadinessInterval: 60 * time.Second,
 
 		readyDelay:   time.Minute * 2,
 		serveHealthz: true,
