@@ -106,9 +106,8 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		changefeedBatchSize: 50,
 		changefeedInterval:  10 * time.Second,
 
-		// Bucket timing is set to prioritise responsiveness to VM changes
-		bucketRefreshInterval:          30 * time.Second,
-		bucketRefreshReadinessInterval: 45 * time.Second,
+		bucketRefreshInterval:          10 * time.Second,
+		bucketRefreshReadinessInterval: 60 * time.Second,
 
 		subs: changefeed.NewSubscriptionsChangefeedCache(m, false),
 
@@ -371,7 +370,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 			}
 
 			ownedBuckets := make(map[string]struct{})
-			for i := range _ownedBuckets {
+			for _, i := range _ownedBuckets {
 				ownedBuckets[fmt.Sprintf("%d", i)] = struct{}{}
 			}
 
