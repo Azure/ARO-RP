@@ -107,11 +107,23 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		}
 	}
 
+	if err := k.CheckAPIServerReadyz(ctx); err != nil {
+		return nil, api.NewCloudError(
+			http.StatusServiceUnavailable,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver",
+			fmt.Sprintf("API server is reporting a non-ready status: %v", err))
+	}
+
 	var wg sync.WaitGroup
 
 	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
-	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
-	wg.Go(func() { collect(validateAPIServerPods(ctx, k)) })
+	wg.Go(func() {
+		if err := validateAPIServerHealth(ctx, k); err != nil {
+			collect(err)
+			return
+		}
+		collect(validateAPIServerPods(ctx, k))
+	})
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
 
@@ -222,17 +234,10 @@ func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionD
 	return nil
 }
 
-// validateAPIServerHealth verifies that:
-// 1. The API server is reachable from the RP (via /readyz)
-// 2. The kube-apiserver ClusterOperator is healthy (Available=True, Progressing=False, Degraded=False)
+// validateAPIServerHealth verifies that the kube-apiserver ClusterOperator is healthy
+// (Available=True, Progressing=False, Degraded=False).
+// Note: API server reachability is checked earlier via CheckAPIServerReadyz
 func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
-	if err := k.CheckAPIServerReadyz(ctx); err != nil {
-		return api.NewCloudError(
-			http.StatusServiceUnavailable,
-			api.CloudErrorCodeInternalServerError, "kube-apiserver",
-			fmt.Sprintf("API server is not reachable: %v", err))
-	}
-
 	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
 	if err != nil {
 		return api.NewCloudError(

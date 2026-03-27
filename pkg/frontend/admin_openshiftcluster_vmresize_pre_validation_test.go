@@ -429,6 +429,45 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
 		},
+		{
+			name:       "API server unreachable",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D8s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					CheckAPIServerReadyz(gomock.Any()).
+					Return(fmt.Errorf("connection refused"))
+			},
+			wantStatusCode: http.StatusServiceUnavailable,
+			wantError:      `503: InternalServerError: kube-apiserver: API server is reporting a non-ready status: connection refused`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
@@ -794,28 +833,13 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "healthy kube-apiserver",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil)
-				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return(healthyKubeAPIServerJSON(), nil)
 			},
 		},
 		{
-			name: "readyz check fails",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(fmt.Errorf("connection refused"))
-			},
-			wantErr: "503: InternalServerError: kube-apiserver: API server is not reachable: connection refused",
-		},
-		{
 			name: "kube-apiserver degraded",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return(fakeClusterOperatorJSON("kube-apiserver", []configv1.ClusterOperatorStatusCondition{
@@ -830,9 +854,6 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "kube-apiserver unavailable",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil)
-				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return(fakeClusterOperatorJSON("kube-apiserver", []configv1.ClusterOperatorStatusCondition{
 						{Type: configv1.OperatorAvailable, Status: configv1.ConditionFalse},
@@ -846,9 +867,6 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "KubeGet returns error",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil)
-				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return(nil, fmt.Errorf("connection refused"))
 			},
@@ -857,9 +875,6 @@ func TestValidateAPIServerHealth(t *testing.T) {
 		{
 			name: "KubeGet returns invalid JSON",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return([]byte(`{invalid`), nil)
