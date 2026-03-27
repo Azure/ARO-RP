@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"iter"
 	"reflect"
-	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -37,7 +36,7 @@ type openShiftClusterCache struct {
 	initialPopulationWaitGroup *sync.WaitGroup
 }
 
-func newOpenShiftClusterCache(log *logrus.Entry, m metrics.Emitter, subCache changefeed.SubscriptionsCache, ownedBuckets []int) *openShiftClusterCache {
+func newOpenShiftClusterCache(log *logrus.Entry, m metrics.Emitter, subCache changefeed.SubscriptionsCache) *openShiftClusterCache {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &openShiftClusterCache{
@@ -45,7 +44,6 @@ func newOpenShiftClusterCache(log *logrus.Entry, m metrics.Emitter, subCache cha
 		m:                          m,
 		subCache:                   subCache,
 		clusters:                   xsync.NewMap[string, selectorData](),
-		ownedBuckets:               ownedBuckets,
 		initialPopulationWaitGroup: wg,
 	}
 }
@@ -71,14 +69,6 @@ func (c *openShiftClusterCache) OnDoc(doc *api.OpenShiftClusterDocument) {
 	id := strings.ToLower(doc.OpenShiftCluster.ID)
 	ps := doc.OpenShiftCluster.Properties.ProvisioningState
 	fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
-
-	// If we don't own the bucket, delete it (which will be a no-op) just in
-	// case our buckets changed (even though MIMO doesn't support balancing that
-	// right now)
-	if !slices.Contains(c.ownedBuckets, doc.Bucket) {
-		c.clusters.Delete(id)
-		return
-	}
 
 	switch {
 	case ps == api.ProvisioningStateCreating,
