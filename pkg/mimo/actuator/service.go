@@ -194,6 +194,10 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	go buckets.StartBucketWorkerLoop(
 		ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
 		s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, func(i []int) {
+			if len(i) == 0 {
+				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
+				return
+			}
 			s.b.SetBuckets(i)
 			s.lastBucketUpdate.Store(s.now())
 		}, stop,
