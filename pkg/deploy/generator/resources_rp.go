@@ -1013,6 +1013,30 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
+						ID: pointerutils.ToPtr("PoolWorkers"),
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								pointerutils.ToPtr("/workerType"),
+							},
+							Kind: &hashPartitionKey,
+						},
+						DefaultTTL: pointerutils.ToPtr(int32(-1)),
+					},
+					Options: &sdkcosmos.CreateUpdateOptions{},
+				},
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/PoolWorkers')]"),
+				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+		},
+		{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: pointerutils.ToPtr("OpenShiftClusters"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
@@ -1091,6 +1115,8 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		g.rpCosmosDBTriggers(databaseName, "OpenShiftClusters", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 		// Monitors
 		g.rpCosmosDBTriggers(databaseName, "Monitors", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		// PoolWorkers
+		g.rpCosmosDBTriggers(databaseName, "PoolWorkers", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 		// MIMO DB triggers
 		g.rpCosmosDBTriggers(databaseName, "MaintenanceManifests", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 	)
