@@ -6,6 +6,7 @@ package api
 type PoolWorkerType string
 
 const (
+	PoolWorkerTypeMonitor       PoolWorkerType = "monitor"
 	PoolWorkerTypeMIMOActuator  PoolWorkerType = "mimo-actuator"
 	PoolWorkerTypeMIMOScheduler PoolWorkerType = "mimo-scheduler"
 )

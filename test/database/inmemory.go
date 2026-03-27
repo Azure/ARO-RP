@@ -58,7 +58,7 @@ func NewFakePoolWorkers(now func() time.Time) (db database.PoolWorkers, client *
 	return db, client
 }
 
-func FakePoolWorkerWithExistingClient(client *cosmosdb.FakePoolWorkerDocumentClient) database.PoolWorkers {
+func NewFakePoolWorkersWithExistingClient(client *cosmosdb.FakePoolWorkerDocumentClient) database.PoolWorkers {
 	return database.NewPoolWorkersWithProvidedClient(client, uuid.DefaultGenerator.Generate())
 }
 
