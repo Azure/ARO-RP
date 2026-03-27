@@ -161,7 +161,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
-	return buckets.StartBucketWorkerLoop(ctx, mon.baseLog, api.PoolWorkerTypeMonitor, mon.bucketCount, mon.changefeedInterval, dbPoolWorkers, mon.onBuckets)
+	return buckets.StartBucketWorkerLoop(ctx, mon.baseLog, api.PoolWorkerTypeMonitor, mon.bucketCount, mon.changefeedInterval, dbPoolWorkers, mon.onBuckets, nil)
 }
 
 func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
