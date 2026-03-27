@@ -114,7 +114,7 @@ type frontend struct {
 	// these helps us to test and mock easier
 	now                          func() time.Time
 	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
-	validateResizeQuota          func(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, currentVMSize, desiredVMSize string) error
+	validateResizeQuota          func(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location string, currentVMSizes []string, desiredVMSize string) error
 
 	streamResponder StreamResponder
 }
