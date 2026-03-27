@@ -223,10 +223,10 @@ func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionD
 }
 
 // validateAPIServerHealth verifies that:
-// 1. The API server is reachable from the RP (via /healthz)
+// 1. The API server is reachable from the RP (via /readyz)
 // 2. The kube-apiserver ClusterOperator is healthy (Available=True, Progressing=False, Degraded=False)
 func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
-	if err := k.CheckAPIServerHealthz(ctx); err != nil {
+	if err := k.CheckAPIServerReadyz(ctx); err != nil {
 		return api.NewCloudError(
 			http.StatusServiceUnavailable,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver",

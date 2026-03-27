@@ -76,18 +76,18 @@ func (mr *MockKubeActionsMockRecorder) ApproveCsr(ctx, csrName any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveCsr", reflect.TypeOf((*MockKubeActions)(nil).ApproveCsr), ctx, csrName)
 }
 
-// CheckAPIServerHealthz mocks base method.
-func (m *MockKubeActions) CheckAPIServerHealthz(ctx context.Context) error {
+// CheckAPIServerReadyz mocks base method.
+func (m *MockKubeActions) CheckAPIServerReadyz(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckAPIServerHealthz", ctx)
+	ret := m.ctrl.Call(m, "CheckAPIServerReadyz", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CheckAPIServerHealthz indicates an expected call of CheckAPIServerHealthz.
-func (mr *MockKubeActionsMockRecorder) CheckAPIServerHealthz(ctx any) *gomock.Call {
+// CheckAPIServerReadyz indicates an expected call of CheckAPIServerReadyz.
+func (mr *MockKubeActionsMockRecorder) CheckAPIServerReadyz(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAPIServerHealthz", reflect.TypeOf((*MockKubeActions)(nil).CheckAPIServerHealthz), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAPIServerReadyz", reflect.TypeOf((*MockKubeActions)(nil).CheckAPIServerReadyz), ctx)
 }
 
 // CordonNode mocks base method.

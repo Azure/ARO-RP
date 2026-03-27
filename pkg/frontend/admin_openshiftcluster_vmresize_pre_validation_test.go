@@ -113,7 +113,7 @@ func healthyAPIServerPodsJSON() []byte {
 
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	k.EXPECT().
-		CheckAPIServerHealthz(gomock.Any()).
+		CheckAPIServerReadyz(gomock.Any()).
 		Return(nil).
 		AnyTimes()
 	k.EXPECT().
@@ -794,7 +794,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "healthy kube-apiserver",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerHealthz(gomock.Any()).
+					CheckAPIServerReadyz(gomock.Any()).
 					Return(nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
@@ -802,10 +802,10 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "healthz check fails",
+			name: "readyz check fails",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerHealthz(gomock.Any()).
+					CheckAPIServerReadyz(gomock.Any()).
 					Return(fmt.Errorf("connection refused"))
 			},
 			wantErr: "503: InternalServerError: kube-apiserver: API server is not reachable: connection refused",
@@ -814,7 +814,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "kube-apiserver degraded",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerHealthz(gomock.Any()).
+					CheckAPIServerReadyz(gomock.Any()).
 					Return(nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
@@ -830,7 +830,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "kube-apiserver unavailable",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerHealthz(gomock.Any()).
+					CheckAPIServerReadyz(gomock.Any()).
 					Return(nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
@@ -846,7 +846,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "KubeGet returns error",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerHealthz(gomock.Any()).
+					CheckAPIServerReadyz(gomock.Any()).
 					Return(nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
@@ -858,7 +858,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 			name: "KubeGet returns invalid JSON",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					CheckAPIServerHealthz(gomock.Any()).
+					CheckAPIServerReadyz(gomock.Any()).
 					Return(nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
