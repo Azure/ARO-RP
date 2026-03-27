@@ -61,7 +61,6 @@ type monitor struct {
 	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
-	isMaster    bool
 	bucketCount int
 
 	lastBucketlist atomic.Value // time.Time
