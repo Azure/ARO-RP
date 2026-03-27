@@ -37,12 +37,12 @@ const changefeedBatchSize = 50
 
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
-	dbMonitors, err := mon.dbGroup.Monitors()
+	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
 	if err != nil {
 		return err
 	}
 
-	buckets, err := dbMonitors.ListBuckets(ctx)
+	buckets, err := dbPoolWorkers.ListBuckets(ctx, api.PoolWorkerTypeMonitor)
 	if err != nil {
 		return err
 	}

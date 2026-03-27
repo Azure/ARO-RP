@@ -33,7 +33,7 @@ import (
 )
 
 type monitorDBs interface {
-	database.DatabaseGroupWithMonitors
+	database.DatabaseGroupWithPoolWorkers
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithSubscriptions
 }
@@ -118,7 +118,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 }
 
 func (mon *monitor) Run(ctx context.Context) error {
-	dbMonitors, err := mon.dbGroup.Monitors()
+	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
 	if err != nil {
 		return err
 	}
@@ -139,11 +139,12 @@ func (mon *monitor) Run(ctx context.Context) error {
 	// dequeue it. If it already exists we will get a StatusPreconditionFailed
 	// error, which is expected and we can ignore. The leasing of the master
 	// document is in `mon.master()`.
-	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
-		ID: "master",
+	_, err = dbPoolWorkers.Create(ctx, api.PoolWorkerTypeMonitor, &api.PoolWorkerDocument{
+		ID:         string(api.PoolWorkerTypeMonitor),
+		WorkerType: api.PoolWorkerTypeMonitor,
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-		mon.baseLog.Error(fmt.Errorf("error bootstrapping master MonitorDocument (not a 412): %w", err))
+		mon.baseLog.Error(fmt.Errorf("error bootstrapping master PoolWorkerDocument (not a 412): %w", err))
 		return err
 	}
 
@@ -161,9 +162,9 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	for {
 		// register ourself as a monitor, ttl of 60s default
-		err = dbMonitors.MonitorHeartbeat(ctx, int(mon.changefeedInterval.Seconds()*6))
+		err = dbPoolWorkers.PoolWorkerHeartbeat(ctx, api.PoolWorkerTypeMonitor, int(mon.changefeedInterval.Seconds()*6))
 		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %w", err))
+			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a Monitor poolWorker, continuing: %w", err))
 		}
 
 		// try to become master and share buckets across registered monitors
