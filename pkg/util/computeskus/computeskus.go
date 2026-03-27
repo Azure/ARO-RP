@@ -56,7 +56,7 @@ func HasCapability(sku *sdkcompute.ResourceSKU, capabilityName string) bool {
 // IsRestricted checks whether given resource SKU is restricted in a given location
 func IsRestricted(sku *sdkcompute.ResourceSKU, location string) bool {
 	for _, restriction := range sku.Restrictions {
-		if restriction.RestrictionInfo != nil {
+		if restriction != nil && restriction.RestrictionInfo != nil {
 			for _, restrictedLocation := range restriction.RestrictionInfo.Locations {
 				if restrictedLocation != nil && strings.EqualFold(*restrictedLocation, location) {
 					return true
@@ -90,6 +90,10 @@ func SelectVMSkusInCurrentRegion(ctx context.Context, resourceSkusClient armcomp
 			return nil, fmt.Errorf("%w: %w", ErrListVMResourceSKUs, err)
 		}
 
+		if sku == nil {
+			continue
+		}
+
 		// We only care about VMs and ones with locations/locationinfo
 		if *sku.ResourceType != "virtualMachines" || len(sku.Locations) == 0 || len(sku.LocationInfo) == 0 {
 			continue
@@ -121,6 +125,10 @@ func ListUnrestrictedVMSkusInCurrentRegion(ctx context.Context, resourceSkusClie
 	for sku, err := range skusIter {
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrListVMResourceSKUs, err)
+		}
+
+		if sku == nil {
+			continue
 		}
 
 		// We only care about VMs and ones with locations/locationinfo

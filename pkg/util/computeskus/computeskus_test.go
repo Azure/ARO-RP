@@ -5,7 +5,6 @@ package computeskus
 
 import (
 	"errors"
-	"maps"
 	"reflect"
 	"testing"
 
@@ -221,70 +220,144 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 			name:   "happypath",
 			vmSkus: []string{"bigmachine_v1", "smallmachine_v4", "smallmachine_v5"},
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
-				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).Return(
-					maps.All(map[*armcompute.ResourceSKU]error{
-						{
-							Name:         pointerutils.ToPtr("bigmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+						for _, s := range []*armcompute.ResourceSKU{
+							{
+								Name:         pointerutils.ToPtr("bigmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v4"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-						// Not actually in our region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v5"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus1"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus1"),
+							// Capitalisation of region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v10"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"Northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("Northus2"),
+									},
 								},
 							},
-						}: nil,
-						// Nil region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v6"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    []*string{nil},
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							// Not actually in our region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v9"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus1"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus1"),
+									},
 								},
 							},
-						}: nil,
-						// Machine that has no locations/locationinfo
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    nil,
-							LocationInfo: nil,
-						}: nil,
-						// Actually an availabilitySet
-						{
-							Name:         pointerutils.ToPtr("Classic"),
-							ResourceType: pointerutils.ToPtr("availabilitySets"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							// Nil region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v11"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    []*string{nil},
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-					}),
-				)
+							// Restricted in this region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v2"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{
+									{
+										RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+											Locations: pointerutils.ToSlicePtr([]string{"somewhereelse"}),
+										},
+									},
+									{
+										RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+											Locations: pointerutils.ToSlicePtr([]string{"northus2"}),
+										},
+									},
+								},
+							},
+							// Restricted in this region, equal fold
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v20"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{
+									{
+										RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+											Locations: pointerutils.ToSlicePtr([]string{"Northus2"}),
+										},
+									},
+								},
+							},
+							// An actual nil
+							nil,
+							// Nil restriction info
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{
+									{},
+									nil,
+								},
+							},
+							// Machine that has no locations/locationinfo
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v3"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    nil,
+								LocationInfo: nil,
+							},
+							// Actually an availabilitySet
+							{
+								Name:         pointerutils.ToPtr("Classic"),
+								ResourceType: pointerutils.ToPtr("availabilitySets"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+							},
+						} {
+							if !yield(s, nil) {
+								return
+							}
+						}
+					})
 			},
 			desired: map[string]*armcompute.ResourceSKU{
 				"bigmachine_v1": {
@@ -310,61 +383,38 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 			},
 		},
 		{
-			name:   "duplicate skus in vmskus",
+			name:   "duplicate skus in vmskus input list does not error",
 			vmSkus: []string{"bigmachine_v1", "bigmachine_v1", "smallmachine_v4"},
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
-				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).Return(
-					maps.All(map[*armcompute.ResourceSKU]error{
-						{
-							Name:         pointerutils.ToPtr("bigmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+						for _, s := range []*armcompute.ResourceSKU{
+							{
+								Name:         pointerutils.ToPtr("bigmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v4"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						// Machine that has no locations/locationinfo
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    nil,
-							LocationInfo: nil,
-						}: nil,
-						// Actually an availabilitySet
-						{
-							Name:         pointerutils.ToPtr("Classic"),
-							ResourceType: pointerutils.ToPtr("availabilitySets"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-					}),
-				)
+						} {
+							if !yield(s, nil) {
+								return
+							}
+						}
+					})
 			},
 			desired: map[string]*armcompute.ResourceSKU{
 				"bigmachine_v1": {
@@ -393,31 +443,36 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 			name:   "error in pagination",
 			vmSkus: []string{"bigmachine_v5"},
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
-				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).Return(
-					maps.All(map[*armcompute.ResourceSKU]error{
-						{
-							Name:         pointerutils.ToPtr("bigmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+						for _, s := range []*armcompute.ResourceSKU{
+							{
+								Name:         pointerutils.ToPtr("bigmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v4"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-						nil: errors.New("this is an error"),
-					}),
-				)
+						} {
+							if !yield(s, nil) {
+								return
+							}
+						}
+						yield(nil, errors.New("this is an error"))
+					})
 			},
 			wantError: "this is an error",
 		},
@@ -448,148 +503,156 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 		{
 			name: "happypath",
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
-				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).Return(
-					maps.All(map[*armcompute.ResourceSKU]error{
-						{
-							Name:         pointerutils.ToPtr("bigmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						// Capitalisation of region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v10"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"Northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("Northus2"),
-								},
-							},
-						}: nil,
-						// Duplicated struct, in case we get two
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-							Restrictions: []*armcompute.ResourceSKURestrictions{},
-						}: nil,
-						// Not actually in our region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v9"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus1"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus1"),
-								},
-							},
-						}: nil,
-						// Nil region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v11"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    []*string{nil},
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						// Restricted in this region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v2"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-							Restrictions: []*armcompute.ResourceSKURestrictions{
-								{
-									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
-										Locations: pointerutils.ToSlicePtr([]string{"somewhereelse"}),
-									},
-								},
-								{
-									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
-										Locations: pointerutils.ToSlicePtr([]string{"northus2"}),
+				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+						for _, s := range []*armcompute.ResourceSKU{
+							{
+								Name:         pointerutils.ToPtr("bigmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
 									},
 								},
 							},
-						}: nil,
-						// Restricted in this region, equal fold
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v20"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-							Restrictions: []*armcompute.ResourceSKURestrictions{
-								{
-									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
-										Locations: pointerutils.ToSlicePtr([]string{"Northus2"}),
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v4"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
 									},
 								},
 							},
-						}: nil,
-						// Nil restriction info
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							// Capitalisation of region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v10"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"Northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("Northus2"),
+									},
 								},
 							},
-							Restrictions: []*armcompute.ResourceSKURestrictions{
-								{},
+							// Duplicated struct, in case we get two
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v4"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{},
 							},
-						}: nil,
-						// Machine that has no locations/locationinfo
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    nil,
-							LocationInfo: nil,
-						}: nil,
-						// Actually an availabilitySet
-						{
-							Name:         pointerutils.ToPtr("Classic"),
-							ResourceType: pointerutils.ToPtr("availabilitySets"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							// Not actually in our region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v9"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus1"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus1"),
+									},
 								},
 							},
-						}: nil,
-					}),
-				)
+							// Nil region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v11"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    []*string{nil},
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+							},
+							// An actual nil
+							nil,
+							// Restricted in this region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v2"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{
+									{
+										RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+											Locations: pointerutils.ToSlicePtr([]string{"somewhereelse"}),
+										},
+									},
+									{
+										RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+											Locations: pointerutils.ToSlicePtr([]string{"northus2"}),
+										},
+									},
+								},
+							},
+							// Restricted in this region, equal fold
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v20"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{
+									{
+										RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+											Locations: pointerutils.ToSlicePtr([]string{"Northus2"}),
+										},
+									},
+								},
+							},
+							// Nil restriction info
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{
+									{},
+									nil,
+								},
+							},
+							// Machine that has no locations/locationinfo
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v3"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    nil,
+								LocationInfo: nil,
+							},
+							// Actually an availabilitySet
+							{
+								Name:         pointerutils.ToPtr("Classic"),
+								ResourceType: pointerutils.ToPtr("availabilitySets"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+							},
+						} {
+							if !yield(s, nil) {
+								return
+							}
+						}
+					})
 			},
 			desired: []string{"bigmachine_v1", "smallmachine_v1", "smallmachine_v10", "smallmachine_v4"},
 		},
@@ -597,125 +660,116 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 			name: "duplicate VM structs don't lead to duplicated names",
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
 				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).Return(
-					maps.All(map[*armcompute.ResourceSKU]error{
-						{
-							Name:         pointerutils.ToPtr("bigmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("bigmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-								{},
-							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						// Restricted in this region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v2"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-							Restrictions: []*armcompute.ResourceSKURestrictions{
-								{
-									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
-										Locations: pointerutils.ToSlicePtr([]string{"northus2"}),
+					func(yield func(*armcompute.ResourceSKU, error) bool) {
+						for _, s := range []*armcompute.ResourceSKU{
+							{
+								Name:         pointerutils.ToPtr("bigmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
 									},
 								},
 							},
-						}: nil,
-						// Machine that has no locations/locationinfo
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    nil,
-							LocationInfo: nil,
-						}: nil,
-						// Actually an availabilitySet
-						{
-							Name:         pointerutils.ToPtr("Classic"),
-							ResourceType: pointerutils.ToPtr("availabilitySets"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
+							{
+								Name:         pointerutils.ToPtr("bigmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
 								},
 							},
-						}: nil,
-					}),
-				)
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v4"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+							},
+							// Restricted in this region
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v2"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+								Restrictions: []*armcompute.ResourceSKURestrictions{
+									{
+										RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
+											Locations: pointerutils.ToSlicePtr([]string{"northus2"}),
+										},
+									},
+								},
+							},
+							// Machine that has no locations/locationinfo
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v3"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    nil,
+								LocationInfo: nil,
+							},
+							// Actually an availabilitySet
+							{
+								Name:         pointerutils.ToPtr("Classic"),
+								ResourceType: pointerutils.ToPtr("availabilitySets"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+							},
+						} {
+							if !yield(s, nil) {
+								return
+							}
+						}
+					})
 			},
 			desired: []string{"bigmachine_v1", "smallmachine_v4"},
 		},
 		{
 			name: "error in pagination",
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
-				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).Return(
-					maps.All(map[*armcompute.ResourceSKU]error{
-						{
-							Name:         pointerutils.ToPtr("bigmachine_v1"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v4"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-						}: nil,
-						// Restricted in this region
-						{
-							Name:         pointerutils.ToPtr("smallmachine_v2"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("northus2"),
-								},
-							},
-							Restrictions: []*armcompute.ResourceSKURestrictions{
-								{
-									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
-										Locations: pointerutils.ToSlicePtr([]string{"northus2"}),
+				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+						for _, s := range []*armcompute.ResourceSKU{
+							{
+								Name:         pointerutils.ToPtr("bigmachine_v1"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
 									},
 								},
 							},
-						}: nil,
-						nil: errors.New("this is an error"),
-					}),
-				)
+							{
+								Name:         pointerutils.ToPtr("smallmachine_v4"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"northus2"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("northus2"),
+									},
+								},
+							},
+						} {
+							if !yield(s, nil) {
+								return
+							}
+						}
+						yield(nil, errors.New("this is an error"))
+					})
 			},
 			wantError: "this is an error",
 		},
