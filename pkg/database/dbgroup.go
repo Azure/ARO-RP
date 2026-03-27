@@ -13,10 +13,6 @@ type DatabaseGroupWithSubscriptions interface {
 	Subscriptions() (Subscriptions, error)
 }
 
-type DatabaseGroupWithMonitors interface {
-	Monitors() (Monitors, error)
-}
-
 type DatabaseGroupWithOpenShiftVersions interface {
 	OpenShiftVersions() (OpenShiftVersions, error)
 }
@@ -52,7 +48,6 @@ type DatabaseGroupWithPoolWorkers interface {
 type DatabaseGroup interface {
 	DatabaseGroupWithOpenShiftClusters
 	DatabaseGroupWithSubscriptions
-	DatabaseGroupWithMonitors
 	DatabaseGroupWithOpenShiftVersions
 	DatabaseGroupWithPlatformWorkloadIdentityRoleSets
 	DatabaseGroupWithAsyncOperations
@@ -64,7 +59,6 @@ type DatabaseGroup interface {
 
 	WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup
 	WithSubscriptions(db Subscriptions) DatabaseGroup
-	WithMonitors(db Monitors) DatabaseGroup
 	WithOpenShiftVersions(db OpenShiftVersions) DatabaseGroup
 	WithPlatformWorkloadIdentityRoleSets(db PlatformWorkloadIdentityRoleSets) DatabaseGroup
 	WithAsyncOperations(db AsyncOperations) DatabaseGroup
@@ -78,7 +72,6 @@ type DatabaseGroup interface {
 type dbGroup struct {
 	openShiftClusters                OpenShiftClusters
 	subscriptions                    Subscriptions
-	monitors                         Monitors
 	platformWorkloadIdentityRoleSets PlatformWorkloadIdentityRoleSets
 	openShiftVersions                OpenShiftVersions
 	asyncOperations                  AsyncOperations
@@ -110,18 +103,6 @@ func (d *dbGroup) Subscriptions() (Subscriptions, error) {
 
 func (d *dbGroup) WithSubscriptions(db Subscriptions) DatabaseGroup {
 	d.subscriptions = db
-	return d
-}
-
-func (d *dbGroup) Monitors() (Monitors, error) {
-	if d.monitors == nil {
-		return nil, errors.New("no Monitors database client set")
-	}
-	return d.monitors, nil
-}
-
-func (d *dbGroup) WithMonitors(db Monitors) DatabaseGroup {
-	d.monitors = db
 	return d
 }
 
