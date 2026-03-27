@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -135,28 +133,12 @@ func (mon *monitor) Run(ctx context.Context) error {
 		mon.hiveClusterManagers[1] = cl
 	}
 
-	// We always need a master document to exist so that we can attempt to
-	// dequeue it. If it already exists we will get a StatusPreconditionFailed
-	// error, which is expected and we can ignore. The leasing of the master
-	// document is in `mon.master()`.
-	_, err = dbPoolWorkers.Create(ctx, api.PoolWorkerTypeMonitor, &api.PoolWorkerDocument{
-		ID:         string(api.PoolWorkerTypeMonitor),
-		WorkerType: api.PoolWorkerTypeMonitor,
-	})
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-		mon.baseLog.Error(fmt.Errorf("error bootstrapping master PoolWorkerDocument (not a 412): %w", err))
-		return err
-	}
-
 	err = mon.startChangefeeds(ctx, nil)
 	if err != nil {
 		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
 		return err
 	}
 	go mon.changefeedMetrics(nil)
-
-	t := time.NewTicker(mon.changefeedInterval)
-	defer t.Stop()
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
