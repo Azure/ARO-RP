@@ -12,7 +12,7 @@ import (
 // master updates the monitor document with the list of buckets balanced between
 // registered monitors
 func (mon *monitor) master(ctx context.Context) error {
-	dbMonitors, err := mon.dbGroup.Monitors()
+	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
 	if err != nil {
 		return err
 	}
@@ -20,7 +20,7 @@ func (mon *monitor) master(ctx context.Context) error {
 	// if we know we're not the master, attempt to gain the lease on the monitor
 	// document
 	if !mon.isMaster {
-		doc, err := dbMonitors.TryLease(ctx)
+		doc, err := dbPoolWorkers.TryLease(ctx, api.PoolWorkerTypeMonitor)
 		if err != nil || doc == nil {
 			return err
 		}
@@ -36,16 +36,16 @@ func (mon *monitor) master(ctx context.Context) error {
 	// including ourself, balance buckets between them and write the bucket
 	// allocations to the database.  If it turns out that we're not the master,
 	// the patch will fail
-	_, err = dbMonitors.PatchWithLease(ctx, "master", func(doc *api.MonitorDocument) error {
-		docs, err := dbMonitors.ListMonitors(ctx)
+	_, err = dbPoolWorkers.PatchWithLease(ctx, api.PoolWorkerTypeMonitor, string(api.PoolWorkerTypeMonitor), func(doc *api.PoolWorkerDocument) error {
+		docs, err := dbPoolWorkers.ListPoolWorkers(ctx, api.PoolWorkerTypeMonitor)
 		if err != nil {
 			return err
 		}
 
 		var monitors []string
 		if docs != nil {
-			monitors = make([]string, 0, len(docs.MonitorDocuments))
-			for _, doc := range docs.MonitorDocuments {
+			monitors = make([]string, 0, len(docs.PoolWorkerDocuments))
+			for _, doc := range docs.PoolWorkerDocuments {
 				monitors = append(monitors, doc.ID)
 			}
 		}
@@ -61,19 +61,19 @@ func (mon *monitor) master(ctx context.Context) error {
 }
 
 // balance shares out buckets over a slice of registered monitors
-func (mon *monitor) balance(monitors []string, doc *api.MonitorDocument) {
-	// initialise doc.Monitor
-	if doc.Monitor == nil {
-		doc.Monitor = &api.Monitor{}
+func (mon *monitor) balance(monitors []string, doc *api.PoolWorkerDocument) {
+	// initialise doc.PoolWorker
+	if doc.PoolWorker == nil {
+		doc.PoolWorker = &api.PoolWorker{}
 	}
 
-	// ensure len(doc.Monitor.Buckets) == mon.bucketCount: this should only do
+	// ensure len(doc.PoolWorker.Buckets) == mon.bucketCount: this should only do
 	// anything on the very first run
-	if len(doc.Monitor.Buckets) < mon.bucketCount {
-		doc.Monitor.Buckets = append(doc.Monitor.Buckets, make([]string, mon.bucketCount-len(doc.Monitor.Buckets))...)
+	if len(doc.PoolWorker.Buckets) < mon.bucketCount {
+		doc.PoolWorker.Buckets = append(doc.PoolWorker.Buckets, make([]string, mon.bucketCount-len(doc.PoolWorker.Buckets))...)
 	}
-	if len(doc.Monitor.Buckets) > mon.bucketCount { // should never happen
-		doc.Monitor.Buckets = doc.Monitor.Buckets[:mon.bucketCount]
+	if len(doc.PoolWorker.Buckets) > mon.bucketCount { // should never happen
+		doc.PoolWorker.Buckets = doc.PoolWorker.Buckets[:mon.bucketCount]
 	}
 
 	var unallocated []int
@@ -91,7 +91,7 @@ func (mon *monitor) balance(monitors []string, doc *api.MonitorDocument) {
 	}
 
 	// load the current bucket allocations into the map
-	for i, monitor := range doc.Monitor.Buckets {
+	for i, monitor := range doc.PoolWorker.Buckets {
 		if buckets, found := m[monitor]; found && len(buckets) < target {
 			// if the current bucket is allocated to a known monitor and doesn't
 			// take its number of buckets above the target, keep it there...
@@ -119,11 +119,11 @@ func (mon *monitor) balance(monitors []string, doc *api.MonitorDocument) {
 
 	// write the updated bucket allocations back to the document
 	for _, i := range unallocated {
-		doc.Monitor.Buckets[i] = "" // should only happen if there are no known monitors
+		doc.PoolWorker.Buckets[i] = "" // should only happen if there are no known monitors
 	}
 	for monitor, buckets := range m {
 		for _, i := range buckets {
-			doc.Monitor.Buckets[i] = monitor
+			doc.PoolWorker.Buckets[i] = monitor
 		}
 	}
 }
