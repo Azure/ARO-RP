@@ -1,4 +1,4 @@
-package monitor
+package buckets
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -164,13 +164,9 @@ func TestBalance(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			mon := &monitor{
-				bucketCount: 8,
-			}
-
 			doc := tt.doc()
 
-			mon.balance(tt.monitors, doc)
+			balance(tt.monitors, 8, doc)
 
 			if doc.PoolWorker == nil {
 				t.Fatal(doc.PoolWorker)

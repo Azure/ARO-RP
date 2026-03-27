@@ -6,7 +6,6 @@ package monitor
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -42,25 +41,16 @@ const changefeedBatchSize = 50
 // goroutines to finish after the monitoring context has been canceled.
 var monitorCleanupGracePeriod = 10 * time.Second
 
-// listBuckets reads our bucket allocation from the master
-func (mon *monitor) listBuckets(ctx context.Context) error {
-	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
-	if err != nil {
-		return err
-	}
-
-	buckets, err := dbPoolWorkers.ListBuckets(ctx, api.PoolWorkerTypeMonitor)
-	if err != nil {
-		return err
-	}
-
+// onBuckets is called when we fetch our bucket allocation from the master
+func (mon *monitor) onBuckets(buckets []int) {
 	if len(buckets) == 0 {
-		return fmt.Errorf("bucket allocation contained no buckets")
+		mon.baseLog.Error("bucket allocation contained no buckets")
+		return
 	}
 
 	mon.clusters.UpdateBuckets(buckets)
 
-	return err
+	mon.lastBucketlist.Store(time.Now())
 }
 
 type clusterChangeFeedResponder struct {

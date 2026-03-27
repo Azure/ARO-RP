@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 )
@@ -159,32 +160,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
-	for {
-		// register ourself as a monitor, ttl of 60s default
-		err = dbPoolWorkers.PoolWorkerHeartbeat(ctx, api.PoolWorkerTypeMonitor, int(mon.changefeedInterval.Seconds()*6))
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a Monitor poolWorker, continuing: %w", err))
-		}
-
-		// try to become master and share buckets across registered monitors
-		err = mon.master(ctx)
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %w", err))
-		}
-
-		// read our bucket allocation from the master
-		err = mon.listBuckets(ctx)
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
-		} else {
-			mon.lastBucketlist.Store(time.Now())
-		}
-
-		if err = ctx.Err(); err != nil {
-			return err
-		}
-		<-t.C
-	}
+	return buckets.StartBucketWorkerLoop(ctx, mon.baseLog, api.PoolWorkerTypeMonitor, mon.bucketCount, mon.changefeedInterval, dbPoolWorkers, mon.onBuckets)
 }
 
 func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
