@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -54,8 +53,7 @@ type kubeActions struct {
 	log *logrus.Entry
 	oc  *api.OpenShiftCluster
 
-	mapper     meta.RESTMapper
-	restConfig *restclient.Config
+	mapper meta.RESTMapper
 
 	dyn     dynamic.Interface
 	kubecli kubernetes.Interface
@@ -87,8 +85,7 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		log: log,
 		oc:  oc,
 
-		mapper:     mapper,
-		restConfig: restConfig,
+		mapper: mapper,
 
 		dyn:     dyn,
 		kubecli: kubecli,
@@ -193,30 +190,12 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 }
 
 func (k *kubeActions) CheckAPIServerHealthz(ctx context.Context) error {
-	rawClientConfig := *k.restConfig
-	rawClientConfig.GroupVersion = &schema.GroupVersion{}
-	rawClientConfig.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
-	rawClientConfig.UserAgent = restclient.DefaultKubernetesUserAgent()
-
-	rawClient, err := restclient.RESTClientFor(&rawClientConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create raw REST client: %w", err)
-	}
-
-	var statusCode int
-	err = rawClient.
-		Get().
-		AbsPath("/healthz").
-		Do(ctx).
-		StatusCode(&statusCode).
-		Error()
+	body, err := k.kubecli.Discovery().RESTClient().Get().AbsPath("/healthz").Do(ctx).Raw()
 	if err != nil {
 		return fmt.Errorf("API server healthz check failed: %w", err)
 	}
-
-	if statusCode != http.StatusOK {
-		return fmt.Errorf("API server healthz returned non-OK status: %d", statusCode)
+	if string(body) != "ok" {
+		return fmt.Errorf("API server healthz returned: %s", string(body))
 	}
-
 	return nil
 }
