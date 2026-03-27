@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
-	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -38,7 +37,6 @@ func TestProcessLoop(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00001111-0000-0000-0000-000000000000"
 	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
-	clusterResourceID2 := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2", mockSubID)
 
 	base_logs := []testlog.ExpectedLogEntry{
 		{
@@ -937,12 +935,17 @@ func TestProcessLoop(t *testing.T) {
 			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 			subscriptions, _ := testdatabase.NewFakeSubscriptions()
 
-			dbs := database.NewDBGroup().WithMaintenanceSchedules(schedules).WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
+			dbs := database.NewDBGroup().
+				WithMaintenanceSchedules(schedules).
+				WithOpenShiftClusters(clusters).
+				WithMaintenanceManifests(manifests).
+				WithSubscriptions(subscriptions)
 
-			subsCache := changefeed.NewSubscriptionsChangefeedCache(metrics, false)
-			clusterCache := newOpenShiftClusterCache(log, metrics, subsCache, []int{1})
 			stop := make(chan struct{})
 			t.Cleanup(func() { close(stop) })
+
+			serv := NewService(_env, log, dbs, metrics)
+			serv.changefeedInterval = 10 * time.Millisecond
 
 			a := &scheduler{
 				log: log,
@@ -950,7 +953,7 @@ func TestProcessLoop(t *testing.T) {
 				m:   metrics,
 
 				dbs:         dbs,
-				getClusters: clusterCache.GetClusters,
+				getClusters: serv.clusters.GetClusters,
 
 				tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
 				now:   now,
@@ -983,20 +986,6 @@ func TestProcessLoop(t *testing.T) {
 				},
 			})
 
-			// Add a cluster that does not meet our bucket requirements and so
-			// won't cause any Manifests to be created
-			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key:    strings.ToLower(clusterResourceID2),
-				Bucket: 2,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: clusterResourceID2,
-					Properties: api.OpenShiftClusterProperties{
-						ProvisioningState: api.ProvisioningStateSucceeded,
-						MaintenanceState:  api.MaintenanceStateNone,
-					},
-				},
-			})
-
 			// Add the schedule + any existing manifests to the fixture
 			fixtures.AddMaintenanceScheduleDocuments(tt.schedule)
 			fixtures.AddMaintenanceManifestDocuments(tt.existingManifests...)
@@ -1015,23 +1004,11 @@ func TestProcessLoop(t *testing.T) {
 				checker.AddMaintenanceScheduleDocuments(tt.schedule)
 			}
 
-			// fire up the changefeeds
-			go changefeed.RunChangefeed(
-				ctx, log.WithField("component", "subchangefeed"), subscriptions.ChangeFeed(),
-				10*time.Millisecond,
-				10, subsCache, stop,
-			)
-
-			// start cluster changefeed
-			go changefeed.RunChangefeed(
-				ctx, log.WithField("component", "clusterchangefeed"), clusters.ChangeFeed(),
-				10*time.Millisecond,
-				10, clusterCache, stop,
-			)
+			err = serv.startChangefeeds(ctx, stop)
+			require.NoError(err)
+			serv.clusters.initialPopulationWaitGroup.Wait()
 
 			a.cachedDoc = func() (*api.MaintenanceScheduleDocument, bool) { return tt.schedule, true }
-
-			clusterCache.initialPopulationWaitGroup.Wait()
 
 			for i := range tt.extraRuns + 1 {
 				didWork, err := a.Process(ctx)

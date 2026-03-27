@@ -99,5 +99,5 @@ func (c *MaintenanceScheduleDocument) GetKey() string {
 }
 
 func (c *MaintenanceScheduleDocument) GetBucket() int {
-	return 0
+	return -1
 }

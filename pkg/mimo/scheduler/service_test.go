@@ -133,7 +133,7 @@ func TestSchedulerPolling(t *testing.T) {
 			err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).WithMaintenanceSchedules(schedules).Create()
 			require.NoError(err)
 
-			svc := NewService(_env, log, dbs, metrics, []int{0})
+			svc := NewService(_env, log, dbs, metrics)
 			svc.now = now
 			svc.workerDelay = func() time.Duration { return 0 * time.Second }
 			svc.serveHealthz = false
@@ -197,7 +197,7 @@ func TestSchedulerStoppingWholeProcess(t *testing.T) {
 	waitFor := &sync.WaitGroup{}
 	sched := &fakeScheduler{waitOnProcess: waitFor}
 
-	svc := NewService(_env, log, dbs, m, []int{0})
+	svc := NewService(_env, log, dbs, m)
 	svc.workerDelay = func() time.Duration { return 0 * time.Second }
 	svc.pollTime = 1 * time.Millisecond
 	svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs, _ func() time.Time) (Scheduler, error) {
@@ -259,7 +259,7 @@ func TestSchedulerStoppingSingleItem(t *testing.T) {
 	waitFor := &sync.WaitGroup{}
 	sched := &fakeScheduler{waitOnProcess: waitFor}
 
-	svc := NewService(_env, log, dbs, m, []int{0})
+	svc := NewService(_env, log, dbs, m)
 	svc.workerDelay = func() time.Duration { return 0 * time.Second }
 	svc.pollTime = 1 * time.Millisecond
 	svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs, _ func() time.Time) (Scheduler, error) {

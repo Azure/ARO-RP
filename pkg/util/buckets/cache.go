@@ -45,12 +45,18 @@ func (mon *monitor[E]) UpsertDoc(doc E) {
 }
 
 // fixDoc ensures that there is a monitoring goroutine for the given document
-// iff it is in a bucket owned by us.  Caller must hold mon.mu.Lock.
+// if it is in a bucket owned by us.  Caller must hold mon.mu.Lock.
 func (mon *monitor[E]) FixDoc(doc E) {
 	id := strings.ToLower(doc.GetID())
 	v := mon.docs[id]
 
-	_, ours := mon.buckets[v.doc.GetBucket()]
+	var ours bool
+	// getBucket() with -1 is served by all
+	if v.doc.GetBucket() > -1 {
+		_, ours = mon.buckets[v.doc.GetBucket()]
+	} else {
+		ours = true
+	}
 
 	if !ours && v.stop != nil {
 		mon.baseLog.Debugf("we no longer own cluster, closing worker for %s", doc.GetID())
