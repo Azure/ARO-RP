@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -51,15 +50,18 @@ type service struct {
 	workers        *atomic.Int32
 	workerRoutines sync.WaitGroup
 
-	b buckets.BucketWorker[*api.OpenShiftClusterDocument]
+	b           buckets.BucketWorker[*api.OpenShiftClusterDocument]
+	bucketCount int
 
 	changefeedBatchSize         int
 	changefeedInterval          time.Duration
 	changefeedReadinessInterval time.Duration
 	taskPollTime                time.Duration
+	bucketRefreshInterval       time.Duration
 
-	lastChangefeed atomic.Value // time.Time
-	startTime      time.Time
+	lastChangefeed   atomic.Value // time.Time
+	lastBucketUpdate atomic.Value // time.Time
+	startTime        time.Time
 
 	now         func() time.Time
 	workerDelay func() time.Duration
@@ -75,9 +77,10 @@ type actuatorDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithPoolWorkers
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter, ownedBuckets []int) *service {
+func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
@@ -85,9 +88,10 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 
 		dbGroup: dbg,
 
-		m:        m,
-		stopping: &atomic.Bool{},
-		workers:  &atomic.Int32{},
+		m:           m,
+		stopping:    &atomic.Bool{},
+		workers:     &atomic.Int32{},
+		bucketCount: bucket.Buckets,
 
 		startTime:   time.Now(),
 		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
@@ -107,13 +111,14 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		// prioritise responsiveness
 		taskPollTime: 90 * time.Second,
 
+		// Bucket timing is set lower to prioritise responsiveness to VM changes
+		bucketRefreshInterval: 30 * time.Second,
+
 		serveHealthz: true,
 	}
 
 	s.cond = sync.NewCond(&s.mu)
 	s.b = buckets.NewBucketWorker[*api.OpenShiftClusterDocument](log, s.spawnWorker, &s.mu)
-	s.b.SetBuckets(ownedBuckets)
-
 	return s
 }
 
@@ -123,6 +128,11 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 
 func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+
+	dbPoolWorkers, err := s.dbGroup.PoolWorkers()
+	if err != nil {
+		return err
+	}
 
 	// Only enable the healthz endpoint if configured (disabled in unit tests)
 	if s.serveHealthz {
@@ -175,6 +185,13 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+
+	// Start the bucket worker update loop which will coordinate buckets between
+	// the MIMO instances
+	go buckets.StartBucketWorkerLoop(
+		ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
+		s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, s.b.SetBuckets, stop,
+	)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
 	for !s.stopping.Load() {
@@ -355,54 +372,4 @@ out:
 			break out
 		}
 	}
-}
-
-// DetermineBuckets uses the hostname to figure out which subset of buckets we
-// should be serving.
-func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
-	_log := env.Logger()
-
-	// We have a VMSS with 3 VMs in prod
-	vmCount := 3
-
-	b := []int{}
-	if !env.IsLocalDevelopmentMode() {
-		name, err := hostnameFunc()
-		if err != nil {
-			// if we can't get the hostname then just run all of them
-			_log.Warn("unable to get the hostname for bucket determination")
-		} else {
-			// figure out which VMSS host we're running on - e.g. rp-v20000101.01-000001"
-			splitName := strings.Split(name, "-")
-			if len(splitName) > 1 {
-				num, err := strconv.Atoi(splitName[len(splitName)-1])
-				if err != nil {
-					_log.Warningf("hostname %s doesn't end in a number, unable to partition buckets", name)
-				} else {
-					if num >= vmCount {
-						// Rather than guess, we fall back to all buckets. This
-						// means that a VMSS replacement of -3 might have some
-						// weird behaviour, but because we get a lock on the
-						// OpenShiftClusterObject before we do anything to the
-						// cluster, it should be fine.
-						_log.Warningf("vmss number is %d, currently only handles 3 partitions (vm numbers 0-2), falling back to all", num)
-					} else {
-						// For the 3 VMs, VM 1 will serve buckets 0,3,6...,
-						// VM 2 will serve 1,4,7... VM 3 will serve 2,5,8...
-						for i := num; i < bucket.Buckets; i += vmCount {
-							b = append(b, i)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// We haven't figured out our buckets so fall back to all
-	if len(b) == 0 {
-		for i := range 256 {
-			b = append(b, i)
-		}
-	}
-	return b
 }
