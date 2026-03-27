@@ -190,12 +190,9 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 }
 
 func (k *kubeActions) CheckAPIServerHealthz(ctx context.Context) error {
-	body, err := k.kubecli.Discovery().RESTClient().Get().AbsPath("/healthz").Do(ctx).Raw()
+	_, err := k.kubecli.Discovery().RESTClient().Get().AbsPath("/healthz").Do(ctx).Raw()
 	if err != nil {
 		return fmt.Errorf("API server healthz check failed: %w", err)
-	}
-	if string(body) != "ok" {
-		return fmt.Errorf("API server healthz returned: %s", string(body))
 	}
 	return nil
 }
