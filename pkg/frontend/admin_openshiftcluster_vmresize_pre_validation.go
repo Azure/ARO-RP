@@ -109,7 +109,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 
 	if err := k.CheckAPIServerReadyz(ctx); err != nil {
 		return nil, api.NewCloudError(
-			http.StatusServiceUnavailable,
+			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver",
 			fmt.Sprintf("API server is reporting a non-ready status: %v", err))
 	}
