@@ -28,6 +28,7 @@ type SelectorDataKey string
 
 const (
 	SelectorDataKeyResourceID         SelectorDataKey = "resourceID"
+	SelectorDataBucketID              SelectorDataKey = "bucketID"
 	SelectorDataKeySubscriptionID     SelectorDataKey = "subscriptionID"
 	SelectorDataKeySubscriptionState  SelectorDataKey = "subscriptionState"
 	SelectorDataKeyAuthenticationType SelectorDataKey = "authenticationType"
@@ -107,6 +108,7 @@ func ToSelectorData(doc *api.OpenShiftClusterDocument, subscriptionState string)
 		return nil, err
 	}
 
+	new[SelectorDataBucketID] = fmt.Sprintf("%d", doc.Bucket)
 	new[SelectorDataKeyResourceID] = resourceID
 	new[SelectorDataKeySubscriptionID] = r.SubscriptionID
 	new[SelectorDataKeySubscriptionState] = subscriptionState
