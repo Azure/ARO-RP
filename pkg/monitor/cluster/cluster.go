@@ -205,7 +205,7 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 
 	// Don't run collectors if we have already timed out
 	if ctx.Err() != nil {
-		mon.log.Debugf("skipping %s because %s:", collectorName, ctx.Err())
+		mon.log.Debugf("skipping %s because %s", collectorName, ctx.Err())
 		mon.emitMonitorCollectorSkipped(collectorName)
 		return &failureToRunClusterCollector{collectorName: collectorName, inner: ctx.Err()}
 	}
