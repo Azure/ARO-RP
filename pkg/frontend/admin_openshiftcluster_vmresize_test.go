@@ -59,6 +59,7 @@ func TestAdminVMResize(t *testing.T) {
 		vmSize            string
 		fixture           func(f *testdatabase.Fixture)
 		azureActionsMocks func(*test, *mock_adminactions.MockAzureActions)
+		kubeActionsMocks  func(*test, *mock_adminactions.MockKubeActions)
 		wantStatusCode    int
 		wantResponse      []byte
 		wantError         string
@@ -78,7 +79,8 @@ func TestAdminVMResize(t *testing.T) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
 				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(nil)
 			},
-			wantStatusCode: http.StatusOK,
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode:   http.StatusOK,
 		},
 		{
 			name:       "cluster not found",
@@ -89,6 +91,7 @@ func TestAdminVMResize(t *testing.T) {
 				addSubscriptionDoc(f)
 			},
 			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			kubeActionsMocks:  func(tt *test, k *mock_adminactions.MockKubeActions) {},
 			wantStatusCode:    http.StatusNotFound,
 			wantError:         `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
 		},
@@ -101,6 +104,7 @@ func TestAdminVMResize(t *testing.T) {
 				addClusterDoc(f)
 			},
 			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			kubeActionsMocks:  func(tt *test, k *mock_adminactions.MockKubeActions) {},
 			wantStatusCode:    http.StatusBadRequest,
 			wantError:         fmt.Sprintf(`400: InvalidSubscriptionState: : Request is not allowed in unregistered subscription '%s'.`, mockSubID),
 		},
@@ -116,8 +120,9 @@ func TestAdminVMResize(t *testing.T) {
 			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(false, nil)
 			},
-			wantStatusCode: http.StatusNotFound,
-			wantError:      `404: NotFound: : "The VirtualMachine 'aro-fake-node-master-0' under resource group 'resourcegroup' was not found."`,
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode:   http.StatusNotFound,
+			wantError:        `404: NotFound: : "The VirtualMachine 'aro-fake-node-master-0' under resource group 'resourcegroup' was not found."`,
 		},
 		{
 			name:       "resize fails, poweron succeeds",
@@ -132,6 +137,9 @@ func TestAdminVMResize(t *testing.T) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
 				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(fmt.Errorf("resize failed"))
 				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
+			},
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().CordonNode(gomock.Any(), tt.vmName, false).Return(nil)
 			},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : resize failed`,
@@ -150,8 +158,9 @@ func TestAdminVMResize(t *testing.T) {
 				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(fmt.Errorf("resize failed"))
 				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(fmt.Errorf("poweron failed"))
 			},
-			wantStatusCode: http.StatusInternalServerError,
-			wantError:      `500: InternalServerError: : resize failed` + "\n" + `poweron failed`,
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode:   http.StatusInternalServerError,
+			wantError:        `500: InternalServerError: : resize failed` + "\n" + `poweron failed`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -160,6 +169,9 @@ func TestAdminVMResize(t *testing.T) {
 
 			a := mock_adminactions.NewMockAzureActions(ti.controller)
 			tt.azureActionsMocks(tt, a)
+
+			k := mock_adminactions.NewMockKubeActions(ti.controller)
+			tt.kubeActionsMocks(tt, k)
 
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
@@ -178,7 +190,9 @@ func TestAdminVMResize(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				nil,
+				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
+					return k, nil
+				},
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 					return a, nil
 				},

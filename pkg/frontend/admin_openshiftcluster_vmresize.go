@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -22,29 +23,36 @@ func (f *frontend) postAdminOpenShiftClusterVMResize(w http.ResponseWriter, r *h
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-	err := f._postAdminOpenShiftClusterVMResize(log, ctx, r)
-	adminReply(log, w, nil, nil, err)
-}
-
-func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx context.Context, r *http.Request) error {
 	vmName := r.URL.Query().Get("vmName")
 	resourceName := chi.URLParam(r, "resourceName")
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 	vmSize := r.URL.Query().Get("vmSize")
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
+	azureActions, doc, err := f.prepareAdminActions(log, ctx, vmName, resourceID, resourceType, resourceName, resourceGroupName)
 	if err != nil {
-		return err
+		adminReply(log, w, nil, nil, err)
+		return
 	}
 
-	err = validateAdminMasterVMSize(vmSize)
+	kubeActions, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
+	if err != nil {
+		adminReply(log, w, nil, nil, err)
+		return
+	}
+	err = f._postAdminOpenShiftClusterVMResize(ctx, kubeActions, azureActions, vmName, vmSize, resourceGroupName)
+	adminReply(log, w, nil, nil, err)
+}
+
+func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, vmName string, vmSize string, resourceGroupName string) error {
+	err := validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
 	}
 
 	// checks if the Virtual machines exists in the Cluster RG
-	exists, err := action.ResourceGroupHasVM(ctx, vmName)
+	exists, err := azureActions.ResourceGroupHasVM(ctx, vmName)
 	if err != nil {
 		return err
 	}
@@ -55,16 +63,19 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 				vmName, resourceGroupName))
 	}
 
-	err = action.VMResize(ctx, vmName, vmSize)
+	err = azureActions.VMResize(ctx, vmName, vmSize)
 	if err != nil {
-		// Before sending the error to the resize GA, we'll attempt to power the VM on
-		poweronErr := action.VMStartAndWait(ctx, vmName)
+		// Before sending the error to the resize GA, we'll attempt to power the VM on, and uncordon it.
+		poweronErr := azureActions.VMStartAndWait(ctx, vmName)
 
 		if poweronErr != nil {
-			err = errors.Join(err, poweronErr)
+			return errors.Join(err, poweronErr)
 		}
 
-		// TO-DO: uncordon the node (requires a kubeclient)
+		unCordonErr := kubeActions.CordonNode(ctx, vmName, false) // vmName should match machine name (resize GA uses the same value for both)
+		if unCordonErr != nil {
+			return errors.Join(err, unCordonErr)
+		}
 	}
 	return err
 }
