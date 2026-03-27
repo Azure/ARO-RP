@@ -29,7 +29,6 @@ const (
 	collAsyncOperations                 = "AsyncOperations"
 	collBilling                         = "Billing"
 	collGateway                         = "Gateway"
-	collMonitors                        = "Monitors"
 	collOpenShiftClusters               = "OpenShiftClusters"
 	collOpenShiftVersion                = "OpenShiftVersions"
 	collPlatformWorkloadIdentityRoleSet = "PlatformWorkloadIdentityRoleSets"
