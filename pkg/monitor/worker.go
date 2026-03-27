@@ -6,7 +6,6 @@ package monitor
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -35,20 +34,11 @@ var subscriptionStateLogFrequency = 30 * time.Minute
 // changefeedBatchSize is how many items in the changefeed to fetch in each page
 const changefeedBatchSize = 50
 
-// listBuckets reads our bucket allocation from the master
-func (mon *monitor) listBuckets(ctx context.Context) error {
-	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
-	if err != nil {
-		return err
-	}
-
-	buckets, err := dbPoolWorkers.ListBuckets(ctx, api.PoolWorkerTypeMonitor)
-	if err != nil {
-		return err
-	}
-
+// onBuckets is called when we fetch our bucket allocation from the master
+func (mon *monitor) onBuckets(buckets []int) {
 	if len(buckets) == 0 {
-		return fmt.Errorf("bucket allocation contained no buckets")
+		mon.baseLog.Error("bucket allocation contained no buckets")
+		return
 	}
 
 	mon.mu.Lock()
@@ -66,7 +56,7 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 		mon.fixDocs()
 	}
 
-	return err
+	mon.lastBucketlist.Store(time.Now())
 }
 
 type clusterChangeFeedResponder struct {
