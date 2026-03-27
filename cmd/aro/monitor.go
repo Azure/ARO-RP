@@ -75,7 +75,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
-	dbMonitors, err := database.NewMonitors(ctx, dbc, dbName)
+	dbPoolWorkers, err := database.NewPoolWorkers(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 
 	dbg := database.NewDBGroup().WithOpenShiftClusters(dbOpenShiftClusters).
 		WithSubscriptions(dbSubscriptions).
-		WithMonitors(dbMonitors)
+		WithPoolWorkers(dbPoolWorkers)
 
 	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode(), _env.LoggerForComponent("dialer"))
 	if err != nil {
