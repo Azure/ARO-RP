@@ -37,6 +37,7 @@ const (
 	collSubscriptions                   = "Subscriptions"
 	collMaintenanceManifests            = "MaintenanceManifests"
 	collMaintenanceSchedules            = "MaintenanceSchedules"
+	collPoolWorkers                     = "PoolWorkers"
 )
 
 type IDable interface {
