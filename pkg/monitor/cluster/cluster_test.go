@@ -568,3 +568,68 @@ func TestMonitor(t *testing.T) {
 		})
 	}
 }
+
+func TestMonitorAlreadyCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	_, log := testlog.New()
+	m := fakemetrics.NewFakeMetricsEmitter(t)
+
+	// for healthz
+	fakeRawClient := &restfake.RESTClient{
+		NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
+		Client: restfake.CreateHTTPClient(
+			func(r *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK}, nil
+			}),
+	}
+
+	client := testclienthelper.NewHookingClient(fake.
+		NewClientBuilder().
+		Build())
+	ocpclientset := clienthelper.NewWithClient(log, client)
+
+	currTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	now := func() time.Time {
+		currTime = currTime.Add(1 * time.Second)
+		return currTime
+	}
+
+	mon := &Monitor{
+		log:          log,
+		rawClient:    fakeRawClient,
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+		now:          now,
+	}
+
+	mon.collectors = []collectorFunc{mon.emitDaemonsetStatuses}
+
+	// Cancel context before it hits the monitor
+	cancel()
+
+	err := mon.Monitor(ctx)
+	utilerror.AssertErrorMatchesAll(t, err, []error{
+		&failureToRunClusterCollector{collectorName: "emitAPIServerHealthzCode"},
+		&failureToRunClusterCollector{collectorName: "emitAPIServerPingCode"},
+		context.Canceled,
+	})
+
+	m.AssertFloats()
+	m.AssertGauges([]fakemetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "monitor.cluster.collector.skipped",
+			Value:      1,
+			Dimensions: map[string]string{
+				"collector": "emitAPIServerPingCode",
+			},
+		},
+		{
+			MetricName: "monitor.cluster.collector.skipped",
+			Value:      1,
+			Dimensions: map[string]string{
+				"collector": "emitAPIServerHealthzCode",
+			},
+		},
+	}...)
+}
