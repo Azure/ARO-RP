@@ -53,11 +53,12 @@ type service struct {
 	b           buckets.BucketWorker[*api.OpenShiftClusterDocument]
 	bucketCount int
 
-	changefeedBatchSize         int
-	changefeedInterval          time.Duration
-	changefeedReadinessInterval time.Duration
-	taskPollTime                time.Duration
-	bucketRefreshInterval       time.Duration
+	changefeedBatchSize            int
+	changefeedInterval             time.Duration
+	changefeedReadinessInterval    time.Duration
+	taskPollTime                   time.Duration
+	bucketRefreshInterval          time.Duration
+	bucketRefreshReadinessInterval time.Duration
 
 	lastChangefeed   atomic.Value // time.Time
 	lastBucketUpdate atomic.Value // time.Time
@@ -65,6 +66,7 @@ type service struct {
 
 	now         func() time.Time
 	workerDelay func() time.Duration
+	readyDelay  time.Duration
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 
@@ -111,8 +113,10 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		taskPollTime: 90 * time.Second,
 
 		// Bucket timing is set lower to prioritise responsiveness to VM changes
-		bucketRefreshInterval: 30 * time.Second,
+		bucketRefreshInterval:          30 * time.Second,
+		bucketRefreshReadinessInterval: 45 * time.Second,
 
+		readyDelay:   time.Minute * 2,
 		serveHealthz: true,
 	}
 
@@ -189,7 +193,10 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	// the MIMO instances
 	go buckets.StartBucketWorkerLoop(
 		ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
-		s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, s.b.SetBuckets, stop,
+		s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, func(i []int) {
+			s.b.SetBuckets(i)
+			s.lastBucketUpdate.Store(s.now())
+		}, stop,
 	)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
@@ -286,17 +293,18 @@ func (s *service) waitForWorkerCompletion() {
 }
 
 func (s *service) checkReady() bool {
+	lastBucketUpdate, ok := s.lastBucketUpdate.Load().(time.Time)
+	if !ok {
+		return false
+	}
 	lastChangefeedTime, ok := s.lastChangefeed.Load().(time.Time)
 	if !ok {
 		return false
 	}
 
-	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) // did we update our list of clusters recently?
-	} else {
-		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
-			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
-	}
+	return (time.Since(lastBucketUpdate) < s.bucketRefreshReadinessInterval) && // did we list buckets successfully recently?
+		(time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
+		(time.Since(s.startTime) > s.readyDelay) // are we running for at least (the default) 2 minutes?
 }
 
 func (s *service) spawnWorker(stop <-chan struct{}, id string) {
