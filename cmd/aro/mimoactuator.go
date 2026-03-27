@@ -82,10 +82,16 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
+	poolWorkers, err := database.NewPoolWorkers(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	dbg := database.NewDBGroup().
 		WithOpenShiftClusters(clusters).
 		WithMaintenanceManifests(manifests).
-		WithSubscriptions(subscriptions)
+		WithSubscriptions(subscriptions).
+		WithPoolWorkers(poolWorkers)
 
 	go database.EmitMIMOMetrics(ctx, _env.LoggerForComponent("metrics"), manifests, m)
 
@@ -94,10 +100,7 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
-	buckets := actuator.DetermineBuckets(_env, os.Hostname)
-	log.Printf("serving %d buckets: %v", len(buckets), buckets)
-
-	a := actuator.NewService(_env, log, dialer, dbg, m, buckets)
+	a := actuator.NewService(_env, log, dialer, dbg, m)
 	a.SetMaintenanceTasks(tasks.DEFAULT_MAINTENANCE_TASKS)
 
 	sigterm := make(chan os.Signal, 1)
