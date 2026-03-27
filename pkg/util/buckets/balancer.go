@@ -3,12 +3,14 @@ package buckets
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 func StartBucketWorkerLoop(
@@ -23,6 +25,19 @@ func StartBucketWorkerLoop(
 ) error {
 	t := time.NewTicker(interval)
 	defer t.Stop()
+
+	// We always need a master document to exist so that we can attempt to
+	// dequeue it. If it already exists we will get a StatusPreconditionFailed
+	// error, which is expected and we can ignore. The leasing of the master
+	// document is in `tryMaster()`.
+	_, err := dbPoolWorkers.Create(ctx, workerType, &api.PoolWorkerDocument{
+		ID:         string(workerType),
+		WorkerType: workerType,
+	})
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
+		log.Error(fmt.Errorf("error bootstrapping master PoolWorkerDocument (not a 412): %w", err))
+		return err
+	}
 
 	isMaster := false
 	for {
