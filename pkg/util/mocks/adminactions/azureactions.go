@@ -14,12 +14,11 @@ import (
 	io "io"
 	reflect "reflect"
 
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
-
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAzureActions is a mock of AzureActions interface.
@@ -89,6 +88,21 @@ func (m *MockAzureActions) GroupResourceList(ctx context.Context) ([]features.Ge
 func (mr *MockAzureActionsMockRecorder) GroupResourceList(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupResourceList", reflect.TypeOf((*MockAzureActions)(nil).GroupResourceList), ctx)
+}
+
+// MasterVMSizes mocks base method.
+func (m *MockAzureActions) MasterVMSizes(ctx context.Context) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MasterVMSizes", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MasterVMSizes indicates an expected call of MasterVMSizes.
+func (mr *MockAzureActionsMockRecorder) MasterVMSizes(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MasterVMSizes", reflect.TypeOf((*MockAzureActions)(nil).MasterVMSizes), ctx)
 }
 
 // NICReconcileFailedState mocks base method.
