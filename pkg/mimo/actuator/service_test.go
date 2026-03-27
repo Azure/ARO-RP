@@ -5,9 +5,7 @@ package actuator
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -174,7 +172,7 @@ func TestActuatorPolling(t *testing.T) {
 			err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).Create()
 			require.NoError(err)
 
-			svc := NewService(_env, log, nil, dbs, metrics, []int{1})
+			svc := NewService(_env, log, nil, dbs, metrics)
 			svc.now = now
 			svc.workerDelay = func() time.Duration { return 0 * time.Second }
 			svc.serveHealthz = false
@@ -256,10 +254,11 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		subscriptions, _ = testdatabase.NewFakeSubscriptions()
 		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions)
 
-		svc = NewService(_env, log, nil, dbg, m, []int{1})
+		svc = NewService(_env, log, nil, dbg, m)
 		svc.now = now
 		svc.workerDelay = func() time.Duration { return 0 * time.Second }
 		svc.serveHealthz = false
+		svc.b.SetBuckets([]int{1})
 	})
 
 	JustBeforeEach(func() {
@@ -429,85 +428,5 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
 		})
-	})
-})
-
-var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
-	var controller *gomock.Controller
-	var _env *mock_env.MockInterface
-	var log *logrus.Entry
-
-	BeforeAll(func() {
-		log = logrus.NewEntry(&logrus.Logger{
-			Out:       GinkgoWriter,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.DebugLevel,
-		})
-
-		controller = gomock.NewController(nil)
-		_env = mock_env.NewMockInterface(controller)
-
-		_env.EXPECT().Logger().Return(log).AnyTimes()
-	})
-
-	It("serves all buckets with 3 workers", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false).Times(3)
-
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-00", nil })
-		b2 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
-		b3 := DetermineBuckets(_env, func() (string, error) { return "vm-02", nil })
-
-		all := slices.Concat(b1, b2, b3)
-
-		Expect(all).To(HaveLen(256))
-		for i := range 256 {
-			Expect(all).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if it cannot get the hostname", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "", errors.New("boo") })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if it does not understand the hostname", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "foobar", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if the hostname does not end in a number", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-bar", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets if the hostname ending in a number that is not 0-2", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(false)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-03", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
-	})
-
-	It("will serve all buckets in local dev", func() {
-		_env.EXPECT().IsLocalDevelopmentMode().Return(true)
-		b1 := DetermineBuckets(_env, func() (string, error) { return "vm-01", nil })
-
-		for i := range 256 {
-			Expect(b1).To(ContainElement(i))
-		}
 	})
 })

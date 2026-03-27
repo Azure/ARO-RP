@@ -19,6 +19,7 @@ func StartBucketWorkerLoop(
 	interval time.Duration,
 	dbPoolWorkers database.PoolWorkers,
 	onBucketChange func([]int),
+	stop <-chan struct{},
 ) error {
 	t := time.NewTicker(interval)
 	defer t.Stop()
@@ -46,7 +47,12 @@ func StartBucketWorkerLoop(
 		if err = ctx.Err(); err != nil {
 			return err
 		}
-		<-t.C
+
+		select {
+		case <-t.C:
+		case <-stop:
+			return nil
+		}
 	}
 }
 
