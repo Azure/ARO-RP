@@ -8,8 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
-
-	"go.uber.org/mock/gomock"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,17 +22,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	fakemetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
-
-type expectedMetric struct {
-	name   string
-	value  any
-	labels map[string]string
-}
 
 func TestMonitor(t *testing.T) {
 	var _ctx context.Context
@@ -47,8 +40,8 @@ func TestMonitor(t *testing.T) {
 		hooks          func(*testclienthelper.HookingClient)
 		collectors     func(*Monitor) []collectorFunc
 		healthzCall    func(*http.Request) (*http.Response, error)
-		expectedGauges []expectedMetric
-		expectedFloats []expectedMetric
+		expectedGauges []fakemetrics.MetricsAssertion[int64]
+		expectedFloats []fakemetrics.MetricsAssertion[float64]
 	}{
 		{
 			name:        "happy path",
@@ -56,18 +49,18 @@ func TestMonitor(t *testing.T) {
 			collectors: func(m *Monitor) []collectorFunc {
 				return []collectorFunc{m.emitReplicasetStatuses, m.emitDaemonsetStatuses}
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:  "apiserver.healthz.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "200",
 					},
 				},
 				{
-					name:  "replicaset.statuses",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "replicaset.statuses",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"availableReplicas": "1",
 						"name":              "name1",
 						"namespace":         "openshift",
@@ -75,9 +68,9 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 				{
-					name:  "daemonset.statuses",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "daemonset.statuses",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"desiredNumberScheduled": "2",
 						"numberAvailable":        "1",
 						"namespace":              "openshift",
@@ -85,39 +78,39 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 			},
-			expectedFloats: []expectedMetric{
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "fetchManagedNamespaces",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitReplicasetStatuses",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitDaemonsetStatuses",
 					},
 				},
@@ -139,34 +132,34 @@ func TestMonitor(t *testing.T) {
 				&failureToRunClusterCollector{collectorName: "fetchManagedNamespaces"},
 				errListNamespaces,
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:  "apiserver.healthz.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "200",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.error",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.error",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"collector": "fetchManagedNamespaces",
 					},
 				},
 			},
-			expectedFloats: []expectedMetric{
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
 					},
 				},
@@ -192,41 +185,41 @@ func TestMonitor(t *testing.T) {
 				errListReplicaSets,
 				innerFailure,
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:  "apiserver.healthz.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "200",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.error",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.error",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"collector": "emitReplicasetStatuses",
 					},
 				},
 			},
-			expectedFloats: []expectedMetric{
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "fetchManagedNamespaces",
 					},
 				},
@@ -251,18 +244,18 @@ func TestMonitor(t *testing.T) {
 				&failureToRunClusterCollector{collectorName: "emitReplicasetStatuses"},
 				&collectorPanic{panicValue: innerFailure},
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:  "apiserver.healthz.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "200",
 					},
 				},
 				{
-					name:  "daemonset.statuses",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "daemonset.statuses",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"desiredNumberScheduled": "2",
 						"numberAvailable":        "1",
 						"namespace":              "openshift",
@@ -270,39 +263,39 @@ func TestMonitor(t *testing.T) {
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.error",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.error",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"collector": "emitReplicasetStatuses",
 					},
 				},
 			},
-			expectedFloats: []expectedMetric{
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "fetchManagedNamespaces",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitDaemonsetStatuses",
 					},
 				},
@@ -317,37 +310,37 @@ func TestMonitor(t *testing.T) {
 				errAPIServerHealthzFailure,
 				errAPIServerPingFailure,
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:  "apiserver.healthz.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "500",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.error",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.error",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.error",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.error",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerPingCode",
 					},
 				},
 				{
-					name:  "apiserver.healthz.ping.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.ping.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "500",
 					},
 				},
 			},
-			expectedFloats: []expectedMetric{},
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{},
 		},
 		{
 			name: "api failure, ping succeeds",
@@ -360,34 +353,34 @@ func TestMonitor(t *testing.T) {
 			expectedErrors: []error{
 				errAPIServerHealthzFailure,
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:  "apiserver.healthz.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "500",
 					},
 				},
 				{
-					name:  "apiserver.healthz.ping.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.ping.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "200",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.error",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.error",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 			},
-			expectedFloats: []expectedMetric{
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerPingCode",
 					},
 				},
@@ -411,48 +404,48 @@ func TestMonitor(t *testing.T) {
 				&failureToRunClusterCollector{collectorName: "2"},
 				context.Canceled,
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:  "apiserver.healthz.code",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"code": "200",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.skipped",
-					value: int64(1),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.skipped",
+					Value:      int64(1),
+					Dimensions: map[string]string{
 						"collector": "2",
 					},
 				},
 			},
-			expectedFloats: []expectedMetric{
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "emitAPIServerHealthzCode",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "fetchManagedNamespaces",
 					},
 				},
 				{
-					name:  "monitor.cluster.collector.duration",
-					value: gomock.Any(),
-					labels: map[string]string{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "1",
 					},
 				},
@@ -519,8 +512,7 @@ func TestMonitor(t *testing.T) {
 			defer _cancel()
 
 			_, log := testlog.New()
-			controller := gomock.NewController(t)
-			m := mock_metrics.NewMockEmitter(controller)
+			m := fakemetrics.NewFakeMetricsEmitter(t)
 
 			// for healthz
 			fakeRawClient := &restfake.RESTClient{
@@ -538,10 +530,17 @@ func TestMonitor(t *testing.T) {
 				tt.hooks(client)
 			}
 
+			currTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+			now := func() time.Time {
+				currTime = currTime.Add(1 * time.Second)
+				return currTime
+			}
+
 			mon := &Monitor{
 				log:          log,
 				rawClient:    fakeRawClient,
 				ocpclientset: ocpclientset,
+				now:          now,
 				m:            m,
 				queryLimit:   1,
 				parallelism:  1,
@@ -551,20 +550,21 @@ func TestMonitor(t *testing.T) {
 				mon.collectors = tt.collectors(mon)
 			}
 
-			for _, gauge := range tt.expectedGauges {
-				m.EXPECT().EmitGauge(gauge.name, gauge.value, gauge.labels).Times(1)
-			}
-			for _, gauge := range tt.expectedFloats {
-				m.EXPECT().EmitFloat(gauge.name, gauge.value, gauge.labels).Times(1)
-			}
-
-			// we only emit duration when no errors
-			if len(tt.expectedErrors) == 0 {
-				m.EXPECT().EmitFloat("monitor.cluster.duration", gomock.Any(), gomock.Any()).Times(1)
-			}
-
 			err := mon.Monitor(_ctx)
 			utilerror.AssertErrorMatchesAll(t, err, tt.expectedErrors)
+
+			// we only emit duration when no errors
+			f := tt.expectedFloats
+			if len(tt.expectedErrors) == 0 {
+				f = append(tt.expectedFloats, fakemetrics.MetricsAssertion[float64]{
+					MetricName: "monitor.cluster.duration",
+					Value:      currTime.Sub(time.Date(1970, 1, 1, 0, 0, 1, 0, time.UTC)).Seconds(),
+					Dimensions: map[string]string{},
+				})
+			}
+
+			m.AssertFloats(f...)
+			m.AssertGauges(tt.expectedGauges...)
 		})
 	}
 }

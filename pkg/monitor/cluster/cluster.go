@@ -60,6 +60,7 @@ type Monitor struct {
 	env         env.Interface
 	rawClient   rest.Interface
 	tenantID    string
+	now         func() time.Time
 
 	ocpclientset clienthelper.Interface
 
@@ -155,6 +156,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		operatorcli: operatorcli,
 		arocli:      arocli,
 		rawClient:   rawClient,
+		now:         time.Now,
 
 		env:                 env,
 		tenantID:            tenantID,
@@ -208,7 +210,7 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 		return &failureToRunClusterCollector{collectorName: collectorName, inner: ctx.Err()}
 	}
 
-	innerNow := time.Now()
+	innerNow := mon.now()
 	mon.log.Debugf("running %s", collectorName)
 
 	// If the collector panics we should return the error (so that it bubbles
@@ -227,7 +229,7 @@ func (mon *Monitor) timeCall(ctx context.Context, f func(context.Context) error)
 		mon.emitMonitorCollectorError(collectorName)
 		return &failureToRunClusterCollector{collectorName: collectorName, inner: innerErr}
 	} else {
-		timeToComplete := time.Since(innerNow).Seconds()
+		timeToComplete := mon.now().Sub(innerNow).Seconds()
 		mon.emitMonitorCollectionTiming(collectorName, timeToComplete)
 		mon.log.Debugf("successfully ran cluster collector '%s' in %2f sec", collectorName, timeToComplete)
 	}
@@ -245,7 +247,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 
 	errs := []error{}
 
-	now := time.Now()
+	monitoringStartTime := mon.now()
 	mon.log.Debug("monitoring")
 
 	if mon.hourlyRun {
@@ -317,7 +319,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 
 	// emit a metric with how long we took when we have no errors
 	if len(errs) == 0 && ctx.Err() == nil {
-		mon.emitFloat("monitor.cluster.duration", time.Since(now).Seconds(), map[string]string{})
+		mon.emitFloat("monitor.cluster.duration", mon.now().Sub(monitoringStartTime).Seconds(), map[string]string{})
 	}
 
 	return errors.Join(errs...)
