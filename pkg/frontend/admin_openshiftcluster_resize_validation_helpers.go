@@ -372,3 +372,25 @@ func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions ad
 
 	return controlPlaneNodesFound, nil
 }
+
+func recoverFromFailedResizeVM(ctx context.Context, log *logrus.Entry, azureActions adminactions.AzureActions, kubeActions adminactions.KubeActions, vmName string, resourceID string) error {
+	poweronErr := azureActions.VMStartAndWait(ctx, vmName)
+	if poweronErr != nil {
+		log.Errorf("failed to power on VM '%s' on cluster '%s': %v", vmName, resourceID, poweronErr)
+		return poweronErr
+	}
+
+	waitErr := kubeActions.WaitForNodeReady(ctx, vmName)
+	if waitErr != nil {
+		log.Errorf("node '%s' on cluster '%s' did not become ready: %v", vmName, resourceID, waitErr)
+		return waitErr
+	}
+
+	unCordonErr := kubeActions.CordonNode(ctx, vmName, false)
+	if unCordonErr != nil {
+		log.Errorf("failed to uncordon node '%s' on cluster '%s': %v", vmName, resourceID, unCordonErr)
+		return unCordonErr
+	}
+
+	return nil
+}

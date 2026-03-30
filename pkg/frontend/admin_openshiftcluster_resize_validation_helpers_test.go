@@ -1300,6 +1300,74 @@ func TestValidateClusterNodes(t *testing.T) {
 	}
 }
 
+func TestRecoverFromFailedResizeVM(t *testing.T) {
+	ctx := context.Background()
+	_, log := testlog.New()
+	vmName := "aro-fake-node-master-0"
+	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename"
+
+	for _, tt := range []struct {
+		name              string
+		azureActionsMocks func(*mock_adminactions.MockAzureActions)
+		kubeActionsMocks  func(*mock_adminactions.MockKubeActions)
+		wantErr           string
+	}{
+		{
+			name: "full recovery succeeds",
+			azureActionsMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMStartAndWait(gomock.Any(), vmName).Return(nil)
+			},
+			kubeActionsMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().WaitForNodeReady(gomock.Any(), vmName).Return(nil)
+				k.EXPECT().CordonNode(gomock.Any(), vmName, false).Return(nil)
+			},
+		},
+		{
+			name: "poweron fails",
+			azureActionsMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMStartAndWait(gomock.Any(), vmName).Return(fmt.Errorf("poweron failed"))
+			},
+			kubeActionsMocks: func(k *mock_adminactions.MockKubeActions) {},
+			wantErr:          "poweron failed",
+		},
+		{
+			name: "node not ready",
+			azureActionsMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMStartAndWait(gomock.Any(), vmName).Return(nil)
+			},
+			kubeActionsMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().WaitForNodeReady(gomock.Any(), vmName).Return(fmt.Errorf("node not ready"))
+			},
+			wantErr: "node not ready",
+		},
+		{
+			name: "uncordon fails",
+			azureActionsMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMStartAndWait(gomock.Any(), vmName).Return(nil)
+			},
+			kubeActionsMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().WaitForNodeReady(gomock.Any(), vmName).Return(nil)
+				k.EXPECT().CordonNode(gomock.Any(), vmName, false).Return(fmt.Errorf("uncordon failed"))
+			},
+			wantErr: "uncordon failed",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			a := mock_adminactions.NewMockAzureActions(controller)
+			tt.azureActionsMocks(a)
+
+			k := mock_adminactions.NewMockKubeActions(controller)
+			tt.kubeActionsMocks(k)
+
+			err := recoverFromFailedResizeVM(ctx, log, a, k, vmName, resourceID)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
 // TestValidateClusterMachinesAndNodes tests the validateClusterMachinesAndNodes function
 func TestValidateClusterMachinesAndNodes(t *testing.T) {
 	_, log := testlog.New()

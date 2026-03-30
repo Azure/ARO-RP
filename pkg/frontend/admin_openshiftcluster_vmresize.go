@@ -67,23 +67,9 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	if err != nil {
 		log.Errorf("failed to resize VM '%s' on cluster '%s': %v", vmName, resourceID, err)
 
-		// Before sending the error to the resize GA, we'll attempt to power the VM on, and uncordon it.
-		poweronErr := azureActions.VMStartAndWait(ctx, vmName)
-		if poweronErr != nil {
-			log.Errorf("failed to power on VM '%s' on cluster '%s': %v", vmName, resourceID, poweronErr)
-			return errors.Join(err, poweronErr)
-		}
-
-		waitErr := kubeActions.WaitForNodeReady(ctx, vmName)
-		if waitErr != nil {
-			log.Errorf("node '%s' on cluster '%s' did not become ready: %v", vmName, resourceID, waitErr)
-			return errors.Join(err, waitErr)
-		}
-
-		unCordonErr := kubeActions.CordonNode(ctx, vmName, false) // vmName should match machine name (resize GA uses the same value for both)
-		if unCordonErr != nil {
-			log.Errorf("failed to uncordon node '%s' on cluster '%s': %v", vmName, resourceID, unCordonErr)
-			return errors.Join(err, unCordonErr)
+		recoveryErr := recoverFromFailedResizeVM(ctx, log, azureActions, kubeActions, vmName, resourceID)
+		if recoveryErr != nil {
+			return errors.Join(err, recoveryErr)
 		}
 	}
 	return err
