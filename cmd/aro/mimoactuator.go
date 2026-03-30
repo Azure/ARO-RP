@@ -11,10 +11,16 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	kmetrics "k8s.io/client-go/tools/metrics"
+
+	"github.com/Azure/go-autorest/tracing"
+
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -51,6 +57,12 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 	go g.Run()
+
+	tracing.Register(azure.New(m))
+	kmetrics.Register(kmetrics.RegisterOpts{
+		RequestResult:  k8s.NewResult(m),
+		RequestLatency: k8s.NewLatency(m),
+	})
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
