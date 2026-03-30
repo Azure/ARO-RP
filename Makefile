@@ -375,19 +375,13 @@ fix-gh-actions: $(PINACT) ## Pin unpinned GitHub Actions to SHA
 	@echo "Done. Please review the changes."
 
 .PHONY: pr-scan
-pr-scan: ## Scan PR or branch for code review (requires Claude Code). Usage: make pr-scan PR=1234 or BRANCH=my-branch
+pr-scan: ## Scan PR or branch for code review (requires Claude Code). Defaults to current branch if no PR/BRANCH specified.
 	@if [ -n "$(PR)" ]; then \
 		hack/pr-scan.sh --pr $(PR) $(if $(BASE),--base $(BASE),) $(if $(MODE),--mode $(MODE),); \
 	elif [ -n "$(BRANCH)" ]; then \
 		hack/pr-scan.sh --branch $(BRANCH) $(if $(BASE),--base $(BASE),) $(if $(MODE),--mode $(MODE),); \
 	else \
-		echo "Usage: make pr-scan PR=NUMBER or BRANCH=name [BASE=master] [MODE=full|quick|security|pipeline]"; \
-		echo "Examples:"; \
-		echo "  make pr-scan PR=1234"; \
-		echo "  make pr-scan BRANCH=fix/my-feature"; \
-		echo "  make pr-scan PR=1234 MODE=quick"; \
-		echo "  make pr-scan BRANCH=fix/feature BASE=master MODE=security"; \
-		exit 1; \
+		hack/pr-scan.sh --auto $(if $(BASE),--base $(BASE),) $(if $(MODE),--mode $(MODE),); \
 	fi
 
 .PHONY: lint-admin-portal

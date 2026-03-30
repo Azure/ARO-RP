@@ -46,37 +46,48 @@ The PR scan agent is a specialized Claude Code agent that performs systematic co
 The easiest way to scan a PR or branch:
 
 ```bash
-# Scan a PR by number
+# Auto-detect current branch (no PR/BRANCH needed!)
+make pr-scan
+make pr-scan MODE=quick
+
+# Scan a specific PR by number
 make pr-scan PR=1234
 
-# Scan a branch
+# Scan a specific branch
 make pr-scan BRANCH=fix/my-feature
 
-# Scan with specific base branch
-make pr-scan PR=1234 BASE=master
+# Scan with custom base branch
+make pr-scan BASE=master MODE=security
 
-# Scan with mode (quick, security, pipeline)
-make pr-scan PR=1234 MODE=quick
-make pr-scan BRANCH=fix/feature MODE=security
-make pr-scan PR=5678 MODE=pipeline
+# All together
+make pr-scan PR=1234 BASE=master MODE=pipeline
 ```
+
+**Auto-detection**: If you don't specify `PR=` or `BRANCH=`, the script automatically scans your **current branch** against master. This is the fastest way to check your work-in-progress!
 
 The Makefile target runs `hack/pr-scan.sh` which gathers context (diff, commits, changed files) and outputs it for Claude Code to analyze.
 
 #### Method 2: Via Shell Script Directly
 
 ```bash
-# Basic usage
+# Auto-detect current branch
+./hack/pr-scan.sh
+./hack/pr-scan.sh --auto --mode quick
+
+# Scan specific PR
 ./hack/pr-scan.sh --pr 1234
+
+# Scan specific branch
 ./hack/pr-scan.sh --branch fix/my-feature
 
-# With options
-./hack/pr-scan.sh --pr 1234 --base master --mode quick
-./hack/pr-scan.sh --branch fix/feature --mode security
+# With all options
+./hack/pr-scan.sh --branch fix/feature --base master --mode security
 
 # List open PRs (requires gh CLI)
 ./hack/pr-scan.sh --list-open
 ```
+
+**Auto-detection**: Running `./hack/pr-scan.sh` with no arguments automatically scans your current branch. Perfect for quick pre-commit checks!
 
 The script outputs context to stdout. Pipe it to a file or copy/paste into Claude Code.
 
@@ -100,8 +111,9 @@ Claude Code will fetch the diff and analyze it. The script methods provide riche
 
 | Format | Example | Script Option | Make Variable |
 |--------|---------|---------------|---------------|
-| PR number | `4649`, `#1234` | `--pr 1234` | `PR=1234` |
-| Branch name | `fix/e2e-pipeline-install-go` | `--branch fix/feature` | `BRANCH=fix/feature` |
+| Auto-detect | Current branch | `--auto` (default) | (none - auto) |
+| PR number | `1234`, `#1234` | `--pr 1234` | `PR=1234` |
+| Branch name | `fix/my-feature` | `--branch fix/feature` | `BRANCH=fix/feature` |
 | Base branch | `master`, `main` | `--base master` | `BASE=master` |
 | Mode | `full`, `quick`, `security`, `pipeline` | `--mode quick` | `MODE=quick` |
 | GitHub URL | `https://github.com/Azure/ARO-RP/pull/5678` | N/A (extract PR number) | `PR=5678` |

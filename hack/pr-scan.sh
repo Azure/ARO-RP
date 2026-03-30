@@ -13,6 +13,7 @@ usage: $0 [options]
 Gather PR or branch diff for Claude Code pr-scan agent analysis.
 
 Options:
+  --auto               Auto-detect current branch (default if no --pr/--branch)
   --pr NUMBER          Fetch and analyze GitHub PR number (e.g., --pr 5678)
   --branch NAME        Analyze branch (e.g., --branch fix/my-feature)
   --base BRANCH        Base branch for diff (default: master)
@@ -21,11 +22,11 @@ Options:
   -h, --help           Show this help
 
 Examples:
+  $0                              # Auto: scan current branch
+  $0 --auto --mode quick          # Auto: scan current branch, quick mode
   $0 --pr 5678                    # Scan PR 5678 against master
   $0 --branch fix/feature         # Scan branch against master
-  $0 --pr 5678 --base master      # Explicit base branch
   $0 --list-open                  # List open PRs (requires gh)
-  $0 --branch fix/feature --mode quick    # Quick scan (Blocker/High only)
 
 Modes:
   full      - Complete 7-category review (default)
@@ -36,6 +37,7 @@ Modes:
 Notes:
   - Requires git access to repository
   - --pr option requires gh CLI (GitHub CLI)
+  - Auto mode uses current git branch (git rev-parse --abbrev-ref HEAD)
   - Output is printed to stdout for Claude Code to analyze
   - The pr-scan agent definition is in .claude/agents/pr-scan.md
 EOF
@@ -63,9 +65,14 @@ BRANCH=""
 BASE="master"
 LIST_OPEN=false
 MODE="full"
+AUTO=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --auto)
+            AUTO=true
+            shift
+            ;;
         --pr)
             PR="$2"
             shift 2
@@ -96,6 +103,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Default to auto mode if no PR or BRANCH specified
+if [ -z "$PR" ] && [ -z "$BRANCH" ] && [ "$LIST_OPEN" = false ]; then
+    AUTO=true
+fi
+
 # Validate mode
 case "$MODE" in
     full|quick|security|pipeline)
@@ -113,9 +125,24 @@ if [ "$LIST_OPEN" = true ]; then
     exit 0
 fi
 
+# Handle auto mode
+if [ "$AUTO" = true ]; then
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ -z "$CURRENT_BRANCH" ]; then
+        abort "Auto mode failed: not in a git repository"
+    fi
+
+    if [ "$CURRENT_BRANCH" = "master" ] || [ "$CURRENT_BRANCH" = "main" ]; then
+        abort "Auto mode: currently on $CURRENT_BRANCH (base branch). Checkout a feature branch to scan, or use --branch explicitly."
+    fi
+
+    BRANCH="$CURRENT_BRANCH"
+    log "Auto mode: detected current branch '$BRANCH'"
+fi
+
 # Validate inputs
 if [ -z "$PR" ] && [ -z "$BRANCH" ]; then
-    abort "Must specify --pr or --branch"
+    abort "Must specify --pr, --branch, or use --auto (default)"
 fi
 
 if [ -n "$PR" ] && [ -n "$BRANCH" ]; then

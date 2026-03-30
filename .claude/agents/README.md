@@ -9,11 +9,16 @@ This directory contains specialized Claude Code agents for the Azure Red Hat Ope
 
 **Quick Start**:
 ```bash
-# Via Makefile (recommended)
+# Auto-detect current branch (fastest!)
+make pr-scan
+make pr-scan MODE=quick
+
+# Scan specific PR or branch
 make pr-scan PR=1234
 make pr-scan BRANCH=fix/my-feature MODE=quick
 
 # Via script
+./hack/pr-scan.sh                   # Auto-detect current branch
 ./hack/pr-scan.sh --pr 1234 --mode security
 ./hack/pr-scan.sh --branch fix/feature --mode pipeline
 
