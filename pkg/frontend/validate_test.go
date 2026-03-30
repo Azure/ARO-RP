@@ -17,7 +17,7 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func TestValidateAdminKubernetesPodLogs(t *testing.T) {
+func TestValidateAdminNamespacePodContainer(t *testing.T) {
 	longName := strings.Repeat("x", 256)
 
 	for _, tt := range []struct {
@@ -37,6 +37,14 @@ func TestValidateAdminKubernetesPodLogs(t *testing.T) {
 			test:          "customer namespace",
 			namespace:     "customer",
 			name:          "Valid-NAME-01",
+			containerName: "container-01",
+			wantErr:       "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
+		},
+		{
+			// Namespace forbidden check fires before pod-name check.
+			test:          "customer namespace with invalid pod name",
+			namespace:     "customer",
+			name:          longName,
 			containerName: "container-01",
 			wantErr:       "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
 		},
@@ -93,7 +101,66 @@ func TestValidateAdminKubernetesPodLogs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.test, func(t *testing.T) {
-			err := validateAdminKubernetesPodLogs(tt.namespace, tt.name, tt.containerName)
+			err := validateAdminNamespacePodContainer(tt.namespace, tt.name, tt.containerName)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateAdminExec(t *testing.T) {
+	longCommand := strings.Repeat("x", 4096)
+
+	for _, tt := range []struct {
+		test      string
+		namespace string
+		podName   string
+		container string
+		command   string
+		wantErr   string
+	}{
+		{
+			test:      "valid",
+			namespace: "openshift-etcd",
+			podName:   "etcd-master-0",
+			container: "etcdctl",
+			command:   "etcdctl member list",
+		},
+		{
+			test:      "empty command",
+			namespace: "openshift-etcd",
+			podName:   "etcd-master-0",
+			container: "etcdctl",
+			command:   "",
+			wantErr:   "400: InvalidParameter: : The provided command must not be empty.",
+		},
+		{
+			// 4096-byte command is exactly at the limit and must be accepted.
+			test:      "command at 4096 bytes",
+			namespace: "openshift-etcd",
+			podName:   "etcd-master-0",
+			container: "etcdctl",
+			command:   longCommand,
+		},
+		{
+			// 4097-byte command exceeds the limit.
+			test:      "command at 4097 bytes",
+			namespace: "openshift-etcd",
+			podName:   "etcd-master-0",
+			container: "etcdctl",
+			command:   longCommand + "x",
+			wantErr:   "400: InvalidParameter: : The provided command must not exceed 4096 bytes.",
+		},
+		{
+			test:      "customer namespace rejected before command check",
+			namespace: "customer",
+			podName:   "pod-0",
+			container: "container",
+			command:   "",
+			wantErr:   "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
+		},
+	} {
+		t.Run(tt.test, func(t *testing.T) {
+			err := validateAdminExec(tt.namespace, tt.podName, tt.container, tt.command)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
