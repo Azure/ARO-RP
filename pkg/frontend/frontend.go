@@ -393,6 +393,12 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
+				// exec, runjob, and etcdkeycount are diagnostic utilities that do not
+				// mutate persistent cluster state, so they do not emit an unplanned maintenance signal.
+				r.Post("/exec", f.postAdminOpenShiftClusterExec)
+				r.Post("/runjob", f.postAdminOpenShiftClusterRunJob)
+				r.Post("/etcdkeycount", f.postAdminOpenShiftClusterEtcdKeyCount)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdanalysis", f.postAdminOpenShiftClusterEtcdAnalysis)
 
 				r.Get("/controlplanestatuscheckafterresize", f.getControlPlaneStatusCheckAfterResize)
 				// MIMO
