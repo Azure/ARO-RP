@@ -142,9 +142,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
-					VMSizeList(gomock.Any()).
-					Return([]*armcompute.ResourceSKU{
-						{
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
 							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
 							ResourceType: pointerutils.ToPtr("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
@@ -308,21 +308,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
-					VMSizeList(gomock.Any()).
-					Return([]*armcompute.ResourceSKU{
-						{
-							Name:         pointerutils.ToPtr("Standard_D16s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("eastus"),
-								},
-							},
-							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-							Capabilities: []*armcompute.ResourceSKUCapabilities{},
-						},
-					}, nil)
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{}, nil)
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
@@ -360,9 +347,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
-					VMSizeList(gomock.Any()).
-					Return([]*armcompute.ResourceSKU{
-						{
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
 							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
 							ResourceType: pointerutils.ToPtr("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),

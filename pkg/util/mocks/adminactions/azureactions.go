@@ -148,6 +148,21 @@ func (mr *MockAzureActionsMockRecorder) ResourcesList(ctx, resources, writer any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockAzureActions)(nil).ResourcesList), ctx, resources, writer)
 }
 
+// VMGetSKUs mocks base method.
+func (m *MockAzureActions) VMGetSKUs(ctx context.Context, vmSizes []string) (map[string]*armcompute.ResourceSKU, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMGetSKUs", ctx, vmSizes)
+	ret0, _ := ret[0].(map[string]*armcompute.ResourceSKU)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VMGetSKUs indicates an expected call of VMGetSKUs.
+func (mr *MockAzureActionsMockRecorder) VMGetSKUs(ctx, vmSizes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMGetSKUs", reflect.TypeOf((*MockAzureActions)(nil).VMGetSKUs), ctx, vmSizes)
+}
+
 // VMRedeployAndWait mocks base method.
 func (m *MockAzureActions) VMRedeployAndWait(ctx context.Context, vmName string) error {
 	m.ctrl.T.Helper()
@@ -191,10 +206,10 @@ func (mr *MockAzureActionsMockRecorder) VMSerialConsole(ctx, log, vmName, target
 }
 
 // VMSizeList mocks base method.
-func (m *MockAzureActions) VMSizeList(ctx context.Context) ([]*armcompute.ResourceSKU, error) {
+func (m *MockAzureActions) VMSizeList(ctx context.Context) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VMSizeList", ctx)
-	ret0, _ := ret[0].([]*armcompute.ResourceSKU)
+	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

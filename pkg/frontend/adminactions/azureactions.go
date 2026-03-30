@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -34,7 +35,8 @@ type AzureActions interface {
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMStartAndWait(ctx context.Context, vmName string) error
 	VMStopAndWait(ctx context.Context, vmName string, deallocateVM bool) error
-	VMSizeList(ctx context.Context) ([]*sdkcompute.ResourceSKU, error)
+	VMSizeList(ctx context.Context) ([]string, error)
+	VMGetSKUs(ctx context.Context, vmSizes []string) (map[string]*sdkcompute.ResourceSKU, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
@@ -148,9 +150,12 @@ func (a *azureActions) VMStopAndWait(ctx context.Context, vmName string, dealloc
 	return a.virtualMachines.StopAndWait(ctx, clusterRGName, vmName, deallocateVM)
 }
 
-func (a *azureActions) VMSizeList(ctx context.Context) ([]*sdkcompute.ResourceSKU, error) {
-	filter := fmt.Sprintf("location eq '%s'", a.env.Location())
-	return a.resourceSkus.List(ctx, filter, false)
+func (a *azureActions) VMGetSKUs(ctx context.Context, vmSizes []string) (map[string]*sdkcompute.ResourceSKU, error) {
+	return computeskus.SelectVMSkusInCurrentRegion(ctx, a.resourceSkus, a.env.Location(), vmSizes)
+}
+
+func (a *azureActions) VMSizeList(ctx context.Context) ([]string, error) {
+	return computeskus.ListUnrestrictedVMSkusInCurrentRegion(ctx, a.resourceSkus, a.env.Location())
 }
 
 func (a *azureActions) VMResize(ctx context.Context, vmName string, size string) error {
