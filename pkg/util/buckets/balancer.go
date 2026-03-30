@@ -44,7 +44,7 @@ func StartBucketWorkerLoop(
 
 	isMaster := false
 	for {
-		// register ourself as a monitor, ttl of 60s default
+		// register ourself as a worker, ttl of 60s default
 		err := dbPoolWorkers.PoolWorkerHeartbeat(ctx, workerType, int(interval.Seconds()*6))
 		if err != nil {
 			log.Error(fmt.Errorf("error registering ourselves as a %s poolWorker, continuing: %w", workerType, err))
@@ -149,8 +149,8 @@ func balance(workers []string, bucketCount int, doc *api.PoolWorkerDocument) {
 
 	var unallocated []int
 	m := make(map[string][]int, len(workers)) // map of worker to list of buckets it owns
-	for _, monitor := range workers {
-		m[monitor] = nil
+	for _, worker := range workers {
+		m[worker] = nil
 	}
 
 	var target int // target number of buckets per worker
@@ -173,7 +173,7 @@ func balance(workers []string, bucketCount int, doc *api.PoolWorkerDocument) {
 		}
 	}
 
-	// reallocate all unallocated buckets, appending to the least loaded monitor
+	// reallocate all unallocated buckets, appending to the least loaded worker
 	if len(workers) > 0 {
 		for _, i := range unallocated {
 			var leastWorker string
