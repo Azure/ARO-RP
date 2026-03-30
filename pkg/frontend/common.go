@@ -19,13 +19,11 @@ const (
 	execOutputLimitLabel       = "1 MiB"
 
 	adminActionCleanupTimeout = 30 * time.Second
-	// adminActionStreamTimeout bounds the lifetime of a streaming admin-action
-	// goroutine so pods stuck in Pending don't block indefinitely.
+	// adminActionStreamTimeout bounds the lifetime of streaming admin-action goroutines.
 	adminActionStreamTimeout = 30 * time.Minute
 )
 
-// kubeRetryBackoff is the shared retry backoff for transient Kubernetes API errors.
-// Tests that zero Duration for speed must not run in parallel with other tests using this var.
+// kubeRetryBackoff is the shared retry backoff for transient k8s API errors (not parallel-test-safe).
 var kubeRetryBackoff = wait.Backoff{Steps: 3, Duration: 2 * time.Second, Factor: 2.0, Jitter: 0.1}
 
 // limitedWriter truncates writes to execOutputLimit, emitting a single notice at that point.
