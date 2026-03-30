@@ -41,11 +41,11 @@ func (f *frontend) postAdminOpenShiftClusterVMResize(w http.ResponseWriter, r *h
 		adminReply(log, w, nil, nil, err)
 		return
 	}
-	err = f._postAdminOpenShiftClusterVMResize(ctx, kubeActions, azureActions, vmName, vmSize, resourceGroupName)
+	err = f._postAdminOpenShiftClusterVMResize(log, ctx, kubeActions, azureActions, resourceID, vmName, vmSize, resourceGroupName)
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, vmName string, vmSize string, resourceGroupName string) error {
+func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, resourceID string, vmName string, vmSize string, resourceGroupName string) error {
 	err := validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
@@ -65,15 +65,18 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, kubeA
 
 	err = azureActions.VMResize(ctx, vmName, vmSize)
 	if err != nil {
+		log.Errorf("failed to resize VM '%s' on cluster '%s': %v", vmName, resourceID, err)
+
 		// Before sending the error to the resize GA, we'll attempt to power the VM on, and uncordon it.
 		poweronErr := azureActions.VMStartAndWait(ctx, vmName)
-
 		if poweronErr != nil {
+			log.Errorf("failed to power on VM '%s' on cluster '%s': %v", vmName, resourceID, poweronErr)
 			return errors.Join(err, poweronErr)
 		}
 
 		unCordonErr := kubeActions.CordonNode(ctx, vmName, false) // vmName should match machine name (resize GA uses the same value for both)
 		if unCordonErr != nil {
+			log.Errorf("failed to uncordon node '%s' on cluster '%s': %v", vmName, resourceID, unCordonErr)
 			return errors.Join(err, unCordonErr)
 		}
 	}

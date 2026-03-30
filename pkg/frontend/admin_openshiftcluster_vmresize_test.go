@@ -145,6 +145,26 @@ func TestAdminVMResize(t *testing.T) {
 			wantError:      `500: InternalServerError: : resize failed`,
 		},
 		{
+			name:       "resize fails, poweron succeeds, uncordon fails",
+			vmName:     "aro-fake-node-master-0",
+			vmSize:     "Standard_D8s_v3",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
+				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(fmt.Errorf("resize failed"))
+				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
+			},
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().CordonNode(gomock.Any(), tt.vmName, false).Return(fmt.Errorf("uncordon failed"))
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : resize failed` + "\n" + `uncordon failed`,
+		},
+		{
 			name:       "resize fails, poweron also fails",
 			vmName:     "aro-fake-node-master-0",
 			vmSize:     "Standard_D8s_v3",
