@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	PoolWorkerGetMasterQuery  string = `SELECT * FROM PoolWorkers doc WHERE doc.id = "@workerType" AND doc.workerType = "@workerType" AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
-	PoolWorkerGetWorkersQuery string = `SELECT * FROM PoolWorkers doc WHERE doc.id != "@workerType" AND doc.workerType = "@workerType"`
+	PoolWorkerGetMasterQuery  string = `SELECT * FROM PoolWorkers doc WHERE doc.id = @workerType AND doc.workerType = @workerType AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	PoolWorkerGetWorkersQuery string = `SELECT * FROM PoolWorkers doc WHERE doc.id != @workerType AND doc.workerType = @workerType`
 )
 
 type poolWorkers struct {
