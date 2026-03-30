@@ -11,9 +11,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/go-autorest/tracing"
+
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/mimo/scheduler"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
@@ -50,6 +53,8 @@ func mimoScheduler(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 	go g.Run()
+
+	tracing.Register(azure.New(m))
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
