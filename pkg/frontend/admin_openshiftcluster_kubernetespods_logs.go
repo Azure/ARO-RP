@@ -36,7 +36,7 @@ func (f *frontend) _getAdminKubernetesPodLogs(ctx context.Context, r *http.Reque
 
 	namespace, containerName, podName := r.URL.Query().Get("namespace"), r.URL.Query().Get("container"), r.URL.Query().Get("podname")
 
-	err := validateAdminKubernetesPodLogs(namespace, podName, containerName)
+	err := validateAdminNamespacePodContainer(namespace, podName, containerName)
 	if err != nil {
 		return nil, err
 	}

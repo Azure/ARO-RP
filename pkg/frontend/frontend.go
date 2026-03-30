@@ -395,6 +395,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
+				// runjob creates k8s resources (mutating, uses maintenance signal); exec and etcdkeycount are read-only.
+				r.Post("/exec", f.postAdminOpenShiftClusterExec)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/runjob", f.postAdminOpenShiftClusterRunJob)
+				r.Post("/etcdkeycount", f.postAdminOpenShiftClusterEtcdKeyCount)
 
 				r.Get("/controlplanestatuscheckafterresize", f.getControlPlaneStatusCheckAfterResize)
 				// MIMO
