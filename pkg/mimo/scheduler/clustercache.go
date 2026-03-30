@@ -105,7 +105,7 @@ func (c *openShiftClusterCache) OnAllPendingProcessed() {
 	old := c.lastChangefeed.Swap(time.Now())
 	// we've done one rotation, unlock the waitgroup
 	if old == nil {
-		c.initialPopulationWaitGroup.Done()
+		defer c.initialPopulationWaitGroup.Done()
 	}
 	c.m.EmitGauge("changefeed.caches.size", int64(c.clusters.Size()), map[string]string{
 		"name": "OpenShiftClusterDocument",

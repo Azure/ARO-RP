@@ -8,8 +8,6 @@ import (
 	"errors"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -17,10 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	fakemetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
 func TestEmitAroOperatorHeartbeat(t *testing.T) {
@@ -29,7 +27,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		objects        []client.Object
-		expectedGauges []expectedMetric
+		expectedGauges []fakemetrics.MetricsAssertion[int64]
 		hooks          func(hc *testclienthelper.HookingClient)
 		wantErr        error
 	}{
@@ -90,16 +88,16 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 					},
 				},
 			},
-			expectedGauges: []expectedMetric{
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
-					name:   "arooperator.heartbeat",
-					value:  int64(0),
-					labels: map[string]string{"name": "aro-operator-master"},
+					MetricName: "arooperator.heartbeat",
+					Value:      int64(0),
+					Dimensions: map[string]string{"name": "aro-operator-master"},
 				},
 				{
-					name:   "arooperator.heartbeat",
-					value:  int64(1),
-					labels: map[string]string{"name": "aro-operator-worker"},
+					MetricName: "arooperator.heartbeat",
+					Value:      int64(1),
+					Dimensions: map[string]string{"name": "aro-operator-worker"},
 				},
 			},
 		},
@@ -114,9 +112,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			m := mock_metrics.NewMockEmitter(controller)
-
+			m := fakemetrics.NewFakeMetricsEmitter(t)
 			_, log := testlog.New()
 			client := testclienthelper.NewHookingClient(fake.
 				NewClientBuilder().
@@ -135,16 +131,15 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 				tt.hooks(client)
 			}
 
-			for _, gauge := range tt.expectedGauges {
-				m.EXPECT().EmitGauge(gauge.name, gauge.value, gauge.labels).Times(1)
-			}
-
 			err := mon.emitAroOperatorHeartbeat(ctx)
 			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Wanted %v, got %v", err, tt.wantErr)
 			} else if tt.wantErr == nil && err != nil {
 				t.Fatal(err)
 			}
+
+			m.AssertGauges(tt.expectedGauges...)
+			m.AssertFloats()
 		})
 	}
 }
