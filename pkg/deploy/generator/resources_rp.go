@@ -474,11 +474,14 @@ func (g *generator) rpVMSS() *arm.Resource {
 	// VMSS extensions only support one custom script
 	// Because of this, the util-*.sh scripts are prefixed to the bootstrapping script
 	// main is called at the end of the bootstrapping script, so appending them will not work
-	bootstrapScript := scriptUtilCommon +
+	//
+	// Comments and blank lines are stripped to stay under the ARM expression
+	// length limit of 81,920 characters (see stripShellComments).
+	bootstrapScript := stripShellComments(scriptUtilCommon +
 		scriptUtilPackages +
 		scriptUtilServices +
 		scriptUtilSystem +
-		scriptRpVMSS
+		scriptRpVMSS)
 	trailer := base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
