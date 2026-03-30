@@ -143,6 +143,122 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 }
 
+func TestGenerateAROAutomationKubeconfig(t *testing.T) {
+	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedKey, err := utilpem.Encode(validCaKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedCert, err := utilpem.Encode(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	ca := &installer.AdminKubeConfigSignerCertKey{
+		SelfSignedCertKey: installer.SelfSignedCertKey{
+			CertKey: installer.CertKey{
+				CertRaw: encodedCert,
+				KeyRaw:  encodedKey,
+			},
+		},
+	}
+
+	apiserverURL := "https://api-int.hash.rg.mydomain:6443"
+	clusterName := "api-hash-rg-mydomain:6443"
+	automationName := "system:aro-automation"
+
+	adminInternalClient := &installer.AdminInternalClient{}
+	adminInternalClient.Config = &clientcmdv1.Config{
+		Clusters: []clientcmdv1.NamedCluster{
+			{
+				Name: clusterName,
+				Cluster: clientcmdv1.Cluster{
+					Server:                   apiserverURL,
+					CertificateAuthorityData: []byte("internal API Cert"),
+				},
+			},
+		},
+		AuthInfos: []clientcmdv1.NamedAuthInfo{},
+		Contexts: []clientcmdv1.NamedContext{
+			{
+				Name: automationName,
+				Context: clientcmdv1.Context{
+					Cluster:  clusterName,
+					AuthInfo: automationName,
+				},
+			},
+		},
+		CurrentContext: automationName,
+	}
+
+	pg := graph.PersistedGraph{}
+
+	caData, err := json.Marshal(ca)
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientData, err := json.Marshal(adminInternalClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pg["*kubeconfig.AdminInternalClient"] = clientData
+	pg["*tls.AdminKubeConfigSignerCertKey"] = caData
+
+	m := &manager{}
+
+	aroAutomationClient, err := m.generateAROAutomationKubeconfig(pg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got *clientcmdv1.Config
+	err = yaml.Unmarshal(aroAutomationClient, &got)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	innerpem := string(got.AuthInfos[0].AuthInfo.ClientCertificateData) + string(got.AuthInfos[0].AuthInfo.ClientKeyData)
+	_, innercert, err := utilpem.Parse([]byte(innerpem))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = innercert[0].CheckSignatureFrom(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	issuer := innercert[0].Issuer.String()
+	if issuer != "CN=validca" {
+		t.Error(issuer)
+	}
+
+	subject := innercert[0].Subject.String()
+	if subject != "CN=system:aro-automation" {
+		t.Error(subject)
+	}
+
+	if !innercert[0].NotAfter.After(time.Now().AddDate(9, 11, 0)) {
+		t.Error(innercert[0].NotAfter)
+	}
+
+	keyUsage := innercert[0].KeyUsage
+	expectedKeyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
+	if keyUsage != expectedKeyUsage {
+		t.Error("Invalid keyUsage.")
+	}
+
+	// validate the rest of the struct
+	got.AuthInfos = []clientcmdv1.NamedAuthInfo{}
+	want := adminInternalClient.Config
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatal(cmp.Diff(got, want))
+	}
+}
+
 func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
 	if err != nil {
