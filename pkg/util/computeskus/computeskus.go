@@ -90,7 +90,7 @@ func SelectVMSkusInCurrentRegion(ctx context.Context, resourceSkusClient armcomp
 			return nil, fmt.Errorf("%w: %w", ErrListVMResourceSKUs, err)
 		}
 
-		if sku == nil {
+		if sku == nil || sku.ResourceType == nil || sku.Name == nil {
 			continue
 		}
 
@@ -127,7 +127,7 @@ func ListUnrestrictedVMSkusInCurrentRegion(ctx context.Context, resourceSkusClie
 			return nil, fmt.Errorf("%w: %w", ErrListVMResourceSKUs, err)
 		}
 
-		if sku == nil {
+		if sku == nil || sku.ResourceType == nil || sku.Name == nil {
 			continue
 		}
 
