@@ -59,7 +59,9 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 				WithQuiet(true).
 				WithPolicy(pullPolicy).
 				WithUsername(pullSecret.Username).
-				WithPassword(pullSecret.Password)
+				WithPassword(pullSecret.Password).
+				WithArch("amd64").
+				WithOS("linux")
 
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
