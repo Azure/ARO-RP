@@ -89,6 +89,7 @@ func tryMaster(
 	if !isMaster {
 		doc, err := dbPoolWorkers.TryLease(ctx, workerType)
 		if err != nil || doc == nil {
+			log.Debugf("err: %s, doc: %#v", err, doc)
 			return false, err
 		}
 		isMaster = true
@@ -117,6 +118,8 @@ func tryMaster(
 				workers = append(workers, doc.ID)
 			}
 		}
+
+		log.Debugf("workers: %v", workers)
 
 		balance(workers, bucketCount, doc)
 		return nil
