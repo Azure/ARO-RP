@@ -74,6 +74,12 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 			return errors.Join(err, poweronErr)
 		}
 
+		waitErr := kubeActions.WaitForNodeReady(ctx, vmName)
+		if waitErr != nil {
+			log.Errorf("node '%s' on cluster '%s' did not become ready: %v", vmName, resourceID, waitErr)
+			return errors.Join(err, waitErr)
+		}
+
 		unCordonErr := kubeActions.CordonNode(ctx, vmName, false) // vmName should match machine name (resize GA uses the same value for both)
 		if unCordonErr != nil {
 			log.Errorf("failed to uncordon node '%s' on cluster '%s': %v", vmName, resourceID, unCordonErr)

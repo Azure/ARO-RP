@@ -236,3 +236,17 @@ func (mr *MockKubeActionsMockRecorder) TopPods(ctx, restConfig, allNamespaces an
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopPods", reflect.TypeOf((*MockKubeActions)(nil).TopPods), ctx, restConfig, allNamespaces)
 }
+
+// WaitForNodeReady mocks base method.
+func (m *MockKubeActions) WaitForNodeReady(ctx context.Context, nodeName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForNodeReady", ctx, nodeName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForNodeReady indicates an expected call of WaitForNodeReady.
+func (mr *MockKubeActionsMockRecorder) WaitForNodeReady(ctx, nodeName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNodeReady", reflect.TypeOf((*MockKubeActions)(nil).WaitForNodeReady), ctx, nodeName)
+}

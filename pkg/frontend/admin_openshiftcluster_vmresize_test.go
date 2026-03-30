@@ -139,10 +139,31 @@ func TestAdminVMResize(t *testing.T) {
 				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
 			},
 			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().WaitForNodeReady(gomock.Any(), tt.vmName).Return(nil)
 				k.EXPECT().CordonNode(gomock.Any(), tt.vmName, false).Return(nil)
 			},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : resize failed`,
+		},
+		{
+			name:       "resize fails, poweron succeeds, node not ready",
+			vmName:     "aro-fake-node-master-0",
+			vmSize:     "Standard_D8s_v3",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
+				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(fmt.Errorf("resize failed"))
+				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
+			},
+			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().WaitForNodeReady(gomock.Any(), tt.vmName).Return(fmt.Errorf("node not ready"))
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : resize failed` + "\n" + `node not ready`,
 		},
 		{
 			name:       "resize fails, poweron succeeds, uncordon fails",
@@ -159,6 +180,7 @@ func TestAdminVMResize(t *testing.T) {
 				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
 			},
 			kubeActionsMocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().WaitForNodeReady(gomock.Any(), tt.vmName).Return(nil)
 				k.EXPECT().CordonNode(gomock.Any(), tt.vmName, false).Return(fmt.Errorf("uncordon failed"))
 			},
 			wantStatusCode: http.StatusInternalServerError,

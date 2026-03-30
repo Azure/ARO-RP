@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -37,6 +39,7 @@ type KubeActions interface {
 	KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool, propagationPolicy *metav1.DeletionPropagation) error
 	ResolveGVR(groupKind string, optionalVersion string) (schema.GroupVersionResource, error)
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
+	WaitForNodeReady(ctx context.Context, nodeName string) error
 	DrainNode(ctx context.Context, nodeName string) error
 	ApproveCsr(ctx context.Context, csrName string) error
 	ApproveAllCsrs(ctx context.Context) error
@@ -186,4 +189,26 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 	}
 
 	return k.dyn.Resource(gvr).Namespace(namespace).Delete(ctx, name, resourceDeleteOptions)
+}
+
+const nodeReadyTimeout = 30 * time.Minute
+
+func (k *kubeActions) WaitForNodeReady(ctx context.Context, nodeName string) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, nodeReadyTimeout)
+	defer cancel()
+
+	return wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
+		node, err := k.kubecli.CoreV1().Nodes().Get(timeoutCtx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.NodeReady {
+				return condition.Status == corev1.ConditionTrue, nil
+			}
+		}
+
+		return false, nil
+	}, timeoutCtx.Done())
 }
