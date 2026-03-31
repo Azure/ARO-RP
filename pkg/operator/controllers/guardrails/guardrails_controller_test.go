@@ -44,6 +44,7 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 	tests := []struct {
 		name          string
 		mocks         func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
+		dhMocks       func(*mock_dynamichelper.MockInterface)
 		flags         arov1alpha1.OperatorFlags
 		cleanupNeeded bool
 		wantErr       string
@@ -177,6 +178,9 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
 			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "managed=false (removal), Remove() fails",
@@ -189,7 +193,10 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(errors.New("failed delete"))
 			},
-			wantErr: "failed delete",
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			wantErr: "failed to remove Gatekeeper deployment: failed delete",
 		},
 		{
 			name: "managed=blank (no action)",
@@ -219,15 +226,20 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 				},
 			}
 			dep := mock_deployer.NewMockDeployer(controller)
+			dh := mock_dynamichelper.NewMockInterface(controller)
 			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(cluster, cv)
 
 			if tt.mocks != nil {
 				tt.mocks(dep, cluster)
 			}
+			if tt.dhMocks != nil {
+				tt.dhMocks(dh)
+			}
 
 			r := &Reconciler{
 				log:               logrus.NewEntry(logrus.StandardLogger()),
 				deployer:          dep,
+				dh:                dh,
 				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
@@ -249,10 +261,12 @@ func TestReconcileVAP(t *testing.T) {
 	cv := clusterVersionForTest("4.17.0")
 
 	tests := []struct {
-		name    string
-		flags   arov1alpha1.OperatorFlags
-		dhMocks func(*mock_dynamichelper.MockInterface)
-		wantErr string
+		name          string
+		flags         arov1alpha1.OperatorFlags
+		depMocks      func(*mock_deployer.MockDeployer)
+		dhMocks       func(*mock_dynamichelper.MockInterface)
+		cleanupNeeded bool
+		wantErr       string
 	}{
 		{
 			name: "VAP: disabled",
@@ -278,6 +292,29 @@ func TestReconcileVAP(t *testing.T) {
 				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
 				// 3 bindings deleted before recreate
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(3)
+			},
+		},
+		{
+			name: "VAP: managed=true with gatekeeper migration (upgrade from pre-4.17)",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:                            operator.FlagTrue,
+				operator.GuardrailsDeployManaged:                      operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyManaged:           operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
+				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
+			},
+			cleanupNeeded: true,
+			depMocks: func(md *mock_deployer.MockDeployer) {
+				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				// cleanupGatekeeper: removePolicy calls EnsureDeletedGVR for GK constraints
+				// then deployVAP: 3 Ensure (policy) + 3 EnsureDeletedGVR (binding delete) + 3 Ensure (binding recreate)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
 			},
 		},
 		{
@@ -317,17 +354,21 @@ func TestReconcileVAP(t *testing.T) {
 				},
 			}
 
+			dep := mock_deployer.NewMockDeployer(controller)
 			dh := mock_dynamichelper.NewMockInterface(controller)
+			if tt.depMocks != nil {
+				tt.depMocks(dep)
+			}
 			if tt.dhMocks != nil {
 				tt.dhMocks(dh)
 			}
 
-			// No gatekeeper is running (kubernetescli is nil)
 			r := &Reconciler{
-				log:      logrus.NewEntry(logrus.StandardLogger()),
-				deployer: mock_deployer.NewMockDeployer(controller),
-				client:   ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
-				dh:       dh,
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+				deployer:      dep,
+				client:        ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
+				dh:            dh,
+				cleanupNeeded: tt.cleanupNeeded,
 			}
 			_, err := r.Reconcile(context.Background(), reconcile.Request{})
 			if err != nil && err.Error() != tt.wantErr {

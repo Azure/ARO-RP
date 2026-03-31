@@ -5,8 +5,7 @@ metadata:
 spec:
   policyName: aro-machines-deny
   validationActions:
-  - Deny
-  #- {{.ValidationAction}}
+  - {{.ValidationAction}}
   matchResources:
     namespaceSelector:
       matchExpressions:

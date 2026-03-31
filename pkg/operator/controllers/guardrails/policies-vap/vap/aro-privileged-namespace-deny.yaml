@@ -56,7 +56,7 @@ spec:
   - name: targetNamespace
     expression: |
       !has(object.metadata) ? "" :
-      (request.kind.kind == "Namespace" ? object.metadata.name : 
+      (request.kind.kind == "Namespace" ? object.metadata.name :
        (has(object.metadata.namespace) ? object.metadata.namespace : ""))
   - name: isExempted
     expression: |
@@ -71,6 +71,6 @@ spec:
       !(variables.targetNamespace in variables.privilegedNamespaces) || variables.isExempted
     message: "Operation not allowed in privileged namespace"
     messageExpression: |
-      request.kind.kind == "Namespace" 
+      request.kind.kind == "Namespace"
         ? "user " + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + " not allowed to " + request.operation + " namespace " + (has(object.metadata) ? object.metadata.name : "unknown")
         : "user " + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + " not allowed to " + request.operation + " " + (has(object.metadata) ? object.metadata.name : "unknown") + " in namespace " + (has(object.metadata) && has(object.metadata.namespace) ? object.metadata.namespace : "unknown")
