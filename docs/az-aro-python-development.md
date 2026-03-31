@@ -58,26 +58,53 @@ There is a useful guide for authoring commands in the
 [azure-cli](https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules)
 repository.
 
+## `az aro` Extension Code Structure/Organization
+
+The majority of hand-written code lives in `python/az/aro/azext_aro`:
+
+- `python/az/aro/azext_aro/__init__.py` - ARO extension entrypoint
+- `python/az/aro/azext_aro/commands.py` - ARO extension command structure
+  definitions
+- `python/az/aro/azext_aro/custom.py` - Logic and helper methods for
+  subcommands
+- `python/az/aro/azext_aro/_help.py` - Help output definitions
+
+### Generated code
+
+Helpful to reference, but these don't need edits:
+
+- `python/az/aro/azext_aro/aaz` - Generated code vendored from AZ tooling that
+  we occasionally change new classes or functions are needed.
+- `python/az/aro/build`
+- `python/az/client`
 
 ## Tests
 
-Tests can be run as follows:
+Tests are run as follows:
 
 ```bash
 azdev test aro (--live) (--lf) (--verbose) (--debug)
 ```
 
-> An issue was discovered on macOS when running tests due to additional security to restrict multithreading in macOS High Sierra and later versions of macOS. \
-If getting the following error:\
-`+[__NSCFConstantString initialize] may have been in progress in another thread when fork() was called.`\
-Add this variable to your env or add it to your profile to make it permanent in `~/.bash_profile` or `~/.zshrc`:\
-`export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
+> [!TIP]
+> An issue was discovered on macOS when running tests due to additional
+> security to restrict multithreading in macOS High Sierra and later versions
+> of macOS.
+>
+> If you see the following error:
+> ```
+> +[__NSCFConstantString initialize] may have been in progress in another
+> thread when fork() was called.
+> ```
+> Add this variable to your env or add it to your profile to make it permanent
+> in `~/.bash_profile` or `~/.zshrc`: `export
+> OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
 
 
 There are two main types of tests:
 
-* live tests that get recorded and replayed
-* mocks
+- live tests that get recorded and replayed, and
+- mocks
 
 The guide for writing and operating the tests is in the
 [azure-cli](https://github.com/Azure/azure-cli/blob/dev/doc/authoring_tests.md)
@@ -86,13 +113,13 @@ repository.
 
 ### Live tests and recording
 
-Tests can be recorded live, which enables the next run to take place against the
-recorded values.  For the recording, the Python VCR library is used; recorded
-"tapes" are stored in
+Tests can be recorded live, which enables the next run to take place against
+the recorded values. For the recording, the Python VCR library is used;
+recorded "tapes" are stored in
 `src/azure-cli/azure/cli/command_modules/aro/tests/latest/recordings`.
 
 When the `--live` flag is passed, the tests run against the Azure API and are
-recorded.  Failed tests can be re-run using the `--lf` flag.
+recorded. Failed tests can be re-run using the `--lf` flag.
 
 Recorded tests are run when the `--live` flag is not passed.
 
@@ -113,7 +140,8 @@ documentation.
 
 ## Updating Azure CLI version
 
-When upstream azure-cli releases a new version that we need to adopt, follow these steps to regenerate `requirements.txt`:
+When upstream azure-cli releases a new version that we need to adopt, follow
+these steps to regenerate `requirements.txt`:
 
 ```sh
 # 1. Remove existing pyenv
@@ -134,21 +162,20 @@ azdev setup -r .
 pip freeze > requirements.txt
 ```
 
-Also update `Dockerfile.ci-azext-aro` to match the new CLI version (both the pip install line and the base image).
+Also update `Dockerfile.ci-azext-aro` to match the new CLI version (both the
+pip install line and the base image).
 
-This lets pip resolve all SDK dependencies automatically rather than manually editing individual packages.
+This lets pip resolve all SDK dependencies automatically rather than manually
+editing individual packages.
 
 ## Caveats
 
-* `azure-cli` CI is not entirely isolated.  Test runs may pass or fail depending
-  on the state of `dev` branch.  Force push to rerun the tests.
-
-* Pulling `azure-cli` can break the `venv`.  If this happens, delete and
+- `azure-cli` CI is not entirely isolated.  Test runs may pass or fail
+  depending on the state of `dev` branch.  Force push to rerun the tests.
+- Pulling `azure-cli` can break the `venv`.  If this happens, delete and
   recreate it.
-
-* Care needs to be taken when designing tests for live recording.  The recording
+- Care needs to be taken when designing tests for live recording. The recording
   framework rewrites some fields, possibly including UUIDs.
-
-* When developing the `az aro` extension in this repository, you may wish to use
-  the [edge](https://github.com/Azure/azure-cli#edge-builds) CLI version to be
-  as close as possible to azure-cli master.
+- When developing the `az aro` extension in this repository, you may wish to
+  use the [edge](https://github.com/Azure/azure-cli#edge-builds) CLI version to
+  be as close as possible to azure-cli master.
