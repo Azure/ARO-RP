@@ -34,7 +34,7 @@ func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) ([]byte, err
 	return generateKubeconfig(pg, "system:aro-sre", nil, installer.TenYears, true)
 }
 
-// generateAROAutomationKubeconfig generates readonly credentials and a
+// generateAROAutomationKubeconfig generates read-only credentials and a
 // kubeconfig for automation tools (e.g. HolmesGPT), based on the admin kubeconfig found in the graph.
 func (m *manager) generateAROAutomationKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
 	return generateKubeconfig(pg, "system:aro-automation", nil, installer.TenYears, true)

@@ -622,22 +622,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - user.openshift.io
-  resources:
-  - groups
-  - identities
-  - users
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - user.openshift.io
-  resources:
-  - useridentitymappings
-  verbs:
-  - get
-- apiGroups:
   - whereabouts.cni.cncf.io
   resources:
   - ippools
@@ -647,6 +631,10 @@ rules:
   - list
   - watch
 - nonResourceURLs:
-  - '*'
+  - /healthz
+  - /livez
+  - /readyz
+  - /version
+  - /metrics
   verbs:
   - get
