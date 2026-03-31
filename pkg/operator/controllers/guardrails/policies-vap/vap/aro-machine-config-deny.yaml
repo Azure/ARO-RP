@@ -41,7 +41,9 @@ spec:
       ["system:kube-controller-manager", "system:kube-scheduler", "system:admin", "system:aro-service"]
   - name: mcName
     expression: |
-      has(object.metadata) && has(object.metadata.name) ? object.metadata.name : ""
+      request.operation == "DELETE"
+      ? (has(oldObject.metadata) && has(oldObject.metadata.name) ? oldObject.metadata.name : "")
+      : (has(object.metadata) && has(object.metadata.name) ? object.metadata.name : "")
   - name: isProtectedMC
     expression: |
       variables.mcName in variables.protectedMachineConfigs ||

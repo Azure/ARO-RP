@@ -65,12 +65,15 @@ func (r *Reconciler) cleanupGatekeeper(ctx context.Context, instance *arov1alpha
 // equivalent VAP validationAction.
 func vapValidationAction(gkEnforcement string) string {
 	switch strings.ToLower(gkEnforcement) {
+	case "deny":
+		return "Deny"
 	case "warn":
 		return "Warn"
 	case "dryrun":
 		return "Audit"
 	default:
-		return "Deny"
+		// default to warn
+		return "Warn"
 	}
 }
 
