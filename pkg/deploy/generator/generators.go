@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
@@ -17,11 +19,13 @@ type Generator interface {
 
 type generator struct {
 	production bool
+	log        *logrus.Entry
 }
 
 func New(production bool) Generator {
 	return &generator{
 		production: production,
+		log:        logrus.WithField("component", "generate"),
 	}
 }
 

@@ -6,6 +6,7 @@ package generator
 import (
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"strings"
 
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
@@ -479,10 +480,15 @@ func (g *generator) rpVMSS() *arm.Resource {
 		scriptUtilServices +
 		scriptUtilSystem +
 		scriptRpVMSS
+
+	regex := regexp.MustCompile(`# *`)
+	bootstrapScript = regex.ReplaceAllString(bootstrapScript, "")
 	trailer := base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
+
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
+	g.log.Info("Returning arm resource.")
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
@@ -583,7 +589,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
 									Publisher:               pointerutils.ToPtr("Microsoft.Azure.Extensions"),
 									Type:                    pointerutils.ToPtr("CustomScript"),
-									TypeHandlerVersion:      pointerutils.ToPtr("2.0"),
+									TypeHandlerVersion:      pointerutils.ToPtr("2.1"),
 									AutoUpgradeMinorVersion: pointerutils.ToPtr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{

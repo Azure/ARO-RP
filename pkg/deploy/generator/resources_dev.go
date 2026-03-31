@@ -6,6 +6,7 @@ package generator
 import (
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -101,8 +102,11 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(scriptDevProxyVMSS))
-	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
+	regex := regexp.MustCompile(`# *`)
+	bootstrapScript := regex.ReplaceAllString(scriptDevProxyVMSS, "")
+	bootstrapScript = base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
+
+	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", bootstrapScript))
 	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
 	return &arm.Resource{
