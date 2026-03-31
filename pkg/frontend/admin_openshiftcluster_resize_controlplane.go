@@ -144,6 +144,11 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 // resizeControlPlaneNode performs the full resize sequence for a single
 // control plane node: cordon → drain → stop → resize → start → wait
 // ready → uncordon → update Machine metadata → update Node labels.
+//
+// If a failure occurs before the VM SKU has been changed (drain, stop,
+// or resize), best-effort recovery is attempted to restore the node to a
+// schedulable state. Failures after the SKU change (start, wait-ready)
+// are reported without automatic recovery — SRE should intervene per SOP.
 func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool) error {
 	log.Infof("Cordoning node %s", machineName)
 	if err := k.CordonNode(ctx, machineName, true); err != nil {
@@ -152,19 +157,24 @@ func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactio
 
 	log.Infof("Draining node %s", machineName)
 	if err := k.DrainNodeWithRetries(ctx, machineName); err != nil {
-		return fmt.Errorf("draining node: %w", err)
+		recoveryErr := bestEffortUncordon(ctx, log, k, machineName)
+		return resizeRecoveryError("draining node", err, recoveryErr)
 	}
 
 	log.Infof("Stopping VM %s (deallocate=%v)", machineName, deallocateVM)
 	if err := a.VMStopAndWait(ctx, machineName, deallocateVM); err != nil {
-		return fmt.Errorf("stopping VM: %w", err)
+		recoveryErr := bestEffortRecoverVM(ctx, log, k, a, machineName)
+		return resizeRecoveryError("stopping VM", err, recoveryErr)
 	}
 
 	log.Infof("Resizing VM %s to %s", machineName, desiredVMSize)
 	if err := a.VMResize(ctx, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("resizing VM: %w", err)
+		recoveryErr := bestEffortRecoverVM(ctx, log, k, a, machineName)
+		return resizeRecoveryError("resizing VM", err, recoveryErr)
 	}
 
+	// Past this point the VM SKU has been changed. No automatic size
+	// rollback is attempted — the new size is the intended outcome.
 	log.Infof("Starting VM %s", machineName)
 	if err := a.VMStartAndWait(ctx, machineName); err != nil {
 		return fmt.Errorf("starting VM: %w", err)
@@ -191,6 +201,55 @@ func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactio
 	}
 
 	return nil
+}
+
+// bestEffortUncordon attempts to uncordon a node that is still running.
+// Used when a failure occurs before the VM was stopped.
+func bestEffortUncordon(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, machineName string) error {
+	log.Infof("Recovery: attempting to uncordon node %s", machineName)
+	if err := k.CordonNode(ctx, machineName, false); err != nil {
+		log.Errorf("Recovery: failed to uncordon node %s: %v", machineName, err)
+		return fmt.Errorf("recovery uncordon failed: %w", err)
+	}
+	log.Infof("Recovery: successfully uncordoned node %s", machineName)
+	return nil
+}
+
+// bestEffortRecoverVM attempts to start a stopped VM, wait for the node to
+// become Ready, and uncordon it. If the VM cannot be started, recovery stops.
+// If the node does not become Ready within the timeout, uncordon is NOT
+// attempted — per SOP, SRE should verify node health before re-enabling
+// scheduling on a node whose health has not been confirmed.
+func bestEffortRecoverVM(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName string) error {
+	log.Infof("Recovery: attempting to start VM %s", machineName)
+	if err := a.VMStartAndWait(ctx, machineName); err != nil {
+		log.Errorf("Recovery: failed to start VM %s: %v", machineName, err)
+		return fmt.Errorf("recovery VM start failed: %w", err)
+	}
+
+	log.Infof("Recovery: VM %s started, waiting for node to become Ready", machineName)
+	if err := waitForNodeReady(ctx, log, k, machineName); err != nil {
+		log.Errorf("Recovery: node %s did not become Ready: %v. Node left cordoned per SOP — SRE should verify node health.", machineName, err)
+		return fmt.Errorf("recovery wait-for-ready failed (node left cordoned per SOP): %w", err)
+	}
+
+	log.Infof("Recovery: node %s is Ready, uncordoning", machineName)
+	if err := k.CordonNode(ctx, machineName, false); err != nil {
+		log.Errorf("Recovery: failed to uncordon node %s: %v", machineName, err)
+		return fmt.Errorf("recovery uncordon failed: %w", err)
+	}
+
+	log.Infof("Recovery: node %s fully recovered", machineName)
+	return nil
+}
+
+// resizeRecoveryError combines the original resize failure with the
+// recovery outcome so SREs can see both in a single error message.
+func resizeRecoveryError(operation string, resizeErr, recoveryErr error) error {
+	if recoveryErr != nil {
+		return fmt.Errorf("%s: %w; recovery also failed: %v", operation, resizeErr, recoveryErr)
+	}
+	return fmt.Errorf("%s: %w; node was recovered successfully", operation, resizeErr)
 }
 
 // checkCPMSNotActive verifies that the ControlPlaneMachineSet is not Active.

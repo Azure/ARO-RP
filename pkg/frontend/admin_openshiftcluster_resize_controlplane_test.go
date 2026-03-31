@@ -316,7 +316,7 @@ func TestResizeControlPlane(t *testing.T) {
 			},
 		},
 		{
-			name: "stop VM fails",
+			name: "stop VM fails - node recovered",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
 					Return(nil, kerrors.NewNotFound(cpmsGR, "cluster"))
@@ -331,12 +331,38 @@ func TestResizeControlPlane(t *testing.T) {
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).
 						Return(errors.New("Azure capacity error")),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 				)
 			},
-			wantErr: "failed to resize node master-0: stopping VM: Azure capacity error",
+			wantErr: "failed to resize node master-0: stopping VM: Azure capacity error; node was recovered successfully",
 		},
 		{
-			name: "drain fails",
+			name: "stop VM fails - recovery also fails",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(nil, kerrors.NewNotFound(cpmsGR, "cluster"))
+
+				machines := masterMachineListJSON(
+					masterMachine("master-0", "Standard_D8s_v3", running),
+				)
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+
+				gomock.InOrder(
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).
+						Return(errors.New("Azure capacity error")),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").
+						Return(errors.New("VM start failed")),
+				)
+			},
+			wantErr: "failed to resize node master-0: stopping VM: Azure capacity error; recovery also failed: recovery VM start failed: VM start failed",
+		},
+		{
+			name: "drain fails - node recovered via uncordon",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
 					Return(nil, kerrors.NewNotFound(cpmsGR, "cluster"))
@@ -350,12 +376,13 @@ func TestResizeControlPlane(t *testing.T) {
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").
 						Return(errors.New("could not drain node after 3 retries: drain error")),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 				)
 			},
-			wantErr: "failed to resize node master-0: draining node: could not drain node after 3 retries: drain error",
+			wantErr: "failed to resize node master-0: draining node: could not drain node after 3 retries: drain error; node was recovered successfully",
 		},
 		{
-			name: "resize VM fails",
+			name: "resize VM fails - node recovered",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
 					Return(nil, kerrors.NewNotFound(cpmsGR, "cluster"))
@@ -371,9 +398,13 @@ func TestResizeControlPlane(t *testing.T) {
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
 					a.EXPECT().VMResize(gomock.Any(), "master-0", desiredSize).
 						Return(errors.New("Azure resize error")),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 				)
 			},
-			wantErr: "failed to resize node master-0: resizing VM: Azure resize error",
+			wantErr: "failed to resize node master-0: resizing VM: Azure resize error; node was recovered successfully",
 		},
 		{
 			name: "no control plane machines found",
@@ -482,6 +513,116 @@ func TestUpdateNodeInstanceTypeLabels(t *testing.T) {
 			tt.mocks(k)
 
 			err := updateNodeInstanceTypeLabels(ctx, k, "master-0", "Standard_D16s_v5")
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestBestEffortUncordon(t *testing.T) {
+	ctx := context.Background()
+	_, log := testlog.New()
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_adminactions.MockKubeActions)
+		wantErr string
+	}{
+		{
+			name: "uncordon succeeds",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil)
+			},
+		},
+		{
+			name: "uncordon fails",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().CordonNode(gomock.Any(), "master-0", false).
+					Return(errors.New("API unavailable"))
+			},
+			wantErr: "recovery uncordon failed: API unavailable",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			k := mock_adminactions.NewMockKubeActions(ctrl)
+			tt.mocks(k)
+
+			err := bestEffortUncordon(ctx, log, k, "master-0")
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestBestEffortRecoverVM(t *testing.T) {
+	_, log := testlog.New()
+
+	for _, tt := range []struct {
+		name    string
+		ctx     context.Context
+		mocks   func(*mock_adminactions.MockKubeActions, *mock_adminactions.MockAzureActions)
+		wantErr string
+	}{
+		{
+			name: "full recovery succeeds",
+			ctx:  context.Background(),
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				gomock.InOrder(
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
+				)
+			},
+		},
+		{
+			name: "VM start fails",
+			ctx:  context.Background(),
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").
+					Return(errors.New("capacity unavailable"))
+			},
+			wantErr: "recovery VM start failed: capacity unavailable",
+		},
+		{
+			name: "node not ready - left cordoned per SOP",
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				return ctx
+			}(),
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return(nodeJSON("master-0", false), nil)
+			},
+			wantErr: "recovery wait-for-ready failed (node left cordoned per SOP): context canceled",
+		},
+		{
+			name: "uncordon fails after recovery",
+			ctx:  context.Background(),
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				gomock.InOrder(
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).
+						Return(errors.New("uncordon failed")),
+				)
+			},
+			wantErr: "recovery uncordon failed: uncordon failed",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			k := mock_adminactions.NewMockKubeActions(ctrl)
+			a := mock_adminactions.NewMockAzureActions(ctrl)
+			tt.mocks(k, a)
+
+			err := bestEffortRecoverVM(tt.ctx, log, k, a, "master-0")
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
