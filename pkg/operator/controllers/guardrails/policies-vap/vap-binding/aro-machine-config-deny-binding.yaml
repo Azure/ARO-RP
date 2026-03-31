@@ -5,4 +5,4 @@ metadata:
 spec:
   policyName: aro-machine-config-deny
   validationActions:
-  - Deny  #TODO: changable, can be Warn or Audit.
+  - {{.ValidationAction}}

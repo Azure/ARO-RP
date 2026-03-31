@@ -64,12 +64,10 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
-	if err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// how to handle the enable/disable sequence of enabled and managed?
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.GuardrailsEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
@@ -79,92 +77,124 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(operator.GuardrailsDeployManaged, "")
 
-	// If enabled and managed=true, install GuardRails
-	// If enabled and managed=false, remove the GuardRails deployment
-	// If enabled and managed is missing, do nothing
-	if strings.EqualFold(managed, "true") {
-		if ns, err := r.getGatekeeperDeployedNs(ctx, instance); err == nil && ns != "" {
-			r.log.Warnf("Found another GateKeeper deployed in ns %s, aborting Guardrails", ns)
-			return reconcile.Result{}, nil
-		}
-
-		// Deploy the GateKeeper manifests and config
-		deployConfig := r.getDefaultDeployConfig(ctx, instance)
-		err = r.deployer.CreateOrUpdate(ctx, instance, deployConfig)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Check Gatekeeper has become ready, wait up to readinessTimeout (default 5min)
-		timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
-		defer cancel()
-
-		err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-			return r.gatekeeperDeploymentIsReady(ctx, deployConfig)
-		}, timeoutCtx.Done())
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("GateKeeper deployment timed out on Ready: %w", err)
-		}
-		r.cleanupNeeded = true
-		policyConfig := &config.GuardRailsPolicyConfig{}
-		if r.gkPolicyTemplate != nil {
-			// Deploy the GateKeeper ConstraintTemplate
-			err = r.gkPolicyTemplate.CreateOrUpdate(ctx, instance, policyConfig)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-				return r.gkPolicyTemplate.IsConstraintTemplateReady(ctx, policyConfig)
-			}, timeoutCtx.Done())
-			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
-			}
-
-			// Deploy the GateKeeper Constraint
-			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-
-		// start a ticker to re-enforce gatekeeper policies periodically
-		r.startTicker(ctx, instance)
-	} else if strings.EqualFold(managed, "false") {
-		if !r.cleanupNeeded {
-			if ns, err := r.getGatekeeperDeployedNs(ctx, instance); err == nil && ns != "" {
-				// resources were *not* created by guardrails, plus another gatekeeper deployed
-				//
-				// guardrails didn't get deployed most likely due to another gatekeeper is deployed by customer
-				// this is to avoid the accidental deletion of gatekeeper CRDs that were deployed by customer
-				// the unnamespaced gatekeeper CRDs were possibly created by a customised gatekeeper, hence cannot ramdomly delete them.
-				r.log.Warn("Skipping cleanup as it is not safe and may destroy customer's gatekeeper resources")
-				return reconcile.Result{}, nil
-			}
-		}
-
-		if r.gkPolicyTemplate != nil {
-			// stop the gatekeeper policies re-enforce ticker
-			r.stopTicker()
-
-			err = r.removePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
-			if err != nil {
-				r.log.Warnf("failed to remove Constraints with error %s", err.Error())
-			}
-
-			err = r.gkPolicyTemplate.Remove(ctx, config.GuardRailsPolicyConfig{})
-			if err != nil {
-				r.log.Warnf("failed to remove ConstraintTemplates with error %s", err.Error())
-			}
-		}
-		err = r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: r.namespace})
-		if err != nil {
-			r.log.Warnf("failed to remove deployer with error %s", err.Error())
-			return reconcile.Result{}, err
-		}
-		r.cleanupNeeded = false
+	lt417, err := r.VersionLT417(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
+	// managed=false: clean up whatever policy mechanism this version uses
+	if strings.EqualFold(managed, "false") {
+		return r.cleanupManaged(ctx, instance, lt417)
+	}
+
+	// managed is blank/missing: no action
+	if !strings.EqualFold(managed, "true") {
+		r.log.Warnf("unrecognised managed flag (%s), doing nothing", managed)
+		return reconcile.Result{}, nil
+	}
+
+	// Pre-4.17 clusters use the Gatekeeper / Rego workflow
+	if lt417 {
+		return r.deployGatekeeper(ctx, instance)
+	}
+
+	// v4.17+ — migrate away from Gatekeeper if it is still running
+	if r.gatekeeperCleanupNeeded(ctx, instance) {
+		if err := r.cleanupGatekeeper(ctx, instance); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	// Deploy VAP policies according to per-policy feature flags
+	if err := r.deployVAP(ctx, instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+// deployGatekeeper handles the managed=true path for clusters < v4.17.
+func (r *Reconciler) deployGatekeeper(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	if ns, err := r.getGatekeeperDeployedNs(ctx, instance); err == nil && ns != "" {
+		r.log.Warnf("Found another GateKeeper deployed in ns %s, aborting Guardrails", ns)
+		return reconcile.Result{}, nil
+	}
+
+	deployConfig := r.getDefaultDeployConfig(ctx, instance)
+	if err := r.deployer.CreateOrUpdate(ctx, instance, deployConfig); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
+	defer cancel()
+
+	if err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+		return r.gatekeeperDeploymentIsReady(ctx, deployConfig)
+	}, timeoutCtx.Done()); err != nil {
+		return reconcile.Result{}, fmt.Errorf("GateKeeper deployment timed out on Ready: %w", err)
+	}
+
+	r.cleanupNeeded = true
+
+	if r.gkPolicyTemplate != nil {
+		policyConfig := &config.GuardRailsPolicyConfig{}
+
+		if err := r.gkPolicyTemplate.CreateOrUpdate(ctx, instance, policyConfig); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+			return r.gkPolicyTemplate.IsConstraintTemplateReady(ctx, policyConfig)
+		}, timeoutCtx.Done()); err != nil {
+			return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
+		}
+
+		if err := r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	r.startTicker(ctx, instance)
+	return reconcile.Result{}, nil
+}
+
+// cleanupManaged handles the managed=false path. The resources to remove
+// depend on the cluster version: pre-4.17 uses Gatekeeper, 4.17+ uses VAP
+// (and may also need leftover Gatekeeper resources removed).
+func (r *Reconciler) cleanupManaged(ctx context.Context, instance *arov1alpha1.Cluster, lt417 bool) (ctrl.Result, error) {
+	if lt417 {
+		return r.cleanupGatekeeperManaged(ctx, instance)
+	}
+
+	// v4.17+: remove VAP policies
+	if err := r.removeAllVAP(ctx); err != nil {
+		r.log.Warnf("failed to remove VAP policies: %s", err.Error())
+	}
+
+	// also clean up Gatekeeper if it is still present (upgrade scenario)
+	if r.gatekeeperCleanupNeeded(ctx, instance) {
+		if err := r.cleanupGatekeeper(ctx, instance); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	return reconcile.Result{}, nil
+}
+
+// cleanupGatekeeperManaged is the managed=false cleanup for pre-4.17 clusters.
+// It preserves the safety check that avoids destroying a customer-deployed
+// Gatekeeper in a different namespace, then delegates to cleanupGatekeeper.
+func (r *Reconciler) cleanupGatekeeperManaged(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	if !r.cleanupNeeded {
+		if ns, err := r.getGatekeeperDeployedNs(ctx, instance); err == nil && ns != "" {
+			r.log.Warn("Skipping cleanup as it is not safe and may destroy customer's gatekeeper resources")
+			return reconcile.Result{}, nil
+		}
+	}
+
+	if err := r.cleanupGatekeeper(ctx, instance); err != nil {
+		return reconcile.Result{}, err
+	}
 	return reconcile.Result{}, nil
 }
 

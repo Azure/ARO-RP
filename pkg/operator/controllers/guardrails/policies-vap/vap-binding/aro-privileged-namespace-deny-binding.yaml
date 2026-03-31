@@ -5,4 +5,4 @@ metadata:
 spec:
   policyName: aro-privileged-namespace-deny
   validationActions:
-  - Deny  #TODO: changable, can be Warn or Audit.
+  - {{.ValidationAction}}
