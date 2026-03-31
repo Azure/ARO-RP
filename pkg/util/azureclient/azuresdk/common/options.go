@@ -43,6 +43,8 @@ func shouldRetry(resp *http.Response, err error) bool {
 
 	// Check if the body contains the certain strings that can be retried.
 	b, err := io.ReadAll(resp.Body)
+	// Close the original body to release the HTTP connection, even on read error
+	resp.Body.Close()
 	if err != nil {
 		return true
 	}
