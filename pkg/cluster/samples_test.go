@@ -105,7 +105,9 @@ func Test_manager_disableSamples(t *testing.T) {
 
 			err := m.disableSamples(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			testlog.AssertLoggingOutput(h, []testlog.ExpectedLogEntry{tt.wantedLog})
+			if err := testlog.AssertLoggingOutput(h, []testlog.ExpectedLogEntry{tt.wantedLog}); err != nil {
+				t.Fatal(err)
+			}
 			got, err := samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
