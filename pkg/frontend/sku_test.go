@@ -95,7 +95,7 @@ func TestValidateVMSku(t *testing.T) {
 			workerProfile1Sku:      "Standard_D4s_v2",
 			workerProfile2Sku:      "Standard_D4s_v2",
 			resourceSkusClientErr:  errors.New("unable to retrieve skus information"),
-			wantErr:                "unable to retrieve skus information",
+			wantErr:                "failure listing resource SKUs: unable to retrieve skus information",
 			masterEncryptionAtHost: api.EncryptionAtHostDisabled,
 			workerEncryptionAtHost: api.EncryptionAtHostDisabled,
 		},
@@ -320,7 +320,17 @@ func TestValidateVMSku(t *testing.T) {
 			resourceSkusClient := mock_armcompute.NewMockResourceSKUsClient(controller)
 			resourceSkusClient.EXPECT().
 				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus"), false).
-				Return(skus, tt.resourceSkusClientErr)
+				Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+					if tt.resourceSkusClientErr != nil {
+						yield(nil, tt.resourceSkusClientErr)
+						return
+					}
+					for _, v := range skus {
+						if !yield(v, nil) {
+							return
+						}
+					}
+				})
 
 			err := validateVMSku(context.Background(), oc, resourceSkusClient)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)

@@ -13,65 +13,64 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
-func getQueuedMonitorDocuments(client cosmosdb.MonitorDocumentClient) (results []*api.MonitorDocument) {
-	input, err := client.ListAll(context.Background(), nil)
+func fakeMonitoringRenewLeaseTrigger(_ context.Context, doc *api.MonitorDocument, now func() time.Time) error {
+	doc.LeaseExpires = int(now().Unix()) + 60
+	return nil
+}
+
+func fakeMonitorGetMasterQuery(client cosmosdb.MonitorDocumentClient, _ *cosmosdb.Query, opts *cosmosdb.Options, now func() time.Time) cosmosdb.MonitorDocumentRawIterator {
+	input, err := client.ListAll(context.Background(), opts)
 	if err != nil {
 		// TODO: should this never happen?
 		panic(err)
 	}
 
-	for _, r := range input.MonitorDocuments {
-		if int64(r.LeaseExpires) < time.Now().Unix() {
-			results = append(results, r)
-		}
-	}
-	return
-}
-
-func fakeMonitorsDequeueQuery(client cosmosdb.MonitorDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MonitorDocumentRawIterator {
-	docs := getQueuedMonitorDocuments(client)
-	return cosmosdb.NewFakeMonitorDocumentIterator(docs, 0)
-}
-
-func fakeMonitoringRenewLeaseTrigger(ctx context.Context, doc *api.MonitorDocument) error {
-	doc.LeaseExpires = int(time.Now().Unix()) + 60
-	return nil
-}
-
-func fakeMonitorRetryLaterTrigger(ctx context.Context, doc *api.MonitorDocument) error {
-	doc.LeaseExpires = int(time.Now().Unix()) + 600
-	return nil
-}
-
-func fakeMonitorGetMasterQuery(client cosmosdb.MonitorDocumentClient, query *cosmosdb.Query, opts *cosmosdb.Options) cosmosdb.MonitorDocumentRawIterator {
-	doc, _ := client.Get(context.Background(), "", "master", nil)
 	out := []*api.MonitorDocument{}
-
-	if time.Unix(int64(doc.LeaseExpires), 0).Before(time.Now()) {
-		out = append(out, doc)
+	for _, r := range input.MonitorDocuments {
+		if r.ID != "master" {
+			continue
+		}
+		if time.Unix(int64(r.LeaseExpires), 0).After(now()) {
+			continue
+		}
+		out = append(out, r)
 	}
 
 	return cosmosdb.NewFakeMonitorDocumentIterator(out, 0)
 }
 
-func fakeMonitorGetAllButMasterHandler(client cosmosdb.MonitorDocumentClient, query *cosmosdb.Query, opts *cosmosdb.Options) cosmosdb.MonitorDocumentRawIterator {
-	docs, _ := client.ListAll(context.TODO(), nil)
-
-	if docs == nil {
+func fakeMonitorGetAllButMasterHandler(client cosmosdb.MonitorDocumentClient, _ *cosmosdb.Query, opts *cosmosdb.Options, now func() time.Time) cosmosdb.MonitorDocumentRawIterator {
+	input, err := client.ListAll(context.Background(), opts)
+	if err != nil {
+		// TODO: should this never happen?
+		panic(err)
+	}
+	if input == nil {
 		return cosmosdb.NewFakeMonitorDocumentIterator(nil, 0)
 	}
 
-	remainingDocs := slices.DeleteFunc(docs.MonitorDocuments, func(d *api.MonitorDocument) bool {
-		return d.ID == "master"
-	})
-	return cosmosdb.NewFakeMonitorDocumentIterator(remainingDocs, 0)
+	out := []*api.MonitorDocument{}
+	for _, r := range input.MonitorDocuments {
+		if r.ID == "master" {
+			continue
+		}
+		// XXX: This does not test for TTL -- we need to add saving a Timestamp to gocosmosdb
+		out = append(out, r)
+	}
+	return cosmosdb.NewFakeMonitorDocumentIterator(out, 0)
 }
 
-func injectMonitors(c *cosmosdb.FakeMonitorDocumentClient) {
-	c.SetQueryHandler(database.SubscriptionsDequeueQuery, fakeMonitorsDequeueQuery)
-	c.SetQueryHandler(`SELECT * FROM Monitors doc WHERE doc.id = "master" AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`, fakeMonitorGetMasterQuery)
-	c.SetQueryHandler(`SELECT * FROM Monitors doc WHERE doc.id != "master"`, fakeMonitorGetAllButMasterHandler)
-
-	c.SetTriggerHandler("renewLease", fakeMonitoringRenewLeaseTrigger)
-	c.SetTriggerHandler("retryLater", fakeMonitorRetryLaterTrigger)
+func injectMonitors(c *cosmosdb.FakeMonitorDocumentClient, now func() time.Time) {
+	c.SetQueryHandler(database.MonitorsTryLeaseQuery, func(client cosmosdb.MonitorDocumentClient, query *cosmosdb.Query, opts *cosmosdb.Options) cosmosdb.MonitorDocumentRawIterator {
+		return fakeMonitorGetMasterQuery(client, query, opts, now)
+	})
+	c.SetQueryHandler(database.MonitorsWorkerQuery, func(client cosmosdb.MonitorDocumentClient, query *cosmosdb.Query, opts *cosmosdb.Options) cosmosdb.MonitorDocumentRawIterator {
+		return fakeMonitorGetAllButMasterHandler(client, query, opts, now)
+	})
+	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MonitorDocument) error {
+		return fakeMonitoringRenewLeaseTrigger(ctx, doc, now)
+	})
+	c.SetSorter(func(in []*api.MonitorDocument) {
+		slices.SortFunc(in, func(a, b *api.MonitorDocument) int { return CompareIDable(a, b) })
+	})
 }

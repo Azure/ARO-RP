@@ -13,14 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -68,23 +65,10 @@ func TestAdminListVMSizeList(t *testing.T) {
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
 					VMSizeList(gomock.Any()).
-					Return([]*armcompute.ResourceSKU{
-						{
-							Name: pointerutils.ToPtr("Standard_D8s_v90"),
-							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{
-								{
-									Type: pointerutils.ToPtr(armcompute.ResourceSKURestrictionsTypeLocation),
-								},
-							}),
-						},
-						{
-							Name:         pointerutils.ToPtr("Standard_D8s_v9001"),
-							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-						},
-					}, nil)
+					Return([]string{"Standard_D8s_v9001", "Standard_D8s_v80"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`["Standard_D8s_v9001"]` + "\n"),
+			wantResponse:   []byte(`["Standard_D8s_v80","Standard_D8s_v9001"]` + "\n"),
 		},
 		{
 			name:       "cluster not found",

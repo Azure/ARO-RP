@@ -45,12 +45,20 @@ Enforced in `pkg/api/validate/vm.go` via:
 
 Minimum **128 GiB** for worker nodes. Enforced in `validate.DiskSizeIsValid()`.
 
+## Admin API VM Resize
+
+The admin API `resize` endpoint (`pkg/frontend/admin_openshiftcluster_vmresize.go`) does NOT check whether the target VM is a control plane node — it resizes any VM in the cluster resource group. The caller (Geneva Action) is responsible for targeting the correct VMs. VM size validation against `supportedMasterVmSizes` is still enforced by `validateAdminMasterVMSize()`.
+
 ## Authentication Modes
 
 Two mutually exclusive modes, determined by `UsesWorkloadIdentity()` on the cluster object:
 
 1. **Service Principal** — traditional client ID + secret
 2. **Workload Identity** — managed identity (platform workload identity role sets)
+
+**CLI helper**: `az aro identity get-required` outputs the identity and role assignment commands needed for creating a cluster with managed identities.
+
+**Error handling**: When cluster MSI role assignments are missing over platform workload identities, the RP returns a `400 InvalidClusterMSIPermissions` error (not a 500 timeout). This tells the customer which identity and role are missing permissions. See `pkg/frontend/openshiftcluster_putorpatch.go` → `ValidateClusterUserAssignedIdentity()`.
 
 ## Networking
 

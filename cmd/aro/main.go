@@ -31,6 +31,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-versions\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-role-sets\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s mimo-actuator\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s mimo-scheduler\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -83,6 +84,9 @@ func main() {
 	case env.SERVICE_MIMO_ACTUATOR:
 		checkArgs(1)
 		err = mimoActuator(ctx, log)
+	case env.SERVICE_MIMO_SCHEDULER:
+		checkArgs(1)
+		err = mimoScheduler(ctx, log)
 	default:
 		usage()
 		os.Exit(2)
@@ -129,6 +133,8 @@ func serviceForCommand(cmd string) env.ServiceName {
 		return env.SERVICE_UPDATE_ROLE_SETS
 	case "mimo-actuator":
 		return env.SERVICE_MIMO_ACTUATOR
+	case "mimo-scheduler":
+		return env.SERVICE_MIMO_SCHEDULER
 	}
 	return ""
 }

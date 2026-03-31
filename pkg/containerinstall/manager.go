@@ -10,13 +10,15 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 type ContainerInstaller interface {
-	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error
+	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]kruntime.Object) error
 }
 
 type manager struct {

@@ -140,7 +140,7 @@ func (c *FakeAsyncOperationDocumentClient) apply(ctx context.Context, partitionk
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if asyncOperationDocument.ETag != existingAsyncOperationDocument.ETag {
+		if (options == nil || !options.NoETag) && asyncOperationDocument.ETag != existingAsyncOperationDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}

@@ -51,12 +51,16 @@ type service struct {
 	workers        *atomic.Int32
 	workerRoutines sync.WaitGroup
 
-	b buckets.BucketWorker
+	b buckets.BucketWorker[*api.OpenShiftClusterDocument]
+
+	changefeedBatchSize         int
+	changefeedInterval          time.Duration
+	changefeedReadinessInterval time.Duration
+	taskPollTime                time.Duration
 
 	lastChangefeed atomic.Value // time.Time
 	startTime      time.Time
 
-	pollTime    time.Duration
 	now         func() time.Time
 	workerDelay func() time.Duration
 
@@ -87,13 +91,26 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		startTime:   time.Now(),
 		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
 		now:         time.Now,
-		pollTime:    time.Minute,
+
+		// For the OpenShiftClusterDocument polling we temporarily use a query
+		// which retrieves ID and bucket rather than polling an incremental
+		// feed. This means that we don't need to worry about a large batch size
+		// being a huge amount of mostly-unneeded JSON (since you can't filter a
+		// changefeed) or needing to align with the deletion timer like the
+		// Monitor.
+		changefeedBatchSize:         200,
+		changefeedInterval:          10 * time.Minute,
+		changefeedReadinessInterval: 12 * time.Minute,
+
+		// The polling time for MaintenanceManifests is kept lower because we
+		// prioritise responsiveness
+		taskPollTime: 90 * time.Second,
 
 		serveHealthz: true,
 	}
 
 	s.cond = sync.NewCond(&s.mu)
-	s.b = buckets.NewBucketWorker(log, s.spawnWorker, &s.mu)
+	s.b = buckets.NewBucketWorker[*api.OpenShiftClusterDocument](log, s.spawnWorker, &s.mu)
 	s.b.SetBuckets(ownedBuckets)
 
 	return s
@@ -143,7 +160,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(s.changefeedInterval)
 	defer t.Stop()
 
 	if stop != nil {
@@ -195,7 +212,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	docs := make([]*api.OpenShiftClusterDocument, 0)
 
 	for {
-		d, err := i.Next(ctx, -1)
+		d, err := i.Next(ctx, s.changefeedBatchSize)
 		if err != nil {
 			return nil, err
 		}
@@ -212,6 +229,10 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	for _, d := range docs {
 		docMap[strings.ToLower(d.Key)] = d
 	}
+
+	// Acquire lock for when we're mutating the changefeed cache
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// remove docs that don't exist in the new set (removed clusters)
 	for oldCluster := range oldDocs {
@@ -231,6 +252,11 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	// Store when we last fetched the clusters
 	s.lastChangefeed.Store(s.now())
 
+	// Emit a metric containing the size of our cache
+	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
+		"name": "OpenShiftClusterDocument",
+	})
+
 	return docMap, nil
 }
 
@@ -249,9 +275,9 @@ func (s *service) checkReady() bool {
 	}
 
 	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < time.Minute) // did we update our list of clusters recently?
+		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) // did we update our list of clusters recently?
 	} else {
-		return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
+		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
 			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
 	}
 }
@@ -293,7 +319,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	// load in the tasks for the Actuator from the controller
 	a.AddMaintenanceTasks(s.tasks)
 
-	t := time.NewTicker(s.pollTime)
+	t := time.NewTicker(s.taskPollTime)
 	defer func() {
 		log.Debugf("stopping worker for %s...", id)
 		t.Stop()

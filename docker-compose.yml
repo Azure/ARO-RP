@@ -5,6 +5,7 @@ x-aro-common-env:
   environment: &common-env
     ARO_ADOPT_BY_HIVE: "true"
     ARO_IMAGE:
+    ARO_E2E_MIMO:
     ARO_CHECKOUT_PATH: /aro
     ARO_INSTALL_VIA_HIVE: "true"
     AZURE_ARM_CLIENT_ID:
@@ -125,6 +126,50 @@ services:
       retries: 3
     restart: on-failure:3
 
+  mimoactuator:
+    image: ${LOCAL_ARO_RP_IMAGE}:${VERSION} # Using localhost/aro for local image
+    build:
+      context: .
+      dockerfile: Dockerfile.ci-rp
+      args:
+        - REGISTRY=${REGISTRY}
+        - ARO_VERSION=${VERSION}
+      ulimits:
+        nofile:
+          soft: 4096
+          hard: 4096
+    container_name: aro-mimo-actuator
+    depends_on:
+      vpn:
+        condition: service_healthy
+    command: ["-loglevel", "debug", "mimo-actuator"]
+    volumes:
+      - ${PWD}/secrets:/aro/secrets:z
+    environment:
+      <<: *common-env
+      ADMIN_OBJECT_ID:
+      AZURE_GATEWAY_CLIENT_ID:
+      AZURE_GATEWAY_CLIENT_SECRET:
+      AZURE_GATEWAY_SERVICE_PRINCIPAL_ID:
+      HIVE_KUBE_CONFIG_PATH: /aro/secrets/aks.kubeconfig
+      KUBECONFIG: /aro/secrets/aks.kubeconfig
+      MOCK_MSI_CERT:
+      MOCK_MSI_CLIENT_ID:
+      MOCK_MSI_OBJECT_ID:
+      MOCK_MSI_TENANT_ID:
+      OIDC_STORAGE_ACCOUNT_NAME:
+      PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:
+      SKIP_MIWI_ROLE_ASSIGNMENT:
+      USE_WI:
+    ports:
+      - "8445:8445"
+    healthcheck:
+      test: ["CMD", "curl", "-sS", "-f", "http://localhost:8445/healthz/ready"]
+      interval: 90s
+      timeout: 30s
+      retries: 3
+    restart: on-failure:3
+
   portal:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION}
     container_name: aro-portal
@@ -176,6 +221,8 @@ services:
         condition: service_healthy
       rp:
         condition: service_healthy
+      mimoactuator:
+        condition: service_healthy
       portal:
         condition: service_healthy
       selenium:
@@ -214,22 +261,20 @@ services:
       context: .
       dockerfile: Dockerfile.dev-env
       args:
-        - FEDORA_REGISTRY=${FEDORA_REGISTRY}
-    image: aro-rp_aro-dev
-    userns_mode: keep-id
-    volumes:
-      - .:/workspace:Z
-      - ~/.azure:/root/.azure:ro,Z
-      - ~/.ssh:/root/.ssh:ro,Z
-      - ./secrets:/workspace/secrets:ro,Z
-      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/podman/podman.sock:z
+        - FEDORA_REGISTRY=${FEDORA_REGISTRY:-registry.fedoraproject.org}
+        - USERID=${USERID:-1000}
+    image: localhost/aro-rp_aro-dev
+    platform: ${PLATFORM:-linux/amd64}
+    # Volumes are mounted in the overrides file to manage SELinux labels
+    volumes: []
     environment:
       AZURE_EXTENSION_DEV_SOURCES: /workspace/python
+      GOCACHE: /workspace/.cache/go-build
+      GOMODCACHE: /workspace/.cache/gomod
       USER: ${USER}
-    security_opt:
-      - label=disable
+    security_opt: []
     network_mode: "host"
-    command: /bin/bash -c ". /workspace/env && make runlocal-rp"
+    command: /bin/bash /workspace/hack/devtools/dev-env-entrypoint.sh
 
 secrets:
   proxy-client-key:

@@ -14,6 +14,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
+const (
+	MonitorsTryLeaseQuery string = `SELECT * FROM Monitors doc WHERE doc.id = "master" AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	MonitorsWorkerQuery   string = `SELECT * FROM Monitors doc WHERE doc.id != "master"`
+)
+
 type monitors struct {
 	c    cosmosdb.MonitorDocumentClient
 	uuid string
@@ -26,7 +31,7 @@ type Monitors interface {
 	TryLease(context.Context) (*api.MonitorDocument, error)
 	ListBuckets(context.Context) ([]int, error)
 	ListMonitors(context.Context) (*api.MonitorDocuments, error)
-	MonitorHeartbeat(context.Context) error
+	MonitorHeartbeat(context.Context, int) error
 }
 
 // NewMonitors returns a new Monitors
@@ -109,7 +114,7 @@ func (c *monitors) update(ctx context.Context, doc *api.MonitorDocument, options
 
 func (c *monitors) TryLease(ctx context.Context) (*api.MonitorDocument, error) {
 	docs, err := c.c.QueryAll(ctx, "", &cosmosdb.Query{
-		Query: `SELECT * FROM Monitors doc WHERE doc.id = "master" AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		Query: MonitorsTryLeaseQuery,
 	}, nil)
 	if err != nil {
 		return nil, err
@@ -132,7 +137,7 @@ func (c *monitors) TryLease(ctx context.Context) (*api.MonitorDocument, error) {
 
 func (c *monitors) ListBuckets(ctx context.Context) (buckets []int, err error) {
 	doc, err := c.get(ctx, "master")
-	if err != nil || doc == nil {
+	if err != nil || doc == nil || doc.Monitor == nil {
 		return nil, err
 	}
 
@@ -147,14 +152,14 @@ func (c *monitors) ListBuckets(ctx context.Context) (buckets []int, err error) {
 
 func (c *monitors) ListMonitors(ctx context.Context) (*api.MonitorDocuments, error) {
 	return c.c.QueryAll(ctx, "", &cosmosdb.Query{
-		Query: `SELECT * FROM Monitors doc WHERE doc.id != "master"`,
+		Query: MonitorsWorkerQuery,
 	}, nil)
 }
 
-func (c *monitors) MonitorHeartbeat(ctx context.Context) error {
+func (c *monitors) MonitorHeartbeat(ctx context.Context, ttl int) error {
 	doc := &api.MonitorDocument{
 		ID:  c.uuid,
-		TTL: 60,
+		TTL: ttl,
 	}
 	_, err := c.update(ctx, doc, &cosmosdb.Options{NoETag: true})
 	if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {

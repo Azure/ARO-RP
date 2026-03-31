@@ -15,6 +15,7 @@ import (
 
 	gomock "go.uber.org/mock/gomock"
 
+	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -89,6 +90,21 @@ func (mr *MockInterfaceMockRecorder) EnsureDeletedGVR(ctx, groupKind, namespace,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeletedGVR", reflect.TypeOf((*MockInterface)(nil).EnsureDeletedGVR), ctx, groupKind, namespace, name, optionalVersion)
 }
 
+// Get mocks base method.
+func (m *MockInterface) Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, groupKind, namespace, name)
+	ret0, _ := ret[0].(*unstructured.Unstructured)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockInterfaceMockRecorder) Get(ctx, groupKind, namespace, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), ctx, groupKind, namespace, name)
+}
+
 // IsConstraintTemplateReady mocks base method.
 func (m *MockInterface) IsConstraintTemplateReady(ctx context.Context, name string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -102,6 +118,21 @@ func (m *MockInterface) IsConstraintTemplateReady(ctx context.Context, name stri
 func (mr *MockInterfaceMockRecorder) IsConstraintTemplateReady(ctx, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsConstraintTemplateReady", reflect.TypeOf((*MockInterface)(nil).IsConstraintTemplateReady), ctx, name)
+}
+
+// List mocks base method.
+func (m *MockInterface) List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, groupKind, namespace)
+	ret0, _ := ret[0].(*unstructured.UnstructuredList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockInterfaceMockRecorder) List(ctx, groupKind, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterface)(nil).List), ctx, groupKind, namespace)
 }
 
 // Refresh mocks base method.

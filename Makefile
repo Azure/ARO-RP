@@ -260,6 +260,10 @@ runlocal-portal:
 runlocal-actuator:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-actuator
 
+.PHONY: runlocal-scheduler
+runlocal-scheduler:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-scheduler
+
 .PHONY: build-portal
 build-portal:
 	cd portal/v2 && npm install && npm run build
@@ -565,17 +569,33 @@ run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production,
 acr-login: ## Login to arointsvc ACR using PULL_SECRET
 	@. hack/devtools/rp_dev_helper.sh && acr_login
 
+# Dev-env: detect OS and choose compose tool / overrides
+ifeq ($(shell uname -s),Darwin)
+  DEV_ENV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml
+  DEV_ENV_USERID := $(shell id -u)
+  DEV_ENV_FEDORA_REGISTRY ?= registry.fedoraproject.org
+  DEV_ENV_DEPS :=
+else
+  DEV_ENV_COMPOSE := podman compose -f docker-compose.yml -f docker-compose.dev-env-linux.yml
+  DEV_ENV_USERID := $(shell id -u)
+  DEV_ENV_FEDORA_REGISTRY := $(FEDORA_REGISTRY)
+  DEV_ENV_DEPS := acr-login
+endif
+
 .PHONY: dev-env-build
-dev-env-build: acr-login ## Build the dev environment container image
-	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose build aro-dev-env
+dev-env-build: $(DEV_ENV_DEPS) ## Build the dev environment container image
+	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+		$(DEV_ENV_COMPOSE) build aro-dev-env
 
 .PHONY: dev-env-start
-dev-env-start: acr-login ## Start the dev environment RP container
-	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose up -d aro-dev-env
+dev-env-start: $(DEV_ENV_DEPS) ## Start the dev environment RP container
+	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+		$(DEV_ENV_COMPOSE) up -d aro-dev-env
 
 .PHONY: dev-env-stop
 dev-env-stop: ## Stop the containerized RP
-	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose down aro-dev-env
+	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+		$(DEV_ENV_COMPOSE) down aro-dev-env
 
 .PHONY: run-selenium
 run-selenium:
