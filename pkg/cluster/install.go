@@ -135,7 +135,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 	}
 	stepsThatNeedAPIServer := []steps.Step{
 		steps.Action(m.fixSREKubeconfig),
-		steps.Action(m.fixAutomationKubeconfig),
+		steps.Action(m.fixDiagnosticsKubeconfig),
 		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.createOrUpdateRouterIPFromCluster),
 

@@ -143,7 +143,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 }
 
-func TestGenerateAROAutomationKubeconfig(t *testing.T) {
+func TestGenerateARODiagnosticsKubeconfig(t *testing.T) {
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
@@ -167,7 +167,7 @@ func TestGenerateAROAutomationKubeconfig(t *testing.T) {
 
 	apiserverURL := "https://api-int.hash.rg.mydomain:6443"
 	clusterName := "api-hash-rg-mydomain:6443"
-	automationName := "system:aro-automation"
+	diagnosticsName := "system:aro-diagnostics"
 
 	adminInternalClient := &installer.AdminInternalClient{}
 	adminInternalClient.Config = &clientcmdv1.Config{
@@ -183,14 +183,14 @@ func TestGenerateAROAutomationKubeconfig(t *testing.T) {
 		AuthInfos: []clientcmdv1.NamedAuthInfo{},
 		Contexts: []clientcmdv1.NamedContext{
 			{
-				Name: automationName,
+				Name: diagnosticsName,
 				Context: clientcmdv1.Context{
 					Cluster:  clusterName,
-					AuthInfo: automationName,
+					AuthInfo: diagnosticsName,
 				},
 			},
 		},
-		CurrentContext: automationName,
+		CurrentContext: diagnosticsName,
 	}
 
 	pg := graph.PersistedGraph{}
@@ -208,13 +208,13 @@ func TestGenerateAROAutomationKubeconfig(t *testing.T) {
 
 	m := &manager{}
 
-	aroAutomationClient, err := m.generateAROAutomationKubeconfig(pg)
+	aroDiagnosticsClient, err := m.generateARODiagnosticsKubeconfig(pg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var got *clientcmdv1.Config
-	err = yaml.Unmarshal(aroAutomationClient, &got)
+	err = yaml.Unmarshal(aroDiagnosticsClient, &got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestGenerateAROAutomationKubeconfig(t *testing.T) {
 	}
 
 	subject := innercert[0].Subject.String()
-	if subject != "CN=system:aro-automation" {
+	if subject != "CN=system:aro-diagnostics" {
 		t.Error(subject)
 	}
 

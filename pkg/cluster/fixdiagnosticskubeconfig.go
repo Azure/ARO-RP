@@ -10,8 +10,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (m *manager) fixAutomationKubeconfig(ctx context.Context) error {
-	if len(m.doc.OpenShiftCluster.Properties.AROAutomationKubeconfig) > 0 {
+func (m *manager) fixDiagnosticsKubeconfig(ctx context.Context) error {
+	if len(m.doc.OpenShiftCluster.Properties.ARODiagnosticsKubeconfig) > 0 {
 		return nil
 	}
 
@@ -23,13 +23,13 @@ func (m *manager) fixAutomationKubeconfig(ctx context.Context) error {
 		return err
 	}
 
-	aroAutomationClient, err := m.generateAROAutomationKubeconfig(pg)
+	aroDiagnosticsClient, err := m.generateARODiagnosticsKubeconfig(pg)
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.AROAutomationKubeconfig = aroAutomationClient
+		doc.OpenShiftCluster.Properties.ARODiagnosticsKubeconfig = aroDiagnosticsClient
 		return nil
 	})
 	return err

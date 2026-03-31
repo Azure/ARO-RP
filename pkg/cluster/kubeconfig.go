@@ -34,10 +34,10 @@ func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) ([]byte, err
 	return generateKubeconfig(pg, "system:aro-sre", nil, installer.TenYears, true)
 }
 
-// generateAROAutomationKubeconfig generates read-only credentials and a
+// generateARODiagnosticsKubeconfig generates read-only credentials and a
 // kubeconfig for automation tools (e.g. HolmesGPT), based on the admin kubeconfig found in the graph.
-func (m *manager) generateAROAutomationKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
-	return generateKubeconfig(pg, "system:aro-automation", nil, installer.TenYears, true)
+func (m *manager) generateARODiagnosticsKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
+	return generateKubeconfig(pg, "system:aro-diagnostics", nil, installer.TenYears, true)
 }
 
 // checkUserAdminKubeconfigUpdated checks if the user kubeconfig is
@@ -118,7 +118,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	aroAutomationInternalClient, err := m.generateAROAutomationKubeconfig(pg)
+	aroDiagnosticsInternalClient, err := m.generateARODiagnosticsKubeconfig(pg)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient
 		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient
 		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient
-		doc.OpenShiftCluster.Properties.AROAutomationKubeconfig = aroAutomationInternalClient
+		doc.OpenShiftCluster.Properties.ARODiagnosticsKubeconfig = aroDiagnosticsInternalClient
 		doc.OpenShiftCluster.Properties.UserAdminKubeconfig = aroUserInternalClient
 		return nil
 	})

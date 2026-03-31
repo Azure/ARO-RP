@@ -192,8 +192,8 @@ type OpenShiftClusterProperties struct {
 	AROServiceKubeconfig SecureBytes `json:"aroServiceKubeconfig,omitempty"`
 	// AROSREKubeconfig is used by portal when proxying request from SRE
 	AROSREKubeconfig SecureBytes `json:"aroSREKubeconfig,omitempty"`
-	// AROAutomationKubeconfig is used by automation tools (e.g. HolmesGPT) for read-only cluster access
-	AROAutomationKubeconfig SecureBytes `json:"aroAutomationKubeconfig,omitempty"`
+	// ARODiagnosticsKubeconfig is used by diagnostic tools (e.g. HolmesGPT) for read-only cluster access
+	ARODiagnosticsKubeconfig SecureBytes `json:"aroDiagnosticsKubeconfig,omitempty"`
 	// KubeadminPassword installer generated kube-admin password
 	KubeadminPassword SecureString `json:"kubeadminPassword,omitempty"`
 

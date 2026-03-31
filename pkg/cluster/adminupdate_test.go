@@ -63,7 +63,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action startVMs]",
 		"[Condition apiServersReady, timeout 30m0s]",
 		"[Action fixSREKubeconfig]",
-		"[Action fixAutomationKubeconfig]",
+		"[Action fixDiagnosticsKubeconfig]",
 		"[Action fixUserAdminKubeconfig]",
 		"[Action createOrUpdateRouterIPFromCluster]",
 		"[Action ensureGatewayUpgrade]",
