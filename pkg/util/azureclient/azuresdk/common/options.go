@@ -4,6 +4,8 @@ package common
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -40,11 +42,14 @@ func shouldRetry(resp *http.Response, err error) bool {
 	}
 
 	// Check if the body contains the certain strings that can be retried.
-	var b []byte
-	_, err = resp.Body.Read(b)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return true
 	}
+	// resp.Body is a shared object (pointer), so we need to restore it
+	// to original state so it can be read again by the SDK or for retries
+	resp.Body = io.NopCloser(bytes.NewReader(b))
+
 	body := string(b)
 	return strings.Contains(body, ErrCodeInvalidClientSecretProvided) ||
 		strings.Contains(body, ErrCodeMissingRequiredParameters) ||
