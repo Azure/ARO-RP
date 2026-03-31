@@ -118,7 +118,9 @@ func (r *Reconciler) deployVAP(ctx context.Context, instance *arov1alpha1.Cluste
 	return nil
 }
 
-// ensureVAPPolicy creates the ValidatingAdmissionPolicy if it does not exist.
+// ensureVAPPolicy creates or updates the ValidatingAdmissionPolicy.
+// The dynamic helper's Ensure method detects native Kubernetes resources
+// and uses server-side apply, so all policy fields are correctly reconciled.
 func (r *Reconciler) ensureVAPPolicy(ctx context.Context, filename string) error {
 	data, err := fs.ReadFile(vapPolicies, filepath.Join(vapPolicyPath, filename))
 	if err != nil {
@@ -131,8 +133,10 @@ func (r *Reconciler) ensureVAPPolicy(ctx context.Context, filename string) error
 	return r.dh.Ensure(ctx, uns)
 }
 
-// ensureVAPBinding deletes an existing binding and recreates it so the
-// validationActions field always reflects the current enforcement setting.
+// ensureVAPBinding creates or updates the ValidatingAdmissionPolicyBinding.
+// The dynamic helper's Ensure method detects native Kubernetes resources
+// and uses server-side apply, so validationActions changes are applied
+// atomically without needing a delete-then-create workaround.
 func (r *Reconciler) ensureVAPBinding(ctx context.Context, policyName, validationAction string) error {
 	bindingFile := policyName + "-binding.yaml"
 	tmpl, err := template.ParseFS(vapBindings, filepath.Join(vapBindingPath, bindingFile))
@@ -153,17 +157,6 @@ func (r *Reconciler) ensureVAPBinding(ctx context.Context, policyName, validatio
 	uns, err := dynamichelper.DecodeUnstructured(buf.Bytes())
 	if err != nil {
 		return err
-	}
-
-	bindingName := uns.GetName()
-	gk := uns.GroupVersionKind().GroupKind().String()
-	ver := uns.GroupVersionKind().Version
-
-	// Delete then recreate to pick up enforcement changes; ensureUnstructuredObj
-	// in the dynamic helper only checks Gatekeeper enforcementAction, not VAP
-	// validationActions, so an in-place update would silently no-op.
-	if err := r.dh.EnsureDeletedGVR(ctx, gk, "", bindingName, ver); err != nil {
-		r.log.Warnf("failed to delete existing VAP binding %s for recreation: %s", bindingName, err.Error())
 	}
 
 	return r.dh.Ensure(ctx, uns)

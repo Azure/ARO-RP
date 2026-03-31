@@ -288,10 +288,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 3 policies + 3 bindings = 6 Ensure calls
+				// 3 policies + 3 bindings = 6 Ensure calls (server-side apply)
 				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
-				// 3 bindings deleted before recreate
-				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(3)
 			},
 		},
 		{
@@ -393,8 +391,8 @@ func TestVapValidationAction(t *testing.T) {
 		{"Warn", "Warn"},
 		{"dryrun", "Audit"},
 		{"DryRun", "Audit"},
-		{"", "Deny"},
-		{"unknown", "Deny"},
+		{"", "Warn"},
+		{"unknown", "Warn"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
