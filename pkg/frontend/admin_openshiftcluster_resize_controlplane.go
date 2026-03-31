@@ -19,9 +19,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/wait"
-
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -286,17 +283,28 @@ func checkCPMSNotActive(ctx context.Context, k adminactions.KubeActions) error {
 }
 
 func waitForNodeReady(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, nodeName string) error {
-	return wait.PollImmediate(nodeReadyPollInterval, nodeReadyPollTimeout, func() (bool, error) {
+	deadline := time.Now().Add(nodeReadyPollTimeout)
+
+	for {
 		ready, err := isNodeReady(ctx, k, nodeName)
 		if err != nil {
 			log.Infof("Error checking node %s readiness: %v", nodeName, err)
-			return false, nil
-		}
-		if !ready {
+		} else if ready {
+			return nil
+		} else {
 			log.Infof("Waiting for node %s to become Ready...", nodeName)
 		}
-		return ready, nil
-	})
+
+		if time.Now().After(deadline) {
+			return fmt.Errorf("node %s did not become Ready within %v", nodeName, nodeReadyPollTimeout)
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(nodeReadyPollInterval):
+		}
+	}
 }
 
 func isNodeReady(ctx context.Context, k adminactions.KubeActions, nodeName string) (bool, error) {
@@ -354,39 +362,33 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 		return err
 	}
 
-	var machine machinev1beta1.Machine
-	if err := json.Unmarshal(rawMachine, &machine); err != nil {
+	var obj unstructured.Unstructured
+	if err := json.Unmarshal(rawMachine, &obj); err != nil {
 		return err
 	}
 
-	providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
-	if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, providerSpec); err != nil {
-		return fmt.Errorf("parsing providerSpec: %w", err)
+	if err := unstructured.SetNestedField(obj.Object, vmSize, "spec", "providerSpec", "value", "vmSize"); err != nil {
+		return fmt.Errorf("setting vmSize in providerSpec: %w", err)
 	}
 
-	providerSpec.VMSize = vmSize
-
-	rawProviderSpec, err := json.Marshal(providerSpec)
+	// Sync the providerSpec embedded metadata.creationTimestamp with the
+	// machine's own creationTimestamp to satisfy API validation.
+	ts, found, err := unstructured.NestedString(obj.Object, "metadata", "creationTimestamp")
 	if err != nil {
-		return fmt.Errorf("marshalling providerSpec: %w", err)
+		return fmt.Errorf("reading machine creationTimestamp: %w", err)
+	}
+	if found {
+		if err := unstructured.SetNestedField(obj.Object, ts, "spec", "providerSpec", "value", "metadata", "creationTimestamp"); err != nil {
+			return fmt.Errorf("setting metadata.creationTimestamp in providerSpec: %w", err)
+		}
 	}
 
-	machine.Spec.ProviderSpec.Value.Raw = rawProviderSpec
-
-	if machine.Labels == nil {
-		machine.Labels = make(map[string]string)
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
 	}
-	machine.Labels[machineLabelInstanceType] = vmSize
-
-	// Convert to Unstructured for KubeCreateOrUpdate.
-	rawBytes, err := json.Marshal(&machine)
-	if err != nil {
-		return fmt.Errorf("marshalling machine: %w", err)
-	}
-	var obj unstructured.Unstructured
-	if err := json.Unmarshal(rawBytes, &obj.Object); err != nil {
-		return fmt.Errorf("converting to unstructured: %w", err)
-	}
+	labels[machineLabelInstanceType] = vmSize
+	obj.SetLabels(labels)
 
 	delete(obj.Object, "status")
 
