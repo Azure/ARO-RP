@@ -25,10 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
-	azuresdkerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
@@ -51,7 +49,7 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 
 	// nic is already gone which typically happens on PLS / PE nics
 	// as they are deleted in a different step
-	if azuresdkerrors.IsNotFoundError(err) {
+	if azureerrors.IsNotFoundError(err) {
 		return nil
 	}
 	if err != nil {
@@ -427,7 +425,7 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 			&armmsi.FederatedIdentityCredentialsClientListOptions{},
 		)
 		if err != nil {
-			if azuresdkerrors.IsNotFoundError(err) {
+			if azureerrors.IsNotFoundError(err) {
 				m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
 			} else {
 				m.log.Errorf("failed to list federated identity credentials for %s: %v", identity.ResourceID, err.Error())
@@ -454,7 +452,7 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 					&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
 				)
 				if err != nil {
-					if azuresdkerrors.IsNotFoundError(err) {
+					if azureerrors.IsNotFoundError(err) {
 						m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
 					} else {
 						m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())
@@ -610,7 +608,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	if !m.env.IsLocalDevelopmentMode() {
-		acrManager, err := acrtoken.NewManager(m.env, m.localFpAuthorizer)
+		acrManager, err := newACRTokenManager(m.env)
 		if err != nil {
 			return err
 		}
