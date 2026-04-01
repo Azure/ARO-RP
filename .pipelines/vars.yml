@@ -2,3 +2,6 @@ variables:
   GOPATH: $(Agent.BuildDirectory)/go
   ARO_CHECKOUT_PATH: $(Agent.BuildDirectory)/go/src/github.com/Azure/ARO-RP
   OpenShiftCLIVersion: "4.16.30"
+  # GoTool@0: Microsoft distribution base (not go.dev). Override via pipeline variable if required.
+  # Go version is read from root go.mod in the pipeline (same pattern as sdp-pipelines go.work grep).
+  GO_TOOL_DOWNLOAD_URL: "https://aka.ms/golang/release/latest"
