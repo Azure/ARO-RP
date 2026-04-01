@@ -250,6 +250,10 @@ stages:
               echo "##vso[task.setvariable variable=CI]true"
             displayName: Set CI=true
 
+          - bash: |
+              echo "##vso[task.setvariable variable=ARO_E2E_MIMO]true"
+            displayName: Set ARO_E2E_MIMO=true
+
           # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
           # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
           - bash: |
@@ -301,6 +305,7 @@ stages:
               docker compose logs vpn
               docker compose logs selenium
               docker compose logs rp
+              docker compose logs mimoactuator
               docker compose logs portal
               docker compose logs e2e
             displayName: Log Service Output
@@ -308,10 +313,11 @@ stages:
 
           # Collect must-gather logs
           - bash: |
-              # The script calls ./db <resource-id> which connects to the CosmosDB to fetch cluster details.
-              # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
-              go build ./hack/db
+              . ./hack/e2e/run-rp-and-e2e.sh
+              container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
+              docker cp ${container_id}:/usr/local/bin/db ./db
+              docker rm ${container_id}
               ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=$(pwd)/admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
@@ -376,6 +382,10 @@ stages:
           - bash: |
               echo "##vso[task.setvariable variable=CI]true"
             displayName: Set CI=true
+
+          - bash: |
+              echo "##vso[task.setvariable variable=ARO_E2E_MIMO]true"
+            displayName: Set ARO_E2E_MIMO=true
 
           # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
           # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
@@ -449,6 +459,7 @@ stages:
               docker compose logs vpn
               docker compose logs selenium
               docker compose logs rp
+              docker compose logs mimoactuator
               docker compose logs portal
               docker compose logs e2e
             displayName: Log Service Output
@@ -456,10 +467,11 @@ stages:
 
           # Collect must-gather logs
           - bash: |
-              # The script calls ./db <resource-id> which connects to the CosmosDB to fetch cluster details.
-              # Since must-gather runs independently, we rebuild the binary on-demand.
               . secrets/env
-              go build ./hack/db
+              . ./hack/e2e/run-rp-and-e2e.sh
+              container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
+              docker cp ${container_id}:/usr/local/bin/db ./db
+              docker rm ${container_id}
               ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
               export KUBECONFIG=$(pwd)/admin.kubeconfig
               wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz

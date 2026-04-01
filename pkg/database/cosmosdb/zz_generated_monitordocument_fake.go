@@ -140,7 +140,7 @@ func (c *FakeMonitorDocumentClient) apply(ctx context.Context, partitionkey stri
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if monitorDocument.ETag != existingMonitorDocument.ETag {
+		if (options == nil || !options.NoETag) && monitorDocument.ETag != existingMonitorDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}

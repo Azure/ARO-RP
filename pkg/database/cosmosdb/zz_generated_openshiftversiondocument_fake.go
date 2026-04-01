@@ -140,7 +140,7 @@ func (c *FakeOpenShiftVersionDocumentClient) apply(ctx context.Context, partitio
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if openShiftVersionDocument.ETag != existingOpenShiftVersionDocument.ETag {
+		if (options == nil || !options.NoETag) && openShiftVersionDocument.ETag != existingOpenShiftVersionDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}

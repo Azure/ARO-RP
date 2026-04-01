@@ -55,6 +55,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithMaintenanceSchedules
 	database.DatabaseGroupWithBilling
 }
 
@@ -316,10 +317,23 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		r.Route("/maintenancemanifests", func(r chi.Router) {
 			r.Get("/queued", f.getAdminQueuedMaintManifests)
+			r.Post("/cancel", f.postAdminMaintManifestCancelBatch)
 		})
+
+		r.Route("/maintenanceschedules", func(r chi.Router) {
+			r.Put("/", f.putAdminMaintScheduleCreate)
+			r.Get("/", f.getAdminMaintSchedules)
+			r.Route("/{scheduleId}", func(r chi.Router) {
+				r.Get("/", f.getAdminMaintSchedule)
+			})
+		})
+
 		r.Route("/hivesyncset", func(r chi.Router) {
 			r.Get("/", f.listAdminHiveSyncSet)
 			r.Get("/syncsetname/{syncsetname}", f.getAdminHiveSyncSet)
+		})
+		r.Route("/hive", func(r chi.Router) {
+			r.Get("/k8sobjects/{resource}", f.adminHiveK8sObjectsList)
 		})
 
 		r.Route("/billingdocuments", func(r chi.Router) {
@@ -380,6 +394,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
 
+				r.Get("/controlplanestatuscheckafterresize", f.getControlPlaneStatusCheckAfterResize)
 				// MIMO
 				r.Route("/maintenancemanifests", func(r chi.Router) {
 					r.Get("/", f.getAdminMaintManifests)
@@ -390,6 +405,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 						r.Post("/cancel", f.postAdminMaintManifestCancel)
 					})
 				})
+				r.Get("/selectors", f.getAdminOpenShiftClusterSelectors)
 			})
 		})
 

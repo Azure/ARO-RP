@@ -140,7 +140,7 @@ func (c *FakeGatewayDocumentClient) apply(ctx context.Context, partitionkey stri
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if gatewayDocument.ETag != existingGatewayDocument.ETag {
+		if (options == nil || !options.NoETag) && gatewayDocument.ETag != existingGatewayDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}
