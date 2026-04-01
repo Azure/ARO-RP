@@ -14,54 +14,10 @@ import (
 	"text/template"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
-
-// gatekeeperCleanupNeeded returns true if there are Gatekeeper resources on the
-// cluster that should be removed as part of the migration to VAP. This covers
-// the upgrade scenario where Gatekeeper was deployed on a pre-4.17 cluster.
-func (r *Reconciler) gatekeeperCleanupNeeded(ctx context.Context, instance *arov1alpha1.Cluster) bool {
-	if r.cleanupNeeded {
-		return true
-	}
-	if r.kubernetescli == nil {
-		return false
-	}
-	ns := instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)
-	_, err := r.kubernetescli.AppsV1().Deployments(ns).Get(ctx, "gatekeeper-audit", metav1.GetOptions{})
-	return err == nil
-}
-
-// cleanupGatekeeper removes all Gatekeeper resources: constraints, constraint
-// templates, and the deployment itself. It is safe to call when no Gatekeeper
-// resources exist.
-func (r *Reconciler) cleanupGatekeeper(ctx context.Context, instance *arov1alpha1.Cluster) error {
-	r.log.Info("cleaning up Gatekeeper resources after upgrade to v4.17+")
-
-	r.stopTicker()
-
-	if err := r.removePolicy(ctx, gkPolicyConstraints, gkConstraintsPath); err != nil {
-		r.log.Warnf("failed to remove Gatekeeper constraints: %s", err.Error())
-	}
-
-	if r.gkPolicyTemplate != nil {
-		if err := r.gkPolicyTemplate.Remove(ctx, config.GuardRailsPolicyConfig{}); err != nil {
-			r.log.Warnf("failed to remove Gatekeeper ConstraintTemplates: %s", err.Error())
-		}
-	}
-
-	ns := instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)
-	if err := r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: ns}); err != nil {
-		return fmt.Errorf("failed to remove Gatekeeper deployment: %w", err)
-	}
-
-	r.cleanupNeeded = false
-	return nil
-}
 
 // vapValidationAction maps a Gatekeeper-style enforcement action to the
 // equivalent VAP validationAction.
@@ -71,7 +27,7 @@ func vapValidationAction(gkEnforcement string) string {
 		return "Deny"
 	case "warn":
 		return "Warn"
-	case "dryrun":
+	case "dryrun", "audit":
 		return "Audit"
 	default:
 		// default to warn

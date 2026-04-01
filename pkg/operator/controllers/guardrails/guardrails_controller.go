@@ -39,7 +39,7 @@ type Reconciler struct {
 	readinessTimeout      time.Duration
 	dh                    dynamichelper.Interface
 	namespace             string
-	policyTickerDone      chan bool
+	gkTickerDone          chan bool
 	vapTickerDone         chan bool
 	reconciliationMinutes int
 	cleanupNeeded         bool
@@ -157,7 +157,7 @@ func (r *Reconciler) deployGatekeeper(ctx context.Context, instance *arov1alpha1
 		}
 	}
 
-	r.startTicker(ctx, instance)
+	r.startGKTicker(ctx, instance)
 	return reconcile.Result{}, nil
 }
 
