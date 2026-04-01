@@ -9,14 +9,15 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	sdkarmcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry/v2"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_armcontainerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcontainerregistry"
+	mock_containerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerregistry"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
@@ -30,26 +31,28 @@ const (
 
 func TestEnsureTokenAndPassword(t *testing.T) {
 	ctx := context.Background()
+
 	controller := gomock.NewController(t)
+	defer controller.Finish()
 
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
 
-	tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
+	tokens := mock_containerregistry.NewMockTokensClient(controller)
 	tokens.EXPECT().
-		CreateAndWait(ctx, "global", "arointsvc", gomock.Any(), sdkarmcontainerregistry.Token{
-			Properties: &sdkarmcontainerregistry.TokenProperties{
+		CreateAndWait(ctx, "global", "arointsvc", gomock.Any(), mgmtcontainerregistry.Token{
+			TokenProperties: &mgmtcontainerregistry.TokenProperties{
 				ScopeMapID: pointerutils.ToPtr(registryResourceID + "/scopeMaps/_repositories_pull"),
-				Status:     pointerutils.ToPtr(sdkarmcontainerregistry.TokenStatusEnabled),
+				Status:     mgmtcontainerregistry.TokenStatusEnabled,
 			},
 		}).
-		Return(nil, nil)
+		Return(nil)
 
-	registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
+	registries := mock_containerregistry.NewMockRegistriesClient(controller)
 	registries.EXPECT().
-		GenerateCredentialsAndWait(ctx, "global", "arointsvc", gomock.Any()).
-		Return(&sdkarmcontainerregistry.GenerateCredentialsResult{
-			Passwords: []*sdkarmcontainerregistry.TokenPassword{
+		GenerateCredentials(ctx, "global", "arointsvc", gomock.Any()).
+		Return(mgmtcontainerregistry.GenerateCredentialsResult{
+			Passwords: &[]mgmtcontainerregistry.TokenPassword{
 				{
 					Value: pointerutils.ToPtr("foo"),
 				},
@@ -81,109 +84,66 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 func TestRotateTokenPassword(t *testing.T) {
 	tests := []struct {
 		name                  string
-		currentTokenPasswords []*sdkarmcontainerregistry.TokenPassword
-		wantRenewalName       sdkarmcontainerregistry.TokenPasswordName
+		currentTokenPasswords []mgmtcontainerregistry.TokenPassword
+		wantRenewalName       mgmtcontainerregistry.TokenPasswordName
 		wantPassword          string
 	}{
 		{
 			name:                  "uses password1 when token has no passwords present",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{},
-			wantRenewalName:       sdkarmcontainerregistry.TokenPasswordNamePassword1,
+			currentTokenPasswords: []mgmtcontainerregistry.TokenPassword{},
+			wantRenewalName:       mgmtcontainerregistry.TokenPasswordNamePassword1,
 			wantPassword:          "foo",
 		},
 		{
 			name: "uses password1 when only password2 exists",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+			currentTokenPasswords: []mgmtcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
+					CreationTime: toDate(time.Now()),
 				},
 			},
-			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword1,
 			wantPassword:    "foo",
 		},
 		{
 			name: "uses password2 when only password1 exists",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+			currentTokenPasswords: []mgmtcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
+					CreationTime: toDate(time.Now()),
 				},
 			},
-			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
-			wantPassword:    "bar",
-		},
-		{
-			name: "renews password1 when it has no creation time",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
-				{
-					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-				},
-				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now()),
-				},
-			},
-			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
-			wantPassword:    "foo",
-		},
-		{
-			name: "renews password2 when it has no creation time",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
-				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
-				},
-				{
-					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-				},
-			},
-			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword2,
 			wantPassword:    "bar",
 		},
 		{
 			name: "renews password1 when it is the oldest password",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+			currentTokenPasswords: []mgmtcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
+					CreationTime: toDate(time.Now().Add(-60 * time.Hour * 24)),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
+					CreationTime: toDate(time.Now()),
 				},
 			},
-			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword1,
 			wantPassword:    "foo",
 		},
 		{
 			name: "renews password2 when it is the oldest password",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
+			currentTokenPasswords: []mgmtcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
+					CreationTime: toDate(time.Now()),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
-				},
-			},
-			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
-			wantPassword:    "bar",
-		},
-		{
-			name: "renews password2 when it is the oldest password, even if in reverse order",
-			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
-				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
-				},
-				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(time.Now()),
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
+					CreationTime: toDate(time.Now().Add(-60 * time.Hour * 24)),
 				},
 			},
-			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword2,
 			wantPassword:    "bar",
 		},
 	}
@@ -192,12 +152,12 @@ func TestRotateTokenPassword(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
-			registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
+			tokens := mock_containerregistry.NewMockTokensClient(controller)
+			registries := mock_containerregistry.NewMockRegistriesClient(controller)
 
-			tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(fakeTokenProperties(tt.currentTokenPasswords), nil)
+			tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(fakeTokenProperties(&tt.currentTokenPasswords), nil)
 
-			registries.EXPECT().GenerateCredentialsAndWait(ctx, "global", "arointsvc", generateCredentialsParameters(tt.wantRenewalName)).Return(fakeCredentialResult(), nil)
+			registries.EXPECT().GenerateCredentials(ctx, "global", "arointsvc", generateCredentialsParameters(tt.wantRenewalName)).Return(fakeCredentialResult(), nil)
 
 			m := setupManager(controller, tokens, registries)
 
@@ -210,65 +170,17 @@ func TestRotateTokenPassword(t *testing.T) {
 				t.Fatal(err)
 			}
 			if registryProfile.Password != api.SecureString(tt.wantPassword) {
-				t.Errorf("got '%s', want '%s'", registryProfile.Password, tt.wantPassword)
+				t.Error(registryProfile.Password)
 			}
 		})
 	}
 }
 
-func TestRotateTokenPasswordNilStruct(t *testing.T) {
-	ctx := context.Background()
-	controller := gomock.NewController(t)
-	tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
-	registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
-
-	tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(&sdkarmcontainerregistry.TokenProperties{}, nil)
-
-	registries.EXPECT().GenerateCredentialsAndWait(ctx, "global", "arointsvc", generateCredentialsParameters(sdkarmcontainerregistry.TokenPasswordNamePassword1)).Return(fakeCredentialResult(), nil)
-
-	m := setupManager(controller, tokens, registries)
-
-	registryProfile := api.RegistryProfile{
-		Username: tokenName,
-	}
-
-	err := m.RotateTokenPassword(ctx, &registryProfile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if registryProfile.Password != api.SecureString("foo") {
-		t.Errorf("got '%s', want '%s'", registryProfile.Password, "foo")
-	}
+func toDate(t time.Time) *date.Time {
+	return &date.Time{Time: t}
 }
 
-func TestRotateTokenPasswordNeedsName(t *testing.T) {
-	ctx := context.Background()
-	controller := gomock.NewController(t)
-	tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
-	registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
-
-	tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(
-		fakeTokenProperties([]*sdkarmcontainerregistry.TokenPassword{
-			{
-				CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
-			},
-			{
-				Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-				CreationTime: pointerutils.ToPtr(time.Now()),
-			},
-		}), nil)
-
-	m := setupManager(controller, tokens, registries)
-
-	registryProfile := api.RegistryProfile{
-		Username: tokenName,
-	}
-
-	err := m.RotateTokenPassword(ctx, &registryProfile)
-	require.ErrorContains(t, err, "token password 0 did not have a name")
-}
-
-func setupManager(controller *gomock.Controller, tc *mock_armcontainerregistry.MockTokensClient, rc *mock_armcontainerregistry.MockRegistriesClient) *manager {
+func setupManager(controller *gomock.Controller, tc *mock_containerregistry.MockTokensClient, rc *mock_containerregistry.MockRegistriesClient) *manager {
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
 	env.EXPECT().ACRDomain().AnyTimes().Return(registryDomain)
@@ -285,38 +197,38 @@ func setupManager(controller *gomock.Controller, tc *mock_armcontainerregistry.M
 	}
 }
 
-func fakeCredentialResult() *sdkarmcontainerregistry.GenerateCredentialsResult {
-	return &sdkarmcontainerregistry.GenerateCredentialsResult{
-		Passwords: []*sdkarmcontainerregistry.TokenPassword{
+func fakeCredentialResult() mgmtcontainerregistry.GenerateCredentialsResult {
+	return mgmtcontainerregistry.GenerateCredentialsResult{
+		Passwords: &[]mgmtcontainerregistry.TokenPassword{
 			{
-				Name:  pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+				Name:  mgmtcontainerregistry.TokenPasswordNamePassword1,
 				Value: pointerutils.ToPtr("foo"),
 			},
 			{
-				Name:  pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+				Name:  mgmtcontainerregistry.TokenPasswordNamePassword2,
 				Value: pointerutils.ToPtr("bar"),
 			},
 		},
 	}
 }
 
-func fakeTokenProperties(tp []*sdkarmcontainerregistry.TokenPassword) *sdkarmcontainerregistry.TokenProperties {
-	return &sdkarmcontainerregistry.TokenProperties{
-		Credentials: &sdkarmcontainerregistry.TokenCredentialsProperties{
+func fakeTokenProperties(tp *[]mgmtcontainerregistry.TokenPassword) mgmtcontainerregistry.TokenProperties {
+	return mgmtcontainerregistry.TokenProperties{
+		Credentials: &mgmtcontainerregistry.TokenCredentialsProperties{
 			Passwords: tp,
 		},
 	}
 }
 
-func generateCredentialsParameters(tpn sdkarmcontainerregistry.TokenPasswordName) sdkarmcontainerregistry.GenerateCredentialsParameters {
-	return sdkarmcontainerregistry.GenerateCredentialsParameters{
+func generateCredentialsParameters(tpn mgmtcontainerregistry.TokenPasswordName) mgmtcontainerregistry.GenerateCredentialsParameters {
+	return mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: pointerutils.ToPtr(registryResourceID + "/tokens/" + tokenName),
-		Name:    pointerutils.ToPtr(tpn),
+		Name:    tpn,
 	}
 }
 
 func TestGetRegistryProfiles(t *testing.T) {
-	a := require.New(t)
+	a := assert.New(t)
 	controller := gomock.NewController(t)
 	mgr := setupManager(controller, nil, nil)
 
@@ -367,7 +279,7 @@ func TestGetRegistryProfiles(t *testing.T) {
 }
 
 func TestNewAndPutRegistryProfile(t *testing.T) {
-	a := require.New(t)
+	a := assert.New(t)
 	controller := gomock.NewController(t)
 	mgr := setupManager(controller, nil, nil)
 

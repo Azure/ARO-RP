@@ -436,10 +436,7 @@ func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) 
 	hiveClusterManagerMock := mock_hive.NewMockClusterManager(controller)
 	hiveClusterManagerMock.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 
-	_, log := testlog.New()
-
 	m := &manager{
-		log: log,
 		doc: dequeuedDoc,
 		db:  openShiftClustersDatabase,
 		openShiftClusterDocumentVersioner: &FakeOpenShiftClusterDocumentVersionerService{

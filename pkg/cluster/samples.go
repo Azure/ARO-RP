@@ -50,17 +50,7 @@ func (m *manager) disableSamples(ctx context.Context) error {
 }
 
 func (m *manager) shouldDisableSamples() bool {
-	if m.env.IsLocalDevelopmentMode() {
-		m.log.Info("Running in local development mode, disabling samples")
-		return true
-	}
-
-	if m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret == "" {
-		m.log.Info("No pull secret found, disabling samples")
-		return true
-	}
-
-	return false
+	return m.env.IsLocalDevelopmentMode() || m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret == ""
 }
 
 func bootstrapDisabledSamplesConfig() *samplesv1.Config {

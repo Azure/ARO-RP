@@ -221,12 +221,8 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			require.NoError(t, err)
 			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
 
-			// Validate the expected cache contents. Use EventuallyWithT because
-			// AllIteratorsConsumed can return true as soon as the iterator's
-			// Next() returns the last batch, but before OnDoc has processed it.
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.Equal(collect, tC.expected, maps.Collect(cache.subs.All()))
-			}, time.Second, 1*time.Millisecond)
+			// Validate the expected cache contents
+			assert.Equal(t, tC.expected, maps.Collect(cache.subs.All()))
 
 			// Validate we can get one of the subscriptions
 			sub, ok := cache.GetSubscription("9187ef95-a9cc-487d-80df-f85e615cf926")

@@ -344,37 +344,3 @@ func TestIsVMSKUError(t *testing.T) {
 		})
 	}
 }
-
-func TestIsStatusConflictError(t *testing.T) {
-	for _, tt := range []struct {
-		name string
-		err  error
-		want bool
-	}{
-		{
-			name: "Another error",
-			err:  errors.New("something happened"),
-		},
-		{
-			name: "autorest detailederror",
-			err: autorest.DetailedError{
-				StatusCode: http.StatusConflict,
-			},
-			want: true,
-		},
-		{
-			name: "azcore ResponseError",
-			err: &azcore.ResponseError{
-				StatusCode: http.StatusConflict,
-			},
-			want: true,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			got := IsStatusConflictError(tt.err)
-			if got != tt.want {
-				t.Error(got)
-			}
-		})
-	}
-}

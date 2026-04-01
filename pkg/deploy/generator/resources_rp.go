@@ -479,11 +479,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 		scriptUtilServices +
 		scriptUtilSystem +
 		scriptRpVMSS
-
-	customScript, err := g.createStartupScript("rp", parts, bootstrapScript)
-	if err != nil {
-		panic(err)
-	}
+	trailer := base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
+	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
+	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
