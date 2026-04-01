@@ -142,7 +142,6 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.rotateACRTokenPassword),
 
 		steps.Action(m.populateRegistryStorageAccountName),
-		steps.Action(m.ensureMTUSize),
 		steps.Action(m.reconcileSoftwareDefinedNetwork),
 	}
 	return utilgenerics.ConcatMultipleSlices(
@@ -421,7 +420,6 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
 		steps.Action(m.ensureStorageSuffix),
-		steps.Action(m.populateMTUSize),
 		steps.Action(m.createDNS),
 		steps.Action(m.createOIDC),
 		steps.Action(m.ensureResourceGroup),
