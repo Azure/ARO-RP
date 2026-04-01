@@ -48,6 +48,44 @@ func TestExecute(t *testing.T) {
 	assert.True(t, triggeredFail)
 }
 
+type slowMonitor struct{}
+
+func (m *slowMonitor) Monitor(ctx context.Context) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func (m *slowMonitor) MonitorName() string {
+	return "slowMonitor"
+}
+
+// TestExecuteReturnsWhenNoReceiver verifies that the execute goroutine does not
+// leak when nobody reads from the done channel (the timeout path in workOne).
+// With an unbuffered channel this test would hang forever.
+func TestExecuteReturnsWhenNoReceiver(t *testing.T) {
+	_, log := testlog.New()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	onPanic := func(m monitoring.Monitor) {}
+
+	// Buffered channel: execute can send without a receiver
+	done := make(chan bool, 1)
+	go execute(ctx, log, done, []monitoring.Monitor{&slowMonitor{}}, onPanic)
+
+	// Simulate workOne's timeout path: cancel the context and never read from done
+	cancel()
+
+	// The execute goroutine must exit within a reasonable time
+	assert.Eventually(t, func() bool {
+		select {
+		case <-done:
+			return true
+		default:
+			return false
+		}
+	}, 2*time.Second, 10*time.Millisecond, "execute goroutine leaked: blocked sending on done channel")
+}
+
 func TestChangefeedOperations(t *testing.T) {
 	// Setup test environment
 	env := SetupTestEnvironment(t)
