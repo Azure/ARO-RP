@@ -4,12 +4,14 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -103,7 +105,9 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 // resizeControlPlane orchestrates the full control plane resize operation,
 // processing each master node sequentially in reverse name order.
 func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
-	machines, err := getClusterMachines(ctx, k)
+	// getControlPlaneMachines filters by machine.openshift.io/cluster-api-machine-role=master,
+	// so the returned map only contains control plane machines.
+	machines, err := getControlPlaneMachines(ctx, k)
 	if err != nil {
 		return err
 	}
@@ -112,15 +116,14 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 		return fmt.Errorf("no control plane machines found")
 	}
 
-	machineNames := make([]string, 0, len(machines))
-	for name := range machines {
-		machineNames = append(machineNames, name)
-	}
-	// Process in reverse lexicographic order so the highest-numbered master
-	// (conventionally the least critical, e.g. master-2) is resized first.
-	sort.Sort(sort.Reverse(sort.StringSlice(machineNames)))
+	// Reverse lexicographic order: master-2 → master-1 → master-0.
+	// This minimises etcd leader elections by resizing the highest-indexed
+	// (conventionally least critical) node first, matching the C# behaviour.
+	sortedNames := slices.SortedFunc(maps.Keys(machines), func(a, b string) int {
+		return cmp.Compare(b, a)
+	})
 
-	for _, name := range machineNames {
+	for _, name := range sortedNames {
 		machine := machines[name]
 		if machine.size == desiredVMSize {
 			log.Infof("%s is already running %s, skipping", name, desiredVMSize)
@@ -142,7 +145,7 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 // ready → uncordon → update Machine metadata → update Node labels.
 func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool) error {
 	log.Infof("Cordoning node %s", machineName)
-	if err := k.CordonNode(ctx, machineName, true); err != nil {
+	if err := cordonNode(ctx, k, machineName); err != nil {
 		return fmt.Errorf("cordoning node: %w", err)
 	}
 
@@ -172,7 +175,7 @@ func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactio
 	}
 
 	log.Infof("Uncordoning node %s", machineName)
-	if err := k.CordonNode(ctx, machineName, false); err != nil {
+	if err := uncordonNode(ctx, k, machineName); err != nil {
 		return fmt.Errorf("uncordoning node: %w", err)
 	}
 
@@ -187,6 +190,21 @@ func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactio
 	}
 
 	return nil
+}
+
+func cordonNode(ctx context.Context, k adminactions.KubeActions, nodeName string) error {
+	return k.CordonNode(ctx, nodeName, true)
+}
+
+func uncordonNode(ctx context.Context, k adminactions.KubeActions, nodeName string) error {
+	return k.CordonNode(ctx, nodeName, false)
+}
+
+// getControlPlaneMachines is a thin wrapper around getClusterMachines that
+// makes the intent explicit at the call site. getClusterMachines already
+// filters by the machine.openshift.io/cluster-api-machine-role=master label.
+func getControlPlaneMachines(ctx context.Context, k adminactions.KubeActions) (map[string]machineValidationData, error) {
+	return getClusterMachines(ctx, k)
 }
 
 // checkCPMSNotActive verifies that the ControlPlaneMachineSet is not Active.
