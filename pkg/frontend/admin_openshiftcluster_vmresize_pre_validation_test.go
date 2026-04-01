@@ -14,7 +14,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -89,6 +91,10 @@ func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	k.EXPECT().
 		KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
 		Return(validServicePrincipalJSON(), nil).
+		AnyTimes()
+	k.EXPECT().
+		KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", "openshift-machine-api", "cluster").
+		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
 		AnyTimes()
 }
 
