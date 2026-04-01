@@ -19,6 +19,9 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -100,10 +103,6 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 // resizeControlPlane orchestrates the full control plane resize operation,
 // processing each master node sequentially in reverse name order.
 func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
-	if err := checkCPMSNotActive(ctx, k); err != nil {
-		return err
-	}
-
 	machines, err := getClusterMachines(ctx, k)
 	if err != nil {
 		return err
@@ -141,11 +140,6 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 // resizeControlPlaneNode performs the full resize sequence for a single
 // control plane node: cordon → drain → stop → resize → start → wait
 // ready → uncordon → update Machine metadata → update Node labels.
-//
-// If a failure occurs before the VM SKU has been changed (drain, stop,
-// or resize), best-effort recovery is attempted to restore the node to a
-// schedulable state. Failures after the SKU change (start, wait-ready)
-// are reported without automatic recovery — SRE should intervene per SOP.
 func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool) error {
 	log.Infof("Cordoning node %s", machineName)
 	if err := k.CordonNode(ctx, machineName, true); err != nil {
@@ -154,24 +148,19 @@ func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactio
 
 	log.Infof("Draining node %s", machineName)
 	if err := k.DrainNodeWithRetries(ctx, machineName); err != nil {
-		recoveryErr := bestEffortUncordon(ctx, log, k, machineName)
-		return resizeRecoveryError("draining node", err, recoveryErr)
+		return fmt.Errorf("draining node: %w", err)
 	}
 
 	log.Infof("Stopping VM %s (deallocate=%v)", machineName, deallocateVM)
 	if err := a.VMStopAndWait(ctx, machineName, deallocateVM); err != nil {
-		recoveryErr := bestEffortRecoverVM(ctx, log, k, a, machineName)
-		return resizeRecoveryError("stopping VM", err, recoveryErr)
+		return fmt.Errorf("stopping VM: %w", err)
 	}
 
 	log.Infof("Resizing VM %s to %s", machineName, desiredVMSize)
 	if err := a.VMResize(ctx, machineName, desiredVMSize); err != nil {
-		recoveryErr := bestEffortRecoverVM(ctx, log, k, a, machineName)
-		return resizeRecoveryError("resizing VM", err, recoveryErr)
+		return fmt.Errorf("resizing VM: %w", err)
 	}
 
-	// Past this point the VM SKU has been changed. No automatic size
-	// rollback is attempted — the new size is the intended outcome.
 	log.Infof("Starting VM %s", machineName)
 	if err := a.VMStartAndWait(ctx, machineName); err != nil {
 		return fmt.Errorf("starting VM: %w", err)
@@ -198,55 +187,6 @@ func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactio
 	}
 
 	return nil
-}
-
-// bestEffortUncordon attempts to uncordon a node that is still running.
-// Used when a failure occurs before the VM was stopped.
-func bestEffortUncordon(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, machineName string) error {
-	log.Infof("Recovery: attempting to uncordon node %s", machineName)
-	if err := k.CordonNode(ctx, machineName, false); err != nil {
-		log.Errorf("Recovery: failed to uncordon node %s: %v", machineName, err)
-		return fmt.Errorf("recovery uncordon failed: %w", err)
-	}
-	log.Infof("Recovery: successfully uncordoned node %s", machineName)
-	return nil
-}
-
-// bestEffortRecoverVM attempts to start a stopped VM, wait for the node to
-// become Ready, and uncordon it. If the VM cannot be started, recovery stops.
-// If the node does not become Ready within the timeout, uncordon is NOT
-// attempted — per SOP, SRE should verify node health before re-enabling
-// scheduling on a node whose health has not been confirmed.
-func bestEffortRecoverVM(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName string) error {
-	log.Infof("Recovery: attempting to start VM %s", machineName)
-	if err := a.VMStartAndWait(ctx, machineName); err != nil {
-		log.Errorf("Recovery: failed to start VM %s: %v", machineName, err)
-		return fmt.Errorf("recovery VM start failed: %w", err)
-	}
-
-	log.Infof("Recovery: VM %s started, waiting for node to become Ready", machineName)
-	if err := waitForNodeReady(ctx, log, k, machineName); err != nil {
-		log.Errorf("Recovery: node %s did not become Ready: %v. Node left cordoned per SOP — SRE should verify node health.", machineName, err)
-		return fmt.Errorf("recovery wait-for-ready failed (node left cordoned per SOP): %w", err)
-	}
-
-	log.Infof("Recovery: node %s is Ready, uncordoning", machineName)
-	if err := k.CordonNode(ctx, machineName, false); err != nil {
-		log.Errorf("Recovery: failed to uncordon node %s: %v", machineName, err)
-		return fmt.Errorf("recovery uncordon failed: %w", err)
-	}
-
-	log.Infof("Recovery: node %s fully recovered", machineName)
-	return nil
-}
-
-// resizeRecoveryError combines the original resize failure with the
-// recovery outcome so SREs can see both in a single error message.
-func resizeRecoveryError(operation string, resizeErr, recoveryErr error) error {
-	if recoveryErr != nil {
-		return fmt.Errorf("%s: %w; recovery also failed: %v", operation, resizeErr, recoveryErr)
-	}
-	return fmt.Errorf("%s: %w; node was recovered successfully", operation, resizeErr)
 }
 
 // checkCPMSNotActive verifies that the ControlPlaneMachineSet is not Active.
@@ -283,28 +223,20 @@ func checkCPMSNotActive(ctx context.Context, k adminactions.KubeActions) error {
 }
 
 func waitForNodeReady(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, nodeName string) error {
-	deadline := time.Now().Add(nodeReadyPollTimeout)
+	ctx, cancel := context.WithTimeout(ctx, nodeReadyPollTimeout)
+	defer cancel()
 
-	for {
+	return wait.PollImmediateUntilWithContext(ctx, nodeReadyPollInterval, func(ctx context.Context) (bool, error) {
 		ready, err := isNodeReady(ctx, k, nodeName)
 		if err != nil {
 			log.Infof("Error checking node %s readiness: %v", nodeName, err)
-		} else if ready {
-			return nil
-		} else {
+			return false, nil
+		}
+		if !ready {
 			log.Infof("Waiting for node %s to become Ready...", nodeName)
 		}
-
-		if time.Now().After(deadline) {
-			return fmt.Errorf("node %s did not become Ready within %v", nodeName, nodeReadyPollTimeout)
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(nodeReadyPollInterval):
-		}
-	}
+		return ready, nil
+	})
 }
 
 func isNodeReady(ctx context.Context, k adminactions.KubeActions, nodeName string) (bool, error) {
@@ -362,33 +294,38 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 		return err
 	}
 
-	var obj unstructured.Unstructured
-	if err := json.Unmarshal(rawMachine, &obj); err != nil {
+	var machine machinev1beta1.Machine
+	if err := json.Unmarshal(rawMachine, &machine); err != nil {
 		return err
 	}
 
-	if err := unstructured.SetNestedField(obj.Object, vmSize, "spec", "providerSpec", "value", "vmSize"); err != nil {
-		return fmt.Errorf("setting vmSize in providerSpec: %w", err)
+	providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
+	if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, providerSpec); err != nil {
+		return fmt.Errorf("parsing providerSpec: %w", err)
 	}
 
-	// Sync the providerSpec embedded metadata.creationTimestamp with the
-	// machine's own creationTimestamp to satisfy API validation.
-	ts, found, err := unstructured.NestedString(obj.Object, "metadata", "creationTimestamp")
+	providerSpec.VMSize = vmSize
+
+	rawProviderSpec, err := json.Marshal(providerSpec)
 	if err != nil {
-		return fmt.Errorf("reading machine creationTimestamp: %w", err)
-	}
-	if found {
-		if err := unstructured.SetNestedField(obj.Object, ts, "spec", "providerSpec", "value", "metadata", "creationTimestamp"); err != nil {
-			return fmt.Errorf("setting metadata.creationTimestamp in providerSpec: %w", err)
-		}
+		return fmt.Errorf("marshalling providerSpec: %w", err)
 	}
 
-	labels := obj.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
+	machine.Spec.ProviderSpec.Value.Raw = rawProviderSpec
+
+	if machine.Labels == nil {
+		machine.Labels = make(map[string]string)
 	}
-	labels[machineLabelInstanceType] = vmSize
-	obj.SetLabels(labels)
+	machine.Labels[machineLabelInstanceType] = vmSize
+
+	rawBytes, err := json.Marshal(&machine)
+	if err != nil {
+		return fmt.Errorf("marshalling machine: %w", err)
+	}
+	var obj unstructured.Unstructured
+	if err := json.Unmarshal(rawBytes, &obj.Object); err != nil {
+		return fmt.Errorf("converting to unstructured: %w", err)
+	}
 
 	delete(obj.Object, "status")
 

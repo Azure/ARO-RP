@@ -129,6 +129,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	})
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
+	wg.Go(func() { collect(checkCPMSNotActive(ctx, k)) })
 
 	wg.Wait()
 
