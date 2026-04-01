@@ -38,6 +38,7 @@ type KubeActions interface {
 	ResolveGVR(groupKind string, optionalVersion string) (schema.GroupVersionResource, error)
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
 	DrainNode(ctx context.Context, nodeName string) error
+	DrainNodeWithRetries(ctx context.Context, nodeName string) error
 	ApproveCsr(ctx context.Context, csrName string) error
 	ApproveAllCsrs(ctx context.Context) error
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
