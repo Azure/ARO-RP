@@ -503,12 +503,12 @@ func TestGenevaConfigMapResources(t *testing.T) {
 					}
 
 					// verify ENVIRONMENT filters are present for all log types
-					if !strings.Contains(fConf, "Add ENVIRONMENT ${ENVIRONMENT}") {
+					if !strings.Contains(fConf, "Add Environment ${ENVIRONMENT}") {
 						errs = append(errs, errors.New("fluent.conf missing ENVIRONMENT filter - logs will not include environment field"))
 					}
 
 					// count how many times the ENVIRONMENT filter appears (should match expectedEnvironmentFilterCount)
-					environmentFilterCount := strings.Count(fConf, "Add ENVIRONMENT ${ENVIRONMENT}")
+					environmentFilterCount := strings.Count(fConf, "Add Environment ${ENVIRONMENT}")
 					if environmentFilterCount != expectedEnvironmentFilterCount {
 						errs = append(errs, fmt.Errorf("expected %d ENVIRONMENT filters in fluent.conf (journald, containers, audit), got %d", expectedEnvironmentFilterCount, environmentFilterCount))
 					}

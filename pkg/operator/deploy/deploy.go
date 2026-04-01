@@ -366,7 +366,7 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 		},
 	}
 
-	// Set aro.environment operator flag for MONITORING_ENVIRONMENT in cluster logs
+	// Set aro.environment operator flag for ENVIRONMENT in cluster logs
 	if cluster.Spec.OperatorFlags == nil {
 		cluster.Spec.OperatorFlags = arov1alpha1.OperatorFlags{}
 	}

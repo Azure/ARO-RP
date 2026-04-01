@@ -89,7 +89,7 @@ main() {
 [FILTER]
 	Name modify
 	Match journald
-	Add ENVIRONMENT \${ENVIRONMENT}
+	Add Environment \${ENVIRONMENT}
 
 [FILTER]
 	Name modify
