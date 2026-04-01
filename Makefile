@@ -1,8 +1,8 @@
 SHELL = /bin/bash
 
-# Source local env file if present (gitignored)
--include .env
-export
+# PYTHONPATH default for Python targets; overridden if 'source env' was run.
+PYTHONPATH ?= python/az/aro
+export PYTHONPATH
 
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
