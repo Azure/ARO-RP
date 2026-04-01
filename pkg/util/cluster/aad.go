@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -52,9 +53,9 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 			return true, nil
 		}
 
-		mainErr, ok := err.(*msgraph_errors.ODataError)
+		var mainErr *msgraph_errors.ODataError
 		// some unknown error, bubble it up to caller
-		if !ok || mainErr.GetStatusCode() != http.StatusNotFound {
+		if ok := errors.As(err, &mainErr); !ok || mainErr.GetStatusCode() != http.StatusNotFound {
 			return false, err
 		}
 
