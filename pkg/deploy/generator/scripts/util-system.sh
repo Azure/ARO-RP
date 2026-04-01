@@ -292,10 +292,7 @@ create_required_dirs() {
 # firewalld_configure_backend
 firewalld_configure_backend() {
     log "starting"
-
-    log "Changing firewalld backend to iptables"
-    conf_file="/etc/firewalld/firewalld.conf"
-    sed -i 's/FirewallBackend=nftables/FirewallBackend=iptables/g' "$conf_file"
+    log "Using default nftables backend on Azure Linux 3"
 }
 
 # firewalld_configure
