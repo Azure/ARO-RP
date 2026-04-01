@@ -20,11 +20,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/util/retry"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -55,8 +57,9 @@ func (e *podFailedError) Error() string {
 
 const (
 	serviceAccountName    = "etcd-recovery-privileged"
-	kubeServiceAccount    = "system:serviceaccount" + namespaceEtcds + ":" + serviceAccountName
+	kubeServiceAccount    = "system:serviceaccount:" + namespaceEtcds + ":" + serviceAccountName
 	namespaceEtcds        = "openshift-etcd"
+	etcdContainerName     = "etcdctl"
 	image                 = "ubi9/ubi-minimal"
 	genericPodName        = "etcd-recovery-"
 	patchOverides         = "unsupportedConfigOverrides:"
@@ -345,7 +348,7 @@ func newServiceAccount(name, cluster string) *unstructured.Unstructured {
 	return serviceAcc
 }
 
-func newClusterRole(usersAccount, cluster string) *unstructured.Unstructured {
+func newClusterRole(usersAccount string) *unstructured.Unstructured {
 	clusterRole := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"rules": []rbacv1.PolicyRule{
@@ -365,13 +368,13 @@ func newClusterRole(usersAccount, cluster string) *unstructured.Unstructured {
 	return clusterRole
 }
 
-func newClusterRoleBinding(name, cluster string) *unstructured.Unstructured {
+func newClusterRoleBinding(name, usersAccount string) *unstructured.Unstructured {
 	crb := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"roleRef": map[string]interface{}{
-				"kind":      "ClusterRole",
-				"name":      kubeServiceAccount,
-				"apiGroups": "",
+				"kind":     "ClusterRole",
+				"name":     usersAccount,
+				"apiGroup": "rbac.authorization.k8s.io",
 			},
 			"subjects": []rbacv1.Subject{
 				{
@@ -395,8 +398,7 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 			"groups":                   []string{},
 			"users":                    []string{usersAccount},
 			"allowPrivilegedContainer": true,
-			"allowPrivilegeEscalation": pointerutils.ToPtr(true),
-			"allowedCapabilities":      []corev1.Capability{"*"},
+			"allowHostDirVolumePlugin": true,
 			"runAsUser": map[string]securityv1.RunAsUserStrategyType{
 				"type": securityv1.RunAsUserStrategyRunAsAny,
 			},
@@ -412,71 +414,67 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 	return scc
 }
 
-// createPrivilegedServiceAccount creates the following objects and returns a cleanup function to delete them all after use
-//
-// - ServiceAccount
-//
-// - ClusterRole
-//
-// - ClusterRoleBinding
-//
-// - SecurityContextConstraint
+// createPrivilegedServiceAccount creates a ServiceAccount, ClusterRole, ClusterRoleBinding, and SCC,
+// and returns a cleanup function that deletes them all.
 func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name, cluster, usersAccount string, kubeActions adminactions.KubeActions) (func() error, error, error) {
 	serviceAcc := newServiceAccount(name, cluster)
-	clusterRole := newClusterRole(usersAccount, cluster)
-	crb := newClusterRoleBinding(name, cluster)
+	clusterRole := newClusterRole(usersAccount)
+	crb := newClusterRoleBinding(name, usersAccount)
 	scc := newSecurityContextConstraint(name, cluster, usersAccount)
 
-	// cleanup is created here incase an error occurs while creating permissions
+	isTransient := func(err error) bool {
+		return kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err) || kerrors.IsServiceUnavailable(err)
+	}
+
+	// Fresh context so request cancellation does not prevent RBAC/SCC teardown.
 	cleanup := func() error {
-		log.Infof("Deleting service account %s now", serviceAcc.GetName())
-		err := kubeActions.KubeDelete(ctx, serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName(), true, nil)
-		if err != nil {
-			return err
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), adminActionCleanupTimeout)
+		defer cancel()
+
+		kubeDeleteIgnoreNotFound := func(groupKind, namespace, name string) error {
+			return retry.OnError(kubeRetryBackoff, isTransient, func() error {
+				err := kubeActions.KubeDelete(cleanupCtx, groupKind, namespace, name, true, nil)
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			})
 		}
 
-		log.Infof("Deleting security context contstraint %s now", scc.GetName())
-		err = kubeActions.KubeDelete(ctx, scc.GetKind(), scc.GetNamespace(), scc.GetName(), true, nil)
-		if err != nil {
-			return err
-		}
+		var errs []error
+
+		log.Infof("Deleting service account %s now", serviceAcc.GetName())
+		errs = append(errs, kubeDeleteIgnoreNotFound(serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName()))
+
+		log.Infof("Deleting security context constraint %s now", scc.GetName())
+		errs = append(errs, kubeDeleteIgnoreNotFound(scc.GetKind(), scc.GetNamespace(), scc.GetName()))
 
 		log.Infof("Deleting cluster role %s now", clusterRole.GetName())
-		err = kubeActions.KubeDelete(ctx, clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil)
-		if err != nil {
-			return err
-		}
+		errs = append(errs, kubeDeleteIgnoreNotFound(clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName()))
 
 		log.Infof("Deleting cluster role binding %s now", crb.GetName())
-		err = kubeActions.KubeDelete(ctx, crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil)
-		if err != nil {
-			return err
-		}
+		errs = append(errs, kubeDeleteIgnoreNotFound(crb.GetKind(), crb.GetNamespace(), crb.GetName()))
 
-		return nil
+		return errors.Join(errs...)
 	}
 
 	log.Infof("Creating Service Account %s now", serviceAcc.GetName())
-	err := kubeActions.KubeCreateOrUpdate(ctx, serviceAcc)
-	if err != nil {
+	if err := retry.OnError(kubeRetryBackoff, isTransient, func() error { return kubeActions.KubeCreateOrUpdate(ctx, serviceAcc) }); err != nil {
 		return nil, err, cleanup()
 	}
 
 	log.Infof("Creating Cluster Role %s now", clusterRole.GetName())
-	err = kubeActions.KubeCreateOrUpdate(ctx, clusterRole)
-	if err != nil {
+	if err := retry.OnError(kubeRetryBackoff, isTransient, func() error { return kubeActions.KubeCreateOrUpdate(ctx, clusterRole) }); err != nil {
 		return nil, err, cleanup()
 	}
 
 	log.Infof("Creating Cluster Role Binding %s now", crb.GetName())
-	err = kubeActions.KubeCreateOrUpdate(ctx, crb)
-	if err != nil {
+	if err := retry.OnError(kubeRetryBackoff, isTransient, func() error { return kubeActions.KubeCreateOrUpdate(ctx, crb) }); err != nil {
 		return nil, err, cleanup()
 	}
 
 	log.Infof("Creating Security Context Constraint %s now", name)
-	err = kubeActions.KubeCreateOrUpdate(ctx, scc)
-	if err != nil {
+	if err := retry.OnError(kubeRetryBackoff, isTransient, func() error { return kubeActions.KubeCreateOrUpdate(ctx, scc) }); err != nil {
 		return nil, err, cleanup()
 	}
 
