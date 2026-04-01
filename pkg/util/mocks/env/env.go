@@ -301,6 +301,20 @@ func (mr *MockInterfaceMockRecorder) Environment() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockInterface)(nil).Environment))
 }
 
+// EnvironmentType mocks base method.
+func (m *MockInterface) EnvironmentType() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentType")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// EnvironmentType indicates an expected call of EnvironmentType.
+func (mr *MockInterfaceMockRecorder) EnvironmentType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentType", reflect.TypeOf((*MockInterface)(nil).EnvironmentType))
+}
+
 // FPAuthorizer mocks base method.
 func (m *MockInterface) FPAuthorizer(arg0 string, arg1 []string, arg2 ...string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
