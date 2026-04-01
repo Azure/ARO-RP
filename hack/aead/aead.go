@@ -39,10 +39,16 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	if *fileName == "-" {
 		file = os.Stdin
 	} else {
-		file, err = os.Open(*fileName)
+		openedFile, err := os.Open(*fileName)
 		if err != nil {
 			return err
 		}
+		defer func() {
+			if closeErr := openedFile.Close(); closeErr != nil {
+				log.WithError(closeErr).Warn("failed to close file")
+			}
+		}()
+		file = openedFile
 	}
 
 	scanner := bufio.NewScanner(file)
