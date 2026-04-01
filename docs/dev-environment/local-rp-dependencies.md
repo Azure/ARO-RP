@@ -215,6 +215,59 @@
     sudo touch /etc/containers/nodocker
     ```
 
+### Configure Podman on macOS (Apple Silicon)
+
+> [!IMPORTANT]
+> On Apple Silicon Macs (M1/M2/M3/M4), the `aro-installer` container image is only built for `amd64`. You must configure Podman with Rosetta emulation to run amd64 containers.
+
+1. Install Podman
+
+    ```sh
+    brew install podman
+    ```
+
+2. Initialize the Podman machine with Rosetta support and sufficient resources
+
+    ```sh
+    podman machine init --cpus 4 --memory 5000 --rootful --rosetta
+    podman machine start
+    ```
+
+    > [!NOTE]
+    > If you already have a Podman machine without Rosetta, recreate it:
+    >
+    > ```sh
+    > podman machine stop
+    > podman machine rm
+    > podman machine init --cpus 4 --memory 5000 --rootful --rosetta
+    > podman machine start
+    > ```
+
+3. Set the Podman socket environment variable
+
+    The socket path varies by system. Find yours with:
+
+    ```sh
+    podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}'
+    ```
+
+    Then add to your shell RC file or `env` file:
+
+    ```sh
+    export ARO_PODMAN_SOCKET="unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')"
+    ```
+
+4. Verify the setup
+
+    ```sh
+    # Confirm Rosetta is enabled
+    podman machine inspect | grep -i rosetta
+
+    # Test pulling an amd64 image
+    podman pull --platform linux/amd64 alpine
+    podman run --rm alpine uname -m  # Should output: x86_64
+    ```
+
 ## Install GolangCI Lint
 
 1. Find latest version [here](https://github.com/golangci/golangci-lint/releases)
