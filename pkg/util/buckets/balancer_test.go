@@ -1,4 +1,4 @@
-package monitor
+package buckets
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -14,19 +14,19 @@ func TestBalance(t *testing.T) {
 	type test struct {
 		name     string
 		monitors []string
-		doc      func() *api.MonitorDocument
-		validate func(*testing.T, *test, *api.MonitorDocument)
+		doc      func() *api.PoolWorkerDocument
+		validate func(*testing.T, *test, *api.PoolWorkerDocument)
 	}
 
 	for _, tt := range []*test{
 		{
 			name:     "0->1",
 			monitors: []string{"one"},
-			doc: func() *api.MonitorDocument {
-				return &api.MonitorDocument{}
+			doc: func() *api.PoolWorkerDocument {
+				return &api.PoolWorkerDocument{}
 			},
-			validate: func(t *testing.T, tt *test, doc *api.MonitorDocument) {
-				for i, bucket := range doc.Monitor.Buckets {
+			validate: func(t *testing.T, tt *test, doc *api.PoolWorkerDocument) {
+				for i, bucket := range doc.PoolWorker.Buckets {
 					if bucket != "one" {
 						t.Error(i, bucket)
 					}
@@ -36,15 +36,15 @@ func TestBalance(t *testing.T) {
 		{
 			name:     "3->1",
 			monitors: []string{"one"},
-			doc: func() *api.MonitorDocument {
-				return &api.MonitorDocument{
-					Monitor: &api.Monitor{
+			doc: func() *api.PoolWorkerDocument {
+				return &api.PoolWorkerDocument{
+					PoolWorker: &api.PoolWorker{
 						Buckets: []string{"one", "two", "one", "three", "one", "two", "two", "one", "two"},
 					},
 				}
 			},
-			validate: func(t *testing.T, tt *test, doc *api.MonitorDocument) {
-				for i, bucket := range doc.Monitor.Buckets {
+			validate: func(t *testing.T, tt *test, doc *api.PoolWorkerDocument) {
+				for i, bucket := range doc.PoolWorker.Buckets {
 					if bucket != "one" {
 						t.Error(i, bucket)
 					}
@@ -53,15 +53,15 @@ func TestBalance(t *testing.T) {
 		},
 		{
 			name: "3->0",
-			doc: func() *api.MonitorDocument {
-				return &api.MonitorDocument{
-					Monitor: &api.Monitor{
+			doc: func() *api.PoolWorkerDocument {
+				return &api.PoolWorkerDocument{
+					PoolWorker: &api.PoolWorker{
 						Buckets: []string{"one", "one", "one", "one", "one", "one", "two", "three"},
 					},
 				}
 			},
-			validate: func(t *testing.T, tt *test, doc *api.MonitorDocument) {
-				for i, bucket := range doc.Monitor.Buckets {
+			validate: func(t *testing.T, tt *test, doc *api.PoolWorkerDocument) {
+				for i, bucket := range doc.PoolWorker.Buckets {
 					if bucket != "" {
 						t.Error(i, bucket)
 					}
@@ -70,23 +70,23 @@ func TestBalance(t *testing.T) {
 		},
 		{
 			name: "imbalanced",
-			doc: func() *api.MonitorDocument {
-				return &api.MonitorDocument{
-					Monitor: &api.Monitor{
+			doc: func() *api.PoolWorkerDocument {
+				return &api.PoolWorkerDocument{
+					PoolWorker: &api.PoolWorker{
 						Buckets: []string{"one", "one", "", "two", "one", "one", "one", "one"},
 					},
 				}
 			},
 			monitors: []string{"one", "two"},
-			validate: func(t *testing.T, tt *test, doc *api.MonitorDocument) {
+			validate: func(t *testing.T, tt *test, doc *api.PoolWorkerDocument) {
 				old := tt.doc()
 
 				m := map[string]int{}
-				for i, bucket := range doc.Monitor.Buckets {
+				for i, bucket := range doc.PoolWorker.Buckets {
 					m[bucket]++
 					switch bucket {
 					case "one":
-						if old.Monitor.Buckets[i] != bucket {
+						if old.PoolWorker.Buckets[i] != bucket {
 							t.Error(i)
 						}
 					case "two":
@@ -108,41 +108,41 @@ func TestBalance(t *testing.T) {
 		},
 		{
 			name: "stable",
-			doc: func() *api.MonitorDocument {
-				return &api.MonitorDocument{
-					Monitor: &api.Monitor{
+			doc: func() *api.PoolWorkerDocument {
+				return &api.PoolWorkerDocument{
+					PoolWorker: &api.PoolWorker{
 						Buckets: []string{"one", "two", "three", "one", "two", "three", "one", "three"},
 					},
 				}
 			},
 			monitors: []string{"one", "two", "three"},
-			validate: func(t *testing.T, tt *test, doc *api.MonitorDocument) {
+			validate: func(t *testing.T, tt *test, doc *api.PoolWorkerDocument) {
 				old := tt.doc()
 
 				if !reflect.DeepEqual(old, doc) {
-					t.Error(doc.Monitor.Buckets)
+					t.Error(doc.PoolWorker.Buckets)
 				}
 			},
 		},
 		{
 			name: "3->5",
-			doc: func() *api.MonitorDocument {
-				return &api.MonitorDocument{
-					Monitor: &api.Monitor{
+			doc: func() *api.PoolWorkerDocument {
+				return &api.PoolWorkerDocument{
+					PoolWorker: &api.PoolWorker{
 						Buckets: []string{"one", "two", "three", "one", "two", "three", "one", "three"},
 					},
 				}
 			},
 			monitors: []string{"one", "two", "three", "four", "five"},
-			validate: func(t *testing.T, tt *test, doc *api.MonitorDocument) {
+			validate: func(t *testing.T, tt *test, doc *api.PoolWorkerDocument) {
 				old := tt.doc()
 
 				m := map[string]int{}
-				for i, bucket := range doc.Monitor.Buckets {
+				for i, bucket := range doc.PoolWorker.Buckets {
 					m[bucket]++
 					switch bucket {
 					case "one", "two", "three":
-						if old.Monitor.Buckets[i] != bucket {
+						if old.PoolWorker.Buckets[i] != bucket {
 							t.Error(i)
 						}
 					case "four", "five":
@@ -164,20 +164,16 @@ func TestBalance(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			mon := &monitor{
-				bucketCount: 8,
-			}
-
 			doc := tt.doc()
 
-			mon.balance(tt.monitors, doc)
+			balance(tt.monitors, 8, doc)
 
-			if doc.Monitor == nil {
-				t.Fatal(doc.Monitor)
+			if doc.PoolWorker == nil {
+				t.Fatal(doc.PoolWorker)
 			}
 
-			if len(doc.Monitor.Buckets) != 8 {
-				t.Fatal(len(doc.Monitor.Buckets))
+			if len(doc.PoolWorker.Buckets) != 8 {
+				t.Fatal(len(doc.PoolWorker.Buckets))
 			}
 
 			tt.validate(t, tt, doc)

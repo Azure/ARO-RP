@@ -988,10 +988,10 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
-						ID: pointerutils.ToPtr("Monitors"),
+						ID: pointerutils.ToPtr("PoolWorkers"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
-								pointerutils.ToPtr("/id"),
+								pointerutils.ToPtr("/workerType"),
 							},
 							Kind: &hashPartitionKey,
 						},
@@ -999,7 +999,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					},
 					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
-				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Monitors')]"),
+				Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/PoolWorkers')]"),
 				Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: pointerutils.ToPtr("[resourceGroup().location]"),
 			},
@@ -1088,8 +1088,8 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		g.rpCosmosDBTriggers(databaseName, "Billing", "setDeletionBillingTimeStamp", setDeletionBillingTimeStampTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationReplace),
 		// OpenShiftClusters
 		g.rpCosmosDBTriggers(databaseName, "OpenShiftClusters", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
-		// Monitors
-		g.rpCosmosDBTriggers(databaseName, "Monitors", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		// PoolWorkers
+		g.rpCosmosDBTriggers(databaseName, "PoolWorkers", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 		// MIMO DB triggers
 		g.rpCosmosDBTriggers(databaseName, "MaintenanceManifests", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 	)

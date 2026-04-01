@@ -11,10 +11,16 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	kmetrics "k8s.io/client-go/tools/metrics"
+
+	"github.com/Azure/go-autorest/tracing"
+
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -52,6 +58,12 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 	}
 	go g.Run()
 
+	tracing.Register(azure.New(m))
+	kmetrics.Register(kmetrics.RegisterOpts{
+		RequestResult:  k8s.NewResult(m),
+		RequestLatency: k8s.NewLatency(m),
+	})
+
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
@@ -77,9 +89,15 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
+	poolWorkers, err := database.NewPoolWorkers(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	dbg := database.NewDBGroup().
 		WithOpenShiftClusters(clusters).
-		WithMaintenanceManifests(manifests)
+		WithMaintenanceManifests(manifests).
+		WithPoolWorkers(poolWorkers)
 
 	go database.EmitMIMOMetrics(ctx, _env.LoggerForComponent("metrics"), manifests, m)
 
@@ -88,10 +106,7 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
-	buckets := actuator.DetermineBuckets(_env, os.Hostname)
-	log.Printf("serving %d buckets: %v", len(buckets), buckets)
-
-	a := actuator.NewService(_env, log, dialer, dbg, m, buckets)
+	a := actuator.NewService(_env, log, dialer, dbg, m)
 	a.SetMaintenanceTasks(tasks.DEFAULT_MAINTENANCE_TASKS)
 
 	sigterm := make(chan os.Signal, 1)
