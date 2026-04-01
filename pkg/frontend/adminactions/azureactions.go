@@ -38,6 +38,7 @@ type AzureActions interface {
 	VMSizeList(ctx context.Context) ([]string, error)
 	VMGetSKUs(ctx context.Context, vmSizes []string) (map[string]*sdkcompute.ResourceSKU, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
+	VMResizeWithCapacityReservation(ctx context.Context, targetVMSize string) error
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
@@ -50,16 +51,19 @@ type azureActions struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	networkInterfaces  armnetwork.InterfacesClient
-	diskEncryptionSets compute.DiskEncryptionSetsClient
-	loadBalancers      armnetwork.LoadBalancersClient
-	resources          features.ResourcesClient
-	resourceSkus       armcompute.ResourceSKUsClient
-	routeTables        armnetwork.RouteTablesClient
-	securityGroups     armnetwork.SecurityGroupsClient
-	storageAccounts    storage.AccountsClient
-	virtualMachines    compute.VirtualMachinesClient
-	virtualNetworks    armnetwork.VirtualNetworksClient
+	networkInterfaces            armnetwork.InterfacesClient
+	diskEncryptionSets           compute.DiskEncryptionSetsClient
+	loadBalancers                armnetwork.LoadBalancersClient
+	resources                    features.ResourcesClient
+	resourceSkus                 armcompute.ResourceSKUsClient
+	routeTables                  armnetwork.RouteTablesClient
+	securityGroups               armnetwork.SecurityGroupsClient
+	storageAccounts              storage.AccountsClient
+	virtualMachines              compute.VirtualMachinesClient
+	virtualNetworks              armnetwork.VirtualNetworksClient
+	armVirtualMachines           armcompute.VirtualMachinesClient
+	armCapacityReservationGroups armcompute.CapacityReservationGroupsClient
+	armCapacityReservations      armcompute.CapacityReservationsClient
 }
 
 // NewAzureActions returns an azureActions
@@ -109,21 +113,39 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	armVMsClient, err := armcompute.NewVirtualMachinesClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
+	armCRGClient, err := armcompute.NewCapacityReservationGroupsClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
+	armCRClient, err := armcompute.NewCapacityReservationsClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
 		oc:  oc,
 
-		networkInterfaces:  networkInterfaces,
-		diskEncryptionSets: compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
-		loadBalancers:      loadBalancers,
-		resources:          features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		resourceSkus:       armResourceSKUsClient,
-		routeTables:        routeTables,
-		securityGroups:     securityGroups,
-		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualNetworks:    virtualNetworks,
+		networkInterfaces:            networkInterfaces,
+		diskEncryptionSets:           compute.NewDiskEncryptionSetsClientWithAROEnvironment(env.Environment(), subscriptionDoc.ID, fpAuth),
+		loadBalancers:                loadBalancers,
+		resources:                    features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		resourceSkus:                 armResourceSKUsClient,
+		routeTables:                  routeTables,
+		securityGroups:               securityGroups,
+		storageAccounts:              storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualMachines:              compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualNetworks:              virtualNetworks,
+		armVirtualMachines:           armVMsClient,
+		armCapacityReservationGroups: armCRGClient,
+		armCapacityReservations:      armCRClient,
 	}, nil
 }
 

@@ -31,13 +31,22 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 	vmSize := r.URL.Query().Get("vmSize")
+	useCapacityReservation := strings.EqualFold(r.URL.Query().Get("useCapacityReservation"), "true")
 
-	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
+	err := validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
 	}
 
-	err = validateAdminMasterVMSize(vmSize)
+	if useCapacityReservation {
+		action, _, err := f.prepareAdminActionsForCluster(log, ctx, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
+		if err != nil {
+			return err
+		}
+		return action.VMResizeWithCapacityReservation(ctx, vmSize)
+	}
+
+	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}

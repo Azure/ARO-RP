@@ -53,15 +53,16 @@ func TestAdminVMResize(t *testing.T) {
 	}
 
 	type test struct {
-		name              string
-		resourceID        string
-		vmName            string
-		vmSize            string
-		fixture           func(f *testdatabase.Fixture)
-		azureActionsMocks func(*test, *mock_adminactions.MockAzureActions)
-		wantStatusCode    int
-		wantResponse      []byte
-		wantError         string
+		name                   string
+		resourceID             string
+		vmName                 string
+		vmSize                 string
+		useCapacityReservation bool
+		fixture                func(f *testdatabase.Fixture)
+		azureActionsMocks      func(*test, *mock_adminactions.MockAzureActions)
+		wantStatusCode         int
+		wantResponse           []byte
+		wantError              string
 	}
 
 	for _, tt := range []*test{
@@ -77,6 +78,20 @@ func TestAdminVMResize(t *testing.T) {
 			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
 				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(nil)
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:                   "capacity reservation path",
+			vmSize:                 "Standard_D8s_v3",
+			useCapacityReservation: true,
+			resourceID:             testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMResizeWithCapacityReservation(gomock.Any(), tt.vmSize).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -156,9 +171,11 @@ func TestAdminVMResize(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/resize?vmName=%s&vmSize=%s", tt.resourceID, tt.vmName, tt.vmSize),
-				nil, nil)
+			url := fmt.Sprintf("https://server/admin%s/resize?vmName=%s&vmSize=%s", tt.resourceID, tt.vmName, tt.vmSize)
+			if tt.useCapacityReservation {
+				url += "&useCapacityReservation=true"
+			}
+			resp, b, err := ti.request(http.MethodPost, url, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

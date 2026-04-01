@@ -191,6 +191,20 @@ func (mr *MockAzureActionsMockRecorder) VMResize(ctx, vmName, vmSize any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResize", reflect.TypeOf((*MockAzureActions)(nil).VMResize), ctx, vmName, vmSize)
 }
 
+// VMResizeWithCapacityReservation mocks base method.
+func (m *MockAzureActions) VMResizeWithCapacityReservation(ctx context.Context, targetVMSize string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMResizeWithCapacityReservation", ctx, targetVMSize)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMResizeWithCapacityReservation indicates an expected call of VMResizeWithCapacityReservation.
+func (mr *MockAzureActionsMockRecorder) VMResizeWithCapacityReservation(ctx, targetVMSize any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResizeWithCapacityReservation", reflect.TypeOf((*MockAzureActions)(nil).VMResizeWithCapacityReservation), ctx, targetVMSize)
+}
+
 // VMSerialConsole mocks base method.
 func (m *MockAzureActions) VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error {
 	m.ctrl.T.Helper()
