@@ -91,6 +91,21 @@ func (mr *MockAzureActionsMockRecorder) GroupResourceList(ctx any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupResourceList", reflect.TypeOf((*MockAzureActions)(nil).GroupResourceList), ctx)
 }
 
+// MasterVMSizes mocks base method.
+func (m *MockAzureActions) MasterVMSizes(ctx context.Context) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MasterVMSizes", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MasterVMSizes indicates an expected call of MasterVMSizes.
+func (mr *MockAzureActionsMockRecorder) MasterVMSizes(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MasterVMSizes", reflect.TypeOf((*MockAzureActions)(nil).MasterVMSizes), ctx)
+}
+
 // NICReconcileFailedState mocks base method.
 func (m *MockAzureActions) NICReconcileFailedState(ctx context.Context, nicName string) error {
 	m.ctrl.T.Helper()
