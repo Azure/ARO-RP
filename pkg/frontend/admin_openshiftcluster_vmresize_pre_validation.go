@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -135,19 +136,34 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 			fmt.Sprintf("API server is reporting a non-ready status: %v", err))
 	}
 
+	// safeGo wraps a validation function with panic recovery. The
+	// dynamicRESTMapper in controller-runtime v0.11.2 can nil-pointer panic
+	// when the API server is unreachable (lazy init leaves staticMapper nil).
+	// Since these run in child goroutines, the HTTP Panic middleware cannot
+	// catch them — an unrecovered panic here would crash the entire RP process.
+	safeGo := func(fn func() error) func() {
+		return func() {
+			defer func() {
+				if r := recover(); r != nil {
+					collect(fmt.Errorf("panic: %v\n%s", r, debug.Stack()))
+				}
+			}()
+			collect(fn())
+		}
+	}
+
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a)) })
-	wg.Go(func() {
+	wg.Go(safeGo(func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a) }))
+	wg.Go(safeGo(func() error {
 		if err := validateAPIServerHealth(ctx, k); err != nil {
-			collect(err)
-			return
+			return err
 		}
-		collect(validateAPIServerPods(ctx, k))
-	})
-	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
-	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
-	wg.Go(func() { collect(checkCPMSNotActive(ctx, k)) })
+		return validateAPIServerPods(ctx, k)
+	}))
+	wg.Go(safeGo(func() error { return validateEtcdHealth(ctx, k) }))
+	wg.Go(safeGo(func() error { return validateClusterSP(ctx, k) }))
+	wg.Go(safeGo(func() error { return checkCPMSNotActive(ctx, k) }))
 
 	wg.Wait()
 
