@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -194,4 +196,54 @@ func (r *Reconciler) removeAllVAP(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// vapTicker periodically re-applies VAP policies and bindings to prevent them from being externally deleted.
+func (r *Reconciler) vapTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
+	r.vapTickerDone = make(chan bool)
+	var err error
+
+	minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
+	reconciliationMinutes, err := strconv.Atoi(minutes)
+	if err != nil {
+		reconciliationMinutes, _ = strconv.Atoi(defaultReconciliationMinutes)
+	}
+
+	ticker := time.NewTicker(time.Duration(reconciliationMinutes) * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case done := <-r.vapTickerDone:
+			if done {
+				r.vapTickerDone = nil
+				return
+			}
+			// false to trigger a ticker reset
+			minutes = instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
+			reconciliationMinutes, err = strconv.Atoi(minutes)
+			if err != nil {
+				reconciliationMinutes, _ = strconv.Atoi(defaultReconciliationMinutes)
+			}
+			r.log.Infof("vapTicker reset to %d min", reconciliationMinutes)
+			ticker.Reset(time.Duration(reconciliationMinutes) * time.Minute)
+		case <-ticker.C:
+			err = r.deployVAP(ctx, instance)
+			if err != nil {
+				r.log.Errorf("vapTicker deployVAP error %s", err.Error())
+			}
+		}
+	}
+}
+
+func (r *Reconciler) startVAPTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
+	if r.vapTickerDone == nil {
+		go r.vapTicker(ctx, instance)
+	}
+}
+
+func (r *Reconciler) stopVAPTicker() {
+	if r.vapTickerDone != nil {
+		r.vapTickerDone <- true
+		close(r.vapTickerDone)
+	}
 }

@@ -40,6 +40,7 @@ type Reconciler struct {
 	dh                    dynamichelper.Interface
 	namespace             string
 	policyTickerDone      chan bool
+	vapTickerDone         chan bool
 	reconciliationMinutes int
 	cleanupNeeded         bool
 	kubernetescli         kubernetes.Interface
@@ -110,6 +111,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	r.startVAPTicker(ctx, instance)
+
 	return reconcile.Result{}, nil
 }
 
@@ -167,6 +170,7 @@ func (r *Reconciler) cleanupManaged(ctx context.Context, instance *arov1alpha1.C
 	}
 
 	// v4.17+: remove VAP policies
+	r.stopVAPTicker()
 	if err := r.removeAllVAP(ctx); err != nil {
 		r.log.Warnf("failed to remove VAP policies: %s", err.Error())
 	}
