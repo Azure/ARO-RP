@@ -338,7 +338,7 @@ ExecStart=/usr/bin/podman run \
   -e PORTAL_HOSTNAME \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e ARO_LOG_LEVEL \
-  -e ENIVRONMETN_TYPE \
+  -e ENVIRONMENT_TYPE \
   -m 2g \
   -p 444:8444 \
   -p 2222:2222 \
