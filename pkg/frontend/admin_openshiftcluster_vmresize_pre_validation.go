@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -105,12 +106,28 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		}
 	}
 
+	// safeGo wraps a validation function with panic recovery. The
+	// dynamicRESTMapper in controller-runtime v0.11.2 can nil-pointer panic
+	// when the API server is unreachable (lazy init leaves staticMapper nil).
+	// Since these run in child goroutines, the HTTP Panic middleware cannot
+	// catch them — an unrecovered panic here would crash the entire RP process.
+	safeGo := func(fn func() error) func() {
+		return func() {
+			defer func() {
+				if r := recover(); r != nil {
+					collect(fmt.Errorf("panic: %v\n%s", r, debug.Stack()))
+				}
+			}()
+			collect(fn())
+		}
+	}
+
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
-	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
-	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
-	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
+	wg.Go(safeGo(func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log) }))
+	wg.Go(safeGo(func() error { return validateAPIServerHealth(ctx, k) }))
+	wg.Go(safeGo(func() error { return validateEtcdHealth(ctx, k) }))
+	wg.Go(safeGo(func() error { return validateClusterSP(ctx, k) }))
 
 	wg.Wait()
 
