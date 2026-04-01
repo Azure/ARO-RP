@@ -117,14 +117,14 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		},
 		{
 			name:          "cluster with non-standard operator flags",
-			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
+			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DNSEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				operator.ImageConfigEnabled:    operator.FlagFalse,
-				operator.DnsmasqEnabled:        operator.FlagFalse,
+				operator.DNSEnabled:            operator.FlagFalse,
 				operator.GenevaLoggingEnabled:  operator.FlagFalse,
 				operator.AutosizedNodesEnabled: operator.FlagFalse,
 			},
@@ -133,14 +133,14 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		},
 		{
 			name:          "cluster with missing operator flags",
-			operatorFlags: generateFlagsWithMissingEntries([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
+			operatorFlags: generateFlagsWithMissingEntries([]string{operator.ImageConfigEnabled, operator.DNSEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				operator.ImageConfigEnabled:    "DNE",
-				operator.DnsmasqEnabled:        "DNE",
+				operator.DNSEnabled:            "DNE",
 				operator.GenevaLoggingEnabled:  "DNE",
 				operator.AutosizedNodesEnabled: "DNE",
 			},
@@ -160,14 +160,14 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		},
 		{
 			name:          "cluster with non-standard operator flags and activated support banner",
-			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
+			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DNSEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: arov1alpha1.BannerContactSupport,
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				operator.ImageConfigEnabled:    operator.FlagFalse,
-				operator.DnsmasqEnabled:        operator.FlagFalse,
+				operator.DNSEnabled:            operator.FlagFalse,
 				operator.GenevaLoggingEnabled:  operator.FlagFalse,
 				operator.AutosizedNodesEnabled: operator.FlagFalse,
 			},
