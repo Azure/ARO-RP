@@ -31,6 +31,9 @@ const (
 	machineLabelZone           = "machine.openshift.io/zone"
 	machineLabelInstanceType   = "machine.openshift.io/instance-type"
 	machineRoleMaster          = "master"
+
+	nodeLabelInstanceType     = "node.kubernetes.io/instance-type"
+	nodeLabelBetaInstanceType = "beta.kubernetes.io/instance-type"
 )
 
 type machineValidationData struct {
@@ -343,13 +346,13 @@ func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions ad
 			}
 
 			nodeInfo := nodeValidationData{
-				nodeInstanceType: node.Labels["node.kubernetes.io/instance-type"],
-				betaInstanceType: node.Labels["beta.kubernetes.io/instance-type"],
+				nodeInstanceType: node.Labels[nodeLabelInstanceType],
+				betaInstanceType: node.Labels[nodeLabelBetaInstanceType],
 			}
 			controlPlaneNodesFound[node.Name] = nodeInfo
 
 			if nodeInfo.betaInstanceType != nodeInfo.nodeInstanceType {
-				err := fmt.Errorf("node %s has a mismatch between labels. node.kubernetes.io/instance-type: %s beta.kubernetes.io/instance-type: %s", node.Name, nodeInfo.nodeInstanceType, nodeInfo.betaInstanceType)
+				err := fmt.Errorf("node %s has a mismatch between labels. %s: %s %s: %s", node.Name, nodeLabelInstanceType, nodeInfo.nodeInstanceType, nodeLabelBetaInstanceType, nodeInfo.betaInstanceType)
 				log.Info(err)
 				validationErrs = append(validationErrs, err)
 			}

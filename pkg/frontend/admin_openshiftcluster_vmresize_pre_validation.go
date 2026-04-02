@@ -82,7 +82,43 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return nil, err
 	}
 
-	// Run checks in parallel, collecting all errors so the caller sees every failure at once.
+	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
+}
+
+func (f *frontend) preResizeControlPlaneVMsValidation(
+	ctx context.Context,
+	doc *api.OpenShiftClusterDocument,
+	subscriptionDoc *api.SubscriptionDocument,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	desiredVMSize string,
+) ([]byte, error) {
+	// API server health is the most fundamental check. If the API server is
+	// unreachable, all kube-based checks below will fail with connection errors,
+	// producing noisy output that obscures the root cause. Run it synchronously
+	// as a gate before the parallel checks.
+	if err := validateAPIServerHealth(ctx, k); err != nil {
+		var ce *api.CloudError
+		if errors.As(err, &ce) && ce.CloudErrorBody != nil {
+			return nil, &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidParameter,
+					Message: "Pre-flight validation failed.",
+					Details: []api.CloudErrorBody{*ce.CloudErrorBody},
+				},
+			}
+		}
+		return nil, err
+	}
+
+	// Remaining checks run in parallel. The VM SKU/quota check uses the Azure
+	// ARM API (not kube), so it can run concurrently with the kube-based checks.
 	var (
 		mu      sync.Mutex
 		details []api.CloudErrorBody
@@ -106,10 +142,10 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
-	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
+	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a)) })
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
+	wg.Go(func() { collect(checkCPMSNotActive(ctx, k)) })
 
 	wg.Wait()
 
@@ -320,18 +356,13 @@ func (f *frontend) validateVMSKU(
 	doc *api.OpenShiftClusterDocument,
 	subscriptionDoc *api.SubscriptionDocument,
 	desiredVMSize string,
-	log *logrus.Entry,
+	a adminactions.AzureActions,
 ) error {
 	if desiredVMSize == "" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize", "The provided vmSize is empty.")
 	}
 
 	err := validateAdminMasterVMSize(desiredVMSize)
-	if err != nil {
-		return err
-	}
-
-	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}
