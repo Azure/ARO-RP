@@ -1,0 +1,128 @@
+toolsets:
+  # ========== ENABLED ==========
+  kubectl-run:
+    enabled: true
+  kubernetes/kube-prometheus-stack:
+    enabled: true
+  kubernetes/logs:
+    enabled: true
+  kubernetes/core:
+    enabled: true
+  kubernetes/live-metrics:
+    enabled: true
+  bash:
+    enabled: true
+    config:
+      builtin_allowlist: extended
+      allow:
+        - "kubectl get"
+        - "kubectl describe"
+        - "kubectl logs"
+        - "kubectl top"
+        - "kubectl cluster-info"
+        - "kubectl explain"
+        - "kubectl api-resources"
+        - "kubectl version"
+        - "egrep"
+      deny:
+        - "kubectl delete"
+        - "kubectl apply"
+        - "kubectl create"
+        - "kubectl edit"
+        - "kubectl exec"
+        - "kubectl patch"
+        - "kubectl scale"
+        - "kubectl drain"
+        - "kubectl cordon"
+        - "kubectl taint"
+        - "kubectl debug"
+        - "rm"
+        - "oc"
+
+  # ========== DISABLED ==========
+  core_investigation:
+    enabled: false
+  openshift/core:
+    enabled: false
+  openshift/logs:
+    enabled: false
+  openshift/security:
+    enabled: false
+  openshift/live-metrics:
+    enabled: false
+  runbook:
+    enabled: false
+  internet:
+    enabled: false
+  connectivity_check:
+    enabled: false
+  robusta:
+    enabled: false
+  kubernetes/krew-extras:
+    enabled: false
+  kubernetes/kube-lineage-extras:
+    enabled: false
+  aks/core:
+    enabled: false
+  aks/node-health:
+    enabled: false
+  argocd/core:
+    enabled: false
+  cilium/core:
+    enabled: false
+  hubble/observability:
+    enabled: false
+  docker/core:
+    enabled: false
+  helm/core:
+    enabled: false
+  grafana/dashboards:
+    enabled: false
+  grafana/loki:
+    enabled: false
+  grafana/tempo:
+    enabled: false
+  prometheus/metrics:
+    enabled: false
+  datadog/logs:
+    enabled: false
+  datadog/general:
+    enabled: false
+  datadog/metrics:
+    enabled: false
+  datadog/traces:
+    enabled: false
+  elasticsearch/data:
+    enabled: false
+  elasticsearch/cluster:
+    enabled: false
+  opensearch/query_assist:
+    enabled: false
+  coralogix:
+    enabled: false
+  newrelic:
+    enabled: false
+  kafka/admin:
+    enabled: false
+  rabbitmq/core:
+    enabled: false
+  notion:
+    enabled: false
+  confluence:
+    enabled: false
+  slab:
+    enabled: false
+  servicenow/tables:
+    enabled: false
+  azure/sql:
+    enabled: false
+  MongoDBAtlas:
+    enabled: false
+  database/sql:
+    enabled: false
+  inspektor-gadget/node:
+    enabled: false
+  inspektor-gadget/tcpdump:
+    enabled: false
+  kubevela/core:
+    enabled: false
