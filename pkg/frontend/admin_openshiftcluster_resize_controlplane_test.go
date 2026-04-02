@@ -17,6 +17,7 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -438,7 +439,20 @@ func TestUpdateMachineVMSize(t *testing.T) {
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
 					Return(machineJSON("master-0", "Standard_D8s_v3"), nil)
-				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil)
+				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, obj *unstructured.Unstructured) error {
+						ts, found, err := unstructured.NestedString(obj.Object, "spec", "providerSpec", "value", "metadata", "creationTimestamp")
+						if err != nil {
+							t.Fatalf("unexpected error reading providerSpec metadata.creationTimestamp: %v", err)
+						}
+						if !found {
+							t.Fatal("providerSpec metadata.creationTimestamp was not set")
+						}
+						if ts != "2024-01-01T00:00:00Z" {
+							t.Fatalf("providerSpec metadata.creationTimestamp = %q, want %q", ts, "2024-01-01T00:00:00Z")
+						}
+						return nil
+					})
 			},
 		},
 		{
