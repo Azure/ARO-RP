@@ -20,13 +20,17 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
+
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -516,6 +520,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 		name           string
 		resourceID     string
 		vmSize         string
+		deallocateVM   string
 		fixture        func(f *testdatabase.Fixture)
 		kubeMocks      func(*mock_adminactions.MockKubeActions)
 		azureMocks     func(*mock_adminactions.MockAzureActions)
@@ -527,8 +532,12 @@ func TestAdminResizeControlPlane(t *testing.T) {
 		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 			Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 			OpenShiftCluster: &api.OpenShiftCluster{
-				ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD8sV3,
+					},
 					ClusterProfile: api.ClusterProfile{
 						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 					},
@@ -551,9 +560,66 @@ func TestAdminResizeControlPlane(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:       "invalid vm size",
-			vmSize:     "Standard_Invalid_Size",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name:         "happy path - prevalidation and no-op resize",
+			vmSize:       "Standard_D8s_v3",
+			deallocateVM: "true",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(healthyKubeAPIServerJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(healthyEtcdJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(validServicePrincipalJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+					AnyTimes()
+
+				running := "Running"
+				k.EXPECT().
+					KubeList(gomock.Any(), "Machine", machineNamespace).
+					Return(masterMachineListJSON(
+						masterMachine("master-0", "Standard_D8s_v3", running),
+						masterMachine("master-1", "Standard_D8s_v3", running),
+						masterMachine("master-2", "Standard_D8s_v3", running),
+					), nil)
+			},
+			azureMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:         "invalid vm size",
+			vmSize:       "Standard_Invalid_Size",
+			deallocateVM: "true",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addClusterDoc(f)
 				addSubscriptionDoc(f)
@@ -564,9 +630,10 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			wantError:      `400: InvalidParameter: : The provided vmSize 'Standard_Invalid_Size' is unsupported for master.`,
 		},
 		{
-			name:       "cluster not found",
-			vmSize:     "Standard_D8s_v3",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name:         "cluster not found",
+			vmSize:       "Standard_D8s_v3",
+			deallocateVM: "true",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addSubscriptionDoc(f)
 			},
@@ -576,9 +643,10 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
 		},
 		{
-			name:       "subscription not found",
-			vmSize:     "Standard_D8s_v3",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name:         "subscription not found",
+			vmSize:       "Standard_D8s_v3",
+			deallocateVM: "true",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addClusterDoc(f)
 			},
@@ -586,6 +654,17 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      fmt.Sprintf(`400: InvalidSubscriptionState: : Request is not allowed in unregistered subscription '%s'.`, mockSubID),
+		},
+		{
+			name:           "invalid deallocateVM",
+			vmSize:         "Standard_D8s_v3",
+			deallocateVM:   "foo",
+			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture:        func(f *testdatabase.Fixture) {},
+			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
+			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: deallocateVM: The provided deallocateVM value 'foo' is invalid. Allowed values are 'true' or 'false'.`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -617,10 +696,13 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			// Avoid creating real Azure quota clients in handler tests.
+			f.validateResizeQuota = quotaCheckDisabled
+
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=%s&deallocateVM=true", tt.resourceID, tt.vmSize),
+				fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=%s&deallocateVM=%s", tt.resourceID, tt.vmSize, tt.deallocateVM),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)

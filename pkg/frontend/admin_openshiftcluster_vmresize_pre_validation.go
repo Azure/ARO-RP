@@ -88,6 +88,22 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return err
 	}
 
+	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
+}
+
+func (f *frontend) preResizeControlPlaneVMsValidation(
+	ctx context.Context,
+	doc *api.OpenShiftClusterDocument,
+	subscriptionDoc *api.SubscriptionDocument,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	desiredVMSize string,
+) ([]byte, error) {
 	// API server health is the most fundamental check. If the API server is
 	// unreachable, all kube-based checks below will fail with connection errors,
 	// producing noisy output that obscures the root cause. Run it synchronously
@@ -139,7 +155,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
+	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a)) })
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
 	wg.Go(func() { collect(checkCPMSNotActive(ctx, k)) })
@@ -424,18 +440,13 @@ func (f *frontend) validateVMSKU(
 	doc *api.OpenShiftClusterDocument,
 	subscriptionDoc *api.SubscriptionDocument,
 	desiredVMSize string,
-	log *logrus.Entry,
+	a adminactions.AzureActions,
 ) error {
 	if desiredVMSize == "" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize", "The provided vmSize is empty.")
 	}
 
 	err := validateAdminMasterVMSize(desiredVMSize)
-	if err != nil {
-		return err
-	}
-
-	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}
