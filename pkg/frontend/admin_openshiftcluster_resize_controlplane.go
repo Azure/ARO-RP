@@ -21,6 +21,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -332,14 +333,12 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 	}
 	machine.Labels[machineLabelInstanceType] = vmSize
 
-	rawBytes, err := json.Marshal(&machine)
+	// KubeCreateOrUpdate expects unstructured objects, so convert the typed Machine before nested field updates.
+	objMap, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&machine)
 	if err != nil {
-		return fmt.Errorf("marshalling machine: %w", err)
+		return fmt.Errorf("converting machine to unstructured: %w", err)
 	}
-	var obj unstructured.Unstructured
-	if err := json.Unmarshal(rawBytes, &obj.Object); err != nil {
-		return fmt.Errorf("converting to unstructured: %w", err)
-	}
+	obj := unstructured.Unstructured{Object: objMap}
 
 	machineCreationTimestamp, found, err := unstructured.NestedString(obj.Object, "metadata", "creationTimestamp")
 	if err != nil {
