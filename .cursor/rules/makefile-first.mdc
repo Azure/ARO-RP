@@ -1,0 +1,43 @@
+---
+description: Always use Makefile targets instead of ad-hoc commands
+alwaysApply: true
+---
+
+# Makefile First
+
+The root `Makefile` is the single source of truth for all quality gates, builds, and CI operations. Never improvise shell commands for operations that have a Makefile target.
+
+## Formatting & Linting
+
+- `make fmt` — Format BOTH Go modules (golangci-lint: gci + gofumpt). **Never use `gofmt` directly.**
+- `make lint-go` — Run all linters (both modules)
+- `make lint-go-fix` — Lint with `--fix` (both modules)
+- `make validate-imports` — Verify import ordering matches CI expectations
+
+## Testing
+
+- `make unit-test-go` — Unit tests for **root module only** (see `multi-module-awareness` rule for the `pkg/api` trap)
+- `go test -v ./pkg/frontend/... -run TestSpecificFunction` — Run a single test
+- `make test-go` — Full validation: generate + build-all + validate-go + lint-go + unit-test-go
+
+## Code Generation
+
+- `make generate` — Run all `//go:generate` directives + swagger
+- `make generate-swagger` — Regenerate swagger specs only
+- `make go-tidy` — `go mod tidy` for BOTH modules
+
+## Building
+
+- `make aro` — Build the ARO RP binary
+- `make build-all` — Build all Go binaries
+- `make build-portal` — Build the portal frontend (npm)
+
+## Local Development
+
+- `make runlocal-rp` — Run RP locally
+- `make runlocal-monitor` — Run monitor locally
+- `make runlocal-portal` — Run portal locally
+
+## Discovery
+
+Run `make help` to list all available targets with descriptions.

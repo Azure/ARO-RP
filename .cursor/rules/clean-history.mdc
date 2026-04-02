@@ -1,0 +1,45 @@
+---
+description: Ensure clean linear branch history before PR submission
+alwaysApply: true
+---
+
+# Clean Branch History
+
+Before creating or updating a PR, verify the branch has a clean, reviewable history.
+
+## Pre-Push Checks
+
+1. **No merge commits** — rebase onto main instead:
+   ```bash
+   git log --oneline --merges main..HEAD
+   # Should produce no output
+   ```
+
+2. **No fixup/WIP commits** — squash them before pushing:
+   ```bash
+   git log --oneline main..HEAD | grep -iE '(fixup|wip|squash|tmp|todo)'
+   # Should produce no output
+   ```
+
+3. **No unrelated changes** — verify diff is scoped to the task:
+   ```bash
+   git diff --stat main..HEAD
+   ```
+
+4. **Up to date with main** — check if a rebase is needed:
+   ```bash
+   git fetch origin main
+   git log --oneline HEAD..origin/main
+   ```
+   If output exists, **ask the user before rebasing** — `git rebase origin/main` rewrites history and can cause conflicts. Never rebase autonomously.
+
+## Commit Message Guidelines
+
+- Use conventional commit format: `type(scope): description`
+- Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`
+- Scope should match the package or area (e.g. `frontend`, `operator`, `api`)
+- Body should explain **why**, not **what** (the diff shows what)
+
+## After Rebasing
+
+Always re-run the validation pipeline (see `validation-pipeline` rule) after a rebase.

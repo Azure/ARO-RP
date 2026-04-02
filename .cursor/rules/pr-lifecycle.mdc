@@ -1,0 +1,38 @@
+---
+description: PR creation, CI monitoring, and merge workflow for ARO-RP
+alwaysApply: true
+---
+
+# PR Lifecycle
+
+## Creating
+
+1. Run the full validation pipeline (see `validation-pipeline` rule).
+2. Verify clean branch history (see `clean-history` rule).
+3. **ASK the user for approval before pushing or creating the PR.** Never push or open a PR autonomously.
+4. Push: `git push -u origin HEAD`
+5. Open PR: `gh pr create` with summary and test plan.
+
+## CI Monitoring
+
+ARO-RP has multiple CI systems (GitHub Actions + Azure Pipelines / Prow). Key workflows:
+
+- **ci-go**: vendor-check, generate-check, golangci-lint, validate-go
+- **ci-python**: Python linting and tests
+- **CodeQL**: Static analysis (Go, JS, Python)
+- **Test coverage**: 6 parallel suites (cmd, pkg-api, pkg-frontend, pkg-operator, pkg-util, pkg-other)
+- **ci/prow/images**: OpenShift CI image build
+
+### Monitoring Steps
+
+1. Poll: `gh pr checks <PR-NUMBER>` until all checks complete.
+2. On failure, read logs: `gh run view <RUN-ID> --job <JOB-ID> --log-failed`
+3. Fix in the worktree, commit, push, re-monitor.
+4. If failure is unrelated (e.g. flaky infra test), note it and proceed.
+
+## Merging
+
+**ALWAYS ask the user for explicit approval before merging.** Never merge autonomously.
+
+- Squash merge: `gh pr merge <number> --squash --body "..."`
+- After merge: `git checkout main && git pull`
