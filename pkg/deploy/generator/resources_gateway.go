@@ -248,9 +248,11 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		scriptUtilServices +
 		scriptUtilSystem +
 		scriptGatewayVMSS
-	trailer := base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
-	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
-	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
+
+	customScript, err := g.createStartupScript("gateway", parts, bootstrapScript)
+	if err != nil {
+		panic(err)
+	}
 
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
