@@ -32,10 +32,10 @@ import (
 )
 
 const (
-	nodeReadyPollTimeout       = 30 * time.Minute
-	nodeReadyPollInterval      = 5 * time.Second
-	kubeObjectUpdateMaxRetries = 3
-	kubeObjectUpdateRetryDelay = time.Second
+	nodeReadyPollTimeout        = 30 * time.Minute
+	nodeReadyPollInterval       = 5 * time.Second
+	kubeObjectUpdateMaxAttempts = 3
+	kubeObjectUpdateRetryDelay  = time.Second
 )
 
 func (f *frontend) postAdminResizeControlPlane(w http.ResponseWriter, r *http.Request) {
@@ -297,21 +297,9 @@ func isNodeReady(ctx context.Context, k adminactions.KubeActions, nodeName strin
 }
 
 func updateMachineVMSize(ctx context.Context, k adminactions.KubeActions, machineName, vmSize string) error {
-	var lastErr error
-	for attempt := 0; attempt <= kubeObjectUpdateMaxRetries; attempt++ {
-		lastErr = doUpdateMachineVMSize(ctx, k, machineName, vmSize)
-		if lastErr == nil {
-			return nil
-		}
-		if attempt < kubeObjectUpdateMaxRetries {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(kubeObjectUpdateRetryDelay):
-			}
-		}
-	}
-	return fmt.Errorf("could not update Machine object after %d retries: %w", kubeObjectUpdateMaxRetries, lastErr)
+	return retryKubeObjectUpdate(ctx, "Machine", func() error {
+		return doUpdateMachineVMSize(ctx, k, machineName, vmSize)
+	})
 }
 
 func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, machineName, vmSize string) error {
@@ -359,21 +347,31 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 }
 
 func updateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
+	return retryKubeObjectUpdate(ctx, "Node", func() error {
+		return doUpdateNodeInstanceTypeLabels(ctx, k, nodeName, vmSize)
+	})
+}
+
+func retryKubeObjectUpdate(ctx context.Context, objectType string, updateFn func() error) error {
 	var lastErr error
-	for attempt := 0; attempt <= kubeObjectUpdateMaxRetries; attempt++ {
-		lastErr = doUpdateNodeInstanceTypeLabels(ctx, k, nodeName, vmSize)
+	for attempt := range kubeObjectUpdateMaxAttempts {
+		lastErr = updateFn()
 		if lastErr == nil {
 			return nil
 		}
-		if attempt < kubeObjectUpdateMaxRetries {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(kubeObjectUpdateRetryDelay):
-			}
+
+		if attempt == kubeObjectUpdateMaxAttempts-1 {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(kubeObjectUpdateRetryDelay):
 		}
 	}
-	return fmt.Errorf("could not update Node object after %d retries: %w", kubeObjectUpdateMaxRetries, lastErr)
+
+	return fmt.Errorf("could not update %s object after %d attempts: %w", objectType, kubeObjectUpdateMaxAttempts, lastErr)
 }
 
 func doUpdateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
