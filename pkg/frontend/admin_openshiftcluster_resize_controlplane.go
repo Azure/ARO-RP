@@ -57,7 +57,15 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 	vmSize := r.URL.Query().Get("vmSize")
 	deallocateVM := true
 	if v := r.URL.Query().Get("deallocateVM"); v != "" {
-		deallocateVM = strings.EqualFold(v, "true")
+		switch {
+		case strings.EqualFold(v, "true"):
+			deallocateVM = true
+		case strings.EqualFold(v, "false"):
+			deallocateVM = false
+		default:
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "deallocateVM",
+				fmt.Sprintf("The provided deallocateVM value '%s' is invalid. Allowed values are 'true' or 'false'.", v))
+		}
 	}
 
 	if err := validateAdminMasterVMSize(vmSize); err != nil {
@@ -94,7 +102,7 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 	}
 
 	// Run all pre-flight validations (API server health, etcd health, SP, VM SKU, quota).
-	_, err = f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, vmSize, log)
+	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize)
 	if err != nil {
 		return err
 	}
