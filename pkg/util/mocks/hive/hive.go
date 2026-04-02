@@ -11,6 +11,7 @@ package mock_hive
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -22,6 +23,7 @@ import (
 	v1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
+	holmes "github.com/Azure/ARO-RP/pkg/util/holmes"
 )
 
 // MockClusterManager is a mock of ClusterManager interface.
@@ -148,6 +150,20 @@ func (m *MockClusterManager) Install(ctx context.Context, sub *api.SubscriptionD
 func (mr *MockClusterManagerMockRecorder) Install(ctx, sub, doc, version, customManifests any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockClusterManager)(nil).Install), ctx, sub, doc, version, customManifests)
+}
+
+// InvestigateCluster mocks base method.
+func (m *MockClusterManager) InvestigateCluster(ctx context.Context, hiveNamespace string, kubeconfig []byte, holmesConfig *holmes.HolmesConfig, question string, w io.Writer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InvestigateCluster", ctx, hiveNamespace, kubeconfig, holmesConfig, question, w)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InvestigateCluster indicates an expected call of InvestigateCluster.
+func (mr *MockClusterManagerMockRecorder) InvestigateCluster(ctx, hiveNamespace, kubeconfig, holmesConfig, question, w any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvestigateCluster", reflect.TypeOf((*MockClusterManager)(nil).InvestigateCluster), ctx, hiveNamespace, kubeconfig, holmesConfig, question, w)
 }
 
 // IsClusterDeploymentReady mocks base method.

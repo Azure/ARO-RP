@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"sort"
 	"strings"
@@ -31,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive/failure"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -53,6 +55,7 @@ type ClusterManager interface {
 	GetClusterSync(ctx context.Context, oc *api.OpenShiftCluster) (*hivev1alpha1.ClusterSync, error)
 	ListHiveK8sObjects(ctx context.Context, resource, namespace string) ([]byte, error)
 	GetHiveK8sObject(ctx context.Context, resource, namespace, name string) ([]byte, error)
+	InvestigateCluster(ctx context.Context, hiveNamespace string, kubeconfig []byte, holmesConfig *holmes.HolmesConfig, question string, w io.Writer) error
 }
 
 type clusterManager struct {

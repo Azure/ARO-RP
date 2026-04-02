@@ -406,6 +406,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 					})
 				})
 				r.Get("/selectors", f.getAdminOpenShiftClusterSelectors)
+
+				r.Post("/investigate", f.postAdminOpenShiftClusterInvestigate)
 			})
 		})
 

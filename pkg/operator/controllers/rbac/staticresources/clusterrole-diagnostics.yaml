@@ -1,0 +1,175 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:aro-diagnostics
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/log
+  - nodes
+  - services
+  - endpoints
+  - configmaps
+  - events
+  - namespaces
+  - persistentvolumeclaims
+  - replicationcontrollers
+  - resourcequotas
+  - serviceaccounts
+  - limitranges
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  - persistentvolumes
+  - volumeattachments
+  - csinodes
+  - csidrivers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  - clusterroles
+  - clusterrolebindings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.openshift.io
+  resources:
+  - deploymentconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - machine.openshift.io
+  resources:
+  - machines
+  - machinesets
+  - machinehealthchecks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - clusterversions
+  - clusteroperators
+  - infrastructures
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - machineconfiguration.openshift.io
+  resources:
+  - machineconfigs
+  - machineconfigpools
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - prometheusrules
+  - servicemonitors
+  - alertmanagers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operator.openshift.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operators.coreos.com
+  resources:
+  - subscriptions
+  - clusterserviceversions
+  - installplans
+  - operatorgroups
+  verbs:
+  - get
+  - list
+  - watch
+- nonResourceURLs:
+  - /healthz
+  - /livez
+  - /readyz
+  - /version
+  - /metrics
+  verbs:
+  - get
