@@ -62,10 +62,14 @@ ARO_FEDERATED_CREDENTIAL_ROLE = "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
 FP_SERVICE_PRINCIPAL_ROLE = "42f3c60f-e7b1-46d7-ba56-6de681664342"
 
 
-class Scope(enum.Enum):
+class RoleAssignmentScope(enum.Enum):
     """Role Assignment Scope"""
-    VNET = enum.auto()
+    DISK_ENCRYPTION_SET = enum.auto()
     MASTER_SUBNET = enum.auto()
+    NAT_GATEWAY = enum.auto()
+    NSG = enum.auto()
+    ROUTE_TABLE = enum.auto()
+    VNET = enum.auto()
     WORKER_SUBNET = enum.auto()
 
 
@@ -778,6 +782,7 @@ def aro_identity_get_required(*,
                               master_subnet,
                               worker_subnet,
                               vnet,
+                              disk_encryption_set=None,
                               vnet_resource_group_name=None) -> None:
     _validate_version(client, version, location)
     role_set = _get_pwi_role_set(client, version, location)
@@ -788,18 +793,59 @@ def aro_identity_get_required(*,
         _print_identity_create_cmd(resource_group_name, role.operator_name, location)
 
     sub_id = get_subscription_id(cmd.cli_ctx)
-    auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     logger.warning("\nUse the following commands to create the required role assignments"
                    " over virtual network and/or subnets:")
+
+    subnet_resources = dict()
+    for sn in [master_subnet, worker_subnet]:
+        sid = parse_resource_id(sn)
+
+        if 'resource_group' not in sid or 'name' not in sid or 'resource_name' not in sid:
+            raise ValidationError(f"""(ValidationError) Failed to validate subnet '{sn}'.
+                Please retry, if issue persists: raise azure support ticket""")
+            logger.info("Failed to validate subnet '%s'", sn)
+
+        try:
+            subnet = subnet_show(cli_ctx=cmd.cli_ctx)(command_args={
+                "name": sid['resource_name'],
+                "vnet_name": sid['name'],
+                "resource_group": sid['resource_group']}
+            )
+        except CoreResourceNotFoundError:
+            continue
+
+        if subnet.get("routeTable", None):
+            subnet_resources["routeTable"] = subnet["routeTable"]["id"]
+
+        if subnet.get("natGateway", None):
+            subnet_resources["natGateway"] = subnet["natGateway"]["id"]
+
+        if subnet.get("networkSecurityGroup", None):
+            subnet_resources["networkSecurityGroup"] = subnet["networkSecurityGroup"]["id"]
+
     for role in role_set.platform_workload_identity_roles:
-        for scope in _determine_scopes(cmd, role):
-            match scope:
-                case Scope.MASTER_SUBNET:
-                    scopestr = master_subnet
-                case Scope.WORKER_SUBNET:
-                    scopestr = worker_subnet
-                case Scope.VNET:
-                    scopestr = vnet
+        scopes = _determine_role_assignment_scopes(cmd, role)
+        for scope in scopes:
+            try:
+                match scope:
+                    case RoleAssignmentScope.DISK_ENCRYPTION_SET:
+                        if not disk_encryption_set:
+                            continue
+                        scopestr = disk_encryption_set
+                    case RoleAssignmentScope.MASTER_SUBNET:
+                        scopestr = master_subnet
+                    case RoleAssignmentScope.NAT_GATEWAY:
+                        scopestr = subnet_resources["natGateway"]
+                    case RoleAssignmentScope.NSG:
+                        scopestr = subnet_resources["networkSecurityGroup"]
+                    case RoleAssignmentScope.ROUTE_TABLE:
+                        scopestr = subnet_resources["routeTable"]
+                    case RoleAssignmentScope.VNET:
+                        scopestr = vnet
+                    case RoleAssignmentScope.WORKER_SUBNET:
+                        scopestr = worker_subnet
+            except KeyError:
+                continue
 
             _print_role_assignment_create_cmd(
                 f"$(az identity show -g '{resource_group_name}' -n '{role.operator_name}' --query principalId -o tsv)",
@@ -856,18 +902,26 @@ def aro_identity_create_required(*,
         created_identities.append(identity)
 
         # vnet/subnet role assignments
-        for scope in _determine_scopes(cmd, role):
+        for scope in _determine_role_assignment_scopes(cmd, role):
             match scope:
-                case Scope.MASTER_SUBNET:
+                case RoleAssignmentScope.DISK_ENCRYPTION_SET:
+                    pass # TODO: write me
+                case RoleAssignmentScope.MASTER_SUBNET:
                     scopestr = master_subnet
-                case Scope.WORKER_SUBNET:
-                    scopestr = worker_subnet
-                case Scope.VNET:
+                case RoleAssignmentScope.NAT_GATEWAY:
+                    pass # TODO: write me
+                case RoleAssignmentScope.NSG:
+                    pass # TODO: write me
+                case RoleAssignmentScope.ROUTE_TABLE:
+                    pass # TODO: write me
+                case RoleAssignmentScope.VNET:
                     scopestr = vnet
+                case RoleAssignmentScope.WORKER_SUBNET:
+                    scopestr = worker_subnet
 
             id = identity["principalId"]
             defn = f"{resource_id(subscription=sub_id)}{role.role_definition_id}"
-            ra = _roleassignment_create(cmd, id, defn, scopestr)
+            ra = _role_assignment_create(cmd, id, defn, scopestr)
             created_roleassignments.append(ra)
 
         # platform workload identity role assignment
@@ -878,7 +932,7 @@ def aro_identity_create_required(*,
             type="roleDefinitions",
             name=ARO_FEDERATED_CREDENTIAL_ROLE
         )
-        topra = _roleassignment_create(cmd, id, defn, identity["id"])
+        topra = _role_assignment_create(cmd, id, defn, identity["id"])
         created_roleassignments.append(topra)
 
     id = AADManager(cmd.cli_ctx).get_service_principal_id(FP_CLIENT_ID)
@@ -888,7 +942,7 @@ def aro_identity_create_required(*,
         type="roleDefinitions",
         name=FP_SERVICE_PRINCIPAL_ROLE,
     )
-    spra = _roleassignment_create(cmd, id, defn, vnet)
+    spra = _role_assignment_create(cmd, id, defn, vnet)
     created_roleassignments.append(spra)
 
     return created_identities + created_roleassignments
@@ -933,17 +987,17 @@ def _get_pwi_role_set(client, version, location):
 
 
 def _print_identity_create_cmd(group, name, location) -> None:
-    msg = f"    az identity create -g \"{group}\" -n \"{name}\" -l \"{location}\""
+    msg = f"    az identity create -g '{group}' -n '{name}' -l '{location}'"
     logger.warning(msg)
 
 
 def _print_role_assignment_create_cmd(assignee, role, scope) -> None:
     msg = [
         "    az role assignment create",
-        f"--assignee-object-id \"{assignee}\"",
+        f"--assignee-object-id '{assignee}'",
         "--assignee-principal-type ServicePrincipal",
-        f"--role \"{role}\"",
-        f"--scope \"{scope}\"",
+        f"--role '{role}'",
+        f"--scope '{scope}'",
     ]
     logger.warning(" ".join(msg))
 
@@ -961,7 +1015,7 @@ def _identity_create(cmd, location, group, name):
     })
 
 
-def _roleassignment_create(cmd, principal_id, role_definition_id, scope, name=None):
+def _role_assignment_create(cmd, principal_id, role_definition_id, scope, name=None):
     if not name:
         name = str(uuid.uuid4())
 
@@ -974,15 +1028,29 @@ def _roleassignment_create(cmd, principal_id, role_definition_id, scope, name=No
     })
 
 
-def _determine_scopes(cmd, role) -> list[Scope]:
+def _determine_role_assignment_scopes(cmd, role) -> set[RoleAssignmentScope]:
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
 
+    scopes: set[RoleAssignmentScope] = set()
     for permissions in definition.permissions:
         for action in permissions.actions:
-            if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
-                return [Scope.MASTER_SUBNET, Scope.WORKER_SUBNET]
-            elif action.startswith("Microsoft.Network/virtualNetworks/"):
-                return [Scope.VNET]
+            if action.startswith("Microsoft.Compute/diskEncryptionSets/"):
+                scopes.add(RoleAssignmentScope.DISK_ENCRYPTION_SET)
 
-    raise RuntimeError("Could not determine permissions.")
+            if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
+                scopes.add(RoleAssignmentScope.MASTER_SUBNET)
+                scopes.add(RoleAssignmentScope.WORKER_SUBNET)
+            elif action.startswith("Microsoft.Network/virtualNetworks/"):
+                scopes.add(RoleAssignmentScope.VNET)
+
+            if action.startswith("Microsoft.Network/natGateways/"):
+                scopes.add(RoleAssignmentScope.NAT_GATEWAY)
+
+            if action.startswith("Microsoft.Network/networkSecurityGroups/"):
+                scopes.add(RoleAssignmentScope.NSG)
+
+            if action.startswith("Microsoft.Network/routeTable/"):
+                scopes.add(RoleAssignmentScope.ROUTE_TABLE)
+
+    return scopes
