@@ -33,7 +33,14 @@ skill in the same PR to prevent configuration drift.
 Verify runtime is available:
 
 ```bash
-docker info --format '{{.OSType}}/{{.Architecture}}'
+if command -v podman >/dev/null 2>&1; then
+  podman info --format '{{.Host.Os}}/{{.Host.Arch}}'
+elif command -v docker >/dev/null 2>&1; then
+  docker info --format '{{.OSType}}/{{.Architecture}}'
+else
+  echo "Error: neither podman nor docker found in PATH" >&2
+  exit 1
+fi
 ```
 
 ## Worktree setup (required)
@@ -43,8 +50,22 @@ bind-mounts the worktree as `/workspace`, so these files must be present there.
 Always check and create links before starting the container from a worktree.
 
 ```bash
-# Detect the host checkout root (parent repo of the worktree)
-HOST_CHECKOUT="$(git worktree list | head -1 | awk '{print $1}')"
+# Detect host checkout containing env and secrets/.
+# Prefer explicit HOST_CHECKOUT; otherwise default to current repo root.
+if [ -z "${HOST_CHECKOUT:-}" ]; then
+  HOST_CHECKOUT="$(git rev-parse --show-toplevel)"
+  echo "HOST_CHECKOUT not set; defaulting to ${HOST_CHECKOUT}"
+fi
+
+# Validate source files exist before linking.
+if [ ! -e "$HOST_CHECKOUT/env" ]; then
+  echo "Error: expected '$HOST_CHECKOUT/env'. Set HOST_CHECKOUT to your primary checkout." >&2
+  return 1 2>/dev/null || exit 1
+fi
+if [ ! -e "$HOST_CHECKOUT/secrets" ]; then
+  echo "Error: expected '$HOST_CHECKOUT/secrets'. Set HOST_CHECKOUT to your primary checkout." >&2
+  return 1 2>/dev/null || exit 1
+fi
 
 # Link env file if missing
 [ ! -e env ] && ln -s "$HOST_CHECKOUT/env" env
@@ -110,11 +131,9 @@ set +a
 ### 5. Run a focused E2E test
 
 ```bash
-export RP_BASE_URL=https://localhost:8443
 go test -v -tags=e2e ./test/e2e/... \
   -run "TestE2E" \
-  --ginkgo.label-filter="Admin API" \
-  --ginkgo.focus="Resize control plane" \
+  --ginkgo.focus="\\[Admin API\\]" \
   --ginkgo.timeout=30m
 ```
 
@@ -146,7 +165,7 @@ Then run your focused test:
 ```bash
 go test -v -tags=e2e ./test/e2e/... \
   -run "TestE2E" \
-  --ginkgo.focus="Resize control plane"
+  --ginkgo.focus="\\[Admin API\\]"
 ```
 
 ## Linux/Fedora notes (default)
@@ -188,6 +207,14 @@ docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml build a
 
 ### Container won't start
 
+Linux/Fedora (Podman):
+
+```bash
+podman compose -f docker-compose.yml -f docker-compose.dev-env-linux.yml logs aro-dev-env
+```
+
+macOS arm64 (Docker):
+
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml logs aro-dev-env
 ```
@@ -195,6 +222,14 @@ docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml logs ar
 ### RP fails health check
 
 Check that `/workspace/env` and `/workspace/secrets/env` are readable:
+
+Linux/Fedora (Podman):
+
+```bash
+podman compose -f docker-compose.yml -f docker-compose.dev-env-linux.yml exec aro-dev-env cat /workspace/env
+```
+
+macOS arm64 (Docker):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml exec aro-dev-env cat /workspace/env
@@ -248,6 +283,6 @@ Task Progress:
 - [ ] Step 5: Start local RP: make dev-env-start
 - [ ] Step 6: Wait for health: curl -ksSf https://localhost:8443/healthz/ready
 - [ ] Step 7: Test endpoint via curl or E2E test
-- [ ] Step 8: Check RP logs: docker compose ... logs -f aro-dev-env
+- [ ] Step 8: Check RP logs (runtime-specific): podman/docker compose ... logs -f aro-dev-env
 - [ ] Step 9: Stop RP: make dev-env-stop
 ```

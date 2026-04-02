@@ -35,4 +35,4 @@ ARO-RP has multiple CI systems (GitHub Actions + Azure Pipelines / Prow). Key wo
 **ALWAYS ask the user for explicit approval before merging.** Never merge autonomously.
 
 - Squash merge: `gh pr merge <number> --squash --body "..."`
-- After merge: `git checkout main && git pull`
+- After merge: `git checkout master && git pull`

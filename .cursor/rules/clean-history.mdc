@@ -9,29 +9,29 @@ Before creating or updating a PR, verify the branch has a clean, reviewable hist
 
 ## Pre-Push Checks
 
-1. **No merge commits** — rebase onto main instead:
+1. **No merge commits** — rebase onto master instead:
    ```bash
-   git log --oneline --merges main..HEAD
+   git log --oneline --merges master..HEAD
    # Should produce no output
    ```
 
 2. **No fixup/WIP commits** — squash them before pushing:
    ```bash
-   git log --oneline main..HEAD | grep -iE '(fixup|wip|squash|tmp|todo)'
+   git log --oneline master..HEAD | grep -iE '(fixup|wip|squash|tmp|todo)'
    # Should produce no output
    ```
 
 3. **No unrelated changes** — verify diff is scoped to the task:
    ```bash
-   git diff --stat main..HEAD
+   git diff --stat master..HEAD
    ```
 
-4. **Up to date with main** — check if a rebase is needed:
+4. **Up to date with master** — check if a rebase is needed:
    ```bash
-   git fetch origin main
-   git log --oneline HEAD..origin/main
+   git fetch origin master
+   git log --oneline HEAD..origin/master
    ```
-   If output exists, **ask the user before rebasing** — `git rebase origin/main` rewrites history and can cause conflicts. Never rebase autonomously.
+   If output exists, **ask the user before rebasing** — `git rebase origin/master` rewrites history and can cause conflicts. Never rebase autonomously.
 
 ## Commit Message Guidelines
 

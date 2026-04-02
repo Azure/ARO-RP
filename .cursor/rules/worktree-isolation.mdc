@@ -6,8 +6,8 @@ alwaysApply: true
 # Worktree Isolation
 
 - Never edit host checkout files for implementation work.
-- Start each task in an isolated git worktree: `git worktree add -b <branch-name> .worktrees/<task-name> main`
-- Always branch from `main` (the default branch for ARO-RP).
+- Start each task in an isolated git worktree: `git worktree add -b <branch-name> .worktrees/<task-name> master`
+- Always branch from `master` (the default branch for ARO-RP).
 - Keep host checkout read-only — use it only for exploration, review, and context.
 - Only include task-related files in commits.
 
@@ -15,7 +15,7 @@ alwaysApply: true
 
 1. Run `gh pr list --state open` to check for parallel work that may conflict.
 2. Create the worktree from the host checkout root.
-3. Verify ancestry: `git merge-base --is-ancestor main HEAD`
+3. Verify ancestry: `git merge-base --is-ancestor master HEAD`
 
 ## Branch Naming (Non-Blocking)
 
