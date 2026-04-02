@@ -232,6 +232,23 @@ func TestIsNodeReady(t *testing.T) {
 			wantReady: false,
 			wantErr:   "not found",
 		},
+		{
+			name: "node payload invalid JSON",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return([]byte(`{invalid`), nil)
+			},
+			wantReady: false,
+			wantErr:   "invalid character 'i' looking for beginning of object key string",
+		},
+		{
+			name: "node without conditions is treated as not ready",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return([]byte(`{"apiVersion":"v1","kind":"Node","metadata":{"name":"master-0"},"status":{}}`), nil)
+			},
+			wantReady: false,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -344,6 +361,43 @@ func TestResizeControlPlane(t *testing.T) {
 				)
 			},
 			wantErr: "failed to resize node master-0: resizing VM: Azure resize error",
+		},
+		{
+			name: "start VM fails",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
+
+				gomock.InOrder(
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
+					a.EXPECT().VMResize(gomock.Any(), "master-0", desiredSize).Return(nil),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").
+						Return(errors.New("start failed")),
+				)
+			},
+			wantErr: "failed to resize node master-0: starting VM: start failed",
+		},
+		{
+			name: "uncordon fails",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
+
+				gomock.InOrder(
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
+					a.EXPECT().VMResize(gomock.Any(), "master-0", desiredSize).Return(nil),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).
+						Return(errors.New("uncordon failure")),
+				)
+			},
+			wantErr: "failed to resize node master-0: uncordoning node: uncordon failure",
 		},
 		{
 			name: "no control plane machines found",
