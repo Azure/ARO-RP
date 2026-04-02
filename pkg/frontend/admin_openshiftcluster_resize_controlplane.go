@@ -341,6 +341,16 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 		return fmt.Errorf("converting to unstructured: %w", err)
 	}
 
+	machineCreationTimestamp, found, err := unstructured.NestedString(obj.Object, "metadata", "creationTimestamp")
+	if err != nil {
+		return fmt.Errorf("reading machine creationTimestamp: %w", err)
+	}
+	if found {
+		if err := unstructured.SetNestedField(obj.Object, machineCreationTimestamp, "spec", "providerSpec", "value", "metadata", "creationTimestamp"); err != nil {
+			return fmt.Errorf("setting providerSpec metadata.creationTimestamp: %w", err)
+		}
+	}
+
 	delete(obj.Object, "status")
 
 	return k.KubeCreateOrUpdate(ctx, &obj)
