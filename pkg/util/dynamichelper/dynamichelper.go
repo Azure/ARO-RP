@@ -5,6 +5,8 @@ package dynamichelper
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -23,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -100,9 +104,19 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
 		if un, ok := o.(*unstructured.Unstructured); ok {
-			err := dh.ensureUnstructuredObj(ctx, un)
-			if err != nil {
-				return err
+			// ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding
+			// are handled via server-side apply so that all fields are
+			// correctly reconciled. The Gatekeeper-specific path only
+			// compares enforcementAction and would silently skip updates
+			// to other resource types.
+			if isAdmissionRegistrationResource(un) {
+				if err := dh.ensureByServerSideApply(ctx, un); err != nil {
+					return err
+				}
+			} else {
+				if err := dh.ensureGatekeeperConstraint(ctx, un); err != nil {
+					return err
+				}
 			}
 			continue
 		}
@@ -161,6 +175,40 @@ func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntim
 	}
 
 	return clienthelper.Merge(old.(client.Object), new.(client.Object))
+}
+
+// isAdmissionRegistrationResource returns true for ValidatingAdmissionPolicy
+// and ValidatingAdmissionPolicyBinding resources that should be managed via
+// server-side apply rather than the Gatekeeper-specific path.
+func isAdmissionRegistrationResource(uns *unstructured.Unstructured) bool {
+	return uns.GroupVersionKind().Group == "admissionregistration.k8s.io"
+}
+
+// ensureByServerSideApply creates or updates a single unstructured object
+// using server-side apply. This correctly reconciles all fields, unlike
+// ensureUnstructuredObj which only compares Gatekeeper's enforcementAction.
+func (dh *dynamicHelper) ensureByServerSideApply(ctx context.Context, uns *unstructured.Unstructured) error {
+	gvr, err := dh.Resolve(uns.GroupVersionKind().GroupKind().String(), uns.GroupVersionKind().Version)
+	if err != nil {
+		return err
+	}
+
+	data, err := json.Marshal(uns)
+	if err != nil {
+		return fmt.Errorf("marshalling %s/%s: %w", uns.GroupVersionKind().GroupKind(), uns.GetName(), err)
+	}
+
+	dh.log.Infof("Apply %s", keyFunc(uns.GroupVersionKind().GroupKind(), uns.GetNamespace(), uns.GetName()))
+	_, err = dh.dynamicClient.Resource(*gvr).
+		Namespace(uns.GetNamespace()).
+		Patch(ctx, uns.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+			FieldManager: "aro-operator",
+			Force:        pointerutils.ToPtr(true),
+		})
+	if err != nil {
+		return fmt.Errorf("server-side apply %s/%s: %w", uns.GroupVersionKind().GroupKind(), uns.GetName(), err)
+	}
+	return nil
 }
 
 func makeURLSegments(gvr *schema.GroupVersionResource, namespace, name string) (url []string) {

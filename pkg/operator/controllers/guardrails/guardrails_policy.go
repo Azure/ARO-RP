@@ -16,6 +16,7 @@ import (
 	"time"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -114,8 +115,50 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 	return nil
 }
 
-func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
-	r.policyTickerDone = make(chan bool)
+// gatekeeperCleanupNeeded returns true if there are Gatekeeper resources on the
+// cluster that should be removed as part of the migration to VAP. This covers
+// the upgrade scenario where Gatekeeper was deployed on a pre-4.17 cluster.
+func (r *Reconciler) gatekeeperCleanupNeeded(ctx context.Context, instance *arov1alpha1.Cluster) bool {
+	if r.cleanupNeeded {
+		return true
+	}
+	if r.kubernetescli == nil {
+		return false
+	}
+	ns := instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)
+	_, err := r.kubernetescli.AppsV1().Deployments(ns).Get(ctx, "gatekeeper-audit", metav1.GetOptions{})
+	return err == nil
+}
+
+// cleanupGatekeeper removes all Gatekeeper resources: constraints, constraint
+// templates, and the deployment itself. It is safe to call when no Gatekeeper
+// resources exist.
+func (r *Reconciler) cleanupGatekeeper(ctx context.Context, instance *arov1alpha1.Cluster) error {
+	r.log.Info("cleaning up Gatekeeper resources after upgrade to v4.17+")
+
+	r.stopGKTicker()
+
+	if err := r.removePolicy(ctx, gkPolicyConstraints, gkConstraintsPath); err != nil {
+		r.log.Warnf("failed to remove Gatekeeper constraints: %s", err.Error())
+	}
+
+	if r.gkPolicyTemplate != nil {
+		if err := r.gkPolicyTemplate.Remove(ctx, config.GuardRailsPolicyConfig{}); err != nil {
+			r.log.Warnf("failed to remove Gatekeeper ConstraintTemplates: %s", err.Error())
+		}
+	}
+
+	ns := instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)
+	if err := r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: ns}); err != nil {
+		return fmt.Errorf("failed to remove Gatekeeper deployment: %w", err)
+	}
+
+	r.cleanupNeeded = false
+	return nil
+}
+
+func (r *Reconciler) gkTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
+	r.gkTickerDone = make(chan bool)
 	var err error
 
 	minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
@@ -128,44 +171,44 @@ func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Clu
 	defer ticker.Stop()
 	for {
 		select {
-		case done := <-r.policyTickerDone:
+		case done := <-r.gkTickerDone:
 			if done {
-				r.policyTickerDone = nil
+				r.gkTickerDone = nil
 				return
 			}
 			// false to trigger a ticker reset
-			r.log.Infof("policyTicker reset to %d min", r.reconciliationMinutes)
+			r.log.Infof("gkTicker reset to %d min", r.reconciliationMinutes)
 			ticker.Reset(time.Duration(r.reconciliationMinutes) * time.Minute)
 		case <-ticker.C:
 			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
-				r.log.Errorf("policyTicker ensurePolicy error %s", err.Error())
+				r.log.Errorf("gkTicker ensurePolicy error %s", err.Error())
 			}
 		}
 	}
 }
 
-func (r *Reconciler) startTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
+func (r *Reconciler) startGKTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
 	minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
 	min, err := strconv.Atoi(minutes)
 	if err != nil {
 		min, _ = strconv.Atoi(defaultReconciliationMinutes)
 	}
-	if r.reconciliationMinutes != min && r.policyTickerDone != nil {
+	if r.reconciliationMinutes != min && r.gkTickerDone != nil {
 		// trigger ticker reset
 		r.reconciliationMinutes = min
-		r.policyTickerDone <- false
+		r.gkTickerDone <- false
 	}
 
 	// make sure only one ticker started
-	if r.policyTickerDone == nil {
-		go r.policyTicker(ctx, instance)
+	if r.gkTickerDone == nil {
+		go r.gkTicker(ctx, instance)
 	}
 }
 
-func (r *Reconciler) stopTicker() {
-	if r.policyTickerDone != nil {
-		r.policyTickerDone <- true
-		close(r.policyTickerDone)
+func (r *Reconciler) stopGKTicker() {
+	if r.gkTickerDone != nil {
+		r.gkTickerDone <- true
+		close(r.gkTickerDone)
 	}
 }

@@ -17,20 +17,37 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configv1 "github.com/openshift/api/config/v1"
+
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
+	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-func TestGuardRailsReconciler(t *testing.T) {
+func clusterVersionForTest(version string) *configv1.ClusterVersion {
+	return &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{Name: "version"},
+		Status: configv1.ClusterVersionStatus{
+			History: []configv1.UpdateHistory{
+				{State: configv1.CompletedUpdate, Version: version},
+			},
+		},
+	}
+}
+
+func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
+	cv := clusterVersionForTest("4.16.0")
+
 	tests := []struct {
 		name          string
 		mocks         func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
+		dhMocks       func(*mock_dynamichelper.MockInterface)
 		flags         arov1alpha1.OperatorFlags
 		cleanupNeeded bool
-		// errors
-		wantErr string
+		wantErr       string
 	}{
 		{
 			name: "disabled",
@@ -161,6 +178,9 @@ func TestGuardRailsReconciler(t *testing.T) {
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
 			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "managed=false (removal), Remove() fails",
@@ -173,7 +193,10 @@ func TestGuardRailsReconciler(t *testing.T) {
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(errors.New("failed delete"))
 			},
-			wantErr: "failed delete",
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			wantErr: "failed to remove Gatekeeper deployment: failed delete",
 		},
 		{
 			name: "managed=blank (no action)",
@@ -202,16 +225,21 @@ func TestGuardRailsReconciler(t *testing.T) {
 					ACRDomain:     "acrtest.example.com",
 				},
 			}
-			deployer := mock_deployer.NewMockDeployer(controller)
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(cluster)
+			dep := mock_deployer.NewMockDeployer(controller)
+			dh := mock_dynamichelper.NewMockInterface(controller)
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(cluster, cv)
 
 			if tt.mocks != nil {
-				tt.mocks(deployer, cluster)
+				tt.mocks(dep, cluster)
+			}
+			if tt.dhMocks != nil {
+				tt.dhMocks(dh)
 			}
 
 			r := &Reconciler{
 				log:               logrus.NewEntry(logrus.StandardLogger()),
-				deployer:          deployer,
+				deployer:          dep,
+				dh:                dh,
 				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
@@ -224,6 +252,153 @@ func TestGuardRailsReconciler(t *testing.T) {
 
 			if err == nil && tt.wantErr != "" {
 				t.Errorf("did not get an error, but wanted error '%v'", tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestReconcileVAP(t *testing.T) {
+	cv := clusterVersionForTest("4.17.0")
+
+	tests := []struct {
+		name          string
+		flags         arov1alpha1.OperatorFlags
+		depMocks      func(*mock_deployer.MockDeployer)
+		dhMocks       func(*mock_dynamichelper.MockInterface)
+		cleanupNeeded bool
+		wantErr       string
+	}{
+		{
+			name: "VAP: disabled",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:       operator.FlagFalse,
+				operator.GuardrailsDeployManaged: operator.FlagTrue,
+			},
+		},
+		{
+			name: "VAP: managed=true, deploys VAP policies",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:                            operator.FlagTrue,
+				operator.GuardrailsDeployManaged:                      operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyManaged:           operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
+				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				// 3 policies + 3 bindings = 6 Ensure calls (server-side apply)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+			},
+		},
+		{
+			name: "VAP: managed=true with gatekeeper migration (upgrade from pre-4.17)",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:                            operator.FlagTrue,
+				operator.GuardrailsDeployManaged:                      operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyManaged:           operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
+				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
+			},
+			cleanupNeeded: true,
+			depMocks: func(md *mock_deployer.MockDeployer) {
+				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				// cleanupGatekeeper: removePolicy calls EnsureDeletedGVR for GK constraints
+				// then deployVAP: 3 Ensure (policy) + 3 EnsureDeletedGVR (binding delete) + 3 Ensure (binding recreate)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+			},
+		},
+		{
+			name: "VAP: managed=false, removes all policies",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagFalse,
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				// 3 policies × (binding delete + policy delete) = 6 deletions
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(6)
+			},
+		},
+		{
+			name: "VAP: managed=blank, no action",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: "",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			cluster := &arov1alpha1.Cluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Cluster",
+					APIVersion: "aro.openshift.io/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: tt.flags,
+				},
+			}
+
+			dep := mock_deployer.NewMockDeployer(controller)
+			dh := mock_dynamichelper.NewMockInterface(controller)
+			if tt.depMocks != nil {
+				tt.depMocks(dep)
+			}
+			if tt.dhMocks != nil {
+				tt.dhMocks(dh)
+			}
+
+			r := &Reconciler{
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+				deployer:      dep,
+				client:        ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
+				dh:            dh,
+				cleanupNeeded: tt.cleanupNeeded,
+			}
+			_, err := r.Reconcile(context.Background(), reconcile.Request{})
+			if err != nil && err.Error() != tt.wantErr {
+				t.Errorf("got error '%v', wanted error '%v'", err, tt.wantErr)
+			}
+
+			if err == nil && tt.wantErr != "" {
+				t.Errorf("did not get an error, but wanted error '%v'", tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestVapValidationAction(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"deny", "Deny"},
+		{"Deny", "Deny"},
+		{"warn", "Warn"},
+		{"Warn", "Warn"},
+		{"dryrun", "Audit"},
+		{"DryRun", "Audit"},
+		{"", "Warn"},
+		{"unknown", "Warn"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := vapValidationAction(tt.input)
+			if got != tt.want {
+				t.Errorf("vapValidationAction(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
