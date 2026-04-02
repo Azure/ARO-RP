@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	drainMaxRetries = 3
-	drainRetryDelay = 2 * time.Second
+	drainMaxAttempts = 3
+	drainRetryDelay  = 2 * time.Second
 )
 
 func (k *kubeActions) CordonNode(ctx context.Context, nodeName string, shouldCordon bool) error {
@@ -66,21 +66,24 @@ func (k *kubeActions) DrainNode(ctx context.Context, nodeName string) error {
 
 func (k *kubeActions) DrainNodeWithRetries(ctx context.Context, nodeName string) error {
 	var lastErr error
-	for attempt := 0; attempt <= drainMaxRetries; attempt++ {
+	for attempt := range drainMaxAttempts {
 		err := k.DrainNode(ctx, nodeName)
 		if err == nil {
 			return nil
 		}
 		lastErr = err
-		remaining := drainMaxRetries - attempt
-		if remaining > 0 {
-			k.log.Infof("Drain attempt %d failed for %s: %v. Retrying %d more times.", attempt+1, nodeName, err, remaining)
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(drainRetryDelay):
-			}
+
+		if attempt == drainMaxAttempts-1 {
+			break
+		}
+
+		remainingRetries := drainMaxAttempts - attempt - 1
+		k.log.Infof("Drain attempt %d failed for %s: %v. Retrying %d more times.", attempt+1, nodeName, err, remainingRetries)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(drainRetryDelay):
 		}
 	}
-	return fmt.Errorf("could not drain node after %d retries: %w", drainMaxRetries, lastErr)
+	return fmt.Errorf("could not drain node after %d attempts: %w", drainMaxAttempts, lastErr)
 }
