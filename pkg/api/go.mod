@@ -1,6 +1,6 @@
 module github.com/Azure/ARO-RP/pkg/api
 
-go 1.24.1
+go 1.24.0
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
