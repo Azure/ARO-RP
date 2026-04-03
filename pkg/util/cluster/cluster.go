@@ -402,7 +402,7 @@ func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, erro
 	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
 }
 
-func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string) error {
+func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string, diskEncryptionSetID string) error {
 	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
 	if err != nil {
 		return fmt.Errorf("failed parsing platformWI Roles: %w", err)
@@ -451,10 +451,104 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			return err
 		}
 
+		// Check if this role definition has DES permissions and assign DES-scoped role if needed
+		err = c.assignDiskEncryptionSetRoleIfNeeded(ctx, wi.RoleDefinitionID, *resp.Properties.PrincipalID, diskEncryptionSetID)
+		if err != nil {
+			return err
+		}
+
 		if wi.OperatorName != "aro-Cluster" {
 			c.workloadIdentities[wi.OperatorName] = api.PlatformWorkloadIdentity{
 				ResourceID: *resp.ID,
 			}
+		}
+	}
+
+	return nil
+}
+
+// assignDiskEncryptionSetRoleIfNeeded checks if the role definition has DES-related permissions
+// and creates a DES-scoped role assignment if it does
+func (c *Cluster) assignDiskEncryptionSetRoleIfNeeded(ctx context.Context, roleDefinitionID string, principalID string, diskEncryptionSetID string) error {
+	// Extract the role GUID from the full resource ID
+	// roleDefinitionID format: /providers/Microsoft.Authorization/roleDefinitions/{guid}
+	parts := strings.Split(roleDefinitionID, "/")
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid role definition ID format: %s", roleDefinitionID)
+	}
+	roleGUID := parts[len(parts)-1]
+
+	// Get the role definition to check its permissions
+	// Use subscription scope to query the role definition
+	subscriptionScope := fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
+
+	// List role definitions with a filter for the specific role
+	filter := fmt.Sprintf("roleName eq '%s'", roleGUID)
+	roleDefs, err := c.roledefinitions.List(ctx, subscriptionScope, filter)
+	if err != nil {
+		return fmt.Errorf("failed to list role definition %s: %w", roleDefinitionID, err)
+	}
+
+	if len(roleDefs) == 0 {
+		return fmt.Errorf("role definition %s not found", roleDefinitionID)
+	}
+
+	roleDef := roleDefs[0]
+
+	// Check if the role has DES-related permissions
+	hasDESPermission := false
+	if roleDef.Permissions != nil {
+		for _, perm := range *roleDef.Permissions {
+			if perm.Actions != nil {
+				for _, action := range *perm.Actions {
+					// Check for DES-related actions
+					if strings.Contains(action, "Microsoft.Compute/diskEncryptionSets") {
+						hasDESPermission = true
+						break
+					}
+				}
+			}
+			if hasDESPermission {
+				break
+			}
+		}
+	}
+
+	// If the role has DES permissions, assign it scoped to the DES
+	if hasDESPermission {
+		c.log.Infof("assigning role %s to DES for principal %s", roleDefinitionID, principalID)
+		for i := 0; i < 5; i++ {
+			_, err := c.roleassignments.Create(
+				ctx,
+				diskEncryptionSetID,
+				uuid.DefaultGenerator.Generate(),
+				mgmtauthorization.RoleAssignmentCreateParameters{
+					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+						RoleDefinitionID: &roleDefinitionID,
+						PrincipalID:      &principalID,
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				},
+			)
+
+			// Ignore if the role assignment already exists
+			if detailedError, ok := err.(autorest.DetailedError); ok {
+				if detailedError.StatusCode == http.StatusConflict {
+					err = nil
+				}
+			}
+
+			if err != nil && i < 4 {
+				// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
+				// Retry a few times.
+				c.log.Print(err)
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			break
 		}
 	}
 
@@ -622,13 +716,6 @@ func (c *Cluster) Create(ctx context.Context) error {
 		diskEncryptionSetName,
 	)
 
-	if c.Config.UseWorkloadIdentity {
-		c.log.Info("creating WIs")
-		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup); err != nil {
-			return fmt.Errorf("error setting up Workload Identity Roles: %w", err)
-		}
-	}
-
 	principalIds := []string{
 		c.Config.FPServicePrincipalID,
 	}
@@ -643,6 +730,13 @@ func (c *Cluster) Create(ctx context.Context) error {
 	err = c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, principalIds)
 	if err != nil {
 		return err
+	}
+
+	if c.Config.UseWorkloadIdentity {
+		c.log.Info("creating WIs")
+		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup, diskEncryptionSetID); err != nil {
+			return fmt.Errorf("error setting up Workload Identity Roles: %w", err)
+		}
 	}
 
 	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
