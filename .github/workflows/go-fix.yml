@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - master
-      # TEMP: allow pre-merge validation on this PR branch.
-      - copilot/automate-go-fix-commands
     paths:
       - 'go.mod'
       - 'pkg/api/go.mod'
