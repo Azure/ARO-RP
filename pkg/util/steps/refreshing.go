@@ -150,14 +150,7 @@ func CreateActionableError(err error, managedRGName string) error {
 			"value are correct."),
 			http.StatusBadRequest,
 		)
-	case azureerrors.HasAuthorizationFailedError(err):
-		return newServicePrincipalCloudError(make_one_line_str(
-			"Authorization using provided credentials failed.",
-			"Please ensure that the provided application (client)",
-			"id and client secret value are correct."),
-			http.StatusBadRequest,
-		)
-	case azureerrors.IsInvalidSecretError(err):
+	case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
 		return newServicePrincipalCloudError(make_one_line_str(
 			"Authorization using provided credentials failed.",
 			"Please ensure that the provided application (client)",

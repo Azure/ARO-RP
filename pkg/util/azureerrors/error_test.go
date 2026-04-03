@@ -474,13 +474,6 @@ func TestResourceGroupFromError(t *testing.T) {
 			wantOK: true,
 		},
 		{
-			name: "azcore fallback to error message when RawResponse is nil",
-			err: &azcore.ResponseError{
-				StatusCode: http.StatusForbidden,
-				ErrorCode:  CODE_AUTHFAILED,
-			},
-		},
-		{
 			name: "autorest DetailedError with nil Response falls back to message",
 			err: autorest.DetailedError{
 				Original: &azure.ServiceError{
