@@ -429,7 +429,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - MUO Deployment", func(ctx context.Context) {
+var _ = Describe("ARO Operator - MUO Deployment", func() {
 	const (
 		managedUpgradeOperatorNamespace  = "openshift-managed-upgrade-operator"
 		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
