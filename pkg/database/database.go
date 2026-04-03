@@ -91,12 +91,12 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 		return h, nil
 	}
 
-	err := h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{aead: aead})
+	err := h.SetInterfaceExt(reflect.TypeFor[api.SecureBytes](), 1, secureBytesExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{aead: aead})
+	err = h.SetInterfaceExt(reflect.TypeFor[*api.SecureString](), 1, secureStringExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}

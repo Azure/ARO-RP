@@ -18,7 +18,7 @@ import (
 
 type PersistedGraph map[string]json.RawMessage
 
-func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) error {
+func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...any) error {
 	for _, i := range is {
 		d := json.NewDecoder(bytes.NewReader(pg[reflect.TypeOf(i).Elem().String()]))
 
@@ -35,7 +35,7 @@ func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) erro
 	return nil
 }
 
-func (pg PersistedGraph) GetByName(disallowUnknownFields bool, name string, out interface{}) error {
+func (pg PersistedGraph) GetByName(disallowUnknownFields bool, name string, out any) error {
 	graphItem, ok := pg[name]
 	if !ok {
 		return fmt.Errorf("entry '%s' not found in persisted graph", name)

@@ -48,9 +48,9 @@ func (f *frontend) _getAdminHiveSyncSet(ctx context.Context, namespace string, s
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "hive is not enabled")
 	}
 
-	ssType := reflect.TypeOf(hivev1.SelectorSyncSet{})
+	ssType := reflect.TypeFor[hivev1.SelectorSyncSet]()
 	if isSyncSet {
-		ssType = reflect.TypeOf(hivev1.SyncSet{})
+		ssType = reflect.TypeFor[hivev1.SyncSet]()
 	}
 	if isSyncSet && namespace == "" {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "namespace cannot be null for getting a syncset")

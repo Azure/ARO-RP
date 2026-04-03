@@ -168,7 +168,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
 	}
 
-	var ext interface{}
+	var ext any
 	switch putOrPatchClusterParameters.method {
 	// In case of PUT we will take customer request payload and store into database
 	// Our base structure for unmarshal is skeleton document with values we
@@ -444,7 +444,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 	return nil
 }
 
-func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error {
+func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext any, path string) error {
 	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, path)
 	if err != nil {
 		return err

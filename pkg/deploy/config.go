@@ -14,8 +14,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"sigs.k8s.io/yaml"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -188,7 +186,7 @@ func (conf *RPConfig) validate() error {
 			return err
 		}
 		publicKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
-		conf.Configuration.SSHPublicKey = pointerutils.ToPtr(string(publicKeyBytes))
+		conf.Configuration.SSHPublicKey = new(string(publicKeyBytes))
 	}
 
 	for i := 0; i < v.NumField(); i++ {

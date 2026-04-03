@@ -8,7 +8,7 @@ import (
 )
 
 type pullSecret struct {
-	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
+	Auths map[string]map[string]any `json:"auths,omitempty"`
 }
 
 func Validate(_ps string) error {

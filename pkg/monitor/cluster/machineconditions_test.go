@@ -21,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -147,7 +146,7 @@ func newTestMachine(t *testing.T, name, role, machineset, phase string, isSpot b
 			Labels:    labels,
 		},
 		Status: machinev1beta1.MachineStatus{
-			Phase: pointerutils.ToPtr(phase),
+			Phase: new(phase),
 		},
 		Spec: machinev1beta1.MachineSpec{
 			ProviderSpec: providerSpec,

@@ -91,11 +91,11 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 		}
 		kc.Labels[labelName] = labelValue
 
-		b, err := json.Marshal(map[string]interface{}{
-			"systemReserved": map[string]interface{}{
+		b, err := json.Marshal(map[string]any{
+			"systemReserved": map[string]any{
 				"memory": memReserved,
 			},
-			"evictionHard": map[string]interface{}{
+			"evictionHard": map[string]any{
 				"memory.available":  hardEviction,
 				"nodefs.available":  nodeFsAvailable,
 				"nodefs.inodesFree": nodeFsInodes,

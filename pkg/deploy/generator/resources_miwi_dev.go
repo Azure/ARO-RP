@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -31,18 +30,18 @@ func (g *generator) oicStorageAccount() *arm.Resource {
 			Name: "Standard_LRS",
 		},
 		AccountProperties: &mgmtstorage.AccountProperties{
-			AllowBlobPublicAccess:  pointerutils.ToPtr(false),
-			EnableHTTPSTrafficOnly: pointerutils.ToPtr(true),
+			AllowBlobPublicAccess:  new(false),
+			EnableHTTPSTrafficOnly: new(true),
 			MinimumTLSVersion:      mgmtstorage.MinimumTLSVersionTLS12,
 			AccessTier:             mgmtstorage.AccessTierHot,
-			AllowSharedKeyAccess:   pointerutils.ToPtr(false),
+			AllowSharedKeyAccess:   new(false),
 			// Production has Public Network Access Disabled as OIDC Storage Account will be accessed via Azure Front Door
 		},
-		Name:     pointerutils.ToPtr(fmt.Sprintf("[%s]", storageAccountName)),
-		Location: pointerutils.ToPtr("[resourceGroup().location]"),
-		Type:     pointerutils.ToPtr(resourceTypeStorageAccount),
+		Name:     new(fmt.Sprintf("[%s]", storageAccountName)),
+		Location: new("[resourceGroup().location]"),
+		Type:     new(resourceTypeStorageAccount),
 		Tags: map[string]*string{
-			tagKeyExemptPublicBlob: pointerutils.ToPtr(tagValueExemptPublicBlob),
+			tagKeyExemptPublicBlob: new(tagValueExemptPublicBlob),
 		},
 	}
 

@@ -48,7 +48,7 @@ func marshalAzureMachineProviderSpec(t *testing.T, spec *machinev1beta1.AzureMac
 	return buf.Bytes()
 }
 
-func marshal(t *testing.T, i interface{}) []byte {
+func marshal(t *testing.T, i any) []byte {
 	b, err := json.Marshal(i)
 	if err != nil {
 		t.Fatal(i)
@@ -61,23 +61,23 @@ func marshal(t *testing.T, i interface{}) []byte {
 }
 
 func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource string) *corev1.Secret {
-	config := map[string]interface{}{
+	config := map[string]any{
 		"extrakey": true,
 	}
 
 	if appendSource != "" {
-		config["append"] = []interface{}{
-			map[string]interface{}{
-				"extrakey": []interface{}{},
+		config["append"] = []any{
+			map[string]any{
+				"extrakey": []any{},
 				"source":   appendSource,
 			},
 		}
 	}
 
 	if mergeSource != "" {
-		config["merge"] = []interface{}{
-			map[string]interface{}{
-				"extrakey": map[string]interface{}{},
+		config["merge"] = []any{
+			map[string]any{
+				"extrakey": map[string]any{},
 				"source":   appendSource,
 			},
 		}
@@ -89,9 +89,9 @@ func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource str
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
-			"userData": marshal(t, map[string]interface{}{
+			"userData": marshal(t, map[string]any{
 				"extrakey": 1,
-				"ignition": map[string]interface{}{
+				"ignition": map[string]any{
 					"extrakey": "2",
 					"config":   config,
 				},

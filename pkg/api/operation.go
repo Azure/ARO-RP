@@ -18,7 +18,7 @@ type Operation struct {
 	Name string `json:"name,omitempty"`
 
 	// The object that describes the operation.
-	Display Display `json:"display,omitempty"`
+	Display Display `json:"display"`
 
 	// Sources of requests to this operation.  Comma separated list with valid values user or system, e.g. "user,system".
 	Origin string `json:"origin,omitempty"`

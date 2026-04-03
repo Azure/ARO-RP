@@ -428,7 +428,7 @@ func addCSRF(req *http.Request) error {
 func addAuth(req *http.Request, groups []string) error {
 	store := sessions.NewCookieStore(make([]byte, 32))
 
-	cookie, err := securecookie.EncodeMulti(middleware.SessionName, map[interface{}]interface{}{
+	cookie, err := securecookie.EncodeMulti(middleware.SessionName, map[any]any{
 		middleware.SessionKeyUsername: "username",
 		middleware.SessionKeyGroups:   groups,
 		middleware.SessionKeyExpires:  time.Now().Add(time.Hour).Unix(),

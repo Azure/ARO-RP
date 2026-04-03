@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_containerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerregistry"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 )
 
@@ -42,7 +41,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 	tokens.EXPECT().
 		CreateAndWait(ctx, "global", "arointsvc", gomock.Any(), mgmtcontainerregistry.Token{
 			TokenProperties: &mgmtcontainerregistry.TokenProperties{
-				ScopeMapID: pointerutils.ToPtr(registryResourceID + "/scopeMaps/_repositories_pull"),
+				ScopeMapID: new(registryResourceID + "/scopeMaps/_repositories_pull"),
 				Status:     mgmtcontainerregistry.TokenStatusEnabled,
 			},
 		}).
@@ -54,7 +53,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		Return(mgmtcontainerregistry.GenerateCredentialsResult{
 			Passwords: &[]mgmtcontainerregistry.TokenPassword{
 				{
-					Value: pointerutils.ToPtr("foo"),
+					Value: new("foo"),
 				},
 			},
 		}, nil)
@@ -202,11 +201,11 @@ func fakeCredentialResult() mgmtcontainerregistry.GenerateCredentialsResult {
 		Passwords: &[]mgmtcontainerregistry.TokenPassword{
 			{
 				Name:  mgmtcontainerregistry.TokenPasswordNamePassword1,
-				Value: pointerutils.ToPtr("foo"),
+				Value: new("foo"),
 			},
 			{
 				Name:  mgmtcontainerregistry.TokenPasswordNamePassword2,
-				Value: pointerutils.ToPtr("bar"),
+				Value: new("bar"),
 			},
 		},
 	}
@@ -222,7 +221,7 @@ func fakeTokenProperties(tp *[]mgmtcontainerregistry.TokenPassword) mgmtcontaine
 
 func generateCredentialsParameters(tpn mgmtcontainerregistry.TokenPasswordName) mgmtcontainerregistry.GenerateCredentialsParameters {
 	return mgmtcontainerregistry.GenerateCredentialsParameters{
-		TokenID: pointerutils.ToPtr(registryResourceID + "/tokens/" + tokenName),
+		TokenID: new(registryResourceID + "/tokens/" + tokenName),
 		Name:    tpn,
 	}
 }

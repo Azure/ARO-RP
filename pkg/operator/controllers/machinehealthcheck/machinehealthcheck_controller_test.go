@@ -297,7 +297,7 @@ type mhcIsPausedMatcher struct {
 	paused bool
 }
 
-func (m mhcIsPausedMatcher) Matches(x interface{}) bool {
+func (m mhcIsPausedMatcher) Matches(x any) bool {
 	if objs, ok := x.([]kruntime.Object); !ok {
 		return false
 	} else {

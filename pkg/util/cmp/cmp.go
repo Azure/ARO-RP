@@ -13,7 +13,7 @@ import (
 )
 
 // Diff is a wrapper for github.com/google/go-cmp/cmp.Diff with extra options
-func Diff(x, y interface{}, opts ...cmp.Option) string {
+func Diff(x, y any, opts ...cmp.Option) string {
 	newOpts := append(
 		opts,
 		// FIXME: Remove x509CertComparer after upgrading to a Go version that includes https://github.com/golang/go/issues/28743

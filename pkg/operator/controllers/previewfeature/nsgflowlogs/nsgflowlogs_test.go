@@ -61,24 +61,24 @@ func getValidPreviewFeatureInstance() *aropreviewv1alpha1.PreviewFeature {
 func getValidFlowLogFeature() *armnetwork.FlowLog {
 	return &armnetwork.FlowLog{
 		Properties: &armnetwork.FlowLogPropertiesFormat{
-			TargetResourceID: pointerutils.ToPtr(""),
-			Enabled:          pointerutils.ToPtr(true),
-			StorageID:        pointerutils.ToPtr(""),
+			TargetResourceID: new(""),
+			Enabled:          new(true),
+			StorageID:        new(""),
 			RetentionPolicy: &armnetwork.RetentionPolicyParameters{
-				Days: pointerutils.ToPtr(int32(0)),
+				Days: new(int32(0)),
 			},
 			Format: &armnetwork.FlowLogFormatParameters{
 				Type:    pointerutils.ToPtr(armnetwork.FlowLogFormatTypeJSON),
-				Version: pointerutils.ToPtr(int32(0)),
+				Version: new(int32(0)),
 			},
 			FlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsProperties{
 				NetworkWatcherFlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsConfigurationProperties{
-					TrafficAnalyticsInterval: pointerutils.ToPtr(int32(0)),
-					WorkspaceID:              pointerutils.ToPtr(""),
+					TrafficAnalyticsInterval: new(int32(0)),
+					WorkspaceID:              new(""),
 				},
 			},
 		},
-		Location: pointerutils.ToPtr(location),
+		Location: new(location),
 	}
 }
 

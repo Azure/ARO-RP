@@ -26,7 +26,7 @@ type OpenShiftVersion struct {
 	Type string `json:"type,omitempty" mutable:"case"`
 
 	// The properties for the OpenShiftVersion resource.
-	Properties OpenShiftVersionProperties `json:"properties,omitempty"`
+	Properties OpenShiftVersionProperties `json:"properties"`
 }
 
 // OpenShiftVersionProperties represents the properties of an OpenShiftVersion.

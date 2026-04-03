@@ -10,7 +10,7 @@ import (
 
 func TestToPtr(t *testing.T) {
 	input := []byte("Test String")
-	output := ToPtr(input)
+	output := new(input)
 
 	if output == &input {
 		t.Errorf("Value returned by ToPtr does not matches the expected pointer value")

@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -239,7 +238,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
-			InstallAttemptsLimit: pointerutils.ToPtr(int32(1)),
+			InstallAttemptsLimit: new(int32(1)),
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
 			},

@@ -48,7 +48,7 @@ func init() {
 }
 
 type noopOauther struct {
-	tokenMap map[string]interface{}
+	tokenMap map[string]any
 	err      error
 }
 
@@ -84,7 +84,7 @@ func TestAAD(t *testing.T) {
 		{
 			name: "authenticated",
 			request: func(a *aad) (*http.Request, error) {
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
 					SessionKeyExpires:  int64(1),
@@ -106,7 +106,7 @@ func TestAAD(t *testing.T) {
 		{
 			name: "expired - not authenticated",
 			request: func(a *aad) (*http.Request, error) {
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
 					SessionKeyExpires:  int64(-1),
@@ -387,7 +387,7 @@ func TestLogout(t *testing.T) {
 		{
 			name: "authenticated",
 			request: func(a *aad) (*http.Request, error) {
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
 					SessionKeyExpires:  int64(0),
@@ -466,7 +466,7 @@ func TestLogout(t *testing.T) {
 				t.Error(w.Header().Get("Location"))
 			}
 
-			var m map[interface{}]interface{}
+			var m map[any]any
 			cookies := w.Result().Cookies()
 			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
 			if err != nil {
@@ -509,7 +509,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -527,7 +527,7 @@ func TestCallback(t *testing.T) {
 				}, nil
 			},
 			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{
+				tokenMap: map[string]any{
 					"id_token": string(idToken),
 				},
 			},
@@ -559,7 +559,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -583,7 +583,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -609,7 +609,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -636,7 +636,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -661,7 +661,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -679,7 +679,7 @@ func TestCallback(t *testing.T) {
 				}, nil
 			},
 			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{"id_token": ""},
+				tokenMap: map[string]any{"id_token": ""},
 			},
 			verifier: &oidc.NoopVerifier{
 				Err: fmt.Errorf("failed"),
@@ -691,7 +691,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -709,7 +709,7 @@ func TestCallback(t *testing.T) {
 				}, nil
 			},
 			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{
+				tokenMap: map[string]any{
 					"id_token": "",
 				},
 			},
@@ -721,7 +721,7 @@ func TestCallback(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				uuid := uuid.DefaultGenerator.Generate()
 
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
+				cookie, err := securecookie.EncodeMulti(SessionName, map[any]any{
 					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
@@ -739,7 +739,7 @@ func TestCallback(t *testing.T) {
 				}, nil
 			},
 			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{
+				tokenMap: map[string]any{
 					"id_token": "null",
 				},
 			},
@@ -787,7 +787,7 @@ func TestCallback(t *testing.T) {
 				return
 			}
 
-			type cookie map[interface{}]interface{}
+			type cookie map[any]any
 			var m cookie
 			cookies := w.Result().Cookies()
 			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
@@ -880,7 +880,7 @@ func TestClientAssertion(t *testing.T) {
 	}
 
 	p := jwt.NewParser()
-	_, err = p.Parse(req.Form.Get("client_assertion"), func(*jwt.Token) (interface{}, error) {
+	_, err = p.Parse(req.Form.Get("client_assertion"), func(*jwt.Token) (any, error) {
 		return &clientkey.PublicKey, nil
 	})
 	if err != nil {

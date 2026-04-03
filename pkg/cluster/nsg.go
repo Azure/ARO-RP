@@ -16,8 +16,8 @@ import (
 func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 	nsg := &armnetwork.SecurityGroup{
 		Properties: &armnetwork.SecurityGroupPropertiesFormat{},
-		Name:       pointerutils.ToPtr(infraID + apisubnet.NSGSuffixV2),
-		Type:       pointerutils.ToPtr("Microsoft.Network/networkSecurityGroups"),
+		Name:       new(infraID + apisubnet.NSGSuffixV2),
+		Type:       new("Microsoft.Network/networkSecurityGroups"),
 		Location:   &location,
 	}
 
@@ -26,15 +26,15 @@ func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 			{
 				Properties: &armnetwork.SecurityRulePropertiesFormat{
 					Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
-					SourcePortRange:          pointerutils.ToPtr("*"),
-					DestinationPortRange:     pointerutils.ToPtr("6443"),
-					SourceAddressPrefix:      pointerutils.ToPtr("*"),
-					DestinationAddressPrefix: pointerutils.ToPtr("*"),
+					SourcePortRange:          new("*"),
+					DestinationPortRange:     new("6443"),
+					SourceAddressPrefix:      new("*"),
+					DestinationAddressPrefix: new("*"),
 					Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
-					Priority:                 pointerutils.ToPtr(int32(120)),
+					Priority:                 new(int32(120)),
 					Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
 				},
-				Name: pointerutils.ToPtr("apiserver_in"),
+				Name: new("apiserver_in"),
 			},
 		}
 	}

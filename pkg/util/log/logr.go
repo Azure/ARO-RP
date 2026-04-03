@@ -23,14 +23,14 @@ func (lw *logrWrapper) Enabled(level int) bool {
 	return level <= int(logrus.GetLevel())
 }
 
-func (lw *logrWrapper) Error(err error, msg string, keysAndValues ...interface{}) {
+func (lw *logrWrapper) Error(err error, msg string, keysAndValues ...any) {
 	lw.withKeysAndValues(keysAndValues).Error(msg, " ", err)
 }
 
-func (lw *logrWrapper) withKeysAndValues(keysAndValues []interface{}) *logrus.Entry {
+func (lw *logrWrapper) withKeysAndValues(keysAndValues []any) *logrus.Entry {
 	fields := logrus.Fields{}
 	for i := 0; i < len(keysAndValues); i += 2 {
-		var v interface{}
+		var v any
 		if i+1 < len(keysAndValues) {
 			v = keysAndValues[i+1]
 		}
@@ -40,11 +40,11 @@ func (lw *logrWrapper) withKeysAndValues(keysAndValues []interface{}) *logrus.En
 	return lw.entry.WithFields(fields)
 }
 
-func (lw *logrWrapper) Info(level int, msg string, keysAndValues ...interface{}) {
+func (lw *logrWrapper) Info(level int, msg string, keysAndValues ...any) {
 	lw.withKeysAndValues(keysAndValues).Info(msg)
 }
 
-func (lw *logrWrapper) WithValues(keysAndValues ...interface{}) logr.LogSink {
+func (lw *logrWrapper) WithValues(keysAndValues ...any) logr.LogSink {
 	return &logrWrapper{
 		entry: lw.withKeysAndValues(keysAndValues),
 	}
@@ -52,7 +52,7 @@ func (lw *logrWrapper) WithValues(keysAndValues ...interface{}) logr.LogSink {
 
 func (lw *logrWrapper) WithName(name string) logr.LogSink {
 	return &logrWrapper{
-		entry: lw.withKeysAndValues([]interface{}{name, ""}),
+		entry: lw.withKeysAndValues([]any{name, ""}),
 	}
 }
 

@@ -57,7 +57,7 @@ func formatServerGroups(path string) error {
 		return err
 	}
 
-	var i interface{}
+	var i any
 
 	err = json.Unmarshal(b, &i)
 	if err != nil {

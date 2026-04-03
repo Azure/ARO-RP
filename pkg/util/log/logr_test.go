@@ -13,18 +13,18 @@ import (
 func TestLogrWrapperWithKeysAndValues(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		kv       []interface{}
+		kv       []any
 		expected logrus.Fields
 	}{
 		{
-			kv: []interface{}{"", "value1", "key2", "value2"},
+			kv: []any{"", "value1", "key2", "value2"},
 			expected: logrus.Fields{
 				"":     "value1",
 				"key2": "value2",
 			},
 		},
 		{
-			kv: []interface{}{"key1", "value1", "key2"},
+			kv: []any{"key1", "value1", "key2"},
 			expected: logrus.Fields{
 				"key1": "value1",
 				"key2": nil,

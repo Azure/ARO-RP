@@ -85,7 +85,7 @@ func Test_getAdminHiveSyncSet(t *testing.T) {
 			hiveEnabled: true,
 			mocks: func(tt *test, s *mock_hive.MockSyncSetManager) {
 				s.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeOf(hivev1.SelectorSyncSet{}))).
+					Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeFor[hivev1.SelectorSyncSet]())).
 					Return(&selectorSyncSetTest, nil).Times(1)
 			},
 			wantStatusCode: 200,
@@ -100,7 +100,7 @@ func Test_getAdminHiveSyncSet(t *testing.T) {
 			hiveEnabled: true,
 			mocks: func(tt *test, s *mock_hive.MockSyncSetManager) {
 				s.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeOf(hivev1.SyncSet{}))).
+					Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeFor[hivev1.SyncSet]())).
 					Return(&syncsetTest, nil).Times(1)
 			},
 			wantStatusCode: 200,

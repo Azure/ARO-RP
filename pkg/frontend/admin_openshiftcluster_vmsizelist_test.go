@@ -70,7 +70,7 @@ func TestAdminListVMSizeList(t *testing.T) {
 					VMSizeList(gomock.Any()).
 					Return([]*armcompute.ResourceSKU{
 						{
-							Name: pointerutils.ToPtr("Standard_D8s_v90"),
+							Name: new("Standard_D8s_v90"),
 							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{
 								{
 									Type: pointerutils.ToPtr(armcompute.ResourceSKURestrictionsTypeLocation),
@@ -78,7 +78,7 @@ func TestAdminListVMSizeList(t *testing.T) {
 							}),
 						},
 						{
-							Name:         pointerutils.ToPtr("Standard_D8s_v9001"),
+							Name:         new("Standard_D8s_v9001"),
 							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 						},
 					}, nil)

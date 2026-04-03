@@ -102,14 +102,14 @@ func (client OpenShiftVersionsClient) Get(ctx context.Context, location string, 
 
 // GetPreparer prepares the Get request.
 func (client OpenShiftVersionsClient) GetPreparer(ctx context.Context, location string, openShiftVersion string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"location":         autorest.Encode("path", location),
 		"openShiftVersion": autorest.Encode("path", openShiftVersion),
 		"subscriptionId":   autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -191,13 +191,13 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 
 // ListPreparer prepares the List request.
 func (client OpenShiftVersionsClient) ListPreparer(ctx context.Context, location string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"location":       autorest.Encode("path", location),
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 

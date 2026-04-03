@@ -146,10 +146,10 @@ func TestDeployConfig(t *testing.T) {
 			if cms.Name == "managed-upgrade-operator-config" && cms.Namespace == "openshift-managed-upgrade-operator" {
 				foundConfig = true
 
-				expectedMap := make(map[string]interface{})
+				expectedMap := make(map[string]any)
 				yaml.Unmarshal(tt.expected, &expectedMap)
 
-				resultMap := make(map[string]interface{})
+				resultMap := make(map[string]any)
 				yaml.Unmarshal([]byte(cms.Data["config.yaml"]), &resultMap)
 
 				err := deep.Equal(expectedMap, resultMap)

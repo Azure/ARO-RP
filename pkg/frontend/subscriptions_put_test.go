@@ -279,7 +279,7 @@ func TestPutSubscription(t *testing.T) {
 				t.Error(err)
 			}
 
-			var wantResponse interface{}
+			var wantResponse any
 			if tt.wantDbDoc != nil {
 				wantResponse = tt.wantDbDoc.Subscription
 				ti.checker.AddSubscriptionDocuments(tt.wantDbDoc)

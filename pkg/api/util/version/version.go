@@ -62,7 +62,7 @@ func ParseVersion(vsn string) (*version, error) {
 		Suffix: m[4],
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		d, err := strconv.ParseUint(m[i+1], 10, 32)
 		if err != nil {
 			return nil, err
@@ -76,7 +76,7 @@ func ParseVersion(vsn string) (*version, error) {
 
 func (v *version) Lt(_w Version) bool {
 	other, _ := _w.Components()
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		switch {
 		case v.V[i] < other[i]:
 			return true

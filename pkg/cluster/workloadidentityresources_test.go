@@ -872,7 +872,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -880,7 +880,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName2,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
 						PrincipalID:      &objectId2,
 					},
 				},
@@ -924,7 +924,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -971,7 +971,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -1009,7 +1009,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -1056,7 +1056,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -1066,7 +1066,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -1143,7 +1143,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -1194,7 +1194,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName1,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -1202,7 +1202,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName2,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
 						PrincipalID:      &objectId1,
 					},
 				},
@@ -1212,7 +1212,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 					Name: &roleName2,
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            &resourceGroupID,
-						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
+						RoleDefinitionID: new(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId2)),
 						PrincipalID:      &objectId1,
 					},
 				},

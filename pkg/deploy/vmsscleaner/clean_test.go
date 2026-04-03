@@ -14,7 +14,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestRemoveFailedScaleset(t *testing.T) {
@@ -51,7 +50,7 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: pointerutils.ToPtr(servingVMSS)},
+						{Name: new(servingVMSS)},
 					},
 					nil,
 				)
@@ -63,7 +62,7 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: pointerutils.ToPtr(vmssToDelete)},
+						{Name: new(vmssToDelete)},
 					},
 					nil,
 				)
@@ -74,8 +73,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: pointerutils.ToPtr(servingVMSS)},
-						{Name: pointerutils.ToPtr("otherVMSS")},
+						{Name: new(servingVMSS)},
+						{Name: new("otherVMSS")},
 					},
 					nil,
 				)
@@ -87,8 +86,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: pointerutils.ToPtr(servingVMSS)},
-						{Name: pointerutils.ToPtr(vmssToDelete)},
+						{Name: new(servingVMSS)},
+						{Name: new(vmssToDelete)},
 					},
 					nil,
 				)
@@ -100,8 +99,8 @@ func TestRemoveFailedScaleset(t *testing.T) {
 			mocks: func(vmss *mock_compute.MockVirtualMachineScaleSetsClient) {
 				vmss.EXPECT().List(ctx, rg).Return(
 					[]mgmtcompute.VirtualMachineScaleSet{
-						{Name: pointerutils.ToPtr(servingVMSS)},
-						{Name: pointerutils.ToPtr(vmssToDelete)},
+						{Name: new(servingVMSS)},
+						{Name: new(vmssToDelete)},
 					},
 					nil,
 				)

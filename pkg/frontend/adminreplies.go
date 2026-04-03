@@ -6,6 +6,7 @@ package frontend
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -24,9 +25,7 @@ type StreamResponder interface {
 type defaultResponder struct{}
 
 func (d defaultResponder) ReplyStream(log *logrus.Entry, w http.ResponseWriter, header http.Header, reader io.Reader, err error) {
-	for k, v := range header {
-		w.Header()[k] = v
-	}
+	maps.Copy(w.Header(), header)
 
 	if err != nil {
 		switch err := err.(type) {

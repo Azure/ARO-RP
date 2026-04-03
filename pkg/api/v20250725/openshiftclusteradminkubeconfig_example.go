@@ -5,7 +5,7 @@ package v20250725
 
 // ExampleOpenShiftClusterAdminKubeconfigResponse returns an example
 // OpenShiftClusterAdminKubeconfig object that the RP might return to an end-user
-func ExampleOpenShiftClusterAdminKubeconfigResponse() interface{} {
+func ExampleOpenShiftClusterAdminKubeconfigResponse() any {
 	return &OpenShiftClusterAdminKubeconfig{
 		Kubeconfig: []byte("{}"),
 	}

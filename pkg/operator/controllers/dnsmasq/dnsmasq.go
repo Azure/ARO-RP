@@ -19,8 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -107,32 +105,32 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 			Files: []ign3types.File{
 				{
 					Node: ign3types.Node{
-						Overwrite: pointerutils.ToPtr(true),
+						Overwrite: new(true),
 						Path:      "/etc/" + configFileName,
 						User: ign3types.NodeUser{
-							Name: pointerutils.ToPtr("root"),
+							Name: new("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: pointerutils.ToPtr(dataurl.EncodeBytes(config)),
+							Source: new(dataurl.EncodeBytes(config)),
 						},
-						Mode: pointerutils.ToPtr(0o644),
+						Mode: new(0o644),
 					},
 				},
 				{
 					Node: ign3types.Node{
-						Overwrite: pointerutils.ToPtr(true),
+						Overwrite: new(true),
 						Path:      "/usr/local/bin/" + prescriptFileName,
 						User: ign3types.NodeUser{
-							Name: pointerutils.ToPtr("root"),
+							Name: new("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: pointerutils.ToPtr(dataurl.EncodeBytes(startpre)),
+							Source: new(dataurl.EncodeBytes(startpre)),
 						},
-						Mode: pointerutils.ToPtr(0o744),
+						Mode: new(0o744),
 					},
 				},
 			},
@@ -141,7 +139,7 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 			Units: []ign3types.Unit{
 				{
 					Contents: &service,
-					Enabled:  pointerutils.ToPtr(true),
+					Enabled:  new(true),
 					Name:     unitFileName,
 				},
 			},
@@ -172,7 +170,7 @@ func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatew
 	}
 
 	// canonicalise the machineconfig payload the same way as MCO
-	var i interface{}
+	var i any
 	err = json.Unmarshal(b, &i)
 	if err != nil {
 		return nil, err

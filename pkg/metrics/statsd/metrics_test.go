@@ -6,8 +6,6 @@ package statsd
 import (
 	"testing"
 	"time"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestMarshalFloat(t *testing.T) {
@@ -17,7 +15,7 @@ func TestMarshalFloat(t *testing.T) {
 		dimensions: map[string]string{"key": "value"},
 
 		timestamp:  time.Unix(0, 0),
-		valueFloat: pointerutils.ToPtr(1.0),
+		valueFloat: new(1.0),
 	}
 	b, err := f.marshalStatsd()
 	if err != nil {
@@ -36,7 +34,7 @@ func TestMarshalGauge(t *testing.T) {
 		dimensions: map[string]string{"key": "value"},
 
 		timestamp:  time.Unix(0, 0),
-		valueGauge: pointerutils.ToPtr(int64(42)),
+		valueGauge: new(int64(42)),
 	}
 	b, err := g.marshalStatsd()
 	if err != nil {

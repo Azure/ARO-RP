@@ -26,8 +26,8 @@ import (
 // n==9 patch action on resource expecting input payload
 // n==10 list child resources belonging to a parent resource
 
-func (g *generator) populateParameters(n int, typ, friendlyName string) (s []interface{}) {
-	s = []interface{}{
+func (g *generator) populateParameters(n int, typ, friendlyName string) (s []any) {
+	s = []any{
 		Reference{
 			Ref: "../../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter",
 		},
@@ -127,8 +127,8 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 
 // populateResponses populates a responses block.  Always include the default
 // error response.
-func (g *generator) populateResponses(typ string, isDelete bool, statusCodes ...int) (responses map[string]interface{}) {
-	responses = map[string]interface{}{
+func (g *generator) populateResponses(typ string, isDelete bool, statusCodes ...int) (responses map[string]any) {
+	responses = map[string]any{
 		"default": Response{
 			Description: "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
 			Schema: &Schema{

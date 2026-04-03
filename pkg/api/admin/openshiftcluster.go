@@ -23,7 +23,7 @@ type OpenShiftCluster struct {
 	Type                       string                     `json:"type,omitempty" mutable:"case"`
 	Location                   string                     `json:"location,omitempty"`
 	Tags                       map[string]string          `json:"tags,omitempty"`
-	Properties                 OpenShiftClusterProperties `json:"properties,omitempty"`
+	Properties                 OpenShiftClusterProperties `json:"properties"`
 	Identity                   *ManagedServiceIdentity    `json:"identity,omitempty"`
 	OperatorFlagsMergeStrategy string                     `json:"operatorFlagsMergeStrategy,omitempty" mutable:"true"`
 }
@@ -38,28 +38,28 @@ type OpenShiftClusterProperties struct {
 	MaintenanceTask                 MaintenanceTask                  `json:"maintenanceTask,omitempty" mutable:"true"`
 	OperatorFlags                   OperatorFlags                    `json:"operatorFlags,omitempty" mutable:"true"`
 	OperatorVersion                 string                           `json:"operatorVersion,omitempty" mutable:"true"`
-	CreatedAt                       time.Time                        `json:"createdAt,omitempty"`
+	CreatedAt                       time.Time                        `json:"createdAt"`
 	CreatedBy                       string                           `json:"createdBy,omitempty"`
 	ProvisionedBy                   string                           `json:"provisionedBy,omitempty"`
-	ClusterProfile                  ClusterProfile                   `json:"clusterProfile,omitempty"`
-	FeatureProfile                  FeatureProfile                   `json:"featureProfile,omitempty"`
-	ConsoleProfile                  ConsoleProfile                   `json:"consoleProfile,omitempty"`
+	ClusterProfile                  ClusterProfile                   `json:"clusterProfile"`
+	FeatureProfile                  FeatureProfile                   `json:"featureProfile"`
+	ConsoleProfile                  ConsoleProfile                   `json:"consoleProfile"`
 	ServicePrincipalProfile         *ServicePrincipalProfile         `json:"servicePrincipalProfile,omitempty"`
 	PlatformWorkloadIdentityProfile *PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
-	NetworkProfile                  NetworkProfile                   `json:"networkProfile,omitempty"`
-	MasterProfile                   MasterProfile                    `json:"masterProfile,omitempty"`
+	NetworkProfile                  NetworkProfile                   `json:"networkProfile"`
+	MasterProfile                   MasterProfile                    `json:"masterProfile"`
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 	// WorkerProfilesStatus is used to store the enriched worker profile data
 	WorkerProfilesStatus            []WorkerProfile   `json:"workerProfilesStatus,omitempty" swagger:"readOnly"`
-	APIServerProfile                APIServerProfile  `json:"apiserverProfile,omitempty"`
+	APIServerProfile                APIServerProfile  `json:"apiserverProfile"`
 	IngressProfiles                 []IngressProfile  `json:"ingressProfiles,omitempty"`
 	Install                         *Install          `json:"install,omitempty"`
 	StorageSuffix                   string            `json:"storageSuffix,omitempty"`
 	RegistryProfiles                []RegistryProfile `json:"registryProfiles,omitempty"`
 	ImageRegistryStorageAccountName string            `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string            `json:"infraId,omitempty"`
-	HiveProfile                     HiveProfile       `json:"hiveProfile,omitempty"`
+	HiveProfile                     HiveProfile       `json:"hiveProfile"`
 	MaintenanceState                MaintenanceState  `json:"maintenanceState,omitempty"`
 }
 
@@ -534,7 +534,7 @@ type ManagedServiceIdentity struct {
 
 // Install represents an install process.
 type Install struct {
-	Now   time.Time    `json:"now,omitempty"`
+	Now   time.Time    `json:"now"`
 	Phase InstallPhase `json:"phase"`
 }
 

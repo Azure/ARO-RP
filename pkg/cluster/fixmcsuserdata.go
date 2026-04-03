@@ -37,8 +37,8 @@ type userData struct {
 				api.MissingFields
 				Source string `json:"source,omitempty"`
 			} `json:"append,omitempty"`
-		} `json:"config,omitempty"`
-	} `json:"ignition,omitempty"`
+		} `json:"config"`
+	} `json:"ignition"`
 }
 
 func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.SecretReference]struct{} {

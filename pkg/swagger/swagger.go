@@ -289,7 +289,7 @@ func Run(api, outputDir string) error {
 	return os.WriteFile(outputDir+"/redhatopenshift.json", b, 0o666)
 }
 
-func deepCopy(v interface{}) (interface{}, error) {
+func deepCopy(v any) (any, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return nil, err

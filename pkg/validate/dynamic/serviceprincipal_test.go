@@ -26,11 +26,11 @@ type tokenRequirements struct {
 
 type signingMethodFake struct{}
 
-func (m signingMethodFake) Verify(signingString, signature string, key interface{}) error {
+func (m signingMethodFake) Verify(signingString, signature string, key any) error {
 	return nil
 }
 
-func (m signingMethodFake) Sign(signingString string, key interface{}) (string, error) {
+func (m signingMethodFake) Sign(signingString string, key any) (string, error) {
 	return "", nil
 }
 

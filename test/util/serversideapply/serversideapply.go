@@ -5,6 +5,7 @@ package serversideapply
 
 import (
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,13 +29,7 @@ func CliWithApply(objectTypes []string, object ...runtime.Object) *fake.Clientse
 
 	fc := fake.NewSimpleClientset(object...)
 	for _, ot := range objectTypes {
-		foundOt := false
-		for _, sot := range supportedObjectTypes {
-			if ot == sot {
-				foundOt = true
-				break
-			}
-		}
+		foundOt := slices.Contains(supportedObjectTypes, ot)
 
 		if !foundOt {
 			panic(fmt.Sprintf("Kubernetes object type %s needs to be added to ARO-RP/test/util/serversideapply's CliWithApply (see doc comment on function for context)", ot))

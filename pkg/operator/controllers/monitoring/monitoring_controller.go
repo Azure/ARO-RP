@@ -50,11 +50,11 @@ type Config struct {
 		api.MissingFields
 		Retention           string           `json:"retention,omitempty"`
 		VolumeClaimTemplate *json.RawMessage `json:"volumeClaimTemplate,omitempty"`
-	} `json:"prometheusK8s,omitempty"`
+	} `json:"prometheusK8s"`
 	AlertManagerMain struct {
 		api.MissingFields
 		VolumeClaimTemplate *json.RawMessage `json:"volumeClaimTemplate,omitempty"`
-	} `json:"alertmanagerMain,omitempty"`
+	} `json:"alertmanagerMain"`
 }
 
 type MonitoringReconciler struct {

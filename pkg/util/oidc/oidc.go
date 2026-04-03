@@ -41,7 +41,7 @@ func NewVerifier(ctx context.Context, issuer, clientID string) (Verifier, error)
 }
 
 type Token interface {
-	Claims(interface{}) error
+	Claims(any) error
 	Subject() string
 }
 
@@ -49,7 +49,7 @@ type token struct {
 	t *oidc.IDToken
 }
 
-func (t *token) Claims(v interface{}) error {
+func (t *token) Claims(v any) error {
 	return t.t.Claims(v)
 }
 
@@ -70,12 +70,12 @@ func (v *NoopVerifier) Verify(ctx context.Context, rawtoken string) (Token, erro
 
 type NoopClaims []byte
 
-func (c NoopClaims) Claims(v interface{}) error {
+func (c NoopClaims) Claims(v any) error {
 	return json.Unmarshal(c, v)
 }
 
 func (c NoopClaims) Subject() string {
-	var m map[string]interface{}
+	var m map[string]any
 	_ = json.Unmarshal(c, &m)
 
 	subject, _ := m["sub"].(string)

@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
 	azerrors "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/errors"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -114,7 +113,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 
 	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, sdkdns.RecordSet{
 		Properties: &sdkdns.RecordSetProperties{
-			TTL: pointerutils.ToPtr(int64(300)),
+			TTL: new(int64(300)),
 			ARecords: []*sdkdns.ARecord{
 				{
 					IPv4Address: &routerIP,
@@ -148,7 +147,7 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	}
 
 	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-		IfMatch: pointerutils.ToPtr(""),
+		IfMatch: new(""),
 	})
 	if err != nil {
 		return err
@@ -172,7 +171,7 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 			Metadata: map[string]*string{
 				resourceID: &oc.ID,
 			},
-			TTL: pointerutils.ToPtr(int64(300)),
+			TTL: new(int64(300)),
 		},
 	}
 

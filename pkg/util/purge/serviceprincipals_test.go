@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestBuildIDPattern(t *testing.T) {
@@ -104,8 +103,8 @@ func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 					Get(gomock.Any(), "v4-e2e-V123456789-eastus").
 					Return(mgmtfeatures.ResourceGroup{
 						Tags: map[string]*string{
-							"persist":   pointerutils.ToPtr("true"),
-							"createdAt": pointerutils.ToPtr(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
+							"persist":   new("true"),
+							"createdAt": new(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
 						},
 					}, nil)
 			},
@@ -120,8 +119,8 @@ func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 					Get(gomock.Any(), "v4-e2e-V123456789-eastus").
 					Return(mgmtfeatures.ResourceGroup{
 						Tags: map[string]*string{
-							"Persist":   pointerutils.ToPtr("true"),
-							"createdAt": pointerutils.ToPtr(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
+							"Persist":   new("true"),
+							"createdAt": new(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
 						},
 					}, nil)
 			},
@@ -136,7 +135,7 @@ func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 					Get(gomock.Any(), "v4-e2e-V123456789-eastus").
 					Return(mgmtfeatures.ResourceGroup{
 						Tags: map[string]*string{
-							"createdAt": pointerutils.ToPtr(now.Add(-24 * time.Hour).Format(time.RFC3339Nano)),
+							"createdAt": new(now.Add(-24 * time.Hour).Format(time.RFC3339Nano)),
 						},
 					}, nil)
 			},
@@ -151,7 +150,7 @@ func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 					Get(gomock.Any(), "v4-e2e-V123456789-eastus").
 					Return(mgmtfeatures.ResourceGroup{
 						Tags: map[string]*string{
-							"createdAt": pointerutils.ToPtr(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
+							"createdAt": new(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
 						},
 					}, nil)
 			},
@@ -166,7 +165,7 @@ func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 					Get(gomock.Any(), "v4-e2e-V123456789-eastus").
 					Return(mgmtfeatures.ResourceGroup{
 						Tags: map[string]*string{
-							"someOtherTag": pointerutils.ToPtr("value"),
+							"someOtherTag": new("value"),
 						},
 					}, nil)
 			},

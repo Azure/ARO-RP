@@ -36,7 +36,7 @@ type CorrelationData struct {
 	ClientPrincipalName string `json:"clientPrincipalName,omitempty"`
 
 	// RequestTime is the time that the request was received
-	RequestTime time.Time `json:"requestTime,omitempty"`
+	RequestTime time.Time `json:"requestTime"`
 }
 
 func CtxWithCorrelationData(ctx context.Context, correlationData *CorrelationData) context.Context {
