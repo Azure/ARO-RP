@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -29,6 +30,16 @@ const (
 	mockInvestigateSubID    = "00000000-0000-0000-0000-000000000001"
 	mockInvestigateTenantID = "00000000-0000-0000-0000-000000000002"
 )
+
+var testHolmesConfig = &holmes.HolmesConfig{
+	Image:                       "quay.io/test/holmesgpt:latest",
+	AzureAPIKey:                 "test-key",
+	AzureAPIBase:                "https://test.openai.azure.com",
+	AzureAPIVersion:             "2025-04-01-preview",
+	Model:                       "azure/gpt-4o",
+	DefaultTimeout:              600,
+	MaxConcurrentInvestigations: 20,
+}
 
 func investigateDatabaseFixture(dbFixture *testdatabase.Fixture) {
 	dbFixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -91,6 +102,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 		resourceID     string
 		fixture        func(*testdatabase.Fixture)
 		hiveEnabled    bool
+		holmesConfig   *holmes.HolmesConfig
 		mocks          func(*mock_hive.MockClusterManager)
 		wantStatusCode int
 		wantError      string
@@ -101,6 +113,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
+			holmesConfig:   testHolmesConfig,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "The request body could not be parsed",
 		},
@@ -110,8 +123,19 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
+			holmesConfig:   testHolmesConfig,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "The question parameter is required",
+		},
+		{
+			name:           "question with control characters returns bad request",
+			body:           `{"question":"what is\nthe status?"}`,
+			resourceID:     resourceID,
+			fixture:        investigateDatabaseFixture,
+			hiveEnabled:    true,
+			holmesConfig:   testHolmesConfig,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "must not contain control characters",
 		},
 		{
 			name:           "question too long returns bad request",
@@ -119,8 +143,19 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
+			holmesConfig:   testHolmesConfig,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "The question must not exceed 1000 characters",
+		},
+		{
+			name:           "holmes not configured returns internal error",
+			body:           `{"question":"what is wrong?"}`,
+			resourceID:     resourceID,
+			fixture:        investigateDatabaseFixture,
+			hiveEnabled:    true,
+			holmesConfig:   nil,
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      "Holmes investigation is not configured",
 		},
 		{
 			name:           "cluster not found returns not found",
@@ -128,6 +163,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockInvestigateSubID, "nonexistent")),
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
+			holmesConfig:   testHolmesConfig,
 			wantStatusCode: http.StatusNotFound,
 			wantError:      "was not found",
 		},
@@ -137,6 +173,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    false,
+			holmesConfig:   testHolmesConfig,
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      "hive is not enabled",
 		},
@@ -146,14 +183,11 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixtureNoHiveNamespace,
 			hiveEnabled:    true,
+			holmesConfig:   testHolmesConfig,
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      "cluster does not have a Hive namespace configured",
 		},
 	}
-
-	// Set required Holmes env vars for tests that pass request validation.
-	t.Setenv("HOLMES_AZURE_API_KEY", "test-key")
-	t.Setenv("HOLMES_AZURE_API_BASE", "https://test.openai.azure.com")
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -181,6 +215,9 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			// Override holmesConfig — NewFrontend soft-loads it (may be nil in test env).
+			f.holmesConfig = tt.holmesConfig
 
 			recorder := httptest.NewRecorder()
 			// The URL must include /investigate — the outer handler strips it via filepath.Dir.

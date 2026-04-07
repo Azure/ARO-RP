@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -65,6 +66,7 @@ func TestSecurity(t *testing.T) {
 
 	keyvault := mock_azsecrets.NewMockClient(controller)
 	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)
+	keyvault.EXPECT().GetSecret(gomock.Any(), gomock.Not(gomock.Eq(env.RPServerSecretName)), gomock.Any(), gomock.Any()).AnyTimes().Return(azsecrets.GetSecretResponse{}, fmt.Errorf("secret not found"))
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)

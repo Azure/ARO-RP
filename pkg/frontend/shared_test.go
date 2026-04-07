@@ -114,6 +114,8 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 
 	keyvault := mock_azsecrets.NewMockClient(controller)
 	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)
+	// Return "not found" for any secret other than RPServerSecretName (e.g., Holmes config secrets).
+	keyvault.EXPECT().GetSecret(gomock.Any(), gomock.Not(gomock.Eq(env.RPServerSecretName)), gomock.Any(), gomock.Any()).AnyTimes().Return(azsecrets.GetSecretResponse{}, fmt.Errorf("secret not found"))
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 

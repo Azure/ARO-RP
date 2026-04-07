@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -108,10 +109,11 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 			RestartPolicy:                corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
 				{
-					Name:    "holmes",
-					Image:   holmesConfig.Image,
-					Command: []string{"python", "holmes_cli.py"},
-					Args:    []string{"ask", question, "-n", "--model=" + holmesConfig.Model, "--config=/etc/holmes/config.yaml"},
+					Name:            "holmes",
+					Image:           holmesConfig.Image,
+					ImagePullPolicy: corev1.PullAlways,
+					Command:         []string{"python", "holmes_cli.py"},
+					Args:            []string{"ask", question, "-n", "--model=" + holmesConfig.Model, "--config=/etc/holmes/config.yaml"},
 					Env: []corev1.EnvVar{
 						{
 							Name: "AZURE_API_KEY",
@@ -248,16 +250,18 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 }
 
 func (hr *clusterManager) waitForPodRunning(ctx context.Context, namespace, name string, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	for {
-		pod, err := hr.kubernetescli.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
+		pod, err := hr.kubernetescli.CoreV1().Pods(namespace).Get(timeoutCtx, name, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get pod %s: %w", name, err)
+			return false, fmt.Errorf("failed to get pod %s: %w", name, err)
 		}
 
 		switch pod.Status.Phase {
 		case corev1.PodRunning, corev1.PodSucceeded:
-			return nil
+			return true, nil
 		case corev1.PodFailed:
 			reason := pod.Status.Reason
 			message := pod.Status.Message
@@ -271,19 +275,11 @@ func (hr *clusterManager) waitForPodRunning(ctx context.Context, namespace, name
 					message = cs.State.Waiting.Message
 				}
 			}
-			return fmt.Errorf("pod %s failed: reason=%s message=%s", name, reason, message)
+			return false, fmt.Errorf("pod %s failed: reason=%s message=%s", name, reason, message)
 		}
 
-		if time.Now().After(deadline) {
-			return fmt.Errorf("timed out waiting for pod %s to be running", name)
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(2 * time.Second):
-		}
-	}
+		return false, nil
+	}, timeoutCtx.Done())
 }
 
 func (hr *clusterManager) streamPodLogs(ctx context.Context, namespace, name string, w io.Writer) error {
