@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -26,12 +27,12 @@ import (
 func (f *frontend) generateDiagnosticsKubeconfig(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) ([]byte, error) {
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get subscription document: %w", err)
 	}
 
 	credential, err := f.env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create FP credential: %w", err)
 	}
 
 	options := f.env.Environment().ArmClientOptions()
@@ -43,12 +44,12 @@ func (f *frontend) generateDiagnosticsKubeconfig(ctx context.Context, log *logru
 		options,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create storage manager: %w", err)
 	}
 
 	clusterAead, err := encryption.NewMulti(ctx, f.env.ServiceKeyvault(), env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create encryption client: %w", err)
 	}
 
 	graphManager := graph.NewManager(f.env, log, clusterAead, storageManager)
@@ -57,12 +58,12 @@ func (f *frontend) generateDiagnosticsKubeconfig(ctx context.Context, log *logru
 
 	pg, err := graphManager.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load persisted graph: %w", err)
 	}
 
 	kubeconfig, err := cluster.GenerateKubeconfig(pg, "system:aro-diagnostics", nil, time.Hour, true)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate diagnostics kubeconfig: %w", err)
 	}
 
 	// In development mode, the Hive cluster cannot resolve api-int.* private DNS
@@ -71,7 +72,7 @@ func (f *frontend) generateDiagnosticsKubeconfig(ctx context.Context, log *logru
 	if f.env.IsLocalDevelopmentMode() {
 		kubeconfig, err = holmes.MakeExternalKubeconfig(kubeconfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to convert to external kubeconfig: %w", err)
 		}
 	}
 

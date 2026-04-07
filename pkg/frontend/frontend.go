@@ -94,6 +94,7 @@ type frontend struct {
 
 	hiveClusterManager    hive.ClusterManager
 	hiveSyncSetManager    hive.SyncSetManager
+	activeInvestigations  int64
 	kubeActionsFactory    kubeActionsFactory
 	azureActionsFactory   azureActionsFactory
 	appLensActionsFactory appLensActionsFactory

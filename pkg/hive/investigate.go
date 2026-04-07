@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/holmes"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 //go:embed staticresources/holmes-config.yaml
@@ -165,8 +166,8 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 					},
 					SecurityContext: &corev1.SecurityContext{
 						RunAsUser:                &runAsUser,
-						RunAsNonRoot:             &[]bool{true}[0],
-						AllowPrivilegeEscalation: &[]bool{false}[0],
+						RunAsNonRoot:             pointerutils.ToPtr(true),
+						AllowPrivilegeEscalation: pointerutils.ToPtr(false),
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{"ALL"},
 						},

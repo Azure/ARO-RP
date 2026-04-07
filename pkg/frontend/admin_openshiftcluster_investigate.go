@@ -22,9 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/holmes"
 )
 
-// activeInvestigations tracks the number of currently running investigations.
-var activeInvestigations int64
-
 type investigateRequest struct {
 	Question string `json:"question"`
 }
@@ -64,8 +61,8 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 	holmesConfig := holmes.NewHolmesConfigFromEnv()
 
 	// Rate limit: reject if too many concurrent investigations are running.
-	current := atomic.AddInt64(&activeInvestigations, 1)
-	defer atomic.AddInt64(&activeInvestigations, -1)
+	current := atomic.AddInt64(&f.activeInvestigations, 1)
+	defer atomic.AddInt64(&f.activeInvestigations, -1)
 	if current > int64(holmesConfig.MaxConcurrentInvestigations) {
 		return api.NewCloudError(http.StatusTooManyRequests, api.CloudErrorCodeThrottlingLimitExceeded, "", fmt.Sprintf("Too many concurrent investigations (%d). Please try again later.", holmesConfig.MaxConcurrentInvestigations))
 	}
