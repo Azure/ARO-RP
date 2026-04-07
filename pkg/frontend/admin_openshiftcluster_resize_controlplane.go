@@ -132,6 +132,13 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 		return cmp.Compare(b, a)
 	})
 
+	// Guard the whole operation before touching any VM. Even when a machine
+	// already matches the target SKU, we must not continue to the next resize
+	// while another control plane node is NotReady or still cordoned.
+	if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, sortedNames); err != nil {
+		return err
+	}
+
 	for _, name := range sortedNames {
 		machine := machines[name]
 		if machine.size == desiredVMSize {
@@ -266,21 +273,53 @@ func waitForNodeReady(ctx context.Context, log *logrus.Entry, k adminactions.Kub
 	})
 }
 
+func ensureControlPlaneNodesReadyAndSchedulable(ctx context.Context, k adminactions.KubeActions, nodeNames []string) error {
+	for _, nodeName := range nodeNames {
+		ready, schedulable, err := getNodeReadinessAndSchedulability(ctx, k, nodeName)
+		if err != nil {
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+				fmt.Sprintf("failed to evaluate control plane node %s health before resize: %v", nodeName, err))
+		}
+		if !ready {
+			return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
+				fmt.Sprintf("Control plane node %s is not Ready. Resolve node health before resizing another master.", nodeName))
+		}
+		if !schedulable {
+			return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
+				fmt.Sprintf("Control plane node %s is unschedulable. Uncordon and verify the node before resizing another master.", nodeName))
+		}
+	}
+	return nil
+}
+
 func isNodeReady(ctx context.Context, k adminactions.KubeActions, nodeName string) (bool, error) {
+	ready, _, err := getNodeReadinessAndSchedulability(ctx, k, nodeName)
+	return ready, err
+}
+
+func getNodeReadinessAndSchedulability(ctx context.Context, k adminactions.KubeActions, nodeName string) (bool, bool, error) {
 	rawNode, err := k.KubeGet(ctx, "Node", "", nodeName)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	var node unstructured.Unstructured
 	if err := json.Unmarshal(rawNode, &node); err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	conditions, found, err := unstructured.NestedSlice(node.Object, "status", "conditions")
 	if err != nil || !found {
-		return false, nil
+		return false, false, nil
 	}
+
+	unschedulable, found, err := unstructured.NestedBool(node.Object, "spec", "unschedulable")
+	if err != nil {
+		return false, false, err
+	}
+	schedulable := !found || !unschedulable
+
+	ready := false
 
 	for _, c := range conditions {
 		cond, ok := c.(map[string]interface{})
@@ -290,11 +329,12 @@ func isNodeReady(ctx context.Context, k adminactions.KubeActions, nodeName strin
 		condType, _ := cond["type"].(string)
 		condStatus, _ := cond["status"].(string)
 		if condType == "Ready" {
-			return condStatus == "True", nil
+			ready = condStatus == "True"
+			break
 		}
 	}
 
-	return false, nil
+	return ready, schedulable, nil
 }
 
 func updateMachineVMSize(ctx context.Context, k adminactions.KubeActions, machineName, vmSize string) error {

@@ -85,6 +85,10 @@ func cpmsJSON(state string) []byte {
 }
 
 func nodeJSON(name string, ready bool) []byte {
+	return nodeJSONWithSchedulability(name, ready, false)
+}
+
+func nodeJSONWithSchedulability(name string, ready, unschedulable bool) []byte {
 	status := "False"
 	if ready {
 		status = "True"
@@ -93,6 +97,9 @@ func nodeJSON(name string, ready bool) []byte {
 		"apiVersion": "v1",
 		"kind":       "Node",
 		"metadata":   map[string]interface{}{"name": name},
+		"spec": map[string]interface{}{
+			"unschedulable": unschedulable,
+		},
 		"status": map[string]interface{}{
 			"conditions": []interface{}{
 				map[string]interface{}{"type": "Ready", "status": status},
@@ -292,6 +299,12 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachine("master-2", desiredSize, running),
 				)
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+					Return(nodeJSON("master-2", true), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+					Return(nodeJSON("master-1", true), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return(nodeJSON("master-0", true), nil)
 			},
 		},
 		{
@@ -305,6 +318,12 @@ func TestResizeControlPlane(t *testing.T) {
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
 
 				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", true).Return(nil),
@@ -329,6 +348,8 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
 
 				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").
 						Return(errors.New("could not drain node after 3 retries: drain error")),
@@ -343,6 +364,8 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
 
 				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).
@@ -358,6 +381,8 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
 
 				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
@@ -374,6 +399,8 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
 
 				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
@@ -391,6 +418,8 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
 
 				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
@@ -403,6 +432,26 @@ func TestResizeControlPlane(t *testing.T) {
 				)
 			},
 			wantErr: "failed to resize node master-0: uncordoning node: uncordon failure",
+		},
+		{
+			name: "pre-loop gate fails when node is not ready",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+					masterMachineListJSON(masterMachine("master-0", desiredSize, running)), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return(nodeJSON("master-0", false), nil)
+			},
+			wantErr: "409: RequestNotAllowed: : Control plane node master-0 is not Ready. Resolve node health before resizing another master.",
+		},
+		{
+			name: "pre-loop gate fails when node is unschedulable",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+					masterMachineListJSON(masterMachine("master-0", desiredSize, running)), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return(nodeJSONWithSchedulability("master-0", true, true), nil)
+			},
+			wantErr: "409: RequestNotAllowed: : Control plane node master-0 is unschedulable. Uncordon and verify the node before resizing another master.",
 		},
 		{
 			name: "no control plane machines found",
@@ -608,6 +657,12 @@ func TestAdminResizeControlPlane(t *testing.T) {
 						masterMachine("master-1", "Standard_D8s_v3", running),
 						masterMachine("master-2", "Standard_D8s_v3", running),
 					), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+					Return(nodeJSON("master-2", true), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+					Return(nodeJSON("master-1", true), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return(nodeJSON("master-0", true), nil)
 			},
 			azureMocks: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
