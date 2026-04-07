@@ -151,6 +151,10 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 		},
 	}
 
+	// Set required Holmes env vars for tests that pass request validation.
+	t.Setenv("HOLMES_AZURE_API_KEY", "test-key")
+	t.Setenv("HOLMES_AZURE_API_BASE", "https://test.openai.azure.com")
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()

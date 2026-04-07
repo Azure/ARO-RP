@@ -24,15 +24,17 @@ func MakeExternalKubeconfig(internalKubeconfig []byte) ([]byte, error) {
 	}
 
 	for i := range cfg.Clusters {
-		cfg.Clusters[i].Cluster.Server = strings.Replace(
-			cfg.Clusters[i].Cluster.Server,
-			"https://api-int.", "https://api.", 1,
-		)
-		// The self-signed CA does not cover the external endpoint's cert,
-		// so skip TLS verification. The client cert is still used for
-		// authentication (mTLS for identity, not for server verification).
-		cfg.Clusters[i].Cluster.InsecureSkipTLSVerify = true
-		cfg.Clusters[i].Cluster.CertificateAuthorityData = nil
+		originalServer := cfg.Clusters[i].Cluster.Server
+		rewrittenServer := strings.Replace(originalServer, "https://api-int.", "https://api.", 1)
+		cfg.Clusters[i].Cluster.Server = rewrittenServer
+
+		if rewrittenServer != originalServer {
+			// The self-signed CA does not cover the external endpoint's cert,
+			// so skip TLS verification. The client cert is still used for
+			// authentication (mTLS for identity, not for server verification).
+			cfg.Clusters[i].Cluster.InsecureSkipTLSVerify = true
+			cfg.Clusters[i].Cluster.CertificateAuthorityData = nil
+		}
 	}
 
 	return yaml.Marshal(cfg)

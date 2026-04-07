@@ -59,6 +59,9 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 	}
 
 	holmesConfig := holmes.NewHolmesConfigFromEnv()
+	if err := holmesConfig.Validate(); err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("Holmes configuration error: %v", err))
+	}
 
 	// Rate limit: reject if too many concurrent investigations are running.
 	current := atomic.AddInt64(&f.activeInvestigations, 1)

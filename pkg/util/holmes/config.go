@@ -4,6 +4,7 @@ package holmes
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -30,6 +31,20 @@ func NewHolmesConfigFromEnv() *HolmesConfig {
 		DefaultTimeout:              envOrDefaultInt("HOLMES_DEFAULT_TIMEOUT", 600),
 		MaxConcurrentInvestigations: envOrDefaultInt("HOLMES_MAX_CONCURRENT", 20),
 	}
+}
+
+// Validate checks that required configuration values are set.
+func (c *HolmesConfig) Validate() error {
+	if c.AzureAPIKey == "" {
+		return fmt.Errorf("HOLMES_AZURE_API_KEY is required")
+	}
+	if c.AzureAPIBase == "" {
+		return fmt.Errorf("HOLMES_AZURE_API_BASE is required")
+	}
+	if c.Image == "" {
+		return fmt.Errorf("HOLMES_IMAGE is required")
+	}
+	return nil
 }
 
 func envOrDefault(key, defaultValue string) string {
