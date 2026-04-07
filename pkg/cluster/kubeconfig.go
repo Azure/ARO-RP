@@ -127,6 +127,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	return err
 }
 
+// GenerateKubeconfig generates a kubeconfig with a client certificate signed by the cluster CA.
 func GenerateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) ([]byte, error) {
 	var ca *installer.AdminKubeConfigSignerCertKey
 	var adminInternalClient *installer.AdminInternalClient

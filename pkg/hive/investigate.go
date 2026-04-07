@@ -37,7 +37,8 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 
 	// Ensure cleanup of the secret, ConfigMap, and pod on exit.
 	defer func() {
-		cleanupCtx := context.Background()
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 
 		hr.log.Infof("cleaning up investigation pod %s", podName)
 		err := hr.kubernetescli.CoreV1().Pods(hiveNamespace).Delete(cleanupCtx, podName, metav1.DeleteOptions{})
@@ -102,8 +103,9 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 			Namespace: hiveNamespace,
 		},
 		Spec: corev1.PodSpec{
-			ActiveDeadlineSeconds: &activeDeadlineSeconds,
-			RestartPolicy:         corev1.RestartPolicyNever,
+			AutomountServiceAccountToken: pointerutils.ToPtr(false),
+			ActiveDeadlineSeconds:        &activeDeadlineSeconds,
+			RestartPolicy:                corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
 				{
 					Name:    "holmes",
