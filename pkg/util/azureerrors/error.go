@@ -307,30 +307,31 @@ func detectVMProfile(errStr string) VMProfileType {
 	return VMProfileUnknown
 }
 
-var rxScopeResourceGroup = regexp.MustCompile(`(?i)/resourceGroups/([^/']+)`)
+var rxResourceID = regexp.MustCompile(`(?i)/subscriptions/[^/']+/resourceGroups/([^/']+)`)
 
-// ResourceGroupFromError attempts to extract the Azure resource group name from
-// an Azure SDK error. It checks (in order):
+// ResourceGroupsFromError attempts to extract the Azure resource group names from
+// error. It checks (in order):
 //  1. The HTTP request URL from the response attached to the error
-//  2. The error message text for an ARM scope pattern
-func ResourceGroupFromError(err error) (string, bool) {
+//  2. All resource IDs in the error message text
+func ResourceGroupsFromError(err error) []string {
 	if err == nil {
-		return "", false
+		return nil
 	}
 
 	if rg, ok := resourceGroupFromResponse(err); ok {
-		return rg, true
+		return []string{rg}
 	}
 
-	return resourceGroupFromMessage(err.Error())
+	return resourceGroupsFromMessage(err.Error())
 }
 
 func IsManagedResourceGroupError(err error, managedRGName string) bool {
-	rg, ok := ResourceGroupFromError(err)
-	if !ok {
-		return false
+	for _, rg := range ResourceGroupsFromError(err) {
+		if strings.EqualFold(rg, managedRGName) {
+			return true
+		}
 	}
-	return strings.EqualFold(rg, managedRGName)
+	return false
 }
 
 func resourceGroupFromResponse(err error) (string, bool) {
@@ -350,15 +351,21 @@ func resourceGroupFromResponse(err error) (string, bool) {
 		return "", false
 	}
 
-	return resourceGroupFromMessage(url)
-}
-
-func resourceGroupFromMessage(msg string) (string, bool) {
-	matches := rxScopeResourceGroup.FindStringSubmatch(msg)
-	if len(matches) < 2 {
+	rgs := resourceGroupsFromMessage(url)
+	if len(rgs) == 0 {
 		return "", false
 	}
-	return matches[1], true
+	return rgs[0], true
+}
+
+func resourceGroupsFromMessage(msg string) []string {
+	var rgs []string
+	for _, match := range rxResourceID.FindAllStringSubmatch(msg, -1) {
+		if len(match) >= 2 {
+			rgs = append(rgs, match[1])
+		}
+	}
+	return rgs
 }
 
 // IsRetryableError returns true if the error is a transient/retryable error
