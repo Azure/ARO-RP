@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -31,14 +30,15 @@ func (f *frontend) postAdminOpenShiftClusterInvestigate(w http.ResponseWriter, r
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	w.Header().Set("Content-Type", "text/plain")
-
 	err := f._postAdminOpenShiftClusterInvestigate(ctx, r, log, w)
-
-	adminReply(log, w, nil, nil, err)
+	if err != nil {
+		// Only set Content-Type and call adminReply on error, since on success
+		// the response was already streamed as text/plain by InvestigateCluster.
+		adminReply(log, w, nil, nil, err)
+	}
 }
 
-func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r *http.Request, log *logrus.Entry, w io.Writer) error {
+func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r *http.Request, log *logrus.Entry, w http.ResponseWriter) error {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	// Parse request body from context (middleware buffers the body).
@@ -100,6 +100,10 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 	}
 
 	log.Infof("starting Holmes investigation for cluster %s with question: %s", resourceID, req.Question)
+
+	// Set Content-Type before streaming begins. Once bytes are written to w,
+	// the response is committed and errors cannot be reported via adminReply.
+	w.Header().Set("Content-Type", "text/plain")
 
 	err = f.hiveClusterManager.InvestigateCluster(ctx, hiveNamespace, kubeconfig, holmesConfig, req.Question, w)
 	if err != nil {
