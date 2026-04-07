@@ -58,34 +58,34 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	ctx context.Context,
 	resType, resName, resGroupName, resourceID, desiredVMSize string,
 	log *logrus.Entry,
-) error {
+) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			fmt.Sprintf(
 				"The Resource '%s/%s' under resource group '%s' was not found.",
 				resType, resName, resGroupName))
 	case err != nil:
-		return err
+		return nil, err
 	}
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
@@ -104,27 +104,9 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	a adminactions.AzureActions,
 	desiredVMSize string,
 ) ([]byte, error) {
-	// API server health is the most fundamental check. If the API server is
-	// unreachable, all kube-based checks below will fail with connection errors,
-	// producing noisy output that obscures the root cause. Run it synchronously
-	// as a gate before the parallel checks.
-	if err := validateAPIServerHealth(ctx, k); err != nil {
-		var ce *api.CloudError
-		if errors.As(err, &ce) && ce.CloudErrorBody != nil {
-			return nil, &api.CloudError{
-				StatusCode: http.StatusBadRequest,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "Pre-flight validation failed.",
-					Details: []api.CloudErrorBody{*ce.CloudErrorBody},
-				},
-			}
-		}
-		return nil, err
-	}
-
-	// Remaining checks run in parallel. The VM SKU/quota check uses the Azure
-	// ARM API (not kube), so it can run concurrently with the kube-based checks.
+	// Run checks in parallel, collecting all errors so the caller sees every
+	// failure at once. For API server checks, run ClusterOperator status first
+	// and only run per-pod validation if the operator-level gate is healthy.
 	var (
 		mu      sync.Mutex
 		details []api.CloudErrorBody
@@ -147,7 +129,7 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	}
 
 	if err := k.CheckAPIServerReadyz(ctx); err != nil {
-		return api.NewCloudError(
+		return nil, api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver",
 			fmt.Sprintf("API server is reporting a non-ready status: %v", err))
@@ -156,6 +138,13 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	var wg sync.WaitGroup
 
 	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a)) })
+	wg.Go(func() {
+		if err := validateAPIServerHealth(ctx, k); err != nil {
+			collect(err)
+			return
+		}
+		collect(validateAPIServerPods(ctx, k))
+	})
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
 	wg.Go(func() { collect(checkCPMSNotActive(ctx, k)) })
@@ -163,7 +152,7 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	wg.Wait()
 
 	if len(details) > 0 {
-		return &api.CloudError{
+		return nil, &api.CloudError{
 			StatusCode: http.StatusBadRequest,
 			CloudErrorBody: &api.CloudErrorBody{
 				Code:    api.CloudErrorCodeInvalidParameter,
@@ -173,7 +162,7 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 		}
 	}
 
-	return nil
+	return json.Marshal("All pre-flight checks passed")
 }
 
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
@@ -289,9 +278,9 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 
 	if !clusteroperators.IsOperatorAvailable(&co) {
 		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError, "kube-apiserver",
-			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is unhealthy.",
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver",
+			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is degraded.",
 				clusteroperators.OperatorStatusText(&co)))
 	}
 
@@ -328,24 +317,23 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 		}
 
 		apiServerPodCount++
-
-		if err := validatePodHealth(&pod); err != nil {
-			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, err.Error()))
+		if healthy, reason := isPodHealthy(&pod); !healthy {
+			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, reason))
 		}
 	}
 
 	if apiServerPodCount != api.ControlPlaneNodeCount {
 		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
 			fmt.Sprintf("Expected %d kube-apiserver pods, found %d. Resize is not safe without full API server redundancy.",
 				api.ControlPlaneNodeCount, apiServerPodCount))
 	}
 
 	if len(unhealthyPods) > 0 {
 		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
 			fmt.Sprintf("Unhealthy kube-apiserver pods: %v. Resize is not safe without full API server redundancy.",
 				unhealthyPods))
 	}
@@ -353,19 +341,21 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 	return nil
 }
 
-func validatePodHealth(pod *corev1.Pod) error {
+func isPodHealthy(pod *corev1.Pod) (bool, string) {
 	if pod.Status.Phase != corev1.PodRunning {
-		return fmt.Errorf("phase: %s", pod.Status.Phase)
+		return false, fmt.Sprintf("phase: %s", pod.Status.Phase)
 	}
+
 	for _, cond := range pod.Status.Conditions {
 		if cond.Type == corev1.PodReady {
 			if cond.Status != corev1.ConditionTrue {
-				return fmt.Errorf("not ready")
+				return false, "not ready"
 			}
-			return nil
+			return true, ""
 		}
 	}
-	return fmt.Errorf("ready condition not found")
+
+	return false, "Ready condition not found"
 }
 
 // validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
@@ -389,8 +379,8 @@ func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 
 	if !clusteroperators.IsOperatorAvailable(&co) {
 		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError, "etcd",
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "etcd",
 			fmt.Sprintf("etcd is not healthy: %s. Resize is not safe while etcd quorum is at risk.",
 				clusteroperators.OperatorStatusText(&co)))
 	}
@@ -423,14 +413,14 @@ func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 				return nil
 			}
 			return api.NewCloudError(
-				http.StatusInternalServerError,
+				http.StatusConflict,
 				api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
 				fmt.Sprintf("Cluster Service Principal is invalid: %s", cond.Message))
 		}
 	}
 
 	return api.NewCloudError(
-		http.StatusInternalServerError,
+		http.StatusConflict,
 		api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
 		"ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.")
 }
