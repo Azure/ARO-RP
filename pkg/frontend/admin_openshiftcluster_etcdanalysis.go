@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	etcdAnalysisImage        = "quay.io/redhat_emp1/octosql-etcd:latest" // TODO: move this to the arosvc ACR.
+	etcdAnalysisImage        = "arosvc.azurecr.io/redhat_emp1/octosql-etcd:latest"
 	etcdDataDir              = "/var/lib/etcd"
 	etcdAnalysisSAPrefix     = "etcd-analysis-privileged"
 	etcdAnalysisSuffixLength = 8
