@@ -139,7 +139,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		}
 	}
 
-	return json.Marshal("All pre-flight checks passed")
+	return json.Marshal(map[string]string{"status": "passed"})
 }
 
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and

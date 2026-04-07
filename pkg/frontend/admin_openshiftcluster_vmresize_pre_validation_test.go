@@ -202,7 +202,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`"All pre-flight checks passed"` + "\n"),
+			wantResponse:   []byte(`{"status":"passed"}` + "\n"),
 		},
 		{
 			name:       "missing vmSize parameter",
