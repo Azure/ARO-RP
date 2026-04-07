@@ -44,7 +44,7 @@ Returns a list of all schedules.
 
 Creates or updates a schedule. Returns `201 Created` for new schedules and `200 OK` for updates.
 
-If `id` is omitted from the request body, a new schedule is created with an auto-generated ID. If `id` is provided and matches an existing schedule, that schedule is updated. If `id` is provided but does not match any existing schedule, a new schedule is created with that ID.
+The schedule `id` field is the schedule's own unique identifier (distinct from `maintenanceTaskID`). If `id` is omitted from the request body, a new schedule is created with an auto-generated ID. If `id` is provided and matches an existing schedule, that schedule is updated. If `id` is provided but does not match any existing schedule, a new schedule is created with that ID.
 
 See [Scheduler Calendar and Selectors](./scheduler-calendar-and-selectors.md) for the calendar expression format and selector syntax.
 

@@ -10,7 +10,7 @@ The Scheduler runs alongside the Actuator and shares key infrastructure:
 - **Shared Database**: Both components share the same database. The Scheduler writes `MaintenanceManifest` documents that the Actuator subsequently reads and executes.
 - **Cluster Cache**: The Scheduler maintains a cache of cluster and subscription metadata, updated via database change notifications. This cache is used for selector evaluation.
 
-The Scheduler exposes a `/healthz/ready` endpoint for liveness and readiness probes.
+The Scheduler exposes a `/healthz/ready` endpoint for readiness probes.
 
 ## Key Concepts
 

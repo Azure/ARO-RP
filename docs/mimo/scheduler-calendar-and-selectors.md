@@ -26,7 +26,7 @@ The seconds component is optional. If provided, it must be `00`. Per-second gran
 
 | Field | Min | Max | Notes |
 |-------|-----|-----|-------|
-| Year | 2026 | 2100 | Years outside this range are rejected. Matching is exact: specifying `2026` matches only 2026, not subsequent years. Use `*` for any year. |
+| Year | 2026 | -- | Years before 2026 are rejected. There is no enforced upper bound. Matching is exact: specifying `2026` matches only 2026, not subsequent years. Use `*` for any year. |
 | Month | 1 | 12 | |
 | Day | 1 | 31 | Days beyond the month's range are handled gracefully |
 | Hour | 0 | 23 | |
