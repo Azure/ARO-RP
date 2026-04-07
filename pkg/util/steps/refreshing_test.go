@@ -89,7 +89,7 @@ func TestCreateActionableError(t *testing.T) {
 			},
 		},
 		{
-			testName:      "AuthorizationFailed on managed RG returns InvalidResourceProviderPermissions",
+			testName:      "AuthorizationFailed on managed RG returns InternalServerError",
 			managedRGName: "aro-managed-rg",
 			rawErr: autorest.DetailedError{
 				Original: &azure.ServiceError{
