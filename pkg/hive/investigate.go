@@ -192,6 +192,12 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName: kubeconfigSecretName,
+							Items: []corev1.KeyToPath{
+								{
+									Key:  "config",
+									Path: "config",
+								},
+							},
 						},
 					},
 				},
@@ -291,8 +297,8 @@ func (hr *clusterManager) streamPodLogs(ctx context.Context, namespace, name str
 	}
 	defer stream.Close()
 
-	// Use a buffered reader to read line-by-line and flush after each write
-	// so the client sees output in real-time instead of only when the pod exits.
+	// Read the log stream in chunks and flush after each write so the client
+	// sees output in real-time instead of only when the pod exits.
 	flusher, canFlush := w.(interface{ Flush() })
 	buf := make([]byte, 4096)
 	for {
