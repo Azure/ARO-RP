@@ -4,6 +4,7 @@ package stringutils
 // Licensed under the Apache License 2.0.
 
 import (
+	"slices"
 	"strings"
 )
 
@@ -13,21 +14,13 @@ func LastTokenByte(s string, sep byte) string {
 }
 
 func Contains(list []string, value string) bool {
-	for _, e := range list {
-		if value == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, value)
 }
 
 func GroupsIntersect(as, bs []string) (gs []string) {
 	for _, a := range as {
-		for _, b := range bs {
-			if a == b {
-				gs = append(gs, a)
-				break
-			}
+		if slices.Contains(bs, a) {
+			gs = append(gs, a)
 		}
 	}
 

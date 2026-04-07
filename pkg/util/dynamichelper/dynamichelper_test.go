@@ -195,7 +195,7 @@ func TestMergeGK(t *testing.T) {
 			},
 			new: &appsv1.Deployment{
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
@@ -219,7 +219,7 @@ func TestMergeGK(t *testing.T) {
 			},
 			want: &appsv1.Deployment{
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
@@ -260,8 +260,8 @@ func TestMergeGK(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(10)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(10)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,

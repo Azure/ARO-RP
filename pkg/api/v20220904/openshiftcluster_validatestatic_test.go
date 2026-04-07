@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
@@ -122,11 +121,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.location == nil {
-					tt.location = pointerutils.ToPtr("location")
+					tt.location = new("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = pointerutils.ToPtr("resourceName")
+					tt.clusterName = new("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{

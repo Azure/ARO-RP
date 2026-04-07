@@ -23,7 +23,7 @@ import (
 
 type adminReqOpts struct {
 	Option string
-	Value  interface{}
+	Value  any
 }
 
 func logOnError(log *logrus.Entry) []adminReqOpts {
@@ -39,7 +39,7 @@ func logOnError(log *logrus.Entry) []adminReqOpts {
 	}
 }
 
-func _getAdminReqOpt(key string, opts []adminReqOpts) (interface{}, bool) {
+func _getAdminReqOpt(key string, opts []adminReqOpts) (any, bool) {
 	for _, i := range opts {
 		if i.Option == key {
 			return i.Value, true
@@ -48,7 +48,7 @@ func _getAdminReqOpt(key string, opts []adminReqOpts) (interface{}, bool) {
 	return nil, false
 }
 
-func adminRequest(ctx context.Context, method, path string, params url.Values, strict bool, in, out interface{}, opts ...adminReqOpts) (*http.Response, error) {
+func adminRequest(ctx context.Context, method, path string, params url.Values, strict bool, in, out any, opts ...adminReqOpts) (*http.Response, error) {
 	if !env.IsLocalDevelopmentMode() {
 		return nil, errors.New("only development RP mode is supported")
 	}

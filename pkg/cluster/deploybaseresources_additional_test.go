@@ -57,7 +57,7 @@ func TestDenyAssignment(t *testing.T) {
 			},
 			ExpectedExcludePrincipals: &[]mgmtauthorization.Principal{
 				{
-					ID:   pointerutils.ToPtr(fakeClusterSPObjectId),
+					ID:   new(fakeClusterSPObjectId),
 					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},
@@ -89,15 +89,15 @@ func TestDenyAssignment(t *testing.T) {
 			},
 			ExpectedExcludePrincipals: &[]mgmtauthorization.Principal{
 				{
-					ID:   pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+					ID:   new("00000000-0000-0000-0000-000000000000"),
 					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 				{
-					ID:   pointerutils.ToPtr("88888888-8888-8888-8888-888888888888"),
+					ID:   new("88888888-8888-8888-8888-888888888888"),
 					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 				{
-					ID:   pointerutils.ToPtr("77777777-7777-7777-7777-777777777777"),
+					ID:   new("77777777-7777-7777-7777-777777777777"),
 					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},
@@ -163,12 +163,12 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 			},
 			ExpectedArmResource: &arm.Resource{
 				Resource: mgmtauthorization.RoleAssignment{
-					Name: pointerutils.ToPtr("[concat('clustertest', '/Microsoft.Authorization/', guid(" + resourceID + "))]"),
-					Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
+					Name: new("[concat('clustertest', '/Microsoft.Authorization/', guid(" + resourceID + "))]"),
+					Type: new(resourceType + "/providers/roleAssignments"),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
+						Scope:            new("[" + resourceID + "]"),
 						RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleStorageBlobDataContributor + "')]"),
-						PrincipalID:      pointerutils.ToPtr("['" + fakePrincipalID + "']"),
+						PrincipalID:      new("['" + fakePrincipalID + "']"),
 						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
 				},
@@ -255,31 +255,31 @@ func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
 								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
 									Subnet: &armnetwork.Subnet{
-										ID: pointerutils.ToPtr("someID"),
+										ID: new("someID"),
 									},
 								},
 								Zones: []*string{},
-								Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
+								Name:  new("internal-lb-ip-v4"),
 							},
 						},
 						BackendAddressPools: []*armnetwork.BackendAddressPool{
 							{
-								Name: pointerutils.ToPtr(infraID),
+								Name: new(infraID),
 							},
 							{
-								Name: pointerutils.ToPtr("ssh-0"),
+								Name: new("ssh-0"),
 							},
 							{
-								Name: pointerutils.ToPtr("ssh-1"),
+								Name: new("ssh-1"),
 							},
 							{
-								Name: pointerutils.ToPtr("ssh-2"),
+								Name: new("ssh-2"),
 							},
 						},
 					},
-					Name:     pointerutils.ToPtr(infraID + "-internal"),
-					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-					Location: pointerutils.ToPtr(location),
+					Name:     new(infraID + "-internal"),
+					Type:     new("Microsoft.Network/loadBalancers"),
+					Location: new(location),
 				},
 				APIVersion: azureclient.APIVersion("Microsoft.Network"),
 				DependsOn:  []string{},
@@ -323,31 +323,31 @@ func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
 								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
 									Subnet: &armnetwork.Subnet{
-										ID: pointerutils.ToPtr("someID"),
+										ID: new("someID"),
 									},
 								},
-								Zones: []*string{pointerutils.ToPtr("1"), pointerutils.ToPtr("2"), pointerutils.ToPtr("3")},
-								Name:  pointerutils.ToPtr("internal-lb-ip-v4"),
+								Zones: []*string{new("1"), new("2"), new("3")},
+								Name:  new("internal-lb-ip-v4"),
 							},
 						},
 						BackendAddressPools: []*armnetwork.BackendAddressPool{
 							{
-								Name: pointerutils.ToPtr(infraID),
+								Name: new(infraID),
 							},
 							{
-								Name: pointerutils.ToPtr("ssh-0"),
+								Name: new("ssh-0"),
 							},
 							{
-								Name: pointerutils.ToPtr("ssh-1"),
+								Name: new("ssh-1"),
 							},
 							{
-								Name: pointerutils.ToPtr("ssh-2"),
+								Name: new("ssh-2"),
 							},
 						},
 					},
-					Name:     pointerutils.ToPtr(infraID + "-internal"),
-					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-					Location: pointerutils.ToPtr(location),
+					Name:     new(infraID + "-internal"),
+					Type:     new("Microsoft.Network/loadBalancers"),
+					Location: new(location),
 				},
 				APIVersion: azureclient.APIVersion("Microsoft.Network"),
 				DependsOn:  []string{},

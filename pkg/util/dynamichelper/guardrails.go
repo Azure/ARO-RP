@@ -74,7 +74,7 @@ func GetEnforcementAction(obj *unstructured.Unstructured) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("%s/%s: get spec failed", ns, name)
 	}
-	spec, ok := field.(map[string]interface{})
+	spec, ok := field.(map[string]any)
 	if !ok {
 		return "", fmt.Errorf("%s/%s: spec: %T is not map", ns, name, field)
 	}
@@ -227,7 +227,7 @@ func (dh *dynamicHelper) IsConstraintTemplateReady(ctx context.Context, name str
 	if err != nil {
 		return false, err
 	}
-	status, ok := ct.Object["status"].(map[string]interface{})
+	status, ok := ct.Object["status"].(map[string]any)
 	if !ok {
 		return false, nil
 	}

@@ -7,8 +7,6 @@ import (
 	"context"
 
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type ResourceSKUsClientAddons interface {
@@ -22,8 +20,8 @@ func (c *resourceSKUsClient) List(ctx context.Context, filter string, includeExt
 	}
 
 	pager := c.NewListPager(&armcompute.ResourceSKUsClientListOptions{
-		Filter:                   pointerutils.ToPtr(filter),
-		IncludeExtendedLocations: pointerutils.ToPtr(ex),
+		Filter:                   new(filter),
+		IncludeExtendedLocations: new(ex),
 	})
 
 	for pager.More() {

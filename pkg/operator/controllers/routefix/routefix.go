@@ -18,7 +18,6 @@ import (
 	securityv1 "github.com/openshift/api/security/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -164,7 +163,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 								},
 								// TODO: specify requests/limits
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: pointerutils.ToPtr(true),
+									Privileged: new(true),
 								},
 								Lifecycle: &corev1.Lifecycle{
 									PreStop: &corev1.LifecycleHandler{
@@ -217,7 +216,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 								},
 								// TODO: specify requests/limits
 								SecurityContext: &corev1.SecurityContext{
-									Privileged: pointerutils.ToPtr(true),
+									Privileged: new(true),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -255,7 +254,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: configmapName,
 										},
-										DefaultMode: pointerutils.ToPtr(int32(0o555)),
+										DefaultMode: new(int32(0o555)),
 									},
 								},
 							},

@@ -68,7 +68,7 @@ func TestHasAuthorizationFailedError(t *testing.T) {
 			err: &azure.ServiceError{
 				Code:    CODE_DEPLOYFAILED,
 				Message: "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.",
-				Details: []map[string]interface{}{
+				Details: []map[string]any{
 					{
 						"code":    "Forbidden",
 						"message": "{\r\n  \"error\": {\r\n    \"code\": \"AuthorizationFailed\",\r\n    \"message\": \"The client 'a0f3c32d-647d-416c-8997-fb2463b1dcd5' with object id 'a0f3c32d-647d-416c-8997-fb2463b1dcd5' does not have authorization to perform action 'Microsoft.Storage/storageAccounts/write' over scope '/subscriptions/225e02bc-43d0-43d1-a01a-17e584a4ef69/resourceGroups/test' or the scope is invalid. If access was recently granted, please refresh your credentials.\"\r\n  }\r\n}",

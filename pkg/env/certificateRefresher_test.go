@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const testCertBundle1 = `-----BEGIN PRIVATE KEY-----
@@ -170,7 +169,7 @@ func TestRefreshingCertificate(t *testing.T) {
 		}
 
 		mockSource := func(cancel context.CancelFunc) {
-			for i := 0; i < n; i++ {
+			for range n {
 				s <- time.Time{}
 			}
 			cancel()
@@ -192,7 +191,7 @@ func TestRefreshingCertificate(t *testing.T) {
 			name: "test initial certificate, pull exactly once, ticks one time",
 			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
 				manager := mock_azsecrets.NewMockClient(controller)
-				manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil)
+				manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: new(testCertBundle1)}}, nil)
 				return manager
 			},
 			tickCount: 0,
@@ -205,8 +204,8 @@ func TestRefreshingCertificate(t *testing.T) {
 			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
 				manager := mock_azsecrets.NewMockClient(mockController)
 				gomock.InOrder(
-					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil),
-					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle2)}}, nil),
+					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: new(testCertBundle1)}}, nil),
+					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: new(testCertBundle2)}}, nil),
 				)
 				return manager
 			},
@@ -232,7 +231,7 @@ func TestRefreshingCertificate(t *testing.T) {
 			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
 				manager := mock_azsecrets.NewMockClient(controller)
 				gomock.InOrder(
-					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil),
+					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: new(testCertBundle1)}}, nil),
 					manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{}, cannotPull),
 				)
 				return manager
@@ -246,7 +245,7 @@ func TestRefreshingCertificate(t *testing.T) {
 			name: "test refresh, pull exactly 5 times, 4 ticks",
 			managerFactory: func(controller *gomock.Controller) azsecrets.Client {
 				manager := mock_azsecrets.NewMockClient(controller)
-				manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: pointerutils.ToPtr(testCertBundle1)}}, nil).Times(5)
+				manager.EXPECT().GetSecret(gomock.Any(), testCertName, "", nil).Return(azsecretssdk.GetSecretResponse{Secret: azsecretssdk.Secret{Value: new(testCertBundle1)}}, nil).Times(5)
 				return manager
 			},
 			tickCount: 4,

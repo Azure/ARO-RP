@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -606,17 +605,17 @@ func expectWatchEvent(ctx gomock.Matcher, o *unstructured.Unstructured, k *mock_
 	return func() {
 		go func() {
 			w.Add(&unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"kind":       "Pod",
 					"apiVersion": "v1",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name":      o.GetName(),
 						"namespace": o.GetNamespace(),
-						"labels": map[string]interface{}{
+						"labels": map[string]any{
 							"app": "recovery-etcd",
 						},
 					},
-					"status": map[string]interface{}{
+					"status": map[string]any{
 						"phase":   podPhase,
 						"message": message,
 					},
@@ -677,7 +676,7 @@ func newEtcdPods(t *testing.T, doc *api.OpenShiftClusterDocument, healthy, multi
 		{
 			Name:         "etcd",
 			Ready:        false,
-			Started:      pointerutils.ToPtr(false),
+			Started:      new(false),
 			RestartCount: 50,
 			State: corev1.ContainerState{
 				Waiting: &corev1.ContainerStateWaiting{

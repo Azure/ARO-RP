@@ -133,11 +133,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				if tt.location == nil {
-					tt.location = pointerutils.ToPtr("location")
+					tt.location = new("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = pointerutils.ToPtr("resourceName")
+					tt.clusterName = new("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{
@@ -875,7 +875,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 					ManagedOutboundIPs: &ManagedOutboundIPs{
 						Count: 1,
 					},
-					AllocatedOutboundPorts: pointerutils.ToPtr(1),
+					AllocatedOutboundPorts: new(1),
 				}
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.allocatedOutboundPorts: The field allocatedOutboundPorts is not implemented at this time, please check back later.",

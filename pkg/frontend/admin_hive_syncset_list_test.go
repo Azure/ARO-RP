@@ -95,7 +95,7 @@ func Test_listAdminHiveSyncSet(t *testing.T) {
 			syncsetname: "selectorSyncSetTest",
 			mocks: func(tt *test, s *mock_hive.MockSyncSetManager) {
 				s.EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeOf(hivev1.SelectorSyncSetList{}))).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeFor[hivev1.SelectorSyncSetList]())).
 					Return(&selectorSyncSetTest, nil).Times(1)
 			},
 			isSyncSet:      false,
@@ -110,7 +110,7 @@ func Test_listAdminHiveSyncSet(t *testing.T) {
 			syncsetname: "syncSetTest",
 			mocks: func(tt *test, s *mock_hive.MockSyncSetManager) {
 				s.EXPECT().
-					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeOf(hivev1.SyncSetList{}))).
+					List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(reflect.TypeFor[hivev1.SyncSetList]())).
 					Return(&syncsetTest, nil).Times(1)
 			},
 			isSyncSet:      true,

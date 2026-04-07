@@ -13,7 +13,7 @@ import (
 type openShiftVersionStaticValidator struct{}
 
 // Validate validates an OpenShift cluster
-func (sv openShiftVersionStaticValidator) Static(_new interface{}, _current *api.OpenShiftVersion) error {
+func (sv openShiftVersionStaticValidator) Static(_new any, _current *api.OpenShiftVersion) error {
 	new := _new.(*OpenShiftVersion)
 
 	var current *OpenShiftVersion

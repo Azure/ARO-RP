@@ -62,7 +62,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	return append(b, byte('\n')), nil
 }
 
-func (g *generator) conditionStanza(parameterName string) interface{} {
+func (g *generator) conditionStanza(parameterName string) any {
 	if g.production {
 		return "[parameters('" + parameterName + "')]"
 	}

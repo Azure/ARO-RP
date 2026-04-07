@@ -20,8 +20,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/api/machine/v1beta1"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -46,13 +44,13 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		By("Disabling reconciliation")
 		dep, err := clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Get(ctx, "cluster-version-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		dep.Spec.Replicas = pointerutils.ToPtr(int32(0))
+		dep.Spec.Replicas = new(int32(0))
 		_, err = clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Update(ctx, dep, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		dep, err = clients.Kubernetes.AppsV1().Deployments("openshift-etcd-operator").Get(ctx, "etcd-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		dep.Spec.Replicas = pointerutils.ToPtr(int32(0))
+		dep.Spec.Replicas = new(int32(0))
 		_, err = clients.Kubernetes.AppsV1().Deployments("openshift-etcd-operator").Update(ctx, dep, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -122,7 +120,7 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		By("Reverting deployments") // cluster-version-operator reconciles etcd-operator.
 		dep, err = clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Get(ctx, "cluster-version-operator", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		dep.Spec.Replicas = pointerutils.ToPtr(int32(1))
+		dep.Spec.Replicas = new(int32(1))
 		_, err = clients.Kubernetes.AppsV1().Deployments("openshift-cluster-version").Update(ctx, dep, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 

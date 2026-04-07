@@ -93,7 +93,7 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		"vpnCACertificate",
 	} {
 		typ := "string"
-		var defaultValue interface{}
+		var defaultValue any
 		switch param {
 		case "proxyImageAuth", "proxyKey":
 			typ = "securestring"

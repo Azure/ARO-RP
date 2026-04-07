@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerregistry"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -104,7 +103,7 @@ func (m *manager) PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryP
 func (m *manager) EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error) {
 	err := m.tokens.CreateAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username, mgmtcontainerregistry.Token{
 		TokenProperties: &mgmtcontainerregistry.TokenProperties{
-			ScopeMapID: pointerutils.ToPtr(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
+			ScopeMapID: new(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
 			Status:     mgmtcontainerregistry.TokenStatusEnabled,
 		},
 	})
@@ -163,7 +162,7 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 // a password for the specified password name
 func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
-		TokenID: pointerutils.ToPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
+		TokenID: new(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
 	})
 	if err != nil {

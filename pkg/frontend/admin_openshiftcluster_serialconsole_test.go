@@ -164,10 +164,10 @@ func TestGetAdminOpenShiftClusterSerialConsole(t *testing.T) {
 			require.Equal(t, tt.wantStatusCode, response.StatusCode)
 
 			if tt.wantError != "" {
-				body := make(map[string]interface{})
+				body := make(map[string]any)
 				err := json.NewDecoder(response.Body).Decode(&body)
 				require.NoError(t, err)
-				require.Contains(t, body["error"].(map[string]interface{})["message"], tt.wantError)
+				require.Contains(t, body["error"].(map[string]any)["message"], tt.wantError)
 			}
 		})
 	}

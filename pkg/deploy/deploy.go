@@ -32,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -158,8 +157,8 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 // getParameters returns an *arm.Parameters populated with parameter names and
 // values.  The names are taken from the ps argument and the values are taken
 // from d.config.Configuration.
-func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
-	m := map[string]interface{}{}
+func (d *deployer) getParameters(ps map[string]any) *arm.Parameters {
+	m := map[string]any{}
 	v := reflect.ValueOf(*d.config.Configuration)
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).IsNil() {
@@ -197,7 +196,7 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName string, deployment mgmtfeatures.Deployment) (err error) {
 	numAttempts := 3
 
-	for i := 0; i < numAttempts; i++ {
+	for i := range numAttempts {
 		d.log.Printf("deploying %s", deploymentName)
 		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
 		serviceErr, isServiceError := err.(*azure.ServiceError)
@@ -283,7 +282,7 @@ func (d *deployer) disableAutomaticRepairsOnVMSS(ctx context.Context, resourceGr
 	err := d.vmss.UpdateAndWait(ctx, resourceGroupName, vmssName, mgmtcompute.VirtualMachineScaleSetUpdate{
 		VirtualMachineScaleSetUpdateProperties: &mgmtcompute.VirtualMachineScaleSetUpdateProperties{
 			AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
-				Enabled: pointerutils.ToPtr(false),
+				Enabled: new(false),
 			},
 		},
 	})
@@ -306,7 +305,7 @@ func (d *deployer) runCommandWithRetry(ctx context.Context, resourceGroupName, v
 	const retryDelaySecs = 10
 
 	var err error
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		err = d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input)
 		if err == nil || !isOperationPreemptedError(err) {
 			break

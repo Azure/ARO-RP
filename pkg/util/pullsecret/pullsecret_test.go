@@ -39,7 +39,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 				},
 			},
 			want: &pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "ZnJlZDplbnRlcg==",
 					},
@@ -63,7 +63,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 				},
 			},
 			want: &pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "ZnJlZDplbnRlcg==",
 					},
@@ -87,7 +87,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 				},
 			},
 			want: &pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "ZnJlZDplbnRlcg==",
 					},
@@ -105,7 +105,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 			ps:   original,
 			rps:  []*api.RegistryProfile{},
 			want: &pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},
@@ -155,7 +155,7 @@ func TestMerge(t *testing.T) {
 			ps:   originalPS,
 			base: originalPS,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},
@@ -172,7 +172,7 @@ func TestMerge(t *testing.T) {
 			ps:   ``,
 			base: originalPS,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},
@@ -189,7 +189,7 @@ func TestMerge(t *testing.T) {
 			ps:   originalPS,
 			base: ``,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},
@@ -206,7 +206,7 @@ func TestMerge(t *testing.T) {
 			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"x"},"registry.redhat.io":{"auth":"y"},"aroacr.azure.io":{"auth":"z"}}}`,
 			base: originalPS,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},
@@ -226,7 +226,7 @@ func TestMerge(t *testing.T) {
 			base: `{"auths":{"arosvc.azurecr.io":{"auth":"x"},"registry.redhat.io":{"auth":"y"},"aroacr.azure.io":{"auth":"z"}}}`,
 			ps:   originalPS,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},
@@ -246,7 +246,7 @@ func TestMerge(t *testing.T) {
 			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"a"},"registry.redhat.io":{"auth":"y"}}}`,
 			base: originalPS,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "a",
 					},
@@ -263,7 +263,7 @@ func TestMerge(t *testing.T) {
 			base: `{"auths":{"arosvc.azurecr.io":{"auth":"x"},"registry.redhat.io":{"auth":"y"},"aroacr.azure.io":{"auth":"z"}}}`,
 			ps:   originalPS,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},
@@ -283,7 +283,7 @@ func TestMerge(t *testing.T) {
 			base: `{"auths":{"arosvc.azurecr.io":{"auth":"x"}}}`,
 			ps:   originalPS,
 			wantPS: pullSecret{
-				Auths: map[string]map[string]interface{}{
+				Auths: map[string]map[string]any{
 					"arosvc.azurecr.io": {
 						"auth": "x",
 					},

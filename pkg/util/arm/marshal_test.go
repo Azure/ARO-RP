@@ -36,7 +36,7 @@ func TestResourceMarshal(t *testing.T) {
 						"zero": {Uint: 0, Unmarshaled: 1},
 						"one":  {Uint: 1, Unmarshaled: 1},
 					},
-					Ptr:         pointerutils.ToPtr("test"),
+					Ptr:         new("test"),
 					Slice:       []*testResource{{Float: 1.1, Unmarshaled: 1}},
 					ByteSlice:   []byte("test"),
 					String:      "test",
@@ -101,53 +101,53 @@ func TestResourceMarshal(t *testing.T) {
 			r: &Resource{
 				APIVersion: "2020-08-01",
 				Resource: armnetwork.VirtualNetwork{
-					ID:       pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet"),
-					Name:     pointerutils.ToPtr("vnet"),
-					Type:     pointerutils.ToPtr("microsoft.network/virtualnetworks"),
-					Location: pointerutils.ToPtr("eastus"),
-					Tags:     map[string]*string{"Tag": pointerutils.ToPtr("Value")},
+					ID:       new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet"),
+					Name:     new("vnet"),
+					Type:     new("microsoft.network/virtualnetworks"),
+					Location: new("eastus"),
+					Tags:     map[string]*string{"Tag": new("Value")},
 					Properties: &armnetwork.VirtualNetworkPropertiesFormat{
 						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
-						ResourceGUID:      pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+						ResourceGUID:      new("00000000-0000-0000-0000-000000000000"),
 						AddressSpace: &armnetwork.AddressSpace{
-							AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/22")},
+							AddressPrefixes: []*string{new("10.0.0.0/22")},
 						},
 						Encryption: &armnetwork.VirtualNetworkEncryption{
-							Enabled:     pointerutils.ToPtr(false),
+							Enabled:     new(false),
 							Enforcement: pointerutils.ToPtr(armnetwork.VirtualNetworkEncryptionEnforcementAllowUnencrypted),
 						},
-						EnableDdosProtection:   pointerutils.ToPtr(false),
+						EnableDdosProtection:   new(false),
 						VirtualNetworkPeerings: []*armnetwork.VirtualNetworkPeering{},
 						Subnets: []*armnetwork.Subnet{
 							{
-								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"),
-								Name: pointerutils.ToPtr("master"),
-								Type: pointerutils.ToPtr("Microsoft.Network/virtualNetworks/subnets"),
+								ID:   new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"),
+								Name: new("master"),
+								Type: new("Microsoft.Network/virtualNetworks/subnets"),
 								Properties: &armnetwork.SubnetPropertiesFormat{
 									ProvisioningState:    pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
-									AddressPrefixes:      []*string{pointerutils.ToPtr("10.0.0.0/23")},
-									NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
+									AddressPrefixes:      []*string{new("10.0.0.0/23")},
+									NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
 									IPConfigurations: []*armnetwork.IPConfiguration{
-										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/loadBalancers/ARO-00000-INTERNAL/frontendIPConfigurations/INTERNAL-LB-IP-V4")},
-										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PE.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/PRIVATEENDPOINTIPCONFIG.00000000-0000-0000-0000-000000000000")},
-										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PLS.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/ARO-00000-PLS-NIC")},
-										{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateLinkServices/ARO-00000-PLS/ipConfigurations/ARO-00000-PLS-NIC")},
+										{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/loadBalancers/ARO-00000-INTERNAL/frontendIPConfigurations/INTERNAL-LB-IP-V4")},
+										{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PE.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/PRIVATEENDPOINTIPCONFIG.00000000-0000-0000-0000-000000000000")},
+										{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkInterfaces/ARO-00000-PLS.NIC.00000000-0000-0000-0000-000000000000/ipConfigurations/ARO-00000-PLS-NIC")},
+										{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateLinkServices/ARO-00000-PLS/ipConfigurations/ARO-00000-PLS-NIC")},
 									},
-									PrivateEndpoints:                  []*armnetwork.PrivateEndpoint{{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateEndpoints/ARO-00000-PE")}},
+									PrivateEndpoints:                  []*armnetwork.PrivateEndpoint{{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateEndpoints/ARO-00000-PE")}},
 									PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
 									PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
-									Purpose:                           pointerutils.ToPtr("PrivateEndpoints"),
+									Purpose:                           new("PrivateEndpoints"),
 									Delegations:                       []*armnetwork.Delegation{},
 								},
 							},
 							{
-								ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker"),
-								Name: pointerutils.ToPtr("worker"),
-								Type: pointerutils.ToPtr("Microsoft.Network/virtualNetworks/subnets"),
+								ID:   new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker"),
+								Name: new("worker"),
+								Type: new("Microsoft.Network/virtualNetworks/subnets"),
 								Properties: &armnetwork.SubnetPropertiesFormat{
 									ProvisioningState:                 pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
-									AddressPrefixes:                   []*string{pointerutils.ToPtr("10.0.2.0/23")},
-									NetworkSecurityGroup:              &armnetwork.SecurityGroup{ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
+									AddressPrefixes:                   []*string{new("10.0.2.0/23")},
+									NetworkSecurityGroup:              &armnetwork.SecurityGroup{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
 									PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
 									PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesEnabled),
 									Delegations:                       []*armnetwork.Delegation{},
@@ -244,17 +244,17 @@ func TestResourceMarshal(t *testing.T) {
 			r: &Resource{
 				APIVersion: "2023-04-15",
 				Resource: &armcosmos.SQLDatabaseCreateUpdateParameters{
-					Type:     pointerutils.ToPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
-					Location: pointerutils.ToPtr("eastus"),
-					Name:     pointerutils.ToPtr("databaseAccountName/databaseName"),
+					Type:     new("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+					Location: new("eastus"),
+					Name:     new("databaseAccountName/databaseName"),
 					Properties: &armcosmos.SQLDatabaseCreateUpdateProperties{
 						Options: &armcosmos.CreateUpdateOptions{
 							AutoscaleSettings: &armcosmos.AutoscaleSettings{
-								MaxThroughput: pointerutils.ToPtr(int32(1000)),
+								MaxThroughput: new(int32(1000)),
 							},
 						},
 						Resource: &armcosmos.SQLDatabaseResource{
-							ID: pointerutils.ToPtr("databaseName"),
+							ID: new("databaseName"),
 						},
 					},
 				},
@@ -283,10 +283,10 @@ func TestResourceMarshal(t *testing.T) {
 				Type:       "Microsoft.Network/virtualNetworks",
 				Location:   "westus",
 				Resource: armnetwork.VirtualNetwork{
-					Name: pointerutils.ToPtr("test-vnet"),
+					Name: new("test-vnet"),
 					Properties: &armnetwork.VirtualNetworkPropertiesFormat{
 						AddressSpace: &armnetwork.AddressSpace{
-							AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/16")},
+							AddressPrefixes: []*string{new("10.0.0.0/16")},
 						},
 					},
 				},
@@ -325,7 +325,7 @@ type testResource struct {
 	Uint        uint                     `json:"uint,omitempty"`
 	Float       float64                  `json:"float,omitempty"`
 	Array       [1]*testResource         `json:"array,omitempty"`
-	Interface   interface{}              `json:"interface,omitempty"`
+	Interface   any                      `json:"interface,omitempty"`
 	Map         map[string]*testResource `json:"map,omitempty"`
 	Ptr         *string                  `json:"ptr,omitempty"`
 	Slice       []*testResource          `json:"slice,omitempty"`

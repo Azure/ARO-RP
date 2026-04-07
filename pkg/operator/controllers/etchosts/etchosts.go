@@ -17,8 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -166,31 +164,31 @@ func EtcHostsIgnitionConfig(clusterDomain string, apiIntIP string, gatewayDomain
 				{
 					Node: ign3types.Node{
 						Path:      "/etc/hosts.d/" + configFileName,
-						Overwrite: pointerutils.ToPtr(true),
+						Overwrite: new(true),
 						User: ign3types.NodeUser{
-							Name: pointerutils.ToPtr("root"),
+							Name: new("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: pointerutils.ToPtr(dataurl.EncodeBytes(aroconf)),
+							Source: new(dataurl.EncodeBytes(aroconf)),
 						},
-						Mode: pointerutils.ToPtr(0o644),
+						Mode: new(0o644),
 					},
 				},
 				{
 					Node: ign3types.Node{
-						Overwrite: pointerutils.ToPtr(true),
+						Overwrite: new(true),
 						Path:      "/usr/local/bin/" + scriptFileName,
 						User: ign3types.NodeUser{
-							Name: pointerutils.ToPtr("root"),
+							Name: new("root"),
 						},
 					},
 					FileEmbedded1: ign3types.FileEmbedded1{
 						Contents: ign3types.Resource{
-							Source: pointerutils.ToPtr(dataurl.EncodeBytes(aroscript)),
+							Source: new(dataurl.EncodeBytes(aroscript)),
 						},
-						Mode: pointerutils.ToPtr(0o744),
+						Mode: new(0o744),
 					},
 				},
 			},
@@ -199,7 +197,7 @@ func EtcHostsIgnitionConfig(clusterDomain string, apiIntIP string, gatewayDomain
 			Units: []ign3types.Unit{
 				{
 					Contents: &arounit,
-					Enabled:  pointerutils.ToPtr(true),
+					Enabled:  new(true),
 					Name:     unitFileName,
 				},
 			},
@@ -221,7 +219,7 @@ func EtcHostsMachineConfig(clusterDomain string, apiIntIP string, gatewayDomains
 	}
 
 	// canonicalise the machineconfig payload the same way as MCO
-	var i interface{}
+	var i any
 	err = json.Unmarshal(b, &i)
 	if err != nil {
 		return nil, err

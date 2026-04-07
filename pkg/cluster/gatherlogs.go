@@ -23,7 +23,7 @@ import (
 )
 
 type diagnosticStep struct {
-	f      func(context.Context) (interface{}, error)
+	f      func(context.Context) (any, error)
 	isJSON bool
 }
 
@@ -60,7 +60,7 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 
 			m.log.Printf("%s: %s", steps.FriendlyName(f.f), string(b))
 		} else {
-			entries, ok := o.([]interface{})
+			entries, ok := o.([]any)
 			name := steps.FriendlyName(f.f)
 			if ok {
 				for _, i := range entries {
@@ -73,7 +73,7 @@ func (m *manager) gatherFailureLogs(ctx context.Context, runType string) {
 	}
 }
 
-func (m *manager) logClusterDeployment(ctx context.Context) (interface{}, error) {
+func (m *manager) logClusterDeployment(ctx context.Context) (any, error) {
 	if m.doc == nil || m.hiveClusterManager == nil {
 		return nil, nil
 	}
@@ -88,7 +88,7 @@ func (m *manager) logClusterDeployment(ctx context.Context) (interface{}, error)
 	return cd, nil
 }
 
-func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
+func (m *manager) logClusterVersion(ctx context.Context) (any, error) {
 	if m.configcli == nil {
 		return nil, nil
 	}
@@ -103,7 +103,7 @@ func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
 	return cv, nil
 }
 
-func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
+func (m *manager) logNodes(ctx context.Context) (any, error) {
 	if m.kubernetescli == nil {
 		return nil, nil
 	}
@@ -139,7 +139,7 @@ func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
 	return strings.Join(lines, "\n"), errors.Join(errs...)
 }
 
-func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) {
+func (m *manager) logClusterOperators(ctx context.Context) (any, error) {
 	if m.configcli == nil {
 		return nil, nil
 	}
@@ -181,7 +181,7 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 	return strings.Join(lines, "\n"), errors.Join(errs...)
 }
 
-func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error) {
+func (m *manager) logIngressControllers(ctx context.Context) (any, error) {
 	if m.operatorcli == nil {
 		return nil, nil
 	}
@@ -223,7 +223,7 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 	return strings.Join(lines, "\n"), errors.Join(errs...)
 }
 
-func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
+func (m *manager) logPodLogs(ctx context.Context) (any, error) {
 	if m.kubernetescli == nil {
 		return nil, nil
 	}
@@ -232,7 +232,7 @@ func (m *manager) logPodLogs(ctx context.Context) (interface{}, error) {
 	podLogOptions := corev1.PodLogOptions{
 		TailLines: &tailLines,
 	}
-	items := make([]interface{}, 0)
+	items := make([]any, 0)
 
 	pods, err := m.kubernetescli.CoreV1().Pods("openshift-azure-operator").List(ctx, metav1.ListOptions{})
 	if err != nil {

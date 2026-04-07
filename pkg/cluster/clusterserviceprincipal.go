@@ -84,7 +84,7 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 // cloudConfigSecretFromChanges takes in the kube-system/azure-cloud-provider Secret and a map
 // containing cloud-config data. If the cloud-config data in cf is different from what's currently
 // in the Secret, cloudConfigSecretFromChanges updates and returns the Secret. Otherwise, it returns nil.
-func cloudConfigSecretFromChanges(secret *corev1.Secret, cf map[string]interface{}) (*corev1.Secret, error) {
+func cloudConfigSecretFromChanges(secret *corev1.Secret, cf map[string]any) (*corev1.Secret, error) {
 	data, err := yaml.Marshal(cf)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (m *manager) servicePrincipalUpdated(ctx context.Context) (*corev1.Secret, 
 		return nil, err
 	}
 
-	var cf map[string]interface{}
+	var cf map[string]any
 	if secret != nil && secret.Data != nil {
 		err = yaml.Unmarshal(secret.Data["cloud-config"], &cf)
 		if err != nil {

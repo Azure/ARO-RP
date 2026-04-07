@@ -229,7 +229,7 @@ func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
 
 	state := uuid.DefaultGenerator.Generate()
 
-	session.Values = map[interface{}]interface{}{
+	session.Values = map[any]any{
 		sessionKeyState: state,
 	}
 

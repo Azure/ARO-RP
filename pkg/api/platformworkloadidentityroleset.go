@@ -12,7 +12,7 @@ type PlatformWorkloadIdentityRoleSet struct {
 	Type     string `json:"type,omitempty"`
 	Deleting bool   `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 
-	Properties PlatformWorkloadIdentityRoleSetProperties `json:"properties,omitempty"`
+	Properties PlatformWorkloadIdentityRoleSetProperties `json:"properties"`
 }
 
 // PlatformWorkloadIdentityRoleSetProperties represents the properties of a PlatformWorkloadIdentityRoleSet resource.
@@ -27,7 +27,7 @@ type PlatformWorkloadIdentityRole struct {
 	RoleDefinitionName string         `json:"roleDefinitionName,omitempty"`
 	RoleDefinitionID   string         `json:"roleDefinitionId,omitempty"`
 	ServiceAccounts    []string       `json:"serviceAccounts,omitempty"`
-	SecretLocation     SecretLocation `json:"secretLocation,omitempty"`
+	SecretLocation     SecretLocation `json:"secretLocation"`
 }
 
 // SecretLocation represents the location of the in-cluster secret containing credentials for the platform workload identity.
