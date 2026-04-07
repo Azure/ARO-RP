@@ -64,11 +64,18 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 	}
 
 	// Rate limit: reject if too many concurrent investigations are running.
-	current := atomic.AddInt64(&f.activeInvestigations, 1)
-	defer atomic.AddInt64(&f.activeInvestigations, -1)
-	if current > int64(holmesConfig.MaxConcurrentInvestigations) {
-		return api.NewCloudError(http.StatusTooManyRequests, api.CloudErrorCodeThrottlingLimitExceeded, "", fmt.Sprintf("Too many concurrent investigations (%d). Please try again later.", holmesConfig.MaxConcurrentInvestigations))
+	// Use CAS loop so rejected requests don't temporarily inflate the counter.
+	maxConcurrent := int64(holmesConfig.MaxConcurrentInvestigations)
+	for {
+		current := atomic.LoadInt64(&f.activeInvestigations)
+		if current >= maxConcurrent {
+			return api.NewCloudError(http.StatusTooManyRequests, api.CloudErrorCodeThrottlingLimitExceeded, "", fmt.Sprintf("Too many concurrent investigations (%d). Please try again later.", holmesConfig.MaxConcurrentInvestigations))
+		}
+		if atomic.CompareAndSwapInt64(&f.activeInvestigations, current, current+1) {
+			break
+		}
 	}
+	defer atomic.AddInt64(&f.activeInvestigations, -1)
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 

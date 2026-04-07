@@ -84,7 +84,7 @@ echo "--------------------------------------------"
 curl -sk --no-buffer -X POST \
     "${RP_URL}${API_PATH}" \
     -H "Content-Type: application/json" \
-    -d "{\"question\": \"${QUESTION}\"}"
+    -d "$(jq -n --arg q "${QUESTION}" '{question: $q}')"
 
 echo ""
 echo "--------------------------------------------"
