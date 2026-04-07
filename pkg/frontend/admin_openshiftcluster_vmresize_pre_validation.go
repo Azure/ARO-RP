@@ -257,7 +257,7 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 		return api.NewCloudError(
 			http.StatusConflict,
 			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver",
-			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is degraded.",
+			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is unhealthy.",
 				clusteroperators.OperatorStatusText(&co)))
 	}
 

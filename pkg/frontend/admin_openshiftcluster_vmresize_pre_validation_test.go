@@ -835,7 +835,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False. Resize is not safe while the API server is degraded.",
+			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False, Degraded=True. Resize is not safe while the API server is unhealthy.",
 		},
 		{
 			name: "kube-apiserver unavailable",
@@ -848,7 +848,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True. Resize is not safe while the API server is degraded.",
+			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True, Degraded=False. Resize is not safe while the API server is unhealthy.",
 		},
 		{
 			name: "KubeGet returns error",
@@ -909,7 +909,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=True, Progressing=False. Resize is not safe while etcd quorum is at risk.",
+			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=True, Progressing=False, Degraded=True. Resize is not safe while etcd quorum is at risk.",
 		},
 		{
 			name: "etcd unavailable",
@@ -922,7 +922,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=False, Progressing=True. Resize is not safe while etcd quorum is at risk.",
+			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=False, Progressing=True, Degraded=False. Resize is not safe while etcd quorum is at risk.",
 		},
 		{
 			name: "KubeGet returns error",
