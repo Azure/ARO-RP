@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
@@ -58,6 +59,9 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	resType, resName, resGroupName, resourceID, desiredVMSize string,
 	log *logrus.Entry,
 ) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
 		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
