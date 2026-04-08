@@ -34,6 +34,8 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
+HOLMESGPT_VERSION ?= 0.23.0
+HOLMESGPT_BASE_REGISTRY ?= docker.io
 
 include .bingo/Variables.mk
 
@@ -70,6 +72,7 @@ endif
 # prod images
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
+HOLMESGPT_IMAGE ?= ${REGISTRY}/holmesgpt:$(HOLMESGPT_VERSION)
 
 
 help:  ## Show help message
@@ -212,6 +215,10 @@ image-proxy:
 image-gatekeeper:
 	docker build --platform=$(PLATFORM) --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
 
+.PHONY: image-holmesgpt
+image-holmesgpt:
+	docker build --platform=$(PLATFORM) --network=host --build-arg HOLMESGPT_VERSION=$(HOLMESGPT_VERSION) --build-arg BASE_REGISTRY=$(HOLMESGPT_BASE_REGISTRY) -f Dockerfile.holmesgpt -t $(HOLMESGPT_IMAGE) .
+
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)
@@ -235,6 +242,10 @@ publish-image-proxy: image-proxy
 .PHONY: publish-image-gatekeeper
 publish-image-gatekeeper: image-gatekeeper
 	docker push $(GATEKEEPER_IMAGE)
+
+.PHONY: publish-image-holmesgpt
+publish-image-holmesgpt: image-holmesgpt
+	docker push $(HOLMESGPT_IMAGE)
 
 .PHONY: image-e2e
 image-e2e:
