@@ -47,7 +47,7 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 	// check if returned error is 404 not found, if so, retry the operation
 	numRetries := 0
 	var pwResult msgraph_models.PasswordCredentialable
-	err = wait.PollUntilWithContext(ctx, GraphApiRetryInterval, func(ctx context.Context) (done bool, err error) {
+	err = wait.PollImmediateUntilWithContext(ctx, GraphApiRetryInterval, func(ctx context.Context) (done bool, err error) {
 		pwResult, err = c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
 		if err == nil {
 			return true, nil
