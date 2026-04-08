@@ -335,7 +335,7 @@ func validatePodHealth(pod *corev1.Pod) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Ready condition not found")
+	return fmt.Errorf("ready condition not found")
 }
 
 // validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
