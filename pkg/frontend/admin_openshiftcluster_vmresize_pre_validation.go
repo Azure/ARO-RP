@@ -295,8 +295,8 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 
 		apiServerPodCount++
 
-		if healthy, reason := isPodHealthy(&pod); !healthy {
-			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, reason))
+		if err := validatePodHealth(&pod); err != nil {
+			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, err.Error()))
 		}
 	}
 
@@ -319,19 +319,19 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 	return nil
 }
 
-func isPodHealthy(pod *corev1.Pod) (healthy bool, reason string) {
+func validatePodHealth(pod *corev1.Pod) error {
 	if pod.Status.Phase != corev1.PodRunning {
-		return false, fmt.Sprintf("phase: %s", pod.Status.Phase)
+		return fmt.Errorf("phase: %s", pod.Status.Phase)
 	}
 	for _, cond := range pod.Status.Conditions {
 		if cond.Type == corev1.PodReady {
 			if cond.Status != corev1.ConditionTrue {
-				return false, "not ready"
+				return fmt.Errorf("not ready")
 			}
-			return true, ""
+			return nil
 		}
 	}
-	return false, "Ready condition not found"
+	return fmt.Errorf("Ready condition not found")
 }
 
 // validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
