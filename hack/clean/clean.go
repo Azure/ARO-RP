@@ -213,7 +213,6 @@ func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *lo
 		return false
 	}
 
-	// TODO(mj): Fix this!
 	if contains(denylist, name) {
 		return false
 	}
