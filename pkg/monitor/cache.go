@@ -4,6 +4,8 @@ package monitor
 // Licensed under the Apache License 2.0.
 
 import (
+	"github.com/puzpuzpuz/xsync/v4"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -13,23 +15,32 @@ type cacheDoc struct {
 }
 
 // deleteDoc deletes the given document from mon.docs, signalling the associated
-// monitoring goroutine to stop if it exists.  Caller must hold mon.mu.Lock.
-func (mon *clusterChangeFeedResponder) deleteDoc(doc *api.OpenShiftClusterDocument) {
-	v, loaded := mon.docs.LoadAndDelete(doc.ID)
-	if loaded {
-		close(v.stop)
-	}
+// monitoring goroutine to stop if it exists.
+func (c *clusterChangeFeedResponder) deleteDoc(doc *api.OpenShiftClusterDocument) {
+	c.docs.Compute(doc.ID, func(oldValue *cacheDoc, loaded bool) (newValue *cacheDoc, op xsync.ComputeOp) {
+		if loaded && oldValue.stop != nil {
+			close(oldValue.stop)
+		}
+		return nil, xsync.DeleteOp
+	})
 }
 
 // upsertDoc inserts or updates the given document into mon.docs, starting an
 // associated monitoring goroutine if the document is in a bucket owned by us.
-// Caller must hold mon.mu.Lock.
-func (mon *clusterChangeFeedResponder) upsertDoc(doc *api.OpenShiftClusterDocument) {
-	v, loaded := mon.docs.LoadOrStore(doc.ID, &cacheDoc{doc: stripUnusedFields(doc)})
-	if loaded {
-		v.doc = stripUnusedFields(doc)
-	}
-	mon.fixDoc(v)
+func (c *clusterChangeFeedResponder) upsertDoc(doc *api.OpenShiftClusterDocument) {
+	c.bucketMu.RLock()
+	defer c.bucketMu.RUnlock()
+	c.docs.Compute(doc.ID, func(oldValue *cacheDoc, loaded bool) (newValue *cacheDoc, op xsync.ComputeOp) {
+		if loaded {
+			oldValue.doc = stripUnusedFields(doc)
+			c.fixDoc(oldValue)
+			return oldValue, xsync.UpdateOp
+		} else {
+			newValue = &cacheDoc{doc: stripUnusedFields(doc)}
+			c.fixDoc(newValue)
+			return newValue, xsync.UpdateOp
+		}
+	})
 }
 
 // stripUnusedFields creates a copy of the document with only the fields
@@ -138,17 +149,17 @@ func stripUnusedFields(doc *api.OpenShiftClusterDocument) *api.OpenShiftClusterD
 }
 
 // fixDocs ensures that there is a monitoring goroutine for all documents in all
-// buckets owned by us.
-func (mon *clusterChangeFeedResponder) fixDocs() {
-	for _, v := range mon.docs.All() {
-		mon.fixDoc(v)
+// buckets owned by us. Caller needs to own r.bucketMu.
+func (c *clusterChangeFeedResponder) fixDocs() {
+	for _, v := range c.docs.All() {
+		c.fixDoc(v)
 	}
 }
 
 // fixDoc ensures that there is a monitoring goroutine for the given document
-// iff it is in a bucket owned by us.
-func (mon *clusterChangeFeedResponder) fixDoc(v *cacheDoc) {
-	_, ours := mon.buckets[v.doc.Bucket]
+// if it is in a bucket owned by us. Caller needs to own r.bucketMu.
+func (c *clusterChangeFeedResponder) fixDoc(v *cacheDoc) {
+	_, ours := c.buckets[v.doc.Bucket]
 
 	if !ours && v.stop != nil {
 		close(v.stop)
@@ -156,6 +167,6 @@ func (mon *clusterChangeFeedResponder) fixDoc(v *cacheDoc) {
 	} else if ours && v.stop == nil {
 		ch := make(chan struct{})
 		v.stop = ch
-		go mon.newWorker(ch, v.doc.ID)
+		go c.newWorker(ch, v.doc.ID)
 	}
 }

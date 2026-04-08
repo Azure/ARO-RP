@@ -54,17 +54,16 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 		return fmt.Errorf("bucket allocation contained no buckets")
 	}
 
-	mon.mu.Lock()
-	defer mon.mu.Unlock()
 	mon.clusters.UpdateBuckets(buckets)
 
 	return err
 }
 
 type clusterChangeFeedResponder struct {
-	log     *logrus.Entry
-	docs    *xsync.Map[string, *cacheDoc]
-	buckets map[int]struct{}
+	log      *logrus.Entry
+	docs     *xsync.Map[string, *cacheDoc]
+	bucketMu *sync.RWMutex
+	buckets  map[int]struct{}
 
 	lastChangefeedProcessed  atomic.Value // time.Time
 	lastChangefeedDataUpdate atomic.Value // time.Time
@@ -74,9 +73,10 @@ type clusterChangeFeedResponder struct {
 
 func NewClusterChangefeedResponder(log *logrus.Entry, workerFunc func(<-chan struct{}, string)) *clusterChangeFeedResponder {
 	return &clusterChangeFeedResponder{
-		log:     log,
-		docs:    xsync.NewMap[string, *cacheDoc](),
-		buckets: map[int]struct{}{},
+		log:      log,
+		docs:     xsync.NewMap[string, *cacheDoc](),
+		bucketMu: &sync.RWMutex{},
+		buckets:  map[int]struct{}{},
 
 		newWorker: workerFunc,
 	}
@@ -86,6 +86,8 @@ var _ changefeed.ChangefeedConsumer[*api.OpenShiftClusterDocument] = &clusterCha
 
 // Update the buckets that we want to pay attention to.
 func (c *clusterChangeFeedResponder) UpdateBuckets(buckets []int) {
+	c.bucketMu.Lock()
+	defer c.bucketMu.Unlock()
 	oldBuckets := c.buckets
 	c.buckets = make(map[int]struct{}, len(buckets))
 
