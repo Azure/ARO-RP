@@ -61,6 +61,21 @@ func (mr *MockAzureActionsMockRecorder) GetEffectiveRouteTable(ctx, nicName any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffectiveRouteTable", reflect.TypeOf((*MockAzureActions)(nil).GetEffectiveRouteTable), ctx, nicName)
 }
 
+// GetMasterVMs mocks base method.
+func (m *MockAzureActions) GetMasterVMs(ctx context.Context) ([]compute.VirtualMachine, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMasterVMs", ctx)
+	ret0, _ := ret[0].([]compute.VirtualMachine)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMasterVMs indicates an expected call of GetMasterVMs.
+func (mr *MockAzureActionsMockRecorder) GetMasterVMs(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMasterVMs", reflect.TypeOf((*MockAzureActions)(nil).GetMasterVMs), ctx)
+}
+
 // GetVirtualMachine mocks base method.
 func (m *MockAzureActions) GetVirtualMachine(ctx context.Context, resourceGroupName, VMName string, expand compute.InstanceViewTypes) (compute.VirtualMachine, error) {
 	m.ctrl.T.Helper()
