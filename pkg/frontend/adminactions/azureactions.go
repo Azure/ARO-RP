@@ -39,6 +39,7 @@ type AzureActions interface {
 	VMSizeList(ctx context.Context) ([]string, error)
 	VMGetSKUs(ctx context.Context, vmSizes []string) (map[string]*sdkcompute.ResourceSKU, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
+	GetMasterVMs(ctx context.Context) ([]mgmtcompute.VirtualMachine, error)
 	MasterVMSizes(ctx context.Context) ([]string, error)
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
@@ -171,16 +172,32 @@ func (a *azureActions) VMResize(ctx context.Context, vmName string, size string)
 	return a.virtualMachines.CreateOrUpdateAndWait(ctx, clusterRGName, vmName, vm)
 }
 
-func (a *azureActions) MasterVMSizes(ctx context.Context) ([]string, error) {
+func (a *azureActions) GetMasterVMs(ctx context.Context) ([]mgmtcompute.VirtualMachine, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	vmList, err := a.virtualMachines.List(ctx, clusterRGName)
 	if err != nil {
 		return nil, err
 	}
 
-	var sizes []string
+	var masterVMs []mgmtcompute.VirtualMachine
 	for _, vm := range vmList {
-		if vm.Name != nil && strings.Contains(*vm.Name, "-master-") && vm.HardwareProfile != nil {
+		if vm.Name != nil && strings.Contains(*vm.Name, "-master-") {
+			masterVMs = append(masterVMs, vm)
+		}
+	}
+
+	return masterVMs, nil
+}
+
+func (a *azureActions) MasterVMSizes(ctx context.Context) ([]string, error) {
+	masterVMs, err := a.GetMasterVMs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var sizes []string
+	for _, vm := range masterVMs {
+		if vm.HardwareProfile != nil {
 			sizes = append(sizes, string(vm.HardwareProfile.VMSize))
 		}
 	}
