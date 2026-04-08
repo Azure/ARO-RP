@@ -255,8 +255,8 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 
 	if !clusteroperators.IsOperatorAvailable(&co) {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver",
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver",
 			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is unhealthy.",
 				clusteroperators.OperatorStatusText(&co)))
 	}
@@ -302,16 +302,16 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 
 	if apiServerPodCount != api.ControlPlaneNodeCount {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
 			fmt.Sprintf("Expected %d kube-apiserver pods, found %d. Resize is not safe without full API server redundancy.",
 				api.ControlPlaneNodeCount, apiServerPodCount))
 	}
 
 	if len(unhealthyPods) > 0 {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
 			fmt.Sprintf("Unhealthy kube-apiserver pods: %v. Resize is not safe without full API server redundancy.",
 				unhealthyPods))
 	}
@@ -355,8 +355,8 @@ func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 
 	if !clusteroperators.IsOperatorAvailable(&co) {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed, "etcd",
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "etcd",
 			fmt.Sprintf("etcd is not healthy: %s. Resize is not safe while etcd quorum is at risk.",
 				clusteroperators.OperatorStatusText(&co)))
 	}
@@ -389,14 +389,14 @@ func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 				return nil
 			}
 			return api.NewCloudError(
-				http.StatusConflict,
+				http.StatusInternalServerError,
 				api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
 				fmt.Sprintf("Cluster Service Principal is invalid: %s", cond.Message))
 		}
 	}
 
 	return api.NewCloudError(
-		http.StatusConflict,
+		http.StatusInternalServerError,
 		api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
 		"ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.")
 }

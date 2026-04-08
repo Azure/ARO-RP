@@ -765,7 +765,7 @@ func TestValidateVMSP(t *testing.T) {
 						},
 					}), nil)
 			},
-			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: Cluster Service Principal is invalid: secret expired",
+			wantErr: "500: InvalidServicePrincipalCredentials: servicePrincipal: Cluster Service Principal is invalid: secret expired",
 		},
 		{
 			name: "condition not found",
@@ -774,7 +774,7 @@ func TestValidateVMSP(t *testing.T) {
 					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
 					Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{}), nil)
 			},
-			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.",
+			wantErr: "500: InvalidServicePrincipalCredentials: servicePrincipal: ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.",
 		},
 		{
 			name: "KubeGet returns error",
@@ -835,7 +835,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False, Degraded=True. Resize is not safe while the API server is unhealthy.",
+			wantErr: "500: InternalServerError: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False, Degraded=True. Resize is not safe while the API server is unhealthy.",
 		},
 		{
 			name: "kube-apiserver unavailable",
@@ -848,7 +848,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True, Degraded=False. Resize is not safe while the API server is unhealthy.",
+			wantErr: "500: InternalServerError: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True, Degraded=False. Resize is not safe while the API server is unhealthy.",
 		},
 		{
 			name: "KubeGet returns error",
@@ -909,7 +909,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=True, Progressing=False, Degraded=True. Resize is not safe while etcd quorum is at risk.",
+			wantErr: "500: InternalServerError: etcd: etcd is not healthy: etcd Available=True, Progressing=False, Degraded=True. Resize is not safe while etcd quorum is at risk.",
 		},
 		{
 			name: "etcd unavailable",
@@ -922,7 +922,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=False, Progressing=True, Degraded=False. Resize is not safe while etcd quorum is at risk.",
+			wantErr: "500: InternalServerError: etcd: etcd is not healthy: etcd Available=False, Progressing=True, Degraded=False. Resize is not safe while etcd quorum is at risk.",
 		},
 		{
 			name: "KubeGet returns error",
@@ -1000,7 +1000,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 						healthyAPIServerPod("kube-apiserver-master-1", "master-1"),
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Expected 3 kube-apiserver pods, found 2. Resize is not safe without full API server redundancy.",
+			wantErr: "500: InternalServerError: kube-apiserver-pods: Expected 3 kube-apiserver pods, found 2. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "4 apiserver pods",
@@ -1014,7 +1014,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 						healthyAPIServerPod("kube-apiserver-master-3", "master-3"),
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Expected 3 kube-apiserver pods, found 4. Resize is not safe without full API server redundancy.",
+			wantErr: "500: InternalServerError: kube-apiserver-pods: Expected 3 kube-apiserver pods, found 4. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "one pod not running",
@@ -1037,7 +1037,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
 					Return(fakeAPIServerPodListJSON(pods), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-2 (phase: Pending)]. Resize is not safe without full API server redundancy.",
+			wantErr: "500: InternalServerError: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-2 (phase: Pending)]. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "one pod not ready",
@@ -1063,7 +1063,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
 					Return(fakeAPIServerPodListJSON(pods), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-2 (not ready)]. Resize is not safe without full API server redundancy.",
+			wantErr: "500: InternalServerError: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-2 (not ready)]. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "multiple unhealthy pods",
@@ -1098,7 +1098,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
 					Return(fakeAPIServerPodListJSON(pods), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-1 (phase: Failed) kube-apiserver-master-2 (not ready)]. Resize is not safe without full API server redundancy.",
+			wantErr: "500: InternalServerError: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-1 (phase: Failed) kube-apiserver-master-2 (not ready)]. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "filters non-apiserver pods",
