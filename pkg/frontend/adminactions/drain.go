@@ -5,7 +5,6 @@ package adminactions
 
 import (
 	"context"
-	"log"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +18,11 @@ func (k *kubeActions) CordonNode(ctx context.Context, nodeName string, shouldCor
 		return err
 	}
 
+	drainLogWriter := k.log.Logger.Writer()
+	defer func() {
+		_ = drainLogWriter.Close()
+	}()
+
 	drainer := &drain.Helper{
 		Ctx:                 ctx,
 		Client:              k.kubecli,
@@ -29,16 +33,21 @@ func (k *kubeActions) CordonNode(ctx context.Context, nodeName string, shouldCor
 		DeleteEmptyDirData:  true,
 		DisableEviction:     true,
 		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
-			log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
+			k.log.Infof("deleted pod %s/%s", pod.Namespace, pod.Name)
 		},
-		Out:    log.Writer(),
-		ErrOut: log.Writer(),
+		Out:    drainLogWriter,
+		ErrOut: drainLogWriter,
 	}
 
 	return drain.RunCordonOrUncordon(drainer, node, shouldCordon)
 }
 
 func (k *kubeActions) DrainNode(ctx context.Context, nodeName string) error {
+	drainLogWriter := k.log.Logger.Writer()
+	defer func() {
+		_ = drainLogWriter.Close()
+	}()
+
 	drainer := &drain.Helper{
 		Ctx:                 ctx,
 		Client:              k.kubecli,
@@ -49,10 +58,10 @@ func (k *kubeActions) DrainNode(ctx context.Context, nodeName string) error {
 		DeleteEmptyDirData:  true,
 		DisableEviction:     true,
 		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
-			log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
+			k.log.Infof("deleted pod %s/%s", pod.Namespace, pod.Name)
 		},
-		Out:    log.Writer(),
-		ErrOut: log.Writer(),
+		Out:    drainLogWriter,
+		ErrOut: drainLogWriter,
 	}
 
 	return drain.RunNodeDrain(drainer, nodeName)
