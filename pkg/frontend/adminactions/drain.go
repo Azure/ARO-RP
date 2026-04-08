@@ -18,7 +18,7 @@ func (k *kubeActions) CordonNode(ctx context.Context, nodeName string, shouldCor
 		return err
 	}
 
-	drainLogWriter := k.log.Logger.Writer()
+	drainLogWriter := k.log.Writer()
 	defer func() {
 		_ = drainLogWriter.Close()
 	}()
@@ -43,7 +43,7 @@ func (k *kubeActions) CordonNode(ctx context.Context, nodeName string, shouldCor
 }
 
 func (k *kubeActions) DrainNode(ctx context.Context, nodeName string) error {
-	drainLogWriter := k.log.Logger.Writer()
+	drainLogWriter := k.log.Writer()
 	defer func() {
 		_ = drainLogWriter.Close()
 	}()
