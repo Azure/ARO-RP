@@ -66,6 +66,9 @@
         "disableCosmosDBFirewall": {
             "value": false
         },
+        "environment": {
+            "value": ""
+        },
         "fluentbitImage": {
             "value": ""
         },
