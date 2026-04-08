@@ -45,9 +45,9 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 	desiredVMSize := r.URL.Query().Get("vmSize")
 
-	b, err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, desiredVMSize, log)
+	err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, desiredVMSize, log)
 
-	adminReply(log, w, nil, b, err)
+	adminReply(log, w, nil, nil, err)
 }
 
 // _getPreResizeControlPlaneVMsValidation runs all pre-flight checks before
@@ -57,31 +57,31 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	ctx context.Context,
 	resType, resName, resGroupName, resourceID, desiredVMSize string,
 	log *logrus.Entry,
-) ([]byte, error) {
+) error {
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			fmt.Sprintf(
 				"The Resource '%s/%s' under resource group '%s' was not found.",
 				resType, resName, resGroupName))
 	case err != nil:
-		return nil, err
+		return err
 	}
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Run checks in parallel, collecting all errors so the caller sees every failure at once.
@@ -107,7 +107,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	}
 
 	if err := k.CheckAPIServerReadyz(ctx); err != nil {
-		return nil, api.NewCloudError(
+		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver",
 			fmt.Sprintf("API server is reporting a non-ready status: %v", err))
@@ -129,7 +129,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	wg.Wait()
 
 	if len(details) > 0 {
-		return nil, &api.CloudError{
+		return &api.CloudError{
 			StatusCode: http.StatusBadRequest,
 			CloudErrorBody: &api.CloudErrorBody{
 				Code:    api.CloudErrorCodeInvalidParameter,
@@ -139,7 +139,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		}
 	}
 
-	return json.Marshal(map[string]string{"status": "passed"})
+	return nil
 }
 
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
