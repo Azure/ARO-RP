@@ -186,10 +186,12 @@ func TestChangefeedOperations(t *testing.T) {
 				return lastData != lastSubDataUpdate && lastProc != lastData
 			}, time.Second, 1*time.Millisecond)
 			assert.Eventually(t, func() bool {
-				return mon.clusters.lastChangefeedDataUpdate.Load() != lastClusterDataUpdate && mon.clusters.lastChangefeedDataUpdate.Load() != mon.clusters.lastChangefeedProcessed.Load()
+				lastProc, _ := mon.clusters.GetLastProcessed()
+				lastData, _ := mon.clusters.GetLastDataUpdate()
+				return lastData != lastClusterDataUpdate && lastProc != lastData
 			}, time.Second, 1*time.Millisecond)
 
-			lastClusterDataUpdate = mon.clusters.lastChangefeedDataUpdate.Load().(time.Time)
+			lastClusterDataUpdate, _ = mon.clusters.GetLastDataUpdate()
 			lastSubDataUpdate, _ = mon.subs.GetLastDataUpdate()
 
 			// Validate expected results
