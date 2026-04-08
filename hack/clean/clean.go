@@ -128,22 +128,24 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func getTagValueCaseInsensitive(tags map[string]*string, key string) (string, bool) {
+func normalizeTagsCaseInsensitive(tags map[string]*string) map[string]string {
 	if len(tags) == 0 {
-		return "", false
+		return nil
 	}
+
+	normalized := make(map[string]string, len(tags))
 
 	for k, v := range tags {
-		if strings.EqualFold(k, key) {
-			if v == nil {
-				return "", true
-			}
-
-			return *v, true
+		key := strings.ToLower(k)
+		if v == nil {
+			normalized[key] = ""
+			continue
 		}
+
+		normalized[key] = *v
 	}
 
-	return "", false
+	return normalized
 }
 
 func isTruthyTagValue(value string) bool {
@@ -162,10 +164,8 @@ func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *lo
 	// the production deny assignment will prevent us from breaking most
 	// things, that does not include us potentially detaching the cluster's
 	// NSG from the vnet, thus breaking inbound access to the cluster.
-	// We use purge=true to distinguish between dev and prod clusters:
-	// https://github.com/Azure/ARO-RP/blob/master/pkg/cluster/deploybaseresources.go#L81-L87
-	// Previously we only evaluated resource groups that had a "purge" tag
-	// (dev clusters). Removed that gate so prod e2e clusters are also
+	// Historically we only evaluated resource groups that had a "purge" tag
+	// (dev clusters). That gate was removed so prod e2e clusters are also
 	// considered for deletion by the subsequent TTL/persist/createdAt checks.
 	if resourceGroup.Name == nil || *resourceGroup.Name == "" {
 		log.Warnf("Group with empty name cannot be evaluated. SKIP.")
@@ -189,13 +189,15 @@ func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *lo
 		}
 	}
 
-	keepTagValue, keepTagExists := getTagValueCaseInsensitive(resourceGroup.Tags, defaultKeepTag)
+	normalizedTags := normalizeTagsCaseInsensitive(resourceGroup.Tags)
+
+	keepTagValue, keepTagExists := normalizedTags[strings.ToLower(defaultKeepTag)]
 	if keepTagExists && isTruthyTagValue(keepTagValue) {
 		log.Infof("Group %s is to persist. SKIP.", name)
 		return false
 	}
 
-	createdAtValue, ok := getTagValueCaseInsensitive(resourceGroup.Tags, s.createdTag)
+	createdAtValue, ok := normalizedTags[strings.ToLower(s.createdTag)]
 	if !ok || createdAtValue == "" {
 		log.Infof("Group %s does not have %s tag. SKIP.", name, s.createdTag)
 		return false
