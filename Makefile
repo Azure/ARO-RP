@@ -9,6 +9,7 @@ COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcela
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke&&!regressiontest
+E2E_FOKUS ?= *
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
 
@@ -299,6 +300,10 @@ tunnel:
 .PHONY: e2e.test
 e2e.test:
 	go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
+
+.PHONY: e2e
+e2e:
+	go test ./test/e2e/... -tags e2e,codec.safe -timeout 180m --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 -ginkgo.label-filter="$(E2E_LABEL)" -ginkgo.focus="$(E2E_FOKUS)"
 
 .PHONY: e2etools
 e2etools:
