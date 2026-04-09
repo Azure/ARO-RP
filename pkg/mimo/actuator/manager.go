@@ -29,6 +29,11 @@ type Actuator interface {
 	AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask)
 }
 
+type taskContextWithGetResult interface {
+	utilmimo.TaskContext
+	GetResultMessage() string
+}
+
 type actuator struct {
 	env                      env.Interface
 	log                      *logrus.Entry
@@ -202,23 +207,26 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 		taskLog.Info("executing manifest")
 
+		timeoutContext, cancel := context.WithTimeout(ctx, a.taskRunTimeout)
+
 		// Create task context containing the environment, logger, cluster doc,
 		// etc -- this is the only way we pass information, to reduce the
 		// surface area for dependencies in tests
-		taskContext := newTaskContext(ctx, a.env, taskLog, oc, subDoc)
+		taskContext := newTaskContext(timeoutContext, a.env, taskLog, oc, subDoc)
 
 		// Perform the task with a timeout
-		err = taskContext.RunInTimeout(a.taskRunTimeout, func() error {
+		err = func() error {
 			innerErr := f(taskContext, doc, oc)
+			defer cancel()
 			if innerErr != nil {
 				return innerErr
 			}
 			return taskContext.Err()
-		})
+		}()
 
 		var state api.MaintenanceManifestState
 		// Pull the result message out of the task context to save, if it is set
-		msg := taskContext.GetResultMessage()
+		msg := taskContext.(taskContextWithGetResult).GetResultMessage()
 
 		if err != nil {
 			if doc.Dequeues >= maxDequeueCount {
