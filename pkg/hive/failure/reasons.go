@@ -61,10 +61,10 @@ var AzureZonalAllocationFailed = InstallFailingReason{
 }
 
 var AzureOSProvisioningTimedOut = InstallFailingReason{
-    Name:    "AzureOSProvisioningTimedOut",
-    Reason:  "AzureOSProvisioningTimedOut",
-    Message: "Deployment failed due to AzureOSProvisioningTimedOut. The cluster's virtual machines failed to start up in time. Please check your network configuration.",
-    SearchRegexes: []*regexp.Regexp{
-        regexp.MustCompile(`"code\W*:\W*"OSProvisioningTimedOut\W*"`),
-    },
+	Name:    "AzureOSProvisioningTimedOut",
+	Reason:  "AzureOSProvisioningTimedOut",
+	Message: "Deployment failed due to AzureOSProvisioningTimedOut. The cluster's virtual machines failed to start up in time. Please check your network configuration.",
+	SearchRegexes: []*regexp.Regexp{
+		regexp.MustCompile(`"code\W*:\W*"OSProvisioningTimedOut\W*"`),
+	},
 }
