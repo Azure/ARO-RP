@@ -52,6 +52,9 @@ RUN dnf install -y jq \
         *) echo "Unsupported platform: ${PLATFORM}" && exit 1 ;; \
       esac)" \
     && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl" -o /usr/local/bin/kubectl \
+    && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl.sha256" -o /tmp/kubectl.sha256 \
+    && echo "$(cat /tmp/kubectl.sha256)  /usr/local/bin/kubectl" | sha256sum -c - \
+    && rm -f /tmp/kubectl.sha256 \
     && chmod 0555 /usr/local/bin/kubectl \
     && kubectl version --client=true
 
