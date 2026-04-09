@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var _ = Describe("MIMO Actuator", Ordered, func() {
@@ -35,6 +37,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	var clusters database.OpenShiftClusters
 	var clustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient
 	var subscriptions database.Subscriptions
+	var subscriptionsClient *cosmosdb.FakeSubscriptionDocumentClient
 
 	var a Actuator
 
@@ -42,6 +45,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	var cancel context.CancelFunc
 
 	var log *logrus.Entry
+	var hook *test.Hook
 	var _env env.Interface
 
 	var controller *gomock.Controller
@@ -65,13 +69,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		ctx, cancel = context.WithCancel(context.Background())
 
-		log = logrus.NewEntry(&logrus.Logger{
-			Out:       GinkgoWriter,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.DebugLevel,
-		})
-
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
 	})
@@ -80,7 +77,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
-		subscriptions, _ = testdatabase.NewFakeSubscriptions()
+		subscriptions, subscriptionsClient = testdatabase.NewFakeSubscriptions()
+
+		hook, log = testlog.New()
 
 		a = &actuator{
 			log: log,
@@ -234,6 +233,92 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 	})
 
+	When("no valid subscription", func() {
+		var manifestID string
+
+		BeforeEach(func() {
+			manifestID = manifests.NewUUID()
+			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+
+			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				Dequeues:          0,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+		})
+
+		It("returns an error", func() {
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					return nil
+				},
+			})
+
+			err := subscriptionsClient.Delete(ctx, mockSubID, &api.SubscriptionDocument{ID: mockSubID}, &cosmosdb.Options{})
+			Expect(err).ToNot(HaveOccurred())
+
+			didWork, err := a.Process(ctx)
+			Expect(err).To(MatchError("failed fetching subscription document: 404 : "))
+			Expect(didWork).To(BeFalse())
+
+			verifyDatabaseState()
+		})
+	})
+
+	When("unknown task", func() {
+		var manifestID string
+
+		BeforeEach(func() {
+			manifestID = manifests.NewUUID()
+			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+
+			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				Dequeues:          1,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStateFailed,
+					StatusText:        "task ID not registered",
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+		})
+
+		It("skips", func() {
+			didWork, err := a.Process(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(didWork).To(BeFalse())
+
+			verifyDatabaseState()
+		})
+	})
+
 	When("new manifest with runAfter later than now", func() {
 		var manifestID string
 		var manifestThatRunsID string
@@ -347,6 +432,201 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			didWork, err := a.Process(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeTrue())
+
+			verifyDatabaseState()
+		})
+	})
+
+	When("new manifest for a task which fails the first time with a transient error", func() {
+		var manifestID string
+
+		BeforeEach(func() {
+			manifestID = manifests.NewUUID()
+			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+
+			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				Dequeues:          1,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+		})
+		It("dequeues the document and places it back in pending", func() {
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					return mimo.TransientError(errors.New("oh no"))
+				},
+			})
+
+			didWork, err := a.Process(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(didWork).To(BeTrue())
+
+			err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
+				{
+					"level": Equal(logrus.InfoLevel),
+					"msg":   Equal("Processing 1 manifests"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("begin processing manifest"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("executing manifest"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.ErrorLevel),
+					"msg":        Equal("task returned a retryable error: TransientError: oh no"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("manifest processing complete"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			verifyDatabaseState()
+		})
+	})
+
+	When("new manifest for a task which fails with a terminal error", func() {
+		var manifestID string
+
+		BeforeEach(func() {
+			manifestID = manifests.NewUUID()
+			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStatePending,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+
+			checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+				ID:                manifestID,
+				Dequeues:          1,
+				ClusterResourceID: strings.ToLower(clusterResourceID),
+				MaintenanceManifest: api.MaintenanceManifest{
+					State:             api.MaintenanceManifestStateFailed,
+					MaintenanceTaskID: "0",
+					RunBefore:         600,
+					RunAfter:          0,
+				},
+			})
+		})
+		It("dequeues the document and marks it as failed", func() {
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					return mimo.TerminalError(errors.New("oh no"))
+				},
+			})
+
+			didWork, err := a.Process(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(didWork).To(BeTrue())
+
+			err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
+				{
+					"level": Equal(logrus.InfoLevel),
+					"msg":   Equal("Processing 1 manifests"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("begin processing manifest"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("executing manifest"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.ErrorLevel),
+					"msg":        Equal("task returned a terminal error: TerminalError: oh no"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("manifest processing complete"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			verifyDatabaseState()
+		})
+		It("marks it as failed even if not wrapped in TerminalError", func() {
+			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
+				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
+					return errors.New("oh no")
+				},
+			})
+
+			didWork, err := a.Process(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(didWork).To(BeTrue())
+
+			err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
+				{
+					"level": Equal(logrus.InfoLevel),
+					"msg":   Equal("Processing 1 manifests"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("begin processing manifest"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("executing manifest"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.ErrorLevel),
+					"msg":        Equal("task returned a terminal error: oh no"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+				{
+					"level":      Equal(logrus.InfoLevel),
+					"msg":        Equal("manifest processing complete"),
+					"taskID":     Equal("0"),
+					"manifestID": Equal("07070707-0707-0707-0707-070707070001"),
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
 
 			verifyDatabaseState()
 		})
