@@ -18,12 +18,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -238,18 +240,13 @@ func checkCPMSNotActive(ctx context.Context, k adminactions.KubeActions) error {
 			fmt.Sprintf("failed to check ControlPlaneMachineSet state: %v", err))
 	}
 
-	var obj unstructured.Unstructured
-	if err := json.Unmarshal(rawCPMS, &obj); err != nil {
+	var cpms machinev1.ControlPlaneMachineSet
+	if err := json.Unmarshal(rawCPMS, &cpms); err != nil {
 		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
 			fmt.Sprintf("failed to parse ControlPlaneMachineSet object: %v", err))
 	}
 
-	state, found, err := unstructured.NestedString(obj.Object, "spec", "state")
-	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("failed to read ControlPlaneMachineSet state: %v", err))
-	}
-	if found && strings.EqualFold(state, "Active") {
+	if cpms.Spec.State == machinev1.ControlPlaneMachineSetStateActive {
 		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
 			"ControlPlaneMachineSet is currently Active. Deactivate CPMS before running this operation.")
 	}
@@ -304,33 +301,17 @@ func getNodeReadinessAndSchedulability(ctx context.Context, k adminactions.KubeA
 		return false, false, err
 	}
 
-	var node unstructured.Unstructured
+	var node corev1.Node
 	if err := json.Unmarshal(rawNode, &node); err != nil {
 		return false, false, err
 	}
 
-	conditions, found, err := unstructured.NestedSlice(node.Object, "status", "conditions")
-	if err != nil || !found {
-		return false, false, nil
-	}
-
-	unschedulable, found, err := unstructured.NestedBool(node.Object, "spec", "unschedulable")
-	if err != nil {
-		return false, false, err
-	}
-	schedulable := !found || !unschedulable
-
+	schedulable := !node.Spec.Unschedulable
 	ready := false
 
-	for _, c := range conditions {
-		cond, ok := c.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		condType, _ := cond["type"].(string)
-		condStatus, _ := cond["status"].(string)
-		if condType == "Ready" {
-			ready = condStatus == "True"
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady {
+			ready = condition.Status == corev1.ConditionTrue
 			break
 		}
 	}
@@ -361,6 +342,7 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 	}
 
 	providerSpec.VMSize = vmSize
+	providerSpec.SetCreationTimestamp(machine.GetCreationTimestamp())
 
 	rawProviderSpec, err := json.Marshal(providerSpec)
 	if err != nil {
@@ -380,16 +362,6 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 		return fmt.Errorf("converting machine to unstructured: %w", err)
 	}
 	obj := unstructured.Unstructured{Object: objMap}
-
-	machineCreationTimestamp, found, err := unstructured.NestedString(obj.Object, "metadata", "creationTimestamp")
-	if err != nil {
-		return fmt.Errorf("reading machine creationTimestamp: %w", err)
-	}
-	if found {
-		if err := unstructured.SetNestedField(obj.Object, machineCreationTimestamp, "spec", "providerSpec", "value", "metadata", "creationTimestamp"); err != nil {
-			return fmt.Errorf("setting providerSpec metadata.creationTimestamp: %w", err)
-		}
-	}
 
 	delete(obj.Object, "status")
 
@@ -430,18 +402,24 @@ func doUpdateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActi
 		return err
 	}
 
-	var obj unstructured.Unstructured
-	if err := json.Unmarshal(rawNode, &obj); err != nil {
+	var node corev1.Node
+	if err := json.Unmarshal(rawNode, &node); err != nil {
 		return err
 	}
 
-	labels := obj.GetLabels()
+	labels := node.GetLabels()
 	if labels == nil {
 		labels = make(map[string]string)
 	}
 	labels[nodeLabelInstanceType] = vmSize
 	labels[nodeLabelBetaInstanceType] = vmSize
-	obj.SetLabels(labels)
+	node.SetLabels(labels)
+
+	objMap, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&node)
+	if err != nil {
+		return fmt.Errorf("converting node to unstructured: %w", err)
+	}
+	obj := unstructured.Unstructured{Object: objMap}
 
 	delete(obj.Object, "status")
 

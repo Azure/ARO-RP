@@ -254,6 +254,15 @@ func TestIsNodeReady(t *testing.T) {
 			wantErr:   "invalid character 'i' looking for beginning of object key string",
 		},
 		{
+			name: "node payload has malformed conditions field",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return([]byte(`{"apiVersion":"v1","kind":"Node","metadata":{"name":"master-0"},"status":{"conditions":"bad"}}`), nil)
+			},
+			wantReady: false,
+			wantErr:   "json: cannot unmarshal string into Go struct field NodeStatus.status.conditions of type []v1.NodeCondition",
+		},
+		{
 			name: "node without conditions is treated as not ready",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
