@@ -128,9 +128,10 @@ level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code"
 		},
 		{
 			name: "AzureOSProvisioningTimedOut",
-			installLog: `level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code":"DeploymentFailed","message":"At least one resource deployment operation failed.","details":[{"code":"Conflict","message":"{\r\n \"status\": \"Failed\",\r\n \"error\": {\r\n \"code\": \"OSProvisioningTimedOut\",\r\n \"message\": \"OS Provisioning for VM did not finish in the allotted time.\"\r\n }\r\n}"}]}`,
+			installLog: `level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code":"DeploymentFailed","message":"At least one resource deployment operation failed.","details":[{"code":"Conflict","message":"{\r\n\"status\":\"Failed\",\r\n\"error\":{\r\n\"code\":\"OSProvisioningTimedOut\",\r\n\"message\":\"OS Provisioning for VM did not finish in the allotted time.\"\r\n}\r\n}"}]}`,
 			want: AzureOSProvisioningTimedOut,
 		},
+
 		{
 			name: "KeyBasedAuthenticationNotPermitted",
 			installLog: `level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS)
