@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
@@ -34,8 +35,9 @@ type TaskContext interface {
 	// Kubernetes client
 	ClientHelper() (clienthelper.Interface, error)
 
-	// Subscription
-	GetTenantID() string
+	// All Azure clients that MIMO tasks interact with _must_ be Track 2 SDK
+	// clients. If you need something with only a Track 1 client in pkg/util/,
+	// first port it to be Track 2 before including it here.
 
 	// Azure Networking clients
 	InterfacesClient() (armnetwork.InterfacesClient, error)
@@ -46,7 +48,8 @@ type TaskContext interface {
 	ResourceSKUsClient() (armcompute.ResourceSKUsClient, error)
 
 	// Azure Container Registry clients
-	TokensClient()
+	TokensClient() (armcontainerregistry.TokensClient, error)
+	RegistriesClient() (armcontainerregistry.RegistriesClient, error)
 }
 
 func GetTaskContext(c context.Context) (TaskContext, error) {

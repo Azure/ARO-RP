@@ -13,6 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -36,6 +38,7 @@ type actuator struct {
 
 	clusterResourceID string
 
+	sub database.Subscriptions
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
 
@@ -49,6 +52,7 @@ func NewActuator(
 	_env env.Interface,
 	log *logrus.Entry,
 	clusterResourceID string,
+	sub database.Subscriptions,
 	oc database.OpenShiftClusters,
 	mmf database.MaintenanceManifests,
 	now func() time.Time,
@@ -57,6 +61,7 @@ func NewActuator(
 		env:                      _env,
 		log:                      log,
 		clusterResourceID:        strings.ToLower(clusterResourceID),
+		sub:                      sub,
 		oc:                       oc,
 		mmf:                      mmf,
 		tasks:                    make(map[api.MIMOTaskID]tasks.MaintenanceTask),
@@ -74,6 +79,13 @@ func (a *actuator) AddMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenanc
 }
 
 func (a *actuator) Process(ctx context.Context) (bool, error) {
+	r, err := azure.ParseResourceID(a.clusterResourceID)
+	if err != nil {
+		err = fmt.Errorf("failed parsing ResourceID: %w", err)
+		a.log.Error(err)
+		return false, err
+	}
+
 	// Get the manifests for this cluster which need to be worked
 	i, err := a.mmf.GetQueuedByClusterResourceID(ctx, a.clusterResourceID, "")
 	if err != nil {
@@ -142,6 +154,14 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 	a.log.Infof("Processing %d manifests", len(manifestsToAction))
 
+	// We need to fetch the subscription for the cluster to get the TenantID
+	subDoc, err := a.sub.Get(ctx, strings.ToLower(r.SubscriptionID))
+	if err != nil {
+		err = fmt.Errorf("failed fetching subscription document: %w", err)
+		a.log.Error(err)
+		return false, err
+	}
+
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
 		taskLog := a.log.WithFields(logrus.Fields{
@@ -183,7 +203,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		// Create task context containing the environment, logger, cluster doc,
 		// etc -- this is the only way we pass information, to reduce the
 		// surface area for dependencies in tests
-		taskContext := newTaskContext(ctx, a.env, taskLog, oc)
+		taskContext := newTaskContext(ctx, a.env, taskLog, oc, subDoc)
 
 		// Perform the task with a timeout
 		err = taskContext.RunInTimeout(a.taskRunTimeout, func() error {
