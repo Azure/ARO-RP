@@ -28,6 +28,10 @@ type azClients struct {
 
 func (t *th) setupAzureClients() error {
 	if t.az == nil {
+		if t.sub == nil || t.sub.Subscription == nil || t.sub.Subscription.Properties == nil || t.sub.Subscription.Properties.TenantID == "" {
+			return fmt.Errorf("invalid/nil subscription document")
+		}
+
 		fpCredClusterTenant, err := t.env.FPNewClientCertificateCredential(t.sub.Subscription.Properties.TenantID, nil)
 		if err != nil {
 			return fmt.Errorf("failure creating fpCredClusterTenant: %w", err)

@@ -197,7 +197,7 @@ func (t *fakeTestContext) RegistriesClient() (armcontainerregistry.RegistriesCli
 }
 
 func (t *fakeTestContext) TokensClient() (armcontainerregistry.TokensClient, error) {
-	if t.interfacesClient == nil {
+	if t.tokensClient == nil {
 		return nil, fmt.Errorf("no armcontainerregistry.TokensClient provided")
 	}
 	return *t.tokensClient, nil
