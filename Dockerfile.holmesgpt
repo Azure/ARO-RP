@@ -5,6 +5,8 @@ FROM ${BASE_REGISTRY}/${REPOSITORY}:${TAG} AS builder
 ARG HOLMESGPT_REPO=https://github.com/robusta-dev/holmesgpt
 ARG HOLMESGPT_REF
 
+RUN test -n "${HOLMESGPT_REF}" || { echo "ERROR: HOLMESGPT_REF build arg must be set (e.g., --build-arg HOLMESGPT_REF=v0.23.0)"; exit 1; }
+
 USER root
 WORKDIR /build
 
