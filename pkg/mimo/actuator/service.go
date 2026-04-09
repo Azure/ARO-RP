@@ -72,6 +72,7 @@ type service struct {
 var _ Runnable = (*service)(nil)
 
 type actuatorDBs interface {
+	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithMaintenanceManifests
 }
@@ -298,6 +299,12 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	// Wait for a randomised delay before starting
 	time.Sleep(delay)
 
+	dbSubscriptions, err := s.dbGroup.Subscriptions()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
 	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
 	if err != nil {
 		log.Error(err)
@@ -310,7 +317,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 		return
 	}
 
-	a, err := NewActuator(context.Background(), s.env, log, id, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
+	a, err := NewActuator(context.Background(), s.env, log, id, dbSubscriptions, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
 	if err != nil {
 		log.Error(err)
 		return

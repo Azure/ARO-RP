@@ -58,7 +58,7 @@ func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClien
 	return m, nil
 }
 
-func NewManagerWithClients(env env.Interface, tokensClient containerregistry.TokensClient, registriesClient containerregistry.RegistriesClient) (Manager, error) {
+func NewManagerWithClients(env env.Interface, tokensClient armcontainerregistry.TokensClient, registriesClient armcontainerregistry.RegistriesClient) (Manager, error) {
 	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
 		return nil, err

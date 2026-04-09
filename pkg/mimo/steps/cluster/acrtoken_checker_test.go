@@ -25,11 +25,10 @@ import (
 )
 
 const (
-	registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
-	clusterUUID        = "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
-	publicACR          = "arosvc.azurecr.io"
-	intACR             = "arointsvc.azurecr.io"
-	user               = "testuser"
+	clusterUUID = "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
+	publicACR   = "arosvc.azurecr.io"
+	intACR      = "arointsvc.azurecr.io"
+	user        = "testuser"
 )
 
 func TestEnsureACRToken(t *testing.T) {
