@@ -446,8 +446,11 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		DeleteK8sObjectWithRetry(ctx, deleteFunc, managedUpgradeOperatorDeployment, metav1.DeleteOptions{})
 
 		By("waiting for the MUO deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
-	}, SpecTimeout(2*time.Minute))
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := getFunc(ctx, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	})
 })
 
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
@@ -749,7 +752,10 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkControllerManagerDeployment, metav1.DeleteOptions{})
 
 		By("waiting for the gatekeeper Controller Manager deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := getFunc(ctx, gkControllerManagerDeployment, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("Audit must be restored if deleted", func(ctx context.Context) {
@@ -771,7 +777,10 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkAuditDeployment, metav1.DeleteOptions{})
 
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := getFunc(ctx, gkAuditDeployment, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
