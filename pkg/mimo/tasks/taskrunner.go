@@ -26,6 +26,6 @@ var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 }
 
 func run(t utilmimo.TaskContext, s []steps.Step) error {
-	_, err := steps.Run(t, t.Log(), DEFAULT_POLL_TIME, s, t.Now)
+	_, err := steps.Run(t, t.Log(), DEFAULT_POLL_TIME, s, t.Now, "")
 	return err
 }
