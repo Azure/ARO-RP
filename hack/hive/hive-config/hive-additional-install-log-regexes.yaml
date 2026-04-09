@@ -23,7 +23,7 @@ data:
       name: AzureZonalAllocationFailed
       searchRegexStrings:
       - '"code\W*":\W*"ZonalAllocationFailed\W*"'
-    - installFailingMessage: Deployment failed due to AzureOSProvisioningTimedOut.
+    - installFailingMessage: Deployment failed due to OSProvisioningTimedOut.
         The cluster's virtual machines failed to start up in time. Please check your network configuration.
       installFailingReason: AzureOSProvisioningTimedOut
       name: AzureOSProvisioningTimedOut
