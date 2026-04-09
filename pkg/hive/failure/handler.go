@@ -82,7 +82,7 @@ func HandleProvisionFailed(ctx context.Context, cd *hivev1.ClusterDeployment, co
 		if err != nil {
 			return err
 		}
-
+		
 		return wrapArmError(
 			AzureOSProvisioningTimedOut.Message,
 			*armError,
