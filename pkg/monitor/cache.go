@@ -4,6 +4,9 @@ package monitor
 // Licensed under the Apache License 2.0.
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/puzpuzpuz/xsync/v4"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -169,4 +172,11 @@ func (c *clusterChangeFeedResponder) fixDoc(v *cacheDoc) {
 		v.stop = ch
 		go c.newWorker(ch, v.doc.ID)
 	}
+}
+
+// Return the buckets that are the responsibility of this responder.
+func (c *clusterChangeFeedResponder) getBuckets() []int {
+	c.bucketMu.RLock()
+	defer c.bucketMu.RUnlock()
+	return slices.Collect(maps.Keys(c.buckets))
 }
