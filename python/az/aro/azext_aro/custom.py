@@ -809,9 +809,15 @@ def aro_identity_get_required(*,
 
     logger.warning("\nUse the following bash commands to create the required role assignments "
                    "over virtual network and/or subnets:")
-    scope_map = _generate_scope_map(cmd, disk_encryption_set, vnet, master_subnet, worker_subnet)
+    scope_map = _determine_required_scopes_from_network_resources(
+        cmd,
+        disk_encryption_set,
+        vnet,
+        master_subnet,
+        worker_subnet
+    )
     for role in role_set.platform_workload_identity_roles:
-        scopes = _determine_role_assignment_scopes(cmd, role)
+        scopes = _determine_required_scopes_from_role_set(cmd, role)
         for scope in scopes:
             scopestr = scope_map[scope]
             if not scopestr:
@@ -883,11 +889,17 @@ def aro_identity_create_required(*,
             raise AzureResponseError("Something went wrong.")
         created.append(identity)
 
-        scopes = _determine_role_assignment_scopes(cmd, role)
+        scopes = _determine_required_scopes_from_role_set(cmd, role)
         for scope in scopes:
             progress.add(message=f"Creating role assignments for {role.operator_name}")
 
-            scopestr = _generate_scope_map(cmd, disk_encryption_set, vnet, master_subnet, worker_subnet)[scope]
+            scopestr = _determine_required_scopes_from_network_resources(
+                cmd,
+                disk_encryption_set,
+                vnet,
+                master_subnet,
+                worker_subnet
+            )[scope]
             if not scopestr:
                 continue
 
@@ -1024,7 +1036,7 @@ def _role_assignment_create(cmd, principal_id, role_definition_id, scope, name=N
         return None
 
 
-def _determine_role_assignment_scopes(cmd, role) -> set[RoleAssignmentScope]:
+def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentScope]:
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
 
@@ -1052,11 +1064,11 @@ def _determine_role_assignment_scopes(cmd, role) -> set[RoleAssignmentScope]:
     return scopes
 
 
-def _generate_scope_map(cmd,
-                        disk_encryption_set,
-                        vnet,
-                        master_subnet,
-                        worker_subnet) -> dict[RoleAssignmentScope, str | None]:
+def _determine_required_scopes_from_network_resources(cmd,
+                                                      disk_encryption_set,
+                                                      vnet,
+                                                      master_subnet,
+                                                      worker_subnet) -> dict[RoleAssignmentScope, str | None]:
     subnet_resources = get_network_resources_from_subnets(cmd.cli_ctx, [master_subnet, worker_subnet])
 
     return {
