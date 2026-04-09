@@ -35,7 +35,8 @@ AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
 HOLMESGPT_VERSION ?= 0.23.0
-HOLMESGPT_BASE_REGISTRY ?= docker.io
+HOLMESGPT_REF ?= $(HOLMESGPT_VERSION)
+HOLMESGPT_BASE_REGISTRY ?= registry.access.redhat.com
 
 include .bingo/Variables.mk
 
@@ -217,7 +218,7 @@ image-gatekeeper:
 
 .PHONY: image-holmesgpt
 image-holmesgpt:
-	docker build --platform=$(PLATFORM) --network=host --build-arg HOLMESGPT_VERSION=$(HOLMESGPT_VERSION) --build-arg BASE_REGISTRY=$(HOLMESGPT_BASE_REGISTRY) -f Dockerfile.holmesgpt -t $(HOLMESGPT_IMAGE) .
+	docker build --platform=$(PLATFORM) --network=host --build-arg HOLMESGPT_REF=$(HOLMESGPT_REF) --build-arg BASE_REGISTRY=$(HOLMESGPT_BASE_REGISTRY) -f Dockerfile.holmesgpt -t $(HOLMESGPT_IMAGE) .
 
 .PHONY: publish-image-aro-multistage
 publish-image-aro-multistage: image-aro-multistage
