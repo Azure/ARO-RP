@@ -122,7 +122,8 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 	}
 
 	if len(machines) == 0 {
-		return fmt.Errorf("no control plane machines found")
+		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
+			"No control plane machines found. Resize cannot proceed.")
 	}
 
 	// Reverse lexicographic order: master-2 → master-1 → master-0.

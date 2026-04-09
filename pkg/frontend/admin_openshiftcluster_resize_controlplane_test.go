@@ -458,7 +458,7 @@ func TestResizeControlPlane(t *testing.T) {
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(masterMachineListJSON(), nil)
 			},
-			wantErr: "no control plane machines found",
+			wantErr: "409: RequestNotAllowed: : No control plane machines found. Resize cannot proceed.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
