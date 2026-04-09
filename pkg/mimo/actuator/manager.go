@@ -128,7 +128,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		if evaluationTime.After(time.Unix(doc.MaintenanceManifest.RunBefore, 0)) {
 			taskLog := a.log.WithFields(logrus.Fields{
 				"manifestID": doc.ID,
-				"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,
+				"taskID":     string(doc.MaintenanceManifest.MaintenanceTaskID),
 			})
 			// timed out, mark as such
 			taskLog.Infof("marking as outdated: %v older than %v", doc.MaintenanceManifest.RunBefore, evaluationTime.UTC())
@@ -162,11 +162,13 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
+	doneSomeWork := false
+
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
 		taskLog := a.log.WithFields(logrus.Fields{
 			"manifestID": doc.ID,
-			"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,
+			"taskID":     string(doc.MaintenanceManifest.MaintenanceTaskID),
 		})
 		taskLog.Info("begin processing manifest")
 
@@ -240,6 +242,8 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 			taskLog.Info("manifest executed successfully")
 		}
 
+		doneSomeWork = true
+
 		_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg)
 		if err != nil {
 			taskLog.Error(fmt.Errorf("failed ending lease on manifest: %w", err))
@@ -247,5 +251,5 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		taskLog.Info("manifest processing complete")
 	}
 
-	return true, nil
+	return doneSomeWork, nil
 }
