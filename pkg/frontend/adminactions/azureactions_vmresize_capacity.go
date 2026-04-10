@@ -142,6 +142,13 @@ func (a *azureActions) CRGEnsureReservations(ctx context.Context, clusterRG, loc
 					"please retry with a different VM family: %w",
 				targetSKU, zone, err)
 		}
+		if azureerrors.HasAuthorizationFailedError(err) {
+			return fmt.Errorf(
+				"insufficient permissions to create capacity reservation in %s "+
+					"— requires Microsoft.Compute/capacityReservationGroups/capacityReservations/write "+
+					"on resource group %s: %w",
+				location, clusterRG, err)
+		}
 		return fmt.Errorf("creating target-SKU reservation for zone %s: %w", zone, err)
 	}
 	return nil
