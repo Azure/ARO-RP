@@ -14,11 +14,10 @@ import (
 	io "io"
 	reflect "reflect"
 
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
-
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAzureActions is a mock of AzureActions interface.
@@ -43,6 +42,77 @@ func NewMockAzureActions(ctrl *gomock.Controller) *MockAzureActions {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
+}
+
+// CRGAssociateVM mocks base method.
+func (m *MockAzureActions) CRGAssociateVM(ctx context.Context, clusterRG, vmName, crgID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CRGAssociateVM", ctx, clusterRG, vmName, crgID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CRGAssociateVM indicates an expected call of CRGAssociateVM.
+func (mr *MockAzureActionsMockRecorder) CRGAssociateVM(ctx, clusterRG, vmName, crgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGAssociateVM", reflect.TypeOf((*MockAzureActions)(nil).CRGAssociateVM), ctx, clusterRG, vmName, crgID)
+}
+
+// CRGCreate mocks base method.
+func (m *MockAzureActions) CRGCreate(ctx context.Context, clusterRG, location string, zones []string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CRGCreate", ctx, clusterRG, location, zones)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CRGCreate indicates an expected call of CRGCreate.
+func (mr *MockAzureActionsMockRecorder) CRGCreate(ctx, clusterRG, location, zones any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGCreate", reflect.TypeOf((*MockAzureActions)(nil).CRGCreate), ctx, clusterRG, location, zones)
+}
+
+// CRGDelete mocks base method.
+func (m *MockAzureActions) CRGDelete(ctx context.Context, clusterRG, location, targetSKU string, zones, vmNames []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CRGDelete", ctx, clusterRG, location, targetSKU, zones, vmNames)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CRGDelete indicates an expected call of CRGDelete.
+func (mr *MockAzureActionsMockRecorder) CRGDelete(ctx, clusterRG, location, targetSKU, zones, vmNames any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGDelete", reflect.TypeOf((*MockAzureActions)(nil).CRGDelete), ctx, clusterRG, location, targetSKU, zones, vmNames)
+}
+
+// CRGEnsureReservations mocks base method.
+func (m *MockAzureActions) CRGEnsureReservations(ctx context.Context, clusterRG, location, zone, targetSKU string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CRGEnsureReservations", ctx, clusterRG, location, zone, targetSKU)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CRGEnsureReservations indicates an expected call of CRGEnsureReservations.
+func (mr *MockAzureActionsMockRecorder) CRGEnsureReservations(ctx, clusterRG, location, zone, targetSKU any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGEnsureReservations", reflect.TypeOf((*MockAzureActions)(nil).CRGEnsureReservations), ctx, clusterRG, location, zone, targetSKU)
+}
+
+// CRGResizeSingleVM mocks base method.
+func (m *MockAzureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, location, vmName, zone, targetVMSize string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CRGResizeSingleVM", ctx, clusterRG, location, vmName, zone, targetVMSize)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CRGResizeSingleVM indicates an expected call of CRGResizeSingleVM.
+func (mr *MockAzureActionsMockRecorder) CRGResizeSingleVM(ctx, clusterRG, location, vmName, zone, targetVMSize any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGResizeSingleVM", reflect.TypeOf((*MockAzureActions)(nil).CRGResizeSingleVM), ctx, clusterRG, location, vmName, zone, targetVMSize)
 }
 
 // GetEffectiveRouteTable mocks base method.
@@ -158,20 +228,6 @@ func (m *MockAzureActions) VMResize(ctx context.Context, vmName, vmSize string) 
 func (mr *MockAzureActionsMockRecorder) VMResize(ctx, vmName, vmSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResize", reflect.TypeOf((*MockAzureActions)(nil).VMResize), ctx, vmName, vmSize)
-}
-
-// VMResizeWithCapacityReservation mocks base method.
-func (m *MockAzureActions) VMResizeWithCapacityReservation(ctx context.Context, targetVMSize string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VMResizeWithCapacityReservation", ctx, targetVMSize)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// VMResizeWithCapacityReservation indicates an expected call of VMResizeWithCapacityReservation.
-func (mr *MockAzureActionsMockRecorder) VMResizeWithCapacityReservation(ctx, targetVMSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResizeWithCapacityReservation", reflect.TypeOf((*MockAzureActions)(nil).VMResizeWithCapacityReservation), ctx, targetVMSize)
 }
 
 // VMSerialConsole mocks base method.

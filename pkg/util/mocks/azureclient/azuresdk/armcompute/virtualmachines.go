@@ -112,3 +112,17 @@ func (mr *MockVirtualMachinesClientMockRecorder) StartAndWait(ctx, resourceGroup
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StartAndWait), ctx, resourceGroupName, vmName)
 }
+
+// UpdateAndWait mocks base method.
+func (m *MockVirtualMachinesClient) UpdateAndWait(ctx context.Context, resourceGroupName, vmName string, parameters armcompute.VirtualMachineUpdate) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAndWait", ctx, resourceGroupName, vmName, parameters)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAndWait indicates an expected call of UpdateAndWait.
+func (mr *MockVirtualMachinesClientMockRecorder) UpdateAndWait(ctx, resourceGroupName, vmName, parameters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).UpdateAndWait), ctx, resourceGroupName, vmName, parameters)
+}

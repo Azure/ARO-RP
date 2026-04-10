@@ -36,7 +36,11 @@ type AzureActions interface {
 	VMStopAndWait(ctx context.Context, vmName string, deallocateVM bool) error
 	VMSizeList(ctx context.Context) ([]*sdkcompute.ResourceSKU, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
-	VMResizeWithCapacityReservation(ctx context.Context, targetVMSize string) error
+	CRGCreate(ctx context.Context, clusterRG, location string, zones []string) (string, error)
+	CRGEnsureReservations(ctx context.Context, clusterRG, location, zone, targetSKU string) error
+	CRGAssociateVM(ctx context.Context, clusterRG, vmName, crgID string) error
+	CRGDelete(ctx context.Context, clusterRG, location, targetSKU string, zones []string, vmNames []string) error
+	CRGResizeSingleVM(ctx context.Context, clusterRG, location, vmName, zone, targetVMSize string) error
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error

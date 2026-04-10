@@ -14,6 +14,7 @@ type VirtualMachinesClientAddons interface {
 	Get(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error)
 	List(ctx context.Context, resourceGroupName string) ([]armcompute.VirtualMachine, error)
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, vmName string, parameters armcompute.VirtualMachine) error
+	UpdateAndWait(ctx context.Context, resourceGroupName, vmName string, parameters armcompute.VirtualMachineUpdate) error
 	DeallocateAndWait(ctx context.Context, resourceGroupName, vmName string) error
 	StartAndWait(ctx context.Context, resourceGroupName, vmName string) error
 }
@@ -45,6 +46,15 @@ func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName stri
 
 func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, vmName string, parameters armcompute.VirtualMachine) error {
 	poller, err := c.BeginCreateOrUpdate(ctx, resourceGroupName, vmName, parameters, nil)
+	if err != nil {
+		return err
+	}
+	_, err = poller.PollUntilDone(ctx, nil)
+	return err
+}
+
+func (c *virtualMachinesClient) UpdateAndWait(ctx context.Context, resourceGroupName, vmName string, parameters armcompute.VirtualMachineUpdate) error {
+	poller, err := c.BeginUpdate(ctx, resourceGroupName, vmName, parameters, nil)
 	if err != nil {
 		return err
 	}

@@ -68,3 +68,18 @@ func (mr *MockCapacityReservationsClientMockRecorder) DeleteAndWait(ctx, resourc
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockCapacityReservationsClient)(nil).DeleteAndWait), ctx, resourceGroupName, capacityReservationGroupName, capacityReservationName)
 }
+
+// Get mocks base method.
+func (m *MockCapacityReservationsClient) Get(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string) (armcompute.CapacityReservation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, capacityReservationGroupName, capacityReservationName)
+	ret0, _ := ret[0].(armcompute.CapacityReservation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockCapacityReservationsClientMockRecorder) Get(ctx, resourceGroupName, capacityReservationGroupName, capacityReservationName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCapacityReservationsClient)(nil).Get), ctx, resourceGroupName, capacityReservationGroupName, capacityReservationName)
+}
