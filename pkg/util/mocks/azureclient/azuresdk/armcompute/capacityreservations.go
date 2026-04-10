@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	gomock "go.uber.org/mock/gomock"
+
+	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 )
 
 // MockCapacityReservationsClient is a mock of CapacityReservationsClient interface.
