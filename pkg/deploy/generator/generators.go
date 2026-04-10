@@ -4,8 +4,13 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
+
+	"mvdan.cc/sh/v3/syntax"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -134,4 +139,33 @@ func (g *generator) writeParameters(p *arm.Parameters, output string) error {
 	b = append(b, byte('\n'))
 
 	return os.WriteFile(output, b, 0o666)
+}
+
+func (g *generator) createStartupScript(name string, base []string, bootstrapScript string) (string, error) {
+	// Minify the bash scripts
+	f, err := syntax.NewParser(syntax.KeepComments(false)).Parse(strings.NewReader(bootstrapScript), "")
+	if err != nil {
+		return "", err
+	}
+	syntax.Simplify(f)
+	out := &strings.Builder{}
+	err = syntax.NewPrinter(syntax.Minify(true)).Print(out, f)
+	if err != nil {
+		return "", err
+	}
+
+	minified := out.String()
+	trailerPreMinified := base64.StdEncoding.EncodeToString([]byte(bootstrapScript))
+	trailer := base64.StdEncoding.EncodeToString([]byte(minified))
+	base = append(base, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
+	customScript := fmt.Sprintf("[base64(concat(%s))]", strings.Join(base, ","))
+
+	fmt.Printf("reduced %s startup script from %d bytes to %d bytes, total customScript length %d->%d\n", name, len(trailerPreMinified), len(trailer), len(customScript)+(len(trailerPreMinified)-len(trailer)), len(customScript))
+
+	// Limit to 81,000 -- the real limit is 81920, but give us some breathing room just-in-case
+	if len(customScript) > 81000 {
+		return "", fmt.Errorf("script is too long, %d bytes when maximum is 81000", len(customScript))
+	}
+
+	return customScript, nil
 }

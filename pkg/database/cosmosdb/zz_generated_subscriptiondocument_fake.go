@@ -140,7 +140,7 @@ func (c *FakeSubscriptionDocumentClient) apply(ctx context.Context, partitionkey
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if subscriptionDocument.ETag != existingSubscriptionDocument.ETag {
+		if (options == nil || !options.NoETag) && subscriptionDocument.ETag != existingSubscriptionDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}

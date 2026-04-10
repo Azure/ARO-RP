@@ -27,11 +27,8 @@ main() {
 
     # shellcheck disable=SC2034
     local -ra install_pkgs=(
-        clamav
-        azsec-clamav
         azure-cli
         azure-mdsd
-        azure-security
         podman
         podman-docker
         openssl-perl
@@ -79,6 +76,8 @@ main() {
         "444/tcp"
         # MIMO Actuator healthz
         "445/tcp"
+        # MIMO Scheduler healthz
+        "446/tcp"
         # Portal ssh
         "2222/tcp"
         # JIT ssh
@@ -105,6 +104,11 @@ main() {
 	Tag journald
 	Systemd_Filter _SYSTEMD_UNIT=aro-otel-collector.service
 	DB /var/lib/fluent/journaldb
+
+[FILTER]
+	Name modify
+	Match journald
+	Add Environment \${ENVIRONMENT}
 
 [FILTER]
 	Name modify
@@ -151,6 +155,7 @@ main() {
         ["monitor"]="10.88.0.3"
         ["portal"]="10.88.0.4"
         ["mimo_actuator"]="10.88.0.10"
+        ["mimo_scheduler"]="10.88.0.11"
         ["mise"]="10.88.0.5"
         ["otel_collector"]="10.88.0.6"
         ["mdm"]="10.88.0.8"
@@ -188,6 +193,7 @@ OIDC_AFD_ENDPOINT='$LOCATION.oic.$RPPARENTDOMAINNAME'
 OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
 OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
 MSI_RP_ENDPOINT='$MSIRPENDPOINT'
+ENVIRONMENT='$ENVIRONMENT'
 "
 
     configure_vmss_aro_services role_rp \
@@ -201,6 +207,7 @@ MSI_RP_ENDPOINT='$MSIRPENDPOINT'
         "aro-otel-collector"
         "aro-portal"
         "aro-mimo-actuator"
+        "aro-mimo-scheduler"
         "aro-rp"
         "azsecd"
         "mdsd"

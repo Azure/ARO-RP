@@ -102,13 +102,15 @@ type Configuration struct {
 	MsiRpEndpoint                     *string                `json:"msiRpEndpoint,omitempty" value:"required"`
 	TokenContributorRoleID            *string                `json:"tokenContributorRoleID,omitempty" value:"required"`
 	TokenContributorRoleName          *string                `json:"tokenContributorRoleName,omitempty" value:"required"`
+	Environment                       *string                `json:"environment,omitempty" value:"required"`
 
 	// Log levels for ARO services running on the VMSSes
-	RPLogLevel           *string `json:"rpLogLevel,omitempty"`
-	GatewayLogLevel      *string `json:"gatewayLogLevel,omitempty"`
-	PortalLogLevel       *string `json:"portalLogLevel,omitempty"`
-	MonitorLogLevel      *string `json:"monitorLogLevel,omitempty"`
-	MimoActuatorLogLevel *string `json:"mimoActuatorLogLevel,omitempty"`
+	RPLogLevel            *string `json:"rpLogLevel,omitempty"`
+	GatewayLogLevel       *string `json:"gatewayLogLevel,omitempty"`
+	PortalLogLevel        *string `json:"portalLogLevel,omitempty"`
+	MonitorLogLevel       *string `json:"monitorLogLevel,omitempty"`
+	MimoActuatorLogLevel  *string `json:"mimoActuatorLogLevel,omitempty"`
+	MimoSchedulerLogLevel *string `json:"mimoSchedulerLogLevel,omitempty"`
 
 	// TODO: Replace with Live Service Configuration in KeyVault
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`

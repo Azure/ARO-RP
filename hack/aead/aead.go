@@ -31,23 +31,38 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	flag.Parse()
 
 	var (
-		file io.Reader
-		err  error
-		v    string
+		file       io.Reader
+		openedFile *os.File
+		err        error
+		v          string
 	)
 
 	if *fileName == "-" {
 		file = os.Stdin
 	} else {
-		file, err = os.Open(*fileName)
+		openedFile, err = os.Open(*fileName)
 		if err != nil {
 			return err
 		}
+		file = openedFile
 	}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		v = v + scanner.Text() + "\n"
+	}
+	if err = scanner.Err(); err != nil {
+		if openedFile != nil {
+			if closeErr := openedFile.Close(); closeErr != nil {
+				log.WithError(closeErr).Warn("failed to close file")
+			}
+		}
+		return err
+	}
+	if openedFile != nil {
+		if closeErr := openedFile.Close(); closeErr != nil {
+			log.WithError(closeErr).Warn("failed to close file")
+		}
 	}
 
 	_env, err := env.NewCore(ctx, log, env.SERVICE_TOOLING)

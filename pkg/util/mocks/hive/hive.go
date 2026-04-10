@@ -121,6 +121,21 @@ func (mr *MockClusterManagerMockRecorder) GetClusterSync(ctx, oc any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSync", reflect.TypeOf((*MockClusterManager)(nil).GetClusterSync), ctx, oc)
 }
 
+// GetHiveK8sObject mocks base method.
+func (m *MockClusterManager) GetHiveK8sObject(ctx context.Context, resource, namespace, name string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHiveK8sObject", ctx, resource, namespace, name)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHiveK8sObject indicates an expected call of GetHiveK8sObject.
+func (mr *MockClusterManagerMockRecorder) GetHiveK8sObject(ctx, resource, namespace, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHiveK8sObject", reflect.TypeOf((*MockClusterManager)(nil).GetHiveK8sObject), ctx, resource, namespace, name)
+}
+
 // Install mocks base method.
 func (m *MockClusterManager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]runtime.Object) error {
 	m.ctrl.T.Helper()
@@ -163,6 +178,21 @@ func (m *MockClusterManager) IsClusterInstallationComplete(ctx context.Context, 
 func (mr *MockClusterManagerMockRecorder) IsClusterInstallationComplete(ctx, doc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterInstallationComplete", reflect.TypeOf((*MockClusterManager)(nil).IsClusterInstallationComplete), ctx, doc)
+}
+
+// ListHiveK8sObjects mocks base method.
+func (m *MockClusterManager) ListHiveK8sObjects(ctx context.Context, resource, namespace string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListHiveK8sObjects", ctx, resource, namespace)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListHiveK8sObjects indicates an expected call of ListHiveK8sObjects.
+func (mr *MockClusterManagerMockRecorder) ListHiveK8sObjects(ctx, resource, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHiveK8sObjects", reflect.TypeOf((*MockClusterManager)(nil).ListHiveK8sObjects), ctx, resource, namespace)
 }
 
 // ResetCorrelationData mocks base method.

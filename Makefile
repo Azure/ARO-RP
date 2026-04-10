@@ -12,21 +12,28 @@ E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
 
-# Docker build platform: defaults to current architecture, override with PLATFORM=linux/amd64 for CI
-PLATFORM ?= linux/$(shell go env GOARCH)
+# When Go is not installed on the host (e.g., CI Docker-only jobs), provide
+# safe fallback values. Without this guard, every $(shell go ...) call —
+# including those in .bingo/Variables.mk — produces "go: command not found"
+# noise (hundreds of lines). When Go IS installed, all $(shell go ...) calls
+# run normally and errors are visible.
+ifneq ($(shell command -v go 2>/dev/null),)
+  PLATFORM ?= linux/$(shell go env GOARCH)
+  GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
+else
+  PLATFORM ?= linux/amd64
+  GOLANG_VERSION ?=
+endif
 
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-MARINER_VERSION = 20250701
-FLUENTBIT_VERSION = 4.0.4
+MARINER_VERSION = 20260102
+FLUENTBIT_VERSION = 4.2.2
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
-
-# Golang version go mod tidy compatibility
-GOLANG_VERSION ?= $(shell go mod edit -json | jq --raw-output .Go)
 
 include .bingo/Variables.mk
 
@@ -252,6 +259,10 @@ runlocal-portal:
 .PHONY: runlocal-actuator
 runlocal-actuator:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-actuator
+
+.PHONY: runlocal-scheduler
+runlocal-scheduler:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-scheduler
 
 .PHONY: build-portal
 build-portal:
@@ -507,6 +518,7 @@ ci-rp:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.ci-rp \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -524,6 +536,7 @@ aro-e2e:
 	docker build . ${DOCKER_BUILD_CI_ARGS} \
 		-f Dockerfile.aro-e2e \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -536,6 +549,7 @@ ci-tunnel:
 	    build . \
 		-f Dockerfile.ci-tunnel \
 		--ulimit=nofile=4096:4096 \
+		--platform=$(PLATFORM) \
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
@@ -555,17 +569,33 @@ run-rp: aks.kubeconfig ## Run RP locally as similarly as possible to production,
 acr-login: ## Login to arointsvc ACR using PULL_SECRET
 	@. hack/devtools/rp_dev_helper.sh && acr_login
 
+# Dev-env: detect OS and choose compose tool / overrides
+ifeq ($(shell uname -s),Darwin)
+  DEV_ENV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml
+  DEV_ENV_USERID := $(shell id -u)
+  DEV_ENV_FEDORA_REGISTRY ?= registry.fedoraproject.org
+  DEV_ENV_DEPS :=
+else
+  DEV_ENV_COMPOSE := podman compose -f docker-compose.yml -f docker-compose.dev-env-linux.yml
+  DEV_ENV_USERID := $(shell id -u)
+  DEV_ENV_FEDORA_REGISTRY := $(FEDORA_REGISTRY)
+  DEV_ENV_DEPS := acr-login
+endif
+
 .PHONY: dev-env-build
-dev-env-build: acr-login ## Build the dev environment container image
-	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose build aro-dev-env
+dev-env-build: $(DEV_ENV_DEPS) ## Build the dev environment container image
+	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+		$(DEV_ENV_COMPOSE) build aro-dev-env
 
 .PHONY: dev-env-start
-dev-env-start: acr-login ## Start the dev environment RP container
-	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose up -d aro-dev-env
+dev-env-start: $(DEV_ENV_DEPS) ## Start the dev environment RP container
+	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+		$(DEV_ENV_COMPOSE) up -d aro-dev-env
 
 .PHONY: dev-env-stop
 dev-env-stop: ## Stop the containerized RP
-	FEDORA_REGISTRY=$(FEDORA_REGISTRY) podman compose down aro-dev-env
+	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+		$(DEV_ENV_COMPOSE) down aro-dev-env
 
 .PHONY: run-selenium
 run-selenium:

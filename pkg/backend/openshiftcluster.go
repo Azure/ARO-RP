@@ -323,7 +323,9 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 	}
 
 	if initialProvisioningState == api.ProvisioningStateAdminUpdating {
-		provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
+		if doc.OpenShiftCluster.Properties.LastProvisioningState.IsTerminal() {
+			provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
+		}
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
 		if backendErr == nil {

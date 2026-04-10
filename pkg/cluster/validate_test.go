@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -180,8 +179,18 @@ func TestValidateZones(t *testing.T) {
 
 			resourceSkusClient := mock_armcompute.NewMockResourceSKUsClient(controller)
 			resourceSkusClient.EXPECT().
-				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus"), false).
-				Return(skus, tt.resourceSkusClientErr)
+				List(gomock.Any(), "location eq eastus", false).
+				Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+					if tt.resourceSkusClientErr != nil {
+						yield(nil, tt.resourceSkusClientErr)
+						return
+					}
+					for _, v := range skus {
+						if !yield(v, nil) {
+							return
+						}
+					}
+				})
 
 			m := &manager{
 				env: mockEnv,

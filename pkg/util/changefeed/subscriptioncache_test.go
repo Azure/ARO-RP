@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
 func TestSubscriptionChangefeed(t *testing.T) {
@@ -72,6 +73,7 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			startedTime := time.Now().UnixNano()
 			subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
 			_, log := testlog.LogForTesting(t)
+			m := testmetrics.NewFakeMetricsEmitter(t)
 
 			// need to register the changefeed before making documents
 			subscriptionChangefeed := subscriptionsDB.ChangeFeed()
@@ -139,7 +141,7 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			)
 			require.NoError(t, fixtures.Create())
 
-			cache := NewSubscriptionsChangefeedCache(tC.validOnly)
+			cache := NewSubscriptionsChangefeedCache(m, tC.validOnly)
 
 			stop := make(chan struct{})
 			defer close(stop)
@@ -219,8 +221,12 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			require.NoError(t, err)
 			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
 
-			// Validate the expected cache contents
-			assert.Equal(t, tC.expected, maps.Collect(cache.subs.All()))
+			// Validate the expected cache contents. Use EventuallyWithT because
+			// AllIteratorsConsumed can return true as soon as the iterator's
+			// Next() returns the last batch, but before OnDoc has processed it.
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+				assert.Equal(collect, tC.expected, maps.Collect(cache.subs.All()))
+			}, time.Second, 1*time.Millisecond)
 
 			// Validate we can get one of the subscriptions
 			sub, ok := cache.GetSubscription("9187ef95-a9cc-487d-80df-f85e615cf926")
@@ -236,6 +242,18 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			last, ok := cache.GetLastProcessed()
 			assert.True(t, ok, "fetching last processed time")
 			assert.Greater(t, last.UnixNano(), startedTime)
+
+			// Validate the changefeed metrics
+			m.AssertFloats()
+			m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: int64(len(tC.expected)),
+				},
+			}...)
 		})
 	}
 }
@@ -243,13 +261,14 @@ func TestSubscriptionChangefeed(t *testing.T) {
 func TestSubscriptionChangefeedError(t *testing.T) {
 	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
 	hook, log := testlog.LogForTesting(t)
+	m := testmetrics.NewFakeMetricsEmitter(t)
 
 	subscriptionsClient.SetError(errors.New("oh no"))
 
 	// need to register the changefeed before making documents
 	subscriptionChangefeed := subscriptionsDB.ChangeFeed()
 
-	cache := NewSubscriptionsChangefeedCache(true)
+	cache := NewSubscriptionsChangefeedCache(m, true)
 
 	stop := make(chan struct{})
 	defer close(stop)
@@ -270,4 +289,8 @@ func TestSubscriptionChangefeedError(t *testing.T) {
 
 	// Empty cache
 	assert.Equal(t, map[string]subscriptionInfo{}, maps.Collect(cache.subs.All()))
+
+	// Validate the changefeed metrics
+	m.AssertFloats()
+	m.AssertGauges()
 }

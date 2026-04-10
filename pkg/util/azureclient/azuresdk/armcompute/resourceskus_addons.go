@@ -5,6 +5,7 @@ package armcompute
 
 import (
 	"context"
+	"iter"
 
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
@@ -12,10 +13,10 @@ import (
 )
 
 type ResourceSKUsClientAddons interface {
-	List(ctx context.Context, filter string, includeExtendedLocations bool) ([]*armcompute.ResourceSKU, error)
+	List(ctx context.Context, filter string, includeExtendedLocations bool) iter.Seq2[*armcompute.ResourceSKU, error]
 }
 
-func (c *resourceSKUsClient) List(ctx context.Context, filter string, includeExtendedLocations bool) (result []*armcompute.ResourceSKU, err error) {
+func (c *resourceSKUsClient) List(ctx context.Context, filter string, includeExtendedLocations bool) iter.Seq2[*armcompute.ResourceSKU, error] {
 	ex := "false"
 	if includeExtendedLocations {
 		ex = "true"
@@ -26,13 +27,19 @@ func (c *resourceSKUsClient) List(ctx context.Context, filter string, includeExt
 		IncludeExtendedLocations: pointerutils.ToPtr(ex),
 	})
 
-	for pager.More() {
-		page, err := pager.NextPage(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, page.Value...)
-	}
+	return func(yield func(*armcompute.ResourceSKU, error) bool) {
+		for pager.More() {
+			page, err := pager.NextPage(ctx)
+			if err != nil {
+				yield(nil, err)
+				return
+			}
 
-	return result, nil
+			for _, v := range page.Value {
+				if !yield(v, nil) {
+					return
+				}
+			}
+		}
+	}
 }

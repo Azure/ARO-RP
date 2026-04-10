@@ -17,6 +17,9 @@
         "databaseAccountName": {
             "value": ""
         },
+        "environment": {
+            "value": ""
+        },
         "fluentbitImage": {
             "value": ""
         },

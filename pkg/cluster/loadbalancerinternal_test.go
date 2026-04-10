@@ -94,19 +94,20 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
-					{
-						Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
-						Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
-						LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
-							{
-								Zones: []*string{},
-							},
-						}),
-						Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-						ResourceType: pointerutils.ToPtr("virtualMachines"),
-					},
-				}, nil)
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+						yield(&armcompute.ResourceSKU{
+							Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
+							Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+								{
+									Zones: []*string{},
+								},
+							}),
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+						}, nil)
+					})
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{
 				{
@@ -136,15 +137,8 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
-					{
-						Name:         pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
-						Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-						LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{}),
-						Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-						ResourceType: pointerutils.ToPtr("virtualMachines"),
-					},
-				}, nil)
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {})
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
 			wantErrs:     []error{errVMAvailability},
@@ -170,7 +164,10 @@ func TestUpdateLoadBalancerZonalNoopAndErrorPaths(t *testing.T) {
 					}, nil,
 				)
 
-				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{}, errTestSKUFetchError)
+				sku.EXPECT().List(gomock.Any(), "location eq eastus", false).
+					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+						yield(nil, errTestSKUFetchError)
+					})
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
 			wantErrs:     []error{computeskus.ErrListVMResourceSKUs, errTestSKUFetchError},
@@ -380,17 +377,18 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				}, nil,
 			)
 
-			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
-				{
-					Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
-					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
-					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
-						{Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"})},
-					}),
-					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-					ResourceType: pointerutils.ToPtr("virtualMachines"),
-				},
-			}, nil)
+			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).
+				Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+					yield(&armcompute.ResourceSKU{
+						Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
+						Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
+						LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
+							{Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"})},
+						}),
+						Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+						ResourceType: pointerutils.ToPtr("virtualMachines"),
+					}, nil)
+				})
 
 			plsFIPRemoval := plses.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-pls", armnetwork.PrivateLinkService{
 				Properties: &armnetwork.PrivateLinkServiceProperties{

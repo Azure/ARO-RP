@@ -9,12 +9,11 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
-
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -26,15 +25,15 @@ func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-	b, err := f._getAdminOpenShiftClusterVMResizeOptions(ctx, r, log)
+
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+
+	b, err := f._getAdminOpenShiftClusterVMResizeOptions(ctx, resType, resName, resGroupName, resourceID, log)
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
-
-	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-
+func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, resType, resName, resGroupName, resourceID string, log *logrus.Entry) ([]byte, error) {
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
@@ -66,19 +65,8 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 		return nil, err
 	}
 
-	return json.Marshal(f.filterVMSkus(skus))
-}
+	// Sort for stability
+	slices.Sort(skus)
 
-func (f *frontend) filterVMSkus(skus []*armcompute.ResourceSKU) []string {
-	filteredSkus := []string{}
-
-	for _, sku := range skus {
-		if sku.Restrictions != nil && len(sku.Restrictions) == 0 {
-			if sku.Name != nil {
-				filteredSkus = append(filteredSkus, *sku.Name)
-			}
-		}
-	}
-
-	return filteredSkus
+	return json.Marshal(skus)
 }

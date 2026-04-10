@@ -60,7 +60,7 @@ func MigrateInternalLoadBalancerZones(
 		}
 	}
 
-	filteredSkus, err := computeskus.GetVMSkusForCurrentRegion(ctx, resourceSkusClient, location)
+	filteredSkus, err := computeskus.SelectVMSkusInCurrentRegion(ctx, resourceSkusClient, location, []string{string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize)})
 	if err != nil {
 		return doc, err
 	}
