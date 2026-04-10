@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -32,8 +33,23 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 	vmSize := r.URL.Query().Get("vmSize")
-	useCapacityReservation := strings.EqualFold(r.URL.Query().Get("useCapacityReservation"), "true")
+	useCapacityReservationRaw := r.URL.Query().Get("useCapacityReservation")
 	zone := r.URL.Query().Get("zone")
+
+	var useCapacityReservation bool
+	if useCapacityReservationRaw != "" {
+		var parseErr error
+		useCapacityReservation, parseErr = strconv.ParseBool(useCapacityReservationRaw)
+		if parseErr != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "useCapacityReservation",
+				"useCapacityReservation must be a boolean (true or false)")
+		}
+	}
+
+	if !useCapacityReservation && zone != "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "zone",
+			"zone is only valid when useCapacityReservation is true")
+	}
 
 	err := validateAdminMasterVMSize(vmSize)
 	if err != nil {

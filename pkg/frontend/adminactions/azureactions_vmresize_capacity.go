@@ -49,7 +49,9 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 	// request context has already timed out or been canceled.
 	// vmNames should be non-nil only if the VM was successfully associated in step 4.
 	cleanupCRG := func(vmNames []string) {
-		cleanCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		// Allow enough time for all retries in CRGDelete to complete.
+		cleanupTimeout := time.Duration(crgMaxRetries)*crgRetryInterval + 2*time.Minute
+		cleanCtx, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
 		defer cancel()
 		if cleanErr := a.CRGDelete(cleanCtx, clusterRG, location, targetVMSize, []string{zone}, vmNames); cleanErr != nil {
 			a.log.Errorf("CRG cleanup failed for VM %s: %v", vmName, cleanErr)
@@ -173,6 +175,9 @@ func (a *azureActions) CRGAssociateVM(ctx context.Context, clusterRG, vmName, cr
 	if err != nil {
 		return fmt.Errorf("reading VM %s before association: %w", vmName, err)
 	}
+	if vm.Properties == nil {
+		return fmt.Errorf("VM %s has no properties in ARM response", vmName)
+	}
 	vm.Properties.CapacityReservation = &armcompute.CapacityReservationProfile{
 		CapacityReservationGroup: &armcompute.SubResource{ID: &crgID},
 	}
@@ -210,6 +215,10 @@ func (a *azureActions) CRGDelete(ctx context.Context, clusterRG, location, targe
 		vm, getErr := a.armVirtualMachines.Get(ctx, clusterRG, vmName)
 		if getErr != nil {
 			errs = append(errs, fmt.Errorf("read VM %s before disassociation: %w", vmName, getErr))
+			continue
+		}
+		if vm.Properties == nil {
+			errs = append(errs, fmt.Errorf("VM %s has no properties in ARM response, skipping disassociation", vmName))
 			continue
 		}
 		vm.Properties.CapacityReservation = &armcompute.CapacityReservationProfile{
