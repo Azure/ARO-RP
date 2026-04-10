@@ -10,8 +10,8 @@ The root `Makefile` is the single source of truth for all quality gates, builds,
 ## Formatting & Linting
 
 - `make fmt` — Format BOTH Go modules (golangci-lint: gci + gofumpt). **Never use `gofmt` directly.**
-- `make lint-go` — Run all linters (both modules)
-- `make lint-go-fix` — Lint with `--fix` (both modules)
+- `make lint-go` — Run golangci-lint for the root module
+- `make lint-go-fix` — Run lint with `--fix` (includes `pkg/api` checks used by CI validation)
 - `make validate-imports` — Verify import ordering matches CI expectations
 
 ## Testing

@@ -148,7 +148,7 @@ To validate only that the required variable names are present (without printing
 secret values), run:
 
 ```bash
-env | cut -d= -f1 | rg '^(LOCATION|CLUSTER|AZURE_TENANT_ID|AZURE_SUBSCRIPTION_ID|AZURE_CLIENT_ID|AZURE_CLIENT_SECRET)$'
+env | cut -d= -f1 | rg '^(LOCATION|CLUSTER|RESOURCEGROUP|AZURE_TENANT_ID|AZURE_SUBSCRIPTION_ID|AZURE_CLIENT_ID|AZURE_CLIENT_SECRET)$'
 ```
 
 For smoke tests:

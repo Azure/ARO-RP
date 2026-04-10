@@ -23,7 +23,7 @@ Cluster mutations (PUT/DELETE) are **async**: Frontend writes to CosmosDB with n
 | Runtime context | Packages |
 |----------------|----------|
 | RP control plane (Azure VMSS) | `pkg/frontend`, `pkg/backend`, `pkg/cluster`, `pkg/monitor`, `pkg/gateway`, `pkg/portal` |
-| Customer OpenShift cluster | `pkg/operator/controllers` (26 controllers) |
+| Customer OpenShift cluster | `pkg/operator/controllers` |
 | CI/dev only (NOT production) | `pkg/util/cluster`, `hack/cluster`, `test/e2e` |
 | RP infra deployment | `pkg/deploy` |
 

@@ -25,6 +25,12 @@ git diff --quiet || echo "Formatting produced changes — stage and review them"
 make lint-go
 ```
 
+If you changed anything under `pkg/api/`, also run:
+
+```bash
+cd pkg/api && golangci-lint run ./...
+```
+
 See the `code-style` rule for details on common lint failures and enforced conventions.
 
 ## Stage 3: Unit Tests
