@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,12 +33,40 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 
 	pwCredentialRequestBody := msgraph_apps.NewItemAddPasswordPostRequestBody()
 	pwCredentialRequestBody.SetPasswordCredential(pwCredential)
-	// ByApplicationId is confusingly named, but it refers to
-	// the application's Object ID, not to the Application ID.
-	// https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0&tabs=http#http-request
-	pwResult, err := c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
-	if err != nil {
-		return "", "", err
+
+	// Add password to application with retry for eventual consistency
+	var pwResult msgraph_models.PasswordCredentialable
+	var lastErr error
+	attempts := 0
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	pollErr := wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+		attempts++
+		var err error
+		// ByApplicationId is confusingly named, but it refers to
+		// the application's Object ID, not to the Application ID.
+		// https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0&tabs=http#http-request
+		pwResult, err = c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
+		if err != nil {
+			lastErr = err
+			// Only retry on transient errors (404, 429, 5xx)
+			var odataErr *msgraph_errors.ODataError
+			if errors.As(err, &odataErr) {
+				code := odataErr.ResponseStatusCode
+				if code == 404 || code == 429 || code >= 500 {
+					return false, nil
+				}
+			}
+			// Non-transient or unknown error, stop retrying
+			return false, err
+		}
+		return true, nil
+	}, timeoutCtx.Done())
+	if pollErr != nil {
+		if lastErr != nil {
+			return "", "", fmt.Errorf("add password after %d attempts; last attempt error: %w; polling error: %w", attempts, lastErr, pollErr)
+		}
+		return "", "", fmt.Errorf("add password after %d attempts: %w", attempts, pollErr)
 	}
 
 	return *appResult.GetAppId(), *pwResult.GetSecretText(), nil
