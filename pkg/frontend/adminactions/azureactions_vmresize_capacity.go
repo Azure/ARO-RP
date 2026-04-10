@@ -45,9 +45,13 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 	}
 
 	// cleanupCRG is called on any failure path after the CRG exists.
+	// A fresh background context is used so cleanup is not canceled if the
+	// request context has already timed out or been canceled.
 	// vmNames should be non-nil only if the VM was successfully associated in step 4.
 	cleanupCRG := func(vmNames []string) {
-		if cleanErr := a.CRGDelete(ctx, clusterRG, location, targetVMSize, []string{zone}, vmNames); cleanErr != nil {
+		cleanCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		if cleanErr := a.CRGDelete(cleanCtx, clusterRG, location, targetVMSize, []string{zone}, vmNames); cleanErr != nil {
 			a.log.Errorf("CRG cleanup failed for VM %s: %v", vmName, cleanErr)
 		}
 	}
@@ -69,6 +73,11 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 	if err != nil {
 		cleanupCRG(nil)
 		return fmt.Errorf("reading VM %s before resize: %w", vmName, err)
+	}
+
+	if vm.Properties == nil || vm.Properties.HardwareProfile == nil {
+		cleanupCRG(nil)
+		return fmt.Errorf("VM %s has no hardware profile", vmName)
 	}
 
 	// Update the SKU and associate with the CRG in a single call.
@@ -120,6 +129,9 @@ func (a *azureActions) CRGCreate(ctx context.Context, clusterRG, location string
 				location, clusterRG, err)
 		}
 		return "", fmt.Errorf("creating capacity reservation group: %w", err)
+	}
+	if crg.ID == nil {
+		return "", fmt.Errorf("capacity reservation group %s was created but returned no ID", capacityReservationGroupName)
 	}
 	return *crg.ID, nil
 }

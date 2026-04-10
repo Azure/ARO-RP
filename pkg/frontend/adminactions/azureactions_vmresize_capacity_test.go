@@ -125,13 +125,20 @@ func TestCRGEnsureReservations_TargetFails_ReturnsCapacityError(t *testing.T) {
 
 	a, _, _, mockCRs := newTestAzureActions(t, ctrl)
 
+	capacityErr := &azcore.ResponseError{
+		ErrorCode:  "AllocationFailed",
+		StatusCode: http.StatusConflict,
+	}
 	mockCRs.EXPECT().
 		CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), "cr-target-z1", gomock.Any()).
-		Return(errors.New("quota exceeded"))
+		Return(capacityErr)
 
 	err := a.CRGEnsureReservations(context.Background(), "cluster-rg", "eastus", "1", "Standard_D16s_v3")
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+	if !isCapacityError(capacityErr) {
+		t.Errorf("expected AllocationFailed to be recognized as a capacity error")
 	}
 }
 
