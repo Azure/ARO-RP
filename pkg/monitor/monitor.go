@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -28,12 +26,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 )
 
 type monitorDBs interface {
-	database.DatabaseGroupWithMonitors
+	database.DatabaseGroupWithPoolWorkers
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithSubscriptions
 }
@@ -60,7 +59,6 @@ type monitor struct {
 	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
-	isMaster    bool
 	bucketCount int
 	buckets     map[int]struct{}
 
@@ -118,7 +116,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 }
 
 func (mon *monitor) Run(ctx context.Context) error {
-	dbMonitors, err := mon.dbGroup.Monitors()
+	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
 	if err != nil {
 		return err
 	}
@@ -135,18 +133,6 @@ func (mon *monitor) Run(ctx context.Context) error {
 		mon.hiveClusterManagers[1] = cl
 	}
 
-	// We always need a master document to exist so that we can attempt to
-	// dequeue it. If it already exists we will get a StatusPreconditionFailed
-	// error, which is expected and we can ignore. The leasing of the master
-	// document is in `mon.master()`.
-	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
-		ID: "master",
-	})
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-		mon.baseLog.Error(fmt.Errorf("error bootstrapping master MonitorDocument (not a 412): %w", err))
-		return err
-	}
-
 	err = mon.startChangefeeds(ctx, nil)
 	if err != nil {
 		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
@@ -154,37 +140,9 @@ func (mon *monitor) Run(ctx context.Context) error {
 	}
 	go mon.changefeedMetrics(nil)
 
-	t := time.NewTicker(mon.changefeedInterval)
-	defer t.Stop()
-
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
-	for {
-		// register ourself as a monitor, ttl of 60s default
-		err = dbMonitors.MonitorHeartbeat(ctx, int(mon.changefeedInterval.Seconds()*6))
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %w", err))
-		}
-
-		// try to become master and share buckets across registered monitors
-		err = mon.master(ctx)
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %w", err))
-		}
-
-		// read our bucket allocation from the master
-		err = mon.listBuckets(ctx)
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
-		} else {
-			mon.lastBucketlist.Store(time.Now())
-		}
-
-		if err = ctx.Err(); err != nil {
-			return err
-		}
-		<-t.C
-	}
+	return buckets.StartBucketWorkerLoop(ctx, mon.baseLog, api.PoolWorkerTypeMonitor, mon.bucketCount, mon.changefeedInterval, dbPoolWorkers, mon.onBuckets, nil)
 }
 
 func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {

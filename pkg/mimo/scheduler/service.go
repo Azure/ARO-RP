@@ -6,6 +6,8 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"fmt"
+	"iter"
 	"log"
 	"math/rand"
 	"net"
@@ -24,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
@@ -47,19 +50,25 @@ type service struct {
 	workerRoutines sync.WaitGroup
 	newScheduler   newSchedulerFunc
 
+	buckets  atomic.Value // []int
 	b        buckets.BucketWorker[*api.MaintenanceScheduleDocument]
 	subs     changefeed.SubscriptionsCache
 	clusters *openShiftClusterCache
 
-	changefeedBatchSize int
-	changefeedInterval  time.Duration
+	bucketCount                    int
+	changefeedBatchSize            int
+	changefeedInterval             time.Duration
+	bucketRefreshInterval          time.Duration
+	bucketRefreshReadinessInterval time.Duration
 
-	lastChangefeed atomic.Value // time.Time
-	startTime      time.Time
+	lastChangefeed   atomic.Value // time.Time
+	lastBucketUpdate atomic.Value // time.Time
+	startTime        time.Time
 
 	pollTime    time.Duration
 	now         func() time.Time
 	workerDelay func() time.Duration
+	readyDelay  time.Duration
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 
@@ -73,18 +82,20 @@ type schedulerDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithMaintenanceManifests
 	database.DatabaseGroupWithMaintenanceSchedules
+	database.DatabaseGroupWithPoolWorkers
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metrics.Emitter, ownedBuckets []int) *service {
+func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metrics.Emitter) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
 
 		dbGroup: dbg,
 
-		m:        m,
-		stopping: &atomic.Bool{},
-		workers:  &atomic.Int32{},
+		m:           m,
+		stopping:    &atomic.Bool{},
+		workers:     &atomic.Int32{},
+		bucketCount: bucket.Buckets,
 
 		startTime:    time.Now(),
 		workerDelay:  func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
@@ -95,16 +106,17 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		changefeedBatchSize: 50,
 		changefeedInterval:  10 * time.Second,
 
+		bucketRefreshInterval:          10 * time.Second,
+		bucketRefreshReadinessInterval: 60 * time.Second,
+
 		subs: changefeed.NewSubscriptionsChangefeedCache(m, false),
 
+		readyDelay:   time.Minute * 2,
 		serveHealthz: true,
 	}
 
-	s.clusters = newOpenShiftClusterCache(log, m, s.subs, ownedBuckets)
+	s.clusters = newOpenShiftClusterCache(log, m, s.subs)
 	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
-	// All Schedules have a bucket of 0
-	s.b.SetBuckets([]int{0})
-
 	return s
 }
 
@@ -114,6 +126,11 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 
 func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+
+	dbPoolWorkers, err := s.dbGroup.PoolWorkers()
+	if err != nil {
+		return err
+	}
 
 	// Only enable the healthz endpoint if configured (disabled in unit tests)
 	if s.serveHealthz {
@@ -165,12 +182,26 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	err := s.startChangefeeds(ctx, stop)
+	err = s.startChangefeeds(ctx, stop)
 	if err != nil {
 		return err
 	}
 
 	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", nil, s.checkReady)
+
+	// Start the bucket worker update loop which will coordinate buckets between
+	// the MIMO instances
+	go buckets.StartBucketWorkerLoop(
+		ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
+		s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, func(i []int) {
+			if len(i) == 0 {
+				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
+				return
+			}
+			s.buckets.Store(i)
+			s.lastBucketUpdate.Store(s.now())
+		}, stop,
+	)
 
 	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
 	for !s.stopping.Load() {
@@ -232,7 +263,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 		return nil, err
 	}
 
-	// Fetch all of the cluster UUIDs
+	// Fetch all of the valid schedules
 	i, err := dbMaintenanceSchedules.GetValid(ctx, "")
 	if err != nil {
 		return nil, err
@@ -290,6 +321,11 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 }
 
 func (s *service) checkReady() bool {
+	lastBucketUpdate, ok := s.lastBucketUpdate.Load().(time.Time)
+	if !ok {
+		return false
+	}
+
 	lastChangefeedTime, ok := s.lastChangefeed.Load().(time.Time)
 	if !ok {
 		return false
@@ -305,24 +341,21 @@ func (s *service) checkReady() bool {
 		return false
 	}
 
-	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < time.Minute && // did we update our changefeeds recently?
-			time.Since(lastClusterChangefeed) < time.Minute &&
-			time.Since(lastSubsChangefeed) < time.Minute)
-	} else {
-		return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
-			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
-	}
+	return (time.Since(lastChangefeedTime) < time.Minute && // did we update our changefeeds recently?
+		time.Since(lastClusterChangefeed) < time.Minute &&
+		time.Since(lastSubsChangefeed) < time.Minute) &&
+		time.Since(lastBucketUpdate) < s.bucketRefreshReadinessInterval &&
+		(time.Since(s.startTime) > s.readyDelay) // are we running for at least (the default) 2 minutes?
 }
 
 func (s *service) spawnWorker(stop <-chan struct{}, id string) {
-	s.workerRoutines.Add(1)
-	go s.worker(stop, id)
+	s.workerRoutines.Go(func() {
+		s.worker(stop, id)
+	})
 }
 
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
-	defer s.workerRoutines.Done()
 
 	delay := s.workerDelay()
 	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
@@ -332,8 +365,37 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	time.Sleep(delay)
 
 	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
+	getClusters := func() iter.Seq2[string, selectorData] {
+		return func(yield func(string, selectorData) bool) {
+			_ownedBuckets, ok := s.buckets.Load().([]int)
+			if !ok {
+				// no owned buckets yet
+				return
+			}
 
-	a, err := s.newScheduler(s.env, log, s.m, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
+			ownedBuckets := make(map[string]struct{})
+			for _, i := range _ownedBuckets {
+				ownedBuckets[fmt.Sprintf("%d", i)] = struct{}{}
+			}
+
+			// Only give clusters belonging to buckets we currently have owned
+			for cl, d := range s.clusters.GetClusters() {
+				bucket, ok := d.GetString(string(SelectorDataBucketID))
+				if !ok {
+					continue
+				}
+
+				_, ownedBucket := ownedBuckets[bucket]
+				if ownedBucket {
+					if !yield(cl, d) {
+						return
+					}
+				}
+			}
+		}
+	}
+
+	a, err := s.newScheduler(s.env, log, s.m, getDoc, getClusters, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return

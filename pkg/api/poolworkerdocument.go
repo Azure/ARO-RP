@@ -3,17 +3,17 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// MonitorDocuments represents monitor documents.
+// PoolWorkerDocuments represents PoolWorker documents.
 // pkg/database/cosmosdb requires its definition.
-type MonitorDocuments struct {
-	Count            int                `json:"_count,omitempty"`
-	ResourceID       string             `json:"_rid,omitempty"`
-	MonitorDocuments []*MonitorDocument `json:"Documents,omitempty"`
+type PoolWorkerDocuments struct {
+	Count               int                   `json:"_count,omitempty"`
+	ResourceID          string                `json:"_rid,omitempty"`
+	PoolWorkerDocuments []*PoolWorkerDocument `json:"Documents,omitempty"`
 }
 
-// MonitorDocument represents a monitor document.
+// PoolWorkerDocument represents a PoolWorker document.
 // pkg/database/cosmosdb requires its definition.
-type MonitorDocument struct {
+type PoolWorkerDocument struct {
 	MissingFields
 
 	ID          string                 `json:"id,omitempty"`
@@ -29,9 +29,10 @@ type MonitorDocument struct {
 	LeaseOwner   string `json:"leaseOwner,omitempty"`
 	LeaseExpires int    `json:"leaseExpires,omitempty"`
 
-	Monitor *Monitor `json:"monitor,omitempty"`
+	WorkerType PoolWorkerType `json:"workerType,omitempty"`
+	PoolWorker *PoolWorker    `json:"poolWorker,omitempty"`
 }
 
-func (c *MonitorDocument) GetID() string {
+func (c *PoolWorkerDocument) GetID() string {
 	return c.ID
 }

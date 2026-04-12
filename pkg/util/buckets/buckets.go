@@ -4,6 +4,7 @@ package buckets
 // Licensed under the Apache License 2.0.
 
 import (
+	"reflect"
 	"strings"
 	"sync"
 
@@ -76,13 +77,17 @@ func (mon *monitor[E]) Doc(id string) (r E, ok bool) {
 func (mon *monitor[E]) SetBuckets(buckets []int) {
 	mon.mu.Lock()
 	defer mon.mu.Unlock()
-	mon.buckets = map[int]struct{}{}
+	oldBuckets := mon.buckets
+	mon.buckets = make(map[int]struct{}, len(buckets))
 
 	for _, i := range buckets {
 		mon.buckets[i] = struct{}{}
 	}
 
-	for _, v := range mon.docs {
-		mon.FixDoc(v.doc)
+	if !reflect.DeepEqual(mon.buckets, oldBuckets) {
+		mon.baseLog.Printf("servicing %d buckets", len(mon.buckets))
+		for _, v := range mon.docs {
+			mon.FixDoc(v.doc)
+		}
 	}
 }
