@@ -107,8 +107,9 @@ type Cluster struct {
 }
 
 const (
-	GenerateSubnetMaxTries        = 100
-	localDefaultURL        string = "https://localhost:8443"
+	GenerateSubnetMaxTries                = 100
+	localDefaultURL                string = "https://localhost:8443"
+	aroClusterIdentityOperatorName        = "aro-Cluster"
 )
 
 func DefaultMasterVmSizes() []string {
@@ -402,30 +403,19 @@ func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, erro
 	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
 }
 
-func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string) error {
+func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string, diskEncryptionSetID string) error {
 	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
 	if err != nil {
 		return fmt.Errorf("failed parsing platformWI Roles: %w", err)
 	}
 
 	platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
-		OperatorName:     "aro-Cluster",
+		OperatorName:     aroClusterIdentityOperatorName,
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
 
-	c.log.Info("Assigning role to mock msi client")
-	c.roleassignments.Create(
-		ctx,
-		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
-		uuid.DefaultGenerator.Generate(),
-		mgmtauthorization.RoleAssignmentCreateParameters{
-			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
-				PrincipalID:      &c.Config.MockMSIObjectID,
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		},
-	)
+	// Create managed identities and store their resource IDs for later federated credential role assignment
+	operatorIdentities := make(map[string]string) // operatorName -> resourceID
 
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
@@ -435,30 +425,220 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		if err != nil {
 			return err
 		}
-		_, err = c.roleassignments.Create(
-			ctx,
-			fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
-			uuid.DefaultGenerator.Generate(),
-			mgmtauthorization.RoleAssignmentCreateParameters{
-				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-					RoleDefinitionID: &wi.RoleDefinitionID,
-					PrincipalID:      resp.Properties.PrincipalID,
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-		)
+
+		operatorIdentities[wi.OperatorName] = *resp.ID
+
+		// Determine required scopes based on role permissions
+		scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, wi.RoleDefinitionID, vnetResourceGroup, diskEncryptionSetID)
 		if err != nil {
 			return err
 		}
 
-		if wi.OperatorName != "aro-Cluster" {
+		// Assign role to each determined scope
+		for _, scope := range scopes {
+			c.log.Infof("assigning role %s to scope %s for principal %s", wi.RoleDefinitionID, scope, *resp.Properties.PrincipalID)
+			for i := 0; i < 5; i++ {
+				_, err := c.roleassignments.Create(
+					ctx,
+					scope,
+					uuid.DefaultGenerator.Generate(),
+					mgmtauthorization.RoleAssignmentCreateParameters{
+						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+							RoleDefinitionID: &wi.RoleDefinitionID,
+							PrincipalID:      resp.Properties.PrincipalID,
+							PrincipalType:    mgmtauthorization.ServicePrincipal,
+						},
+					},
+				)
+
+				// Ignore if the role assignment already exists
+				if detailedError, ok := err.(autorest.DetailedError); ok {
+					if detailedError.StatusCode == http.StatusConflict {
+						err = nil
+					}
+				}
+
+				if err != nil && i < 4 {
+					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
+					// Retry a few times.
+					c.log.Print(err)
+					continue
+				}
+				if err != nil {
+					return fmt.Errorf("failed to assign role to scope %s: %w", scope, err)
+				}
+
+				break
+			}
+		}
+
+		if wi.OperatorName != aroClusterIdentityOperatorName {
 			c.workloadIdentities[wi.OperatorName] = api.PlatformWorkloadIdentity{
 				ResourceID: *resp.ID,
 			}
 		}
 	}
 
+	// Assign federated credential role from aro-Cluster identity to each operator identity
+	_, ok := operatorIdentities[aroClusterIdentityOperatorName]
+	if !ok {
+		return fmt.Errorf("%s identity not found", aroClusterIdentityOperatorName)
+	}
+
+	// Get the aro-Cluster identity to get its principalID
+	aroClusterIdentity, err := c.msiClient.Get(ctx, vnetResourceGroup, aroClusterIdentityOperatorName, nil)
+	if err != nil {
+		return fmt.Errorf("failed to get %s identity: %w", aroClusterIdentityOperatorName, err)
+	}
+
+	c.log.Infof("Assigning federated credential role from %s to operator identities", aroClusterIdentityOperatorName)
+	for operatorName, operatorResourceID := range operatorIdentities {
+		if operatorName == aroClusterIdentityOperatorName {
+			continue // Don't assign to itself
+		}
+
+		for i := 0; i < 5; i++ {
+			_, err := c.roleassignments.Create(
+				ctx,
+				operatorResourceID, // Scope to the operator's managed identity resource
+				uuid.DefaultGenerator.Generate(),
+				mgmtauthorization.RoleAssignmentCreateParameters{
+					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+						RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole),
+						PrincipalID:      aroClusterIdentity.Properties.PrincipalID,
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				},
+			)
+
+			// Ignore if the role assignment already exists
+			if detailedError, ok := err.(autorest.DetailedError); ok {
+				if detailedError.StatusCode == http.StatusConflict {
+					err = nil
+				}
+			}
+
+			if err != nil && i < 4 {
+				// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
+				// Retry a few times.
+				c.log.Print(err)
+				continue
+			}
+			if err != nil {
+				return fmt.Errorf("failed to assign federated credential role to %s: %w", operatorName, err)
+			}
+
+			break
+		}
+	}
+
+	// Also assign federated credential role to mock MSI if configured (for testing)
+	if c.Config.MockMSIObjectID != "" {
+		c.log.Info("Assigning federated credential role to mock msi client")
+		for operatorName, operatorResourceID := range operatorIdentities {
+			if operatorName == aroClusterIdentityOperatorName {
+				continue
+			}
+
+			for i := 0; i < 5; i++ {
+				_, err := c.roleassignments.Create(
+					ctx,
+					operatorResourceID,
+					uuid.DefaultGenerator.Generate(),
+					mgmtauthorization.RoleAssignmentCreateParameters{
+						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+							RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole),
+							PrincipalID:      &c.Config.MockMSIObjectID,
+							PrincipalType:    mgmtauthorization.ServicePrincipal,
+						},
+					},
+				)
+
+				// Ignore if the role assignment already exists
+				if detailedError, ok := err.(autorest.DetailedError); ok {
+					if detailedError.StatusCode == http.StatusConflict {
+						err = nil
+					}
+				}
+
+				if err != nil && i < 4 {
+					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
+					// Retry a few times.
+					c.log.Print(err)
+					continue
+				}
+				if err != nil {
+					return fmt.Errorf("failed to assign federated credential role to mock MSI for %s: %w", operatorName, err)
+				}
+
+				break
+			}
+		}
+	}
+
 	return nil
+}
+
+// determineRequiredPlatformWorkloadIdentityScopes analyzes a role definition's permissions
+// and returns the list of resource scopes where the role should be assigned
+func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Context, roleDefinitionID string, vnetResourceGroup string, diskEncryptionSetID string) ([]string, error) {
+	// Extract the role GUID from the full resource ID
+	parts := strings.Split(roleDefinitionID, "/")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("invalid role definition ID format: %s", roleDefinitionID)
+	}
+	roleGUID := parts[len(parts)-1]
+
+	// Get the role definition to check its permissions
+	subscriptionScope := fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
+	filter := fmt.Sprintf("roleName eq '%s'", roleGUID)
+	roleDefs, err := c.roledefinitions.List(ctx, subscriptionScope, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list role definition %s: %w", roleDefinitionID, err)
+	}
+
+	if len(roleDefs) == 0 {
+		return nil, fmt.Errorf("role definition %s not found", roleDefinitionID)
+	}
+
+	roleDef := roleDefs[0]
+
+	// Build the list of scopes based on the role's permissions
+	var scopes []string
+
+	if roleDef.Permissions != nil {
+		for _, perm := range *roleDef.Permissions {
+			if perm.Actions == nil {
+				continue
+			}
+
+			for _, action := range *perm.Actions {
+				// Check for subnet-specific permissions
+				if strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
+					// Assign to both master and worker subnets
+					masterSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
+					workerSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
+					scopes = append(scopes, masterSubnet, workerSubnet)
+					break
+				}
+
+				// Check for VNet-level permissions
+				if strings.Contains(action, "Microsoft.Network/virtualNetworks/") && !strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
+					vnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.Config.SubscriptionID, vnetResourceGroup)
+					scopes = append(scopes, vnetID)
+					break
+				}
+
+				// Check for DES permissions
+				if strings.Contains(action, "Microsoft.Compute/diskEncryptionSets") {
+					scopes = append(scopes, diskEncryptionSetID)
+					break
+				}
+			}
+		}
+	}
+
+	return scopes, nil
 }
 
 func (c *Cluster) Create(ctx context.Context) error {
@@ -622,13 +802,6 @@ func (c *Cluster) Create(ctx context.Context) error {
 		diskEncryptionSetName,
 	)
 
-	if c.Config.UseWorkloadIdentity {
-		c.log.Info("creating WIs")
-		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup); err != nil {
-			return fmt.Errorf("error setting up Workload Identity Roles: %w", err)
-		}
-	}
-
 	principalIds := []string{
 		c.Config.FPServicePrincipalID,
 	}
@@ -643,6 +816,13 @@ func (c *Cluster) Create(ctx context.Context) error {
 	err = c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, principalIds)
 	if err != nil {
 		return err
+	}
+
+	if c.Config.UseWorkloadIdentity {
+		c.log.Info("creating WIs")
+		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup, diskEncryptionSetID); err != nil {
+			return fmt.Errorf("error setting up Workload Identity Roles: %w", err)
+		}
 	}
 
 	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
@@ -869,7 +1049,7 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 		return fmt.Errorf("failure parsing Platform WI Roles, unable to remove them: %w", err)
 	}
 	platformWorkloadIdentityRoles = append(platformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
-		OperatorName:     "aro-Cluster",
+		OperatorName:     aroClusterIdentityOperatorName,
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
 	for _, wi := range platformWorkloadIdentityRoles {
@@ -943,7 +1123,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			Type:     api.ManagedServiceIdentityUserAssigned,
 			TenantID: c.Config.TenantID,
 			UserAssignedIdentities: map[string]api.UserAssignedIdentity{
-				fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.Config.SubscriptionID, vnetResourceGroup, "aro-Cluster"): {},
+				fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", c.Config.SubscriptionID, vnetResourceGroup, aroClusterIdentityOperatorName): {},
 			},
 		}
 	} else {
@@ -1323,7 +1503,7 @@ func (c *Cluster) deleteMiwiRoleAssignments(ctx context.Context, vnetResourceGro
 		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
 	platformWorkloadIdentityRoles := append(wiRoleSets[0].PlatformWorkloadIdentityRoles, api.PlatformWorkloadIdentityRole{
-		OperatorName:     "aro-Cluster",
+		OperatorName:     aroClusterIdentityOperatorName,
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
 	for _, wi := range platformWorkloadIdentityRoles {
