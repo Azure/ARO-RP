@@ -122,6 +122,35 @@ If you already created a dev cluster, you can run the e2e tests just by running 
 CLUSTER=<cluster-name> RESOURCEGROUP=<resource-group> make test-e2e
 ```
 
+### Run E2E From A Worktree
+
+When running E2E from a git worktree, load both the worktree `env` file and
+`secrets/env` in the same shell so required variables are exported together:
+
+```bash
+set -a
+source env
+source secrets/env
+set +a
+```
+
+If you want to run against an existing cluster (without create/delete),
+set these before `make test-e2e`:
+
+```bash
+export CLUSTER=<existing-cluster-name>
+export RESOURCEGROUP=<existing-cluster-resource-group>
+unset CI
+export E2E_DELETE_CLUSTER=false
+```
+
+To validate only that the required variable names are present (without printing
+secret values), run:
+
+```bash
+env | cut -d= -f1 | rg '^(LOCATION|CLUSTER|RESOURCEGROUP|AZURE_TENANT_ID|AZURE_SUBSCRIPTION_ID|AZURE_CLIENT_ID|AZURE_CLIENT_SECRET)$'
+```
+
 For smoke tests:
 
 ```bash
