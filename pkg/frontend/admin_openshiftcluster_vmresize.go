@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (f *frontend) postAdminOpenShiftClusterVMResize(w http.ResponseWriter, r *http.Request) {
@@ -31,13 +33,35 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 	vmSize := r.URL.Query().Get("vmSize")
+	useCapacityReservationRaw := r.URL.Query().Get("useCapacityReservation")
+	zone := r.URL.Query().Get("zone")
 
-	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
+	var useCapacityReservation bool
+	if useCapacityReservationRaw != "" {
+		var parseErr error
+		useCapacityReservation, parseErr = strconv.ParseBool(useCapacityReservationRaw)
+		if parseErr != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "useCapacityReservation",
+				"useCapacityReservation must be a boolean (true or false)")
+		}
+	}
+
+	if !useCapacityReservation && zone != "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "zone",
+			"zone is only valid when useCapacityReservation is true")
+	}
+
+	err := validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
 	}
 
-	err = validateAdminMasterVMSize(vmSize)
+	if useCapacityReservation && zone == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "zone",
+			"zone is required when useCapacityReservation is true")
+	}
+
+	action, doc, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}
@@ -52,6 +76,11 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 			fmt.Sprintf(
 				`"The VirtualMachine '%s' under resource group '%s' was not found."`,
 				vmName, resourceGroupName))
+	}
+
+	if useCapacityReservation {
+		clusterRG := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+		return action.CRGResizeSingleVM(ctx, clusterRG, doc.OpenShiftCluster.Location, vmName, zone, vmSize)
 	}
 
 	return action.VMResize(ctx, vmName, vmSize)

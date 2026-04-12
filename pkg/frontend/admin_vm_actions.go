@@ -20,7 +20,12 @@ func (f *frontend) prepareAdminActions(log *logrus.Entry, ctx context.Context, v
 	if err != nil {
 		return nil, nil, err
 	}
+	return f.prepareAdminActionsForCluster(log, ctx, resourceID, resourceType, resourceName, resourceGroupName)
+}
 
+// prepareAdminActionsForCluster is like prepareAdminActions but does not require or validate a VM name.
+// Use this for operations that act on the whole cluster rather than a specific VM.
+func (f *frontend) prepareAdminActionsForCluster(log *logrus.Entry, ctx context.Context, resourceID string, resourceType, resourceName, resourceGroupName string) (azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument, err error) {
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
 		return nil, nil, err

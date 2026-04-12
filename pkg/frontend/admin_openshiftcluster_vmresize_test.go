@@ -30,7 +30,8 @@ func TestAdminVMResize(t *testing.T) {
 		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 			Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 			OpenShiftCluster: &api.OpenShiftCluster{
-				ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
 						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
@@ -53,15 +54,17 @@ func TestAdminVMResize(t *testing.T) {
 	}
 
 	type test struct {
-		name              string
-		resourceID        string
-		vmName            string
-		vmSize            string
-		fixture           func(f *testdatabase.Fixture)
-		azureActionsMocks func(*test, *mock_adminactions.MockAzureActions)
-		wantStatusCode    int
-		wantResponse      []byte
-		wantError         string
+		name                   string
+		resourceID             string
+		vmName                 string
+		vmSize                 string
+		useCapacityReservation bool
+		zone                   string
+		fixture                func(f *testdatabase.Fixture)
+		azureActionsMocks      func(*test, *mock_adminactions.MockAzureActions)
+		wantStatusCode         int
+		wantResponse           []byte
+		wantError              string
 	}
 
 	for _, tt := range []*test{
@@ -119,6 +122,37 @@ func TestAdminVMResize(t *testing.T) {
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: NotFound: : "The VirtualMachine 'aro-fake-node-master-0' under resource group 'resourcegroup' was not found."`,
 		},
+		{
+			name:                   "CRG resize - basic coverage",
+			vmName:                 "aro-fake-node-master-0",
+			vmSize:                 "Standard_D16s_v3",
+			resourceID:             testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			useCapacityReservation: true,
+			zone:                   "1",
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().ResourceGroupHasVM(gomock.Any(), tt.vmName).Return(true, nil)
+				a.EXPECT().CRGResizeSingleVM(gomock.Any(), "test-cluster", "eastus", tt.vmName, tt.zone, tt.vmSize).Return(nil)
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:                   "CRG resize - zone missing returns 400",
+			vmName:                 "aro-fake-node-master-0",
+			vmSize:                 "Standard_D16s_v3",
+			resourceID:             testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			useCapacityReservation: true,
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         `400: InvalidParameter: zone: zone is required when useCapacityReservation is true`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
@@ -156,9 +190,14 @@ func TestAdminVMResize(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/resize?vmName=%s&vmSize=%s", tt.resourceID, tt.vmName, tt.vmSize),
-				nil, nil)
+			url := fmt.Sprintf("https://server/admin%s/resize?vmName=%s&vmSize=%s", tt.resourceID, tt.vmName, tt.vmSize)
+			if tt.useCapacityReservation {
+				url += "&useCapacityReservation=true"
+			}
+			if tt.zone != "" {
+				url += "&zone=" + tt.zone
+			}
+			resp, b, err := ti.request(http.MethodPost, url, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
