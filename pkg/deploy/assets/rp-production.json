@@ -11,6 +11,9 @@
             },
             {
                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"
+            },
+            {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'default')]"
             }
         ]
     },
