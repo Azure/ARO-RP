@@ -349,6 +349,11 @@ fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (
 	$(GOLANGCI_LINT) fmt
 	cd pkg/api/ && $(GOLANGCI_LINT) fmt
 
+.PHONY: go-fix
+go-fix: ## Run go fix on both Go modules
+	go fix ./...
+	cd pkg/api/ && go fix ./...
+
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run --verbose
