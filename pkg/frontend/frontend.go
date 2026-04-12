@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
@@ -94,6 +95,8 @@ type frontend struct {
 
 	hiveClusterManager    hive.ClusterManager
 	hiveSyncSetManager    hive.SyncSetManager
+	holmesConfig          *holmes.HolmesConfig
+	activeInvestigations  int64
 	kubeActionsFactory    kubeActionsFactory
 	azureActionsFactory   azureActionsFactory
 	appLensActionsFactory appLensActionsFactory
@@ -200,6 +203,18 @@ func NewFrontend(ctx context.Context,
 		validateResizeQuota:          defaultValidateResizeQuota,
 
 		streamResponder: defaultResponder{},
+	}
+
+	// Load Holmes config: secrets from Key Vault in prod, env vars in dev.
+	var holmesErr error
+	if _env.IsLocalDevelopmentMode() {
+		f.holmesConfig, holmesErr = holmes.NewHolmesConfigFromEnv()
+	} else {
+		f.holmesConfig, holmesErr = holmes.NewHolmesConfig(ctx, _env.ServiceKeyvault())
+	}
+	if holmesErr != nil {
+		baseLog.WithError(holmesErr).Warning("Holmes config not available; investigations will be disabled")
+		f.holmesConfig = nil
 	}
 
 	l, err := f.env.Listen()
@@ -406,6 +421,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 					})
 				})
 				r.Get("/selectors", f.getAdminOpenShiftClusterSelectors)
+
+				r.Post("/investigate", f.postAdminOpenShiftClusterInvestigate)
 			})
 		})
 
