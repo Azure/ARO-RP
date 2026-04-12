@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -104,12 +105,28 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		}
 	}
 
+	// safeGo wraps a validation function with panic recovery. The
+	// dynamicRESTMapper in controller-runtime v0.11.2 can nil-pointer panic
+	// when the API server is unreachable (lazy init leaves staticMapper nil).
+	// Since these run in child goroutines, the HTTP Panic middleware cannot
+	// catch them — an unrecovered panic here would crash the entire RP process.
+	safeGo := func(fn func() error) func() {
+		return func() {
+			defer func() {
+				if r := recover(); r != nil {
+					collect(fmt.Errorf("panic: %v\n%s", r, debug.Stack()))
+				}
+			}()
+			collect(fn())
+		}
+	}
+
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
-	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
-	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
-	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
+	wg.Go(safeGo(func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log) }))
+	wg.Go(safeGo(func() error { return validateAPIServerHealth(ctx, k) }))
+	wg.Go(safeGo(func() error { return validateEtcdHealth(ctx, k) }))
+	wg.Go(safeGo(func() error { return validateClusterSP(ctx, k) }))
 
 	wg.Wait()
 
@@ -130,7 +147,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
 // delegates to checkResizeComputeQuota. Injected via f.validateResizeQuota so
 // tests can swap it with quotaCheckDisabled.
-func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, currentVMSize, desiredVMSize string) error {
+func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location string, currentVMSizes []string, desiredVMSize string) error {
 	tenantID := subscriptionDoc.Subscription.Properties.TenantID
 
 	fpAuthorizer, err := environment.FPAuthorizer(tenantID, nil, environment.Environment().ResourceManagerScope)
@@ -139,7 +156,7 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 	}
 
 	spComputeUsage := compute.NewUsageClient(environment.Environment(), subscriptionDoc.ID, fpAuthorizer)
-	return checkResizeComputeQuota(ctx, spComputeUsage, location, currentVMSize, desiredVMSize)
+	return checkResizeComputeQuota(ctx, spComputeUsage, location, currentVMSizes, desiredVMSize)
 }
 
 // checkResizeComputeQuota verifies that the subscription has enough remaining
@@ -147,42 +164,57 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 // master nodes.
 //
 // Unlike validateQuota in quota_validation.go (which checks absolute totals for
-// cluster creation), this computes the incremental delta: same-family resizes
-// only need (newCores − currentCores) × nodeCount; cross-family resizes need
-// the full new cores for the target family but only the net delta for "cores".
+// cluster creation), this computes the incremental delta per VM. Each master VM
+// may have a different current size (e.g. after a partial resize), so we
+// calculate the delta individually and sum across all VMs that need resizing.
+//
+// Same-family resizes only need (newCores − currentCores) per VM; cross-family
+// resizes need the full new cores for the target family but only the net delta
+// for regional "cores".
 //
 // This checks subscription-level quota only, not Azure regional datacenter
 // capacity — without a capacity reservation, AllocationFailed errors can only
 // be detected at ARM PUT time.
-func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, currentVMSize, desiredVMSize string) error {
+func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location string, currentVMSizes []string, desiredVMSize string) error {
 	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(desiredVMSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
 			fmt.Sprintf("The provided VM SKU '%s' is not supported.", desiredVMSize))
 	}
 
-	currentSizeStruct, ok := validate.VMSizeFromName(api.VMSize(currentVMSize))
-	if !ok {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
-			fmt.Sprintf("The current VM SKU '%s' could not be resolved.", currentVMSize))
-	}
+	requiredByQuota := map[string]int{}
 
-	// Same family: only the delta matters. Cross-family: full new cores needed.
-	additionalCoresPerNode := newSizeStruct.CoreCount
-	if newSizeStruct.Family == currentSizeStruct.Family {
-		additionalCoresPerNode = newSizeStruct.CoreCount - currentSizeStruct.CoreCount
-		if additionalCoresPerNode <= 0 {
-			return nil
+	for _, currentVMSize := range currentVMSizes {
+		if strings.EqualFold(currentVMSize, desiredVMSize) {
+			continue // VM already at desired size, no quota needed
+		}
+
+		currentSizeStruct, ok := validate.VMSizeFromName(api.VMSize(currentVMSize))
+		if !ok {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
+				fmt.Sprintf("The current VM SKU '%s' could not be resolved.", currentVMSize))
+		}
+
+		// Same family: only the delta matters. Cross-family: full new cores needed.
+		additionalFamilyCores := newSizeStruct.CoreCount
+		if newSizeStruct.Family == currentSizeStruct.Family {
+			additionalFamilyCores = newSizeStruct.CoreCount - currentSizeStruct.CoreCount
+		}
+
+		if additionalFamilyCores > 0 {
+			requiredByQuota[newSizeStruct.Family] += additionalFamilyCores
+		}
+
+		// Regional "cores" delta accounts for freed cores from the old VM.
+		regionalDelta := newSizeStruct.CoreCount - currentSizeStruct.CoreCount
+		if regionalDelta > 0 {
+			requiredByQuota["cores"] += regionalDelta
 		}
 	}
-	totalAdditionalCores := additionalCoresPerNode * api.ControlPlaneNodeCount
 
-	// Regional "cores" delta accounts for freed cores from the old VM.
-	totalAdditionalRegionalCores := max((newSizeStruct.CoreCount-currentSizeStruct.CoreCount)*api.ControlPlaneNodeCount, 0)
-
-	requiredByQuota := map[string]int{
-		newSizeStruct.Family: totalAdditionalCores,
-		"cores":              totalAdditionalRegionalCores,
+	// All VMs already at desired size or downsizing — no quota check needed.
+	if len(requiredByQuota) == 0 {
+		return nil
 	}
 
 	usages, err := spComputeUsage.List(ctx, location)
@@ -214,7 +246,7 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 }
 
 // quotaCheckDisabled is a no-op replacement for f.validateResizeQuota in tests.
-func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionDocument, _, _, _ string) error {
+func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionDocument, _ string, _ []string, _ string) error {
 	return nil
 }
 
@@ -352,8 +384,18 @@ func (f *frontend) validateVMSKU(
 		return err
 	}
 
-	currentVMSize := string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize)
-	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSize, desiredVMSize)
+	currentVMSizes, err := a.MasterVMSizes(ctx)
+	if err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Failed to retrieve current master VM sizes from Azure: %v", err))
+	}
+
+	if len(currentVMSizes) == 0 {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			"No master VMs found in the cluster resource group.")
+	}
+
+	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSizes, desiredVMSize)
 	if err != nil {
 		return err
 	}
