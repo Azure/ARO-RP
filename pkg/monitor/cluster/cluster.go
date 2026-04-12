@@ -195,6 +195,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitCWPStatus,
 		mon.emitClusterAuthenticationType,
 		mon.emitNetworkMTU,
+		mon.emitDNSType,
 	}
 
 	return mon, nil
