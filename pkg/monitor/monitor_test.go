@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"math/big"
 	"slices"
 	"strings"
@@ -95,10 +94,9 @@ func TestMonitor(t *testing.T) {
 	for _, w := range workers {
 		// bucketcount is the total number of buckets that should be across all
 		// workers, each one should have less than that
-		w.mu.RLock()
-		require.Less(t, len(w.buckets), w.bucketCount)
-		buckets = slices.AppendSeq(buckets, maps.Keys(w.buckets))
-		w.mu.RUnlock()
+		workerBuckets := w.clusters.getBuckets()
+		require.Less(t, len(workerBuckets), w.bucketCount)
+		buckets = append(buckets, workerBuckets...)
 	}
 	require.Len(t, buckets, 256)
 	// Sort + compact to remove any dupes to ensure there isn't any

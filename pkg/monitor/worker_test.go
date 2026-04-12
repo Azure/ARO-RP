@@ -100,6 +100,9 @@ func TestChangefeedOperations(t *testing.T) {
 
 	stopChan := make(chan struct{})
 
+	var lastClusterDataUpdate time.Time
+	var lastSubDataUpdate time.Time
+
 	mon.changefeedInterval = time.Millisecond * 5
 	mon.startChangefeeds(ctx, stopChan)
 
@@ -177,12 +180,23 @@ func TestChangefeedOperations(t *testing.T) {
 			}
 
 			// Wait for changefeeds to be consumed
-			assert.Eventually(t, env.OpenShiftClusterClient.AllIteratorsConsumed, time.Second, 10*time.Millisecond)
-			assert.Eventually(t, env.SubscriptionsClient.AllIteratorsConsumed, time.Second, 10*time.Millisecond)
+			assert.Eventually(t, func() bool {
+				lastProc, _ := mon.subs.GetLastProcessed()
+				lastData, _ := mon.subs.GetLastDataUpdate()
+				return lastData != lastSubDataUpdate && lastProc != lastData
+			}, time.Second, 1*time.Millisecond)
+			assert.Eventually(t, func() bool {
+				lastProc, _ := mon.clusters.GetLastProcessed()
+				lastData, _ := mon.clusters.GetLastDataUpdate()
+				return lastData != lastClusterDataUpdate && lastProc != lastData
+			}, time.Second, 1*time.Millisecond)
+
+			lastClusterDataUpdate, _ = mon.clusters.GetLastDataUpdate()
+			lastSubDataUpdate, _ = mon.subs.GetLastDataUpdate()
 
 			// Validate expected results
-			if len(mon.docs) != op.expectDocs {
-				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, len(mon.docs))
+			if mon.clusters.GetCacheSize() != op.expectDocs {
+				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, mon.clusters.GetCacheSize())
 			}
 			if mon.subs.GetCacheSize() != op.expectSubs {
 				t.Errorf("%s: expected %d subscriptions in cache, got %d", op.name, op.expectSubs, mon.subs.GetCacheSize())

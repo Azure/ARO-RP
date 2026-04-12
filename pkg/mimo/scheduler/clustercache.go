@@ -29,9 +29,11 @@ type openShiftClusterCache struct {
 
 	subCache changefeed.SubscriptionsCache
 
-	clusters                   *xsync.Map[string, selectorData]
-	ownedBuckets               []int
-	lastChangefeed             atomic.Value // time.Time
+	clusters     *xsync.Map[string, selectorData]
+	ownedBuckets []int
+
+	lastChangefeedDataUpdate   atomic.Value // time.Time
+	lastChangefeedProcessed    atomic.Value // time.Time
 	initialPopulationWaitGroup *sync.WaitGroup
 }
 
@@ -56,7 +58,12 @@ func (c *openShiftClusterCache) Lock() {
 func (c *openShiftClusterCache) Unlock() {}
 
 func (c *openShiftClusterCache) GetLastProcessed() (time.Time, bool) {
-	t, ok := c.lastChangefeed.Load().(time.Time)
+	t, ok := c.lastChangefeedProcessed.Load().(time.Time)
+	return t, ok
+}
+
+func (c *openShiftClusterCache) GetLastDataUpdate() (time.Time, bool) {
+	t, ok := c.lastChangefeedDataUpdate.Load().(time.Time)
 	return t, ok
 }
 
@@ -101,8 +108,12 @@ func (c *openShiftClusterCache) OnDoc(doc *api.OpenShiftClusterDocument) {
 	}
 }
 
-func (c *openShiftClusterCache) OnAllPendingProcessed() {
-	old := c.lastChangefeed.Swap(time.Now())
+func (c *openShiftClusterCache) OnAllPendingProcessed(gotAny bool) {
+	now := time.Now()
+	old := c.lastChangefeedProcessed.Swap(now)
+	if gotAny {
+		c.lastChangefeedDataUpdate.Store(now)
+	}
 	// we've done one rotation, unlock the waitgroup
 	if old == nil {
 		defer c.initialPopulationWaitGroup.Done()
