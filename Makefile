@@ -378,6 +378,16 @@ fix-gh-actions: $(PINACT) ## Pin unpinned GitHub Actions to SHA
 	@$(PINACT) run
 	@echo "Done. Please review the changes."
 
+.PHONY: pr-scan
+pr-scan: ## Scan PR or branch for code review (requires Claude Code). Defaults to current branch if no PR/BRANCH specified.
+	@if [ -n "$(PR)" ]; then \
+		hack/pr-scan.sh --pr $(PR) $(if $(BASE),--base $(BASE),) $(if $(MODE),--mode $(MODE),); \
+	elif [ -n "$(BRANCH)" ]; then \
+		hack/pr-scan.sh --branch $(BRANCH) $(if $(BASE),--base $(BASE),) $(if $(MODE),--mode $(MODE),); \
+	else \
+		hack/pr-scan.sh --auto $(if $(BASE),--base $(BASE),) $(if $(MODE),--mode $(MODE),); \
+	fi
+
 .PHONY: lint-admin-portal
 lint-admin-portal:
 	docker build --platform=$(PLATFORM) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
