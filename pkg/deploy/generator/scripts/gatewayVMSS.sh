@@ -153,8 +153,11 @@ ENVIRONMENT='$ENVIRONMENT'"
     reboot_vm
 }
 
+# export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
+# util="util.sh"
+#
 # util.sh does not exist when deployed to VMSS via VMSS extensions
 # Provides shellcheck definitions
 util="util.sh"
