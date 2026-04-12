@@ -16,6 +16,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
+
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -82,7 +84,25 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return nil, err
 	}
 
-	// Run checks in parallel, collecting all errors so the caller sees every failure at once.
+	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
+}
+
+func (f *frontend) preResizeControlPlaneVMsValidation(
+	ctx context.Context,
+	doc *api.OpenShiftClusterDocument,
+	subscriptionDoc *api.SubscriptionDocument,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	desiredVMSize string,
+) ([]byte, error) {
+	// Run checks in parallel, collecting all errors so the caller sees every
+	// failure at once. For API server checks, run ClusterOperator status first
+	// and only run per-pod validation if the operator-level gate is healthy.
 	var (
 		mu      sync.Mutex
 		details []api.CloudErrorBody
@@ -106,10 +126,17 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, log)) })
-	wg.Go(func() { collect(validateAPIServerHealth(ctx, k)) })
+	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a)) })
+	wg.Go(func() {
+		if err := validateAPIServerHealth(ctx, k); err != nil {
+			collect(err)
+			return
+		}
+		collect(validateAPIServerPods(ctx, k))
+	})
 	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
 	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
+	wg.Go(func() { collect(checkCPMSNotActive(ctx, k)) })
 
 	wg.Wait()
 
@@ -248,6 +275,77 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 	return nil
 }
 
+func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) error {
+	const (
+		kubeAPIServerNamespace = "openshift-kube-apiserver"
+		kubeAPIServerAppLabel  = "openshift-kube-apiserver"
+	)
+
+	rawPods, err := k.KubeList(ctx, "Pod", kubeAPIServerNamespace)
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
+			fmt.Sprintf("Failed to list pods in %s namespace: %v", kubeAPIServerNamespace, err))
+	}
+
+	var podList corev1.PodList
+	if err := json.Unmarshal(rawPods, &podList); err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
+			fmt.Sprintf("Failed to parse pod list: %v", err))
+	}
+
+	var apiServerPodCount int
+	var unhealthyPods []string
+	for _, pod := range podList.Items {
+		if pod.Labels["app"] != kubeAPIServerAppLabel {
+			continue
+		}
+
+		apiServerPodCount++
+		if healthy, reason := isPodHealthy(&pod); !healthy {
+			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, reason))
+		}
+	}
+
+	if apiServerPodCount != api.ControlPlaneNodeCount {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
+			fmt.Sprintf("Expected %d kube-apiserver pods, found %d. Resize is not safe without full API server redundancy.",
+				api.ControlPlaneNodeCount, apiServerPodCount))
+	}
+
+	if len(unhealthyPods) > 0 {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
+			fmt.Sprintf("Unhealthy kube-apiserver pods: %v. Resize is not safe without full API server redundancy.",
+				unhealthyPods))
+	}
+
+	return nil
+}
+
+func isPodHealthy(pod *corev1.Pod) (bool, string) {
+	if pod.Status.Phase != corev1.PodRunning {
+		return false, fmt.Sprintf("phase: %s", pod.Status.Phase)
+	}
+
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady {
+			if cond.Status != corev1.ConditionTrue {
+				return false, "not ready"
+			}
+			return true, ""
+		}
+	}
+
+	return false, "Ready condition not found"
+}
+
 // validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
 // Resizing takes a master offline, so all etcd members must be healthy.
 func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
@@ -320,18 +418,13 @@ func (f *frontend) validateVMSKU(
 	doc *api.OpenShiftClusterDocument,
 	subscriptionDoc *api.SubscriptionDocument,
 	desiredVMSize string,
-	log *logrus.Entry,
+	a adminactions.AzureActions,
 ) error {
 	if desiredVMSize == "" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize", "The provided vmSize is empty.")
 	}
 
 	err := validateAdminMasterVMSize(desiredVMSize)
-	if err != nil {
-		return err
-	}
-
-	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}
