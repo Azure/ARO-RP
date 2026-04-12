@@ -1,0 +1,47 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: aro-machines-deny
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["machine.openshift.io"]
+      apiVersions: ["*"]
+      operations: ["DELETE"]
+      resources: ["machines"]
+    namespaceSelector:
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values: ["openshift-machine-api"]
+  variables:
+  - name: denyLabelKey
+    expression: |
+      "machine.openshift.io/cluster-api-machine-role"
+  - name: denyLabelRegex
+    expression: |
+      "master"
+  - name: exemptedUsers
+    expression: |
+      ["system:kube-controller-manager", "system:kube-scheduler", "system:admin", "system:aro-service"]
+  - name: isExempted
+    expression: |
+      !has(request.userInfo) ||
+      !has(request.userInfo.username) ||
+      request.userInfo.username in variables.exemptedUsers ||
+      (has(request.userInfo.groups) && request.userInfo.groups.exists(g,
+        g.contains("system:node") || g.contains("system:serviceaccount") || g.contains("system:masters")
+      ))
+  - name: isMasterMachine
+    expression: |
+      has(oldObject.metadata) &&
+      has(oldObject.metadata.labels) &&
+      variables.denyLabelKey in oldObject.metadata.labels &&
+      oldObject.metadata.labels[variables.denyLabelKey].matches(variables.denyLabelRegex)
+  validations:
+  - expression: |
+      !variables.isMasterMachine || variables.isExempted
+    message: "Deletion of master machines is not allowed"
+    messageExpression: |
+      "user <" + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + "> not allowed to delete resource with label <machine.openshift.io/cluster-api-machine-role: " + (has(oldObject.metadata) && has(oldObject.metadata.labels) && "machine.openshift.io/cluster-api-machine-role" in oldObject.metadata.labels ? oldObject.metadata.labels["machine.openshift.io/cluster-api-machine-role"] : "unknown") + ">"
