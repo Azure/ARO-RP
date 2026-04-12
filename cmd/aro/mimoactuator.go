@@ -67,6 +67,11 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
+	subscriptions, err := database.NewSubscriptions(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	clusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
 	if err != nil {
 		return err
@@ -79,7 +84,8 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 
 	dbg := database.NewDBGroup().
 		WithOpenShiftClusters(clusters).
-		WithMaintenanceManifests(manifests)
+		WithMaintenanceManifests(manifests).
+		WithSubscriptions(subscriptions)
 
 	go database.EmitMIMOMetrics(ctx, _env.LoggerForComponent("metrics"), manifests, m)
 

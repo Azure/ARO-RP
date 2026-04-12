@@ -28,33 +28,27 @@ type th struct {
 
 	resultMessage string
 
-	oc *api.OpenShiftClusterDocument
+	oc  *api.OpenShiftClusterDocument
+	sub *api.SubscriptionDocument
 
 	_ch clienthelper.Interface
+
+	az *azClients
 }
 
 // force interface checking
 var _ mimo.TaskContext = &th{}
 
-func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument) *th {
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) mimo.TaskContext {
 	return &th{
 		originalCtx: ctx,
 		ctx:         ctx,
 		env:         env,
 		log:         log,
 		oc:          oc,
+		sub:         sub,
 		_ch:         nil,
 	}
-}
-
-func (t *th) RunInTimeout(timeout time.Duration, f func() error) error {
-	newctx, cancel := context.WithTimeout(t.originalCtx, timeout)
-	t.ctx = newctx
-	defer func() {
-		cancel()
-		t.ctx = t.originalCtx
-	}()
-	return f()
 }
 
 // context stuff

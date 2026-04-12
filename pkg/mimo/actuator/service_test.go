@@ -164,12 +164,13 @@ func TestActuatorPolling(t *testing.T) {
 			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 			subscriptions, _ := testdatabase.NewFakeSubscriptions()
 
-			dbs := database.NewDBGroup().WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests)
+			dbs := database.NewDBGroup().WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).WithSubscriptions(subscriptions)
 
 			metrics := testmetrics.NewFakeMetricsEmitter(t)
 
 			// Apply the fixture
 			fixtures.AddOpenShiftClusterDocuments(tt.docs...)
+			fixtures.AddSubscriptionDocuments(&api.SubscriptionDocument{ID: mockSubID})
 			err := fixtures.WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions).WithMaintenanceManifests(manifests).Create()
 			require.NoError(err)
 
@@ -203,7 +204,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var manifests database.MaintenanceManifests
 	var manifestsClient *cosmosdb.FakeMaintenanceManifestDocumentClient
 	var clusters database.OpenShiftClusters
-	// var clustersClient cosmosdb.OpenShiftClusterDocumentClient
+	var subscriptions database.Subscriptions
 	var m metrics.Emitter
 
 	var svc *service
@@ -252,7 +253,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		now := func() time.Time { return time.Unix(120, 0) }
 		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
-		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters)
+		subscriptions, _ = testdatabase.NewFakeSubscriptions()
+		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions)
 
 		svc = NewService(_env, log, nil, dbg, m, []int{1})
 		svc.now = now
@@ -261,7 +263,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	})
 
 	JustBeforeEach(func() {
-		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
+		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).WithSubscriptions(subscriptions).Create()
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -270,6 +272,11 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 
 		BeforeEach(func() {
 			fixtures.Clear()
+			fixtures.AddSubscriptionDocuments(
+				&api.SubscriptionDocument{
+					ID: mockSubID,
+				},
+			)
 			fixtures.AddOpenShiftClusterDocuments(
 				&api.OpenShiftClusterDocument{
 					Key:    strings.ToLower(clusterResourceID),

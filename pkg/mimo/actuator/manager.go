@@ -13,6 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -27,6 +29,11 @@ type Actuator interface {
 	AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask)
 }
 
+type taskContextWithGetResult interface {
+	utilmimo.TaskContext
+	GetResultMessage() string
+}
+
 type actuator struct {
 	env                      env.Interface
 	log                      *logrus.Entry
@@ -36,6 +43,7 @@ type actuator struct {
 
 	clusterResourceID string
 
+	sub database.Subscriptions
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
 
@@ -49,6 +57,7 @@ func NewActuator(
 	_env env.Interface,
 	log *logrus.Entry,
 	clusterResourceID string,
+	sub database.Subscriptions,
 	oc database.OpenShiftClusters,
 	mmf database.MaintenanceManifests,
 	now func() time.Time,
@@ -57,6 +66,7 @@ func NewActuator(
 		env:                      _env,
 		log:                      log,
 		clusterResourceID:        strings.ToLower(clusterResourceID),
+		sub:                      sub,
 		oc:                       oc,
 		mmf:                      mmf,
 		tasks:                    make(map[api.MIMOTaskID]tasks.MaintenanceTask),
@@ -74,6 +84,13 @@ func (a *actuator) AddMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenanc
 }
 
 func (a *actuator) Process(ctx context.Context) (bool, error) {
+	r, err := azure.ParseResourceID(a.clusterResourceID)
+	if err != nil {
+		err = fmt.Errorf("failed parsing ResourceID: %w", err)
+		a.log.Error(err)
+		return false, err
+	}
+
 	// Get the manifests for this cluster which need to be worked
 	i, err := a.mmf.GetQueuedByClusterResourceID(ctx, a.clusterResourceID, "")
 	if err != nil {
@@ -116,7 +133,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		if evaluationTime.After(time.Unix(doc.MaintenanceManifest.RunBefore, 0)) {
 			taskLog := a.log.WithFields(logrus.Fields{
 				"manifestID": doc.ID,
-				"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,
+				"taskID":     string(doc.MaintenanceManifest.MaintenanceTaskID),
 			})
 			// timed out, mark as such
 			taskLog.Infof("marking as outdated: %v older than %v", doc.MaintenanceManifest.RunBefore, evaluationTime.UTC())
@@ -142,11 +159,21 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 	a.log.Infof("Processing %d manifests", len(manifestsToAction))
 
+	// We need to fetch the subscription for the cluster to get the TenantID
+	subDoc, err := a.sub.Get(ctx, strings.ToLower(r.SubscriptionID))
+	if err != nil {
+		err = fmt.Errorf("failed fetching subscription document: %w", err)
+		a.log.Error(err)
+		return false, err
+	}
+
+	doneSomeWork := false
+
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
 		taskLog := a.log.WithFields(logrus.Fields{
 			"manifestID": doc.ID,
-			"taskID":     doc.MaintenanceManifest.MaintenanceTaskID,
+			"taskID":     string(doc.MaintenanceManifest.MaintenanceTaskID),
 		})
 		taskLog.Info("begin processing manifest")
 
@@ -180,23 +207,26 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 		taskLog.Info("executing manifest")
 
+		timeoutContext, cancel := context.WithTimeout(ctx, a.taskRunTimeout)
+
 		// Create task context containing the environment, logger, cluster doc,
 		// etc -- this is the only way we pass information, to reduce the
 		// surface area for dependencies in tests
-		taskContext := newTaskContext(ctx, a.env, taskLog, oc)
+		taskContext := newTaskContext(timeoutContext, a.env, taskLog, oc, subDoc)
 
 		// Perform the task with a timeout
-		err = taskContext.RunInTimeout(a.taskRunTimeout, func() error {
+		err = func() error {
 			innerErr := f(taskContext, doc, oc)
+			defer cancel()
 			if innerErr != nil {
 				return innerErr
 			}
 			return taskContext.Err()
-		})
+		}()
 
 		var state api.MaintenanceManifestState
 		// Pull the result message out of the task context to save, if it is set
-		msg := taskContext.GetResultMessage()
+		msg := taskContext.(taskContextWithGetResult).GetResultMessage()
 
 		if err != nil {
 			if doc.Dequeues >= maxDequeueCount {
@@ -220,6 +250,8 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 			taskLog.Info("manifest executed successfully")
 		}
 
+		doneSomeWork = true
+
 		_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg)
 		if err != nil {
 			taskLog.Error(fmt.Errorf("failed ending lease on manifest: %w", err))
@@ -227,5 +259,5 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		taskLog.Info("manifest processing complete")
 	}
 
-	return true, nil
+	return doneSomeWork, nil
 }
