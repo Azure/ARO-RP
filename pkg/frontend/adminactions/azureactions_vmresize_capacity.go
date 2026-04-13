@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
@@ -45,7 +47,8 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 		return fmt.Errorf("reading VM %s for zone validation: %w", vmName, err)
 	}
 	if !vmIsInZone(vmForZoneCheck, zone) {
-		return fmt.Errorf("VM %s is not in zone %s", vmName, zone)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "zone",
+			fmt.Sprintf("VM %s is not in zone %s; check the zone parameter", vmName, zone))
 	}
 
 	a.log.Infof("creating capacity reservation group for VM %s (zone %s)", vmName, zone)
@@ -279,7 +282,7 @@ const (
 func (a *azureActions) deleteReservationWithRetry(ctx context.Context, clusterRG, crName string) error {
 	for attempt := 1; attempt <= crgMaxRetries; attempt++ {
 		err := a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, crName)
-		if err == nil {
+		if err == nil || azureerrors.IsNotFoundError(err) {
 			return nil
 		}
 		if !isReferencedByVMError(err) || attempt == crgMaxRetries {
@@ -301,7 +304,7 @@ func (a *azureActions) deleteReservationWithRetry(ctx context.Context, clusterRG
 func (a *azureActions) deleteCRGWithRetry(ctx context.Context, clusterRG string) error {
 	for attempt := 1; attempt <= crgMaxRetries; attempt++ {
 		err := a.armCapacityReservationGroups.Delete(ctx, clusterRG, capacityReservationGroupName)
-		if err == nil {
+		if err == nil || azureerrors.IsNotFoundError(err) {
 			return nil
 		}
 		if !isNestedResourcesError(err) || attempt == crgMaxRetries {
