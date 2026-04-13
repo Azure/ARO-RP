@@ -108,6 +108,7 @@ type Cluster struct {
 
 const (
 	GenerateSubnetMaxTries                = 100
+	roleAssignmentMaxRetries              = 5
 	localDefaultURL                string = "https://localhost:8443"
 	aroClusterIdentityOperatorName        = "aro-Cluster"
 )
@@ -348,38 +349,9 @@ func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, disk
 		{diskEncryptionSetID, rbac.RoleReader},
 	} {
 		for _, principalID := range principalIDs {
-			for i := 0; i < 5; i++ {
-				_, err := c.roleassignments.Create(
-					ctx,
-					scope.resource,
-					uuid.DefaultGenerator.Generate(),
-					mgmtauthorization.RoleAssignmentCreateParameters{
-						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: pointerutils.ToPtr("/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
-							PrincipalID:      &principalID,
-							PrincipalType:    mgmtauthorization.ServicePrincipal,
-						},
-					},
-				)
-
-				// Ignore if the role assignment already exists
-				if detailedError, ok := err.(autorest.DetailedError); ok {
-					if detailedError.StatusCode == http.StatusConflict {
-						err = nil
-					}
-				}
-
-				if err != nil && i < 4 {
-					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-					// Retry a few times.
-					c.log.Print(err)
-					continue
-				}
-				if err != nil {
-					return err
-				}
-
-				break
+			roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role
+			if err := c.createRoleAssignmentWithRetry(ctx, scope.resource, roleDefID, principalID); err != nil {
+				return err
 			}
 		}
 	}
@@ -414,8 +386,12 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
 
-	// Create managed identities and store their resource IDs for later federated credential role assignment
-	operatorIdentities := make(map[string]string) // operatorName -> resourceID
+	// Create managed identities and store their resource IDs and principal IDs for later federated credential role assignment
+	type identityInfo struct {
+		resourceID  string
+		principalID string
+	}
+	operatorIdentities := make(map[string]identityInfo) // operatorName -> identity info
 
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
@@ -426,49 +402,32 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			return err
 		}
 
-		operatorIdentities[wi.OperatorName] = *resp.ID
+		if resp.ID == nil {
+			return fmt.Errorf("managed identity %s was created but response contains nil ID", wi.OperatorName)
+		}
+		if resp.Properties == nil {
+			return fmt.Errorf("managed identity %s was created but response contains nil Properties", wi.OperatorName)
+		}
+		if resp.Properties.PrincipalID == nil {
+			return fmt.Errorf("managed identity %s was created but response contains nil PrincipalID", wi.OperatorName)
+		}
+
+		operatorIdentities[wi.OperatorName] = identityInfo{
+			resourceID:  *resp.ID,
+			principalID: *resp.Properties.PrincipalID,
+		}
 
 		// Determine required scopes based on role permissions
 		scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, wi.RoleDefinitionID, vnetResourceGroup, diskEncryptionSetID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to determine scopes for operator %s: %w", wi.OperatorName, err)
 		}
 
 		// Assign role to each determined scope
 		for _, scope := range scopes {
 			c.log.Infof("assigning role %s to scope %s for principal %s", wi.RoleDefinitionID, scope, *resp.Properties.PrincipalID)
-			for i := 0; i < 5; i++ {
-				_, err := c.roleassignments.Create(
-					ctx,
-					scope,
-					uuid.DefaultGenerator.Generate(),
-					mgmtauthorization.RoleAssignmentCreateParameters{
-						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: &wi.RoleDefinitionID,
-							PrincipalID:      resp.Properties.PrincipalID,
-							PrincipalType:    mgmtauthorization.ServicePrincipal,
-						},
-					},
-				)
-
-				// Ignore if the role assignment already exists
-				if detailedError, ok := err.(autorest.DetailedError); ok {
-					if detailedError.StatusCode == http.StatusConflict {
-						err = nil
-					}
-				}
-
-				if err != nil && i < 4 {
-					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-					// Retry a few times.
-					c.log.Print(err)
-					continue
-				}
-				if err != nil {
-					return fmt.Errorf("failed to assign role to scope %s: %w", scope, err)
-				}
-
-				break
+			if err := c.createRoleAssignmentWithRetry(ctx, scope, wi.RoleDefinitionID, *resp.Properties.PrincipalID); err != nil {
+				return fmt.Errorf("failed to assign role to scope %s: %w", scope, err)
 			}
 		}
 
@@ -480,98 +439,34 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	}
 
 	// Assign federated credential role from aro-Cluster identity to each operator identity
-	_, ok := operatorIdentities[aroClusterIdentityOperatorName]
+	aroClusterInfo, ok := operatorIdentities[aroClusterIdentityOperatorName]
 	if !ok {
 		return fmt.Errorf("%s identity not found", aroClusterIdentityOperatorName)
 	}
 
-	// Get the aro-Cluster identity to get its principalID
-	aroClusterIdentity, err := c.msiClient.Get(ctx, vnetResourceGroup, aroClusterIdentityOperatorName, nil)
-	if err != nil {
-		return fmt.Errorf("failed to get %s identity: %w", aroClusterIdentityOperatorName, err)
-	}
-
 	c.log.Infof("Assigning federated credential role from %s to operator identities", aroClusterIdentityOperatorName)
-	for operatorName, operatorResourceID := range operatorIdentities {
+	for operatorName, operatorInfo := range operatorIdentities {
 		if operatorName == aroClusterIdentityOperatorName {
 			continue // Don't assign to itself
 		}
 
-		for i := 0; i < 5; i++ {
-			_, err := c.roleassignments.Create(
-				ctx,
-				operatorResourceID, // Scope to the operator's managed identity resource
-				uuid.DefaultGenerator.Generate(),
-				mgmtauthorization.RoleAssignmentCreateParameters{
-					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-						RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole),
-						PrincipalID:      aroClusterIdentity.Properties.PrincipalID,
-						PrincipalType:    mgmtauthorization.ServicePrincipal,
-					},
-				},
-			)
-
-			// Ignore if the role assignment already exists
-			if detailedError, ok := err.(autorest.DetailedError); ok {
-				if detailedError.StatusCode == http.StatusConflict {
-					err = nil
-				}
-			}
-
-			if err != nil && i < 4 {
-				// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-				// Retry a few times.
-				c.log.Print(err)
-				continue
-			}
-			if err != nil {
-				return fmt.Errorf("failed to assign federated credential role to %s: %w", operatorName, err)
-			}
-
-			break
+		roleDefID := "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole
+		if err := c.createRoleAssignmentWithRetry(ctx, operatorInfo.resourceID, roleDefID, aroClusterInfo.principalID); err != nil {
+			return fmt.Errorf("failed to assign federated credential role to %s: %w", operatorName, err)
 		}
 	}
 
 	// Also assign federated credential role to mock MSI if configured (for testing)
 	if c.Config.MockMSIObjectID != "" {
 		c.log.Info("Assigning federated credential role to mock msi client")
-		for operatorName, operatorResourceID := range operatorIdentities {
+		roleDefID := "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole
+		for operatorName, operatorInfo := range operatorIdentities {
 			if operatorName == aroClusterIdentityOperatorName {
 				continue
 			}
 
-			for i := 0; i < 5; i++ {
-				_, err := c.roleassignments.Create(
-					ctx,
-					operatorResourceID,
-					uuid.DefaultGenerator.Generate(),
-					mgmtauthorization.RoleAssignmentCreateParameters{
-						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole),
-							PrincipalID:      &c.Config.MockMSIObjectID,
-							PrincipalType:    mgmtauthorization.ServicePrincipal,
-						},
-					},
-				)
-
-				// Ignore if the role assignment already exists
-				if detailedError, ok := err.(autorest.DetailedError); ok {
-					if detailedError.StatusCode == http.StatusConflict {
-						err = nil
-					}
-				}
-
-				if err != nil && i < 4 {
-					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-					// Retry a few times.
-					c.log.Print(err)
-					continue
-				}
-				if err != nil {
-					return fmt.Errorf("failed to assign federated credential role to mock MSI for %s: %w", operatorName, err)
-				}
-
-				break
+			if err := c.createRoleAssignmentWithRetry(ctx, operatorInfo.resourceID, roleDefID, c.Config.MockMSIObjectID); err != nil {
+				return fmt.Errorf("failed to assign federated credential role to mock MSI for %s: %w", operatorName, err)
 			}
 		}
 	}
@@ -579,32 +474,68 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	return nil
 }
 
+// createRoleAssignmentWithRetry creates a role assignment with automatic retry logic.
+// It retries up to roleAssignmentMaxRetries times to handle transient errors like
+// HashConflictOnDifferentRoleAssignmentIds. HTTP 409 Conflict errors are ignored
+// as they indicate the role assignment already exists (idempotent operation).
+func (c *Cluster) createRoleAssignmentWithRetry(ctx context.Context, scope string, roleDefinitionID string, principalID string) error {
+	for i := 0; i < roleAssignmentMaxRetries; i++ {
+		_, err := c.roleassignments.Create(
+			ctx,
+			scope,
+			uuid.DefaultGenerator.Generate(),
+			mgmtauthorization.RoleAssignmentCreateParameters{
+				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+					RoleDefinitionID: &roleDefinitionID,
+					PrincipalID:      &principalID,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+		)
+
+		// Ignore if the role assignment already exists (idempotent)
+		if detailedError, ok := err.(autorest.DetailedError); ok {
+			if detailedError.StatusCode == http.StatusConflict {
+				return nil
+			}
+		}
+
+		// Retry on transient errors (e.g., HashConflictOnDifferentRoleAssignmentIds)
+		if err != nil && i < roleAssignmentMaxRetries-1 {
+			c.log.Print(err)
+			continue
+		}
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	return nil
+}
+
 // determineRequiredPlatformWorkloadIdentityScopes analyzes a role definition's permissions
-// and returns the list of resource scopes where the role should be assigned
+// and returns the list of resource scopes where the role should be assigned.
+// It matches role permissions against known patterns:
+// - Microsoft.Network/virtualNetworks/subnets/* -> assigns to master and worker subnets
+// - Microsoft.Network/virtualNetworks/* (non-subnet) -> assigns to vnet
+// - Microsoft.Compute/diskEncryptionSets/* -> assigns to disk encryption set
+// Returns an error if the role definition cannot be retrieved or if no known patterns match.
 func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Context, roleDefinitionID string, vnetResourceGroup string, diskEncryptionSetID string) ([]string, error) {
-	// Extract the role GUID from the full resource ID
-	parts := strings.Split(roleDefinitionID, "/")
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("invalid role definition ID format: %s", roleDefinitionID)
-	}
-	roleGUID := parts[len(parts)-1]
-
 	// Get the role definition to check its permissions
-	subscriptionScope := fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
-	filter := fmt.Sprintf("roleName eq '%s'", roleGUID)
-	roleDefs, err := c.roledefinitions.List(ctx, subscriptionScope, filter)
+	roleDef, err := c.roledefinitions.GetByID(ctx, roleDefinitionID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list role definition %s: %w", roleDefinitionID, err)
+		return nil, fmt.Errorf("failed to get role definition %s: %w", roleDefinitionID, err)
 	}
-
-	if len(roleDefs) == 0 {
-		return nil, fmt.Errorf("role definition %s not found", roleDefinitionID)
-	}
-
-	roleDef := roleDefs[0]
 
 	// Build the list of scopes based on the role's permissions
-	var scopes []string
+	// Use a map to track unique scopes and avoid duplicate role assignments
+	scopeMap := make(map[string]struct{})
+
+	// Track all actions we see for debugging if no patterns match
+	var allActions []string
 
 	if roleDef.Permissions != nil {
 		for _, perm := range *roleDef.Permissions {
@@ -613,29 +544,43 @@ func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Co
 			}
 
 			for _, action := range *perm.Actions {
+				allActions = append(allActions, action)
+
 				// Check for subnet-specific permissions
 				if strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
 					// Assign to both master and worker subnets
 					masterSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
 					workerSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
-					scopes = append(scopes, masterSubnet, workerSubnet)
+					scopeMap[masterSubnet] = struct{}{}
+					scopeMap[workerSubnet] = struct{}{}
 					break
 				}
 
 				// Check for VNet-level permissions
 				if strings.Contains(action, "Microsoft.Network/virtualNetworks/") && !strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
 					vnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.Config.SubscriptionID, vnetResourceGroup)
-					scopes = append(scopes, vnetID)
+					scopeMap[vnetID] = struct{}{}
 					break
 				}
 
 				// Check for DES permissions
 				if strings.Contains(action, "Microsoft.Compute/diskEncryptionSets") {
-					scopes = append(scopes, diskEncryptionSetID)
+					scopeMap[diskEncryptionSetID] = struct{}{}
 					break
 				}
 			}
 		}
+	}
+
+	// Validate that we found at least one matching scope
+	if len(scopeMap) == 0 {
+		c.log.Warnf("Role %s has no permissions matching expected patterns. Actions found: %v", roleDefinitionID, allActions)
+		return nil, fmt.Errorf("no scopes determined for role %s - role permissions may not match expected patterns (subnet, vnet, or DES)", roleDefinitionID)
+	}
+
+	scopes := make([]string, 0, len(scopeMap))
+	for scope := range scopeMap {
+		scopes = append(scopes, scope)
 	}
 
 	return scopes, nil
