@@ -54,17 +54,18 @@ func TestAdminVMResize(t *testing.T) {
 	}
 
 	type test struct {
-		name                   string
-		resourceID             string
-		vmName                 string
-		vmSize                 string
-		useCapacityReservation bool
-		zone                   string
-		fixture                func(f *testdatabase.Fixture)
-		azureActionsMocks      func(*test, *mock_adminactions.MockAzureActions)
-		wantStatusCode         int
-		wantResponse           []byte
-		wantError              string
+		name                      string
+		resourceID                string
+		vmName                    string
+		vmSize                    string
+		useCapacityReservation    bool
+		useCapacityReservationRaw string // overrides bool when non-empty, for invalid-value tests
+		zone                      string
+		fixture                   func(f *testdatabase.Fixture)
+		azureActionsMocks         func(*test, *mock_adminactions.MockAzureActions)
+		wantStatusCode            int
+		wantResponse              []byte
+		wantError                 string
 	}
 
 	for _, tt := range []*test{
@@ -153,6 +154,34 @@ func TestAdminVMResize(t *testing.T) {
 			wantStatusCode:    http.StatusBadRequest,
 			wantError:         `400: InvalidParameter: zone: zone is required when useCapacityReservation is true`,
 		},
+		{
+			name:                      "CRG resize - invalid useCapacityReservation value returns 400",
+			vmName:                    "aro-fake-node-master-0",
+			vmSize:                    "Standard_D16s_v3",
+			resourceID:                testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			useCapacityReservationRaw: "notabool",
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         `400: InvalidParameter: useCapacityReservation: useCapacityReservation must be a boolean (true or false)`,
+		},
+		{
+			name:       "CRG resize - zone without useCapacityReservation returns 400",
+			vmName:     "aro-fake-node-master-0",
+			vmSize:     "Standard_D16s_v3",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			zone:       "1",
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			azureActionsMocks: func(tt *test, a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         `400: InvalidParameter: zone: zone is only valid when useCapacityReservation is true`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
@@ -191,7 +220,9 @@ func TestAdminVMResize(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			url := fmt.Sprintf("https://server/admin%s/resize?vmName=%s&vmSize=%s", tt.resourceID, tt.vmName, tt.vmSize)
-			if tt.useCapacityReservation {
+			if tt.useCapacityReservationRaw != "" {
+				url += "&useCapacityReservation=" + tt.useCapacityReservationRaw
+			} else if tt.useCapacityReservation {
 				url += "&useCapacityReservation=true"
 			}
 			if tt.zone != "" {

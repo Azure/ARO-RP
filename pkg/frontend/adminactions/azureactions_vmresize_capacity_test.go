@@ -280,6 +280,8 @@ func TestCRGResizeSingleVM_HappyPath(t *testing.T) {
 	)
 
 	gomock.InOrder(
+		// Step 0: zone validation GET.
+		mockVMs.EXPECT().Get(gomock.Any(), clusterRG, "master-0").Return(vm, nil),
 		// Step 1: create CRG.
 		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), clusterRG, capacityReservationGroupName, gomock.Any()).
 			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
@@ -310,15 +312,35 @@ func TestCRGResizeSingleVM_HappyPath(t *testing.T) {
 	}
 }
 
+func TestCRGResizeSingleVM_ZoneMismatch_ReturnsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	a, mockVMs, _, _ := newTestAzureActions(t, ctrl)
+	// VM is in zone 2; caller passes zone 1.
+	vm := masterVM("master-0", "2", "Standard_D8s_v3")
+
+	mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil)
+
+	err := a.CRGResizeSingleVM(context.Background(), "cluster-rg", "eastus", "master-0", "1", "Standard_D16s_v3")
+	if err == nil {
+		t.Fatal("expected zone mismatch error, got nil")
+	}
+}
+
 func TestCRGResizeSingleVM_CRGCreateFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	a, _, mockCRGs, _ := newTestAzureActions(t, ctrl)
+	a, mockVMs, mockCRGs, _ := newTestAzureActions(t, ctrl)
+	vm := masterVM("master-0", "1", "Standard_D8s_v3")
 
-	mockCRGs.EXPECT().
-		CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(armcomputev7.CapacityReservationGroup{}, errors.New("permission denied"))
+	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
+		mockCRGs.EXPECT().
+			CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(armcomputev7.CapacityReservationGroup{}, errors.New("permission denied")),
+	)
 
 	err := a.CRGResizeSingleVM(context.Background(), "cluster-rg", "eastus", "master-0", "1", "Standard_D16s_v3")
 	if err == nil {
@@ -330,11 +352,13 @@ func TestCRGResizeSingleVM_ReservationCreateFails_TriggersCleanup(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	a, _, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+	a, mockVMs, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+	vm := masterVM("master-0", "1", "Standard_D8s_v3")
 
 	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
 
 	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
 		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
 			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
 		// Reservation create fails — no VMs associated yet.
@@ -362,6 +386,7 @@ func TestCRGResizeSingleVM_ResizeFails_TriggersCleanup(t *testing.T) {
 	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
 
 	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
 		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
 			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
 		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
@@ -386,10 +411,13 @@ func TestCRGResizeSingleVM_DeallocateFails_TriggersCleanup(t *testing.T) {
 	defer ctrl.Finish()
 
 	a, mockVMs, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+	vm := masterVM("master-0", "1", "Standard_D8s_v3")
 
 	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
 
 	gomock.InOrder(
+		// Zone validation.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
 		// Setup succeeds.
 		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
 			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
@@ -420,6 +448,8 @@ func TestCRGResizeSingleVM_CRGDeleteFails_AfterVMRunning(t *testing.T) {
 	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
 
 	gomock.InOrder(
+		// Zone validation.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
 		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
 			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
 		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
@@ -453,6 +483,8 @@ func TestCRGResizeSingleVM_StartFails(t *testing.T) {
 	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
 
 	gomock.InOrder(
+		// Zone validation.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
 		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
 			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
 		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),

@@ -38,6 +38,16 @@ const (
 // capacity for the allocation. Cleanup happens only after the VM is confirmed running.
 // On any failure after CRG creation, a best-effort cleanup is attempted before returning.
 func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, location, vmName, zone, targetVMSize string) error {
+	// Validate the supplied zone against the VM's actual zone before creating any Azure
+	// resources, to avoid deallocating the VM if the caller provided the wrong zone.
+	vmForZoneCheck, err := a.armVirtualMachines.Get(ctx, clusterRG, vmName)
+	if err != nil {
+		return fmt.Errorf("reading VM %s for zone validation: %w", vmName, err)
+	}
+	if !vmIsInZone(vmForZoneCheck, zone) {
+		return fmt.Errorf("VM %s is not in zone %s", vmName, zone)
+	}
+
 	a.log.Infof("creating capacity reservation group for VM %s (zone %s)", vmName, zone)
 	crgID, err := a.CRGCreate(ctx, clusterRG, location, []string{zone})
 	if err != nil {
@@ -105,12 +115,26 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 		return fmt.Errorf("starting VM %s after resize: %w", vmName, err)
 	}
 
-	// VM is running — release the reservation resources.
+	// VM is running — release the reservation resources. Use a fresh context so
+	// cleanup still runs even if the request context has been canceled.
 	a.log.Infof("cleaning up capacity reservation group after resize of VM %s", vmName)
-	if err = a.CRGDelete(ctx, clusterRG, location, targetVMSize, []string{zone}, []string{vmName}); err != nil {
+	cleanupTimeout := time.Duration(crgMaxRetries)*crgRetryInterval + 2*time.Minute
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), cleanupTimeout)
+	defer cleanupCancel()
+	if err = a.CRGDelete(cleanupCtx, clusterRG, location, targetVMSize, []string{zone}, []string{vmName}); err != nil {
 		return fmt.Errorf("cleaning up capacity reservation group: %w", err)
 	}
 	return nil
+}
+
+// vmIsInZone returns true if the VM is deployed in the given zone.
+func vmIsInZone(vm armcompute.VirtualMachine, zone string) bool {
+	for _, z := range vm.Zones {
+		if z != nil && *z == zone {
+			return true
+		}
+	}
+	return false
 }
 
 // CRGCreate creates a Capacity Reservation Group scoped to the given zones.
