@@ -417,21 +417,23 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			principalID: *resp.Properties.PrincipalID,
 		}
 
-		// Determine required scopes based on role permissions
-		scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, wi.RoleDefinitionID, vnetResourceGroup, diskEncryptionSetID)
-		if err != nil {
-			return fmt.Errorf("failed to determine scopes for operator %s: %w", wi.OperatorName, err)
-		}
-
-		// Assign role to each determined scope
-		for _, scope := range scopes {
-			c.log.Infof("assigning role %s to scope %s for principal %s", wi.RoleDefinitionID, scope, *resp.Properties.PrincipalID)
-			if err := c.createRoleAssignmentWithRetry(ctx, scope, wi.RoleDefinitionID, *resp.Properties.PrincipalID); err != nil {
-				return fmt.Errorf("failed to assign role to scope %s: %w", scope, err)
-			}
-		}
-
+		// Skip scope-based role assignments for aro-Cluster identity
+		// It gets federated credential role assignments later (to other operator identities)
 		if wi.OperatorName != aroClusterIdentityOperatorName {
+			// Determine required scopes based on role permissions
+			scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, wi.RoleDefinitionID, vnetResourceGroup, diskEncryptionSetID)
+			if err != nil {
+				return fmt.Errorf("failed to determine scopes for operator %s: %w", wi.OperatorName, err)
+			}
+
+			// Assign role to each determined scope
+			for _, scope := range scopes {
+				c.log.Infof("assigning role %s to scope %s for principal %s", wi.RoleDefinitionID, scope, *resp.Properties.PrincipalID)
+				if err := c.createRoleAssignmentWithRetry(ctx, scope, wi.RoleDefinitionID, *resp.Properties.PrincipalID); err != nil {
+					return fmt.Errorf("failed to assign role to scope %s: %w", scope, err)
+				}
+			}
+
 			c.workloadIdentities[wi.OperatorName] = api.PlatformWorkloadIdentity{
 				ResourceID: *resp.ID,
 			}
