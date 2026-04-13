@@ -759,6 +759,9 @@ processors:
       - key: \"host\"
         action: insert
         value: \"$(hostname)\"
+      - key: \"Environment\"
+        action: insert
+        value: \"$ENVIRONMENT\"
 extensions:
   health_check:
     endpoint: $ipaddress:13133
@@ -1125,6 +1128,7 @@ MDM_INPUT=statsd_local,otlp_grpc
 MDM_NAMESPACE='OTEL'
 MDM_ACCOUNT='AzureRedHatOpenShiftRP'
 PODMAN_NETWORK='podman'
+ENVIRONMENT='$ENVIRONMENT'
 IPADDRESS='$ipaddress'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
@@ -1152,6 +1156,7 @@ ExecStart=/usr/bin/podman run \
   --cap-drop net_raw \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
+  -e ENVIRONMENT \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
