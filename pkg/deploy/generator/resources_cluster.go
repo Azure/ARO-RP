@@ -94,7 +94,12 @@ func (g *generator) diskEncryptionKeyVault() *arm.Resource {
 func (g *generator) diskEncryptionKeyVaultRBAC() *arm.Resource {
 	// use the Azure built-in Key Vault Crypto Service Encryption User role
 	// See: https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#azure-built-in-roles-for-key-vault-data-plane-operations
-	return rbac.ResourceRoleAssignment("e147488a-f6f5-4113-8e2d-b22465e65bf6", tenantIDHack, "Microsoft.KeyVault", "parameters['kvName']")
+	return rbac.ResourceRoleAssignment(
+		rbac.RoleKeyVaultCryptoServiceEncryptionUser,
+		fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets")),
+		"Microsoft.KeyVault",
+		"parameters('kvName')",
+	)
 }
 
 func (g *generator) diskEncryptionKey() *arm.Resource {
