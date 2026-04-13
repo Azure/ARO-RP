@@ -217,7 +217,7 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 			wantErr: "no scopes determined",
 		},
 		{
-			name: "vnet and subnet permissions in separate blocks - returns both without duplicates",
+			name: "vnet and subnet permissions in separate blocks - returns vnet only (inheritance)",
 			mockSetup: func(m *mock_authorization.MockRoleDefinitionsClient) {
 				m.EXPECT().GetByID(ctx, roleDefinitionID).Return(mgmtauthorization.RoleDefinition{
 					RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
@@ -236,10 +236,10 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedScope: []string{expectedVnet, expectedMasterSubnet, expectedWorkerSubnet},
+			expectedScope: []string{expectedVnet}, // VNet only - subnets inherit
 		},
 		{
-			name: "vnet and subnet permissions in same block - returns both",
+			name: "vnet and subnet permissions in same block - returns vnet only (inheritance)",
 			mockSetup: func(m *mock_authorization.MockRoleDefinitionsClient) {
 				m.EXPECT().GetByID(ctx, roleDefinitionID).Return(mgmtauthorization.RoleDefinition{
 					RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
@@ -254,7 +254,7 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedScope: []string{expectedVnet, expectedMasterSubnet, expectedWorkerSubnet}, // All scopes
+			expectedScope: []string{expectedVnet}, // VNet only - subnets inherit
 		},
 	}
 

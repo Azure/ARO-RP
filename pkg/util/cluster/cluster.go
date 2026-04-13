@@ -539,7 +539,13 @@ func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Co
 	// Track all actions we see for debugging if no patterns match
 	var allActions []string
 
+	// Track whether we found VNet-level permissions
+	// If VNet permissions exist, we don't need subnet-level assignments (inheritance)
+	hasVnetPermissions := false
+	hasSubnetPermissions := false
+
 	if roleDef.Permissions != nil {
+		// First pass: check what permission types we have
 		for _, perm := range *roleDef.Permissions {
 			if perm.Actions == nil {
 				continue
@@ -548,19 +554,14 @@ func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Co
 			for _, action := range *perm.Actions {
 				allActions = append(allActions, action)
 
-				// Check for subnet-specific permissions
-				if strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
-					// Assign to both master and worker subnets
-					masterSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
-					workerSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
-					scopeMap[masterSubnet] = struct{}{}
-					scopeMap[workerSubnet] = struct{}{}
-				}
-
 				// Check for VNet-level permissions (non-subnet)
 				if strings.Contains(action, "Microsoft.Network/virtualNetworks/") && !strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
-					vnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.Config.SubscriptionID, vnetResourceGroup)
-					scopeMap[vnetID] = struct{}{}
+					hasVnetPermissions = true
+				}
+
+				// Check for subnet-specific permissions
+				if strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
+					hasSubnetPermissions = true
 				}
 
 				// Check for DES permissions
@@ -569,6 +570,19 @@ func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Co
 				}
 			}
 		}
+	}
+
+	// Add network scopes based on what we found
+	// VNet permissions cover subnets via inheritance, so prefer VNet scope
+	if hasVnetPermissions {
+		vnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.Config.SubscriptionID, vnetResourceGroup)
+		scopeMap[vnetID] = struct{}{}
+	} else if hasSubnetPermissions {
+		// Only assign to subnets if there are NO vnet-level permissions
+		masterSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
+		workerSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
+		scopeMap[masterSubnet] = struct{}{}
+		scopeMap[workerSubnet] = struct{}{}
 	}
 
 	// Validate that we found at least one matching scope
