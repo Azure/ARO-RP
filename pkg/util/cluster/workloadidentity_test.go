@@ -28,6 +28,7 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 	expectedMasterSubnet := "/subscriptions/test-subscription-id/resourceGroups/test-vnet-rg/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/test-cluster-master"
 	expectedWorkerSubnet := "/subscriptions/test-subscription-id/resourceGroups/test-vnet-rg/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/test-cluster-worker"
 	expectedVnet := "/subscriptions/test-subscription-id/resourceGroups/test-vnet-rg/providers/Microsoft.Network/virtualNetworks/dev-vnet"
+	expectedRouteTable := "/subscriptions/test-subscription-id/resourceGroups/test-vnet-rg/providers/Microsoft.Network/routeTables/test-cluster-rt"
 
 	tests := []struct {
 		name          string
@@ -89,6 +90,24 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 			expectedScope: []string{diskEncryptionSetID},
 		},
 		{
+			name: "route table permissions - returns route table",
+			mockSetup: func(m *mock_authorization.MockRoleDefinitionsClient) {
+				m.EXPECT().GetByID(ctx, roleDefinitionID).Return(mgmtauthorization.RoleDefinition{
+					RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
+						Permissions: &[]mgmtauthorization.Permission{
+							{
+								Actions: &[]string{
+									"Microsoft.Network/routeTables/read",
+									"Microsoft.Network/routeTables/write",
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			expectedScope: []string{expectedRouteTable},
+		},
+		{
 			name: "mixed permissions in separate blocks - returns all unique scopes",
 			mockSetup: func(m *mock_authorization.MockRoleDefinitionsClient) {
 				m.EXPECT().GetByID(ctx, roleDefinitionID).Return(mgmtauthorization.RoleDefinition{
@@ -109,6 +128,25 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 				}, nil)
 			},
 			expectedScope: []string{expectedMasterSubnet, expectedWorkerSubnet, diskEncryptionSetID},
+		},
+		{
+			name: "vnet, route table, and DES permissions - returns all",
+			mockSetup: func(m *mock_authorization.MockRoleDefinitionsClient) {
+				m.EXPECT().GetByID(ctx, roleDefinitionID).Return(mgmtauthorization.RoleDefinition{
+					RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
+						Permissions: &[]mgmtauthorization.Permission{
+							{
+								Actions: &[]string{
+									"Microsoft.Network/virtualNetworks/read",
+									"Microsoft.Network/routeTables/write",
+									"Microsoft.Compute/diskEncryptionSets/read",
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			expectedScope: []string{expectedVnet, expectedRouteTable, diskEncryptionSetID},
 		},
 		{
 			name: "duplicate permissions - deduplicates scopes",
@@ -275,7 +313,7 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 				roledefinitions: mockRoleDefinitions,
 			}
 
-			scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, roleDefinitionID, vnetResourceGroup, diskEncryptionSetID)
+			scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, roleDefinitionID, vnetResourceGroup, diskEncryptionSetID, expectedRouteTable)
 
 			if tt.wantErr != "" {
 				if err == nil {

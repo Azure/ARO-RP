@@ -340,12 +340,12 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	return appDetails{appID, appSecret, spID}, nil
 }
 
-func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, diskEncryptionSetID string, principalIDs []string) error {
+func (c *Cluster) SetupServicePrincipalRoleAssignments(ctx context.Context, diskEncryptionSetID string, routeTableID string, principalIDs []string) error {
 	c.log.Info("creating role assignments")
 
 	for _, scope := range []struct{ resource, role string }{
 		{"/subscriptions/" + c.Config.SubscriptionID + "/resourceGroups/" + c.Config.VnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/dev-vnet", rbac.RoleNetworkContributor},
-		{"/subscriptions/" + c.Config.SubscriptionID + "/resourceGroups/" + c.Config.VnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + c.Config.ClusterName + "-rt", rbac.RoleNetworkContributor},
+		{routeTableID, rbac.RoleNetworkContributor},
 		{diskEncryptionSetID, rbac.RoleReader},
 	} {
 		for _, principalID := range principalIDs {
@@ -375,7 +375,7 @@ func (c *Cluster) GetPlatformWIRoles() ([]api.PlatformWorkloadIdentityRole, erro
 	return nil, fmt.Errorf("workload identity role sets for version %s not found", c.Config.OSClusterVersion)
 }
 
-func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string, diskEncryptionSetID string) error {
+func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup string, diskEncryptionSetID string, routeTableID string) error {
 	platformWorkloadIdentityRoles, err := c.GetPlatformWIRoles()
 	if err != nil {
 		return fmt.Errorf("failed parsing platformWI Roles: %w", err)
@@ -421,7 +421,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		// It gets federated credential role assignments later (to other operator identities)
 		if wi.OperatorName != aroClusterIdentityOperatorName {
 			// Determine required scopes based on role permissions
-			scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, wi.RoleDefinitionID, vnetResourceGroup, diskEncryptionSetID)
+			scopes, err := c.determineRequiredPlatformWorkloadIdentityScopes(ctx, wi.RoleDefinitionID, vnetResourceGroup, diskEncryptionSetID, routeTableID)
 			if err != nil {
 				return fmt.Errorf("failed to determine scopes for operator %s: %w", wi.OperatorName, err)
 			}
@@ -521,11 +521,12 @@ func (c *Cluster) createRoleAssignmentWithRetry(ctx context.Context, scope strin
 // determineRequiredPlatformWorkloadIdentityScopes analyzes a role definition's permissions
 // and returns the list of resource scopes where the role should be assigned.
 // It matches role permissions against known patterns:
-// - Microsoft.Network/virtualNetworks/subnets/* -> assigns to master and worker subnets
-// - Microsoft.Network/virtualNetworks/* (non-subnet) -> assigns to vnet
+// - Microsoft.Network/virtualNetworks/subnets/* -> assigns to master and worker subnets (unless VNet scope is also needed)
+// - Microsoft.Network/virtualNetworks/* (non-subnet) -> assigns to vnet (preferred over subnets due to inheritance)
+// - Microsoft.Network/routeTables/* -> assigns to route table
 // - Microsoft.Compute/diskEncryptionSets/* -> assigns to disk encryption set
 // Returns an error if the role definition cannot be retrieved or if no known patterns match.
-func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Context, roleDefinitionID string, vnetResourceGroup string, diskEncryptionSetID string) ([]string, error) {
+func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Context, roleDefinitionID string, vnetResourceGroup string, diskEncryptionSetID string, routeTableID string) ([]string, error) {
 	// Get the role definition to check its permissions
 	roleDef, err := c.roledefinitions.GetByID(ctx, roleDefinitionID)
 	if err != nil {
@@ -562,6 +563,11 @@ func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Co
 				// Check for subnet-specific permissions
 				if strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
 					hasSubnetPermissions = true
+				}
+
+				// Check for route table permissions
+				if strings.Contains(action, "Microsoft.Network/routeTables") {
+					scopeMap[routeTableID] = struct{}{}
 				}
 
 				// Check for DES permissions
@@ -760,6 +766,13 @@ func (c *Cluster) Create(ctx context.Context) error {
 		diskEncryptionSetName,
 	)
 
+	routeTableID := fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/routeTables/%s-rt",
+		c.Config.SubscriptionID,
+		c.Config.VnetResourceGroup,
+		c.Config.ClusterName,
+	)
+
 	principalIds := []string{
 		c.Config.FPServicePrincipalID,
 	}
@@ -771,14 +784,14 @@ func (c *Cluster) Create(ctx context.Context) error {
 		c.log.Info("creating FPSP role assignments")
 	}
 
-	err = c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, principalIds)
+	err = c.SetupServicePrincipalRoleAssignments(ctx, diskEncryptionSetID, routeTableID, principalIds)
 	if err != nil {
 		return err
 	}
 
 	if c.Config.UseWorkloadIdentity {
 		c.log.Info("creating WIs")
-		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup, diskEncryptionSetID); err != nil {
+		if err := c.SetupWorkloadIdentity(ctx, c.Config.VnetResourceGroup, diskEncryptionSetID, routeTableID); err != nil {
 			return fmt.Errorf("error setting up Workload Identity Roles: %w", err)
 		}
 	}
