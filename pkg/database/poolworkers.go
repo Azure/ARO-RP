@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -18,6 +19,8 @@ const (
 	PoolWorkerGetMasterQuery  string = `SELECT * FROM PoolWorkers doc WHERE doc.id = @workerType AND doc.workerType = @workerType AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
 	PoolWorkerGetWorkersQuery string = `SELECT * FROM PoolWorkers doc WHERE doc.id != @workerType AND doc.workerType = @workerType`
 )
+
+var ErrPoolWorkersBucketAllocationNotInitialized = errors.New("bucket allocation not initialized")
 
 type poolWorkers struct {
 	c    cosmosdb.PoolWorkerDocumentClient
@@ -112,6 +115,9 @@ func (c *poolWorkers) update(ctx context.Context, poolWorkerType api.PoolWorkerT
 	return c.c.Replace(ctx, string(poolWorkerType), doc, options)
 }
 
+// TryLease attempts to lease the master document if it is available (no lease
+// or the lease has expired). Failing to get the lease returns a `nil` document
+// and error.
 func (c *poolWorkers) TryLease(ctx context.Context, workerType api.PoolWorkerType) (*api.PoolWorkerDocument, error) {
 	docs, err := c.c.QueryAll(ctx, string(workerType), &cosmosdb.Query{
 		Query: PoolWorkerGetMasterQuery,
@@ -122,13 +128,12 @@ func (c *poolWorkers) TryLease(ctx context.Context, workerType api.PoolWorkerTyp
 			},
 		},
 	}, nil)
-	if err != nil {
+	// Return any errors, or if there's no docs (as there's no lease to try and take).
+	if err != nil || docs.GetCount() == 0 {
 		return nil, err
 	}
-	if docs == nil {
-		return nil, nil
-	}
 
+	// Since we do a query we still need to iterate over the list of docs (even if there's just one)
 	for _, doc := range docs.PoolWorkerDocuments {
 		doc.LeaseOwner = c.uuid
 		doc, err = c.update(ctx, workerType, doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
@@ -138,13 +143,16 @@ func (c *poolWorkers) TryLease(ctx context.Context, workerType api.PoolWorkerTyp
 		return doc, err
 	}
 
+	// We didn't successfully get the lease
 	return nil, nil
 }
 
 func (c *poolWorkers) ListBuckets(ctx context.Context, poolWorkerType api.PoolWorkerType) (buckets []int, err error) {
 	doc, err := c.get(ctx, poolWorkerType, string(poolWorkerType))
-	if err != nil || doc == nil || doc.PoolWorker == nil {
+	if err != nil {
 		return nil, err
+	} else if doc == nil || doc.PoolWorker == nil {
+		return nil, ErrPoolWorkersBucketAllocationNotInitialized
 	}
 
 	for i, poolworker := range doc.PoolWorker.Buckets {
