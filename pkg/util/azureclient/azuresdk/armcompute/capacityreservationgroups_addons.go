@@ -47,7 +47,7 @@ const crgDeletePollInterval = 5 * time.Second
 // context is cancelled. It is called after a 202 Accepted delete response.
 func (c *capacityReservationGroupsClient) pollCRGDeleted(ctx context.Context, resourceGroupName, capacityReservationGroupName string) error {
 	for {
-		_, err := c.CapacityReservationGroupsClient.Get(ctx, resourceGroupName, capacityReservationGroupName, nil)
+		_, err := c.Get(ctx, resourceGroupName, capacityReservationGroupName, nil)
 		if err != nil {
 			var responseErr *azcore.ResponseError
 			if errors.As(err, &responseErr) && responseErr.StatusCode == http.StatusNotFound {
