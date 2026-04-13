@@ -555,20 +555,17 @@ func (c *Cluster) determineRequiredPlatformWorkloadIdentityScopes(ctx context.Co
 					workerSubnet := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.Config.SubscriptionID, vnetResourceGroup, c.Config.ClusterName)
 					scopeMap[masterSubnet] = struct{}{}
 					scopeMap[workerSubnet] = struct{}{}
-					break
 				}
 
-				// Check for VNet-level permissions
+				// Check for VNet-level permissions (non-subnet)
 				if strings.Contains(action, "Microsoft.Network/virtualNetworks/") && !strings.Contains(action, "Microsoft.Network/virtualNetworks/subnets/") {
 					vnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.Config.SubscriptionID, vnetResourceGroup)
 					scopeMap[vnetID] = struct{}{}
-					break
 				}
 
 				// Check for DES permissions
 				if strings.Contains(action, "Microsoft.Compute/diskEncryptionSets") {
 					scopeMap[diskEncryptionSetID] = struct{}{}
-					break
 				}
 			}
 		}

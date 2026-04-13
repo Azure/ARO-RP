@@ -239,7 +239,7 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 			expectedScope: []string{expectedVnet, expectedMasterSubnet, expectedWorkerSubnet},
 		},
 		{
-			name: "actions processed in order - first match wins per permission block",
+			name: "vnet and subnet permissions in same block - returns both",
 			mockSetup: func(m *mock_authorization.MockRoleDefinitionsClient) {
 				m.EXPECT().GetByID(ctx, roleDefinitionID).Return(mgmtauthorization.RoleDefinition{
 					RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
@@ -247,14 +247,14 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 							{
 								Actions: &[]string{
 									"Microsoft.Network/virtualNetworks/read",
-									"Microsoft.Network/virtualNetworks/subnets/join/action", // Not reached due to break
+									"Microsoft.Network/virtualNetworks/subnets/join/action",
 								},
 							},
 						},
 					},
 				}, nil)
 			},
-			expectedScope: []string{expectedVnet}, // Only vnet because vnet pattern matches first
+			expectedScope: []string{expectedVnet, expectedMasterSubnet, expectedWorkerSubnet}, // All scopes
 		},
 	}
 
