@@ -28,9 +28,10 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name  string
-		doc   *api.OpenShiftClusterDocument
-		mocks func(*mock_features.MockDeploymentsClient)
+		name    string
+		doc     *api.OpenShiftClusterDocument
+		mocks   func(*mock_features.MockDeploymentsClient)
+		wantErr string
 	}{
 		{
 			name: "needs create - ServicePrincipalProfile",
@@ -74,7 +75,8 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(client *mock_features.MockDeploymentsClient) {},
+			mocks:   func(client *mock_features.MockDeploymentsClient) {},
+			wantErr: "skipping createOrUpdateDenyAssignment: ServicePrincipalProfile is empty",
 		},
 		{
 			name: "needs create - ServicePrincipalProfile - missing SPObjectID",
@@ -88,7 +90,8 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(client *mock_features.MockDeploymentsClient) {},
+			mocks:   func(client *mock_features.MockDeploymentsClient) {},
+			wantErr: "skipping createOrUpdateDenyAssignment: SPObjectID is empty",
 		},
 		{
 			name: "needs create - PlatformWorkloadIdentityProfile",
@@ -146,7 +149,8 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(client *mock_features.MockDeploymentsClient) {},
+			mocks:   func(client *mock_features.MockDeploymentsClient) {},
+			wantErr: "skipping createOrUpdateDenyAssignment: ObjectID for identity anything is empty",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -168,7 +172,13 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			m.deployments = deployments
 
 			err := m.createOrUpdateDenyAssignment(ctx)
-			if err != nil {
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Errorf("expected error %q, got nil", tt.wantErr)
+				} else if err.Error() != tt.wantErr {
+					t.Errorf("expected error %q, got %q", tt.wantErr, err.Error())
+				}
+			} else if err != nil {
 				t.Fatal(err)
 			}
 		})
