@@ -86,6 +86,9 @@ func TestAzureInit(t *testing.T) {
 		},
 	)
 
+	// no azure clients client before we create it
+	require.Nil(f.az)
+
 	// Successfully create the client
 	c, err := f.TokensClient()
 	require.NoError(err)
@@ -104,4 +107,8 @@ func TestAzureInit(t *testing.T) {
 			Value: pointerutils.ToPtr("c"),
 		},
 	}, p.Credentials.Passwords)
+
+	// client created and cached
+	require.NotNil(f.az)
+	require.NotNil(f.az.tokensClient)
 }
