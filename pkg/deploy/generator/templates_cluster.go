@@ -39,9 +39,9 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		g.clusterMasterSubnet(),
 		g.clusterWorkerSubnet(),
 		g.diskEncryptionKeyVault(),
+		g.diskEncryptionKeyVaultRBAC(),
 		g.diskEncryptionKey(),
 		g.diskEncryptionSet(),
-		g.diskEncryptionKeyVaultAccessPolicy(),
 	)
 
 	return t
