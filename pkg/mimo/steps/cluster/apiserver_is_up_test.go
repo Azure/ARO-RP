@@ -56,11 +56,15 @@ func TestAPIServerIsUp(t *testing.T) {
 								Type:   configv1.OperatorProgressing,
 								Status: configv1.ConditionTrue,
 							},
+							{
+								Type:   configv1.OperatorDegraded,
+								Status: configv1.ConditionFalse,
+							},
 						},
 					},
 				},
 			},
-			wantErr: `TransientError: kube-apiserver Available=False, Progressing=True`,
+			wantErr: `TransientError: kube-apiserver Available=False, Progressing=True, Degraded=False`,
 		},
 		{
 			name: "ready",

@@ -76,6 +76,20 @@ func (mr *MockKubeActionsMockRecorder) ApproveCsr(ctx, csrName any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveCsr", reflect.TypeOf((*MockKubeActions)(nil).ApproveCsr), ctx, csrName)
 }
 
+// CheckAPIServerReadyz mocks base method.
+func (m *MockKubeActions) CheckAPIServerReadyz(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckAPIServerReadyz", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckAPIServerReadyz indicates an expected call of CheckAPIServerReadyz.
+func (mr *MockKubeActionsMockRecorder) CheckAPIServerReadyz(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAPIServerReadyz", reflect.TypeOf((*MockKubeActions)(nil).CheckAPIServerReadyz), ctx)
+}
+
 // CordonNode mocks base method.
 func (m *MockKubeActions) CordonNode(ctx context.Context, nodeName string, unschedulable bool) error {
 	m.ctrl.T.Helper()
