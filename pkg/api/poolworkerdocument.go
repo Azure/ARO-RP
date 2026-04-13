@@ -11,6 +11,13 @@ type PoolWorkerDocuments struct {
 	PoolWorkerDocuments []*PoolWorkerDocument `json:"Documents,omitempty"`
 }
 
+func (c *PoolWorkerDocuments) GetCount() int {
+	if c == nil {
+		return 0
+	}
+	return c.Count
+}
+
 // PoolWorkerDocument represents a PoolWorker document.
 // pkg/database/cosmosdb requires its definition.
 type PoolWorkerDocument struct {
