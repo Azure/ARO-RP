@@ -17,20 +17,19 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 		return nil
 	}
 
-	// needed for AdminUpdate so it would not block other steps
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for operatorName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if identity.ObjectID == "" {
-				return fmt.Errorf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", operatorName)
+				return fmt.Errorf("createOrUpdateDenyAssignment failed: ObjectID for identity %s is empty", operatorName)
 			}
 		}
 	} else {
 		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
-			return fmt.Errorf("skipping createOrUpdateDenyAssignment: ServicePrincipalProfile is empty")
+			return fmt.Errorf("createOrUpdateDenyAssignment failed: ServicePrincipalProfile is empty")
 		}
 
 		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
-			return fmt.Errorf("skipping createOrUpdateDenyAssignment: SPObjectID is empty")
+			return fmt.Errorf("createOrUpdateDenyAssignment failed: SPObjectID is empty")
 		}
 	}
 
