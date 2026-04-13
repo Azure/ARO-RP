@@ -29,11 +29,6 @@ type Actuator interface {
 	AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask)
 }
 
-type taskContextWithGetResult interface {
-	utilmimo.TaskContext
-	GetResultMessage() string
-}
-
 type actuator struct {
 	env                      env.Interface
 	log                      *logrus.Entry
@@ -216,8 +211,8 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 		// Perform the task with a timeout
 		err = func() error {
-			innerErr := f(taskContext, doc, oc)
 			defer cancel()
+			innerErr := f(taskContext, doc, oc)
 			if innerErr != nil {
 				return innerErr
 			}
@@ -226,7 +221,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 		var state api.MaintenanceManifestState
 		// Pull the result message out of the task context to save, if it is set
-		msg := taskContext.(taskContextWithGetResult).GetResultMessage()
+		msg := taskContext.GetResultMessage()
 
 		if err != nil {
 			if doc.Dequeues >= maxDequeueCount {

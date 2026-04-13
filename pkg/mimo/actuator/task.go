@@ -20,8 +20,7 @@ import (
 )
 
 type th struct {
-	originalCtx context.Context
-	ctx         context.Context
+	ctx context.Context
 
 	env env.Interface
 	log *logrus.Entry
@@ -39,15 +38,14 @@ type th struct {
 // force interface checking
 var _ mimo.TaskContext = &th{}
 
-func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) mimo.TaskContext {
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) *th {
 	return &th{
-		originalCtx: ctx,
-		ctx:         ctx,
-		env:         env,
-		log:         log,
-		oc:          oc,
-		sub:         sub,
-		_ch:         nil,
+		ctx: ctx,
+		env: env,
+		log: log,
+		oc:  oc,
+		sub: sub,
+		_ch: nil,
 	}
 }
 

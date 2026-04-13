@@ -4,6 +4,7 @@ package actuator
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -12,6 +13,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 )
+
+var errInvalidSubDoc = errors.New("invalid/nil subscription document")
+var errCreatingFpCredClusterTenant = errors.New("failure creating fpCredClusterTenant")
 
 type azClients struct {
 	fpCred *azidentity.ClientCertificateCredential
@@ -29,12 +33,12 @@ type azClients struct {
 func (t *th) setupAzureClients() error {
 	if t.az == nil {
 		if t.sub == nil || t.sub.Subscription == nil || t.sub.Subscription.Properties == nil || t.sub.Subscription.Properties.TenantID == "" {
-			return fmt.Errorf("invalid/nil subscription document")
+			return errInvalidSubDoc
 		}
 
 		fpCredClusterTenant, err := t.env.FPNewClientCertificateCredential(t.sub.Subscription.Properties.TenantID, nil)
 		if err != nil {
-			return fmt.Errorf("failure creating fpCredClusterTenant: %w", err)
+			return fmt.Errorf("%w: %w", errCreatingFpCredClusterTenant, err)
 		}
 
 		t.az = &azClients{fpCred: fpCredClusterTenant}
