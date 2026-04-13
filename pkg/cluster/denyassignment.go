@@ -21,18 +21,18 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for operatorName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if identity.ObjectID == "" {
-				m.log.Print(fmt.Sprintf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", operatorName))
+				m.log.Error(fmt.Sprintf("skipping createOrUpdateDenyAssignment: ObjectID for identity %s is empty", operatorName))
 				return nil
 			}
 		}
 	} else {
 		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
-			m.log.Print("skipping createOrUpdateDenyAssignment: ServicePrincipalProfile is empty")
+			m.log.Error("skipping createOrUpdateDenyAssignment: ServicePrincipalProfile is empty")
 			return nil
 		}
 
 		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
-			m.log.Print("skipping createOrUpdateDenyAssignment: SPObjectID is empty")
+			m.log.Error("skipping createOrUpdateDenyAssignment: SPObjectID is empty")
 			return nil
 		}
 	}
