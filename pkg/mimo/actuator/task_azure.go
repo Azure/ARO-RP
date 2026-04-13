@@ -7,18 +7,20 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 )
 
-var errInvalidSubDoc = errors.New("invalid/nil subscription document")
-var errCreatingFpCredClusterTenant = errors.New("failure creating fpCredClusterTenant")
+var (
+	errInvalidSubDoc               = errors.New("invalid/nil subscription document")
+	errCreatingFpCredClusterTenant = errors.New("failure creating fpCredClusterTenant")
+)
 
 type azClients struct {
-	fpCred *azidentity.ClientCertificateCredential
+	fpCred azcore.TokenCredential
 
 	// Store these as pointers to interfaces so that nil values make sense, as
 	// interfaces with a nil value are a pain to determine
@@ -53,7 +55,7 @@ func (t *th) LoadBalancersClient() (armnetwork.LoadBalancersClient, error) {
 	}
 
 	if t.az.loadBalancerClient == nil {
-		armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(t.sub.ID, t.az.fpCred, t.env.Environment().ArmClientOptions())
+		armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
 			return nil, fmt.Errorf("failure creating client: %w", err)
 		}
@@ -71,7 +73,7 @@ func (t *th) ResourceSKUsClient() (armcompute.ResourceSKUsClient, error) {
 	}
 
 	if t.az.resourceSKUsClient == nil {
-		resourceSKUsClient, err := armcompute.NewResourceSKUsClient(t.sub.ID, t.az.fpCred, t.env.Environment().ArmClientOptions())
+		resourceSKUsClient, err := armcompute.NewResourceSKUsClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
 			return nil, fmt.Errorf("failure creating client: %w", err)
 		}
@@ -89,7 +91,7 @@ func (t *th) PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, 
 	}
 
 	if t.az.privateLinkServicesClient == nil {
-		privateLinkServicesClient, err := armnetwork.NewPrivateLinkServicesClient(t.sub.ID, t.az.fpCred, t.env.Environment().ArmClientOptions())
+		privateLinkServicesClient, err := armnetwork.NewPrivateLinkServicesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
 			return nil, fmt.Errorf("failure creating client: %w", err)
 		}
@@ -107,7 +109,7 @@ func (t *th) InterfacesClient() (armnetwork.InterfacesClient, error) {
 	}
 
 	if t.az.interfacesClient == nil {
-		interfacesClient, err := armnetwork.NewInterfacesClient(t.sub.ID, t.az.fpCred, t.env.Environment().ArmClientOptions())
+		interfacesClient, err := armnetwork.NewInterfacesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
 			return nil, fmt.Errorf("failure creating client: %w", err)
 		}
@@ -125,7 +127,7 @@ func (t *th) TokensClient() (armcontainerregistry.TokensClient, error) {
 	}
 
 	if t.az.tokensClient == nil {
-		tokensClient, err := armcontainerregistry.NewTokensClient(t.sub.ID, t.az.fpCred, t.env.Environment().ArmClientOptions())
+		tokensClient, err := armcontainerregistry.NewTokensClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
 			return nil, fmt.Errorf("failure creating client: %w", err)
 		}
@@ -143,7 +145,7 @@ func (t *th) RegistriesClient() (armcontainerregistry.RegistriesClient, error) {
 	}
 
 	if t.az.registriesClient == nil {
-		registriesClient, err := armcontainerregistry.NewRegistriesClient(t.sub.ID, t.az.fpCred, t.env.Environment().ArmClientOptions())
+		registriesClient, err := armcontainerregistry.NewRegistriesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
 			return nil, fmt.Errorf("failure creating client: %w", err)
 		}
