@@ -642,6 +642,10 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			},
 			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
+					CheckAPIServerReadyz(gomock.Any()).
+					Return(nil).
+					AnyTimes()
+				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return(healthyKubeAPIServerJSON(), nil).
 					AnyTimes()

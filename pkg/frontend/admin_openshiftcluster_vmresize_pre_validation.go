@@ -46,9 +46,9 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 	desiredVMSize := r.URL.Query().Get("vmSize")
 
-	err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, desiredVMSize, log)
+	b, err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, desiredVMSize, log)
 
-	adminReply(log, w, nil, nil, err)
+	adminReply(log, w, nil, b, err)
 }
 
 // _getPreResizeControlPlaneVMsValidation runs all pre-flight checks before
