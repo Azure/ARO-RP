@@ -17,7 +17,7 @@ type cacheDoc struct {
 	stop chan<- struct{}
 }
 
-// deleteDoc deletes the given document from mon.docs, signalling the associated
+// deleteDoc deletes the given document from c.docs, signalling the associated
 // monitoring goroutine to stop if it exists.
 func (c *clusterChangeFeedResponder) deleteDoc(doc *api.OpenShiftClusterDocument) {
 	c.docs.Compute(doc.ID, func(oldValue *cacheDoc, loaded bool) (newValue *cacheDoc, op xsync.ComputeOp) {
@@ -28,16 +28,16 @@ func (c *clusterChangeFeedResponder) deleteDoc(doc *api.OpenShiftClusterDocument
 	})
 }
 
-// upsertDoc inserts or updates the given document into mon.docs, starting an
+// upsertDoc inserts or updates the given document into c.docs, starting an
 // associated monitoring goroutine if the document is in a bucket owned by us.
 func (c *clusterChangeFeedResponder) upsertDoc(doc *api.OpenShiftClusterDocument) {
 	c.bucketMu.RLock()
 	defer c.bucketMu.RUnlock()
 	c.docs.Compute(doc.ID, func(oldValue *cacheDoc, loaded bool) (newValue *cacheDoc, op xsync.ComputeOp) {
 		if loaded {
-			oldValue.doc = stripUnusedFields(doc)
-			c.fixDoc(oldValue)
-			return oldValue, xsync.UpdateOp
+			newValue = &cacheDoc{doc: stripUnusedFields(doc), stop: oldValue.stop}
+			c.fixDoc(newValue)
+			return newValue, xsync.UpdateOp
 		} else {
 			newValue = &cacheDoc{doc: stripUnusedFields(doc)}
 			c.fixDoc(newValue)
@@ -152,7 +152,7 @@ func stripUnusedFields(doc *api.OpenShiftClusterDocument) *api.OpenShiftClusterD
 }
 
 // fixDocs ensures that there is a monitoring goroutine for all documents in all
-// buckets owned by us. Caller needs to own r.bucketMu.
+// buckets owned by us. Caller needs to own c.bucketMu.
 func (c *clusterChangeFeedResponder) fixDocs() {
 	for _, v := range c.docs.All() {
 		c.fixDoc(v)
@@ -160,7 +160,7 @@ func (c *clusterChangeFeedResponder) fixDocs() {
 }
 
 // fixDoc ensures that there is a monitoring goroutine for the given document
-// if it is in a bucket owned by us. Caller needs to own r.bucketMu.
+// if it is in a bucket owned by us. Caller needs to own c.bucketMu.
 func (c *clusterChangeFeedResponder) fixDoc(v *cacheDoc) {
 	_, ours := c.buckets[v.doc.Bucket]
 
