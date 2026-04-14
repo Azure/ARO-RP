@@ -25,8 +25,7 @@ import (
 
 func TestAzureInit(t *testing.T) {
 	require := require.New(t)
-
-	controller := gomock.NewController(nil)
+	controller := gomock.NewController(t)
 	_env := mock_env.NewMockInterface(controller)
 
 	f := &th{env: _env}

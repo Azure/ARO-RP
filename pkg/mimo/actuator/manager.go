@@ -221,7 +221,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 		var state api.MaintenanceManifestState
 		// Pull the result message out of the task context to save, if it is set
-		msg := taskContext.GetResultMessage()
+		msg := taskContext.getResultMessage()
 
 		if err != nil {
 			if doc.Dequeues >= maxDequeueCount {

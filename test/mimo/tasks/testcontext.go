@@ -156,6 +156,8 @@ func (t *fakeTestContext) SetResultMessage(s string) {
 	t.resultMessage = s
 }
 
+// GetResultMessage is used for verification in tests, it does not appear on the
+// TestContext interface and cannot be called by Tasks.
 func (t *fakeTestContext) GetResultMessage() string {
 	return t.resultMessage
 }

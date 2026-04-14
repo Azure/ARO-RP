@@ -108,10 +108,6 @@ func (t *th) SetResultMessage(msg string) {
 	t.resultMessage = msg
 }
 
-func (t *th) GetResultMessage() string {
-	return t.resultMessage
-}
-
 func (t *th) GetClusterUUID() string {
 	return t.oc.ID
 }
@@ -123,4 +119,10 @@ func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 // GetOpenshiftClusterDocument implements mimo.TaskContext.
 func (t *th) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
 	return t.oc
+}
+
+// getResultMessage is used by the Actuator to retrieve the finished result
+// message out of the TaskContext
+func (t *th) getResultMessage() string {
+	return t.resultMessage
 }
