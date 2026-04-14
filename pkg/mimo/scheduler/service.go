@@ -37,6 +37,16 @@ type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{}) error
 }
 
+var (
+	defaultWorkerDelayMaxSeconds       = 60 * time.Second
+	defaultServiceInterval             = 180 * time.Second
+	defaultReadinessDelay              = 2 * time.Minute
+	defaultSchedulePollInterval        = 30 * time.Second
+	defaultSchedulePollReadiness       = 90 * time.Second
+	defaultChangefeedInteval           = 10 * time.Second
+	defaultChangefeedReadinessInterval = time.Minute
+)
+
 type service struct {
 	baseLog *logrus.Entry
 	env     env.Interface
@@ -55,24 +65,25 @@ type service struct {
 	subs     changefeed.SubscriptionsCache
 	clusters *openShiftClusterCache
 
-	bucketCount                    int
-	changefeedBatchSize            int
-	changefeedInterval             time.Duration
-	bucketRefreshInterval          time.Duration
-	bucketRefreshReadinessInterval time.Duration
+	bucketCount         int
+	changefeedBatchSize int
 
-	lastChangefeed   atomic.Value // time.Time
-	lastBucketUpdate atomic.Value // time.Time
-	startTime        time.Time
+	lastScheduleUpdate atomic.Value // time.Time
+	lastBucketUpdate   atomic.Value // time.Time
+	startTime          time.Time
 
-	pollTime    time.Duration
-	now         func() time.Time
-	workerDelay func() time.Duration
-	readyDelay  time.Duration
+	workerDelayMax            time.Duration // Maximum interval before a worker starts
+	interval                  time.Duration // Interval between service runs
+	schedulePollInterval      time.Duration // Interval between updates to Schedules
+	readyIfSchedulePollWithin time.Duration // Time that the Schedules should have been updated within to be ready
+	changefeedInterval        time.Duration // Interval between changefeed runs (updates to cluster docs + subscriptions)
+	readyIfChangefeedWithin   time.Duration // Time that the changefeed should have been changed within to be healthy
+	readinessDelay            time.Duration // Minimal time until the service will allow itself to be marked ready
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 
-	serveHealthz bool
+	serveHealthz  bool
+	emitHeartbeat bool
 }
 
 var _ Runnable = (*service)(nil)
@@ -97,22 +108,22 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		workers:     &atomic.Int32{},
 		bucketCount: bucket.Buckets,
 
-		startTime:    time.Now(),
-		workerDelay:  func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
-		now:          time.Now,
-		pollTime:     time.Minute,
-		newScheduler: NewSchedulerForSchedule,
+		startTime:      env.Now(),
+		workerDelayMax: defaultWorkerDelayMaxSeconds,
+		newScheduler:   NewSchedulerForSchedule,
 
-		changefeedBatchSize: 50,
-		changefeedInterval:  10 * time.Second,
-
-		bucketRefreshInterval:          10 * time.Second,
-		bucketRefreshReadinessInterval: 60 * time.Second,
+		changefeedBatchSize:       50,
+		changefeedInterval:        defaultChangefeedInteval,
+		interval:                  defaultServiceInterval,
+		readyIfChangefeedWithin:   defaultChangefeedReadinessInterval,
+		readinessDelay:            defaultReadinessDelay,
+		schedulePollInterval:      defaultSchedulePollInterval,
+		readyIfSchedulePollWithin: defaultSchedulePollReadiness,
 
 		subs: changefeed.NewSubscriptionsChangefeedCache(m, false),
 
-		readyDelay:   time.Minute * 2,
-		serveHealthz: true,
+		serveHealthz:  true,
+		emitHeartbeat: true,
 	}
 
 	s.clusters = newOpenShiftClusterCache(log, m, s.subs)
@@ -169,9 +180,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	t := time.NewTicker(s.changefeedInterval)
-	defer t.Stop()
-
 	if stop != nil {
 		go func() {
 			defer recover.Panic(s.baseLog)
@@ -187,21 +195,25 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		return err
 	}
 
-	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", nil, s.checkReady)
-
+	if s.emitHeartbeat {
+		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", stop, s.checkReady)
+	}
 	// Start the bucket worker update loop which will coordinate buckets between
 	// the MIMO instances
 	go buckets.StartBucketWorkerLoop(
 		ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
-		s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, func(i []int) {
+		s.bucketCount, s.changefeedInterval, dbPoolWorkers, func(i []int) {
 			if len(i) == 0 {
 				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
 				return
 			}
 			s.buckets.Store(i)
-			s.lastBucketUpdate.Store(s.now())
+			s.lastBucketUpdate.Store(s.env.Now())
 		}, stop,
 	)
+
+	t := time.NewTicker(s.schedulePollInterval)
+	defer t.Stop()
 
 	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
 	for !s.stopping.Load() {
@@ -310,7 +322,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 	}
 
 	// Store when we last fetched the schedules
-	s.lastChangefeed.Store(s.now())
+	s.lastScheduleUpdate.Store(s.env.Now())
 
 	// Emit a metric containing the size of our cache
 	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
@@ -321,12 +333,14 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 }
 
 func (s *service) checkReady() bool {
+	now := s.env.Now()
+
 	lastBucketUpdate, ok := s.lastBucketUpdate.Load().(time.Time)
 	if !ok {
 		return false
 	}
 
-	lastChangefeedTime, ok := s.lastChangefeed.Load().(time.Time)
+	lastScheduleUpdate, ok := s.lastScheduleUpdate.Load().(time.Time)
 	if !ok {
 		return false
 	}
@@ -341,11 +355,11 @@ func (s *service) checkReady() bool {
 		return false
 	}
 
-	return (time.Since(lastChangefeedTime) < time.Minute && // did we update our changefeeds recently?
-		time.Since(lastClusterChangefeed) < time.Minute &&
-		time.Since(lastSubsChangefeed) < time.Minute) &&
-		time.Since(lastBucketUpdate) < s.bucketRefreshReadinessInterval &&
-		(time.Since(s.startTime) > s.readyDelay) // are we running for at least (the default) 2 minutes?
+	return (now.Sub(lastScheduleUpdate) < s.readyIfSchedulePollWithin && // did we update our changefeeds recently?
+		now.Sub(lastClusterChangefeed) < s.readyIfChangefeedWithin &&
+		now.Sub(lastSubsChangefeed) < s.readyIfChangefeedWithin &&
+		now.Sub(lastBucketUpdate) < s.readyIfChangefeedWithin &&
+		now.Sub(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
 }
 
 func (s *service) spawnWorker(stop <-chan struct{}, id string) {
@@ -357,7 +371,7 @@ func (s *service) spawnWorker(stop <-chan struct{}, id string) {
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
 
-	delay := s.workerDelay()
+	delay := s.workerDelayMax * time.Duration(rand.Float32())
 	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
@@ -395,7 +409,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 		}
 	}
 
-	a, err := s.newScheduler(s.env, log, s.m, getDoc, getClusters, s.dbGroup, s.now)
+	a, err := s.newScheduler(s.env, log, s.m, getDoc, getClusters, s.dbGroup)
 	if err != nil {
 		log.Error(err)
 		return
@@ -404,7 +418,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	// load in valid tasks
 	a.AddMaintenanceTasks(s.tasks)
 
-	t := time.NewTicker(s.pollTime)
+	t := time.NewTicker(s.interval)
 	defer func() {
 		log.Debugf("stopping worker for %s...", id)
 		t.Stop()
