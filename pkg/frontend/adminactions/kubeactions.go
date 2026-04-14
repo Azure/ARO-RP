@@ -46,7 +46,6 @@ type KubeActions interface {
 	// Fetch top pods and nodes metrics
 	TopPods(ctx context.Context, restConfig *restclient.Config, allNamespaces bool) ([]PodMetrics, error)
 	TopNodes(ctx context.Context, restConfig *restclient.Config) ([]NodeMetrics, error)
-	CheckAPIServerReadyz(ctx context.Context) error
 }
 
 type kubeActions struct {
@@ -187,12 +186,4 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 	}
 
 	return k.dyn.Resource(gvr).Namespace(namespace).Delete(ctx, name, resourceDeleteOptions)
-}
-
-func (k *kubeActions) CheckAPIServerReadyz(ctx context.Context) error {
-	_, err := k.kubecli.Discovery().RESTClient().Get().AbsPath("/readyz").Do(ctx).Raw()
-	if err != nil {
-		return fmt.Errorf("API server readyz check failed: %w", err)
-	}
-	return nil
 }

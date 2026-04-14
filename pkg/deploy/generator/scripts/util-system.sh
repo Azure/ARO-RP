@@ -2,15 +2,10 @@
 # This file is intended to be sourced by bootstrapping scripts for commonly used functions
 
 # get_boot_dev_uuid
-#
 # Get the boot devices uuid
 # args:
-#
-#   * 1) boot_dev_uuid - nameref, string; Empty variable for boot device uuid assignment
-#
+# 1) boot_dev_uuid - nameref, string; Empty variable for boot device uuid assignment
 # Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
 get_boot_dev_uuid() {
     local -n boot_dev_uuid="$1"
     # Set boot_uuid variable for the boot partition if different from the root
@@ -25,12 +20,8 @@ get_boot_dev_uuid() {
 }
 
 # fips_verify
-#
 # Verify that fips mode is enabled
-#
 # Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
 fips_verify() {
     fips_enabled_proc="$(cat /proc/sys/crypto/fips_enabled)"
     fips_enabled_sysctl="$(sysctl -n crypto.fips_enabled)"
@@ -42,12 +33,10 @@ fips_verify() {
 }
 
 # fips_configure
-#
 # Configures VM to run with fips mode enabled
-#
 # Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
 # TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
+# Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
 fips_configure() {
     # shellcheck disable=SC2034
     local boot_uuid
@@ -65,7 +54,6 @@ fips_configure() {
 }
 
 # configure_sshd
-#
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
 configure_sshd() {
     log "starting"
@@ -78,12 +66,9 @@ configure_sshd() {
 }
 
 # configure_logrotate clobbers /etc/logrotate.conf
-#
 # args:
-#   1) dropin_files - nameref, associative array; optional
-#       * logrotate files to write to /etc/logrotate.d
-#       * Key name dictates filenames written to /etc/logrotate.d.
-#
+# 1) dropin_files - nameref, associative array, optional; logrotate files to write to /etc/logrotate.d
+#       Key name dictates filenames written to /etc/logrotate.d.
 # Example:
 #   Key dictates the filename written in /etc/logrotate.d
 #   shellcheck disable=SC2034
@@ -147,19 +132,16 @@ include /etc/logrotate.d
 }
 
 # pull_container_images
-#
 # args:
-#   1) pull_images - nameref, string array
-#       * array of strings. Each string is an image to be pulled.
-#   2) registry_conf - nameref, string, optional
-#       * path to docker/podman configuration file.
+# 1) pull_images - nameref, string array
+# 2) registry_conf - nameref, string, optional; path to docker/podman configuration file
 pull_container_images() {
     local -n pull_images="$1"
     local -n registry_conf="${2:-empty_str}"
     log "starting"
 
     # shellcheck disable=SC2034
-    local -ir retry_time=30
+    local -ri retry_time=30
     cmd=(
         az
         login
@@ -170,44 +152,29 @@ pull_container_images() {
     log "Running az login with retries"
     retry cmd retry_time
 
-    # Suppress emulation output for podman instead of docker for az acr compatibility
+    # Suppress emulation output for podman instead of docker for az acr compatability
     mkdir -p /etc/containers/
     mkdir -p /root/.docker
     touch /etc/containers/nodocker
 
-    [ -n "${registry_conf}" ] && write_file REGISTRY_AUTH_FILE registry_conf "true"
-
     # This name is used in the case that az acr login searches for this in it's environment
-    # exported here as it's used by podman login and subsequent podman pull
     export REGISTRY_AUTH_FILE="/root/.docker/config.json"
 
-   # shellcheck disable=SC2329
-   _() {
-        local -r acr="$1"
-        local -r registry="$2"
+    if [ -n "${registry_conf}" ]; then
+        write_file REGISTRY_AUTH_FILE registry_conf true
+    fi
 
-        local -r xtrace_initial_set="$(xtrace_is_set)"
-        xtrace_toggle XTRACE_UNSET
+    log "logging into prod acr"
+    cmd=(
+        az
+        acr
+        login
+        --name
+        # TODO replace this with variable expansion
+        # Reference: https://www.shellcheck.net/wiki/SC2001
+        "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+    )
 
-        log "logging into container registry $2"
-        az acr login \
-            --name "$acr" \
-            --expose-token \
-            --output tsv \
-            --query accessToken \
-            | podman login \
-                --username "00000000-0000-0000-0000-000000000000" \
-                --password-stdin \
-                "$registry"
-        local -ir status=$?
-
-        xtrace_toggle "$xtrace_initial_set"
-        return "$status"
-   }
-
-    local -r acr_name="${ACRRESOURCEID##*/}"
-    local -r registry_name="${acr_name}.azurecr.io"
-    cmd=(_ "$acr_name" "$registry_name")
     retry cmd retry_time
 
     # shellcheck disable=SC2068
@@ -233,38 +200,24 @@ pull_container_images() {
     retry cmd retry_time
 }
 
-# configure_ca_bundle()
-#
-# Configures system ca-bundle certificates common to all VMSS instances.
-configure_ca_bundle() {
+# configure_certs_general Configure system certificates common to all VMSS instances
+configure_certs_general() {
     log "starting"
-
-    local -r xtrace_initial_value="$(xtrace_is_set)"
-    xtrace_toggle XTRACE_UNSET
 
     # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
     # to honour SSL_CERT_FILE any more, heaven only knows why.
     local -r ssl_certs_basedir="/usr/lib/ssl/certs"
     mkdir -p "$ssl_certs_basedir"
-
-    ca_bundle="/etc/pki/tls/certs/ca-bundle.crt"
-    log "Configuring $ca_bundle"
-    csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem "$ca_bundle" /^$/1 "{*}" 1>/dev/null
+    csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" 1>/dev/null
     c_rehash "$ssl_certs_basedir"
-
-    xtrace_toggle "$xtrace_initial_value"
 }
 
-# configure_certs_rp()
-#
-# Configures RP system certificates
+# configure_certs_rp Configure system certificates for RP VMSS
+# args:
 configure_certs_rp() {
     log "starting"
 
     verify_role role_rp
-
-    local -r xtrace_initial_value="$(xtrace_is_set)"
-    xtrace_toggle XTRACE_UNSET
 
     local -r rp_certs_basedir="/etc/aro-rp"
     mkdir -p "$rp_certs_basedir"
@@ -274,30 +227,22 @@ configure_certs_rp() {
     fi
     chown -R 1000:1000 "$rp_certs_basedir"
 
-
-    xtrace_toggle "$xtrace_initial_value"
-    configure_ca_bundle
+    configure_certs_general
 }
 
-# configure_certs_gateway()
-#
-# Configures system tls certificates for Gateway VMSS instances
+# configure_certs_gateway Configure system certificates for Gateway VMSS instances
 configure_certs_gateway() {
     log "starting"
 
     verify_role role_gateway
-    configure_ca_bundle
+    configure_certs_general
 }
 
-# configure_certs_devproxy()
-#
-# Configures system certificates for devproxy VMSS instances
+# configure_certs_devproxy Configure system certificates for devproxy VMSS instances
 configure_certs_devproxy() {
     log "starting"
 
     verify_role role_devproxy
-    xtrace_initial_value="$(xtrace_is_set)"
-    xtrace_toggle XTRACE_UNSET
 
     local -r proxy_certs_basedir="/etc/proxy"
     mkdir -p "$proxy_certs_basedir"
@@ -306,11 +251,8 @@ configure_certs_devproxy() {
     base64 -d <<<"$PROXYCLIENTCERT" > "$proxy_certs_basedir/proxy-client.crt"
     chown -R 1000:1000 /etc/proxy
     chmod 0600 "$proxy_certs_basedir/proxy.key"
-
-    xtrace_toggle "$xtrace_initial_value"
 }
 
-# configure_azsecd_scan()
 configure_azsecd_scan() {
     log "starting"
 
@@ -378,10 +320,9 @@ firewalld_configure_backend() {
 }
 
 # firewalld_configure
-#
 # args:
 # 1) ports - nameref, string array; ports to be enabled.
-#       * Ports must be postfixed with /tcp or /udp
+#       Ports must be postfixed with /tcp or /udp
 firewalld_configure() {
     local -n ports="$1"
     log "starting"

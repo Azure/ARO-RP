@@ -19,7 +19,6 @@ var Reasons = []InstallFailingReason{
 	AzureRequestDisallowedByPolicy,
 	AzureInvalidTemplateDeployment,
 	AzureZonalAllocationFailed,
-	AzureOSProvisioningTimedOut,
 }
 
 var AzureKeyBasedAuthenticationNotPermitted = InstallFailingReason{
@@ -57,14 +56,5 @@ var AzureZonalAllocationFailed = InstallFailingReason{
 	Message: "Deployment failed. Please see details for more information.",
 	SearchRegexes: []*regexp.Regexp{
 		regexp.MustCompile(`"code\W*":\W*"ZonalAllocationFailed\W*"`),
-	},
-}
-
-var AzureOSProvisioningTimedOut = InstallFailingReason{
-	Name:    "AzureOSProvisioningTimedOut",
-	Reason:  "AzureOSProvisioningTimedOut",
-	Message: "Deployment failed due to OSProvisioningTimedOut. The cluster's virtual machines failed to start up in time. Please check your network configuration.",
-	SearchRegexes: []*regexp.Regexp{
-		regexp.MustCompile(`"code\W*:\W*"OSProvisioningTimedOut\W*"`),
 	},
 }

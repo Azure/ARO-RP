@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -81,11 +80,13 @@ func New(env env.Core,
 
 		baseServerConfig: &cryptossh.ServerConfig{
 			Config: cryptossh.Config{
-				Ciphers:      utilssh.Ciphers(),
-				KeyExchanges: utilssh.KexAlgorithms(),
-				MACs:         utilssh.MACs(),
+				// Per security baseline requirements,
+				// https://learn.microsoft.com/en-us/azure/governance/policy/samples/guest-configuration-baseline-linux
+				Ciphers:      sshCiphers(),
+				KeyExchanges: sshKexAlgorithms(),
+				MACs:         sshMACs(),
 			},
-			PublicKeyAuthAlgorithms: utilssh.PublicKeyAlgorithms(),
+			PublicKeyAuthAlgorithms: sshPublicKeyAlgorithms(),
 		},
 		hostPubKey: hostPubKey,
 	}
@@ -210,6 +211,47 @@ func (s *SSH) internalServerError(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
+// as of 30 Jun 2025 / go 1.24.4 / PR , this server supports the following algorithms
+//
+// $ nmap --script ssh2-enum-algos localhost -p 2222
+// Starting Nmap 7.92 ( https://nmap.org ) at 2025-08-21 09:08 PDT
+// Nmap scan report for localhost (127.0.0.1)
+// Host is up (0.00020s latency).
+// Other addresses for localhost (not scanned): ::1
+
+// PORT     STATE SERVICE
+// 2222/tcp open  EtherNetIP-1
+// | ssh2-enum-algos:
+// |   kex_algorithms: (6)
+// |       mlkem768x25519-sha256
+// |       ecdh-sha2-nistp256
+// |       ecdh-sha2-nistp384
+// |       ecdh-sha2-nistp521
+// |       diffie-hellman-group14-sha256
+// |       kex-strict-s-v00@openssh.com
+// |   server_host_key_algorithms: (3)
+// |       rsa-sha2-256
+// |       rsa-sha2-512
+// |       ssh-rsa
+// |   encryption_algorithms: (3)
+// |       aes256-ctr
+// |       aes192-ctr
+// |       aes128-ctr
+// |   mac_algorithms: (5)
+// |       hmac-sha2-256-etm@openssh.com
+// |       hmac-sha2-512-etm@openssh.com
+// |       hmac-sha2-256
+// |       hmac-sha2-512
+// |       hmac-sha1
+// |   compression_algorithms: (1)
+// |_      none
+//
+// To update the selected algorithms, refer to the Azure security baselines, keeping in mind
+// any FIPS requirements.
+// https://learn.microsoft.com/en-us/azure/governance/policy/samples/guest-configuration-baseline-linux
+// and
+// https://liquid.microsoft.com/Web/Views/View/873720#Zrex-3A-2F-2Fsecurityconfigbaselines-2FRequirements-2Fbl-2E00250-2F
+//   - In section bl.00250: Linux OS, review the attached "Linux OS Baseline" Excel file
 const (
 	sshCommand = "echo '{{ .KnownHostLine }}' > {{.Hostname}}_known_host ; " +
 		"ssh " +
@@ -220,6 +262,58 @@ const (
 		"-o MACs={{ .MACs }}" +
 		"{{if .IsLocalDevelopmentMode}} -p 2222{{end}} {{.User}}@{{.Hostname}}"
 )
+
+// These lists are intentionally not leveraging the cryptossh package's
+// constants, as those may change in the future, and they may not be FIPS compliant.
+
+func sshKexAlgorithms() []string {
+	return []string{
+		cryptossh.KeyExchangeECDHP256,
+		cryptossh.KeyExchangeECDHP384,
+		cryptossh.KeyExchangeECDHP521,
+		cryptossh.KeyExchangeDH14SHA256,
+	}
+}
+
+func sshHostKeyAlgorithms() []string {
+	return []string{
+		cryptossh.KeyAlgoRSASHA512,
+		cryptossh.KeyAlgoRSASHA256,
+		cryptossh.KeyAlgoRSA,
+	}
+}
+
+func sshCiphers() []string {
+	return []string{
+		cryptossh.CipherAES256CTR,
+		cryptossh.CipherAES192CTR,
+		cryptossh.CipherAES128CTR,
+	}
+}
+
+func sshMACs() []string {
+	return []string{
+		cryptossh.HMACSHA256ETM,
+		cryptossh.HMACSHA512ETM,
+		cryptossh.HMACSHA256,
+		cryptossh.HMACSHA512,
+		cryptossh.HMACSHA1,
+	}
+}
+
+func sshPublicKeyAlgorithms() []string {
+	return []string{
+		cryptossh.KeyAlgoED25519,
+		cryptossh.KeyAlgoSKED25519,
+		cryptossh.KeyAlgoSKECDSA256,
+		cryptossh.KeyAlgoECDSA256,
+		cryptossh.KeyAlgoECDSA384,
+		cryptossh.KeyAlgoECDSA521,
+		cryptossh.KeyAlgoRSASHA256,
+		cryptossh.KeyAlgoRSASHA512,
+		cryptossh.KeyAlgoRSA,
+	}
+}
 
 func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKey cryptossh.PublicKey) (string, error) {
 	line := knownhosts.Line([]string{host}, publicKey)
@@ -245,10 +339,10 @@ func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKe
 		line,
 		isLocalDevelopmentMode,
 		// Assume we want to use the first supported algorithm
-		utilssh.Ciphers()[0],
-		utilssh.HostKeyAlgorithms()[0],
-		utilssh.KexAlgorithms()[0],
-		utilssh.MACs()[0],
+		sshCiphers()[0],
+		sshHostKeyAlgorithms()[0],
+		sshKexAlgorithms()[0],
+		sshMACs()[0],
 	})
 	return buff.String(), err
 }

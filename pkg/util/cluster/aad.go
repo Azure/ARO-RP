@@ -5,9 +5,7 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -15,11 +13,6 @@ import (
 	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
 	msgraph_models "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
-)
-
-const (
-	GraphApiMaxRetries    int           = 5
-	GraphApiRetryInterval time.Duration = 5 * time.Second
 )
 
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
@@ -42,31 +35,7 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 	// ByApplicationId is confusingly named, but it refers to
 	// the application's Object ID, not to the Application ID.
 	// https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0&tabs=http#http-request
-
-	// retry loop, due to eventual consistency, the application we just created might not be found when queried immediately, only after a retry
-	// check if returned error is 404 not found, if so, retry the operation
-	numRetries := 0
-	var pwResult msgraph_models.PasswordCredentialable
-	err = wait.PollImmediateUntilWithContext(ctx, GraphApiRetryInterval, func(ctx context.Context) (done bool, err error) {
-		pwResult, err = c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
-		if err == nil {
-			return true, nil
-		}
-
-		var mainErr *msgraph_errors.ODataError
-		// some unknown error, bubble it up to caller
-		if ok := errors.As(err, &mainErr); !ok || mainErr.GetStatusCode() != http.StatusNotFound {
-			return false, err
-		}
-
-		// Check if we already tried too often
-		numRetries++
-		if numRetries > GraphApiMaxRetries {
-			return false, mainErr
-		}
-
-		return false, nil
-	})
+	pwResult, err := c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
 	if err != nil {
 		return "", "", err
 	}

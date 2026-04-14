@@ -29,10 +29,7 @@ func OperatorStatusText(operator *configv1.ClusterOperator) string {
 	for _, cond := range operator.Status.Conditions {
 		m[cond.Type] = cond.Status
 	}
-
-	return fmt.Sprintf("%s %s=%s, %s=%s, %s=%s", operator.Name,
-		configv1.OperatorAvailable, m[configv1.OperatorAvailable],
-		configv1.OperatorProgressing, m[configv1.OperatorProgressing],
-		configv1.OperatorDegraded, m[configv1.OperatorDegraded],
+	return fmt.Sprintf("%s %s=%s, %s=%s", operator.Name,
+		configv1.OperatorAvailable, m[configv1.OperatorAvailable], configv1.OperatorProgressing, m[configv1.OperatorProgressing],
 	)
 }

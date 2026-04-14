@@ -36,7 +36,6 @@ import (
 	utilgenerics "github.com/Azure/ARO-RP/pkg/util/generics"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -98,9 +97,9 @@ func (m *manager) getZerothSteps() []steps.Step {
 			steps.Action(m.fixupClusterMsiTenantID),
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 		}
 
 		bootstrap = append(bootstrap, managedIdentitySteps...)
@@ -255,12 +254,12 @@ func (m *manager) Update(ctx context.Context) error {
 		)
 	}
 
-	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources, m.managedResourceGroupName()))
+	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources))
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 			steps.Action(m.ensurePlatformWorkloadIdentityRBAC),
 			steps.Action(m.federateIdentityCredentials),
 		)
@@ -268,7 +267,7 @@ func (m *manager) Update(ctx context.Context) error {
 		s = append(s,
 			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
 			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
 
 			// CSP credentials rotation flow steps
 			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC))
@@ -401,19 +400,19 @@ func (m *manager) bootstrap() []steps.Step {
 	}
 
 	s = append(s,
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateZones, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateZones),
 	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs),
 		)
 	} else {
 		s = append(s,
 			steps.Action(m.initializeClusterSPClients),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		)
 	}
 	s = append(s,
@@ -428,7 +427,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureResourceGroup),
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),
 	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
@@ -438,11 +437,11 @@ func (m *manager) bootstrap() []steps.Step {
 	}
 
 	s = append(s,
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateAPIIPEarly, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createOrUpdateRouterIPEarly, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateAPIIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createOrUpdateRouterIPEarly),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
 	)
 
@@ -543,20 +542,11 @@ func (m *manager) Install(ctx context.Context) error {
 	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], "install")
 }
 
-func (m *manager) managedResourceGroupName() string {
-	if m.doc == nil {
-		return ""
-	}
-	return stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-}
-
 func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic string) error {
-	managedRGName := m.managedResourceGroupName()
-
 	var err error
 	if metricsTopic != "" {
 		var stepsTimeRun map[string]int64
-		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.env.Now, managedRGName)
+		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.env.Now)
 		if err == nil {
 			var totalInstallTime int64
 			for stepName, duration := range stepsTimeRun {
@@ -569,7 +559,7 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 			m.metricsEmitter.EmitGauge(metricName, totalInstallTime, nil)
 		}
 	} else {
-		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil, managedRGName)
+		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	}
 	if err != nil {
 		m.gatherFailureLogs(ctx, metricsTopic)

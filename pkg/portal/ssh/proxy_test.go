@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
-	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/bufferedpipe"
@@ -91,11 +90,11 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 			return nil, nil
 		},
 		Config: cryptossh.Config{
-			Ciphers:      utilssh.Ciphers(),
-			KeyExchanges: utilssh.KexAlgorithms(),
-			MACs:         utilssh.MACs(),
+			Ciphers:      sshCiphers(),
+			KeyExchanges: sshKexAlgorithms(),
+			MACs:         sshMACs(),
 		},
-		PublicKeyAuthAlgorithms: utilssh.PublicKeyAlgorithms(),
+		PublicKeyAuthAlgorithms: sshPublicKeyAlgorithms(),
 	}
 
 	key, _, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
@@ -202,11 +201,11 @@ func TestProxy(t *testing.T) {
 	}
 
 	goodCiphers := cryptossh.Algorithms{
-		KeyExchanges:   utilssh.KexAlgorithms(),
-		Ciphers:        utilssh.Ciphers(),
-		MACs:           utilssh.MACs(),
-		HostKeys:       utilssh.HostKeyAlgorithms(),
-		PublicKeyAuths: utilssh.PublicKeyAlgorithms(),
+		KeyExchanges:   sshKexAlgorithms(),
+		Ciphers:        sshCiphers(),
+		MACs:           sshMACs(),
+		HostKeys:       sshHostKeyAlgorithms(),
+		PublicKeyAuths: sshPublicKeyAlgorithms(),
 	}
 
 	type test struct {

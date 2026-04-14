@@ -69,43 +69,31 @@ func TestOperatorStatusText(t *testing.T) {
 		name                 string
 		availableCondition   configv1.ConditionStatus
 		progressingCondition configv1.ConditionStatus
-		degradedCondition    configv1.ConditionStatus
 		want                 string
 	}{
 		{
-			name:                 "Available && Progressing && !Degraded",
+			name:                 "Available && Progressing; not available",
 			availableCondition:   configv1.ConditionTrue,
 			progressingCondition: configv1.ConditionTrue,
-			degradedCondition:    configv1.ConditionFalse,
-			want:                 "server Available=True, Progressing=True, Degraded=False",
+			want:                 "server Available=True, Progressing=True",
 		},
 		{
-			name:                 "Available && !Progressing && !Degraded; healthy",
+			name:                 "Available && !Progressing; available",
 			availableCondition:   configv1.ConditionTrue,
 			progressingCondition: configv1.ConditionFalse,
-			degradedCondition:    configv1.ConditionFalse,
-			want:                 "server Available=True, Progressing=False, Degraded=False",
+			want:                 "server Available=True, Progressing=False",
 		},
 		{
-			name:                 "!Available && Progressing && !Degraded",
+			name:                 "!Available && Progressing; not available",
 			availableCondition:   configv1.ConditionFalse,
 			progressingCondition: configv1.ConditionTrue,
-			degradedCondition:    configv1.ConditionFalse,
-			want:                 "server Available=False, Progressing=True, Degraded=False",
+			want:                 "server Available=False, Progressing=True",
 		},
 		{
-			name:                 "!Available && !Progressing && !Degraded",
+			name:                 "!Available && !Progressing; not available",
 			availableCondition:   configv1.ConditionFalse,
 			progressingCondition: configv1.ConditionFalse,
-			degradedCondition:    configv1.ConditionFalse,
-			want:                 "server Available=False, Progressing=False, Degraded=False",
-		},
-		{
-			name:                 "Available && !Progressing && Degraded",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionFalse,
-			degradedCondition:    configv1.ConditionTrue,
-			want:                 "server Available=True, Progressing=False, Degraded=True",
+			want:                 "server Available=False, Progressing=False",
 		},
 	} {
 		operator := &configv1.ClusterOperator{
@@ -122,16 +110,12 @@ func TestOperatorStatusText(t *testing.T) {
 						Type:   configv1.OperatorProgressing,
 						Status: tt.progressingCondition,
 					},
-					{
-						Type:   configv1.OperatorDegraded,
-						Status: tt.degradedCondition,
-					},
 				},
 			},
 		}
-		got := OperatorStatusText(operator)
-		if got != tt.want {
-			t.Errorf("%s: OperatorStatusText() = %q, want %q", tt.name, got, tt.want)
+		available := OperatorStatusText(operator)
+		if available != tt.want {
+			t.Error(available)
 		}
 	}
 }
