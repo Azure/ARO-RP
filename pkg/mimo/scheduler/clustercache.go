@@ -102,15 +102,15 @@ func (c *openShiftClusterCache) OnAllPendingProcessed(gotAny bool) {
 	now := time.Now()
 	old := c.lastChangefeedProcessed.Swap(now)
 	if gotAny {
+		c.m.EmitGauge("changefeed.caches.size", int64(c.clusters.Size()), map[string]string{
+			"name": "OpenShiftClusterDocument",
+		})
 		c.lastChangefeedDataUpdate.Store(now)
 	}
 	// we've done one rotation, unlock the waitgroup
 	if old == nil {
 		defer c.initialPopulationWaitGroup.Done()
 	}
-	c.m.EmitGauge("changefeed.caches.size", int64(c.clusters.Size()), map[string]string{
-		"name": "OpenShiftClusterDocument",
-	})
 }
 
 func (c *openShiftClusterCache) toSelectorData(doc *api.OpenShiftClusterDocument, old selectorData) (selectorData, bool, error) {
