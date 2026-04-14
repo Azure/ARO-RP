@@ -270,11 +270,11 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 
 func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) error {
 	const (
-		kubeAPIServerNamespace = "openshift-kube-apiserver"
-		kubeAPIServerAppLabel  = "openshift-kube-apiserver"
+		kubeAPIServerNamespace     = "openshift-kube-apiserver"
+		kubeAPIServerLabelSelector = "app=openshift-kube-apiserver"
 	)
 
-	rawPods, err := k.KubeList(ctx, "Pod", kubeAPIServerNamespace)
+	rawPods, err := k.KubeList(ctx, "Pod", kubeAPIServerNamespace, kubeAPIServerLabelSelector)
 	if err != nil {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
@@ -290,19 +290,14 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 			fmt.Sprintf("Failed to parse pod list: %v", err))
 	}
 
-	var apiServerPodCount int
 	var unhealthyPods []string
 	for _, pod := range podList.Items {
-		if pod.Labels["app"] != kubeAPIServerAppLabel {
-			continue
-		}
-
-		apiServerPodCount++
-
 		if err := validatePodHealth(&pod); err != nil {
 			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, err.Error()))
 		}
 	}
+
+	apiServerPodCount := len(podList.Items)
 
 	if apiServerPodCount != api.ControlPlaneNodeCount {
 		return api.NewCloudError(
