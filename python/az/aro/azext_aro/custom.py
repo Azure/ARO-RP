@@ -2,10 +2,12 @@
 # Licensed under the Apache License 2.0.
 
 import collections
-import random
 import os
-from base64 import b64decode
+import random
 import textwrap
+import typing
+
+from base64 import b64decode
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2025_07_25.models as openshiftcluster
 
@@ -584,16 +586,21 @@ def generate_random_id():
     return random_id
 
 
-def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
-    subnet_resources = set()
+def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=None) -> dict[str, typing.Any]:
+    subnet_resources = {}
     subnets_with_no_nsg_attached = set()
+
+    preconfigured_nsg_enabled = False
+    if oc:
+        preconfigured_nsg_enabled = oc.network_profile.preconfigured_nsg == "Enabled"
+
     for sn in subnets:
         sid = parse_resource_id(sn)
 
         if 'resource_group' not in sid or 'name' not in sid or 'resource_name' not in sid:
             if fail:
-                raise ValidationError(f"""(ValidationError) Failed to validate subnet '{sn}'.
-                    Please retry, if issue persists: raise azure support ticket""")
+                raise ValidationError(f"(ValidationError) Failed to validate subnet '{sn}'. "
+                                      "Please retry, if issue persists: raise an Azure support ticket.")
             logger.info("Failed to validate subnet '%s'", sn)
 
         try:
@@ -606,25 +613,26 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
             continue
 
         if subnet.get("routeTable", None):
-            subnet_resources.add(subnet['routeTable']['id'])
+            subnet_resources["routeTable"] = subnet["routeTable"]["id"]
 
         if subnet.get("natGateway", None):
-            subnet_resources.add(subnet['natGateway']['id'])
+            subnet_resources["natGateway"] = subnet['natGateway']['id']
 
-        if oc.network_profile.preconfigured_nsg == 'Enabled':
-            if subnet.get("networkSecurityGroup", None):
-                subnet_resources.add(subnet['networkSecurityGroup']['id'])
-            else:
-                subnets_with_no_nsg_attached.add(sn)
+        nsg = subnet.get("networkSecurityGroup", None)
 
-    # when preconfiguredNSG feature is Enabled we either have all subnets NSG attached or none.
-    if oc.network_profile.preconfigured_nsg == 'Enabled' and \
-        len(subnets_with_no_nsg_attached) != 0 and \
-            len(subnets_with_no_nsg_attached) != len(subnets):
-        raise ValidationError(f"(ValidationError) preconfiguredNSG feature is enabled but an NSG is\
-                               not attached for all required subnets. Please make sure all the following\
-                               subnets have a network security groups attached and retry.\
-                              {subnets_with_no_nsg_attached}")
+        if nsg:
+            subnet_resources["networkSecurityGroup"] = nsg["id"]
+        elif preconfigured_nsg_enabled and not nsg:
+            subnets_with_no_nsg_attached.add(sn)
+
+    nonattached_nsgs = len(subnets_with_no_nsg_attached) > 0 and \
+        len(subnets_with_no_nsg_attached) != len(subnets)
+
+    if preconfigured_nsg_enabled and nonattached_nsgs:
+        raise ValidationError("(ValidationError) preconfiguredNSG feature is enabled but an NSG is "
+                              "not attached for all required subnets. Please make sure all the following "
+                              "subnets have a network security groups attached and retry. "
+                              f"{subnets_with_no_nsg_attached}")
 
     return subnet_resources
 
@@ -663,7 +671,7 @@ def get_network_resources(cli_ctx, subnets, vnet, fail, oc):
 
     resources = set()
     resources.add(vnet)
-    resources.update(subnet_resources)
+    resources.update(list(subnet_resources.values()))
 
     return resources
 
