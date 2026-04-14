@@ -97,7 +97,7 @@ func (g *generator) diskEncryptionKeyVaultRBAC() *arm.Resource {
 	return rbac.ResourceRoleAssignment(
 		rbac.RoleKeyVaultCryptoServiceEncryptionUser,
 		fmt.Sprintf("reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets")),
-		"Microsoft.KeyVault",
+		"Microsoft.KeyVault/vaults",
 		"parameters('kvName')",
 	)
 }
