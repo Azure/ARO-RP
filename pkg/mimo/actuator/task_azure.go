@@ -57,7 +57,7 @@ func (t *th) LoadBalancersClient() (armnetwork.LoadBalancersClient, error) {
 	if t.az.loadBalancerClient == nil {
 		armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
-			return nil, fmt.Errorf("failure creating client: %w", err)
+			return nil, fmt.Errorf("failure creating LoadBalancersClient: %w", err)
 		}
 
 		t.az.loadBalancerClient = &armLoadBalancersClient
@@ -75,7 +75,7 @@ func (t *th) ResourceSKUsClient() (armcompute.ResourceSKUsClient, error) {
 	if t.az.resourceSKUsClient == nil {
 		resourceSKUsClient, err := armcompute.NewResourceSKUsClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
-			return nil, fmt.Errorf("failure creating client: %w", err)
+			return nil, fmt.Errorf("failure creating ResourceSKUsClient: %w", err)
 		}
 
 		t.az.resourceSKUsClient = &resourceSKUsClient
@@ -93,7 +93,7 @@ func (t *th) PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, 
 	if t.az.privateLinkServicesClient == nil {
 		privateLinkServicesClient, err := armnetwork.NewPrivateLinkServicesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
-			return nil, fmt.Errorf("failure creating client: %w", err)
+			return nil, fmt.Errorf("failure creating PrivateLinkServicesClient: %w", err)
 		}
 
 		t.az.privateLinkServicesClient = &privateLinkServicesClient
@@ -111,7 +111,7 @@ func (t *th) InterfacesClient() (armnetwork.InterfacesClient, error) {
 	if t.az.interfacesClient == nil {
 		interfacesClient, err := armnetwork.NewInterfacesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
-			return nil, fmt.Errorf("failure creating client: %w", err)
+			return nil, fmt.Errorf("failure creating InterfacesClient: %w", err)
 		}
 
 		t.az.interfacesClient = &interfacesClient
@@ -129,7 +129,7 @@ func (t *th) TokensClient() (armcontainerregistry.TokensClient, error) {
 	if t.az.tokensClient == nil {
 		tokensClient, err := armcontainerregistry.NewTokensClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
-			return nil, fmt.Errorf("failure creating client: %w", err)
+			return nil, fmt.Errorf("failure creating TokensClient: %w", err)
 		}
 
 		t.az.tokensClient = &tokensClient
@@ -147,7 +147,7 @@ func (t *th) RegistriesClient() (armcontainerregistry.RegistriesClient, error) {
 	if t.az.registriesClient == nil {
 		registriesClient, err := armcontainerregistry.NewRegistriesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
-			return nil, fmt.Errorf("failure creating client: %w", err)
+			return nil, fmt.Errorf("failure creating RegistriesClient: %w", err)
 		}
 
 		t.az.registriesClient = &registriesClient

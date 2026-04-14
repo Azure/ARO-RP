@@ -80,7 +80,7 @@ func TestAzureInit(t *testing.T) {
 	}
 
 	// Load the fake in via ArmClientOptions's ClientOptions.Transport
-	_env.EXPECT().ArmClientOptions(gomock.Any()).Return(
+	_env.EXPECT().ArmClientOptions().Return(
 		&arm.ClientOptions{
 			ClientOptions: azcore.ClientOptions{
 				Transport: armcontainerregistryfake.NewTokensServerTransport(fakeTokens),
