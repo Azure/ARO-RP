@@ -71,7 +71,7 @@ func TestSubscriptionChangefeed(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			startedTime := time.Now().UnixNano()
-			subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
+			subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
 			_, log := testlog.LogForTesting(t)
 			m := testmetrics.NewFakeMetricsEmitter(t)
 
@@ -141,6 +141,8 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			)
 			require.NoError(t, fixtures.Create())
 
+			var lastProcessed time.Time
+			var lastDataUpdate time.Time
 			cache := NewSubscriptionsChangefeedCache(m, tC.validOnly)
 
 			stop := make(chan struct{})
@@ -149,7 +151,16 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			go RunChangefeed(t.Context(), log, subscriptionChangefeed, 100*time.Microsecond, 1, cache, stop)
 
 			cache.WaitForInitialPopulation()
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
+			}, time.Second, 1*time.Millisecond)
 
 			// Create some after initially populated
 			_, err := subscriptionsDB.Create(t.Context(), &api.SubscriptionDocument{
@@ -187,7 +198,16 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
+			}, time.Second, 1*time.Millisecond)
 
 			// Switch a registered to suspended
 			old2, err := subscriptionsDB.Get(t.Context(), "8c90b62a-3783-4ea6-a8c8-cbaee4667ffd")
@@ -203,7 +223,16 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
+			}, time.Second, 1*time.Millisecond)
 
 			// Switch a registered to deleted
 			old3, err := subscriptionsDB.Get(t.Context(), "4e07b0f5-c789-4817-9079-94012b04e1c9")
@@ -219,14 +248,18 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
-
-			// Validate the expected cache contents. Use EventuallyWithT because
-			// AllIteratorsConsumed can return true as soon as the iterator's
-			// Next() returns the last batch, but before OnDoc has processed it.
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.Equal(collect, tC.expected, maps.Collect(cache.subs.All()))
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
 			}, time.Second, 1*time.Millisecond)
+
+			require.Equal(t, tC.expected, maps.Collect(cache.subs.All()))
 
 			// Validate we can get one of the subscriptions
 			sub, ok := cache.GetSubscription("9187ef95-a9cc-487d-80df-f85e615cf926")
@@ -278,7 +311,7 @@ func TestSubscriptionChangefeedError(t *testing.T) {
 
 	// it'll print the log when on the first loop, use Eventually so that we're
 	// not in a race with the goroutine we spawned
-	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
 		require.NoError(collect, testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
 			{
 				"level": gomega.Equal(logrus.ErrorLevel),
