@@ -6,7 +6,6 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,7 +38,7 @@ type monitorDBs interface {
 
 // Defaults for the different durations. We use different values in tests to speed them up.
 var (
-	defaultMonitorDelay                = time.Duration(rand.Intn(60)) * time.Second
+	defaultMonitorDelayMax             = time.Minute
 	defaultMonitorInterval             = time.Minute
 	defaultMonitorReadinessDelay       = 2 * time.Minute
 	defaultChangefeedInteval           = 10 * time.Second
@@ -70,7 +69,7 @@ type monitor struct {
 	nsgMonitorBuilder     func(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor
 	hiveMonitorBuilder    func(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error)
 
-	delay                   time.Duration // Time until the monitor starts running
+	workerDelayMax          time.Duration // Time until monitor workers start running
 	interval                time.Duration // Interval between monitor runs
 	changefeedInterval      time.Duration // Interval between changefeed runs (updates to cluster docs)
 	readyIfChangefeedWithin time.Duration // Time that the changefeed should have been changed within to be healthy
@@ -103,7 +102,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		nsgMonitorBuilder:     nsg.NewMonitor,
 		hiveMonitorBuilder:    hivemon.NewHiveMonitor,
 
-		delay:                   defaultMonitorDelay,
+		workerDelayMax:          defaultMonitorDelayMax,
 		interval:                defaultMonitorInterval,
 		changefeedInterval:      defaultChangefeedInteval,
 		readyIfChangefeedWithin: defaultChangefeedReadinessInterval,
