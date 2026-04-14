@@ -5,12 +5,14 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -395,6 +397,72 @@ func TestSchedulerGoesReady(t *testing.T) {
 			Value:      0,
 		},
 	}...)
+}
+
+func TestSchedlerStopsIfBucketFailure(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+
+	hook, log := testlog.LogForTesting(t)
+	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now)
+
+	// Error when it tries to get the master document
+	poolWorkersClient.SetError(errors.New("boom"))
+
+	dbs := database.NewDBGroup().
+		WithMaintenanceSchedules(schedules).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers)
+
+	svc := NewService(_env, log, dbs, m)
+	svc.schedulePollInterval = time.Millisecond
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+	done := make(chan struct{})
+
+	go svc.Run(ctx, nil, done)
+
+	// Wait for the process to stop
+	<-done
+
+	// We will have no running workers
+	r.Equal(int32(0), svc.workers.Load())
+
+	m.AssertFloats()
+	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "MaintenanceScheduleDocument",
+			},
+			Value: 0,
+		},
+	}...)
+
+	err := testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
+		{
+			"level": gomega.Equal(logrus.ErrorLevel),
+			"msg":   gomega.Equal("error bootstrapping master PoolWorkerDocument (not a 412): boom"),
+		},
+		{
+			"level": gomega.Equal(logrus.ErrorLevel),
+			"msg":   gomega.Equal("unable to start bucket worker, exiting: boom"),
+		},
+		{
+			"level": gomega.Equal(logrus.InfoLevel),
+			"msg":   gomega.Equal("exiting, waiting for all workers to finish"),
+		},
+	})
+	r.NoError(err)
 }
 
 func TestSchedulerServesBucket(t *testing.T) {

@@ -88,7 +88,10 @@ func tryMaster(
 	// PoolWorkerDocument
 	if !isMaster {
 		doc, err := dbPoolWorkers.TryLease(ctx, workerType)
-		if err != nil || doc == nil {
+		if err == nil && doc == nil {
+			// We didn't become the master
+			return false, nil
+		} else if err != nil || doc == nil {
 			log.Debugf("err: %s, doc: %#v", err, doc)
 			return false, err
 		}

@@ -38,13 +38,15 @@ type Runnable interface {
 }
 
 var (
-	defaultWorkerMaxStartupDelay       = 60 * time.Second
-	defaultServiceInterval             = 180 * time.Second
-	defaultReadinessDelay              = 2 * time.Minute
-	defaultSchedulePollInterval        = 30 * time.Second
-	defaultSchedulePollReadiness       = 90 * time.Second
-	defaultChangefeedInteval           = 10 * time.Second
-	defaultChangefeedReadinessInterval = time.Minute
+	defaultWorkerMaxStartupDelay          = 60 * time.Second
+	defaultServiceInterval                = 180 * time.Second
+	defaultReadinessDelay                 = 2 * time.Minute
+	defaultSchedulePollInterval           = 30 * time.Second
+	defaultSchedulePollReadinessInterval  = 90 * time.Second
+	defaultChangefeedInteval              = 10 * time.Second
+	defaultChangefeedReadinessInterval    = time.Minute
+	defaultBucketRefreshInterval          = 10 * time.Second
+	defaultBucketRefreshReadinessInterval = defaultBucketRefreshInterval * 6
 )
 
 type service struct {
@@ -72,13 +74,15 @@ type service struct {
 	lastBucketUpdate   atomic.Value // time.Time
 	startTime          time.Time
 
-	workerMaxStartupDelay     time.Duration // Maximum interval before a worker starts
-	interval                  time.Duration // Interval between service runs
-	schedulePollInterval      time.Duration // Interval between updates to Schedules
-	readyIfSchedulePollWithin time.Duration // Time that the Schedules should have been updated within to be ready
-	changefeedInterval        time.Duration // Interval between changefeed runs (updates to cluster docs + subscriptions)
-	readyIfChangefeedWithin   time.Duration // Time that the changefeed should have been changed within to be healthy
-	readinessDelay            time.Duration // Minimal time until the service will allow itself to be marked ready
+	workerMaxStartupDelay          time.Duration // Maximum interval before a worker starts
+	interval                       time.Duration // Interval between service runs
+	schedulePollInterval           time.Duration // Interval between updates to Schedules
+	schedulePollReadinessInterval  time.Duration // Time that the Schedules should have been updated within to be ready
+	changefeedInterval             time.Duration // Interval between changefeed runs (updates to cluster docs + subscriptions)
+	bucketRefreshInterval          time.Duration
+	bucketRefreshReadinessInterval time.Duration
+	changefeedReadinessInterval    time.Duration // Time that the changefeed should have been changed within to be healthy
+	readinessDelay                 time.Duration // Minimal time until the service will allow itself to be marked ready
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 
@@ -112,13 +116,15 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
 		newScheduler:          NewSchedulerForSchedule,
 
-		changefeedBatchSize:       50,
-		changefeedInterval:        defaultChangefeedInteval,
-		interval:                  defaultServiceInterval,
-		readyIfChangefeedWithin:   defaultChangefeedReadinessInterval,
-		readinessDelay:            defaultReadinessDelay,
-		schedulePollInterval:      defaultSchedulePollInterval,
-		readyIfSchedulePollWithin: defaultSchedulePollReadiness,
+		changefeedBatchSize:            50,
+		interval:                       defaultServiceInterval,
+		changefeedInterval:             defaultChangefeedInteval,
+		changefeedReadinessInterval:    defaultChangefeedReadinessInterval,
+		bucketRefreshInterval:          defaultBucketRefreshInterval,
+		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
+		readinessDelay:                 defaultReadinessDelay,
+		schedulePollInterval:           defaultSchedulePollInterval,
+		schedulePollReadinessInterval:  defaultSchedulePollReadinessInterval,
 
 		subs: changefeed.NewSubscriptionsChangefeedCache(m, false),
 
@@ -200,17 +206,25 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	}
 	// Start the bucket worker update loop which will coordinate buckets between
 	// the MIMO instances
-	go buckets.StartBucketWorkerLoop(
-		ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
-		s.bucketCount, s.changefeedInterval, dbPoolWorkers, func(i []int) {
-			if len(i) == 0 {
-				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
-				return
-			}
-			s.buckets.Store(i)
-			s.lastBucketUpdate.Store(s.env.Now())
-		}, stop,
-	)
+	go func() {
+		defer recover.Panic(s.baseLog)
+
+		_err := buckets.StartBucketWorkerLoop(
+			ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
+			s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, func(i []int) {
+				if len(i) == 0 {
+					s.baseLog.Error("got an allocation of 0 buckets, ignoring")
+					return
+				}
+				s.buckets.Store(i)
+				s.lastBucketUpdate.Store(s.env.Now())
+			}, stop,
+		)
+		if _err != nil {
+			s.baseLog.Errorf("unable to start bucket worker, exiting: %s", _err.Error())
+			s.stopping.Store(true)
+		}
+	}()
 
 	t := time.NewTicker(s.schedulePollInterval)
 	defer t.Stop()
@@ -355,10 +369,10 @@ func (s *service) checkReady() bool {
 		return false
 	}
 
-	return (now.Sub(lastScheduleUpdate) < s.readyIfSchedulePollWithin && // did we update our changefeeds recently?
-		now.Sub(lastClusterChangefeed) < s.readyIfChangefeedWithin &&
-		now.Sub(lastSubsChangefeed) < s.readyIfChangefeedWithin &&
-		now.Sub(lastBucketUpdate) < s.readyIfChangefeedWithin &&
+	return (now.Sub(lastScheduleUpdate) < s.schedulePollReadinessInterval && // did we update our changefeeds recently?
+		now.Sub(lastClusterChangefeed) < s.changefeedReadinessInterval &&
+		now.Sub(lastSubsChangefeed) < s.changefeedReadinessInterval &&
+		now.Sub(lastBucketUpdate) < s.bucketRefreshReadinessInterval &&
 		now.Sub(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
 }
 
