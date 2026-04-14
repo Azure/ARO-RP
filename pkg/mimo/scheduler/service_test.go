@@ -136,7 +136,7 @@ func TestSchedulerPolling(t *testing.T) {
 			require.NoError(err)
 
 			svc := NewService(_env, log, dbs, metrics)
-			svc.workerDelayMax = 0
+			svc.workerMaxStartupDelay = 0
 			svc.serveHealthz = false
 			svc.emitHeartbeat = false
 			svc.stopping.Store(true)
@@ -201,7 +201,7 @@ func TestSchedulerStoppingWholeProcess(t *testing.T) {
 	sched := &fakeScheduler{waitOnProcess: waitFor}
 
 	svc := NewService(_env, log, dbs, m)
-	svc.workerDelayMax = 0
+	svc.workerMaxStartupDelay = 0
 	svc.interval = time.Millisecond
 	svc.schedulePollInterval = 1 * time.Millisecond
 	svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs) (Scheduler, error) {
@@ -265,7 +265,7 @@ func TestSchedulerStoppingSingleItem(t *testing.T) {
 	sched := &fakeScheduler{waitOnProcess: waitFor}
 
 	svc := NewService(_env, log, dbs, m)
-	svc.workerDelayMax = 0
+	svc.workerMaxStartupDelay = 0
 	svc.interval = time.Millisecond
 	svc.schedulePollInterval = 1 * time.Millisecond
 	svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs) (Scheduler, error) {
@@ -351,7 +351,7 @@ func TestSchedulerGoesReady(t *testing.T) {
 	waitFor.Add(1)
 
 	svc := NewService(_env, log, dbs, m)
-	svc.workerDelayMax = 0
+	svc.workerMaxStartupDelay = 0
 	svc.interval = time.Millisecond
 	svc.schedulePollInterval = 1 * time.Millisecond
 	svc.changefeedInterval = time.Millisecond
@@ -469,7 +469,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 	r.NoError(err)
 
 	svc := NewService(_env, log, dbs, m)
-	svc.workerDelayMax = 0
+	svc.workerMaxStartupDelay = 0
 	svc.interval = 10 * time.Millisecond
 	svc.schedulePollInterval = 1 * time.Millisecond
 	svc.changefeedInterval = time.Millisecond
