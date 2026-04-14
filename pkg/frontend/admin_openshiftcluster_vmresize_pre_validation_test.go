@@ -461,9 +461,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
-					VMSizeList(gomock.Any()).
-					Return([]*armcompute.ResourceSKU{
-						{
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
 							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
 							ResourceType: pointerutils.ToPtr("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
@@ -516,9 +516,9 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
-					VMSizeList(gomock.Any()).
-					Return([]*armcompute.ResourceSKU{
-						{
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
 							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
 							ResourceType: pointerutils.ToPtr("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
