@@ -173,7 +173,7 @@ func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
 func (mon *monitor) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(mon.baseLog)
 
-	time.Sleep(mon.workerDelayMax * time.Duration(rand.Float32()))
+	time.Sleep(mon.workerMaxStartupDelay * time.Duration(rand.Float32()))
 
 	var r azure.Resource
 

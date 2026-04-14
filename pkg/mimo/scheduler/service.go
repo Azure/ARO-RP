@@ -38,7 +38,7 @@ type Runnable interface {
 }
 
 var (
-	defaultWorkerDelayMaxSeconds       = 60 * time.Second
+	defaultWorkerMaxStartupDelay       = 60 * time.Second
 	defaultServiceInterval             = 180 * time.Second
 	defaultReadinessDelay              = 2 * time.Minute
 	defaultSchedulePollInterval        = 30 * time.Second
@@ -72,7 +72,7 @@ type service struct {
 	lastBucketUpdate   atomic.Value // time.Time
 	startTime          time.Time
 
-	workerDelayMax            time.Duration // Maximum interval before a worker starts
+	workerMaxStartupDelay     time.Duration // Maximum interval before a worker starts
 	interval                  time.Duration // Interval between service runs
 	schedulePollInterval      time.Duration // Interval between updates to Schedules
 	readyIfSchedulePollWithin time.Duration // Time that the Schedules should have been updated within to be ready
@@ -108,9 +108,9 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		workers:     &atomic.Int32{},
 		bucketCount: bucket.Buckets,
 
-		startTime:      env.Now(),
-		workerDelayMax: defaultWorkerDelayMaxSeconds,
-		newScheduler:   NewSchedulerForSchedule,
+		startTime:             env.Now(),
+		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
+		newScheduler:          NewSchedulerForSchedule,
 
 		changefeedBatchSize:       50,
 		changefeedInterval:        defaultChangefeedInteval,
@@ -371,7 +371,7 @@ func (s *service) spawnWorker(stop <-chan struct{}, id string) {
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
 
-	delay := s.workerDelayMax * time.Duration(rand.Float32())
+	delay := s.workerMaxStartupDelay * time.Duration(rand.Float32())
 	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 

@@ -28,8 +28,7 @@ type openShiftClusterCache struct {
 
 	subCache changefeed.SubscriptionsCache
 
-	clusters     *xsync.Map[string, selectorData]
-	ownedBuckets []int
+	clusters *xsync.Map[string, selectorData]
 
 	lastChangefeedDataUpdate   atomic.Value // time.Time
 	lastChangefeedProcessed    atomic.Value // time.Time
