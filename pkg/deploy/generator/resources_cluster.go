@@ -9,6 +9,7 @@ import (
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -94,12 +95,31 @@ func (g *generator) diskEncryptionKeyVault() *arm.Resource {
 func (g *generator) diskEncryptionKeyVaultRBAC() *arm.Resource {
 	// use the Azure built-in Key Vault Crypto Service Encryption User role
 	// See: https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#azure-built-in-roles-for-key-vault-data-plane-operations
-	return rbac.ResourceRoleAssignment(
-		rbac.RoleKeyVaultCryptoServiceEncryptionUser,
-		fmt.Sprintf("reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets")),
-		"Microsoft.KeyVault/vaults",
-		"parameters('kvName')",
-	)
+
+	// Not using the rbac.ResourceRoleAssignment() function because it expects
+	// the service principal ID to be passed in as an argument, not a template
+	// function. Getting it via a [reference()] template function doesn't work
+	// because it seems the [reference()] function isn't allowed inside the
+	// [gui()] function
+	resourceID := "resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))"
+	spID := fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))
+
+	return &arm.Resource{
+		Resource: mgmtauthorization.RoleAssignment{
+			Name: pointerutils.ToPtr("[concat(parameters('kvName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]"),
+			Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults/providers/roleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
+				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleKeyVaultCryptoServiceEncryptionUser + "')]"),
+				PrincipalID:      &spID,
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
+		DependsOn: []string{
+			"[" + resourceID + "]",
+		},
+	}
 }
 
 func (g *generator) diskEncryptionKey() *arm.Resource {

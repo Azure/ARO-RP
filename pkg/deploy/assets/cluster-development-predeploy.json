@@ -103,7 +103,7 @@
             "apiVersion": "2019-09-01"
         },
         {
-            "name": "[concat(parameters('kvName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.KeyVault/vaults', parameters('kvName')), reference(resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set')), '2021-04-01', 'Full').identity.PrincipalId, 'e147488a-f6f5-4113-8e2d-b22465e65bf6'))]",
+            "name": "[concat(parameters('kvName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]",
             "type": "Microsoft.KeyVault/vaults/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]",
