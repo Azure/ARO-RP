@@ -32,7 +32,7 @@ import (
 // KubeActions are those that involve k8s objects, and thus depend upon k8s clients being createable
 type KubeActions interface {
 	KubeGet(ctx context.Context, groupKind, namespace, name string) ([]byte, error)
-	KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error)
+	KubeList(ctx context.Context, groupKind, namespace string, labelSelector ...string) ([]byte, error)
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool, propagationPolicy *metav1.DeletionPropagation) error
 	ResolveGVR(groupKind string, optionalVersion string) (schema.GroupVersionResource, error)
@@ -116,14 +116,23 @@ func (k *kubeActions) KubeGet(ctx context.Context, groupKind, namespace, name st
 	return un.MarshalJSON()
 }
 
-func (k *kubeActions) KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error) {
+// KubeList lists resources. Pass an optional single labelSelector to filter results.
+func (k *kubeActions) KubeList(ctx context.Context, groupKind, namespace string, labelSelector ...string) ([]byte, error) {
 	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
+	selector := ""
+	if len(labelSelector) > 0 {
+		selector = labelSelector[0]
+	}
+
 	// protect RP memory by not reading in more than 1000 items
-	ul, err := k.dyn.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{Limit: 1000})
+	ul, err := k.dyn.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{
+		Limit:         1000,
+		LabelSelector: selector,
+	})
 	if err != nil {
 		return nil, err
 	}

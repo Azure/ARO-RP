@@ -177,18 +177,23 @@ func (mr *MockKubeActionsMockRecorder) KubeGetPodLogs(ctx, namespace, name, cont
 }
 
 // KubeList mocks base method.
-func (m *MockKubeActions) KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error) {
+func (m *MockKubeActions) KubeList(ctx context.Context, groupKind, namespace string, labelSelector ...string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "KubeList", ctx, groupKind, namespace)
+	varargs := []any{ctx, groupKind, namespace}
+	for _, a := range labelSelector {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "KubeList", varargs...)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // KubeList indicates an expected call of KubeList.
-func (mr *MockKubeActionsMockRecorder) KubeList(ctx, groupKind, namespace any) *gomock.Call {
+func (mr *MockKubeActionsMockRecorder) KubeList(ctx, groupKind, namespace any, labelSelector ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeList", reflect.TypeOf((*MockKubeActions)(nil).KubeList), ctx, groupKind, namespace)
+	varargs := append([]any{ctx, groupKind, namespace}, labelSelector...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeList", reflect.TypeOf((*MockKubeActions)(nil).KubeList), varargs...)
 }
 
 // KubeWatch mocks base method.
