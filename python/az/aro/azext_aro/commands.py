@@ -32,4 +32,10 @@ def load_command_table(loader, _):
         g.custom_command('validate', 'aro_validate')
 
     with loader.command_group('aro identity', aro_sdk, client_factory=cf_aro) as g:
+        g.custom_command(
+            'create-required',
+            'aro_identity_create_required',
+            confirmation="Required identities and role assignments will be created. Proceed?",
+            supports_no_wait=False
+        )
         g.custom_command('get-required', 'aro_identity_get_required', supports_no_wait=False)
