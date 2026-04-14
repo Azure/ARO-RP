@@ -94,12 +94,12 @@
 <node CREATED="1742320830000" ID="ID_100000030" MODIFIED="1742320830000" TEXT="allocate monitoring bucket"/>
 <node CREATED="1742320831000" ID="ID_100000031" MODIFIED="1742320831000" TEXT="(MSI path) store identity URL and tenant ID in cluster doc"/>
 <node CREATED="1742320832000" ID="ID_100000032" MODIFIED="1742320832000" TEXT="set defaults and default operator flags"/>
-<node CREATED="1591026556253" ID="ID_1483905360" MODIFIED="1591026579930" TEXT="create asynchronous operation record which client can poll on"/>
-<node CREATED="1590502173652" ID="ID_1206384235" MODIFIED="1590502186327" TEXT="cluster record created in CosmosDB"/>
+<node CREATED="1591026556253" ID="ID_1483905360" MODIFIED="1591026579930" TEXT="create asynchronous operation record in CosmosDB which client can poll on"/>
+<node CREATED="1590502173652" ID="ID_1206384235" MODIFIED="1590502186327" TEXT="cluster record created in CosmosDB with non-terminal ProvisioningState"/>
 <node CREATED="1591026646790" ID="ID_782853728" MODIFIED="1742320800000" TEXT="return cluster record to end user (excluding secrets and sensitive fields)"/>
 </node>
 </node>
-<node CREATED="1590502343830" ID="ID_1390328428" MODIFIED="1742320800000" POSITION="right" TEXT="Creation is handled by RP backend (pkg/backend)">
+<node CREATED="1590502343830" ID="ID_1390328428" MODIFIED="1742320800000" POSITION="right" TEXT="Creation is handled by RP backend after dequeuing from CosmosDB (pkg/backend)">
 <node CREATED="1591226420068" ID="ID_1572125659" MODIFIED="1591226749539" TEXT="backends race to dequeue cluster record, one backend wins and takes the lease"/>
 <node CREATED="1591226456124" ID="ID_1974865526" MODIFIED="1591226692283" TEXT="heartbeat process starts, updating lease (prevents other backends dequeueing the same record)"/>
 <node CREATED="1742320833000" ID="ID_100000033" MODIFIED="1742320833000" TEXT="load subscription document for RBAC context"/>
@@ -157,8 +157,8 @@
 </node>
 <node CREATED="1590502724282" ID="ID_991825848" MODIFIED="1742320800000" TEXT="createCertificates - TLS certificates (API server, ingress)"/>
 <node CREATED="1742320878000" ID="ID_100000078" MODIFIED="1742320878000" TEXT="cluster installation (two paths)">
+<node CREATED="1744646500000" ID="ID_200000001" MODIFIED="1744646500000" TEXT="(if installViaHive or adoptViaHive) hiveCreateNamespace - create namespace in management cluster"/>
 <node CREATED="1742320879000" ID="ID_100000079" MODIFIED="1742320879000" TEXT="(Hive path) installViaHive">
-<node CREATED="1742320880000" ID="ID_100000080" MODIFIED="1742320880000" TEXT="hiveCreateNamespace - create namespace in management cluster"/>
 <node CREATED="1742320881000" ID="ID_100000081" MODIFIED="1742320881000" TEXT="runHiveInstaller - create Hive ClusterDeployment"/>
 <node CREATED="1742320882000" ID="ID_100000082" MODIFIED="1742320882000" TEXT="hiveClusterInstallationComplete - wait up to 60 minutes"/>
 <node CREATED="1742320883000" ID="ID_100000083" MODIFIED="1742320883000" TEXT="generateKubeconfigs"/>
@@ -168,6 +168,7 @@
 <node CREATED="1742320886000" ID="ID_100000086" MODIFIED="1742320886000" TEXT="generateKubeconfigs"/>
 <node CREATED="1742320887000" ID="ID_100000087" MODIFIED="1742320887000" TEXT="(if adoptViaHive) hiveEnsureResources and hiveClusterDeploymentReady (5min)"/>
 </node>
+<node CREATED="1744646501000" ID="ID_200000002" MODIFIED="1744646501000" TEXT="(if installViaHive or adoptViaHive) hiveResetCorrelationData - reset correlation data before post-install bootstrap"/>
 </node>
 <node CREATED="1590502466183" ID="ID_986457782" MODIFIED="1742320800000" TEXT="ensureBillingRecord - create/update billing DB record"/>
 <node CREATED="1742320888000" ID="ID_100000088" MODIFIED="1742320888000" TEXT="post-install bootstrap phase">

@@ -13,7 +13,8 @@ flowchart TD
     SP --> C[ARM routing]
     MSI --> C
     C --> D[RP Frontend - PUT handler]
-    D --> E[RP Backend - dequeue]
+    D --> DB[(CosmosDB<br/>cluster + operation records)]
+    DB --> E[RP Backend - poll and dequeue]
     E --> INSTALL{Install path?}
     INSTALL -->|Hive| HIVE[Hive ClusterDeployment]
     INSTALL -->|Podman| PODMAN[Podman container install]
@@ -27,6 +28,7 @@ flowchart TD
     style SP fill:#fff3e0
     style MSI fill:#e1f5fe
     style D fill:#fff3e0
+    style DB fill:#f3e5f5
     style E fill:#fff3e0
     style HIVE fill:#e8f5e9
     style PODMAN fill:#e8f5e9
@@ -110,7 +112,7 @@ flowchart TD
     R6 --> R7[Allocate monitoring bucket]
     R7 --> R8["(MSI) Store identity URL and tenant ID"]
     R8 --> R9[Set defaults and operator flags]
-    R9 --> R10[Create async operation record]
+    R9 --> R10[Create async operation record in CosmosDB]
     R10 --> R11[Create cluster record in CosmosDB]
     R11 --> R12[Return cluster record - excluding secrets]
 ```
@@ -119,7 +121,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    BE["RP Backend<br/>(pkg/backend)"] --> D1[Backends race to dequeue - one wins lease]
+    BE["RP Backend - dequeue from CosmosDB<br/>(pkg/backend)"] --> D1[Backends race to dequeue - one wins lease]
     D1 --> D2[Heartbeat process starts - maintains lease]
     D2 --> D3[Load subscription document]
     D3 --> D4["Determine Hive mode<br/>(installViaHive, adoptViaHive, or neither)"]
@@ -178,21 +180,25 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    INSTALL{Install path?} -->|Hive| H1[hiveCreateNamespace]
-    H1 --> H2[runHiveInstaller - create ClusterDeployment]
+    PRE{"Need Hive namespace?<br/>(Hive install or adopt)"} -->|Yes| H0[hiveCreateNamespace]
+    PRE -->|No| INSTALL{Install path?}
+    H0 --> INSTALL
+
+    INSTALL -->|Hive| H2[runHiveInstaller - create ClusterDeployment]
     H2 --> H3["hiveClusterInstallationComplete<br/>(wait up to 60 min)"]
     H3 --> H4[generateKubeconfigs]
-    H4 --> POST
+    H4 --> RESET["hiveResetCorrelationData<br/>(if Hive or adopt)"]
 
     INSTALL -->|Podman| P1a[runPodmanInstaller]
     P1a --> P2a[generateKubeconfigs]
     P2a --> P3a{"Adopt via Hive?"}
     P3a -->|Yes| P4a[hiveEnsureResources]
     P4a --> P5a["hiveClusterDeploymentReady (5 min)"]
-    P5a --> POST
-    P3a -->|No| POST
+    P5a --> RESET
+    P3a -->|No| POST[Post-install bootstrap]
 
-    POST[Post-install bootstrap] --> Q1[ensureBillingRecord]
+    RESET --> POST
+    POST --> Q1[ensureBillingRecord]
     Q1 --> Q2[initializeKubernetesClients - cluster now running]
     Q2 --> Q3[initializeOperatorDeployer]
     Q3 --> Q4["apiServersReady (30 min timeout)"]
@@ -261,4 +267,3 @@ flowchart TD
     F1 --> F2["clusterOperatorsHaveSettled (30 min)"]
     F2 --> F3["finishInstallation<br/>(clear Install field, mark complete)"]
 ```
-
