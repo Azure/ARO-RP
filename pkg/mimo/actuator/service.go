@@ -32,6 +32,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
+var defaultWorkerMaxStartupDelay = time.Minute
+
 type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{}) error
 }
@@ -59,14 +61,12 @@ type service struct {
 	taskPollTime                   time.Duration
 	bucketRefreshInterval          time.Duration
 	bucketRefreshReadinessInterval time.Duration
+	workerMaxStartupDelay          time.Duration
+	readinessDelay                 time.Duration
 
 	lastChangefeed   atomic.Value // time.Time
 	lastBucketUpdate atomic.Value // time.Time
 	startTime        time.Time
-
-	now         func() time.Time
-	workerDelay func() time.Duration
-	readyDelay  time.Duration
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 
@@ -95,9 +95,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		workers:     &atomic.Int32{},
 		bucketCount: bucket.Buckets,
 
-		startTime:   time.Now(),
-		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
-		now:         time.Now,
+		startTime: env.Now(),
 
 		// For the OpenShiftClusterDocument polling we temporarily use a query
 		// which retrieves ID and bucket rather than polling an incremental
@@ -117,8 +115,9 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		bucketRefreshInterval:          10 * time.Second,
 		bucketRefreshReadinessInterval: 60 * time.Second,
 
-		readyDelay:   time.Minute * 2,
-		serveHealthz: true,
+		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
+		readinessDelay:        time.Minute * 2,
+		serveHealthz:          true,
 	}
 
 	s.cond = sync.NewCond(&s.mu)
@@ -200,7 +199,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 				return
 			}
 			s.b.SetBuckets(i)
-			s.lastBucketUpdate.Store(s.now())
+			s.lastBucketUpdate.Store(s.env.Now())
 		}, stop,
 	)
 
@@ -279,7 +278,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	}
 
 	// Store when we last fetched the clusters
-	s.lastChangefeed.Store(s.now())
+	s.lastChangefeed.Store(s.env.Now())
 
 	// Emit a metric containing the size of our cache
 	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
@@ -309,7 +308,7 @@ func (s *service) checkReady() bool {
 
 	return (time.Since(lastBucketUpdate) < s.bucketRefreshReadinessInterval) && // did we list buckets successfully recently?
 		(time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
-		(time.Since(s.startTime) > s.readyDelay) // are we running for at least (the default) 2 minutes?
+		(time.Since(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
 }
 
 func (s *service) spawnWorker(stop <-chan struct{}, id string) {
@@ -321,7 +320,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
 	defer s.workerRoutines.Done()
 
-	delay := s.workerDelay()
+	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*rand.Float64())
 	log := utillog.EnrichWithResourceID(s.baseLog, id)
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
@@ -346,7 +345,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 		return
 	}
 
-	a, err := NewActuator(context.Background(), s.env, log, id, dbSubscriptions, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
+	a, err := NewActuator(context.Background(), s.env, log, id, dbSubscriptions, dbOpenShiftClusters, dbMaintenanceManifests)
 	if err != nil {
 		log.Error(err)
 		return

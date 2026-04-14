@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -46,7 +45,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 	var log *logrus.Entry
 	var hook *test.Hook
-	var _env env.Interface
+	var _env *mock_env.MockInterface
 
 	var controller *gomock.Controller
 
@@ -66,6 +65,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	BeforeAll(func() {
 		controller = gomock.NewController(nil)
 		_env = mock_env.NewMockInterface(controller)
+		_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
+			return time.Unix(120, 0)
+		})
 
 		ctx, cancel = context.WithCancel(context.Background())
 
@@ -74,8 +76,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		now := func() time.Time { return time.Unix(120, 0) }
-		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
+		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(_env.Now)
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
 		subscriptions, subscriptionsClient = testdatabase.NewFakeSubscriptions()
 
@@ -92,7 +93,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			sub: subscriptions,
 
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
-			now:   now,
 
 			taskRunTimeout:           time.Second,
 			manifestQueryBatchLength: -1,

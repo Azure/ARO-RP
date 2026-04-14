@@ -32,7 +32,6 @@ type Actuator interface {
 type actuator struct {
 	env                      env.Interface
 	log                      *logrus.Entry
-	now                      func() time.Time
 	taskRunTimeout           time.Duration
 	manifestQueryBatchLength int
 
@@ -55,7 +54,6 @@ func NewActuator(
 	sub database.Subscriptions,
 	oc database.OpenShiftClusters,
 	mmf database.MaintenanceManifests,
-	now func() time.Time,
 ) (Actuator, error) {
 	a := &actuator{
 		env:                      _env,
@@ -67,8 +65,6 @@ func NewActuator(
 		tasks:                    make(map[api.MIMOTaskID]tasks.MaintenanceTask),
 		taskRunTimeout:           time.Minute * 60,
 		manifestQueryBatchLength: 50,
-
-		now: now,
 	}
 
 	return a, nil
@@ -121,7 +117,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return docList[i].MaintenanceManifest.RunAfter < docList[j].MaintenanceManifest.RunAfter
 	})
 
-	evaluationTime := a.now()
+	evaluationTime := a.env.Now()
 
 	// Check for manifests that have timed out first
 	for _, doc := range docList {

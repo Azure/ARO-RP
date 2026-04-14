@@ -371,7 +371,7 @@ func (s *service) spawnWorker(stop <-chan struct{}, id string) {
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
 
-	delay := s.workerMaxStartupDelay * time.Duration(rand.Float32())
+	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*rand.Float64())
 	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 

@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
@@ -151,14 +150,16 @@ func TestActuatorPolling(t *testing.T) {
 			require := require.New(t)
 			ctx := t.Context()
 
-			controller := gomock.NewController(nil)
+			controller := gomock.NewController(t)
 			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
+				return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+			})
 			hook, log := testlog.LogForTesting(t)
 
 			fixtures := testdatabase.NewFixture()
 
-			now := func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
-			manifests, _ := testdatabase.NewFakeMaintenanceManifests(now)
+			manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
 			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 			subscriptions, _ := testdatabase.NewFakeSubscriptions()
 
@@ -173,8 +174,7 @@ func TestActuatorPolling(t *testing.T) {
 			require.NoError(err)
 
 			svc := NewService(_env, log, nil, dbs, metrics)
-			svc.now = now
-			svc.workerDelay = func() time.Duration { return 0 * time.Second }
+			svc.workerMaxStartupDelay = 0 * time.Second
 			svc.serveHealthz = false
 			svc.stopping.Store(true)
 
@@ -211,7 +211,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var cancel context.CancelFunc
 
 	var log *logrus.Entry
-	var _env env.Interface
+	var _env *mock_env.MockInterface
 
 	var controller *gomock.Controller
 
@@ -231,7 +231,9 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	BeforeAll(func() {
 		controller = gomock.NewController(nil)
 		_env = mock_env.NewMockInterface(controller)
-
+		_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
+			return time.Unix(120, 0)
+		})
 		ctx, cancel = context.WithCancel(context.Background())
 
 		log = logrus.NewEntry(&logrus.Logger{
@@ -248,15 +250,13 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	BeforeEach(func() {
 		m = newfakeMetricsEmitter()
 
-		now := func() time.Time { return time.Unix(120, 0) }
-		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(now)
+		manifests, manifestsClient = testdatabase.NewFakeMaintenanceManifests(_env.Now)
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
 		subscriptions, _ = testdatabase.NewFakeSubscriptions()
 		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions)
 
 		svc = NewService(_env, log, nil, dbg, m)
-		svc.now = now
-		svc.workerDelay = func() time.Duration { return 0 * time.Second }
+		svc.workerMaxStartupDelay = time.Second * 0
 		svc.serveHealthz = false
 		svc.b.SetBuckets([]int{1})
 	})
