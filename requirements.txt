@@ -164,7 +164,7 @@ PyNaCl==1.6.2
 pyOpenSSL==26.0.0
 pyproject-api==1.10.0
 PySocks==1.7.1
-pytest==9.0.2
+pytest==9.0.3
 pytest-forked==1.6.0
 pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
