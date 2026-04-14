@@ -922,6 +922,7 @@ func TestProcessLoop(t *testing.T) {
 
 			controller := gomock.NewController(nil)
 			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Now().AnyTimes().Return(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 
 			hook, log := testlog.LogForTesting(t)
 			metrics := testmetrics.NewFakeMetricsEmitter(t)
@@ -929,8 +930,7 @@ func TestProcessLoop(t *testing.T) {
 			fixtures := testdatabase.NewFixture()
 			checker := testdatabase.NewChecker()
 
-			now := func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }
-			manifests, manifestsClient := testdatabase.NewFakeMaintenanceManifests(now)
+			manifests, manifestsClient := testdatabase.NewFakeMaintenanceManifests(_env.Now)
 			schedules, schedulesClient := testdatabase.NewFakeMaintenanceSchedules()
 			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 			subscriptions, _ := testdatabase.NewFakeSubscriptions()
@@ -956,7 +956,6 @@ func TestProcessLoop(t *testing.T) {
 				getClusters: serv.clusters.GetClusters,
 
 				tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
-				now:   now,
 			}
 			a.AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask{
 				"0": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
