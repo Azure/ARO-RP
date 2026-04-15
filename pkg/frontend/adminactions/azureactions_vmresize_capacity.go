@@ -97,7 +97,8 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 
 	// Update the SKU and associate with the CRG in a single call.
 	// Association ensures the capacity reservation covers the new SKU during the resize.
-	vm.Properties.HardwareProfile.VMSize = (*armcompute.VirtualMachineSizeTypes)(&targetVMSize)
+	size := armcompute.VirtualMachineSizeTypes(targetVMSize)
+	vm.Properties.HardwareProfile.VMSize = &size
 	vm.Properties.CapacityReservation = &armcompute.CapacityReservationProfile{
 		CapacityReservationGroup: &armcompute.SubResource{ID: &crgID},
 	}
