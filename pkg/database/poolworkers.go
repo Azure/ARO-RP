@@ -151,7 +151,7 @@ func (c *poolWorkers) ListBuckets(ctx context.Context, poolWorkerType api.PoolWo
 	doc, err := c.get(ctx, poolWorkerType, string(poolWorkerType))
 	if err != nil {
 		return nil, err
-	} else if doc == nil || doc.PoolWorker == nil {
+	} else if doc == nil || doc.PoolWorker == nil || len(doc.PoolWorker.Buckets) == 0 {
 		return nil, ErrPoolWorkersBucketAllocationNotInitialized
 	}
 
