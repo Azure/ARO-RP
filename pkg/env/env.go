@@ -15,9 +15,9 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
@@ -101,7 +101,7 @@ type Interface interface {
 	FeatureIsSet(Feature) bool
 	// TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
 	FPAuthorizer(string, []string, ...string) (autorest.Authorizer, error)
-	FPNewClientCertificateCredential(string, []string) (*azidentity.ClientCertificateCredential, error)
+	FPNewClientCertificateCredential(string, []string) (azcore.TokenCredential, error)
 	FPClientID() string
 	Listen() (net.Listener, error)
 	GatewayDomains() []string

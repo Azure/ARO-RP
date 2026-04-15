@@ -20,41 +20,33 @@ import (
 )
 
 type th struct {
-	originalCtx context.Context
-	ctx         context.Context
+	ctx context.Context
 
 	env env.Interface
 	log *logrus.Entry
 
 	resultMessage string
 
-	oc *api.OpenShiftClusterDocument
+	oc  *api.OpenShiftClusterDocument
+	sub *api.SubscriptionDocument
 
 	_ch clienthelper.Interface
+
+	az *azClients
 }
 
 // force interface checking
 var _ mimo.TaskContext = &th{}
 
-func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument) *th {
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) *th {
 	return &th{
-		originalCtx: ctx,
-		ctx:         ctx,
-		env:         env,
-		log:         log,
-		oc:          oc,
-		_ch:         nil,
+		ctx: ctx,
+		env: env,
+		log: log,
+		oc:  oc,
+		sub: sub,
+		_ch: nil,
 	}
-}
-
-func (t *th) RunInTimeout(timeout time.Duration, f func() error) error {
-	newctx, cancel := context.WithTimeout(t.originalCtx, timeout)
-	t.ctx = newctx
-	defer func() {
-		cancel()
-		t.ctx = t.originalCtx
-	}()
-	return f()
 }
 
 // context stuff
@@ -116,10 +108,6 @@ func (t *th) SetResultMessage(msg string) {
 	t.resultMessage = msg
 }
 
-func (t *th) GetResultMessage() string {
-	return t.resultMessage
-}
-
 func (t *th) GetClusterUUID() string {
 	return t.oc.ID
 }
@@ -131,4 +119,10 @@ func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 // GetOpenshiftClusterDocument implements mimo.TaskContext.
 func (t *th) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
 	return t.oc
+}
+
+// getResultMessage is used by the Actuator to retrieve the finished result
+// message out of the TaskContext
+func (t *th) getResultMessage() string {
+	return t.resultMessage
 }
