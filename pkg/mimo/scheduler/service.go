@@ -46,7 +46,8 @@ var (
 	defaultChangefeedInteval              = 10 * time.Second
 	defaultChangefeedReadinessInterval    = time.Minute
 	defaultBucketRefreshInterval          = 10 * time.Second
-	defaultBucketRefreshReadinessInterval = defaultBucketRefreshInterval * 6
+	defaultBucketRefreshTTL               = 60 * time.Second
+	defaultBucketRefreshReadinessInterval = defaultBucketRefreshTTL
 )
 
 type service struct {
@@ -80,6 +81,7 @@ type service struct {
 	schedulePollReadinessInterval  time.Duration // Time that the Schedules should have been updated within to be ready
 	changefeedInterval             time.Duration // Interval between changefeed runs (updates to cluster docs + subscriptions)
 	bucketRefreshInterval          time.Duration
+	bucketRefreshTTL               time.Duration // TTL for worker PoolWorker documents
 	bucketRefreshReadinessInterval time.Duration
 	changefeedReadinessInterval    time.Duration // Time that the changefeed should have been changed within to be healthy
 	readinessDelay                 time.Duration // Minimal time until the service will allow itself to be marked ready
@@ -121,6 +123,7 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		changefeedInterval:             defaultChangefeedInteval,
 		changefeedReadinessInterval:    defaultChangefeedReadinessInterval,
 		bucketRefreshInterval:          defaultBucketRefreshInterval,
+		bucketRefreshTTL:               defaultBucketRefreshTTL,
 		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
 		readinessDelay:                 defaultReadinessDelay,
 		schedulePollInterval:           defaultSchedulePollInterval,
@@ -206,25 +209,17 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	}
 	// Start the bucket worker update loop which will coordinate buckets between
 	// the MIMO instances
-	go func() {
-		defer recover.Panic(s.baseLog)
-
-		_err := buckets.StartBucketWorkerLoop(
-			ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
-			s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, func(i []int) {
-				if len(i) == 0 {
-					s.baseLog.Error("got an allocation of 0 buckets, ignoring")
-					return
-				}
-				s.buckets.Store(i)
-				s.lastBucketUpdate.Store(s.env.Now())
-			}, stop,
-		)
-		if _err != nil {
-			s.baseLog.Errorf("unable to start bucket worker, exiting: %s", _err.Error())
-			s.stopping.Store(true)
-		}
-	}()
+	go buckets.StartBucketRefreshLoop(
+		ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
+		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
+			if len(i) == 0 {
+				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
+				return
+			}
+			s.buckets.Store(i)
+			s.lastBucketUpdate.Store(s.env.Now())
+		}, stop, s.stopping,
+	)
 
 	t := time.NewTicker(s.schedulePollInterval)
 	defer t.Stop()

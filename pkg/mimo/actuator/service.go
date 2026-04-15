@@ -32,7 +32,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-var defaultWorkerMaxStartupDelay = time.Minute
+var (
+	defaultWorkerMaxStartupDelay          = time.Minute
+	defaultBucketRefreshInterval          = 10 * time.Second
+	defaultBucketRefreshTTL               = 60 * time.Second
+	defaultBucketRefreshReadinessInterval = defaultBucketRefreshTTL
+)
 
 type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{}) error
@@ -60,6 +65,7 @@ type service struct {
 	changefeedReadinessInterval    time.Duration
 	taskPollTime                   time.Duration
 	bucketRefreshInterval          time.Duration
+	bucketRefreshTTL               time.Duration
 	bucketRefreshReadinessInterval time.Duration
 	workerMaxStartupDelay          time.Duration
 	readinessDelay                 time.Duration
@@ -112,8 +118,9 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		taskPollTime: 90 * time.Second,
 
 		// Bucket timing is set lower to prioritise responsiveness to VM changes
-		bucketRefreshInterval:          10 * time.Second,
-		bucketRefreshReadinessInterval: 60 * time.Second,
+		bucketRefreshInterval:          defaultBucketRefreshInterval,
+		bucketRefreshTTL:               defaultBucketRefreshTTL,
+		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
 
 		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
 		readinessDelay:        time.Minute * 2,
@@ -191,16 +198,16 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 
 	// Start the bucket worker update loop which will coordinate buckets between
 	// the MIMO instances
-	go buckets.StartBucketWorkerLoop(
+	go buckets.StartBucketRefreshLoop(
 		ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
-		s.bucketCount, s.bucketRefreshInterval, dbPoolWorkers, func(i []int) {
+		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
 			if len(i) == 0 {
 				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
 				return
 			}
 			s.b.SetBuckets(i)
 			s.lastBucketUpdate.Store(s.env.Now())
-		}, stop,
+		}, stop, s.stopping,
 	)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)

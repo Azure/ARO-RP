@@ -6,8 +6,14 @@ package buckets
 import (
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestBalance(t *testing.T) {
@@ -177,6 +183,92 @@ func TestBalance(t *testing.T) {
 			}
 
 			tt.validate(t, tt, doc)
+		})
+	}
+}
+
+func TestCapInterval(t *testing.T) {
+	testCases := []struct {
+		desc             string
+		interval         time.Duration
+		ttl              time.Duration
+		expectedInterval time.Duration
+		expectedTtl      time.Duration
+		logs             []testlog.ExpectedLogEntry
+	}{
+		{
+			desc:             "happy path",
+			interval:         time.Second * 10,
+			ttl:              time.Second * 60,
+			expectedInterval: time.Second * 10,
+			expectedTtl:      time.Second * 60,
+			logs:             []testlog.ExpectedLogEntry{},
+		},
+		{
+			desc:             "interval too short vs ttl",
+			interval:         time.Second * 10,
+			ttl:              time.Second * 10,
+			expectedInterval: time.Millisecond * 7500,
+			expectedTtl:      time.Second * 10,
+			logs: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("interval 10s was more than 75% of TTL 10s, capping"),
+				},
+			},
+		},
+		{
+			desc:             "interval capped",
+			interval:         time.Second * 50,
+			ttl:              time.Second * 60,
+			expectedInterval: time.Second * 45,
+			expectedTtl:      time.Second * 60,
+			logs: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("interval must be at most 45s to align with renewLease, was 50s, capping"),
+				},
+			},
+		},
+		{
+			desc:             "interval capped, then capped because lower TTL",
+			interval:         time.Second * 100,
+			ttl:              time.Second * 45,
+			expectedInterval: time.Millisecond * (45000 * 0.75),
+			expectedTtl:      time.Second * 45,
+			logs: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("interval must be at most 45s to align with renewLease, was 1m40s, capping"),
+				},
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("interval 45s was more than 75% of TTL 45s, capping"),
+				},
+			},
+		},
+		{
+			desc:             "ttl capped",
+			interval:         time.Second * 10,
+			ttl:              time.Second * 120,
+			expectedInterval: time.Second * 10,
+			expectedTtl:      time.Second * 60,
+			logs: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("workerTTL must be at most 1m0s to align with renewLease, was 2m0s, capping"),
+				},
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			r := require.New(t)
+			hook, log := testlog.LogForTesting(t)
+			gotInterval, gotTtl := capIntervals(log, tC.interval, tC.ttl)
+			r.Equal(tC.expectedInterval, gotInterval)
+			r.Equal(tC.expectedTtl, gotTtl)
+			r.NoError(testlog.AssertLoggingOutput(hook, tC.logs))
 		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -14,18 +15,50 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-func StartBucketWorkerLoop(
+var (
+	maxWorkerTTL      = 60 * time.Second
+	maxWorkerInterval = 45 * time.Second
+)
+
+// Set maximums for workerTTL and Interval
+func capIntervals(log *logrus.Entry, _interval time.Duration, _workerTTL time.Duration) (time.Duration, time.Duration) {
+	workerTTL := _workerTTL
+	interval := _interval
+
+	if _interval > maxWorkerInterval {
+		log.Errorf("interval must be at most %s to align with renewLease, was %s, capping", maxWorkerInterval, _interval)
+		interval = maxWorkerInterval
+	}
+	if _workerTTL > maxWorkerTTL {
+		log.Errorf("workerTTL must be at most %s to align with renewLease, was %s, capping", maxWorkerTTL, _workerTTL)
+		workerTTL = maxWorkerTTL
+	}
+	if interval.Seconds() > workerTTL.Seconds()*0.75 {
+		log.Errorf("interval %s was more than 75%% of TTL %s, capping", interval, workerTTL)
+		interval = time.Duration(float64(workerTTL.Milliseconds())*0.75) * time.Millisecond
+	}
+
+	return interval, workerTTL
+}
+
+// Runs the bucket refresh loop. For a version that can be spawned in a
+// goroutine directly, see StartBucketRefreshLoop.
+func BucketRefreshLoop(
 	ctx context.Context,
 	log *logrus.Entry,
 	workerType api.PoolWorkerType,
 	bucketCount int,
-	interval time.Duration,
+	_interval time.Duration,
+	_workerTTL time.Duration,
 	dbPoolWorkers database.PoolWorkers,
 	onBucketChange func([]int),
 	stop <-chan struct{},
 ) error {
+	interval, workerTTL := capIntervals(log, _interval, _workerTTL)
+
 	t := time.NewTicker(interval)
 	defer t.Stop()
 
@@ -44,8 +77,8 @@ func StartBucketWorkerLoop(
 
 	isMaster := false
 	for {
-		// register ourself as a worker, ttl of 60s default
-		err := dbPoolWorkers.PoolWorkerHeartbeat(ctx, workerType, int(interval.Seconds()*6))
+		// register ourself as a worker, we need to refresh within workerTTL seconds
+		err := dbPoolWorkers.PoolWorkerHeartbeat(ctx, workerType, int(workerTTL.Seconds()))
 		if err != nil {
 			log.Error(fmt.Errorf("error registering ourselves as a %s poolWorker, continuing: %w", workerType, err))
 		}
@@ -91,8 +124,8 @@ func tryMaster(
 		if err == nil && doc == nil {
 			// We didn't become the master
 			return false, nil
-		} else if err != nil || doc == nil {
-			log.Debugf("err: %s, doc: %#v", err, doc)
+		} else if err != nil {
+			log.Errorf("problem when trying lease: err: %s", err.Error())
 			return false, err
 		}
 		isMaster = true
@@ -199,5 +232,26 @@ func balance(workers []string, bucketCount int, doc *api.PoolWorkerDocument) {
 		for _, i := range buckets {
 			doc.PoolWorker.Buckets[i] = worker
 		}
+	}
+}
+
+// Start the bucket refreshing loop, logging and setting `true` in doStop on failure.
+func StartBucketRefreshLoop(
+	ctx context.Context,
+	log *logrus.Entry,
+	workerType api.PoolWorkerType,
+	bucketCount int,
+	refreshInterval time.Duration,
+	workerDocTTL time.Duration,
+	db database.PoolWorkers,
+	onBucketChange func([]int),
+	stop <-chan struct{}, doStop *atomic.Bool,
+) {
+	defer recover.Panic(log)
+
+	_err := BucketRefreshLoop(ctx, log, workerType, bucketCount, refreshInterval, workerDocTTL, db, onBucketChange, stop)
+	if _err != nil {
+		log.Errorf("unable to start bucket worker, exiting: %s", _err.Error())
+		doStop.Store(true)
 	}
 }
