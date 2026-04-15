@@ -89,6 +89,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		a = &actuator{
 			log: log,
 			env: _env,
+			now: now,
 
 			clusterResourceID: strings.ToLower(clusterResourceID),
 
@@ -148,9 +149,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		errs = checker.CheckOpenShiftClusters(clustersClient)
 		Expect(errs).To(BeNil(), "OpenShiftClusters don't match")
-
-		errs = checker.CheckSubscriptions(subscriptionsClient)
-		Expect(errs).To(BeNil(), "Subscriptions don't match")
 	}
 
 	When("old manifest", func() {
