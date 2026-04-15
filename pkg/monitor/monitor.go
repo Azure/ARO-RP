@@ -38,11 +38,14 @@ type monitorDBs interface {
 
 // Defaults for the different durations. We use different values in tests to speed them up.
 var (
-	defaultWorkerMaxStartupDelay       = time.Minute
-	defaultMonitorInterval             = time.Minute
-	defaultMonitorReadinessDelay       = 2 * time.Minute
-	defaultChangefeedInteval           = 10 * time.Second
-	defaultChangefeedReadinessInterval = time.Minute
+	defaultWorkerMaxStartupDelay          = time.Minute
+	defaultMonitorInterval                = time.Minute
+	defaultMonitorReadinessDelay          = 2 * time.Minute
+	defaultChangefeedInteval              = 10 * time.Second
+	defaultChangefeedReadinessInterval    = time.Minute
+	defaultBucketRefreshInterval          = 10 * time.Second
+	defaultBucketRefreshTTL               = 60 * time.Second
+	defaultBucketRefreshReadinessInterval = defaultBucketRefreshTTL
 )
 
 type monitor struct {
@@ -69,11 +72,14 @@ type monitor struct {
 	nsgMonitorBuilder     func(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor
 	hiveMonitorBuilder    func(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error)
 
-	workerMaxStartupDelay   time.Duration // Time until monitor workers start running
-	interval                time.Duration // Interval between monitor runs
-	changefeedInterval      time.Duration // Interval between changefeed runs (updates to cluster docs)
-	readyIfChangefeedWithin time.Duration // Time that the changefeed should have been changed within to be healthy
-	readyDelay              time.Duration // Minimal time until the monitor will allow itself to be marked ready
+	workerMaxStartupDelay          time.Duration // Time until monitor workers start running
+	interval                       time.Duration // Interval between monitor runs
+	changefeedInterval             time.Duration // Interval between changefeed runs (updates to cluster docs)
+	bucketRefreshInterval          time.Duration
+	bucketRefreshTTL               time.Duration // TTL for worker PoolWorker documents
+	bucketRefreshReadinessInterval time.Duration
+	readyIfChangefeedWithin        time.Duration // Time that the changefeed should have been changed within to be healthy
+	readyDelay                     time.Duration // Minimal time until the monitor will allow itself to be marked ready
 }
 
 type Runnable interface {
@@ -102,11 +108,14 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		nsgMonitorBuilder:     nsg.NewMonitor,
 		hiveMonitorBuilder:    hivemon.NewHiveMonitor,
 
-		workerMaxStartupDelay:   defaultWorkerMaxStartupDelay,
-		interval:                defaultMonitorInterval,
-		changefeedInterval:      defaultChangefeedInteval,
-		readyIfChangefeedWithin: defaultChangefeedReadinessInterval,
-		readyDelay:              defaultMonitorReadinessDelay,
+		workerMaxStartupDelay:          defaultWorkerMaxStartupDelay,
+		interval:                       defaultMonitorInterval,
+		changefeedInterval:             defaultChangefeedInteval,
+		bucketRefreshInterval:          defaultBucketRefreshInterval,
+		bucketRefreshTTL:               defaultBucketRefreshTTL,
+		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
+		readyIfChangefeedWithin:        defaultChangefeedReadinessInterval,
+		readyDelay:                     defaultMonitorReadinessDelay,
 	}
 
 	mon.clusters = NewClusterChangefeedResponder(log, mon.worker)
@@ -140,7 +149,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
-	return buckets.BucketRefreshLoop(ctx, mon.baseLog, api.PoolWorkerTypeMonitor, mon.bucketCount, mon.changefeedInterval, dbPoolWorkers, mon.onBuckets, nil)
+	return buckets.BucketRefreshLoop(ctx, mon.baseLog, api.PoolWorkerTypeMonitor, mon.bucketCount, mon.bucketRefreshInterval, mon.bucketRefreshTTL, dbPoolWorkers, mon.onBuckets, nil)
 }
 
 func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
@@ -190,7 +199,7 @@ func (mon *monitor) checkReady() bool {
 	if !ok {
 		return false
 	}
-	return (time.Since(lastBucketTime) < mon.readyIfChangefeedWithin) && // did we list buckets successfully recently?
+	return (time.Since(lastBucketTime) < mon.bucketRefreshReadinessInterval) && // did we list buckets successfully recently?
 		(time.Since(lastClusterChangefeedTime) < mon.readyIfChangefeedWithin) && // did we process the cluster change feed recently?
 		(time.Since(lastSubscriptionChangefeedTime) < mon.readyIfChangefeedWithin) && // did we process the subscription change feed recently?
 		(time.Since(mon.startTime) > mon.readyDelay) // are we running for at least (the default) 2 minutes?
