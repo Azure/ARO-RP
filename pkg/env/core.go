@@ -13,6 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/go-autorest/autorest"
 
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
@@ -49,6 +51,10 @@ type Core interface {
 	NewMSIAuthorizer(scope string) (autorest.Authorizer, error)
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
+
+	// For hooking in fake clients, use the easily-fakable Core vs the
+	// concrete-everywhere AROEnvironment
+	ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions
 
 	Service() string
 	Logger() *logrus.Entry
@@ -102,6 +108,10 @@ func (c *core) LoggerForComponent(component string) *logrus.Entry {
 
 func (c *core) EnvironmentType() string {
 	return os.Getenv("ENVIRONMENT")
+}
+
+func (c *core) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
+	return c.Environment().ArmClientOptions(middlewares...)
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {

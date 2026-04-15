@@ -384,6 +384,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.Get("/preresizevalidation", f.getPreResizeControlPlaneVMsValidation)
 
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/resizecontrolplane", f.postAdminResizeControlPlane)
+
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)

@@ -11,6 +11,7 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -92,7 +93,7 @@ func (d *dev) FPAuthorizer(tenantID string, additionalTenants []string, scopes .
 	return azidext.NewTokenCredentialAdapter(fpTokenCredential, scopes), nil
 }
 
-func (d *dev) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (*azidentity.ClientCertificateCredential, error) {
+func (d *dev) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (azcore.TokenCredential, error) {
 	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
 
 	options := d.Environment().ClientCertificateCredentialOptions(additionalTenants)
