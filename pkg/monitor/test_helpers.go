@@ -119,6 +119,7 @@ func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
 	mon.workerMaxStartupDelay = 0
 	mon.interval = 250 * time.Millisecond
 	mon.changefeedInterval = 100 * time.Millisecond
+	mon.bucketRefreshInterval = 100 * time.Millisecond
 	mon.readyDelay = 250 * time.Millisecond
 
 	return mon

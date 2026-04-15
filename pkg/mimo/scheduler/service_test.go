@@ -399,7 +399,7 @@ func TestSchedulerGoesReady(t *testing.T) {
 	}...)
 }
 
-func TestSchedlerStopsIfBucketFailure(t *testing.T) {
+func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 	r := require.New(t)
 	ctx := t.Context()
 
