@@ -164,8 +164,8 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				}, nil,
 			)
 
-			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return([]*armcompute.ResourceSKU{
-				{
+			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+				yield(&armcompute.ResourceSKU{
 					Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
 					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
 					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
@@ -173,8 +173,8 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 					}),
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
 					ResourceType: pointerutils.ToPtr("virtualMachines"),
-				},
-			}, nil)
+				}, nil)
+			})
 
 			plsFIPRemoval := plses.EXPECT().CreateOrUpdateAndWait(gomock.Any(), rgName, infraID+"-pls", armnetwork.PrivateLinkService{
 				Properties: &armnetwork.PrivateLinkServiceProperties{
