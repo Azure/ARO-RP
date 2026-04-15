@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -117,17 +118,14 @@ func (k *kubeActions) KubeGet(ctx context.Context, groupKind, namespace, name st
 	return un.MarshalJSON()
 }
 
-// KubeList lists resources. Pass an optional single labelSelector to filter results.
+// KubeList lists resources. Pass optional label selectors to filter results (e.g., "app=foo", "env=prod").
 func (k *kubeActions) KubeList(ctx context.Context, groupKind, namespace string, labelSelector ...string) ([]byte, error) {
 	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
-	selector := ""
-	if len(labelSelector) > 0 {
-		selector = labelSelector[0]
-	}
+	selector := strings.Join(labelSelector, ",")
 
 	// protect RP memory by not reading in more than 1000 items
 	ul, err := k.dyn.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{
