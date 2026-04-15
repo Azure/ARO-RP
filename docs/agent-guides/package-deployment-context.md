@@ -8,7 +8,6 @@ Read this when modifying packages whose behavior depends on WHERE they run. Gett
 
 These packages run on RP infrastructure VMs managed by Microsoft:
 
-<<<<<<< HEAD
 | Package        | Role                                                                                    |
 | -------------- | --------------------------------------------------------------------------------------- |
 | `pkg/frontend` | ARM REST API handlers (PUT/GET/DELETE/PATCH/POST)                                       |
@@ -19,30 +18,13 @@ These packages run on RP infrastructure VMs managed by Microsoft:
 | `pkg/portal`   | Portal backend                                                                          |
 | `pkg/database` | CosmosDB wrapper layer                                                                  |
 | `pkg/env`      | Environment shims (prod/dev/test)                                                       |
-=======
-| Package | Role |
-|---------|------|
-| `pkg/frontend` | ARM REST API handlers (PUT/GET/DELETE/PATCH/POST) |
-| `pkg/backend` | Async cluster operations worker (polls CosmosDB, processes lifecycle) |
-| `pkg/cluster` | **Production** cluster lifecycle orchestrator (Azure infra, certs, operator deployment) |
-| `pkg/monitor` | Cluster health monitoring |
-| `pkg/gateway` | Gateway service |
-| `pkg/portal` | Portal backend |
-| `pkg/database` | CosmosDB wrapper layer |
-| `pkg/env` | Environment shims (prod/dev/test) |
->>>>>>> cc22b18c7 (Restructure CLAUDE.md with progressive disclosure via agent guides)
 
 ### Customer OpenShift Cluster
 
 These packages run inside the customer's OpenShift cluster as the ARO operator:
 
-<<<<<<< HEAD
 | Package                    | Role                                                     |
 | -------------------------- | -------------------------------------------------------- |
-=======
-| Package | Role |
-|---------|------|
->>>>>>> cc22b18c7 (Restructure CLAUDE.md with progressive disclosure via agent guides)
 | `pkg/operator/controllers` | 26 Kubernetes controllers managing cluster configuration |
 
 Controllers include: alertwebhook, autosizednodes, banner, checkers, cloudproviderconfig, clusteroperatoraro, cpms, dnsmasq, etchosts, genevalogging, guardrails, imageconfig, ingress, machine, machinehealthcheck, machineset, monitoring, muo, node, previewfeature, pullsecret, rbac, routefix, storageaccounts, subnets, workaround.
@@ -51,7 +33,6 @@ Controllers include: alertwebhook, autosizednodes, banner, checkers, cloudprovid
 
 These packages exist solely for testing and development:
 
-<<<<<<< HEAD
 | Package            | Role                                                   |
 | ------------------ | ------------------------------------------------------ |
 | `pkg/util/cluster` | Test cluster creation tooling (Viper config, env vars) |
@@ -62,25 +43,12 @@ These packages exist solely for testing and development:
 
 | Package      | Role                                                                   |
 | ------------ | ---------------------------------------------------------------------- |
-=======
-| Package | Role |
-|---------|------|
-| `pkg/util/cluster` | Test cluster creation tooling (Viper config, env vars) |
-| `hack/cluster` | CLI tool for manual cluster creation |
-| `test/e2e` | E2E test suite (Ginkgo v2 + Gomega) |
-
-### RP Infrastructure Deployment
-
-| Package | Role |
-|---------|------|
->>>>>>> cc22b18c7 (Restructure CLAUDE.md with progressive disclosure via agent guides)
 | `pkg/deploy` | RP VMSS, CosmosDB, DNS, network infra deployment config (`aro deploy`) |
 
 ## The Three "Cluster" Packages
 
 This is the most common source of confusion:
 
-<<<<<<< HEAD
 | Package                | `pkg/cluster`                              | `pkg/util/cluster`                 | `pkg/deploy`              |
 | ---------------------- | ------------------------------------------ | ---------------------------------- | ------------------------- |
 | **Used in production** | Yes                                        | No                                 | Yes (deploy only)         |
@@ -89,16 +57,6 @@ This is the most common source of confusion:
 | **VM size type**       | `api.VMSize`                               | `string` (cast at usage)           | N/A                       |
 | **Config source**      | CosmosDB documents                         | Viper (env vars)                   | Azure Live Config         |
 | **Requires**           | Running RP                                 | `CI=true` or `RP_MODE=development` | Azure credentials         |
-=======
-| Package | `pkg/cluster` | `pkg/util/cluster` | `pkg/deploy` |
-|---------|--------------|-------------------|-------------|
-| **Used in production** | Yes | No | Yes (deploy only) |
-| **Called by** | `pkg/backend` | `test/e2e`, `hack/cluster` | `cmd/aro deploy` |
-| **Does what** | Orchestrates cluster install/update/delete | Creates test clusters | Deploys RP infrastructure |
-| **VM size type** | `api.VMSize` | `string` (cast at usage) | N/A |
-| **Config source** | CosmosDB documents | Viper (env vars) | Azure Live Config |
-| **Requires** | Running RP | `CI=true` or `RP_MODE=development` | Azure credentials |
->>>>>>> cc22b18c7 (Restructure CLAUDE.md with progressive disclosure via agent guides)
 
 **Rule**: CI-specific behavior (VM size retry on quota errors, VM size shuffling) belongs in `pkg/util/cluster/ClusterConfig`, driven by explicit config fields. Never add ad-hoc `os.Getenv("CI")` checks in `pkg/cluster` or `pkg/frontend`.
 

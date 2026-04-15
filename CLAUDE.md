@@ -87,18 +87,13 @@ This allows business logic to be invoked by other Go packages without HTTP mocki
 
 ## Definition of Done
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> cc22b18c7 (Restructure CLAUDE.md with progressive disclosure via agent guides)
 Before considering any change complete:
 1. `make fmt` passes
 2. `make unit-test-go` passes
 3. If `pkg/api/` changed: `cd pkg/api && go test ./...`
 4. If swagger-facing types changed: `make generate-swagger` and verify output
 5. No new lint violations: `make lint-go`
-<<<<<<< HEAD
-=======
+
 Files per API version:
 
 - `openshiftcluster.go` - External struct definitions
@@ -297,7 +292,7 @@ Default excludes: `!smoke&&!regressiontest`
 ### Required Tools
 
 - Go 1.25.3
-- Python 3.6-3.10 (for az aro CLI extension)
+- Python 3.8-3.10 (for az aro CLI extension)
 - Docker/Podman
 - Azure CLI (`az`)
 
@@ -396,6 +391,3 @@ In addition to this project's existing style requirements (import ordering, poin
 - **Interface design**: Keep interfaces narrowly focused. Start unexported and export only when real external consumers exist.
 - **Test quality**: Keep tests small, fast, parallel, and deterministic. Use `go test -race` for important packages. Structure tests to run reliably in CI without timing dependencies.
 - **Main package scope**: Restrict `main` packages to configuration, wiring, and process lifecycle. Place business logic in importable packages.
->>>>>>> 08f34a832 (Fix CLAUDE.md inaccuracies from PR review feedback)
-=======
->>>>>>> cc22b18c7 (Restructure CLAUDE.md with progressive disclosure via agent guides)
