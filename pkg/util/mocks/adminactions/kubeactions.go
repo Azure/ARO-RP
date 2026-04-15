@@ -118,6 +118,20 @@ func (mr *MockKubeActionsMockRecorder) DrainNode(ctx, nodeName any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DrainNode", reflect.TypeOf((*MockKubeActions)(nil).DrainNode), ctx, nodeName)
 }
 
+// DrainNodeWithRetries mocks base method.
+func (m *MockKubeActions) DrainNodeWithRetries(ctx context.Context, nodeName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DrainNodeWithRetries", ctx, nodeName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DrainNodeWithRetries indicates an expected call of DrainNodeWithRetries.
+func (mr *MockKubeActionsMockRecorder) DrainNodeWithRetries(ctx, nodeName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DrainNodeWithRetries", reflect.TypeOf((*MockKubeActions)(nil).DrainNodeWithRetries), ctx, nodeName)
+}
+
 // KubeCreateOrUpdate mocks base method.
 func (m *MockKubeActions) KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()

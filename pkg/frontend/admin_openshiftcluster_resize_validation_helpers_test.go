@@ -1066,10 +1066,10 @@ func TestValidateClusterNodes(t *testing.T) {
 			labels["node-role.kubernetes.io/master"] = ""
 		}
 		if nodeInstanceType != "" {
-			labels["node.kubernetes.io/instance-type"] = nodeInstanceType
+			labels[nodeLabelInstanceType] = nodeInstanceType
 		}
 		if betaInstanceType != "" {
-			labels["beta.kubernetes.io/instance-type"] = betaInstanceType
+			labels[nodeLabelBetaInstanceType] = betaInstanceType
 		}
 
 		conditions := []corev1.NodeCondition{}
