@@ -28,10 +28,14 @@ func (c *capacityReservationGroupsClient) CreateOrUpdate(ctx context.Context, re
 }
 
 func (c *capacityReservationGroupsClient) Delete(ctx context.Context, resourceGroupName, capacityReservationGroupName string) error {
+	// The SDK's Delete only treats 200/204 as success; all other status codes
+	// (including 202 Accepted) are returned as *azcore.ResponseError. When Azure
+	// returns 202 the resource is still being deleted asynchronously, so we poll
+	// Get until a 404 confirms deletion before returning to the caller.
+	// Note: CapacityReservationGroupsClient has no BeginDelete/LRO method in the
+	// SDK, so manual polling is the only option.
 	_, err := c.CapacityReservationGroupsClient.Delete(ctx, resourceGroupName, capacityReservationGroupName, nil)
 	if err != nil {
-		// Azure CRG deletion can return 202 Accepted (async). Poll with Get until
-		// the resource is gone (404) so callers don't proceed with a stale name.
 		var responseErr *azcore.ResponseError
 		if errors.As(err, &responseErr) && responseErr.StatusCode == http.StatusAccepted {
 			return c.pollCRGDeleted(ctx, resourceGroupName, capacityReservationGroupName)
