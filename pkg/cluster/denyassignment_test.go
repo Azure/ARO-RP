@@ -153,6 +153,57 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			mocks:   func(client *mock_features.MockDeploymentsClient) {},
 			wantErr: "createOrUpdateDenyAssignment failed: ObjectID for identity anything is empty",
 		},
+		{
+			name: "admin update - missing ServicePrincipalProfile - logs and skips",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateAdminUpdating,
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {},
+		},
+		{
+			name: "admin update - missing SPObjectID - logs and skips",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateAdminUpdating,
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {},
+		},
+		{
+			name: "admin update - PlatformWorkloadIdentityProfile missing ObjectID - logs and skips",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateAdminUpdating,
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"anything": {
+									ClientID:   "11111111-1111-1111-1111-111111111111",
+									ResourceID: "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
+								},
+							},
+						},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)

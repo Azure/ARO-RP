@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -17,20 +18,28 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 		return nil
 	}
 
+	var validationErr error
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for operatorName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if identity.ObjectID == "" {
-				return fmt.Errorf("createOrUpdateDenyAssignment failed: ObjectID for identity %s is empty", operatorName)
+				validationErr = fmt.Errorf("ObjectID for identity %s is empty", operatorName)
+				break
 			}
 		}
 	} else {
 		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
-			return fmt.Errorf("createOrUpdateDenyAssignment failed: ServicePrincipalProfile is empty")
+			validationErr = fmt.Errorf("ServicePrincipalProfile is empty")
+		} else if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
+			validationErr = fmt.Errorf("SPObjectID is empty")
 		}
+	}
 
-		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
-			return fmt.Errorf("createOrUpdateDenyAssignment failed: SPObjectID is empty")
+	if validationErr != nil {
+		if m.doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
+			m.log.Printf("skipping createOrUpdateDenyAssignment: %v", validationErr)
+			return nil
 		}
+		return fmt.Errorf("createOrUpdateDenyAssignment failed: %w", validationErr)
 	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
