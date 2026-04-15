@@ -403,7 +403,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 
 			// Only give clusters belonging to buckets we currently have owned
 			for cl, d := range s.clusters.GetClusters() {
-				bucket, ok := d.GetString(string(SelectorDataBucketID))
+				bucket, ok := d.GetString(string(SelectorDataKeyBucketID))
 				if !ok {
 					continue
 				}
