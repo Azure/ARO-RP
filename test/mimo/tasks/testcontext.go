@@ -119,7 +119,7 @@ func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entr
 	return ftc
 }
 
-func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
+func (t *fakeTestContext) GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument {
 	if t.doc == nil {
 		panic("didn't set up OpenShiftClusterDocument in test")
 	}
@@ -158,6 +158,10 @@ func (t *fakeTestContext) GetOpenShiftClusterProperties() api.OpenShiftClusterPr
 		panic("didn't set up OpenShiftClusterDocument in test")
 	}
 	return t.doc.OpenShiftCluster.Properties
+}
+
+func (t *fakeTestContext) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+	return t.ocDb.PatchWithLease(ctx, t.doc.Key, f)
 }
 
 // Result

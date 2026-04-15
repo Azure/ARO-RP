@@ -31,7 +31,7 @@ type TaskContext interface {
 	// OpenShiftCluster
 	GetClusterUUID() string
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
-	GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument
+	GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument
 
 	// PatchOpenShiftClusterDocument requires an active lease, and only works for the present document
 	PatchOpenShiftClusterDocument(context.Context, database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)

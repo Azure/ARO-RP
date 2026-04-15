@@ -11,7 +11,7 @@ import (
 )
 
 func MigrateInternalLoadBalancerZonesStep(ctx context.Context) error {
-	th, err := mimo.GetTaskContextWithAzureClients(ctx)
+	th, err := mimo.GetTaskContext(ctx)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
@@ -31,7 +31,7 @@ func MigrateInternalLoadBalancerZonesStep(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
-	_, err = cluster.MigrateInternalLoadBalancerZones(ctx, th.Environment(), th.Log(), th.PatchOpenShiftClusterDocument, lbc, pls, resSkus, th.GetOpenshiftClusterDocument())
+	_, err = cluster.MigrateInternalLoadBalancerZones(ctx, th.Environment(), th.Log(), th.PatchOpenShiftClusterDocument, lbc, pls, resSkus, th.GetOpenShiftClusterDocument())
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
@@ -40,7 +40,7 @@ func MigrateInternalLoadBalancerZonesStep(ctx context.Context) error {
 }
 
 func FixSSHStep(ctx context.Context) error {
-	th, err := mimo.GetTaskContextWithAzureClients(ctx)
+	th, err := mimo.GetTaskContext(ctx)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
@@ -55,7 +55,7 @@ func FixSSHStep(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
-	err = cluster.FixSSH(ctx, th.Log(), lbc, ifc, th.GetOpenshiftClusterDocument().OpenShiftCluster)
+	err = cluster.FixSSH(ctx, th.Log(), lbc, ifc, th.GetOpenShiftClusterDocument().OpenShiftCluster)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
