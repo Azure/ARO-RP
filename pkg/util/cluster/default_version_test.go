@@ -1,7 +1,7 @@
+package cluster
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
-
-package cluster
 
 import (
 	"testing"
@@ -29,7 +29,7 @@ func TestShouldInsertDefaultVersionInCosmosdb(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "skip insert when local default version already exists",
+			name: "repair local fallback version when it exists without default",
 			versionsInDB: []*api.OpenShiftVersion{
 				{
 					Properties: api.OpenShiftVersionProperties{
@@ -37,7 +37,7 @@ func TestShouldInsertDefaultVersionInCosmosdb(t *testing.T) {
 					},
 				},
 			},
-			want: false,
+			want: true,
 		},
 		{
 			name: "insert when no default and no local fallback version exist",

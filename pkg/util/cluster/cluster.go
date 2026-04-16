@@ -1119,14 +1119,12 @@ func getPlatformWIRoleSetsInCosmosDB(ctx context.Context) ([]*api.PlatformWorklo
 }
 
 func shouldInsertDefaultVersionInCosmosdb(versionsInDB []*api.OpenShiftVersion) bool {
-	defaultVersion := version.DefaultInstallStream.Version.String()
-
 	for _, versionFromDB := range versionsInDB {
 		if versionFromDB == nil {
 			continue
 		}
 
-		if versionFromDB.Properties.Default || versionFromDB.Properties.Version == defaultVersion {
+		if versionFromDB.Properties.Default {
 			return false
 		}
 	}
@@ -1135,9 +1133,9 @@ func shouldInsertDefaultVersionInCosmosdb(versionsInDB []*api.OpenShiftVersion) 
 }
 
 // ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
-// cosmos DB when no default version is already present and the local-dev
-// fallback version document does not already exist. It is hardcoded to use the
-// local-RP endpoint.
+// cosmos DB when no default version is already present. If the local-dev
+// fallback version document already exists without being marked default, this
+// repairs that document via the local-RP endpoint.
 //
 // It returns without an error when a default version is already present or a
 // default version was successfully put into the db.
@@ -1149,7 +1147,7 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 
 	defaultVersion := version.DefaultInstallStream
 	if !shouldInsertDefaultVersionInCosmosdb(versionsInDB) {
-		c.log.Debugf("A default version already exists in DB or version %s is already present. Not overwriting existing entry.", defaultVersion.Version.String())
+		c.log.Debug("A default version already exists in DB. Not overwriting existing entry.")
 		return nil
 	}
 
