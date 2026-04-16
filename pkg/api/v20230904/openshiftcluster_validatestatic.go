@@ -279,7 +279,7 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile, version string) error {
 	switch validate.VMSizeIsValidForVersion(api.VMSize(mp.VMSize), sv.requireD2sWorkers, true, version) {
 	case validate.VMValidityNotSupportedForRole:
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid for the 'master' role.", mp.VMSize))
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided VM size '%s' is invalid for the 'master' role.", mp.VMSize))
 	case validate.VMValidityNotSupportedInVersion:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided master VM size '%s' is invalid for the chosen OpenShift version.", mp.VMSize))
 	}
@@ -320,7 +320,7 @@ func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp 
 	}
 	switch validate.VMSizeIsValidForVersion(api.VMSize(wp.VMSize), sv.requireD2sWorkers, false, version) {
 	case validate.VMValidityNotSupportedForRole:
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided worker VM size '%s' is invalid for the 'worker' role.", wp.VMSize))
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided VM size '%s' is invalid for the 'worker' role.", wp.VMSize))
 	case validate.VMValidityNotSupportedInVersion:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided worker VM size '%s' is invalid for the chosen OpenShift version.", wp.VMSize))
 	}
