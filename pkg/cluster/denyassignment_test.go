@@ -29,10 +29,11 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name    string
-		doc     *api.OpenShiftClusterDocument
-		mocks   func(*mock_features.MockDeploymentsClient)
-		wantErr string
+		name          string
+		doc           *api.OpenShiftClusterDocument
+		mocks         func(*mock_features.MockDeploymentsClient)
+		wantErr       string
+		wantOneOfErrs []string
 	}{
 		{
 			name: "needs create - ServicePrincipalProfile",
@@ -154,6 +155,35 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			wantErr: "createOrUpdateDenyAssignment failed: ObjectID for identity anything is empty",
 		},
 		{
+			name: "needs create - PlatformWorkloadIdentityProfile - multiple missing ObjectIDs",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								"identity-1": {
+									ClientID:   "11111111-1111-1111-1111-111111111111",
+									ResourceID: "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-1",
+								},
+								"identity-2": {
+									ClientID:   "33333333-3333-3333-3333-333333333333",
+									ResourceID: "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-2",
+								},
+							},
+						},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {},
+			wantOneOfErrs: []string{
+				"createOrUpdateDenyAssignment failed: ObjectID for identity identity-1 is empty\nObjectID for identity identity-2 is empty",
+				"createOrUpdateDenyAssignment failed: ObjectID for identity identity-2 is empty\nObjectID for identity identity-1 is empty",
+			},
+		},
+		{
 			name: "admin update - missing ServicePrincipalProfile - logs and skips",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -224,7 +254,11 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			m.deployments = deployments
 
 			err := m.createOrUpdateDenyAssignment(ctx)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if len(tt.wantOneOfErrs) > 0 {
+				utilerror.AssertOneOfErrorMessages(t, err, tt.wantOneOfErrs)
+			} else {
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			}
 		})
 	}
 }

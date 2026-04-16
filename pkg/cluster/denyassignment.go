@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -18,23 +19,22 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 		return nil
 	}
 
-	var validationErr error
+	var validationErrs []error
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		for operatorName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if identity.ObjectID == "" {
-				validationErr = fmt.Errorf("ObjectID for identity %s is empty", operatorName)
-				break
+				validationErrs = append(validationErrs, fmt.Errorf("ObjectID for identity %s is empty", operatorName))
 			}
 		}
 	} else {
 		if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
-			validationErr = fmt.Errorf("ServicePrincipalProfile is empty")
+			validationErrs = append(validationErrs, fmt.Errorf("ServicePrincipalProfile is empty"))
 		} else if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
-			validationErr = fmt.Errorf("SPObjectID is empty")
+			validationErrs = append(validationErrs, fmt.Errorf("SPObjectID is empty"))
 		}
 	}
 
-	if validationErr != nil {
+	if validationErr := errors.Join(validationErrs...); validationErr != nil {
 		if m.doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
 			m.log.Printf("skipping createOrUpdateDenyAssignment: %v", validationErr)
 			return nil
