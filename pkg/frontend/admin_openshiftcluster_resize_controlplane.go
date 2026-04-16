@@ -71,7 +71,7 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 		}
 	}
 
-	if err := validateAdminMasterVMSize(vmSize); err != nil {
+	if err := validateAdminMasterVMSize(vmSize, f.env.IsCI()); err != nil {
 		return err
 	}
 

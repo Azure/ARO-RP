@@ -37,7 +37,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 		return err
 	}
 
-	err = validateAdminMasterVMSize(vmSize)
+	err = validateAdminMasterVMSize(vmSize, f.env.IsCI())
 	if err != nil {
 		return err
 	}

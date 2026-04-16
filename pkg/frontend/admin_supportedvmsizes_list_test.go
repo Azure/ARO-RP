@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api/util/vms"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -65,5 +67,24 @@ func TestSupportedvmsizes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSupportedvmsizesIncludesTestingSizesInCI(t *testing.T) {
+	controller := gomock.NewController(t)
+	mockEnv := mock_env.NewMockInterface(controller)
+	mockEnv.EXPECT().IsCI().Return(true)
+
+	f := &frontend{env: mockEnv}
+	gotResponse, err := f.supportedVMSizesForRole(vms.VMRoleMaster)
+	utilerror.AssertErrorMessage(t, err, "")
+
+	got := map[vms.VMSize]vms.VMSizeStruct{}
+	if err := json.Unmarshal(gotResponse, &got); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := got[vms.VMSizeStandardD4sV3]; !ok {
+		t.Fatalf("expected CI master list to include %q, got %v", vms.VMSizeStandardD4sV3, got)
 	}
 }

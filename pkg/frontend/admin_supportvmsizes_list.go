@@ -27,7 +27,8 @@ func (f *frontend) supportedVMSizesForRole(vmRole vms.VMRole) ([]byte, error) {
 	if vmRole != vms.VMRoleMaster && vmRole != vms.VMRoleWorker {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmRole '%s' is invalid. vmRole can only be master or worker", vmRole))
 	}
-	vmsizes := vms.SupportedVMSizesByRole[vmRole]
+	isCI := f.env != nil && f.env.IsCI()
+	vmsizes := adminSupportedVMSizesByRole(isCI)[vmRole]
 	b, err := json.MarshalIndent(vmsizes, "", "    ")
 	if err != nil {
 		return b, err
