@@ -237,6 +237,7 @@ func TestValidateAdminMasterVMSize(t *testing.T) {
 	for _, tt := range []struct {
 		test    string
 		vmSize  string
+		isCI    bool
 		wantErr string
 	}{
 		{
@@ -259,9 +260,15 @@ func TestValidateAdminMasterVMSize(t *testing.T) {
 			vmSize:  "silly_d8s_v10",
 			wantErr: "400: InvalidParameter: : The provided vmSize 'silly_d8s_v10' is unsupported for master.",
 		},
+		{
+			test:    "ci-only master size is supported in ci",
+			vmSize:  "Standard_D4s_v3",
+			isCI:    true,
+			wantErr: "",
+		},
 	} {
 		t.Run(tt.test, func(t *testing.T) {
-			err := validateAdminMasterVMSize(tt.vmSize)
+			err := validateAdminMasterVMSize(tt.vmSize, tt.isCI)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
