@@ -947,7 +947,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-1 (not ready)]. Resize is not safe without full API server redundancy.",
 		},
 		{
-			name: "non-apiserver pods are ignored",
+			name: "uses server-side label selector filtering",
 			mocks: func(k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
 					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
@@ -955,15 +955,6 @@ func TestValidateAPIServerPods(t *testing.T) {
 						fakeKubeAPIServerPod("kube-apiserver-master-0", corev1.PodRunning, true),
 						fakeKubeAPIServerPod("kube-apiserver-master-1", corev1.PodRunning, true),
 						fakeKubeAPIServerPod("kube-apiserver-master-2", corev1.PodRunning, true),
-						corev1.Pod{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:   "unrelated-pod",
-								Labels: map[string]string{"app": "something-else"},
-							},
-							Status: corev1.PodStatus{
-								Phase: corev1.PodFailed,
-							},
-						},
 					), nil)
 			},
 		},
