@@ -137,7 +137,6 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"DisableDenyAssignments",
 				"DisableSignedCertificates",
 				"EnableDevelopmentAuthorizer",
-				"RequireD2sWorkers",
 				"DisableReadinessDelay",
 				"RequireOIDCStorageWebEndpoint",
 				"UseMockMsiRp",

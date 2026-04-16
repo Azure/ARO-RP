@@ -23,6 +23,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -193,13 +194,13 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 // capacity — without a capacity reservation, AllocationFailed errors can only
 // be detected at ARM PUT time.
 func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location, currentVMSize, desiredVMSize string) error {
-	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(desiredVMSize))
+	newSizeStruct, ok := validate.VMSizeFromName(vms.VMSize(desiredVMSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
 			fmt.Sprintf("The provided VM SKU '%s' is not supported.", desiredVMSize))
 	}
 
-	currentSizeStruct, ok := validate.VMSizeFromName(api.VMSize(currentVMSize))
+	currentSizeStruct, ok := validate.VMSizeFromName(vms.VMSize(currentVMSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
 			fmt.Sprintf("The current VM SKU '%s' could not be resolved.", currentVMSize))
@@ -219,8 +220,8 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 	totalAdditionalRegionalCores := max((newSizeStruct.CoreCount-currentSizeStruct.CoreCount)*api.ControlPlaneNodeCount, 0)
 
 	requiredByQuota := map[string]int{
-		newSizeStruct.Family: totalAdditionalCores,
-		"cores":              totalAdditionalRegionalCores,
+		string(newSizeStruct.Family): totalAdditionalCores,
+		"cores":                      totalAdditionalRegionalCores,
 	}
 
 	usages, err := spComputeUsage.List(ctx, location)
