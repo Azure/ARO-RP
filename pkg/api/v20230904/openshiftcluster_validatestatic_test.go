@@ -767,6 +767,21 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = desID
 			},
 		},
+		{
+			name: "ci-only master vmSize valid in ci",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.VMSize = "Standard_D4s_v3"
+			},
+			isCI: true,
+		},
+		{
+			name: "master vmSize too small in ci",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.VMSize = "Standard_D2s_v3"
+			},
+			isCI:    true,
+			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid.",
+		},
 	}
 
 	runTests(t, testModeCreate, createTests)
@@ -866,7 +881,26 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		},
 	}
 
+	createTests := []*validateTest{
+		{
+			name: "ci-only worker vmSize valid in ci",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
+			},
+			isCI: true,
+		},
+		{
+			name: "ci-only worker vmSize still respects minimum version",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v6"
+			},
+			isCI:    true,
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D2s_v6' is invalid.",
+		},
+	}
+
 	// We do not perform this validation on update
+	runTests(t, testModeCreate, createTests)
 	runTests(t, testModeCreate, tests)
 }
 
