@@ -1,14 +1,20 @@
-ARG FEDORA_REGISTRY=registry.fedoraproject.org
-FROM ${FEDORA_REGISTRY}/fedora:42
+FROM mcr.microsoft.com/azurelinux/base/core:3.0
+
+# Enable the extended repo for podman, tk-devel, etc.
+RUN tdnf install -y azurelinux-repos-extended
 
 # Install system dependencies
-RUN dnf update -y && dnf install -y \
-    binutils-gold \
+RUN tdnf update -y && tdnf install -y \
+    binutils \
+    btrfs-progs-devel \
     bzip2-devel \
+    ca-certificates \
     curl \
+    gawk \
     gcc \
     git \
-    golang-github-containerd-btrfs-devel \
+    glibc-devel \
+    kernel-headers \
     gpgme-devel \
     jq \
     libassuan-devel \
@@ -20,19 +26,20 @@ RUN dnf update -y && dnf install -y \
     openssl \
     openssl-devel \
     openssl-libs \
-    openvpn \
     patch \
     podman \
     podman-docker \
     python3-pip \
     readline-devel \
+    shadow-utils \
     sqlite-devel \
+    tar \
     tk-devel \
     wget \
     which \
     xz-devel \
     zlib-devel \
-    && dnf clean all
+    && tdnf clean all
 
 WORKDIR /workspace
 
