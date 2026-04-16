@@ -7,7 +7,6 @@ import (
 	"context"
 	"flag"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -128,37 +127,6 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func normalizeTagsCaseInsensitive(tags map[string]*string) map[string]string {
-	if len(tags) == 0 {
-		return nil
-	}
-
-	normalized := make(map[string]string, len(tags))
-
-	for k, v := range tags {
-		key := strings.ToLower(k)
-		if v == nil {
-			normalized[key] = ""
-			continue
-		}
-
-		normalized[key] = *v
-	}
-
-	return normalized
-}
-
-func isTruthyTagValue(value string) bool {
-	normalized := strings.TrimSpace(value)
-
-	truthy, err := strconv.ParseBool(normalized)
-	if err == nil {
-		return truthy
-	}
-
-	return strings.EqualFold(normalized, "true")
-}
-
 func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
 	// don't mess with clusters in RGs managed by a production RP. Although
 	// the production deny assignment will prevent us from breaking most
@@ -189,10 +157,10 @@ func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *lo
 		}
 	}
 
-	normalizedTags := normalizeTagsCaseInsensitive(resourceGroup.Tags)
+	normalizedTags := purge.NormalizeTagsCaseInsensitive(resourceGroup.Tags)
 
 	keepTagValue, keepTagExists := normalizedTags[strings.ToLower(defaultKeepTag)]
-	if keepTagExists && isTruthyTagValue(keepTagValue) {
+	if keepTagExists && purge.IsTruthyTagValue(keepTagValue) {
 		log.Infof("Group %s is to persist. SKIP.", name)
 		return false
 	}
