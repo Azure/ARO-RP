@@ -323,7 +323,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 
 			d := &manager{
 				log:             entry,
-				doc:             tt.doc, // changed from oc
+				doc:             tt.doc,
 				virtualMachines: vmClient,
 			}
 
