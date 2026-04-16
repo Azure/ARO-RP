@@ -437,7 +437,7 @@ func (f *frontend) validateVMSKU(
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize", "The provided vmSize is empty.")
 	}
 
-	err := validateAdminMasterVMSize(desiredVMSize)
+	err := validateAdminMasterVMSize(desiredVMSize, f.env.IsCI())
 	if err != nil {
 		return err
 	}
