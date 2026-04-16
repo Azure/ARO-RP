@@ -66,6 +66,7 @@ const (
 	VMSizeStandardD8dsV5  VMSize = "Standard_D8ds_v5"
 	VMSizeStandardD16dsV5 VMSize = "Standard_D16ds_v5"
 	VMSizeStandardD32dsV5 VMSize = "Standard_D32ds_v5"
+	VMSizeStandardD48dsV5 VMSize = "Standard_D48ds_v5"
 	VMSizeStandardD64dsV5 VMSize = "Standard_D64ds_v5"
 	VMSizeStandardD96dsV5 VMSize = "Standard_D96ds_v5"
 
@@ -266,6 +267,7 @@ var (
 	vmSizeStandardD8dsV5Struct  = VMSizeStruct{CoreCount: 8, Family: standardDDSv5}
 	vmSizeStandardD16dsV5Struct = VMSizeStruct{CoreCount: 16, Family: standardDDSv5}
 	vmSizeStandardD32dsV5Struct = VMSizeStruct{CoreCount: 32, Family: standardDDSv5}
+	vmSizeStandardD48dsV5Struct = VMSizeStruct{CoreCount: 48, Family: standardDDSv5}
 	vmSizeStandardD64dsV5Struct = VMSizeStruct{CoreCount: 64, Family: standardDDSv5}
 	vmSizeStandardD96dsV5Struct = VMSizeStruct{CoreCount: 96, Family: standardDDSv5}
 
@@ -330,6 +332,7 @@ var (
 	vmSizeStandardE64isV3Struct   = VMSizeStruct{CoreCount: 64, Family: standardESv3}
 	vmSizeStandardE80isV4Struct   = VMSizeStruct{CoreCount: 80, Family: standardEISv4}
 	vmSizeStandardE80idsV4Struct  = VMSizeStruct{CoreCount: 80, Family: standardEIDSv4}
+	vmSizeStandardE96dsV5Struct   = VMSizeStruct{CoreCount: 96, Family: standardEDSv5}
 	vmSizeStandardE104isV5Struct  = VMSizeStruct{CoreCount: 104, Family: standardEISv5}
 	vmSizeStandardE104idsV5Struct = VMSizeStruct{CoreCount: 104, Family: standardEIDSv5}
 
@@ -420,6 +423,7 @@ const (
 	standardEISv4  VMFamily = "standardEISv4Family"
 	standardEIDSv4 VMFamily = "standardEIDSv4Family"
 	standardEISv5  VMFamily = "standardEISv5Family"
+	standardEDSv5  VMFamily = "standardEDSv5Family"
 	standardEIDSv5 VMFamily = "standardEIDSv5Family"
 	standardFSv2   VMFamily = "standardFSv2Family"
 	standardMS     VMFamily = "standardMSFamily"

@@ -147,6 +147,7 @@ var SupportedWorkerVMSizes = map[VMSize]VMSizeStruct{
 	VMSizeStandardD8dsV5:  vmSizeStandardD8dsV5Struct,
 	VMSizeStandardD16dsV5: vmSizeStandardD16dsV5Struct,
 	VMSizeStandardD32dsV5: vmSizeStandardD32dsV5Struct,
+	VMSizeStandardD48dsV5: vmSizeStandardD48dsV5Struct,
 	VMSizeStandardD64dsV5: vmSizeStandardD64dsV5Struct,
 	VMSizeStandardD96dsV5: vmSizeStandardD96dsV5Struct,
 
@@ -195,6 +196,7 @@ var SupportedWorkerVMSizes = map[VMSize]VMSizeStruct{
 	VMSizeStandardE64isV3:   vmSizeStandardE64isV3Struct,
 	VMSizeStandardE80isV4:   vmSizeStandardE80isV4Struct,
 	VMSizeStandardE80idsV4:  vmSizeStandardE80idsV4Struct,
+	VMSizeStandardE96dsV5:   vmSizeStandardE96dsV5Struct,
 	VMSizeStandardE104isV5:  vmSizeStandardE104isV5Struct,
 	VMSizeStandardE104idsV5: vmSizeStandardE104idsV5Struct,
 
