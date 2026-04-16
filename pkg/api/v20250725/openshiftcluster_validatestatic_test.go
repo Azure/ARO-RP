@@ -22,10 +22,9 @@ type validateTest struct {
 	name                string
 	clusterName         *string
 	location            *string
-	clusterVersion      *string
 	current             func(oc *OpenShiftCluster)
 	modify              func(oc *OpenShiftCluster)
-	requireD2sWorkers   bool
+	isCI                bool
 	architectureVersion *api.ArchitectureVersion
 	wantErr             string
 }
@@ -73,7 +72,7 @@ func validSystemData() *SystemData {
 	}
 }
 
-func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
+func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 	oc := &OpenShiftCluster{
 		ID:       getResourceID(name),
 		Name:     name,
@@ -87,7 +86,7 @@ func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:               "cluster.location.aroapp.io",
-				Version:              version,
+				Version:              "4.10.0",
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 				FipsValidatedModules: FipsValidatedModulesDisabled,
 			},
@@ -158,15 +157,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					tt.clusterName = pointerutils.ToPtr("resourceName")
 				}
 
-				if tt.clusterVersion == nil {
-					tt.clusterVersion = pointerutils.ToPtr("4.10.0")
-				}
-
 				v := &openShiftClusterStaticValidator{
-					location:          *tt.location,
-					domain:            "location.aroapp.io",
-					requireD2sWorkers: tt.requireD2sWorkers,
-					resourceID:        getResourceID(*tt.clusterName),
+					location:   *tt.location,
+					domain:     "location.aroapp.io",
+					isCI:       tt.isCI,
+					resourceID: getResourceID(*tt.clusterName),
 					r: azure.Resource{
 						SubscriptionID: subscriptionID,
 						ResourceGroup:  "resourceGroup",
@@ -177,7 +172,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				validOCForTest := func() *OpenShiftCluster {
-					oc := validOpenShiftCluster(*tt.clusterName, *tt.location, *tt.clusterVersion)
+					oc := validOpenShiftCluster(*tt.clusterName, *tt.location)
 					if tt.current != nil {
 						tt.current(oc)
 					}
@@ -204,7 +199,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(ext, current)
 				}
 
-				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sWorkers, api.ArchitectureVersionV2, v.resourceID)
+				err := v.Static(oc, current, tt.isCI, v.location, v.domain, api.ArchitectureVersionV2, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Errorf("Expected error %s, got nil", tt.wantErr)
@@ -854,7 +849,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.MasterProfile.VMSize = "Standard_D2s_v3"
 			},
-			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided VM size 'Standard_D2s_v3' is invalid for the 'master' role.",
+			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid for version '4.10.0'.",
 		},
 		{
 			name: "subnetId invalid",
@@ -910,21 +905,6 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = desID
 			},
 		},
-		{
-			name:           "vmSize invalid for version",
-			clusterVersion: pointerutils.ToPtr("4.10.0"),
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
-			},
-			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D8s_v6' is invalid for the chosen OpenShift version.",
-		},
-		{
-			name:           "vmSize valid for version",
-			clusterVersion: pointerutils.ToPtr("4.20.0"),
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
-			},
-		},
 	}
 
 	runTests(t, testModeCreate, createTests)
@@ -949,37 +929,14 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'invalid' is invalid for the 'worker' role.",
-		},
-		{
-			name:           "vmSize invalid for version",
-			clusterVersion: pointerutils.ToPtr("4.10.0"),
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
-			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D8s_v6' is invalid for the chosen OpenShift version.",
-		},
-		{
-			name:           "vmSize valid for version",
-			clusterVersion: pointerutils.ToPtr("4.20.0"),
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
-			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'invalid' is invalid.",
 		},
 		{
 			name: "vmSize too small (prod)",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'Standard_D2s_v3' is invalid for the 'worker' role.",
-		},
-		{
-			name: "vmSize too big (dev)",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
-			},
-			requireD2sWorkers: true,
-			wantErr:           "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'Standard_D4s_v3' is invalid for the 'worker' role.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D2s_v3' is invalid.",
 		},
 		{
 			name: "disk too small",
