@@ -9,44 +9,43 @@ import (
 
 	"github.com/go-test/deep"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestSupportedvmsizes(t *testing.T) {
-	mastervmsizes := validate.SupportedVMSizesByRole(validate.VMRoleMaster)
-	workervmsizes := validate.SupportedVMSizesByRole(validate.VMRoleWorker)
+	mastervmsizes := vms.SupportedVMSizesByRole[vms.VMRoleMaster]
+	workervmsizes := vms.SupportedVMSizesByRole[vms.VMRoleWorker]
 
 	type test struct {
 		name         string
-		vmRole       string
-		wantResponse map[api.VMSize]api.VMSizeStruct
+		vmRole       vms.VMRole
+		wantResponse map[vms.VMSize]vms.VMSizeStruct
 		wantError    string
 	}
 
 	for _, tt := range []*test{
 		{
 			name:         "vmRole is invalid",
-			vmRole:       "invalidVMRole",
+			vmRole:       vms.VMRole("invalidVMRole"),
 			wantError:    `400: InvalidParameter: : The provided vmRole 'invalidVMRole' is invalid. vmRole can only be master or worker`,
 			wantResponse: nil,
 		},
 		{
 			name:         "vmRole is empty",
-			vmRole:       "",
+			vmRole:       vms.VMRole(""),
 			wantError:    `400: InvalidParameter: : The provided vmRole '' is invalid. vmRole can only be master or worker`,
 			wantResponse: nil,
 		},
 		{
 			name:         "master as vmRole",
-			vmRole:       "master",
+			vmRole:       vms.VMRoleMaster,
 			wantError:    "",
 			wantResponse: mastervmsizes,
 		},
 		{
 			name:         "worker as vmRole",
-			vmRole:       "worker",
+			vmRole:       vms.VMRoleWorker,
 			wantError:    "",
 			wantResponse: workervmsizes,
 		},
@@ -56,7 +55,7 @@ func TestSupportedvmsizes(t *testing.T) {
 			gotResponse, err := f.supportedVMSizesForRole(tt.vmRole)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 			if gotResponse != nil || tt.wantResponse != nil {
-				v := map[api.VMSize]api.VMSizeStruct{}
+				v := map[vms.VMSize]vms.VMSizeStruct{}
 				err = json.Unmarshal(gotResponse, &v)
 				if err != nil {
 					t.Error(err)

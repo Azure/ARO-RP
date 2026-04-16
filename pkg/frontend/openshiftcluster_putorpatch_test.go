@@ -17,6 +17,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -318,14 +319,14 @@ func getOpenShiftClusterDocument(provisioningState, lastProvisioningState, faile
 				},
 				MasterProfile: api.MasterProfile{
 					EncryptionAtHost: api.EncryptionAtHostDisabled,
-					VMSize:           api.VMSize(mockVMSize),
+					VMSize:           vms.VMSize(mockVMSize),
 					SubnetID:         mockMasterSubnetID,
 				},
 				WorkerProfiles: []api.WorkerProfile{
 					{
 						Name:             "worker",
 						EncryptionAtHost: api.EncryptionAtHostDisabled,
-						VMSize:           api.VMSize(mockVMSize),
+						VMSize:           vms.VMSize(mockVMSize),
 						DiskSizeGB:       128,
 						Count:            3,
 						SubnetID:         mockWorkerSubnetID,
@@ -1731,14 +1732,14 @@ func TestPutorPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				},
 				MasterProfile: admin.MasterProfile{
 					EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					VMSize:           admin.VMSize(mockVMSize),
+					VMSize:           vms.VMSize(mockVMSize),
 					SubnetID:         mockMasterSubnetID,
 				},
 				WorkerProfiles: []admin.WorkerProfile{
 					{
 						Name:             "worker",
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-						VMSize:           admin.VMSize(mockVMSize),
+						VMSize:           vms.VMSize(mockVMSize),
 						DiskSizeGB:       128,
 						Count:            3,
 						SubnetID:         mockWorkerSubnetID,

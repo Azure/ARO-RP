@@ -26,6 +26,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -174,7 +175,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
+								VMSize: vms.VMSizeStandardD8sV3,
 							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
@@ -226,7 +227,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
+								VMSize: vms.VMSizeStandardD8sV3,
 							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
@@ -261,7 +262,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
+								VMSize: vms.VMSizeStandardD8sV3,
 							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
@@ -315,7 +316,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
+								VMSize: vms.VMSizeStandardD8sV3,
 							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
@@ -340,7 +341,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
+								VMSize: vms.VMSizeStandardD8sV3,
 							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
@@ -379,7 +380,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
+								VMSize: vms.VMSizeStandardD8sV3,
 							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
@@ -438,7 +439,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						Location: "eastus",
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
+								VMSize: vms.VMSizeStandardD8sV3,
 							},
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
