@@ -43,6 +43,11 @@ func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string, isCI bo
 		return false
 	}
 
+	clusterVersion, err := version.ParseVersion(v)
+	if err != nil {
+		return false
+	}
+
 	role := vms.VMRoleWorker
 	if isMaster {
 		role = vms.VMRoleMaster
@@ -53,10 +58,6 @@ func VMSizeIsValidForVersion(vmSize vms.VMSize, isMaster bool, v string, isCI bo
 
 	// If the VM size has a minimum version requirement, check it
 	if sizeInfo.MinimumVersion != nil {
-		clusterVersion, err := version.ParseVersion(v)
-		if err != nil {
-			return false
-		}
 		return clusterVersion.Gt(sizeInfo.MinimumVersion) || clusterVersion.Eq(sizeInfo.MinimumVersion)
 	}
 
