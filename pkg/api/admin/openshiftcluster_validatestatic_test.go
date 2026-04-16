@@ -814,6 +814,45 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 	}
 }
 
+func TestOpenShiftClusterStaticValidateIsCIParity(t *testing.T) {
+	tests := []struct {
+		name    string
+		current *api.OpenShiftCluster
+		oc      *OpenShiftCluster
+		isCI    bool
+		wantErr string
+	}{
+		{
+			name:    "valid update in ci",
+			current: &api.OpenShiftCluster{},
+			oc:      (&openShiftClusterConverter{}).ToExternal(&api.OpenShiftCluster{}).(*OpenShiftCluster),
+			isCI:    true,
+		},
+		{
+			name:    "admin create disallowed in ci",
+			current: nil,
+			oc:      &OpenShiftCluster{},
+			isCI:    true,
+			wantErr: "400: RequestNotAllowed: : Admin API does not allow cluster creation.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := (&openShiftClusterStaticValidator{}).Static(tt.oc, tt.current, tt.isCI, "", "", api.ArchitectureVersionV2, "")
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || err.Error() != tt.wantErr {
+				t.Fatalf("got err %v, want %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // func toDate(t time.Time) *date.Time {
 // 	return &date.Time{Time: t}
 // }

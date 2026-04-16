@@ -30,10 +30,11 @@ import (
 )
 
 const (
-	mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
-	mockVnetRG         = "fake-vnet-rg"
-	mockVnetName       = "fake-vnet"
-	mockSubnetName     = "cluster-worker"
+	mockSubscriptionID      = "00000000-0000-0000-0000-000000000000"
+	mockVnetRG              = "fake-vnet-rg"
+	mockVnetName            = "fake-vnet"
+	mockSubnetName          = "cluster-worker"
+	mockDiskEncryptionSetID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/fake-vnet-rg/providers/Microsoft.Compute/diskEncryptionSets/test-des"
 )
 
 func TestWorkerProfilesEnricherTask(t *testing.T) {
@@ -77,6 +78,47 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			name:    "machine set objects exist - invalid provider spec JSON - tag as int - treated as valid",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpec()), createMachineSet("fake-worker-profile-2", invalidProvSpecTagsAsInt())),
 			wantOc:  getWantOc(clusterID, validWorkerProfile()),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:   "machine set objects exist - encryption at host and disk encryption set",
+			client: machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpecWithSecurityAndDES())),
+			wantOc: getWantOc(clusterID, []api.WorkerProfile{
+				{
+					Name:                "fake-worker-profile-1",
+					VMSize:              vms.VMSizeStandardD4sV3,
+					DiskSizeGB:          512,
+					EncryptionAtHost:    api.EncryptionAtHostEnabled,
+					DiskEncryptionSetID: mockDiskEncryptionSetID,
+					SubnetID: fmt.Sprintf(
+						"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
+						mockSubscriptionID, mockVnetRG, mockVnetName, mockSubnetName,
+					),
+					Count: 1,
+				},
+			}),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name: "machine set objects exist - nil replicas default to one",
+			client: machinefake.NewSimpleClientset(func() *machinev1beta1.MachineSet {
+				ms := createMachineSet("fake-worker-profile-1", validProvSpec())
+				ms.Spec.Replicas = nil
+				return ms
+			}()),
+			wantOc: getWantOc(clusterID, []api.WorkerProfile{
+				{
+					Name:             "fake-worker-profile-1",
+					VMSize:           vms.VMSizeStandardD4sV3,
+					DiskSizeGB:       512,
+					EncryptionAtHost: api.EncryptionAtHostDisabled,
+					SubnetID: fmt.Sprintf(
+						"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
+						mockSubscriptionID, mockVnetRG, mockVnetName, mockSubnetName,
+					),
+					Count: 1,
+				},
+			}),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
@@ -155,6 +197,36 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 	}
 }
 
+func TestSafeUnmarshalProviderSpec(t *testing.T) {
+	t.Run("coerces zone value to string", func(t *testing.T) {
+		spec, err := safeUnmarshalProviderSpec(invalidProvSpecZoneAsInt().Value.Raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if spec.Zone == nil || *spec.Zone != "1" {
+			t.Fatalf("zone=%v, want %q", spec.Zone, "1")
+		}
+	})
+
+	t.Run("coerces tag values to strings", func(t *testing.T) {
+		spec, err := safeUnmarshalProviderSpec(invalidProvSpecTagsAsInt().Value.Raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if spec.Tags["field2"] != "2" {
+			t.Fatalf("tag field2=%q, want %q", spec.Tags["field2"], "2")
+		}
+	})
+
+	t.Run("malformed json returns error", func(t *testing.T) {
+		_, err := safeUnmarshalProviderSpec([]byte("{invalid"))
+		if err == nil {
+			t.Fatal("expected error for malformed provider spec")
+		}
+	})
+}
+
 // This function creates a new MachineSet object with the given name and ProviderSpec.
 func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machinev1beta1.MachineSet {
 	return &machinev1beta1.MachineSet{
@@ -200,6 +272,39 @@ func validProvSpec() machinev1beta1.ProviderSpec {
 	"zone": "1"
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
+			)),
+		},
+	}
+}
+
+func validProvSpecWithSecurityAndDES() machinev1beta1.ProviderSpec {
+	return machinev1beta1.ProviderSpec{
+		Value: &kruntime.RawExtension{
+			Raw: []byte(fmt.Sprintf(`{
+	"apiVersion": "machine.openshift.io/v1beta1",
+	"kind": "AzureMachineProviderSpec",
+	"tags": {
+		"field1": "value1",
+		"field2": "value2"
+	},
+	"osDisk": {
+		"diskSizeGB": 512,
+		"managedDisk": {
+			"diskEncryptionSet": {
+				"id": "%s"
+			}
+		}
+	},
+	"securityProfile": {
+		"encryptionAtHost": true
+	},
+	"vmSize": "Standard_D4s_v3",
+	"networkResourceGroup": "%s",
+	"vnet": "%s",
+	"subnet": "%s",
+	"zone": "1"
+}`,
+				mockDiskEncryptionSetID, mockVnetRG, mockVnetName, mockSubnetName,
 			)),
 		},
 	}
