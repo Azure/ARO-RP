@@ -1,9 +1,13 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 package cluster
 
 import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func TestShouldInsertDefaultVersionInCosmosdb(t *testing.T) {
@@ -29,7 +33,7 @@ func TestShouldInsertDefaultVersionInCosmosdb(t *testing.T) {
 			versionsInDB: []*api.OpenShiftVersion{
 				{
 					Properties: api.OpenShiftVersionProperties{
-						Version: "4.17.44",
+						Version: version.DefaultInstallStream.Version.String(),
 					},
 				},
 			},
