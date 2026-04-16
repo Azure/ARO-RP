@@ -396,7 +396,11 @@ func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool
 		return VMValidityNotSupportedForRole
 	}
 
-	// If we can't parse the version, just trust the above VMSizeIsValid
+	// If we can't parse the version, just trust the above VMSizeIsValid. The
+	// only reason that the version would not be parseable is because it came
+	// from the cluster during enrichment, and is therefore potentially empty or
+	// nonsense -- this will always be pre-checked by this point during
+	// installs.
 	clusterVersion, err := version.ParseVersion(v)
 	if err != nil {
 		return VMValidityOK
@@ -421,7 +425,8 @@ func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool
 }
 
 func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
-	// this is for development purposes only
+	// the D2s versions are for development purposes only and don't show up in
+	// SupportedVMSizesByRole
 	switch vmSize {
 	case api.VMSizeStandardD2sV3:
 		return api.VMSizeStandardD2sV3Struct, true
