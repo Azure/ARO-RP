@@ -1252,6 +1252,7 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, clusterName string) error {
 	if c.Config.UseWorkloadIdentity {
 		c.log.Print("Skipping deletion of service principal role assignments")
+		return nil
 	}
 	c.log.Print("deleting role assignments")
 	oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
