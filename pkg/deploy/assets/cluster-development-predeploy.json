@@ -103,7 +103,7 @@
             "apiVersion": "2019-09-01"
         },
         {
-            "name": "[concat(parameters('kvName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]",
+            "name": "[concat(parameters('kvName'), '/Microsoft.Authorization/', guid('crypto service encryption user role on disk encryption set keyvault', resourceGroup().id, subscription().subscriptionId))]",
             "type": "Microsoft.KeyVault/vaults/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]",

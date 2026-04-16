@@ -106,7 +106,7 @@ func (g *generator) diskEncryptionKeyVaultRBAC() *arm.Resource {
 
 	return &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: pointerutils.ToPtr("[concat(parameters('kvName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]"),
+			Name: pointerutils.ToPtr("[concat(parameters('kvName'), '/Microsoft.Authorization/', guid('crypto service encryption user role on disk encryption set keyvault', resourceGroup().id, subscription().subscriptionId))]"),
 			Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
