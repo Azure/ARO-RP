@@ -5,6 +5,7 @@ package mirror
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +72,56 @@ func DestLastIndex(repo, reference string) string {
 	return repo + reference[strings.LastIndex(reference, "/"):]
 }
 
+// digestFromReference extracts the manifest digest from a digest-based image
+// reference (e.g. "registry/repo@sha256:abc123..."). Returns an error if the
+// reference does not contain a digest.
+func digestFromReference(reference string) (string, error) {
+	if idx := strings.Index(reference, "@sha256:"); idx != -1 {
+		return reference[idx+1:], nil
+	}
+	return "", fmt.Errorf("reference %q does not contain a digest", reference)
+}
+
+// repoFromReference extracts the repository from an image reference,
+// stripping any tag or digest suffix.
+func repoFromReference(reference string) string {
+	if idx := strings.Index(reference, "@"); idx != -1 {
+		return reference[:idx]
+	}
+	if idx := strings.LastIndex(reference, ":"); idx != -1 {
+		if slashIdx := strings.LastIndex(reference, "/"); slashIdx < idx {
+			return reference[:idx]
+		}
+	}
+	return reference
+}
+
+// sigReference constructs the cosign .sig OCI artifact reference for a given
+// repository and manifest digest (e.g. "sha256:abc123...").
+func sigReference(repo, digest string) string {
+	return repo + ":" + strings.Replace(digest, ":", "-", 1) + ".sig"
+}
+
+// copySigArtifact attempts to copy the cosign .sig OCI artifact for the given
+// image. If the source registry has no .sig artifact for this image, the copy
+// will fail — callers should treat this as non-fatal for older releases that
+// were never signed.
+func copySigArtifact(ctx context.Context, log *logrus.Entry, srcref, dstref string, srcauth, dstauth *types.DockerAuthConfig) error {
+	dgst, err := digestFromReference(srcref)
+	if err != nil {
+		return err
+	}
+
+	srcRepo := repoFromReference(srcref)
+	dstRepo := repoFromReference(dstref)
+
+	sigSrc := sigReference(srcRepo, dgst)
+	sigDst := sigReference(dstRepo, dgst)
+
+	log.Debugf("mirroring sig %s -> %s", sigSrc, sigDst)
+	return Copy(ctx, sigDst, sigSrc, dstauth, srcauth)
+}
+
 func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, dstauth, srcauth *types.DockerAuthConfig) (int, error) {
 	log.Debugf("reading imagestream")
 	startTime := time.Now()
@@ -112,6 +163,14 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 				if err != nil {
 					l.WithField("tag", w.tag).WithError(err).Error("failed to mirror image after 6 retries")
 				}
+
+				if err == nil {
+					sigErr := copySigArtifact(ctx, l, w.srcreference, w.dstreference, w.srcauth, w.dstauth)
+					if sigErr != nil {
+						l.WithField("tag", w.tag+".sig").WithError(sigErr).Debug("sig artifact not mirrored (may not exist)")
+					}
+				}
+
 				results <- err
 			}
 			wg.Done()
