@@ -23,6 +23,7 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -79,7 +80,7 @@ func (ce machineClientEnricher) Enrich(
 			continue
 		}
 
-		workerProfiles[i].VMSize = api.VMSize(machineProviderSpec.VMSize)
+		workerProfiles[i].VMSize = vms.VMSize(machineProviderSpec.VMSize)
 		workerProfiles[i].DiskSizeGB = int(machineProviderSpec.OSDisk.DiskSizeGB)
 		workerProfiles[i].SubnetID = fmt.Sprintf(
 			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",

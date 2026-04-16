@@ -12,6 +12,7 @@ import (
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -42,6 +43,11 @@ func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.M
 	err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, machineProviderSpec)
 	if err != nil {
 		return []error{fmt.Errorf("machine %s: failed to read provider spec: %v", machine.Name, err)}
+	}
+
+	// Validate VM size in machine provider spec
+	if !validate.VMSizeIsValid(vms.VMSize(machineProviderSpec.VMSize), isMaster, false) {
+		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%v'", machine.Name, machineProviderSpec.VMSize))
 	}
 
 	// Validate disk size in machine provider spec
