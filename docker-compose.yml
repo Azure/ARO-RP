@@ -261,7 +261,6 @@ services:
       context: .
       dockerfile: Dockerfile.dev-env
       args:
-        - FEDORA_REGISTRY=${FEDORA_REGISTRY:-registry.fedoraproject.org}
         - USERID=${USERID:-1000}
     image: localhost/aro-rp_aro-dev
     platform: ${PLATFORM:-linux/amd64}

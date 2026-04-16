@@ -47,24 +47,20 @@ else
 	VERSION = $(TAG)
 endif
 
-# REGISTRY, BUILDER_REGISTRY, and FEDORA_REGISTRY are set conditionally below based on RP_IMAGE_ACR
+# REGISTRY and BUILDER_REGISTRY are set conditionally below based on RP_IMAGE_ACR
 # default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
 ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
 	BUILDER_REGISTRY = arointsvc.azurecr.io
-	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
 	BUILDER_REGISTRY = arosvc.azurecr.io
-	FEDORA_REGISTRY = $(REGISTRY)
 else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY ?= registry.access.redhat.com
 	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
-	FEDORA_REGISTRY ?= arointsvc.azurecr.io
 else
 	REGISTRY = $(RP_IMAGE_ACR)
 	BUILDER_REGISTRY = quay.io/openshift-release-dev
-	FEDORA_REGISTRY = $(REGISTRY)
 endif
 
 # prod images
@@ -572,29 +568,24 @@ acr-login: ## Login to arointsvc ACR using PULL_SECRET
 # Dev-env: detect OS and choose compose tool / overrides
 ifeq ($(shell uname -s),Darwin)
   DEV_ENV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev-env-macos.yml
-  DEV_ENV_USERID := $(shell id -u)
-  DEV_ENV_FEDORA_REGISTRY ?= registry.fedoraproject.org
-  DEV_ENV_DEPS :=
 else
   DEV_ENV_COMPOSE := podman compose -f docker-compose.yml -f docker-compose.dev-env-linux.yml
-  DEV_ENV_USERID := $(shell id -u)
-  DEV_ENV_FEDORA_REGISTRY := $(FEDORA_REGISTRY)
-  DEV_ENV_DEPS := acr-login
 endif
+DEV_ENV_USERID := $(shell id -u)
 
 .PHONY: dev-env-build
-dev-env-build: $(DEV_ENV_DEPS) ## Build the dev environment container image
-	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+dev-env-build: ## Build the dev environment container image
+	USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
 		$(DEV_ENV_COMPOSE) build aro-dev-env
 
 .PHONY: dev-env-start
-dev-env-start: $(DEV_ENV_DEPS) ## Start the dev environment RP container
-	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+dev-env-start: ## Start the dev environment RP container
+	USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
 		$(DEV_ENV_COMPOSE) up -d aro-dev-env
 
 .PHONY: dev-env-stop
 dev-env-stop: ## Stop the containerized RP
-	FEDORA_REGISTRY=$(DEV_ENV_FEDORA_REGISTRY) USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
+	USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
 		$(DEV_ENV_COMPOSE) down aro-dev-env
 
 .PHONY: run-selenium
