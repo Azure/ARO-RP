@@ -862,20 +862,15 @@ def aro_identity_create_required(*,
                                  worker_subnet,
                                  vnet,
                                  disk_encryption_set=None,
-                                 vnet_resource_group_name=None) -> list[dict[str, typing.Any]]:  # pylint: disable=unused-argument
+                                 vnet_resource_group_name=None) -> list:  # pylint: disable=unused-argument
     # FIXME:
     # pylint: disable=too-many-locals
+    identities = []
 
     progress = cmd.cli_ctx.get_progress_controller()
     progress.add(message="Reticulating splines")
 
-    created: list[dict | None] = []
     _validate_version(client, version, location)
-
-    progress.add(message="Creating top-level cluster identity")
-    cluster_id = create_identity(cmd, location, resource_group_name, "aro-cluster")
-    created.append(cluster_id)
-
     network_scopes = _determine_required_scopes_from_network_resources(
         cmd,
         disk_encryption_set,
@@ -884,10 +879,14 @@ def aro_identity_create_required(*,
         worker_subnet
     )
 
+    progress.add(message="Creating cluster identity")
+    cluster_identity = create_identity(cmd, location, resource_group_name, "aro-cluster")
+    identities.append(cluster_identity)
+
     for role in _get_pwi_role_set(client, version, location).platform_workload_identity_roles:
         progress.add(message=f"Creating {role.operator_name} identity")
         identity = create_identity(cmd, location, resource_group_name, role.operator_name)
-        created.append(identity)
+        identities.append(identity)
 
         scopes = _determine_required_scopes_from_role_set(cmd, role)
         for scope in scopes:
@@ -896,13 +895,12 @@ def aro_identity_create_required(*,
             if not network_scopes[scope]:
                 continue
 
-            ra = create_role_assignment(
+            create_role_assignment(
                 cmd.cli_ctx,
                 identity["principalId"],
                 f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
                 network_scopes[scope]
             )
-            created.append(ra)
 
         progress.add(message="Creating cluster identity's federated credential "
                      f"role assignment over {role.operator_name} identity")
@@ -912,8 +910,7 @@ def aro_identity_create_required(*,
             type="roleDefinitions",
             name=ARO_FEDERATED_CREDENTIAL_ROLE
         )
-        topra = create_role_assignment(cmd.cli_ctx, cluster_id["principalId"], defn, identity["id"])
-        created.append(topra)
+        create_role_assignment(cmd.cli_ctx, cluster_identity["principalId"], defn, identity["id"])
 
     progress.add(message="Creating first party service principal's role assignment over virtual network")
     firstparty_principal = AADManager(cmd.cli_ctx).get_service_principal_id(FP_CLIENT_ID)
@@ -923,16 +920,14 @@ def aro_identity_create_required(*,
         type="roleDefinitions",
         name=FP_SERVICE_PRINCIPAL_ROLE,
     )
-    spra = create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, vnet)
-    created.append(spra)
+    create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, vnet)
 
     if disk_encryption_set:
         progress.add(message="Creating first party service principal's role assignment over disk encryption set")
-        desra = create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, disk_encryption_set)
-        created.append(desra)
+        create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, disk_encryption_set)
 
     progress.end()
-    return [v for v in created if v]
+    return identities
 
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):

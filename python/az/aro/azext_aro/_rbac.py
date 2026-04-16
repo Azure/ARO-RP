@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import typing
 import uuid
 
 from azext_aro.aaz.latest.identity import Create as _create_identity
@@ -20,7 +21,7 @@ ROLE_READER = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
 logger = get_logger(__name__)
 
 
-def create_identity(cmd, location, group, name):
+def create_identity(cmd, location, group, name) -> typing.Any:
     create = _create_identity(cli_ctx=cmd.cli_ctx)
 
     # idempotent
@@ -31,7 +32,7 @@ def create_identity(cmd, location, group, name):
     })
 
 
-def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope, name=None):
+def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope, name=None) -> typing.Any:
     if not name:
         name = str(uuid.uuid4())
 
@@ -51,7 +52,7 @@ def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope, nam
         return None
 
 
-def has_role_assignment_on_resource(cli_ctx, resource, object_id, role_name):
+def has_role_assignment_on_resource(cli_ctx, resource, object_id, role_name) -> bool:
     auth_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_AUTHORIZATION)
 
     role_definition_id = resource_id(
