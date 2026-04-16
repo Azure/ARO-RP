@@ -533,6 +533,22 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			isCI:          false,
 			desiredResult: false,
 		},
+		{
+			name:          "Standard_D8s_v5 with invalid version is rejected",
+			vmSize:        vms.VMSizeStandardD8sV5,
+			isMaster:      true,
+			version:       "invalid.version",
+			isCI:          false,
+			desiredResult: false,
+		},
+		{
+			name:          "Standard_F72s_v2 with empty version is rejected",
+			vmSize:        vms.VMSizeStandardF72sV2,
+			isMaster:      false,
+			version:       "",
+			isCI:          false,
+			desiredResult: false,
+		},
 		// Test existing VM sizes still work with version validation
 		{
 			name:          "Standard_D8s_v5 is valid for any version as master",
