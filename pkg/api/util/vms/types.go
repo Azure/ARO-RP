@@ -1,13 +1,13 @@
 package vms
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"encoding/json"
 
 	"github.com/Azure/ARO-RP/pkg/api/util/version"
 )
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 
 // VMRole represents a VM role = [master, worker]
 type VMRole string
