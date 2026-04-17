@@ -24,6 +24,7 @@ const (
 	RoleReader                                      = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
 	RoleStorageAccountContributor                   = "17d1049b-9a84-46fb-8f53-869881c3d3ab"
 	RoleStorageBlobDataContributor                  = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+	RoleKeyVaultCryptoServiceEncryptionUser         = "e147488a-f6f5-4113-8e2d-b22465e65bf6"
 	RoleKeyVaultSecretsOfficer                      = "b86a8fe4-44ce-4948-aee5-eccb2c155cd7"
 	RoleAzureRedHatOpenShiftFederatedCredentialRole = "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
 )
