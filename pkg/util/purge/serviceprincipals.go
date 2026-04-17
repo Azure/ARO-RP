@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -143,6 +144,42 @@ func (rc *ResourceCleaner) cleanServicePrincipals(ctx context.Context, prefix st
 	return nil
 }
 
+// NormalizeTagsCaseInsensitive converts an Azure SDK tag map (map[string]*string)
+// into a map with lower-cased keys and dereferenced values.
+func NormalizeTagsCaseInsensitive(tags map[string]*string) map[string]string {
+	if len(tags) == 0 {
+		return nil
+	}
+
+	normalized := make(map[string]string, len(tags))
+
+	for k, v := range tags {
+		key := strings.ToLower(k)
+		if v == nil {
+			normalized[key] = ""
+			continue
+		}
+
+		normalized[key] = *v
+	}
+
+	return normalized
+}
+
+// IsTruthyTagValue returns true if the value is a truthy boolean string.
+// Handles strconv.ParseBool values ("true", "1", "t", "TRUE") and also
+// arbitrary mixed case like "TrUe" via strings.EqualFold fallback.
+func IsTruthyTagValue(value string) bool {
+	normalized := strings.TrimSpace(value)
+
+	truthy, err := strconv.ParseBool(normalized)
+	if err == nil {
+		return truthy
+	}
+
+	return strings.EqualFold(normalized, "true")
+}
+
 func (rc *ResourceCleaner) checkSPNeededBasedOnRGStatus(ctx context.Context, resourceGroupName string, ttl time.Duration) (bool, string) {
 	group, err := rc.resourcegroupscli.Get(ctx, resourceGroupName)
 	if err != nil {
@@ -156,14 +193,14 @@ func (rc *ResourceCleaner) checkSPNeededBasedOnRGStatus(ctx context.Context, res
 	}
 
 	if group.Tags != nil {
-		for tagKey := range group.Tags {
-			if strings.ToLower(tagKey) == defaultKeepTag {
-				return true, fmt.Sprintf("Resource group '%s' has 'persist' tag", resourceGroupName)
-			}
+		normalizedTags := NormalizeTagsCaseInsensitive(group.Tags)
+
+		if keepValue, ok := normalizedTags[defaultKeepTag]; ok && IsTruthyTagValue(keepValue) {
+			return true, fmt.Sprintf("Resource group '%s' has 'persist' tag", resourceGroupName)
 		}
 
-		if createdAtStr, ok := group.Tags["createdAt"]; ok && createdAtStr != nil {
-			createdAt, err := time.Parse(time.RFC3339Nano, *createdAtStr)
+		if createdAtStr, ok := normalizedTags["createdat"]; ok && createdAtStr != "" {
+			createdAt, err := time.Parse(time.RFC3339Nano, createdAtStr)
 			if err != nil {
 				rc.log.Warnf("Resource group '%s' has invalid createdAt tag: %v", resourceGroupName, err)
 			} else {

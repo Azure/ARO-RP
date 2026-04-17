@@ -129,6 +129,37 @@ func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 			wantReason: "Resource group 'v4-e2e-V123456789-eastus' has 'persist' tag",
 		},
 		{
+			name:              "resource group has persist=false tag - should delete SP",
+			resourceGroupName: "v4-e2e-V123456789-eastus",
+			mockSetup: func(m *mock_features.MockResourceGroupsClient) {
+				m.EXPECT().
+					Get(gomock.Any(), "v4-e2e-V123456789-eastus").
+					Return(mgmtfeatures.ResourceGroup{
+						Tags: map[string]*string{
+							"persist":   pointerutils.ToPtr("false"),
+							"createdAt": pointerutils.ToPtr(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
+						},
+					}, nil)
+			},
+			wantKeep:   false,
+			wantReason: "Resource group 'v4-e2e-V123456789-eastus' exists but age",
+		},
+		{
+			name:              "resource group has createdAt tag case insensitive - should check TTL",
+			resourceGroupName: "v4-e2e-V123456789-eastus",
+			mockSetup: func(m *mock_features.MockResourceGroupsClient) {
+				m.EXPECT().
+					Get(gomock.Any(), "v4-e2e-V123456789-eastus").
+					Return(mgmtfeatures.ResourceGroup{
+						Tags: map[string]*string{
+							"CREATEDAT": pointerutils.ToPtr(now.Add(-72 * time.Hour).Format(time.RFC3339Nano)),
+						},
+					}, nil)
+			},
+			wantKeep:   false,
+			wantReason: "Resource group 'v4-e2e-V123456789-eastus' exists but age",
+		},
+		{
 			name:              "resource group younger than TTL - should keep SP",
 			resourceGroupName: "v4-e2e-V123456789-eastus",
 			mockSetup: func(m *mock_features.MockResourceGroupsClient) {
