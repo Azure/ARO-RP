@@ -73,10 +73,11 @@ func TestMachineReconciler(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		request        ctrl.Request
-		objects        []client.Object
-		wantConditions []operatorv1.OperatorCondition
+		name                   string
+		request                ctrl.Request
+		objects                []client.Object
+		isLocalDevelopmentMode bool
+		wantConditions         []operatorv1.OperatorCondition
 	}{
 		{
 			name:    "valid",
@@ -106,6 +107,17 @@ func TestMachineReconciler(t *testing.T) {
 				Status:  operatorv1.ConditionFalse,
 				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4    }'",
 				Reason:  "CheckFailed",
+			}},
+		},
+		{
+			name:                   "CI local dev mode allows CI-only worker size",
+			objects:                newFakeMao1("", "", "Standard_D2s_v3", ""),
+			isLocalDevelopmentMode: true,
+			wantConditions: []operatorv1.OperatorCondition{{
+				Type:    arov1alpha1.MachineValid,
+				Status:  operatorv1.ConditionTrue,
+				Message: "All machines valid",
+				Reason:  "CheckDone",
 			}},
 		},
 		{
@@ -147,7 +159,7 @@ func TestMachineReconciler(t *testing.T) {
 
 			r := &Reconciler{
 				log:                    logrus.NewEntry(logrus.StandardLogger()),
-				isLocalDevelopmentMode: false,
+				isLocalDevelopmentMode: tt.isLocalDevelopmentMode,
 				role:                   "master",
 				client:                 clientFake,
 			}
