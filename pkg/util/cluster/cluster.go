@@ -75,9 +75,8 @@ type ClusterConfig struct {
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
 	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
 
-	MasterVMSize vms.VMSize `mapstructure:"MASTER_VM_SIZE"`
-	WorkerVMSize vms.VMSize `mapstructure:"WORKER_VM_SIZE"`
-	// TODO: MAITIU - Do we need to touch this?
+	MasterVMSize           vms.VMSize   `mapstructure:"MASTER_VM_SIZE"`
+	WorkerVMSize           vms.VMSize   `mapstructure:"WORKER_VM_SIZE"`
 	CandidateMasterVMSizes []vms.VMSize `mapstructure:"MASTER_VM_SIZES"`
 	CandidateWorkerVMSizes []vms.VMSize `mapstructure:"WORKER_VM_SIZES"`
 }
@@ -1291,7 +1290,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 
 func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
 	if !c.Config.UseWorkloadIdentity {
-		c.log.Print("Skipping deletion of wimi roleassignments")
+		c.log.Print("Skipping deletion of wimi role assignments")
 		return nil
 	}
 	c.log.Print("deleting wimi role assignments")
