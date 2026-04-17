@@ -46,12 +46,14 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 
 	for _, tt := range []struct {
 		name           string
+		doc            *api.OpenShiftClusterDocument
 		expectedOutput interface{}
 		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
 		expectedLogs   []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "failure to fetch VMs",
+			doc:  oc,
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
@@ -62,6 +64,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		},
 		{
 			name: "no VMs returned",
+			doc:  oc,
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
@@ -72,6 +75,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		},
 		{
 			name: "failure to get VM serial console",
+			doc:  oc,
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
@@ -99,6 +103,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		},
 		{
 			name: "success",
+			doc:  oc,
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
@@ -136,6 +141,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		},
 		{
 			name: "success (pure duplicates)",
+			doc:  oc,
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
@@ -173,6 +179,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		},
 		{
 			name: "success (empty blob)",
+			doc:  oc,
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
@@ -199,6 +206,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 		},
 		{
 			name: "logs limited by kb",
+			doc:  oc,
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
@@ -281,6 +289,26 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
+		{
+			name: "nil doc",
+			doc:  nil,
+			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
+			},
+			expectedLogs: []testlog.ExpectedLogEntry{},
+			expectedOutput: []interface{}{
+				"cluster document missing",
+			},
+		},
+		{
+			name: "nil OpenShiftCluster",
+			doc:  &api.OpenShiftClusterDocument{},
+			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
+			},
+			expectedLogs: []testlog.ExpectedLogEntry{},
+			expectedOutput: []interface{}{
+				"cluster document missing",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -295,7 +323,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 
 			d := &manager{
 				log:             entry,
-				doc:             oc,
+				doc:             tt.doc,
 				virtualMachines: vmClient,
 			}
 
