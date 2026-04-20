@@ -62,9 +62,7 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 	// request context has already timed out or been canceled.
 	// vmNames should be non-nil only if the VM was successfully associated in step 4.
 	cleanupCRG := func(vmNames []string) {
-		// Allow enough time for all retries in CRGDelete to complete.
-		cleanupTimeout := time.Duration(crgMaxRetries)*crgRetryInterval + 2*time.Minute
-		cleanCtx, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
+		cleanCtx, cancel := context.WithTimeout(context.Background(), crgCleanupTimeout)
 		defer cancel()
 		if cleanErr := a.CRGDelete(cleanCtx, clusterRG, location, targetVMSize, []string{zone}, vmNames); cleanErr != nil {
 			a.log.Errorf("CRG cleanup failed for VM %s: %v", vmName, cleanErr)
@@ -122,8 +120,7 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 	// VM is running — release the reservation resources. Use a fresh context so
 	// cleanup still runs even if the request context has been canceled.
 	a.log.Infof("cleaning up capacity reservation group after resize of VM %s", vmName)
-	cleanupTimeout := time.Duration(crgMaxRetries)*crgRetryInterval + 2*time.Minute
-	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), cleanupTimeout)
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), crgCleanupTimeout)
 	defer cleanupCancel()
 	if err = a.CRGDelete(cleanupCtx, clusterRG, location, targetVMSize, []string{zone}, []string{vmName}); err != nil {
 		return fmt.Errorf("cleaning up capacity reservation group: %w", err)
@@ -275,19 +272,23 @@ func (a *azureActions) CRGDelete(ctx context.Context, clusterRG, location, targe
 const (
 	crgRetryInterval = 30 * time.Second
 	crgMaxRetries    = 15 // 7.5 minutes maximum
+	// crgCleanupTimeout is the budget given to CRGDelete: all retry intervals plus
+	// a two-minute buffer for Azure API round-trips.
+	crgCleanupTimeout = time.Duration(crgMaxRetries)*crgRetryInterval + 2*time.Minute
 )
 
 // deleteReservationWithRetry deletes a capacity reservation, retrying on 409 "OperationNotAllowed"
 // (still referenced by VM) because Azure's reservation bookkeeping lags the VM property update
 // by several minutes after a PUT disassociation.
 func (a *azureActions) deleteReservationWithRetry(ctx context.Context, clusterRG, crName string) error {
+	var lastErr error
 	for attempt := 1; attempt <= crgMaxRetries; attempt++ {
-		err := a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, crName)
-		if err == nil || azureerrors.IsNotFoundError(err) {
+		lastErr = a.armCapacityReservations.DeleteAndWait(ctx, clusterRG, capacityReservationGroupName, crName)
+		if lastErr == nil || azureerrors.IsNotFoundError(lastErr) {
 			return nil
 		}
-		if !isReferencedByVMError(err) || attempt == crgMaxRetries {
-			return fmt.Errorf("delete target reservation %s: %w", crName, err)
+		if !isReferencedByVMError(lastErr) || attempt == crgMaxRetries {
+			break
 		}
 		a.log.Infof("reservation %s still referenced by VM (Azure propagation lag), retrying in %s (attempt %d/%d)",
 			crName, crgRetryInterval, attempt, crgMaxRetries)
@@ -297,19 +298,20 @@ func (a *azureActions) deleteReservationWithRetry(ctx context.Context, clusterRG
 		case <-time.After(crgRetryInterval):
 		}
 	}
-	return nil
+	return fmt.Errorf("delete target reservation %s: %w", crName, lastErr)
 }
 
 // deleteCRGWithRetry deletes the capacity reservation group, retrying on 409 "CannotDeleteResource"
 // (nested reservations still visible in Azure's resource hierarchy bookkeeping after deletion).
 func (a *azureActions) deleteCRGWithRetry(ctx context.Context, clusterRG string) error {
+	var lastErr error
 	for attempt := 1; attempt <= crgMaxRetries; attempt++ {
-		err := a.armCapacityReservationGroups.Delete(ctx, clusterRG, capacityReservationGroupName)
-		if err == nil || azureerrors.IsNotFoundError(err) {
+		lastErr = a.armCapacityReservationGroups.Delete(ctx, clusterRG, capacityReservationGroupName)
+		if lastErr == nil || azureerrors.IsNotFoundError(lastErr) {
 			return nil
 		}
-		if !isNestedResourcesError(err) || attempt == crgMaxRetries {
-			return fmt.Errorf("delete capacity reservation group: %w", err)
+		if !isNestedResourcesError(lastErr) || attempt == crgMaxRetries {
+			break
 		}
 		a.log.Infof("CRG still has nested reservations (Azure propagation lag), retrying in %s (attempt %d/%d)",
 			crgRetryInterval, attempt, crgMaxRetries)
@@ -319,7 +321,7 @@ func (a *azureActions) deleteCRGWithRetry(ctx context.Context, clusterRG string)
 		case <-time.After(crgRetryInterval):
 		}
 	}
-	return nil
+	return fmt.Errorf("delete capacity reservation group: %w", lastErr)
 }
 
 // setReservationCapacityZero sets a capacity reservation's capacity to 0.
