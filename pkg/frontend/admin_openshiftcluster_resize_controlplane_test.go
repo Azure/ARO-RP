@@ -24,8 +24,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	adminapi "github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -133,6 +135,72 @@ func machineJSON(name, vmSize string) []byte {
 	}
 	b, _ := json.Marshal(obj)
 	return b
+}
+
+func decodeResizeControlPlaneResponse(t *testing.T, b []byte) *adminapi.ResizeControlPlaneResponse {
+	t.Helper()
+
+	resp := &adminapi.ResizeControlPlaneResponse{}
+	if err := json.Unmarshal(b, resp); err != nil {
+		t.Fatalf("failed to decode resize control plane response: %v\nbody: %s", err, string(b))
+	}
+
+	return resp
+}
+
+func decodeCloudErrorResponse(t *testing.T, statusCode int, b []byte) *api.CloudError {
+	t.Helper()
+
+	cloudErr := &api.CloudError{StatusCode: statusCode}
+	if err := json.Unmarshal(b, cloudErr); err != nil {
+		t.Fatalf("failed to decode cloud error: %v\nbody: %s", err, string(b))
+	}
+
+	return cloudErr
+}
+
+func findCloudErrorDetail(details []api.CloudErrorBody, code, target string) *api.CloudErrorBody {
+	for i := range details {
+		detail := &details[i]
+		if detail.Code == code && detail.Target == target {
+			return detail
+		}
+		if nested := findCloudErrorDetail(detail.Details, code, target); nested != nil {
+			return nested
+		}
+	}
+
+	return nil
+}
+
+func findResizeNode(nodes []adminapi.ResizeControlPlaneNodeOperation, name string) *adminapi.ResizeControlPlaneNodeOperation {
+	for i := range nodes {
+		if nodes[i].Name == name {
+			return &nodes[i]
+		}
+	}
+
+	return nil
+}
+
+func findResizePhase(phases []adminapi.ResizeControlPlanePhase, name string) *adminapi.ResizeControlPlanePhase {
+	for i := range phases {
+		if phases[i].Name == name {
+			return &phases[i]
+		}
+	}
+
+	return nil
+}
+
+func findResizeStep(steps []adminapi.ResizeControlPlaneStep, name string) *adminapi.ResizeControlPlaneStep {
+	for i := range steps {
+		if steps[i].Name == name {
+			return &steps[i]
+		}
+	}
+
+	return nil
 }
 
 func TestCheckCPMSNotActive(t *testing.T) {
@@ -443,6 +511,36 @@ func TestResizeControlPlane(t *testing.T) {
 			wantErr: "failed to resize node master-0: uncordoning node: uncordon failure",
 		},
 		{
+			name: "update machine object fails after retries",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
+
+				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
+					a.EXPECT().VMResize(gomock.Any(), "master-0", desiredSize).Return(nil),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
+						Return(machineJSON("master-0", "Standard_D8s_v3"), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(errors.New("conflict")),
+					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
+						Return(machineJSON("master-0", "Standard_D8s_v3"), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(errors.New("conflict")),
+					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
+						Return(machineJSON("master-0", "Standard_D8s_v3"), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(errors.New("conflict")),
+				)
+			},
+			wantErr: "failed to resize node master-0: updating Machine object: could not update Machine object after 3 attempts: conflict",
+		},
+		{
 			name: "pre-loop gate fails when node is not ready",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
@@ -598,6 +696,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 		azureMocks     func(*mock_adminactions.MockAzureActions)
 		wantStatusCode int
 		wantError      string
+		assertResponse func(*testing.T, []byte)
 	}
 
 	addClusterDoc := func(f *testdatabase.Fixture) {
@@ -700,6 +799,221 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					}, nil)
 			},
 			wantStatusCode: http.StatusOK,
+			assertResponse: func(t *testing.T, b []byte) {
+				resp := decodeResizeControlPlaneResponse(t, b)
+				if resp.ResourceID != testdatabase.GetResourcePath(mockSubID, "resourceName") {
+					t.Fatalf("resourceId = %q, want %q", resp.ResourceID, testdatabase.GetResourcePath(mockSubID, "resourceName"))
+				}
+				if resp.VMSize != "Standard_D8s_v3" {
+					t.Fatalf("vmSize = %q, want %q", resp.VMSize, "Standard_D8s_v3")
+				}
+				if !resp.DeallocateVM {
+					t.Fatal("deallocateVM = false, want true")
+				}
+				if !strings.Contains(resp.Message, "Control plane resize completed successfully") {
+					t.Fatalf("message %q does not include success summary", resp.Message)
+				}
+
+				if resp.Summary.TotalNodes != 3 || resp.Summary.NodesResized != 0 || resp.Summary.NodesSkipped != 3 {
+					t.Fatalf("unexpected summary: %+v", resp.Summary)
+				}
+				wantOrder := []string{"master-2", "master-1", "master-0"}
+				if strings.Join(resp.Summary.ExecutionOrder, ",") != strings.Join(wantOrder, ",") {
+					t.Fatalf("executionOrder = %v, want %v", resp.Summary.ExecutionOrder, wantOrder)
+				}
+
+				if len(resp.Phases) != 5 {
+					t.Fatalf("len(phases) = %d, want 5", len(resp.Phases))
+				}
+				wantPhaseNames := []string{
+					"request-setup",
+					"pre-flight-validation",
+					"discover-control-plane-machines",
+					"verify-control-plane-health",
+					"resize-control-plane-nodes",
+				}
+				for i, wantName := range wantPhaseNames {
+					if resp.Phases[i].Name != wantName {
+						t.Fatalf("phase[%d].name = %q, want %q", i, resp.Phases[i].Name, wantName)
+					}
+					if resp.Phases[i].Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+						t.Fatalf("phase[%d].status = %q, want %q", i, resp.Phases[i].Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+					}
+				}
+				if len(resp.Phases[1].Checks) != 7 {
+					t.Fatalf("len(pre-flight checks) = %d, want 7", len(resp.Phases[1].Checks))
+				}
+				if resp.Phases[1].Checks[0].Name != "api-server-readyz" {
+					t.Fatalf("first pre-flight check = %q, want %q", resp.Phases[1].Checks[0].Name, "api-server-readyz")
+				}
+
+				if len(resp.Nodes) != 3 {
+					t.Fatalf("len(nodes) = %d, want 3", len(resp.Nodes))
+				}
+				for _, node := range resp.Nodes {
+					if node.Status != adminapi.ResizeControlPlaneOperationStatusSkipped {
+						t.Fatalf("node %s status = %q, want %q", node.Name, node.Status, adminapi.ResizeControlPlaneOperationStatusSkipped)
+					}
+					if node.SourceVMSize != "Standard_D8s_v3" || node.TargetVMSize != "Standard_D8s_v3" {
+						t.Fatalf("node %s sizes = %q -> %q, want Standard_D8s_v3 -> Standard_D8s_v3", node.Name, node.SourceVMSize, node.TargetVMSize)
+					}
+				}
+			},
+		},
+		{
+			name:         "happy path - one node resized with deallocate false",
+			vmSize:       "Standard_D16s_v5",
+			deallocateVM: "false",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					CheckAPIServerReadyz(gomock.Any()).
+					Return(nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(healthyKubeAPIServerJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+					Return(healthyKubeAPIServerPodsJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(healthyEtcdJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(validServicePrincipalJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+					AnyTimes()
+
+				running := "Running"
+				k.EXPECT().
+					KubeList(gomock.Any(), "Machine", machineNamespace).
+					Return(masterMachineListJSON(
+						masterMachine("master-0", "Standard_D16s_v5", running),
+						masterMachine("master-1", "Standard_D16s_v5", running),
+						masterMachine("master-2", "Standard_D8s_v3", running),
+					), nil)
+
+				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-2", false).Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-2").
+						Return(machineJSON("master-2", "Standard_D8s_v3"), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+				)
+			},
+			azureMocks: func(a *mock_adminactions.MockAzureActions) {
+				gomock.InOrder(
+					a.EXPECT().
+						VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
+						Return(map[string]*armcompute.ResourceSKU{
+							"Standard_D16s_v5": {
+								Name:         pointerutils.ToPtr("Standard_D16s_v5"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("eastus"),
+									},
+								},
+								Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+								Capabilities: []*armcompute.ResourceSKUCapabilities{},
+							},
+						}, nil),
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", false).Return(nil),
+					a.EXPECT().VMResize(gomock.Any(), "master-2", "Standard_D16s_v5").Return(nil),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-2").Return(nil),
+				)
+			},
+			wantStatusCode: http.StatusOK,
+			assertResponse: func(t *testing.T, b []byte) {
+				resp := decodeResizeControlPlaneResponse(t, b)
+				if resp.ResourceID != testdatabase.GetResourcePath(mockSubID, "resourceName") {
+					t.Fatalf("resourceId = %q, want %q", resp.ResourceID, testdatabase.GetResourcePath(mockSubID, "resourceName"))
+				}
+				if resp.VMSize != "Standard_D16s_v5" {
+					t.Fatalf("vmSize = %q, want %q", resp.VMSize, "Standard_D16s_v5")
+				}
+				if resp.DeallocateVM {
+					t.Fatal("deallocateVM = true, want false")
+				}
+				if resp.Summary.TotalNodes != 3 || resp.Summary.NodesResized != 1 || resp.Summary.NodesSkipped != 2 {
+					t.Fatalf("unexpected summary: %+v", resp.Summary)
+				}
+
+				resizePhase := findResizePhase(resp.Phases, "resize-control-plane-nodes")
+				if resizePhase == nil {
+					t.Fatalf("missing resize-control-plane-nodes phase in %+v", resp.Phases)
+				}
+				if resizePhase.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("resize phase status = %q, want %q", resizePhase.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
+				if !strings.Contains(resizePhase.Message, "Resized 1 node(s) and skipped 2 node(s).") {
+					t.Fatalf("resize phase message %q does not contain resized/skipped summary", resizePhase.Message)
+				}
+
+				resizedNode := findResizeNode(resp.Nodes, "master-2")
+				if resizedNode == nil {
+					t.Fatalf("missing node report for master-2 in %+v", resp.Nodes)
+				}
+				if resizedNode.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("master-2 status = %q, want %q", resizedNode.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
+				if resizedNode.SourceVMSize != "Standard_D8s_v3" || resizedNode.TargetVMSize != "Standard_D16s_v5" {
+					t.Fatalf("master-2 sizes = %q -> %q, want Standard_D8s_v3 -> Standard_D16s_v5", resizedNode.SourceVMSize, resizedNode.TargetVMSize)
+				}
+				if len(resizedNode.Steps) != 9 {
+					t.Fatalf("len(master-2 steps) = %d, want 9", len(resizedNode.Steps))
+				}
+
+				stopStep := findResizeStep(resizedNode.Steps, "stop-vm")
+				if stopStep == nil {
+					t.Fatalf("missing stop-vm step in %+v", resizedNode.Steps)
+				}
+				if stopStep.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("stop-vm step status = %q, want %q", stopStep.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
+				if !strings.Contains(stopStep.Message, "deallocate=false") {
+					t.Fatalf("stop-vm step message %q does not mention deallocate=false", stopStep.Message)
+				}
+
+				updateNodeLabelsStep := findResizeStep(resizedNode.Steps, "update-node-labels")
+				if updateNodeLabelsStep == nil {
+					t.Fatalf("missing update-node-labels step in %+v", resizedNode.Steps)
+				}
+
+				for _, nodeName := range []string{"master-1", "master-0"} {
+					node := findResizeNode(resp.Nodes, nodeName)
+					if node == nil {
+						t.Fatalf("missing node report for %s in %+v", nodeName, resp.Nodes)
+					}
+					if node.Status != adminapi.ResizeControlPlaneOperationStatusSkipped {
+						t.Fatalf("%s status = %q, want %q", nodeName, node.Status, adminapi.ResizeControlPlaneOperationStatusSkipped)
+					}
+				}
+			},
 		},
 		{
 			name:         "invalid vm size",
@@ -794,10 +1108,299 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			if tt.assertResponse != nil {
+				if resp.StatusCode != tt.wantStatusCode {
+					t.Fatalf("unexpected status code %d, wanted %d: %s", resp.StatusCode, tt.wantStatusCode, string(b))
+				}
+				tt.assertResponse(t, b)
+				return
+			}
+
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, nil)
 			if err != nil {
 				t.Error(err)
 			}
 		})
+	}
+}
+
+func TestAdminResizeControlPlaneFailureDetails(t *testing.T) {
+	const (
+		mockSubID    = "00000000-0000-0000-0000-000000000000"
+		mockTenantID = "00000000-0000-0000-0000-000000000000"
+	)
+
+	ctx := context.Background()
+	ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
+	defer ti.done()
+
+	resourceID := testdatabase.GetResourcePath(mockSubID, "resourceName")
+
+	err := ti.buildFixtures(func(f *testdatabase.Fixture) {
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(resourceID),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID:       resourceID,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD8sV3,
+					},
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+					},
+				},
+			},
+		})
+		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+			ID: mockSubID,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: mockTenantID,
+				},
+			},
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	k := mock_adminactions.NewMockKubeActions(ti.controller)
+	a := mock_adminactions.NewMockAzureActions(ti.controller)
+
+	k.EXPECT().CheckAPIServerReadyz(gomock.Any()).Return(nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+		Return(healthyKubeAPIServerJSON(), nil).AnyTimes()
+	k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+		Return(healthyKubeAPIServerPodsJSON(), nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+		Return(healthyEtcdJSON(), nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+		Return(validServicePrincipalJSON(), nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+		AnyTimes()
+	k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).
+		Return(masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", "Running")), nil)
+	gomock.InOrder(
+		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+		k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+		k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(errors.New("could not drain node after 3 retries: drain error")),
+	)
+
+	a.EXPECT().
+		VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
+		Return(map[string]*armcompute.ResourceSKU{
+			"Standard_D16s_v5": {
+				Name:         pointerutils.ToPtr("Standard_D16s_v5"),
+				ResourceType: pointerutils.ToPtr("virtualMachines"),
+				Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+				LocationInfo: []*armcompute.ResourceSKULocationInfo{
+					{Location: pointerutils.ToPtr("eastus")},
+				},
+				Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+				Capabilities: []*armcompute.ResourceSKUCapabilities{},
+			},
+		}, nil)
+
+	f, err := NewFrontend(ctx,
+		ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup,
+		api.APIs, &noop.Noop{}, &noop.Noop{},
+		nil, nil, nil,
+		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
+			return k, nil
+		},
+		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+			return a, nil
+		},
+		nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.validateResizeQuota = quotaCheckDisabled
+
+	go f.Run(ctx, nil, nil)
+
+	resp, b, err := ti.request(http.MethodPost,
+		fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D16s_v5&deallocateVM=true", resourceID),
+		nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("unexpected status code %d, wanted %d: %s", resp.StatusCode, http.StatusInternalServerError, string(b))
+	}
+
+	cloudErr := decodeCloudErrorResponse(t, resp.StatusCode, b)
+	if !strings.Contains(cloudErr.Message, `step "drain" for node "master-0"`) {
+		t.Fatalf("message %q does not include failing step and node", cloudErr.Message)
+	}
+	if cloudErr.Target != "master-0/drain" {
+		t.Fatalf("target = %q, want %q", cloudErr.Target, "master-0/drain")
+	}
+
+	requestDetail := findCloudErrorDetail(cloudErr.Details, "ResizeRequest", resourceID)
+	if requestDetail == nil {
+		t.Fatalf("missing ResizeRequest detail in %+v", cloudErr.Details)
+	}
+
+	nodeDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNode", "master-0")
+	if nodeDetail == nil {
+		t.Fatalf("missing ResizeNode detail in %+v", cloudErr.Details)
+	}
+	stepDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNodeStep", "master-0/drain")
+	if stepDetail == nil {
+		t.Fatalf("missing ResizeNodeStep detail in %+v", cloudErr.Details)
+	}
+	if !strings.Contains(stepDetail.Message, "failed") {
+		t.Fatalf("step detail message %q does not include failure state", stepDetail.Message)
+	}
+
+	hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "master-0/drain")
+	if hintDetail == nil {
+		t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
+	}
+	if !strings.Contains(hintDetail.Message, "PodDisruptionBudgets") {
+		t.Fatalf("hint detail message %q does not mention drain investigation guidance", hintDetail.Message)
+	}
+}
+
+func TestAdminResizeControlPlanePreflightFailureDetails(t *testing.T) {
+	const (
+		mockSubID    = "00000000-0000-0000-0000-000000000000"
+		mockTenantID = "00000000-0000-0000-0000-000000000000"
+	)
+
+	ctx := context.Background()
+	ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
+	defer ti.done()
+
+	resourceID := testdatabase.GetResourcePath(mockSubID, "resourceName")
+
+	err := ti.buildFixtures(func(f *testdatabase.Fixture) {
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(resourceID),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID:       resourceID,
+				Location: "eastus",
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						VMSize: api.VMSizeStandardD8sV3,
+					},
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+					},
+				},
+			},
+		})
+		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+			ID: mockSubID,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: mockTenantID,
+				},
+			},
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	k := mock_adminactions.NewMockKubeActions(ti.controller)
+	a := mock_adminactions.NewMockAzureActions(ti.controller)
+
+	k.EXPECT().CheckAPIServerReadyz(gomock.Any()).Return(nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+		Return(healthyKubeAPIServerJSON(), nil).AnyTimes()
+	k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+		Return(healthyKubeAPIServerPodsJSON(), nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+		Return(healthyEtcdJSON(), nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+		Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{
+			{
+				Type:    arov1alpha1.ServicePrincipalValid,
+				Status:  operatorv1.ConditionFalse,
+				Message: "secret expired",
+			},
+		}), nil).AnyTimes()
+	k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+		AnyTimes()
+
+	a.EXPECT().
+		VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+		Return(map[string]*armcompute.ResourceSKU{
+			"Standard_D8s_v3": {
+				Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+				ResourceType: pointerutils.ToPtr("virtualMachines"),
+				Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+				LocationInfo: []*armcompute.ResourceSKULocationInfo{
+					{Location: pointerutils.ToPtr("eastus")},
+				},
+				Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+				Capabilities: []*armcompute.ResourceSKUCapabilities{},
+			},
+		}, nil)
+
+	f, err := NewFrontend(ctx,
+		ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup,
+		api.APIs, &noop.Noop{}, &noop.Noop{},
+		nil, nil, nil,
+		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
+			return k, nil
+		},
+		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+			return a, nil
+		},
+		nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.validateResizeQuota = quotaCheckDisabled
+
+	go f.Run(ctx, nil, nil)
+
+	resp, b, err := ti.request(http.MethodPost,
+		fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D8s_v3&deallocateVM=true", resourceID),
+		nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("unexpected status code %d, wanted %d: %s", resp.StatusCode, http.StatusBadRequest, string(b))
+	}
+
+	cloudErr := decodeCloudErrorResponse(t, resp.StatusCode, b)
+	if !strings.Contains(cloudErr.Message, `phase "pre-flight-validation"`) {
+		t.Fatalf("message %q does not include pre-flight phase", cloudErr.Message)
+	}
+	if cloudErr.Target != "pre-flight-validation" {
+		t.Fatalf("target = %q, want %q", cloudErr.Target, "pre-flight-validation")
+	}
+
+	phaseDetail := findCloudErrorDetail(cloudErr.Details, "ResizePhase", "pre-flight-validation")
+	if phaseDetail == nil {
+		t.Fatalf("missing pre-flight phase detail in %+v", cloudErr.Details)
+	}
+
+	checkDetail := findCloudErrorDetail(cloudErr.Details, "ResizeValidationCheck", "cluster-service-principal")
+	if checkDetail == nil {
+		t.Fatalf("missing service principal validation detail in %+v", cloudErr.Details)
+	}
+	if !strings.Contains(checkDetail.Message, "invalid") {
+		t.Fatalf("check detail message %q does not mention invalid service principal", checkDetail.Message)
+	}
+
+	hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "pre-flight-validation")
+	if hintDetail == nil {
+		t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
+	}
+	if !strings.Contains(hintDetail.Message, "Resolve the validation failures") {
+		t.Fatalf("hint detail message %q does not contain retry guidance", hintDetail.Message)
 	}
 }
