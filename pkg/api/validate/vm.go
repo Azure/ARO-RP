@@ -32,6 +32,14 @@ func SupportedVMSizesByRole(vmRole string) map[api.VMSize]api.VMSizeStruct {
 	return supportedvmsizes
 }
 
+type VMValidity int
+
+const (
+	VMValidityOK VMValidity = iota
+	VMValidityNotSupportedForRole
+	VMValidityNotSupportedInVersion
+)
+
 var ver419 = version.NewVersion(4, 19, 0)
 
 var masterVmSizesWithMinimumVersion = map[api.VMSize]version.Version{
@@ -382,33 +390,43 @@ func VMSizeIsValid(vmSize api.VMSize, requireD2sWorkers, isMaster bool) bool {
 }
 
 // VMSizeIsValidForVersion validates VM size with version-specific restrictions
-func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool, v string) bool {
+func VMSizeIsValidForVersion(vmSize api.VMSize, requireD2sWorkers, isMaster bool, v string) VMValidity {
 	// First check basic validity
 	if !VMSizeIsValid(vmSize, requireD2sWorkers, isMaster) {
-		return false
+		return VMValidityNotSupportedForRole
 	}
 
+	// If we can't parse the version, just trust the above VMSizeIsValid. The
+	// only reason that the version would not be parseable is because it came
+	// from the cluster during enrichment, and is therefore potentially empty or
+	// nonsense -- this will always be pre-checked by this point during
+	// installs.
 	clusterVersion, err := version.ParseVersion(v)
 	if err != nil {
-		return false
+		return VMValidityOK
 	}
 	// Check version-specific restrictions
 	if isMaster {
 		if minVersion, exists := masterVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+			if clusterVersion.Lt(minVersion) {
+				return VMValidityNotSupportedInVersion
+			}
 		}
 	} else {
 		if minVersion, exists := workerVmSizesWithMinimumVersion[vmSize]; exists {
-			return clusterVersion.Gt(minVersion) || clusterVersion.Eq(minVersion)
+			if clusterVersion.Lt(minVersion) {
+				return VMValidityNotSupportedInVersion
+			}
 		}
 	}
 
 	// VM size has no version restrictions or passed all checks
-	return true
+	return VMValidityOK
 }
 
 func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
-	// this is for development purposes only
+	// the D2s versions are for development purposes only and don't show up in
+	// SupportedVMSizesByRole
 	switch vmSize {
 	case api.VMSizeStandardD2sV3:
 		return api.VMSizeStandardD2sV3Struct, true
