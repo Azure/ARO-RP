@@ -50,6 +50,8 @@ const crgDeletePollInterval = 5 * time.Second
 // pollCRGDeleted polls Get on the CRG until it returns 404 (deleted) or the
 // context is cancelled. It is called after a 202 Accepted delete response.
 func (c *capacityReservationGroupsClient) pollCRGDeleted(ctx context.Context, resourceGroupName, capacityReservationGroupName string) error {
+	ticker := time.NewTicker(crgDeletePollInterval)
+	defer ticker.Stop()
 	for {
 		_, err := c.Get(ctx, resourceGroupName, capacityReservationGroupName, nil)
 		if err != nil {
@@ -62,7 +64,7 @@ func (c *capacityReservationGroupsClient) pollCRGDeleted(ctx context.Context, re
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(crgDeletePollInterval):
+		case <-ticker.C:
 		}
 	}
 }
