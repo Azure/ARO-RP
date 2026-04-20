@@ -398,7 +398,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Wait for all of the workers to have stopped
-			svc.workerRoutines.Wait()
+			svc.b.WaitForWorkerCompletion()
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
@@ -423,7 +423,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Wait for all of the workers to have stopped
-			svc.workerRoutines.Wait()
+			svc.b.WaitForWorkerCompletion()
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))

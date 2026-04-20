@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -50,14 +49,11 @@ type service struct {
 
 	dbGroup actuatorDBs
 
-	m              metrics.Emitter
-	mu             sync.RWMutex
-	cond           *sync.Cond
-	stopping       *atomic.Bool
-	workers        *atomic.Int32
-	workerRoutines sync.WaitGroup
+	m           metrics.Emitter
+	stopping    *atomic.Bool
+	workerCount *atomic.Int32
 
-	b           buckets.BucketWorker[*api.OpenShiftClusterDocument]
+	b           buckets.BucketWorkerPool[*api.OpenShiftClusterDocument]
 	bucketCount int
 
 	changefeedBatchSize            int
@@ -98,7 +94,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 
 		m:           m,
 		stopping:    &atomic.Bool{},
-		workers:     &atomic.Int32{},
+		workerCount: &atomic.Int32{},
 		bucketCount: bucket.Buckets,
 
 		startTime: env.Now(),
@@ -127,8 +123,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		serveHealthz:          true,
 	}
 
-	s.cond = sync.NewCond(&s.mu)
-	s.b = buckets.NewBucketWorker[*api.OpenShiftClusterDocument](log, s.spawnWorker, &s.mu)
+	s.b = buckets.NewBucketWorkerPool[*api.OpenShiftClusterDocument](log, s.worker)
 	return s
 }
 
@@ -191,7 +186,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			<-stop
 			s.baseLog.Print("stopping")
 			s.stopping.Store(true)
-			s.cond.Signal()
 		}()
 	}
 	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
@@ -201,10 +195,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	go buckets.StartBucketRefreshLoop(
 		ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
 		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
-			if len(i) == 0 {
-				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
-				return
-			}
 			s.b.SetBuckets(i)
 			s.lastBucketUpdate.Store(s.env.Now())
 		}, stop, s.stopping,
@@ -222,10 +212,8 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		<-t.C
 	}
 
-	if !s.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
-		s.waitForWorkerCompletion()
-	}
-	s.baseLog.Print("exiting")
+	s.baseLog.Print("exiting, waiting for all workers to finish")
+	s.b.StopAndWait()
 	close(done)
 	return nil
 }
@@ -265,10 +253,6 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 		docMap[strings.ToLower(d.Key)] = d
 	}
 
-	// Acquire lock for when we're mutating the changefeed cache
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// remove docs that don't exist in the new set (removed clusters)
 	for oldCluster := range oldDocs {
 		_, ok := docMap[strings.ToLower(oldCluster)]
@@ -288,19 +272,11 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	s.lastChangefeed.Store(s.env.Now())
 
 	// Emit a metric containing the size of our cache
-	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
+	s.m.EmitGauge("changefeed.caches.size", int64(s.b.CacheSize()), map[string]string{
 		"name": "OpenShiftClusterDocument",
 	})
 
 	return docMap, nil
-}
-
-func (s *service) waitForWorkerCompletion() {
-	s.mu.Lock()
-	for s.workers.Load() > 0 {
-		s.cond.Wait()
-	}
-	s.mu.Unlock()
 }
 
 func (s *service) checkReady() bool {
@@ -318,14 +294,8 @@ func (s *service) checkReady() bool {
 		(time.Since(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
 }
 
-func (s *service) spawnWorker(stop <-chan struct{}, id string) {
-	s.workerRoutines.Add(1)
-	go s.worker(stop, id)
-}
-
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
-	defer s.workerRoutines.Done()
 
 	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*rand.Float64())
 	log := utillog.EnrichWithResourceID(s.baseLog, id)
@@ -370,12 +340,12 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 out:
 	for !s.stopping.Load() {
 		func() {
-			s.workers.Add(1)
-			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
+			s.workerCount.Add(1)
+			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workerCount.Load()), nil)
 
 			defer func() {
-				s.workers.Add(-1)
-				s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
+				s.workerCount.Add(-1)
+				s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workerCount.Load()), nil)
 			}()
 
 			_, err := a.Process(context.Background())

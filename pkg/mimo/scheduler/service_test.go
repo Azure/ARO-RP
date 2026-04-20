@@ -292,7 +292,7 @@ func TestSchedulerStoppingSingleItem(t *testing.T) {
 
 	// Then wait for the worker to stop
 	svc.workerRoutines.Wait()
-	require.Equal(int32(0), svc.workers.Load())
+	require.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
 	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
@@ -379,7 +379,7 @@ func TestSchedulerGoesReady(t *testing.T) {
 
 	// Then wait for the worker to stop
 	<-done
-	r.Equal(int32(0), svc.workers.Load())
+	r.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
 	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
@@ -435,7 +435,7 @@ func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 	<-done
 
 	// We will have no running workers
-	r.Equal(int32(0), svc.workers.Load())
+	r.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
 	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
@@ -562,7 +562,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 	// Close it after
 	close(stop)
 	<-done
-	r.Equal(int32(0), svc.workers.Load())
+	r.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
 	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
