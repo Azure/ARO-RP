@@ -59,12 +59,12 @@ type service struct {
 	m              metrics.Emitter
 	mu             sync.RWMutex
 	stopping       *atomic.Bool
-	workers        *atomic.Int32
+	workerCount    *atomic.Int32
 	workerRoutines sync.WaitGroup
 	newScheduler   newSchedulerFunc
 
 	buckets  atomic.Value // []int
-	b        buckets.BucketWorker[*api.MaintenanceScheduleDocument]
+	b        buckets.WorkerPool[*api.MaintenanceScheduleDocument]
 	subs     changefeed.SubscriptionsCache
 	clusters *openShiftClusterCache
 
@@ -111,7 +111,7 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 
 		m:           m,
 		stopping:    &atomic.Bool{},
-		workers:     &atomic.Int32{},
+		workerCount: &atomic.Int32{},
 		bucketCount: bucket.Buckets,
 
 		startTime:             env.Now(),
@@ -136,7 +136,7 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 	}
 
 	s.clusters = newOpenShiftClusterCache(log, m, s.subs)
-	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
+	s.b = buckets.NewWorkerPool[*api.MaintenanceScheduleDocument](log, s.spawnWorker)
 	return s
 }
 
@@ -212,10 +212,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	go buckets.StartBucketRefreshLoop(
 		ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
 		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
-			if len(i) == 0 {
-				s.baseLog.Error("got an allocation of 0 buckets, ignoring")
-				return
-			}
 			s.buckets.Store(i)
 			s.lastBucketUpdate.Store(s.env.Now())
 		}, stop, s.stopping,
@@ -334,7 +330,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 	s.lastScheduleUpdate.Store(s.env.Now())
 
 	// Emit a metric containing the size of our cache
-	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
+	s.m.EmitGauge("changefeed.caches.size", int64(s.b.CacheSize()), map[string]string{
 		"name": "MaintenanceScheduleDocument",
 	})
 
@@ -441,11 +437,11 @@ out:
 				break out
 			}
 			func() {
-				s.workers.Add(1)
-				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
+				s.workerCount.Add(1)
+				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
 				defer func() {
-					s.workers.Add(-1)
-					s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
+					s.workerCount.Add(-1)
+					s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
 				}()
 				// Run each process in the background context so that completion
 				// of the current loop is finished before we exit cleanly, as

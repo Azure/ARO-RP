@@ -94,7 +94,7 @@ func TestMonitor(t *testing.T) {
 	for _, w := range workers {
 		// bucketcount is the total number of buckets that should be across all
 		// workers, each one should have less than that
-		workerBuckets := w.clusters.getBuckets()
+		workerBuckets := w.clusters.workerPool.GetBuckets()
 		require.Less(t, len(workerBuckets), w.bucketCount)
 		buckets = append(buckets, workerBuckets...)
 	}
