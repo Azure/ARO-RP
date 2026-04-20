@@ -97,7 +97,3 @@ func (c *MaintenanceScheduleDocument) GetID() string {
 func (c *MaintenanceScheduleDocument) GetKey() string {
 	return c.ID
 }
-
-func (c *MaintenanceScheduleDocument) GetBucket() int {
-	return -1
-}

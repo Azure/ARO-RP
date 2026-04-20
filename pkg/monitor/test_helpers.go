@@ -64,6 +64,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	dialer := mock_proxy.NewMockDialer(ctrl)
 	mockEnv := mock_env.NewMockInterface(ctrl)
 	mockEnv.EXPECT().LiveConfig().Return(testliveconfig.NewTestLiveConfig(false, false)).AnyTimes()
+	mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
 
 	// Create metrics emitters
 	noopMetricsEmitter := noop.Noop{}

@@ -6,7 +6,6 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -56,15 +55,15 @@ type monitor struct {
 
 	m        metrics.Emitter
 	clusterm metrics.Emitter
-	mu       sync.RWMutex
 	clusters *clusterChangeFeedResponder
 	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
-	bucketCount int
+	bucketCount      int
+	workerCount      *atomic.Int32
+	lastBucketUpdate atomic.Value // time.Time
 
-	lastBucketlist atomic.Value // time.Time
-	startTime      time.Time
+	startTime time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
 
@@ -99,8 +98,9 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		env:      e,
 
 		bucketCount: bucket.Buckets,
+		workerCount: &atomic.Int32{},
 
-		startTime: time.Now(),
+		startTime: e.Now(),
 
 		hiveClusterManagers: map[int]hive.ClusterManager{},
 
@@ -118,7 +118,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		readyDelay:                     defaultMonitorReadinessDelay,
 	}
 
-	mon.clusters = NewClusterChangefeedResponder(log, mon.worker)
+	mon.clusters = NewClusterChangefeedResponder(log, e.Now, mon.worker)
 	return mon
 }
 
@@ -149,7 +149,20 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
-	return buckets.BucketRefreshLoop(ctx, mon.baseLog, api.PoolWorkerTypeMonitor, mon.bucketCount, mon.bucketRefreshInterval, mon.bucketRefreshTTL, dbPoolWorkers, mon.onBuckets, nil)
+	return buckets.BucketRefreshLoop(
+		ctx,
+		mon.baseLog,
+		api.PoolWorkerTypeMonitor,
+		mon.bucketCount,
+		mon.bucketRefreshInterval,
+		mon.bucketRefreshTTL,
+		dbPoolWorkers,
+		func(i []int) {
+			mon.clusters.UpdateBuckets(i)
+			mon.lastBucketUpdate.Store(mon.env.Now())
+		},
+		nil,
+	)
 }
 
 func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
@@ -187,7 +200,7 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 // minutes before indicating health.  This ensures that there will be a gap in
 // our health metric if we crash or restart.
 func (mon *monitor) checkReady() bool {
-	lastBucketTime, ok := mon.lastBucketlist.Load().(time.Time)
+	lastBucketTime, ok := mon.clusters.GetLastBucketUpdate()
 	if !ok {
 		return false
 	}
