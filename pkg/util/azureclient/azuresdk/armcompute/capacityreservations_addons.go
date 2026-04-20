@@ -11,6 +11,7 @@ import (
 
 // CapacityReservationsClientAddons contains addons for CapacityReservationsClient
 type CapacityReservationsClientAddons interface {
+	Get(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string, options *armcompute.CapacityReservationsClientGetOptions) (armcompute.CapacityReservationsClientGetResponse, error)
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string, parameters armcompute.CapacityReservation) error
 	DeleteAndWait(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string) error
 }
