@@ -6,6 +6,7 @@ package guardrails
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -13,7 +14,9 @@ import (
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -401,5 +404,104 @@ func TestVapValidationAction(t *testing.T) {
 				t.Errorf("vapValidationAction(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDeployVAPUsesLatestClusterState(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	cluster := &arov1alpha1.Cluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Cluster",
+			APIVersion: "aro.openshift.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
+		Spec: arov1alpha1.ClusterSpec{
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsPolicyMachineDenyManaged:       operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyEnforcement:   operator.GuardrailsPolicyDeny,
+				operator.GuardrailsPolicyMachineConfigDenyManaged: operator.FlagFalse,
+				operator.GuardrailsPolicyPrivNamespaceDenyManaged: operator.FlagFalse,
+			},
+		},
+	}
+
+	var ensured []string
+	var deleted []string
+
+	dh := mock_dynamichelper.NewMockInterface(controller)
+	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, objs ...any) error {
+		for _, obj := range objs {
+			o, ok := obj.(interface {
+				GetObjectKind() schema.ObjectKind
+				GetName() string
+			})
+			if !ok {
+				continue
+			}
+			ensured = append(ensured, o.GetObjectKind().GroupVersionKind().Kind+"/"+o.GetName())
+		}
+		return nil
+	}).AnyTimes()
+	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, groupKind, namespace, name, optionalVersion string) error {
+		deleted = append(deleted, groupKind+"/"+name)
+		return nil
+	}).AnyTimes()
+	dh.EXPECT().Refresh().Return(nil).AnyTimes()
+	dh.EXPECT().EnsureDeleted(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	dh.EXPECT().IsConstraintTemplateReady(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+
+	r := &Reconciler{
+		log:    logrus.NewEntry(logrus.StandardLogger()),
+		client: ctrlfake.NewClientBuilder().WithObjects(cluster).Build(),
+		dh:     dh,
+	}
+
+	if err := r.deployVAP(context.Background()); err != nil {
+		t.Fatalf("first deployVAP() returned error: %v", err)
+	}
+
+	if !slices.Contains(ensured, "ValidatingAdmissionPolicy/aro-machines-deny") {
+		t.Fatalf("expected aro-machines-deny policy to be ensured, got %v", ensured)
+	}
+	if !slices.Contains(ensured, "ValidatingAdmissionPolicyBinding/aro-machines-deny-binding") {
+		t.Fatalf("expected aro-machines-deny binding to be ensured, got %v", ensured)
+	}
+
+	ensured = nil
+	deleted = nil
+
+	latest := &arov1alpha1.Cluster{}
+	if err := r.client.Get(context.Background(), client.ObjectKey{Name: arov1alpha1.SingletonClusterName}, latest); err != nil {
+		t.Fatalf("failed to get cluster from fake client: %v", err)
+	}
+	latest.Spec.OperatorFlags[operator.GuardrailsPolicyMachineDenyManaged] = operator.FlagFalse
+	latest.Spec.OperatorFlags[operator.GuardrailsPolicyPrivNamespaceDenyManaged] = operator.FlagTrue
+	latest.Spec.OperatorFlags[operator.GuardrailsPolicyPrivNamespaceDenyEnforcement] = operator.GuardrailsPolicyWarn
+	if err := r.client.Update(context.Background(), latest); err != nil {
+		t.Fatalf("failed to update cluster in fake client: %v", err)
+	}
+
+	if err := r.deployVAP(context.Background()); err != nil {
+		t.Fatalf("second deployVAP() returned error: %v", err)
+	}
+
+	if !slices.Contains(deleted, "ValidatingAdmissionPolicyBinding.admissionregistration.k8s.io/aro-machines-deny-binding") {
+		t.Fatalf("expected aro-machines-deny binding to be deleted after flag change, got %v", deleted)
+	}
+	if !slices.Contains(deleted, "ValidatingAdmissionPolicy.admissionregistration.k8s.io/aro-machines-deny") {
+		t.Fatalf("expected aro-machines-deny policy to be deleted after flag change, got %v", deleted)
+	}
+	if !slices.Contains(ensured, "ValidatingAdmissionPolicy/aro-privileged-namespace-deny") {
+		t.Fatalf("expected aro-privileged-namespace-deny policy to be ensured after flag change, got %v", ensured)
+	}
+	if !slices.Contains(ensured, "ValidatingAdmissionPolicyBinding/aro-privileged-namespace-deny-binding") {
+		t.Fatalf("expected aro-privileged-namespace-deny binding to be ensured after flag change, got %v", ensured)
+	}
+	if slices.Contains(ensured, "ValidatingAdmissionPolicy/aro-machines-deny") {
+		t.Fatalf("did not expect aro-machines-deny policy to be re-ensured after it was disabled, got %v", ensured)
 	}
 }
