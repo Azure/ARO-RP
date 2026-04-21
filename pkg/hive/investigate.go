@@ -107,6 +107,9 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 			AutomountServiceAccountToken: pointerutils.ToPtr(false),
 			ActiveDeadlineSeconds:        &activeDeadlineSeconds,
 			RestartPolicy:                corev1.RestartPolicyNever,
+			ImagePullSecrets: []corev1.LocalObjectReference{
+				{Name: "hive-global-pull-secret"},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:            "holmes",
