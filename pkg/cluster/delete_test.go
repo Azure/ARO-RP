@@ -13,8 +13,12 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
@@ -397,6 +401,210 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsRetryable(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		err        error
+		wantRetry  bool
+		wantLogMsg string
+	}{
+		{
+			name:       "retryable 429 returns true and logs",
+			err:        autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+			wantRetry:  true,
+			wantLogMsg: "transient error on test-op, retrying:",
+		},
+		{
+			name:      "non-retryable error returns false",
+			err:       errors.New("permanent failure"),
+			wantRetry: false,
+		},
+		{
+			name:       "retryable azcore 429 returns true and logs",
+			err:        &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
+			wantRetry:  true,
+			wantLogMsg: "transient error on test-op, retrying:",
+		},
+		{
+			name: "retryable autorest 409+Retry-After returns true and logs",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+			wantRetry:  true,
+			wantLogMsg: "transient error on test-op, retrying:",
+		},
+		{
+			name: "retryable azcore 409+Retry-After returns true and logs",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+			wantRetry:  true,
+			wantLogMsg: "transient error on test-op, retrying:",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			logger, hook := logrustest.NewNullLogger()
+			logger.SetLevel(logrus.WarnLevel)
+
+			m := &manager{log: logrus.NewEntry(logger)}
+			predicate := m.isRetryable("test-op")
+
+			got := predicate(tt.err)
+			assert.Equal(t, tt.wantRetry, got)
+
+			if tt.wantLogMsg != "" {
+				require.Len(t, hook.Entries, 1)
+				assert.Contains(t, hook.LastEntry().Message, tt.wantLogMsg)
+				assert.Equal(t, logrus.WarnLevel, hook.LastEntry().Level)
+			} else {
+				assert.Empty(t, hook.Entries)
+			}
+		})
+	}
+}
+
+func TestDisconnectSecurityGroupRetry(t *testing.T) {
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	nsgID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkSecurityGroups/test-nsg", subscription, resourceGroup)
+	subnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
+
+	for _, tt := range []struct {
+		name     string
+		firstErr error
+	}{
+		{
+			name:     "retry on 429 (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name:     "retry on 409 Please retry later (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusConflict, Original: errors.New("ConflictingConcurrentWriteNotAllowed: Please retry later.")},
+		},
+		{
+			name:     "retry on 429 (azcore): succeeds on second attempt",
+			firstErr: &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name: "retry on azcore 409+Retry-After: succeeds on second attempt",
+			firstErr: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
+		{
+			name: "retry on autorest 409+Retry-After: succeeds on second attempt",
+			firstErr: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			origBackoff := transientRetryBackoff
+			transientRetryBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { transientRetryBackoff = origBackoff }()
+
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
+			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
+
+			securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(armnetwork.SecurityGroupsClientGetResponse{
+				SecurityGroup: armnetwork.SecurityGroup{
+					ID: pointerutils.ToPtr(nsgID),
+					Properties: &armnetwork.SecurityGroupPropertiesFormat{
+						Subnets: []*armnetwork.Subnet{{ID: pointerutils.ToPtr(subnetID)}},
+					},
+				},
+			}, nil)
+			subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
+				Subnet: armnetwork.Subnet{
+					ID: pointerutils.ToPtr(subnetID),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: pointerutils.ToPtr(nsgID)},
+					},
+				},
+			}, nil)
+			first := subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", gomock.Any(), nil).Return(tt.firstErr)
+			subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", gomock.Any(), nil).Return(nil).After(first)
+
+			m := manager{
+				log:               logrus.NewEntry(logrus.StandardLogger()),
+				armSecurityGroups: securityGroups,
+				armSubnets:        subnets,
+			}
+
+			assert.NoError(t, m.disconnectSecurityGroup(context.Background(), nsgID))
+		})
+	}
+}
+
+// TestDisconnectSecurityGroupRetryExhausted verifies that retry exhaustion propagates the error.
+// Uses a single representative error (autorest 429); the exhaustion path is the same for all retryable errors.
+func TestDisconnectSecurityGroupRetryExhausted(t *testing.T) {
+	origBackoff := transientRetryBackoff
+	transientRetryBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
+	defer func() { transientRetryBackoff = origBackoff }()
+
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	nsgID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkSecurityGroups/test-nsg", subscription, resourceGroup)
+	subnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
+	subnets := mock_armnetwork.NewMockSubnetsClient(controller)
+
+	securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(armnetwork.SecurityGroupsClientGetResponse{
+		SecurityGroup: armnetwork.SecurityGroup{
+			ID: pointerutils.ToPtr(nsgID),
+			Properties: &armnetwork.SecurityGroupPropertiesFormat{
+				Subnets: []*armnetwork.Subnet{{ID: pointerutils.ToPtr(subnetID)}},
+			},
+		},
+	}, nil)
+	subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
+		Subnet: armnetwork.Subnet{
+			ID: pointerutils.ToPtr(subnetID),
+			Properties: &armnetwork.SubnetPropertiesFormat{
+				NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: pointerutils.ToPtr(nsgID)},
+			},
+		},
+	}, nil)
+	subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", gomock.Any(), nil).Return(
+		autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+	)
+
+	m := manager{
+		log:               logrus.NewEntry(logrus.StandardLogger()),
+		armSecurityGroups: securityGroups,
+		armSubnets:        subnets,
+	}
+
+	err := m.disconnectSecurityGroup(context.Background(), nsgID)
+	require.Error(t, err)
+	var cloudErr *api.CloudError
+	assert.ErrorAs(t, err, &cloudErr, "expected *api.CloudError wrapping the exhausted retry error")
 }
 
 func TestDeleteClusterMsiCertificate(t *testing.T) {
@@ -979,6 +1187,232 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 
 			err := m.deleteFederatedCredentials(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+// doneFutureAPI is a minimal azure.FutureAPI implementation that reports immediate completion.
+// Used in tests to avoid actual HTTP polling on azure.Future.
+type doneFutureAPI struct{}
+
+func (d *doneFutureAPI) Response() *http.Response               { return nil }
+func (d *doneFutureAPI) Status() string                         { return "Succeeded" }
+func (d *doneFutureAPI) PollingMethod() azure.PollingMethodType { return azure.PollingUnknown }
+func (d *doneFutureAPI) DoneWithContext(context.Context, autorest.Sender) (bool, error) {
+	return true, nil
+}
+func (d *doneFutureAPI) GetPollingDelay() (time.Duration, bool)                      { return 0, false }
+func (d *doneFutureAPI) WaitForCompletionRef(context.Context, autorest.Client) error { return nil }
+func (d *doneFutureAPI) MarshalJSON() ([]byte, error)                                { return []byte(`{}`), nil }
+func (d *doneFutureAPI) UnmarshalJSON([]byte) error                                  { return nil }
+func (d *doneFutureAPI) PollingURL() string                                          { return "" }
+func (d *doneFutureAPI) GetResult(autorest.Sender) (*http.Response, error)           { return nil, nil }
+
+func TestDeleteResourcesRetry(t *testing.T) {
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/publicIPAddresses/test-pip", subscription, resourceGroup)
+
+	for _, tt := range []struct {
+		name     string
+		firstErr error
+	}{
+		{
+			name:     "retry on 429 (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name:     "retry on 409 Please retry later (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusConflict, Original: errors.New("ConflictingConcurrentWriteNotAllowed: Please retry later.")},
+		},
+		{
+			name:     "retry on 429 (azcore): succeeds on second attempt",
+			firstErr: &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name: "retry on azcore 409+Retry-After: succeeds on second attempt",
+			firstErr: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
+		{
+			name: "retry on autorest 409+Retry-After: succeeds on second attempt",
+			firstErr: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			origBackoff := transientRetryBackoff
+			transientRetryBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { transientRetryBackoff = origBackoff }()
+
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			resources := mock_features.NewMockResourcesClient(controller)
+			resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(
+				[]mgmtfeatures.GenericResourceExpanded{
+					{
+						ID:   pointerutils.ToPtr(resourceID),
+						Type: pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
+					},
+				}, nil,
+			)
+			first := resources.EXPECT().DeleteByID(gomock.Any(), resourceID, gomock.Any()).Return(
+				mgmtfeatures.ResourcesDeleteByIDFuture{}, tt.firstErr,
+			)
+			resources.EXPECT().DeleteByID(gomock.Any(), resourceID, gomock.Any()).Return(
+				mgmtfeatures.ResourcesDeleteByIDFuture{FutureAPI: &doneFutureAPI{}}, nil,
+			).After(first)
+			resources.EXPECT().Client().Return(autorest.Client{})
+
+			m := manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", subscription, resourceGroup),
+							},
+						},
+					},
+				},
+				resources: resources,
+			}
+
+			assert.NoError(t, m.deleteResources(context.Background()))
+		})
+	}
+}
+
+// TestDeleteResourcesRetryExhausted verifies that retry exhaustion propagates the error.
+// Uses a single representative error (autorest 429); the exhaustion path is the same for all retryable errors.
+func TestDeleteResourcesRetryExhausted(t *testing.T) {
+	origBackoff := transientRetryBackoff
+	transientRetryBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
+	defer func() { transientRetryBackoff = origBackoff }()
+
+	subscription := "00000000-0000-0000-0000-000000000000"
+	resourceGroup := "test-rg"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/publicIPAddresses/test-pip", subscription, resourceGroup)
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	resources := mock_features.NewMockResourcesClient(controller)
+	resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(
+		[]mgmtfeatures.GenericResourceExpanded{
+			{
+				ID:   pointerutils.ToPtr(resourceID),
+				Type: pointerutils.ToPtr("Microsoft.Network/publicIPAddresses"),
+			},
+		}, nil,
+	)
+	resources.EXPECT().DeleteByID(gomock.Any(), resourceID, gomock.Any()).Return(
+		mgmtfeatures.ResourcesDeleteByIDFuture{}, autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+	)
+
+	m := manager{
+		log: logrus.NewEntry(logrus.StandardLogger()),
+		doc: &api.OpenShiftClusterDocument{
+			OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", subscription, resourceGroup),
+					},
+				},
+			},
+		},
+		resources: resources,
+	}
+
+	err := m.deleteResources(context.Background())
+	require.Error(t, err)
+	var cloudErr *api.CloudError
+	assert.NotErrorAs(t, err, &cloudErr, "expected raw error, not *api.CloudError: nil Original passes through deleteByIdCloudError unchanged")
+}
+
+func TestDeleteByIdCloudError(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantErr    string
+		wantStatus int
+	}{
+		{
+			name: "CannotDeleteLoadBalancerWithPrivateLinkService",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="CannotDeleteLoadBalancerWithPrivateLinkService"`),
+			},
+			wantErr:    `400: CannotDeleteLoadBalancerWithPrivateLinkService: features.ResourcesClient#DeleteByID: Code="CannotDeleteLoadBalancerWithPrivateLinkService"`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "AuthorizationFailed",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="AuthorizationFailed"`),
+			},
+			wantErr:    `403: Forbidden: features.ResourcesClient#DeleteByID: Code="AuthorizationFailed"`,
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name: "InUseSubnetCannotBeDeleted",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="InUseSubnetCannotBeDeleted"`),
+			},
+			wantErr:    `400: InUseSubnetCannotBeDeleted: features.ResourcesClient#DeleteByID: Code="InUseSubnetCannotBeDeleted"`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "ScopeLocked",
+			err: autorest.DetailedError{
+				Original: errors.New(`Code="ScopeLocked"`),
+			},
+			wantErr:    `409: ScopeLocked: features.ResourcesClient#DeleteByID: Code="ScopeLocked"`,
+			wantStatus: http.StatusConflict,
+		},
+		{
+			name: "unrecognized autorest error passes through",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New("something else"),
+			},
+			wantErr: `#: : StatusCode=409 -- Original Error: something else`,
+		},
+		{
+			name:    "non-autorest error passes through",
+			err:     errors.New("generic error"),
+			wantErr: "generic error",
+		},
+		{
+			name:    "autorest DetailedError with nil Original passes through",
+			err:     autorest.DetailedError{StatusCode: http.StatusConflict},
+			wantErr: "#: : StatusCode=409",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := deleteByIdCloudError(tt.err)
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			var cloudErr *api.CloudError
+			if tt.wantStatus != 0 {
+				require.ErrorAs(t, err, &cloudErr, "expected *api.CloudError, got %T", err)
+				assert.Equal(t, tt.wantStatus, cloudErr.StatusCode)
+			} else {
+				assert.NotErrorAs(t, err, &cloudErr, "expected non-CloudError, got %T", err)
+			}
 		})
 	}
 }

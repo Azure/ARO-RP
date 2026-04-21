@@ -368,16 +368,24 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true if the error is a transient/retryable error
-// such as 429 Too Many Requests or contains RetryableError code
+// IsRetryableError returns true if the error is a transient/retryable error such as
+// 429 Too Many Requests, a 409 conflict whose message contains "Please retry later",
+// or an error string containing "RetryableError".
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
 
+	// azcore.ResponseError.Error() includes the response body when RawResponse is non-nil.
+	errMsg := err.Error()
+
 	var responseError *azcore.ResponseError
 	if errors.As(err, &responseError) {
 		if responseError.StatusCode == http.StatusTooManyRequests {
+			return true
+		}
+		if responseError.StatusCode == http.StatusConflict &&
+			strings.Contains(errMsg, "Please retry later") {
 			return true
 		}
 	}
@@ -387,8 +395,11 @@ func IsRetryableError(err error) bool {
 		if detailedErr.StatusCode == http.StatusTooManyRequests {
 			return true
 		}
+		if detailedErr.StatusCode == http.StatusConflict &&
+			strings.Contains(errMsg, "Please retry later") {
+			return true
+		}
 	}
 
-	// Check for RetryableError in error message (nested Azure errors)
-	return strings.Contains(err.Error(), "RetryableError")
+	return strings.Contains(errMsg, "RetryableError")
 }

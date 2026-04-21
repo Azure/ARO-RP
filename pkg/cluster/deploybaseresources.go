@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -418,6 +419,11 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 				if err != nil {
 					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
+						return false, nil
+					}
+					// Transient error: return (false, nil) to keep the PollImmediateUntil loop running; timeoutCtx is the hard bound.
+					if azureerrors.IsRetryableError(err) {
+						m.log.Warnf("transient error attaching NSG to subnet %s, retrying: %v", subnetID, err)
 						return false, nil
 					}
 					return false, err

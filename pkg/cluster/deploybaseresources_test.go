@@ -20,6 +20,7 @@ import (
 
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	azstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -458,6 +459,119 @@ func TestAttachNSGs(t *testing.T) {
 			},
 			wantErr: "I'm an arbitrary error here to make life harder",
 		},
+		{
+			// Verifies that a transient error causes _attachNSGs to return (false, nil),
+			// keeping innerErr nil so the 1ms timeout fires and the function returns nil.
+			// Actual retry-and-succeed behavior is covered by TestAttachNSGsRetrySuccess.
+			name: "Transient retryable error is treated as continue-poll signal",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(autorest.DetailedError{StatusCode: http.StatusTooManyRequests}).Times(1)
+			},
+		},
+		{
+			// Same as above but for azcore SDK errors. Returns (false, nil) into the poll loop.
+			name: "Transient retryable error (azcore 429) is treated as continue-poll signal",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(&azcore.ResponseError{StatusCode: http.StatusTooManyRequests}).Times(1)
+			},
+		},
+		{
+			// Same as above but for azcore 409+Retry-After errors. Returns (false, nil) into the poll loop.
+			name: "Transient retryable error (azcore 409 Retry-After) is treated as continue-poll signal",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(&azcore.ResponseError{
+					StatusCode: http.StatusConflict,
+					RawResponse: &http.Response{
+						StatusCode: http.StatusConflict,
+						Header:     http.Header{"Retry-After": []string{"5"}},
+					},
+				}).Times(1)
+			},
+		},
 	} {
 		controller := gomock.NewController(t)
 		defer controller.Finish()
@@ -474,6 +588,71 @@ func TestAttachNSGs(t *testing.T) {
 		err := m._attachNSGs(ctx, 1*time.Millisecond, 30*time.Second)
 		utilerror.AssertErrorMessage(t, err, tt.wantErr)
 	}
+}
+
+// TestAttachNSGsRetrySuccess verifies that a transient error on the master subnet triggers a retry
+// that succeeds on the next poll cycle, after which the worker subnet is also attached successfully.
+func TestAttachNSGsRetrySuccess(t *testing.T) {
+	ctx := context.Background()
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+
+	oc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				ArchitectureVersion: api.ArchitectureVersionV2,
+				InfraID:             "infra",
+				ClusterProfile: api.ClusterProfile{
+					ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+				},
+				MasterProfile: api.MasterProfile{
+					SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+				},
+				WorkerProfiles: []api.WorkerProfile{
+					{
+						SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+					},
+				},
+			},
+		},
+	}
+
+	// Get returns empty subnet (no NSG yet); _attachNSGs then attaches the cluster NSG.
+	nsgID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"
+	emptySubnet := sdknetwork.Subnet{}
+	masterWithNSG := sdknetwork.Subnet{
+		Properties: &sdknetwork.SubnetPropertiesFormat{
+			NetworkSecurityGroup: &sdknetwork.SecurityGroup{ID: pointerutils.ToPtr(nsgID)},
+		},
+	}
+	workerWithNSG := sdknetwork.Subnet{
+		Properties: &sdknetwork.SubnetPropertiesFormat{
+			NetworkSecurityGroup: &sdknetwork.SecurityGroup{ID: pointerutils.ToPtr(nsgID)},
+		},
+	}
+
+	// Iteration 1: master Get succeeds, CreateOrUpdateAndWait returns 429. Worker not reached.
+	// Iteration 2: master Get succeeds, CreateOrUpdateAndWait succeeds. Worker Get+update succeeds.
+	gomock.InOrder(
+		armSubnets.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: emptySubnet}, nil),
+		armSubnets.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", masterWithNSG, nil).Return(autorest.DetailedError{StatusCode: http.StatusTooManyRequests}),
+		armSubnets.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: emptySubnet}, nil),
+		armSubnets.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", masterWithNSG, nil).Return(nil),
+		armSubnets.EXPECT().Get(ctx, "subscription-rg", "worker-vnet", "worker-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: emptySubnet}, nil),
+		armSubnets.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "worker-vnet", "worker-subnet", workerWithNSG, nil).Return(nil),
+	)
+
+	m := &manager{
+		log:        logrus.NewEntry(logrus.StandardLogger()),
+		doc:        oc,
+		armSubnets: armSubnets,
+	}
+
+	// 200ms timeout, 1ms poll interval: gives both poll iterations time to run.
+	assert.NoError(t, m._attachNSGs(ctx, 200*time.Millisecond, 1*time.Millisecond))
 }
 
 func TestSetMasterSubnetPolicies(t *testing.T) {
