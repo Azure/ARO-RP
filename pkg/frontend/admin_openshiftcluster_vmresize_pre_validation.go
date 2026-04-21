@@ -158,9 +158,6 @@ func (f *frontend) runPreResizeControlPlaneVMsValidation(
 
 		mu.Lock()
 		defer mu.Unlock()
-		if err == nil {
-			return
-		}
 		var ce *api.CloudError
 		if errors.As(err, &ce) && ce.CloudErrorBody != nil {
 			details = append(details, *ce.CloudErrorBody)

@@ -102,6 +102,8 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 			return err
 		}
 
+		report.ResourceID = doc.OpenShiftCluster.ID
+
 		subscriptionDoc, err = f.getSubscriptionDocument(ctx, doc.Key)
 		if err != nil {
 			return err
@@ -189,9 +191,7 @@ func resizeControlPlaneWithReport(
 	deallocateVM bool,
 	report *adminapi.ResizeControlPlaneResponse,
 ) error {
-	var (
-		machines map[string]machineValidationData
-	)
+	var machines map[string]machineValidationData
 
 	err := runResizePhase(report, "discover-control-plane-machines", func(phase *adminapi.ResizeControlPlanePhase) error {
 		var err error
@@ -452,16 +452,6 @@ func resizeControlPlaneNodeWithReport(
 // processing each master node sequentially in reverse name order.
 func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
 	return resizeControlPlaneWithReport(ctx, log, k, a, desiredVMSize, deallocateVM, nil)
-}
-
-// resizeControlPlaneNode performs the full resize sequence for a single
-// control plane node: cordon → drain → stop → resize → start → wait
-// ready → uncordon → update Machine metadata → update Node labels.
-func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool) error {
-	return resizeControlPlaneNodeWithReport(ctx, log, k, a, machineName, desiredVMSize, deallocateVM, &adminapi.ResizeControlPlaneNodeOperation{
-		Name:         machineName,
-		TargetVMSize: desiredVMSize,
-	})
 }
 
 func cordonNode(ctx context.Context, k adminactions.KubeActions, nodeName string) error {

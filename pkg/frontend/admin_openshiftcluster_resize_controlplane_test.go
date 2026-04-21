@@ -1040,7 +1040,18 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
 			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusNotFound,
-			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
+			assertResponse: func(t *testing.T, b []byte) {
+				cloudErr := decodeCloudErrorResponse(t, http.StatusNotFound, b)
+				if cloudErr.Code != api.CloudErrorCodeResourceNotFound {
+					t.Fatalf("code = %q, want %q", cloudErr.Code, api.CloudErrorCodeResourceNotFound)
+				}
+				if cloudErr.Target != "request-setup" {
+					t.Fatalf("target = %q, want %q", cloudErr.Target, "request-setup")
+				}
+				if !strings.Contains(cloudErr.Message, "was not found") {
+					t.Fatalf("message %q does not contain expected error text", cloudErr.Message)
+				}
+			},
 		},
 		{
 			name:         "subscription not found",
@@ -1053,7 +1064,18 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
 			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      fmt.Sprintf(`400: InvalidSubscriptionState: : Request is not allowed in unregistered subscription '%s'.`, mockSubID),
+			assertResponse: func(t *testing.T, b []byte) {
+				cloudErr := decodeCloudErrorResponse(t, http.StatusBadRequest, b)
+				if cloudErr.Code != api.CloudErrorCodeInvalidSubscriptionState {
+					t.Fatalf("code = %q, want %q", cloudErr.Code, api.CloudErrorCodeInvalidSubscriptionState)
+				}
+				if cloudErr.Target != "request-setup" {
+					t.Fatalf("target = %q, want %q", cloudErr.Target, "request-setup")
+				}
+				if !strings.Contains(cloudErr.Message, "unregistered subscription") {
+					t.Fatalf("message %q does not contain expected error text", cloudErr.Message)
+				}
+			},
 		},
 		{
 			name:           "invalid deallocateVM",
