@@ -14,6 +14,8 @@ import (
 	"text/template"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -37,8 +39,13 @@ func vapValidationAction(gkEnforcement string) string {
 
 // deployVAP creates or updates ValidatingAdmissionPolicy and
 // ValidatingAdmissionPolicyBinding resources based on per-policy operator flags.
-func (r *Reconciler) deployVAP(ctx context.Context, instance *arov1alpha1.Cluster) error {
+func (r *Reconciler) deployVAP(ctx context.Context) error {
 	r.log.Info("reconciling VAP policies")
+
+	instance := &arov1alpha1.Cluster{}
+	if err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance); err != nil {
+		return err
+	}
 
 	entries, err := fs.ReadDir(vapPolicies, vapPolicyPath)
 	if err != nil {
@@ -171,7 +178,7 @@ func (r *Reconciler) vapTicker(ctx context.Context, instance *arov1alpha1.Cluste
 		case <-done:
 			return
 		case <-ticker.C:
-			err = r.deployVAP(ctx, instance)
+			err = r.deployVAP(ctx)
 			if err != nil {
 				r.log.Errorf("vapTicker deployVAP error %s", err.Error())
 			}

@@ -109,7 +109,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Deploy VAP policies according to per-policy feature flags
-	if err := r.deployVAP(ctx, instance); err != nil {
+	if err := r.deployVAP(ctx); err != nil {
 		return reconcile.Result{}, err
 	}
 
