@@ -300,6 +300,13 @@ stages:
               fi
             displayName: ⚙️  Run E2E Test Suite for CSP
 
+          # Publish E2E test results
+          - task: PublishTestResults@2
+            displayName: 📊 Publish E2E test results
+            inputs:
+              testResultsFiles: $(System.DefaultWorkingDirectory)/e2e-report.xml
+            condition: succeededOrFailed()
+
           # Log the output from the services in case of failure
           - bash: |
               docker compose logs vpn
@@ -427,6 +434,14 @@ stages:
                 echo "E2E tests passed."
               fi
             displayName: ⚙️  Run E2E Test Suite for MIWI
+
+          # Publish E2E test results
+          - task: PublishTestResults@2
+            displayName: 📊 Publish E2E test results
+            inputs:
+              testResultsFiles: $(System.DefaultWorkingDirectory)/e2e-report.xml
+            condition: succeededOrFailed()
+
           - bash: |
               . ./env
               echo "deleting mock msi service principal $MOCK_MSI_OBJECT_ID"
