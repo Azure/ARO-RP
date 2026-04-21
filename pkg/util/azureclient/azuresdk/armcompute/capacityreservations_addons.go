@@ -11,9 +11,17 @@ import (
 
 // CapacityReservationsClientAddons contains addons for CapacityReservationsClient
 type CapacityReservationsClientAddons interface {
-	Get(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string, options *armcompute.CapacityReservationsClientGetOptions) (armcompute.CapacityReservationsClientGetResponse, error)
+	Get(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string) (armcompute.CapacityReservation, error)
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string, parameters armcompute.CapacityReservation) error
 	DeleteAndWait(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string) error
+}
+
+func (c *capacityReservationsClient) Get(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string) (armcompute.CapacityReservation, error) {
+	resp, err := c.CapacityReservationsClient.Get(ctx, resourceGroupName, capacityReservationGroupName, capacityReservationName, nil)
+	if err != nil {
+		return armcompute.CapacityReservation{}, err
+	}
+	return resp.CapacityReservation, nil
 }
 
 func (c *capacityReservationsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName, capacityReservationGroupName, capacityReservationName string, parameters armcompute.CapacityReservation) error {

@@ -33,13 +33,12 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 	vmSize := r.URL.Query().Get("vmSize")
-	useCapacityReservationRaw := r.URL.Query().Get("useCapacityReservation")
 	zone := r.URL.Query().Get("zone")
 
 	var useCapacityReservation bool
-	if useCapacityReservationRaw != "" {
+	if r.URL.Query().Has("useCapacityReservation") {
 		var parseErr error
-		useCapacityReservation, parseErr = strconv.ParseBool(useCapacityReservationRaw)
+		useCapacityReservation, parseErr = strconv.ParseBool(r.URL.Query().Get("useCapacityReservation"))
 		if parseErr != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "useCapacityReservation",
 				"useCapacityReservation must be a boolean (true or false)")
