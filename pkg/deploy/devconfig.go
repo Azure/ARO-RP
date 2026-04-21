@@ -163,6 +163,13 @@ func DevConfig(_env env.Core) (*Config, error) {
 			InstallViaHive:           pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
 			DefaultInstallerPullspec: pointerutils.ToPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
 			AdoptByHive:              pointerutils.ToPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
+
+			// Holmes investigation config
+			HolmesImage:           pointerutils.ToPtr(os.Getenv("HOLMES_IMAGE")),
+			HolmesAzureApiVersion: pointerutils.ToPtr(os.Getenv("HOLMES_AZURE_API_VERSION")),
+			HolmesModel:           pointerutils.ToPtr(os.Getenv("HOLMES_MODEL")),
+			HolmesDefaultTimeout:  pointerutils.ToPtr(os.Getenv("HOLMES_DEFAULT_TIMEOUT")),
+			HolmesMaxConcurrent:   pointerutils.ToPtr(os.Getenv("HOLMES_MAX_CONCURRENT")),
 		},
 	}, nil
 }
