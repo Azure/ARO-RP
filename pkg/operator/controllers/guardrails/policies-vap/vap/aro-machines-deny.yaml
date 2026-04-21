@@ -3,7 +3,7 @@ kind: ValidatingAdmissionPolicy
 metadata:
   name: aro-machines-deny
 spec:
-  failurePolicy: Fail
+  failurePolicy: Ignore
   matchConstraints:
     resourceRules:
     - apiGroups: ["machine.openshift.io"]

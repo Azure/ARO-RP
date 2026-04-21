@@ -3,7 +3,7 @@ kind: ValidatingAdmissionPolicy
 metadata:
   name: aro-privileged-namespace-deny
 spec:
-  failurePolicy: Ignore #TODO: how to change this to eg, Fail? via old patch or allow change this field directly?
+  failurePolicy: Ignore
   matchConstraints:
     resourceRules:
     - apiGroups: [""]
