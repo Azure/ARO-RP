@@ -311,27 +311,6 @@ stages:
             displayName: Log Service Output
             condition: always()
 
-          # Collect must-gather logs
-          - bash: |
-              . secrets/env
-              . ./hack/e2e/run-rp-and-e2e.sh
-              container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
-              docker cp ${container_id}:/usr/local/bin/db ./db
-              docker rm ${container_id}
-              ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
-              export KUBECONFIG=$(pwd)/admin.kubeconfig
-              wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-              tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-              ./oc adm must-gather --image arointsvc.azurecr.io/openshift4/ose-must-gather:latest
-              tar cf must-gather.tar.gz must-gather.local.*
-            displayName: Collect must-gather
-            condition: Failed()
-          # Publish the must-gather result to the pipeline
-          - publish: must-gather.tar.gz
-            artifact: must-gather
-            displayName: Append must-gather to Pipeline
-            condition: Failed()
-
           # Clean up Docker Compose services
           - bash: |
               docker compose down
@@ -465,26 +444,6 @@ stages:
             displayName: Log Service Output
             condition: always()
 
-          # Collect must-gather logs
-          - bash: |
-              . secrets/env
-              . ./hack/e2e/run-rp-and-e2e.sh
-              container_id=$(docker create $(LOCAL_E2E_IMAGE):$(TAG))
-              docker cp ${container_id}:/usr/local/bin/db ./db
-              docker rm ${container_id}
-              ./hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER > admin.kubeconfig
-              export KUBECONFIG=$(pwd)/admin.kubeconfig
-              wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-              tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
-              ./oc adm must-gather --image arointsvc.azurecr.io/openshift4/ose-must-gather:latest
-              tar cf must-gather.tar.gz must-gather.local.*
-            displayName: Collect must-gather
-            condition: Failed()
-          # Publish the must-gather result to the pipeline
-          - publish: must-gather.tar.gz
-            artifact: must-gather
-            displayName: Append must-gather to Pipeline
-            condition: Failed()
 
           # Clean up Docker Compose services
           - bash: |
