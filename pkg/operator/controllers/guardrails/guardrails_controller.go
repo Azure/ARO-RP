@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -39,8 +40,9 @@ type Reconciler struct {
 	readinessTimeout      time.Duration
 	dh                    dynamichelper.Interface
 	namespace             string
-	gkTickerDone          chan bool
-	vapTickerDone         chan bool
+	gkTickerDone          chan struct{}
+	vapTickerDone         chan struct{}
+	tickerMu              sync.Mutex
 	reconciliationMinutes int
 	cleanupNeeded         bool
 	kubernetescli         kubernetes.Interface

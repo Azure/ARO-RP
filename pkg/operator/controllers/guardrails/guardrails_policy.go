@@ -157,8 +157,7 @@ func (r *Reconciler) cleanupGatekeeper(ctx context.Context, instance *arov1alpha
 	return nil
 }
 
-func (r *Reconciler) gkTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
-	r.gkTickerDone = make(chan bool)
+func (r *Reconciler) gkTicker(ctx context.Context, instance *arov1alpha1.Cluster, done <-chan struct{}) {
 	var err error
 
 	minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
@@ -171,14 +170,8 @@ func (r *Reconciler) gkTicker(ctx context.Context, instance *arov1alpha1.Cluster
 	defer ticker.Stop()
 	for {
 		select {
-		case done := <-r.gkTickerDone:
-			if done {
-				r.gkTickerDone = nil
-				return
-			}
-			// false to trigger a ticker reset
-			r.log.Infof("gkTicker reset to %d min", r.reconciliationMinutes)
-			ticker.Reset(time.Duration(r.reconciliationMinutes) * time.Minute)
+		case <-done:
+			return
 		case <-ticker.C:
 			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
@@ -194,21 +187,31 @@ func (r *Reconciler) startGKTicker(ctx context.Context, instance *arov1alpha1.Cl
 	if err != nil {
 		min, _ = strconv.Atoi(defaultReconciliationMinutes)
 	}
-	if r.reconciliationMinutes != min && r.gkTickerDone != nil {
-		// trigger ticker reset
-		r.reconciliationMinutes = min
-		r.gkTickerDone <- false
+
+	r.tickerMu.Lock()
+	defer r.tickerMu.Unlock()
+
+	if r.gkTickerDone != nil {
+		if r.reconciliationMinutes == min {
+			return
+		}
+
+		close(r.gkTickerDone)
+		r.gkTickerDone = nil
 	}
 
-	// make sure only one ticker started
-	if r.gkTickerDone == nil {
-		go r.gkTicker(ctx, instance)
-	}
+	done := make(chan struct{})
+	r.gkTickerDone = done
+	r.reconciliationMinutes = min
+	go r.gkTicker(ctx, instance, done)
 }
 
 func (r *Reconciler) stopGKTicker() {
+	r.tickerMu.Lock()
+	defer r.tickerMu.Unlock()
+
 	if r.gkTickerDone != nil {
-		r.gkTickerDone <- true
 		close(r.gkTickerDone)
+		r.gkTickerDone = nil
 	}
 }

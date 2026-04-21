@@ -155,33 +155,21 @@ func (r *Reconciler) removeAllVAP(ctx context.Context) error {
 }
 
 // vapTicker periodically re-applies VAP policies and bindings to prevent them from being externally deleted.
-func (r *Reconciler) vapTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
-	r.vapTickerDone = make(chan bool)
+func (r *Reconciler) vapTicker(ctx context.Context, instance *arov1alpha1.Cluster, done <-chan struct{}) {
 	var err error
 
 	minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
-	reconciliationMinutes, err := strconv.Atoi(minutes)
+	r.reconciliationMinutes, err = strconv.Atoi(minutes)
 	if err != nil {
-		reconciliationMinutes, _ = strconv.Atoi(defaultReconciliationMinutes)
+		r.reconciliationMinutes, _ = strconv.Atoi(defaultReconciliationMinutes)
 	}
 
-	ticker := time.NewTicker(time.Duration(reconciliationMinutes) * time.Minute)
+	ticker := time.NewTicker(time.Duration(r.reconciliationMinutes) * time.Minute)
 	defer ticker.Stop()
 	for {
 		select {
-		case done := <-r.vapTickerDone:
-			if done {
-				r.vapTickerDone = nil
-				return
-			}
-			// false to trigger a ticker reset
-			minutes = instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
-			reconciliationMinutes, err = strconv.Atoi(minutes)
-			if err != nil {
-				reconciliationMinutes, _ = strconv.Atoi(defaultReconciliationMinutes)
-			}
-			r.log.Infof("vapTicker reset to %d min", reconciliationMinutes)
-			ticker.Reset(time.Duration(reconciliationMinutes) * time.Minute)
+		case <-done:
+			return
 		case <-ticker.C:
 			err = r.deployVAP(ctx, instance)
 			if err != nil {
@@ -192,14 +180,36 @@ func (r *Reconciler) vapTicker(ctx context.Context, instance *arov1alpha1.Cluste
 }
 
 func (r *Reconciler) startVAPTicker(ctx context.Context, instance *arov1alpha1.Cluster) {
-	if r.vapTickerDone == nil {
-		go r.vapTicker(ctx, instance)
+	minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
+	min, err := strconv.Atoi(minutes)
+	if err != nil {
+		min, _ = strconv.Atoi(defaultReconciliationMinutes)
 	}
+
+	r.tickerMu.Lock()
+	defer r.tickerMu.Unlock()
+
+	if r.vapTickerDone != nil {
+		if r.reconciliationMinutes == min {
+			return
+		}
+
+		close(r.vapTickerDone)
+		r.vapTickerDone = nil
+	}
+
+	done := make(chan struct{})
+	r.vapTickerDone = done
+	r.reconciliationMinutes = min
+	go r.vapTicker(ctx, instance, done)
 }
 
 func (r *Reconciler) stopVAPTicker() {
+	r.tickerMu.Lock()
+	defer r.tickerMu.Unlock()
+
 	if r.vapTickerDone != nil {
-		r.vapTickerDone <- true
 		close(r.vapTickerDone)
+		r.vapTickerDone = nil
 	}
 }
