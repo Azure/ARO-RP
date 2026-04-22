@@ -318,17 +318,27 @@ def validate_enable_managed_identity(namespace):
     if not namespace.enable_managed_identity:
         return
 
-    if namespace.client_id is not None:
-        raise InvalidArgumentValueError('Must not specify --client-id when --enable-managed-identity is True')
+    if namespace.client_id:
+        raise InvalidArgumentValueError("Must not specify --client-id when "
+                                        "--enable-managed-identity/--enable-mi is True")
 
-    if namespace.client_secret is not None:
-        raise InvalidArgumentValueError('Must not specify --client-secret when --enable-managed-identity is True')
+    if namespace.client_secret:
+        raise InvalidArgumentValueError("Must not specify --client-secret when "
+                                        "--enable-managed-identity/--enable-mi is True")
 
-    if not namespace.platform_workload_identities:
-        raise RequiredArgumentMissingError('Enabling managed identity requires platform workload identities to be provided')  # pylint: disable=line-too-long
+    if namespace.platform_workload_identities and not namespace.mi_user_assigned:
+        raise RequiredArgumentMissingError("Must specify --assign-cluster-identity/--mi-user-assigned "
+                                           "with --assign-platform-workload-identity/--assign-platform-wi")
 
-    if not namespace.mi_user_assigned:
-        raise RequiredArgumentMissingError('Enabling managed identity requires cluster identity to be provided')
+    if not namespace.platform_workload_identities and namespace.mi_user_assigned:
+        raise RequiredArgumentMissingError("Must specify --assign-platform-workload-identity/--assign-platform-wi "
+                                           "with --assign-cluster-identity/--mi-user-assigned")
+
+    if not namespace.platform_workload_identities and not namespace.mi_user_assigned and not namespace.version:
+        raise RequiredArgumentMissingError("--enable-managed-identity/--enable-mi without "
+                                           "--assign-cluster-identity/--mi-user-assigned and "
+                                           "--assign-platform-wi/--assign-platform-workload-identity "
+                                           "requires --version.")
 
 
 def validate_platform_workload_identities(isCreate):
