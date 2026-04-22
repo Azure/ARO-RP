@@ -1,0 +1,12 @@
+ARG REGISTRY
+FROM ${REGISTRY}/ubi9/nodejs-20
+
+LABEL MAINTAINER="aos-azure"
+
+USER 0
+
+COPY api/package*.json ./
+
+RUN npm install
+
+ENTRYPOINT ["tps"]

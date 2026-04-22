@@ -33,6 +33,8 @@ FLUENTBIT_VERSION = 4.2.2
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
+# Just use the `latest` tag since the TypeSpec version is set in api/package.json
+TYPESPEC_IMAGE = arointsvc.azurecr.io/typespec:latest
 GATEKEEPER_VERSION = v3.19.2
 
 include .bingo/Variables.mk
@@ -198,6 +200,10 @@ image-aro-multistage:
 .PHONY: image-autorest
 image-autorest:
 	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+
+.PHONY: image-typespec
+image-typespec:
+	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.typespec -t ${TYPESPEC_IMAGE} .
 
 .PHONY: image-fluentbit
 image-fluentbit:
