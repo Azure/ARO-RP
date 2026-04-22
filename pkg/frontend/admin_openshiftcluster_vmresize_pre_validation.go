@@ -494,9 +494,9 @@ func (f *frontend) validateVMSKU(
 			fmt.Sprintf("Failed to retrieve current master VM sizes from Azure: %v", err))
 	}
 
-	if len(currentVMSizes) == 0 {
+	if len(currentVMSizes) < 3 {
 		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			"No master VMs found in the cluster resource group.")
+			fmt.Sprintf("Expected 3 master VMs but found %d in the cluster resource group. Resize cannot proceed until all control plane VMs are present.", len(currentVMSizes)))
 	}
 
 	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSizes, desiredVMSize)
