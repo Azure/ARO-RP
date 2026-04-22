@@ -98,13 +98,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
-
-			// Holmes investigation config
-			"holmesImage",
-			"holmesAzureApiVersion",
-			"holmesModel",
-			"holmesDefaultTimeout",
-			"holmesMaxConcurrent",
 		)
 	}
 

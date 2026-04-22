@@ -93,21 +93,6 @@
         "globalDevopsServicePrincipalId": {
             "value": ""
         },
-        "holmesAzureApiVersion": {
-            "value": ""
-        },
-        "holmesDefaultTimeout": {
-            "value": ""
-        },
-        "holmesImage": {
-            "value": ""
-        },
-        "holmesMaxConcurrent": {
-            "value": ""
-        },
-        "holmesModel": {
-            "value": ""
-        },
         "ipRules": {
             "value": ""
         },
