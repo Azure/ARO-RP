@@ -30,6 +30,7 @@ func TestShouldRetry(t *testing.T) {
 		expectedRetry    bool
 		expectedReason   string
 		expectBodyClosed bool
+		retryAfter       string
 	}{
 		{
 			name:             "http body not read: retry on error without response",
@@ -102,6 +103,59 @@ func TestShouldRetry(t *testing.T) {
 			expectBodyClosed: true,
 		},
 		{
+			name:             "http body not read: retry on 409 with Retry-After header",
+			bodyContent:      "",
+			statusCode:       http.StatusConflict,
+			err:              nil,
+			expectedRetry:    true,
+			expectedReason:   "should retry on 409 with Retry-After header",
+			expectBodyClosed: false,
+			retryAfter:       "5",
+		},
+		{
+			name: "http body not read: retry on 409 with Retry-After header even when body is non-empty",
+			bodyContent: `{
+				"error": {
+					"code": "ScopeLocked",
+					"message": "The scope is locked."
+				}
+			}`,
+			statusCode:       http.StatusConflict,
+			err:              nil,
+			expectedRetry:    true,
+			expectedReason:   "should retry on 409 with Retry-After header regardless of body content",
+			expectBodyClosed: false,
+			retryAfter:       "5",
+		},
+		{
+			name: "http body read: no retry on 409 without Retry-After header",
+			bodyContent: `{
+				"error": {
+					"code": "ScopeLocked",
+					"message": "The scope is locked."
+				}
+			}`,
+			statusCode:       http.StatusConflict,
+			err:              nil,
+			expectedRetry:    false,
+			expectedReason:   "should not retry on permanent 409 without Retry-After",
+			expectBodyClosed: true,
+		},
+		{
+			name: "http body read: no retry on 409 with Please retry later body but no Retry-After header",
+			bodyContent: `{
+				"error": {
+					"code": "ConflictingConcurrentWriteNotAllowed",
+					"message": "Please retry later."
+				}
+			}`,
+			statusCode:       http.StatusConflict,
+			err:              nil,
+			expectedRetry:    false,
+			expectedReason:   "shouldRetry does not match body-only 409s; Please retry later detection is handled by IsRetryableError/retry.OnError",
+			expectBodyClosed: true,
+		},
+		{
 			name:             "http body not read: retry on 429 status code",
 			bodyContent:      "",
 			statusCode:       http.StatusTooManyRequests,
@@ -134,7 +188,11 @@ func TestShouldRetry(t *testing.T) {
 				}
 				resp = &http.Response{
 					StatusCode: tt.statusCode,
+					Header:     http.Header{},
 					Body:       tracker,
+				}
+				if tt.retryAfter != "" {
+					resp.Header.Set("Retry-After", tt.retryAfter)
 				}
 			}
 
