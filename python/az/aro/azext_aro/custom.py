@@ -118,6 +118,7 @@ def aro_create(*,  # pylint: disable=too-many-locals
                tags=None,
                version=None,
                no_wait=False):
+
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
@@ -231,7 +232,25 @@ def aro_create(*,  # pylint: disable=too-many-locals
         platform_workload_identity_profile=None,
     )
 
-    if enable_managed_identity is True:
+    if enable_managed_identity:
+        if not platform_workload_identities and not mi_user_assigned:
+            identities = aro_identity_create_required(
+                cmd=cmd,
+                client=client,
+                resource_group_name=resource_group_name,
+                location=location,
+                version=version,
+                master_subnet=master_subnet,
+                worker_subnet=worker_subnet,
+                vnet=vnet,
+                disk_encryption_set=disk_encryption_set,
+                vnet_resource_group_name=vnet_resource_group_name
+            )
+
+            mi_user_assigned = identities[0]["id"]
+
+            platform_workload_identities = [(i["name"], {"resourceID": i["id"]}) for i in identities[1:]]
+
         oc.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile(
             platform_workload_identities=dict(platform_workload_identities)
         )
@@ -240,8 +259,6 @@ def aro_create(*,  # pylint: disable=too-many-locals
             type='UserAssigned',
             user_assigned_identities={mi_user_assigned: {}}
         )
-
-        # TODO - perform client-side validation of required identity permissions
 
     else:
         oc.service_principal_profile = openshiftcluster.ServicePrincipalProfile(
@@ -866,11 +883,12 @@ def aro_identity_create_required(*,
     # FIXME:
     # pylint: disable=too-many-locals
     identities = []
-
     progress = cmd.cli_ctx.get_progress_controller()
-    progress.add(message="Reticulating splines")
 
+    progress.add(message="Validating OpenShift version")
     _validate_version(client, version, location)
+
+    progress.add(message="Gathering necessary scopes for network resources")
     network_scopes = _determine_required_scopes_from_network_resources(
         cmd,
         disk_encryption_set,
