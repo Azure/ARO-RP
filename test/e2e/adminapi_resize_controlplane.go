@@ -42,8 +42,8 @@ func getControlPlaneVMs(ctx context.Context) []compute.VirtualMachine {
 	clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 	vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
 	Expect(err).NotTo(HaveOccurred())
-
 	return slices.DeleteFunc(vms, func(vm compute.VirtualMachine) bool {
+		Expect(vm.Name).ToNot(BeNil())
 		return !strings.Contains(*vm.Name, "master")
 	})
 }
@@ -54,6 +54,7 @@ func getControlPlaneVMs(ctx context.Context) []compute.VirtualMachine {
 func getControlPlaneVMSize(ctx context.Context) string {
 	vms := getControlPlaneVMs(ctx)
 	Expect(vms).NotTo(BeEmpty())
+	Expect(vms[0].HardwareProfile).NotTo(BeNil())
 	return string(vms[0].HardwareProfile.VMSize)
 }
 
@@ -198,7 +199,7 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 		} else if strings.HasPrefix(preResizeVMSize, "Standard_E") {
 			targetSku = strings.Replace(preResizeVMSize, "Standard_E", "Standard_D", 1)
 		} else {
-			Skip(fmt.Sprintf("Cowardly refusing to resize the cluster, only know how to hande E and D vms, this cluster has: %s", preResizeVMSize))
+			Skip(fmt.Sprintf("Cowardly refusing to resize the cluster, only know how to handle E and D vms, this cluster has: %s", preResizeVMSize))
 		}
 
 		By(fmt.Sprintf("Resizing from %s to %s", preResizeVMSize, targetSku))
@@ -225,7 +226,7 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 			Expect(vm.HardwareProfile).ToNot(BeNil())
 			Expect(string(vm.HardwareProfile.VMSize)).To(Equal(targetSku))
 			Expect(vm.ProvisioningState).ToNot(BeNil())
-			Expect(*vm.ProvisioningState).ToNot(Equal(string(compute.ProvisioningStateSucceeded)))
+			Expect(*vm.ProvisioningState).To(Equal(string(compute.ProvisioningStateSucceeded)))
 		}
 
 		By("Validating machine and node labels")
