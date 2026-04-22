@@ -95,13 +95,6 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 		Expect(postResizeSize).To(Equal(preResizeVMSize))
 	})
 
-	// Test cases:
-	// - Don't resize if size already matches
-	// - Resize from D to E series
-
-	// Future Test case:
-	// - Validate recovery
-
 	It("Should not attempt to resize if there is no quota", func(ctx context.Context) {
 		By("Finding a supported Master VM Size without Quota")
 		usageRes, err := clients.Usages.List(ctx, _env.Location())
@@ -206,5 +199,3 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 		}
 	}, NodeTimeout(30*time.Minute))
 })
-
-// Get supported master instances, compare with quote. Make sure it doesn't resize
