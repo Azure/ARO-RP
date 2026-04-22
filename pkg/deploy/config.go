@@ -115,13 +115,6 @@ type Configuration struct {
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
 	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
-
-	// Holmes investigation config
-	HolmesImage           *string `json:"holmesImage,omitempty"`
-	HolmesAzureApiVersion *string `json:"holmesAzureApiVersion,omitempty"`
-	HolmesModel           *string `json:"holmesModel,omitempty"`
-	HolmesDefaultTimeout  *string `json:"holmesDefaultTimeout,omitempty"`
-	HolmesMaxConcurrent   *string `json:"holmesMaxConcurrent,omitempty"`
 }
 
 // Note: if this configuration block is provided, all throughputs must be present and valid

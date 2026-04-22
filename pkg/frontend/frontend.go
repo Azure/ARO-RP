@@ -208,9 +208,9 @@ func NewFrontend(ctx context.Context,
 	// Load Holmes config: secrets from Key Vault in prod, env vars in dev.
 	var holmesErr error
 	if _env.IsLocalDevelopmentMode() {
-		f.holmesConfig, holmesErr = holmes.NewHolmesConfigFromEnv()
+		f.holmesConfig, holmesErr = holmes.NewHolmesConfigFromEnv(_env.ACRDomain())
 	} else {
-		f.holmesConfig, holmesErr = holmes.NewHolmesConfig(ctx, _env.ServiceKeyvault())
+		f.holmesConfig, holmesErr = holmes.NewHolmesConfig(ctx, _env.ACRDomain(), _env.ServiceKeyvault())
 	}
 	if holmesErr != nil {
 		baseLog.WithError(holmesErr).Warning("Holmes config not available; investigations will be disabled")

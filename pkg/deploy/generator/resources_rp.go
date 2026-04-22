@@ -410,13 +410,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"clustersInstallViaHive",
 		"clustersAdoptByHive",
 		"clusterDefaultInstallerPullspec",
-
-		// Holmes investigation config
-		"holmesImage",
-		"holmesAzureApiVersion",
-		"holmesModel",
-		"holmesDefaultTimeout",
-		"holmesMaxConcurrent",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),

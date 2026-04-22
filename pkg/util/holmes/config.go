@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // modelPattern validates the model name contains only safe characters
@@ -36,8 +37,8 @@ type HolmesConfig struct {
 
 // NewHolmesConfigFromEnv loads all config from environment variables.
 // Used in local development mode (RP_MODE=development).
-func NewHolmesConfigFromEnv() (*HolmesConfig, error) {
-	c, err := newHolmesConfigBase()
+func NewHolmesConfigFromEnv(acrDomain string) (*HolmesConfig, error) {
+	c, err := newHolmesConfigBase(acrDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +52,7 @@ func NewHolmesConfigFromEnv() (*HolmesConfig, error) {
 
 // NewHolmesConfig loads non-secret config from env vars and secrets from Key Vault.
 // Used in production mode.
-func NewHolmesConfig(ctx context.Context, serviceKeyvault azsecrets.Client) (*HolmesConfig, error) {
+func NewHolmesConfig(ctx context.Context, acrDomain string, serviceKeyvault azsecrets.Client) (*HolmesConfig, error) {
 	apiKeyResp, err := serviceKeyvault.GetSecret(ctx, holmesAzureAPIKeySecretName, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s from keyvault: %w", holmesAzureAPIKeySecretName, err)
@@ -68,7 +69,7 @@ func NewHolmesConfig(ctx context.Context, serviceKeyvault azsecrets.Client) (*Ho
 		return nil, fmt.Errorf("keyvault secret %s has no value", holmesAzureAPIBaseSecretName)
 	}
 
-	c, err := newHolmesConfigBase()
+	c, err := newHolmesConfigBase(acrDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,8 @@ func NewHolmesConfig(ctx context.Context, serviceKeyvault azsecrets.Client) (*Ho
 }
 
 // newHolmesConfigBase loads the non-secret configuration from environment variables.
-func newHolmesConfigBase() (*HolmesConfig, error) {
+// The acrDomain is used to construct the default Holmes image pullspec.
+func newHolmesConfigBase(acrDomain string) (*HolmesConfig, error) {
 	defaultTimeout, err := envOrDefaultInt("HOLMES_DEFAULT_TIMEOUT", 600)
 	if err != nil {
 		return nil, err
@@ -91,7 +93,7 @@ func newHolmesConfigBase() (*HolmesConfig, error) {
 		return nil, err
 	}
 	return &HolmesConfig{
-		Image:                       envOrDefault("HOLMES_IMAGE", "quay.io/haoran/holmesgpt:latest"),
+		Image:                       envOrDefault("HOLMES_IMAGE", version.HolmesImage(acrDomain)),
 		AzureAPIVersion:             envOrDefault("HOLMES_AZURE_API_VERSION", "2025-04-01-preview"),
 		Model:                       envOrDefault("HOLMES_MODEL", "azure/gpt-5.2"),
 		DefaultTimeout:              defaultTimeout,

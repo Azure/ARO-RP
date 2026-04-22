@@ -71,7 +71,7 @@ func TestNewHolmesConfigFromEnv(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			cfg, err := NewHolmesConfigFromEnv()
+			cfg, err := NewHolmesConfigFromEnv("arosvc.azurecr.io")
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -150,7 +150,7 @@ func TestNewHolmesConfig(t *testing.T) {
 			mockKV := mock_azsecrets.NewMockClient(controller)
 			tt.mocks(mockKV)
 
-			cfg, err := NewHolmesConfig(ctx, mockKV)
+			cfg, err := NewHolmesConfig(ctx, "arosvc.azurecr.io", mockKV)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
