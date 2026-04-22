@@ -150,14 +150,17 @@ discoverycache: ## Fix out-of-date discovery cache
 	$(MAKE) generate
 
 .PHONY: generate
-generate: install-tools generate-swagger ## Generate files & content for serving ARO-RP
+generate: install-tools generate-swagger-typespec ## Generate files & content for serving ARO-RP
 	go generate ./...
 	$(MAKE) imports
 
-.PHONY: generate-swagger
-generate-swagger:
+.PHONY: generate-swagger-legacy
+generate-swagger-legacy:
 	go run ./hack/swagger github.com/Azure/ARO-RP/pkg/api/v20240812preview ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/preview/2024-08-12-preview
-	go run ./hack/swagger github.com/Azure/ARO-RP/pkg/api/v20250725 ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/stable/2025-07-25
+
+.PHONY: generate-swagger-typespec
+generate-swagger-typespec:
+	hack/swagger/swagger-from-typespec.sh "${TYPESPEC_IMAGE}"
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
