@@ -105,32 +105,25 @@ NICs:
 				continue NICs
 			}
 
-			ilbBackendPoolsUpdated = updateILBBackendPools(log, oc, *ipc, infraID, *nic.Name, *lb.ID)
+			ilbBackendPoolsUpdated = updateILBBackendPools(log, oc, ipc, infraID, *nic.Name, *lb.ID)
 
-			// Check if UserDefinedRouting is enabled for this cluster
-			// UDR clusters don't have an external load balancer so stop executing here and continue to next NIC
+			// Only update the external load balancer pools if this is a cluster
+			// that uses it for network routing
 			if oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
-				if ilbBackendPoolsUpdated {
-					log.Infof("Updating UDR Cluster Network Interface %s", *nic.Name)
-					err := interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
-					if err != nil {
-						return err
-					}
+				log.Infof("not updating external LB address pool assignment as this is a UDR cluster")
+			} else {
+				elbName := infraID
+				if oc.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+					elbName = infraID + "-public-lb"
 				}
-				continue NICs
-			}
 
-			elbName := infraID
-			if oc.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
-				elbName = infraID + "-public-lb"
-			}
+				elb, err := lbClient.Get(ctx, resourceGroup, elbName, nil)
+				if err != nil {
+					return err
+				}
 
-			elb, err := lbClient.Get(ctx, resourceGroup, elbName, nil)
-			if err != nil {
-				return err
+				elbBackendPoolsUpdated = updateELBBackendPools(log, oc, *ipc, infraID, *nic.Name, *elb.ID)
 			}
-
-			elbBackendPoolsUpdated = updateELBBackendPools(log, oc, *ipc, infraID, *nic.Name, *elb.ID)
 		}
 
 		if ilbBackendPoolsUpdated || elbBackendPoolsUpdated {
@@ -145,7 +138,7 @@ NICs:
 	return nil
 }
 
-func updateILBBackendPools(log *logrus.Entry, oc *api.OpenShiftCluster, ipc armnetwork_sdk.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
+func updateILBBackendPools(log *logrus.Entry, oc *api.OpenShiftCluster, ipc *armnetwork_sdk.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
 	updated := false
 	ilbBackendPoolID := infraID
 	if oc.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
