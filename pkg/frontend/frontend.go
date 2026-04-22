@@ -55,6 +55,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithMaintenanceSchedules
 	database.DatabaseGroupWithBilling
 }
 
@@ -114,6 +115,7 @@ type frontend struct {
 	// these helps us to test and mock easier
 	now                          func() time.Time
 	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+	validateResizeQuota          func(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location, currentVMSize, desiredVMSize string) error
 
 	streamResponder StreamResponder
 }
@@ -195,6 +197,7 @@ func NewFrontend(ctx context.Context,
 
 		now:                          time.Now,
 		systemDataClusterDocEnricher: enrichClusterSystemData,
+		validateResizeQuota:          defaultValidateResizeQuota,
 
 		streamResponder: defaultResponder{},
 	}
@@ -314,10 +317,23 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		r.Route("/maintenancemanifests", func(r chi.Router) {
 			r.Get("/queued", f.getAdminQueuedMaintManifests)
+			r.Post("/cancel", f.postAdminMaintManifestCancelBatch)
 		})
+
+		r.Route("/maintenanceschedules", func(r chi.Router) {
+			r.Put("/", f.putAdminMaintScheduleCreate)
+			r.Get("/", f.getAdminMaintSchedules)
+			r.Route("/{scheduleId}", func(r chi.Router) {
+				r.Get("/", f.getAdminMaintSchedule)
+			})
+		})
+
 		r.Route("/hivesyncset", func(r chi.Router) {
 			r.Get("/", f.listAdminHiveSyncSet)
 			r.Get("/syncsetname/{syncsetname}", f.getAdminHiveSyncSet)
+		})
+		r.Route("/hive", func(r chi.Router) {
+			r.Get("/k8sobjects/{resource}", f.adminHiveK8sObjectsList)
 		})
 
 		r.Route("/billingdocuments", func(r chi.Router) {
@@ -366,6 +382,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				// We don't emit unplanned maintenance signal for resize since it is only used for planned maintenance
 				r.Post("/resize", f.postAdminOpenShiftClusterVMResize)
 
+				r.Get("/preresizevalidation", f.getPreResizeControlPlaneVMsValidation)
+
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/resizecontrolplane", f.postAdminResizeControlPlane)
+
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
@@ -376,6 +396,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
 
+				r.Get("/controlplanestatuscheckafterresize", f.getControlPlaneStatusCheckAfterResize)
 				// MIMO
 				r.Route("/maintenancemanifests", func(r chi.Router) {
 					r.Get("/", f.getAdminMaintManifests)
@@ -386,6 +407,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 						r.Post("/cancel", f.postAdminMaintManifestCancel)
 					})
 				})
+				r.Get("/selectors", f.getAdminOpenShiftClusterSelectors)
 			})
 		})
 

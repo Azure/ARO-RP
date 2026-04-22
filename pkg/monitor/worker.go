@@ -6,11 +6,14 @@ package monitor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -18,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
+	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -42,36 +46,65 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 	}
 
 	buckets, err := dbMonitors.ListBuckets(ctx)
-
-	mon.mu.Lock()
-	defer mon.mu.Unlock()
-
-	oldBuckets := mon.buckets
-	mon.buckets = make(map[int]struct{}, len(buckets))
-
-	for _, i := range buckets {
-		mon.buckets[i] = struct{}{}
+	if err != nil {
+		return err
 	}
 
-	if !reflect.DeepEqual(mon.buckets, oldBuckets) {
-		mon.baseLog.Printf("servicing %d buckets", len(mon.buckets))
-		mon.fixDocs()
+	if len(buckets) == 0 {
+		return fmt.Errorf("bucket allocation contained no buckets")
 	}
+
+	mon.clusters.UpdateBuckets(buckets)
 
 	return err
 }
 
 type clusterChangeFeedResponder struct {
-	mon *monitor
+	log      *logrus.Entry
+	docs     *xsync.Map[string, *cacheDoc]
+	bucketMu *sync.RWMutex
+	buckets  map[int]struct{}
+
+	lastChangefeedProcessed  atomic.Value // time.Time
+	lastChangefeedDataUpdate atomic.Value // time.Time
+
+	newWorker func(<-chan struct{}, string)
 }
 
-func (c *clusterChangeFeedResponder) Lock() {
-	c.mon.mu.Lock()
+func NewClusterChangefeedResponder(log *logrus.Entry, workerFunc func(<-chan struct{}, string)) *clusterChangeFeedResponder {
+	return &clusterChangeFeedResponder{
+		log:      log,
+		docs:     xsync.NewMap[string, *cacheDoc](),
+		bucketMu: &sync.RWMutex{},
+		buckets:  map[int]struct{}{},
+
+		newWorker: workerFunc,
+	}
 }
 
-func (c *clusterChangeFeedResponder) Unlock() {
-	c.mon.mu.Unlock()
+var _ changefeed.ChangefeedConsumer[*api.OpenShiftClusterDocument] = &clusterChangeFeedResponder{}
+
+// Update the buckets that we want to pay attention to.
+func (c *clusterChangeFeedResponder) UpdateBuckets(buckets []int) {
+	c.bucketMu.Lock()
+	defer c.bucketMu.Unlock()
+	oldBuckets := c.buckets
+	c.buckets = make(map[int]struct{}, len(buckets))
+
+	for _, i := range buckets {
+		c.buckets[i] = struct{}{}
+	}
+
+	if !reflect.DeepEqual(c.buckets, oldBuckets) {
+		c.log.Printf("servicing %d buckets", len(c.buckets))
+		c.fixDocs()
+	}
 }
+
+// we don't use a mutex internally, we use a xsync.Map, so Lock/Unlock are
+// no-ops
+func (c *clusterChangeFeedResponder) Lock()   {}
+func (c *clusterChangeFeedResponder) Unlock() {}
 
 func (c *clusterChangeFeedResponder) OnDoc(doc *api.OpenShiftClusterDocument) {
 	ps := doc.OpenShiftCluster.Properties.ProvisioningState
@@ -91,14 +124,40 @@ func (c *clusterChangeFeedResponder) OnDoc(doc *api.OpenShiftClusterDocument) {
 		// start deletion.
 		//
 		// If the cluster is already not monitored, deleteDoc will be a no-op.
-		c.mon.deleteDoc(doc)
+		c.deleteDoc(doc)
 	default:
-		c.mon.upsertDoc(doc)
+		c.upsertDoc(doc)
 	}
 }
 
-func (c *clusterChangeFeedResponder) OnAllPendingProcessed() {
-	c.mon.lastClusterChangefeed.Store(time.Now())
+func (c *clusterChangeFeedResponder) GetCacheSize() int {
+	return c.docs.Size()
+}
+
+func (c *clusterChangeFeedResponder) GetLastProcessed() (time.Time, bool) {
+	t, ok := c.lastChangefeedProcessed.Load().(time.Time)
+	return t, ok
+}
+
+func (c *clusterChangeFeedResponder) GetLastDataUpdate() (time.Time, bool) {
+	t, ok := c.lastChangefeedDataUpdate.Load().(time.Time)
+	return t, ok
+}
+
+func (c *clusterChangeFeedResponder) GetCluster(id string) (*api.OpenShiftClusterDocument, bool) {
+	v, ok := c.docs.Load(id)
+	if !ok {
+		return nil, ok
+	}
+	return v.doc, ok
+}
+
+func (c *clusterChangeFeedResponder) OnAllPendingProcessed(didUpdate bool) {
+	now := time.Now()
+	c.lastChangefeedProcessed.Store(now)
+	if didUpdate {
+		c.lastChangefeedDataUpdate.Store(now)
+	}
 }
 
 // changefeedMetrics emits metrics tracking the size of the changefeed caches.
@@ -108,7 +167,7 @@ func (mon *monitor) changefeedMetrics(stop <-chan struct{}) {
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 	for {
-		mon.m.EmitGauge("monitor.cache.size", int64(len(mon.docs)), map[string]string{"cache": "openshiftclusters"})
+		mon.m.EmitGauge("monitor.cache.size", int64(mon.clusters.GetCacheSize()), map[string]string{"cache": "openshiftclusters"})
 		mon.m.EmitGauge("monitor.cache.size", int64(mon.subs.GetCacheSize()), map[string]string{"cache": "subscriptions"})
 
 		select {
@@ -129,18 +188,15 @@ func (mon *monitor) worker(stop <-chan struct{}, id string) {
 
 	log := mon.baseLog
 	{
-		mon.mu.RLock()
-		v := mon.docs[id]
-		mon.mu.RUnlock()
-
-		if v == nil {
+		doc, ok := mon.clusters.GetCluster(id)
+		if !ok {
 			return
 		}
 
-		log = utillog.EnrichWithResourceID(log, v.doc.OpenShiftCluster.ID)
+		log = utillog.EnrichWithResourceID(log, doc.OpenShiftCluster.ID)
 
 		var err error
-		r, err = azure.ParseResourceID(v.doc.OpenShiftCluster.ID)
+		r, err = azure.ParseResourceID(doc.OpenShiftCluster.ID)
 		if err != nil {
 			log.Error(err)
 			return
@@ -160,15 +216,12 @@ func (mon *monitor) worker(stop <-chan struct{}, id string) {
 
 out:
 	for {
-		mon.mu.RLock()
-		v := mon.docs[id]
-		mon.mu.RUnlock()
-		subID := strings.ToLower(r.SubscriptionID)
-		sub, subok := mon.subs.GetSubscription(subID)
-
-		if v == nil {
+		doc, ok := mon.clusters.GetCluster(id)
+		if !ok {
 			break
 		}
+		subID := strings.ToLower(r.SubscriptionID)
+		sub, subok := mon.subs.GetSubscription(subID)
 
 		newh := time.Now().Hour()
 
@@ -176,7 +229,7 @@ out:
 		// cached metrics in the remaining minutes
 
 		if subok {
-			mon.workOne(context.Background(), log, v.doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
+			mon.workOne(context.Background(), log, doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
 		}
 
 		select {
@@ -185,7 +238,7 @@ out:
 			case <-subscriptionStateLoggingTicker.C:
 				// The changefeed filters out subscriptions in invalid states
 				if !subok {
-					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", v.doc.OpenShiftCluster.ID)
+					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", doc.OpenShiftCluster.ID)
 				}
 			default:
 			}
@@ -241,7 +294,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	monitors = append(monitors, c, nsgMon)
-	allJobsDone := make(chan bool)
+	allJobsDone := make(chan bool, 1)
 	onPanic := func(m monitoring.Monitor) {
 		// emit a failed worker metric on panic
 		mon.m.EmitGauge("monitor."+m.MonitorName()+".failedworker", 1, dims)

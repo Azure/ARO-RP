@@ -96,11 +96,25 @@
                 },
                 "accessPolicies": [],
                 "enabledForDiskEncryption": true,
-                "enableRbacAuthorization": false,
+                "enableRbacAuthorization": true,
                 "enablePurgeProtection": true
             },
             "condition": "[parameters('ci')]",
             "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(parameters('kvName'), '/Microsoft.Authorization/', guid('crypto service encryption user role on disk encryption set keyvault', resourceGroup().id, subscription().subscriptionId))]",
+            "type": "Microsoft.KeyVault/vaults/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'e147488a-f6f5-4113-8e2d-b22465e65bf6')]",
+                "principalId": "[reference(resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set')), '2021-04-01', 'Full').identity.PrincipalId]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
+            ]
         },
         {
             "properties": {
@@ -135,31 +149,6 @@
             "apiVersion": "2021-04-01",
             "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), concat(resourceGroup().name, '-disk-encryption-key'))]"
-            ]
-        },
-        {
-            "name": "[concat(parameters('kvName'), '/add')]",
-            "type": "Microsoft.KeyVault/vaults/accessPolicies",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "accessPolicies": [
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[reference(resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set')), '2021-04-01', 'Full').identity.PrincipalId]",
-                        "permissions": {
-                            "keys": [
-                                "get",
-                                "wrapKey",
-                                "unwrapKey"
-                            ]
-                        }
-                    }
-                ]
-            },
-            "condition": "[parameters('ci')]",
-            "apiVersion": "2019-09-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set'))]"
             ]
         }
     ]

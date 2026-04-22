@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -157,6 +158,20 @@ func IsNotFoundError(err error) bool {
 	return false
 }
 
+func IsStatusConflictError(err error) bool {
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		return detailedErr.StatusCode == http.StatusConflict
+	}
+
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		return responseError.StatusCode == http.StatusConflict
+	}
+
+	return false
+}
+
 // IsInvalidSecretError returns if errors is InvalidCredentials error
 // Example: (adal.tokenRefreshError) adal: Refresh request failed. Status Code = '401'.
 // Response body: {"error":"invalid_client","error_description":"AADSTS7000215:
@@ -290,6 +305,67 @@ func detectVMProfile(errStr string) VMProfileType {
 		return VMProfileMaster
 	}
 	return VMProfileUnknown
+}
+
+var rxResourceID = regexp.MustCompile(`(?i)/subscriptions/[^/']+/resourceGroups/([^/']+)`)
+
+// ResourceGroupsFromError attempts to extract the Azure resource group names from
+// error. It checks (in order):
+//  1. The HTTP request URL from the response attached to the error
+//  2. All resource IDs in the error message text
+func ResourceGroupsFromError(err error) []string {
+	if err == nil {
+		return nil
+	}
+
+	if rg, ok := resourceGroupFromResponse(err); ok {
+		return []string{rg}
+	}
+
+	return resourceGroupsFromMessage(err.Error())
+}
+
+func IsManagedResourceGroupError(err error, managedRGName string) bool {
+	for _, rg := range ResourceGroupsFromError(err) {
+		if strings.EqualFold(rg, managedRGName) {
+			return true
+		}
+	}
+	return false
+}
+
+func resourceGroupFromResponse(err error) (string, bool) {
+	var url string
+
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) && detailedErr.Response != nil && detailedErr.Response.Request != nil {
+		url = detailedErr.Response.Request.URL.Path
+	}
+
+	var respErr *azcore.ResponseError
+	if url == "" && errors.As(err, &respErr) && respErr.RawResponse != nil && respErr.RawResponse.Request != nil {
+		url = respErr.RawResponse.Request.URL.Path
+	}
+
+	if url == "" {
+		return "", false
+	}
+
+	rgs := resourceGroupsFromMessage(url)
+	if len(rgs) == 0 {
+		return "", false
+	}
+	return rgs[0], true
+}
+
+func resourceGroupsFromMessage(msg string) []string {
+	var rgs []string
+	for _, match := range rxResourceID.FindAllStringSubmatch(msg, -1) {
+		if len(match) >= 2 {
+			rgs = append(rgs, match[1])
+		}
+	}
+	return rgs
 }
 
 // IsRetryableError returns true if the error is a transient/retryable error

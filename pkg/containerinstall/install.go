@@ -20,8 +20,17 @@ import (
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	"sigs.k8s.io/yaml"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
+)
+
+const (
+	boundServiceAccountSigningKeySecretName = "bound-service-account-signing-key"
+	boundServiceAccountSigningKeySecretKey  = "bound-service-account-signing-key.key"
 )
 
 var devEnvVars = []string{
@@ -38,7 +47,7 @@ var devEnvVars = []string{
 	"RESOURCEGROUP",
 }
 
-func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
+func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]kruntime.Object) error {
 	pullPolicy := os.Getenv("ARO_PODMAN_PULL_POLICY")
 	if pullPolicy == "" {
 		pullPolicy = "always"
@@ -59,18 +68,20 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 				WithQuiet(true).
 				WithPolicy(pullPolicy).
 				WithUsername(pullSecret.Username).
-				WithPassword(pullSecret.Password)
+				WithPassword(pullSecret.Password).
+				WithArch("amd64").
+				WithOS("linux")
 
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
 		}),
-		steps.Action(func(context.Context) error { return m.createSecrets(ctx, doc, sub) }),
-		steps.Action(func(context.Context) error { return m.startContainer(ctx, version) }),
+		steps.Action(func(context.Context) error { return m.createSecrets(ctx, doc, sub, customManifests) }),
+		steps.Action(func(context.Context) error { return m.startContainer(ctx, doc, version, customManifests) }),
 		steps.Condition(m.containerFinished, 60*time.Minute, false),
 		steps.Action(m.cleanupContainers),
 	}
 
-	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil)
+	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil, "")
 	if err != nil {
 		return err
 	}
@@ -88,7 +99,7 @@ func (m *manager) putSecret(secretName string) specgen.Secret {
 	}
 }
 
-func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVersion) error {
+func (m *manager) startContainer(ctx context.Context, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, customManifests map[string]kruntime.Object) error {
 	s := specgen.NewSpecGenerator(version.Properties.InstallerPullspec, false)
 	s.Name = "installer-" + m.clusterUUID
 
@@ -98,6 +109,28 @@ func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVers
 		m.putSecret("proxy.crt"),
 		m.putSecret("proxy-client.crt"),
 		m.putSecret("proxy-client.key"),
+	}
+
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		s.Secrets = append(s.Secrets, specgen.Secret{
+			Source: m.clusterUUID + "-" + boundServiceAccountSigningKeySecretName,
+			Target: "/boundsasigningkey/" + boundServiceAccountSigningKeySecretKey,
+			Mode:   0o644,
+		})
+		s.Mounts = append(s.Mounts, specs.Mount{
+			Destination: "/boundsasigningkey",
+			Type:        "tmpfs",
+			Source:      "",
+		})
+	}
+
+	// Mount custom ARO manifests
+	for key := range customManifests {
+		s.Secrets = append(s.Secrets, specgen.Secret{
+			Source: m.clusterUUID + "-" + key,
+			Target: "/manifests/" + key,
+			Mode:   0o644,
+		})
 	}
 
 	s.Env = map[string]string{
@@ -111,11 +144,22 @@ func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVers
 		s.Env["ARO_"+envvar] = os.Getenv(envvar)
 	}
 
-	s.Mounts = append(s.Mounts, specs.Mount{
-		Destination: "/.azure",
-		Type:        "tmpfs",
-		Source:      "",
-	})
+	s.Mounts = append(s.Mounts,
+		specs.Mount{
+			Destination: "/.azure",
+			Type:        "tmpfs",
+			Source:      "",
+		},
+		specs.Mount{
+			Destination: "/manifests",
+			Type:        "tmpfs",
+			Source:      "",
+		},
+		specs.Mount{
+			Destination: "/output",
+			Type:        "tmpfs",
+			Source:      "",
+		})
 	s.WorkDir = "/.azure"
 	s.Entrypoint = []string{"/bin/bash", "-c", "/bin/openshift-install create manifests && /bin/openshift-install create cluster"}
 
@@ -141,7 +185,7 @@ func (m *manager) containerFinished(context.Context) (bool, error) {
 	return false, nil
 }
 
-func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {
+func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, customManifests map[string]kruntime.Object) error {
 	encCluster, err := json.Marshal(doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -162,6 +206,32 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-99_sub.json"))
 	if err != nil {
 		return err
+	}
+
+	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		if doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey == nil {
+			return fmt.Errorf("properties.clusterProfile.boundServiceAccountSigningKey not set")
+		}
+		_, err = secrets.Create(
+			m.conn, bytes.NewBufferString(string(*doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey)),
+			(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-"+boundServiceAccountSigningKeySecretName))
+		if err != nil {
+			return err
+		}
+	}
+
+	for key, manifest := range customManifests {
+		b, err := yaml.Marshal(manifest)
+		if err != nil {
+			return err
+		}
+
+		_, err = secrets.Create(
+			m.conn, bytes.NewBuffer(b),
+			(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-"+key))
+		if err != nil {
+			return err
+		}
 	}
 
 	basepath := os.Getenv("ARO_CHECKOUT_PATH")
@@ -220,7 +290,7 @@ func (m *manager) cleanupContainers(ctx context.Context) error {
 		m.log.Errorf("unable to remove container: %v", err)
 	}
 
-	for _, secretName := range []string{"99_aro.json", "99_sub.json", "proxy.crt", "proxy-client.crt", "proxy-client.key"} {
+	for _, secretName := range []string{"99_aro.json", "99_sub.json", "proxy.crt", "proxy-client.crt", "proxy-client.key", boundServiceAccountSigningKeySecretName} {
 		err = secrets.Remove(m.conn, m.clusterUUID+"-"+secretName)
 		if err != nil {
 			m.log.Debugf("unable to remove secret %s: %v", m.clusterUUID+"-"+secretName, err)

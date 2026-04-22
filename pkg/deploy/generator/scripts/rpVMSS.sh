@@ -8,10 +8,12 @@ main() {
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
-    local -ri pkg_retry_count=60
 
     create_required_dirs
+
     configure_sshd
+
+    local -ri pkg_retry_count=60
     configure_rpm_repos retry_wait_time \
                         "$pkg_retry_count"
 
@@ -27,11 +29,8 @@ main() {
 
     # shellcheck disable=SC2034
     local -ra install_pkgs=(
-        clamav
-        azsec-clamav
         azure-cli
         azure-mdsd
-        azure-security
         podman
         podman-docker
         openssl-perl
@@ -56,10 +55,16 @@ main() {
     # shellcheck disable=SC2153 disable=SC2034
     local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
     local -r rpimage="$RPIMAGE"
+
+    # shellcheck disable=SC2034
     local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
+
+    # shellcheck disable=SC2034
     local -r otelimage="$OTELIMAGE"
+
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
+
     # shellcheck disable=SC2034
     local -rA aro_images=(
         ["mdm"]="mdmimage"
@@ -79,6 +84,8 @@ main() {
         "444/tcp"
         # MIMO Actuator healthz
         "445/tcp"
+        # MIMO Scheduler healthz
+        "446/tcp"
         # Portal ssh
         "2222/tcp"
         # JIT ssh
@@ -105,6 +112,11 @@ main() {
 	Tag journald
 	Systemd_Filter _SYSTEMD_UNIT=aro-otel-collector.service
 	DB /var/lib/fluent/journaldb
+
+[FILTER]
+	Name modify
+	Match journald
+	Add Environment \${ENVIRONMENT}
 
 [FILTER]
 	Name modify
@@ -151,6 +163,7 @@ main() {
         ["monitor"]="10.88.0.3"
         ["portal"]="10.88.0.4"
         ["mimo_actuator"]="10.88.0.10"
+        ["mimo_scheduler"]="10.88.0.11"
         ["mise"]="10.88.0.5"
         ["otel_collector"]="10.88.0.6"
         ["mdm"]="10.88.0.8"
@@ -188,6 +201,7 @@ OIDC_AFD_ENDPOINT='$LOCATION.oic.$RPPARENTDOMAINNAME'
 OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
 OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
 MSI_RP_ENDPOINT='$MSIRPENDPOINT'
+ENVIRONMENT='$ENVIRONMENT'
 "
 
     configure_vmss_aro_services role_rp \
@@ -201,6 +215,7 @@ MSI_RP_ENDPOINT='$MSIRPENDPOINT'
         "aro-otel-collector"
         "aro-portal"
         "aro-mimo-actuator"
+        "aro-mimo-scheduler"
         "aro-rp"
         "azsecd"
         "mdsd"
@@ -217,11 +232,15 @@ MSI_RP_ENDPOINT='$MSIRPENDPOINT'
     reboot_vm
 }
 
+# export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
+#
 # This variable is used by az-cli
 # It's assumed that if this variable hasn't been carried over, that others are also not present, so we fail early by returning an error
 # This was mostly helpful when testing on a development VM, but is still applicable
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
+# util="util.sh"
+#
 # util.sh does not exist when deployed to VMSS via VMSS extensions
 # Provides shellcheck definitions
 util="util.sh"

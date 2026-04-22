@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
 func TestSubscriptionChangefeed(t *testing.T) {
@@ -70,8 +71,9 @@ func TestSubscriptionChangefeed(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			startedTime := time.Now().UnixNano()
-			subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
+			subscriptionsDB, _ := testdatabase.NewFakeSubscriptions()
 			_, log := testlog.LogForTesting(t)
+			m := testmetrics.NewFakeMetricsEmitter(t)
 
 			// need to register the changefeed before making documents
 			subscriptionChangefeed := subscriptionsDB.ChangeFeed()
@@ -139,7 +141,9 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			)
 			require.NoError(t, fixtures.Create())
 
-			cache := NewSubscriptionsChangefeedCache(tC.validOnly)
+			var lastProcessed time.Time
+			var lastDataUpdate time.Time
+			cache := NewSubscriptionsChangefeedCache(m, tC.validOnly)
 
 			stop := make(chan struct{})
 			defer close(stop)
@@ -147,7 +151,16 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			go RunChangefeed(t.Context(), log, subscriptionChangefeed, 100*time.Microsecond, 1, cache, stop)
 
 			cache.WaitForInitialPopulation()
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
+			}, time.Second, 1*time.Millisecond)
 
 			// Create some after initially populated
 			_, err := subscriptionsDB.Create(t.Context(), &api.SubscriptionDocument{
@@ -185,7 +198,16 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
+			}, time.Second, 1*time.Millisecond)
 
 			// Switch a registered to suspended
 			old2, err := subscriptionsDB.Get(t.Context(), "8c90b62a-3783-4ea6-a8c8-cbaee4667ffd")
@@ -201,7 +223,16 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
+			}, time.Second, 1*time.Millisecond)
 
 			// Switch a registered to deleted
 			old3, err := subscriptionsDB.Get(t.Context(), "4e07b0f5-c789-4817-9079-94012b04e1c9")
@@ -217,10 +248,18 @@ func TestSubscriptionChangefeed(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			assert.Eventually(t, subscriptionsClient.AllIteratorsConsumed, time.Second, 1*time.Millisecond)
+			require.Eventually(t, func() bool {
+				lastProc, _ := cache.GetLastProcessed()
+				lastData, _ := cache.GetLastDataUpdate()
+				ch := lastProc.After(lastProcessed) && lastData.After(lastDataUpdate) && lastProc.After(lastData)
+				if ch {
+					lastProcessed = lastProc
+					lastDataUpdate = lastData
+				}
+				return ch
+			}, time.Second, 1*time.Millisecond)
 
-			// Validate the expected cache contents
-			assert.Equal(t, tC.expected, maps.Collect(cache.subs.All()))
+			require.Equal(t, tC.expected, maps.Collect(cache.subs.All()))
 
 			// Validate we can get one of the subscriptions
 			sub, ok := cache.GetSubscription("9187ef95-a9cc-487d-80df-f85e615cf926")
@@ -236,6 +275,18 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			last, ok := cache.GetLastProcessed()
 			assert.True(t, ok, "fetching last processed time")
 			assert.Greater(t, last.UnixNano(), startedTime)
+
+			// Validate the changefeed metrics
+			m.AssertFloats()
+			m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: int64(len(tC.expected)),
+				},
+			}...)
 		})
 	}
 }
@@ -243,13 +294,14 @@ func TestSubscriptionChangefeed(t *testing.T) {
 func TestSubscriptionChangefeedError(t *testing.T) {
 	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
 	hook, log := testlog.LogForTesting(t)
+	m := testmetrics.NewFakeMetricsEmitter(t)
 
 	subscriptionsClient.SetError(errors.New("oh no"))
 
 	// need to register the changefeed before making documents
 	subscriptionChangefeed := subscriptionsDB.ChangeFeed()
 
-	cache := NewSubscriptionsChangefeedCache(true)
+	cache := NewSubscriptionsChangefeedCache(m, true)
 
 	stop := make(chan struct{})
 	defer close(stop)
@@ -259,7 +311,7 @@ func TestSubscriptionChangefeedError(t *testing.T) {
 
 	// it'll print the log when on the first loop, use Eventually so that we're
 	// not in a race with the goroutine we spawned
-	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
 		require.NoError(collect, testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
 			{
 				"level": gomega.Equal(logrus.ErrorLevel),
@@ -270,4 +322,8 @@ func TestSubscriptionChangefeedError(t *testing.T) {
 
 	// Empty cache
 	assert.Equal(t, map[string]subscriptionInfo{}, maps.Collect(cache.subs.All()))
+
+	// Validate the changefeed metrics
+	m.AssertFloats()
+	m.AssertGauges()
 }

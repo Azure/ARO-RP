@@ -23,7 +23,6 @@ import (
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	autorest "github.com/Azure/go-autorest/autorest"
 	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
 
@@ -129,6 +128,24 @@ func (m *MockInterface) ArmClientAuthorizer() clientauthorizer.ClientAuthorizer 
 func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
+}
+
+// ArmClientOptions mocks base method.
+func (m *MockInterface) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
+	m.ctrl.T.Helper()
+	varargs := []any{}
+	for _, a := range middlewares {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ArmClientOptions", varargs...)
+	ret0, _ := ret[0].(*arm.ClientOptions)
+	return ret0
+}
+
+// ArmClientOptions indicates an expected call of ArmClientOptions.
+func (mr *MockInterfaceMockRecorder) ArmClientOptions(middlewares ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientOptions", reflect.TypeOf((*MockInterface)(nil).ArmClientOptions), middlewares...)
 }
 
 // ClusterCertificates mocks base method.
@@ -301,6 +318,20 @@ func (mr *MockInterfaceMockRecorder) Environment() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockInterface)(nil).Environment))
 }
 
+// EnvironmentType mocks base method.
+func (m *MockInterface) EnvironmentType() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentType")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// EnvironmentType indicates an expected call of EnvironmentType.
+func (mr *MockInterfaceMockRecorder) EnvironmentType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentType", reflect.TypeOf((*MockInterface)(nil).EnvironmentType))
+}
+
 // FPAuthorizer mocks base method.
 func (m *MockInterface) FPAuthorizer(arg0 string, arg1 []string, arg2 ...string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
@@ -336,10 +367,10 @@ func (mr *MockInterfaceMockRecorder) FPClientID() *gomock.Call {
 }
 
 // FPNewClientCertificateCredential mocks base method.
-func (m *MockInterface) FPNewClientCertificateCredential(arg0 string, arg1 []string) (*azidentity.ClientCertificateCredential, error) {
+func (m *MockInterface) FPNewClientCertificateCredential(arg0 string, arg1 []string) (azcore.TokenCredential, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FPNewClientCertificateCredential", arg0, arg1)
-	ret0, _ := ret[0].(*azidentity.ClientCertificateCredential)
+	ret0, _ := ret[0].(azcore.TokenCredential)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

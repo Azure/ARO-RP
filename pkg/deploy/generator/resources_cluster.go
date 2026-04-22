@@ -9,10 +9,12 @@ import (
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
 const (
@@ -85,9 +87,39 @@ func (g *generator) clusterWorkerSubnet() *arm.Resource {
 }
 
 func (g *generator) diskEncryptionKeyVault() *arm.Resource {
-	vaultResource := g.keyVault("[parameters('kvName')]", &[]mgmtkeyvault.AccessPolicyEntry{}, "[parameters('ci')]", false, nil)
+	vaultResource := g.keyVault("[parameters('kvName')]", &[]mgmtkeyvault.AccessPolicyEntry{}, "[parameters('ci')]", true, nil)
 
 	return vaultResource
+}
+
+func (g *generator) diskEncryptionKeyVaultRBAC() *arm.Resource {
+	// use the Azure built-in Key Vault Crypto Service Encryption User role
+	// See: https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli#azure-built-in-roles-for-key-vault-data-plane-operations
+
+	// Not using the rbac.ResourceRoleAssignment() function because it expects
+	// the service principal ID to be passed in as an argument, not a template
+	// function. Getting it via a [reference()] template function doesn't work
+	// because it seems the [reference()] function isn't allowed inside the
+	// [gui()] function
+	resourceID := "resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))"
+	spID := fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))
+
+	return &arm.Resource{
+		Resource: mgmtauthorization.RoleAssignment{
+			Name: pointerutils.ToPtr("[concat(parameters('kvName'), '/Microsoft.Authorization/', guid('crypto service encryption user role on disk encryption set keyvault', resourceGroup().id, subscription().subscriptionId))]"),
+			Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults/providers/roleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
+				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleKeyVaultCryptoServiceEncryptionUser + "')]"),
+				PrincipalID:      &spID,
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
+		DependsOn: []string{
+			"[" + resourceID + "]",
+		},
+	}
 }
 
 func (g *generator) diskEncryptionKey() *arm.Resource {
@@ -132,36 +164,5 @@ func (g *generator) diskEncryptionSet() *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"),
 		Condition:  pointerutils.ToPtr("[parameters('ci')]"),
 		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), %s)]", diskEncryptionKeyName)},
-	}
-}
-
-func (g *generator) diskEncryptionKeyVaultAccessPolicy() *arm.Resource {
-	accessPolicy := &mgmtkeyvault.VaultAccessPolicyParameters{
-		Properties: &mgmtkeyvault.VaultAccessPolicyProperties{
-			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
-				{
-					TenantID: &tenantUUIDHack,
-					ObjectID: pointerutils.ToPtr(fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", diskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))),
-					Permissions: &mgmtkeyvault.Permissions{
-						Keys: &[]mgmtkeyvault.KeyPermissions{
-							mgmtkeyvault.KeyPermissionsGet,
-							mgmtkeyvault.KeyPermissionsWrapKey,
-							mgmtkeyvault.KeyPermissionsUnwrapKey,
-						},
-					},
-				},
-			},
-		},
-
-		Name:     pointerutils.ToPtr("[concat(parameters('kvName'), '/add')]"),
-		Type:     pointerutils.ToPtr("Microsoft.KeyVault/vaults/accessPolicies"),
-		Location: pointerutils.ToPtr("[resourceGroup().location]"),
-	}
-
-	return &arm.Resource{
-		Resource:   accessPolicy,
-		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
-		Condition:  pointerutils.ToPtr("[parameters('ci')]"),
-		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Compute/diskEncryptionSets', %s)]", diskEncryptionSetName)},
 	}
 }

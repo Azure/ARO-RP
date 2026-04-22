@@ -42,13 +42,17 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 	// Get a list of available worker SKUs, filtering by location. We initialized a new resourceSkusClient
 	// so that we can determine SKU availability within target cluster subscription instead of within RP subscription.
 	location := oc.Location
-	filter := fmt.Sprintf("location eq %s", location)
-	skus, err := resourceSkusClient.List(ctx, filter, false)
+
+	skus := []string{string(oc.Properties.MasterProfile.VMSize)}
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
+	for _, workerprofile := range workerProfiles {
+		skus = append(skus, string(workerprofile.VMSize))
+	}
+
+	filteredSkus, err := computeskus.SelectVMSkusInCurrentRegion(ctx, resourceSkusClient, location, skus)
 	if err != nil {
 		return err
 	}
-
-	filteredSkus := computeskus.FilterVMSizes(skus, location)
 
 	controlPlaneSKU, err := checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(oc.Properties.MasterProfile.VMSize))
 	if err != nil {
@@ -66,8 +70,6 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 			return err
 		}
 	}
-
-	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
 
 	// In case there are multiple WorkerProfiles listed in the cluster document (such as post-install),
 	// compare VMSize in each WorkerProfile to the resourceSkusClient call above to ensure that the sku is available in region.

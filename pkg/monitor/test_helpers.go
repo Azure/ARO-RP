@@ -5,9 +5,12 @@ package monitor
 
 import (
 	"context"
+	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -28,7 +31,7 @@ import (
 )
 
 // Global test variables
-var fakeClusterVisitMonitoringAttempts = map[string]*int{}
+var fakeClusterVisitMonitoringAttempts = xsync.NewMap[string, *atomic.Int64]()
 
 // TestEnvironment contains all the test setup components
 type TestEnvironment struct {
@@ -52,7 +55,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	// Create databases
 	openShiftClusterDB, openShiftClusterClient := testdatabase.NewFakeOpenShiftClusters()
 	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
-	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors()
+	monitorsDB, fakeMonitorsDBClient := testdatabase.NewFakeMonitors(time.Now)
 
 	// Create mocks
 	ctrl := gomock.NewController(t)
@@ -71,14 +74,6 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 		WithMonitors(monitorsDB).
 		WithOpenShiftClusters(openShiftClusterDB).
 		WithSubscriptions(subscriptionsDB)
-
-	// Create master monitor document
-	monitorsDB.Create(context.TODO(), &api.MonitorDocument{
-		ID: "master",
-		Monitor: &api.Monitor{
-			Buckets: make([]string, 256),
-		},
-	})
 
 	// Initialize database fixtures
 	f := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClusterDB)
@@ -103,10 +98,15 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 
 // CreateTestMonitor creates a single monitor with test configuration
 func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
+	uniqueMonitorsDB := testdatabase.NewFakeMonitorWithExistingClient(env.FakeMonitorsDBClient)
+	nDBs := database.NewDBGroup().WithMonitors(uniqueMonitorsDB).
+		WithOpenShiftClusters(env.OpenShiftClusterDB).
+		WithSubscriptions(env.SubscriptionsDB)
+
 	mon := NewMonitor(
 		env.TestLogger.WithField("test", loggerField),
 		env.Dialer,
-		env.DBGroup,
+		nDBs,
 		&env.NoopMetricsEmitter,
 		&env.NoopClusterMetrics,
 		env.MockEnv,
@@ -116,9 +116,10 @@ func (env *TestEnvironment) CreateTestMonitor(loggerField string) *monitor {
 	mon.nsgMonitorBuilder = fakeNsgMonitoringBuilder
 	mon.hiveMonitorBuilder = fakeHiveMonitoringBuilder
 	mon.clusterMonitorBuilder = fakeClusterMonitorBuilder
-	mon.delay = time.Second
-	mon.interval = 2 * time.Second
-	mon.changefeedInterval = time.Second
+	mon.delay = 50 * time.Millisecond
+	mon.interval = 250 * time.Millisecond
+	mon.changefeedInterval = 100 * time.Millisecond
+	mon.readyDelay = 250 * time.Millisecond
 
 	return mon
 }
@@ -130,9 +131,14 @@ func (env *TestEnvironment) Cleanup() {
 
 // Fake monitoring builders for testing
 func fakeClusterMonitorBuilder(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, env env.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error) {
+	counter, ok := fakeClusterVisitMonitoringAttempts.Load(oc.ID)
+	if !ok {
+		return nil, fmt.Errorf("didn't find counter for %s", oc.ID)
+	}
+
 	return &fakeMonitor{
 		timeout:        2 * time.Second,
-		clusterCounter: fakeClusterVisitMonitoringAttempts[oc.ID],
+		clusterCounter: counter,
 	}, nil
 }
 
@@ -146,12 +152,12 @@ func fakeNsgMonitoringBuilder(log *logrus.Entry, oc *api.OpenShiftCluster, e env
 
 type fakeMonitor struct {
 	timeout        time.Duration
-	clusterCounter *int
+	clusterCounter *atomic.Int64
 }
 
 func (fm *fakeMonitor) Monitor(ctx context.Context) error {
 	time.Sleep(fm.timeout)
-	*fm.clusterCounter++
+	fm.clusterCounter.Add(1)
 	return nil
 }
 

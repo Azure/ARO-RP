@@ -191,12 +191,13 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	if len(conf.WorkerVMSizes) == 0 {
 		if conf.WorkerVMSize == "" {
 			// No explicit worker VM size set - use defaults.
-			// In local dev mode, prepend a smaller size for cost savings.
+			// In local dev mode, use D2s sizes only (RequireD2sWorkers feature flag).
 			if conf.IsLocalDevelopmentMode() {
-				conf.WorkerVMSizes = append(
-					[]string{api.VMSizeStandardD2sV3.String()},
-					DefaultWorkerVmSizes()...,
-				)
+				conf.WorkerVMSizes = []string{
+					api.VMSizeStandardD2sV5.String(),
+					api.VMSizeStandardD2sV4.String(),
+					api.VMSizeStandardD2sV3.String(),
+				}
 			} else {
 				conf.WorkerVMSizes = DefaultWorkerVmSizes()
 			}
@@ -791,7 +792,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
 		}
@@ -828,7 +829,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
 		}
@@ -1273,6 +1274,7 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, clusterName string) error {
 	if c.Config.UseWorkloadIdentity {
 		c.log.Print("Skipping deletion of service principal role assignments")
+		return nil
 	}
 	c.log.Print("deleting role assignments")
 	oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
@@ -1309,12 +1311,12 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	return nil
 }
 
-func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
+func (c *Cluster) deleteMiwiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
 	if !c.Config.UseWorkloadIdentity {
-		c.log.Print("Skipping deletion of wimi roleassignments")
+		c.log.Print("Skipping deletion of miwi role assignments")
 		return nil
 	}
-	c.log.Print("deleting wimi role assignments")
+	c.log.Print("deleting miwi role assignments")
 
 	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
 	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &wiRoleSets); err != nil {

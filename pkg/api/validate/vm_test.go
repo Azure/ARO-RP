@@ -132,7 +132,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 		requireD2sWorkers bool
 		isMaster          bool
 		version           string
-		desiredResult     bool
+		desiredResult     VMValidity
 	}{
 		// 4.19+ Master/Control Plane VM sizes - DSv6 series
 		{
@@ -141,7 +141,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D16s_v6 is valid for 4.19 master",
@@ -149,7 +149,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D32s_v6 is valid for 4.19 master",
@@ -157,7 +157,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D64s_v6 is valid for 4.19 master",
@@ -165,7 +165,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D96s_v6 is valid for 4.19 master",
@@ -173,7 +173,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// 4.19+ Master/Control Plane VM sizes - DDSv6 series
 		{
@@ -182,7 +182,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D16ds_v6 is valid for 4.19 master",
@@ -190,7 +190,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D32ds_v6 is valid for 4.19 master",
@@ -198,7 +198,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D64ds_v6 is valid for 4.19 master",
@@ -206,7 +206,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D96ds_v6 is valid for 4.19 master",
@@ -214,7 +214,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// 4.19+ Worker VM sizes - DSv6 series
 		{
@@ -223,7 +223,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D16s_v6 is valid for 4.19 worker",
@@ -231,7 +231,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D32s_v6 is valid for 4.19 worker",
@@ -239,7 +239,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D64s_v6 is valid for 4.19 worker",
@@ -247,7 +247,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D96s_v6 is valid for 4.19 worker",
@@ -255,7 +255,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// 4.19+ Worker VM sizes - DDSv6 series
 		{
@@ -264,7 +264,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D16ds_v6 is valid for 4.19 worker",
@@ -272,7 +272,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D32ds_v6 is valid for 4.19 worker",
@@ -280,7 +280,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D64ds_v6 is valid for 4.19 worker",
@@ -288,7 +288,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D96ds_v6 is valid for 4.19 worker",
@@ -296,7 +296,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// 4.19+ Worker VM sizes - DLSv6 series (worker only)
 		{
@@ -305,7 +305,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D8ls_v6 is valid for 4.19 worker",
@@ -313,7 +313,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D16ls_v6 is valid for 4.19 worker",
@@ -321,7 +321,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D32ls_v6 is valid for 4.19 worker",
@@ -329,7 +329,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D48ls_v6 is valid for 4.19 worker",
@@ -337,7 +337,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D64ls_v6 is valid for 4.19 worker",
@@ -345,7 +345,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D96ls_v6 is valid for 4.19 worker",
@@ -353,7 +353,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// 4.19+ Worker VM sizes - DLDSv6 series (worker only)
 		{
@@ -362,7 +362,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D8lds_v6 is valid for 4.19 worker",
@@ -370,7 +370,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D16lds_v6 is valid for 4.19 worker",
@@ -378,7 +378,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D32lds_v6 is valid for 4.19 worker",
@@ -386,7 +386,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D48lds_v6 is valid for 4.19 worker",
@@ -394,7 +394,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D64lds_v6 is valid for 4.19 worker",
@@ -402,7 +402,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D96lds_v6 is valid for 4.19 worker",
@@ -410,7 +410,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// 4.19+ Worker VM sizes - LSv4 series
 		{
@@ -419,7 +419,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_L16s_v4 is valid for 4.19 worker",
@@ -427,7 +427,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_L32s_v4 is valid for 4.19 worker",
@@ -435,7 +435,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_L48s_v4 is valid for 4.19 worker",
@@ -443,7 +443,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_L64s_v4 is valid for 4.19 worker",
@@ -451,7 +451,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_L80s_v4 is valid for 4.19 worker",
@@ -459,7 +459,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.19.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// DLSv6 and DLDSv6 are not supported for master/control plane
 		{
@@ -468,7 +468,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     false,
+			desiredResult:     VMValidityNotSupportedForRole,
 		},
 		{
 			name:              "Standard_D4lds_v6 is not valid for 4.19 master",
@@ -476,25 +476,24 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.0",
-			desiredResult:     false,
+			desiredResult:     VMValidityNotSupportedForRole,
 		},
 		// Test older versions (< 4.19) - should not support new v6 instances directly
-		// Note: These fall back to VMSizeIsValid() which includes all supported sizes
 		{
-			name:              "Standard_D8s_v6 falls back to standard validation for 4.18 master",
+			name:              "Standard_D8s_v6 is not valid for 4.18 master",
 			vmSize:            api.VMSizeStandardD8sV6,
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.18.0",
-			desiredResult:     false,
+			desiredResult:     VMValidityNotSupportedInVersion,
 		},
 		{
-			name:              "Standard_D8s_v6 falls back to standard validation for 4.18 worker",
+			name:              "Standard_D8s_v6 is not valid for 4.18 worker",
 			vmSize:            api.VMSizeStandardD8sV6,
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.18.0",
-			desiredResult:     false,
+			desiredResult:     VMValidityNotSupportedInVersion,
 		},
 		// Test version edge cases
 		{
@@ -503,7 +502,15 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.19.1",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
+		},
+		{
+			name:              "Standard_D8s_v6 is valid for 4.19.1-nightly master",
+			vmSize:            api.VMSizeStandardD8sV6,
+			requireD2sWorkers: false,
+			isMaster:          true,
+			version:           "4.19.1-nightly",
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D8s_v6 is valid for 4.20.0 master",
@@ -511,7 +518,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.20.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// Test invalid version strings
 		{
@@ -520,7 +527,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "invalid.version",
-			desiredResult:     false,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_D8s_v6 with empty version falls back to old validation",
@@ -528,7 +535,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "",
-			desiredResult:     false,
+			desiredResult:     VMValidityOK,
 		},
 		// Test existing VM sizes still work with version validation
 		{
@@ -537,7 +544,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          true,
 			version:           "4.18.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		{
 			name:              "Standard_F72s_v2 is valid for any version as worker",
@@ -545,7 +552,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.18.0",
-			desiredResult:     true,
+			desiredResult:     VMValidityOK,
 		},
 		// Test LSv4 instances with older versions (< 4.19) - should not be supported
 		{
@@ -554,7 +561,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.18.0",
-			desiredResult:     false,
+			desiredResult:     VMValidityNotSupportedInVersion,
 		},
 		{
 			name:              "Standard_L80s_v4 falls back to standard validation for 4.18 worker",
@@ -562,7 +569,7 @@ func TestVMSizeIsValidForVersion(t *testing.T) {
 			requireD2sWorkers: false,
 			isMaster:          false,
 			version:           "4.18.0",
-			desiredResult:     false,
+			desiredResult:     VMValidityNotSupportedInVersion,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

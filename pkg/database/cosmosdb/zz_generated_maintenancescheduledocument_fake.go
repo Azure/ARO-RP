@@ -140,7 +140,7 @@ func (c *FakeMaintenanceScheduleDocumentClient) apply(ctx context.Context, parti
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		if maintenanceScheduleDocument.ETag != existingMaintenanceScheduleDocument.ETag {
+		if (options == nil || !options.NoETag) && maintenanceScheduleDocument.ETag != existingMaintenanceScheduleDocument.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}

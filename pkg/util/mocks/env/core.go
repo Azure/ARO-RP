@@ -18,6 +18,8 @@ import (
 	gomock "go.uber.org/mock/gomock"
 
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	autorest "github.com/Azure/go-autorest/autorest"
 
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -48,6 +50,24 @@ func (m *MockCore) EXPECT() *MockCoreMockRecorder {
 	return m.recorder
 }
 
+// ArmClientOptions mocks base method.
+func (m *MockCore) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
+	m.ctrl.T.Helper()
+	varargs := []any{}
+	for _, a := range middlewares {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ArmClientOptions", varargs...)
+	ret0, _ := ret[0].(*arm.ClientOptions)
+	return ret0
+}
+
+// ArmClientOptions indicates an expected call of ArmClientOptions.
+func (mr *MockCoreMockRecorder) ArmClientOptions(middlewares ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientOptions", reflect.TypeOf((*MockCore)(nil).ArmClientOptions), middlewares...)
+}
+
 // Environment mocks base method.
 func (m *MockCore) Environment() *azureclient.AROEnvironment {
 	m.ctrl.T.Helper()
@@ -60,6 +80,20 @@ func (m *MockCore) Environment() *azureclient.AROEnvironment {
 func (mr *MockCoreMockRecorder) Environment() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockCore)(nil).Environment))
+}
+
+// EnvironmentType mocks base method.
+func (m *MockCore) EnvironmentType() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentType")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// EnvironmentType indicates an expected call of EnvironmentType.
+func (mr *MockCoreMockRecorder) EnvironmentType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentType", reflect.TypeOf((*MockCore)(nil).EnvironmentType))
 }
 
 // Hostname mocks base method.

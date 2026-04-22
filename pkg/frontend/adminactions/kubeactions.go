@@ -38,6 +38,7 @@ type KubeActions interface {
 	ResolveGVR(groupKind string, optionalVersion string) (schema.GroupVersionResource, error)
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
 	DrainNode(ctx context.Context, nodeName string) error
+	DrainNodeWithRetries(ctx context.Context, nodeName string) error
 	ApproveCsr(ctx context.Context, csrName string) error
 	ApproveAllCsrs(ctx context.Context) error
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
@@ -46,6 +47,7 @@ type KubeActions interface {
 	// Fetch top pods and nodes metrics
 	TopPods(ctx context.Context, restConfig *restclient.Config, allNamespaces bool) ([]PodMetrics, error)
 	TopNodes(ctx context.Context, restConfig *restclient.Config) ([]NodeMetrics, error)
+	CheckAPIServerReadyz(ctx context.Context) error
 }
 
 type kubeActions struct {
@@ -186,4 +188,12 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 	}
 
 	return k.dyn.Resource(gvr).Namespace(namespace).Delete(ctx, name, resourceDeleteOptions)
+}
+
+func (k *kubeActions) CheckAPIServerReadyz(ctx context.Context) error {
+	_, err := k.kubecli.Discovery().RESTClient().Get().AbsPath("/readyz").Do(ctx).Raw()
+	if err != nil {
+		return fmt.Errorf("API server readyz check failed: %w", err)
+	}
+	return nil
 }

@@ -20,5 +20,5 @@ The Actuator will treat these Maintenance Manifests as a work queue, taking ones
 After running each, a state will be written into the Manifest (with optional free-form status text) with the result of the ran Task.
 Manifests past their start-before times are marked as having a "timed out" state and not ran.
 
-Currently, Manifests are created by the Admin API.
-In the future, the Scheduler will create some these Manifests depending on cluster state/version and wall-clock time, providing the ability to perform tasks like rotations of secrets autonomously.
+Manifests are created either manually via the Admin API or automatically by the [Scheduler](./scheduler.md).
+The Scheduler creates Manifests on a recurring basis according to configured [MaintenanceSchedules](./scheduler.md#maintenanceschedule), using [calendar expressions and selectors](./scheduler-calendar-and-selectors.md) to determine when and where tasks run across the fleet.

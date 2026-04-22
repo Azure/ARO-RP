@@ -93,6 +93,7 @@ const (
 	CloudErrorCodeInvalidResourceProviderPermissions                         = "InvalidResourceProviderPermissions"
 	CloudErrorCodeInvalidServicePrincipalPermissions                         = "InvalidServicePrincipalPermissions"
 	CloudErrorCodeInvalidWorkloadIdentityPermissions                         = "InvalidWorkloadIdentityPermissions"
+	CloudErrorCodeInvalidClusterMSIPermissions                               = "InvalidClusterMSIPermissions"
 	CloudErrorCodeInvalidLocation                                            = "InvalidLocation"
 	CloudErrorCodeInvalidOperationID                                         = "InvalidOperationID"
 	CloudErrorCodeDuplicateClientID                                          = "DuplicateClientID"
@@ -114,7 +115,8 @@ const (
 	CloudErrorCodeInvalidResourceID                                          = "InvalidResourceID"
 )
 
-// NewCloudError returns a new CloudError
+// NewCloudError creates a structured ARM-compliant CloudError,
+// ensuring consistent error responses with status codes and targets.
 func NewCloudError(statusCode int, code, target, message string) *CloudError {
 	return &CloudError{
 		StatusCode: statusCode,

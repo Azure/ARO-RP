@@ -32,7 +32,11 @@ func (m *manager) validateResources(ctx context.Context) error {
 // created. This function is only to be called during cluster bootstrap!
 func (m *manager) validateZones(ctx context.Context) error {
 	location := m.doc.OpenShiftCluster.Location
-	filteredSkus, err := computeskus.GetVMSkusForCurrentRegion(ctx, m.armResourceSKUs, location)
+
+	filteredSkus, err := computeskus.SelectVMSkusInCurrentRegion(ctx, m.armResourceSKUs, location, []string{
+		string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
+		string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
+	})
 	if err != nil {
 		return err
 	}

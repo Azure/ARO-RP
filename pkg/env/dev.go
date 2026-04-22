@@ -6,12 +6,12 @@ package env
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -83,13 +83,6 @@ func (d *dev) OtelAuditQueueSize() (int, error) {
 	return 0, nil
 }
 
-func (d *dev) Listen() (net.Listener, error) {
-	if d.Service() == string(SERVICE_MIMO_ACTUATOR) {
-		return net.Listen("tcp", ":8445")
-	}
-	return net.Listen("tcp", ":8443")
-}
-
 // TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
 func (d *dev) FPAuthorizer(tenantID string, additionalTenants []string, scopes ...string) (autorest.Authorizer, error) {
 	fpTokenCredential, err := d.FPNewClientCertificateCredential(tenantID, additionalTenants)
@@ -100,7 +93,7 @@ func (d *dev) FPAuthorizer(tenantID string, additionalTenants []string, scopes .
 	return azidext.NewTokenCredentialAdapter(fpTokenCredential, scopes), nil
 }
 
-func (d *dev) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (*azidentity.ClientCertificateCredential, error) {
+func (d *dev) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (azcore.TokenCredential, error) {
 	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
 
 	options := d.Environment().ClientCertificateCredentialOptions(additionalTenants)

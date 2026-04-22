@@ -47,6 +47,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdConfigVersion",
 			"clusterMdsdNamespace",
 			"cosmosDB",
+			"environment",
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
 			"fpClientId",
@@ -91,6 +92,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"monitorLogLevel",
 			"portalLogLevel",
 			"mimoActuatorLogLevel",
+			"mimoSchedulerLogLevel",
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"clustersInstallViaHive",
@@ -154,7 +156,7 @@ func (g *generator) rpTemplate() *arm.Template {
 				"japanwest",
 				"uaecentral",
 			}
-		case "rpLogLevel", "portalLogLevel", "monitorLogLevel", "mimoActuatorLogLevel":
+		case "rpLogLevel", "portalLogLevel", "monitorLogLevel", "mimoActuatorLogLevel", "mimoSchedulerLogLevel":
 			p.DefaultValue = "info"
 
 		// TODO: Replace with Live Service Configuration in KeyVault

@@ -28,11 +28,8 @@ main() {
 
     # shellcheck disable=SC2034
     local -ra install_pkgs=(
-        clamav
-        azsec-clamav
         azure-cli
         azure-mdsd
-        azure-security
         podman
         podman-docker
         openssl-perl
@@ -92,6 +89,11 @@ main() {
 [FILTER]
 	Name modify
 	Match journald
+	Add Environment \${ENVIRONMENT}
+
+[FILTER]
+	Name modify
+	Match journald
 	Remove_wildcard _
 	Remove TIMESTAMP
 
@@ -107,7 +109,8 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE='${role_gateway^}'
 GATEWAY_DOMAINS='$GATEWAYDOMAINS'
 GATEWAY_FEATURES='$GATEWAYFEATURES'
-RPIMAGE='$rpimage'"
+RPIMAGE='$rpimage'
+ENVIRONMENT='$ENVIRONMENT'"
 
     # shellcheck disable=SC2034
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
@@ -150,8 +153,11 @@ RPIMAGE='$rpimage'"
     reboot_vm
 }
 
+# export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
+# util="util.sh"
+#
 # util.sh does not exist when deployed to VMSS via VMSS extensions
 # Provides shellcheck definitions
 util="util.sh"

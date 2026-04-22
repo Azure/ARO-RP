@@ -48,6 +48,44 @@ func TestExecute(t *testing.T) {
 	assert.True(t, triggeredFail)
 }
 
+type slowMonitor struct{}
+
+func (m *slowMonitor) Monitor(ctx context.Context) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func (m *slowMonitor) MonitorName() string {
+	return "slowMonitor"
+}
+
+// TestExecuteReturnsWhenNoReceiver verifies that the execute goroutine does not
+// leak when nobody reads from the done channel (the timeout path in workOne).
+// With an unbuffered channel this test would hang forever.
+func TestExecuteReturnsWhenNoReceiver(t *testing.T) {
+	_, log := testlog.New()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	onPanic := func(m monitoring.Monitor) {}
+
+	// Buffered channel: execute can send without a receiver
+	done := make(chan bool, 1)
+	go execute(ctx, log, done, []monitoring.Monitor{&slowMonitor{}}, onPanic)
+
+	// Simulate workOne's timeout path: cancel the context and never read from done
+	cancel()
+
+	// The execute goroutine must exit within a reasonable time
+	assert.Eventually(t, func() bool {
+		select {
+		case <-done:
+			return true
+		default:
+			return false
+		}
+	}, 2*time.Second, 10*time.Millisecond, "execute goroutine leaked: blocked sending on done channel")
+}
+
 func TestChangefeedOperations(t *testing.T) {
 	// Setup test environment
 	env := SetupTestEnvironment(t)
@@ -61,6 +99,9 @@ func TestChangefeedOperations(t *testing.T) {
 	defer cancel()
 
 	stopChan := make(chan struct{})
+
+	var lastClusterDataUpdate time.Time
+	var lastSubDataUpdate time.Time
 
 	mon.changefeedInterval = time.Millisecond * 5
 	mon.startChangefeeds(ctx, stopChan)
@@ -139,12 +180,23 @@ func TestChangefeedOperations(t *testing.T) {
 			}
 
 			// Wait for changefeeds to be consumed
-			assert.Eventually(t, env.OpenShiftClusterClient.AllIteratorsConsumed, time.Second, 10*time.Millisecond)
-			assert.Eventually(t, env.SubscriptionsClient.AllIteratorsConsumed, time.Second, 10*time.Millisecond)
+			assert.Eventually(t, func() bool {
+				lastProc, _ := mon.subs.GetLastProcessed()
+				lastData, _ := mon.subs.GetLastDataUpdate()
+				return lastData != lastSubDataUpdate && lastProc != lastData
+			}, time.Second, 1*time.Millisecond)
+			assert.Eventually(t, func() bool {
+				lastProc, _ := mon.clusters.GetLastProcessed()
+				lastData, _ := mon.clusters.GetLastDataUpdate()
+				return lastData != lastClusterDataUpdate && lastProc != lastData
+			}, time.Second, 1*time.Millisecond)
+
+			lastClusterDataUpdate, _ = mon.clusters.GetLastDataUpdate()
+			lastSubDataUpdate, _ = mon.subs.GetLastDataUpdate()
 
 			// Validate expected results
-			if len(mon.docs) != op.expectDocs {
-				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, len(mon.docs))
+			if mon.clusters.GetCacheSize() != op.expectDocs {
+				t.Errorf("%s: expected %d documents in cache, got %d", op.name, op.expectDocs, mon.clusters.GetCacheSize())
 			}
 			if mon.subs.GetCacheSize() != op.expectSubs {
 				t.Errorf("%s: expected %d subscriptions in cache, got %d", op.name, op.expectSubs, mon.subs.GetCacheSize())

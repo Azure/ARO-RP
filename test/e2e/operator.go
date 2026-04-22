@@ -432,27 +432,6 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - MUO Deployment", func() {
-	const (
-		managedUpgradeOperatorNamespace  = "openshift-managed-upgrade-operator"
-		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
-	)
-
-	It("must be restored if deleted", func(ctx context.Context) {
-		deleteFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Delete
-		getFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Get
-
-		By("waiting for the MUO deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
-
-		By("deleting the MUO deployment")
-		DeleteK8sObjectWithRetry(ctx, deleteFunc, managedUpgradeOperatorDeployment, metav1.DeleteOptions{})
-
-		By("waiting for the MUO deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
-	}, SpecTimeout(2*time.Minute))
-})
-
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	const (
 		imageConfigFlag  = operator.ImageConfigEnabled

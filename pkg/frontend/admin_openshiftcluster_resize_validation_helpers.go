@@ -1,0 +1,377 @@
+package frontend
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/sirupsen/logrus"
+	"github.com/ugorji/go/codec"
+
+	corev1 "k8s.io/api/core/v1"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+)
+
+const (
+	machineNamespace           = "openshift-machine-api"
+	machineLabelClusterAPIRole = "machine.openshift.io/cluster-api-machine-role"
+	machineLabelZone           = "machine.openshift.io/zone"
+	machineLabelInstanceType   = "machine.openshift.io/instance-type"
+	machineRoleMaster          = "master"
+
+	nodeLabelInstanceType     = "node.kubernetes.io/instance-type"
+	nodeLabelBetaInstanceType = "beta.kubernetes.io/instance-type"
+)
+
+type machineValidationData struct {
+	labelZone         string
+	specZone          string
+	size              string
+	phase             string
+	labelInstanceType string
+}
+
+type azureVMValidationData struct {
+	status []string
+	vmSize string
+	zone   string
+}
+
+type nodeValidationData struct {
+	nodeInstanceType string
+	betaInstanceType string
+}
+
+func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
+	machines := make(map[string]machineValidationData)
+
+	rawMachines, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	machineList := &machinev1beta1.MachineList{}
+	err = codec.NewDecoderBytes(rawMachines, &codec.JsonHandle{}).Decode(machineList)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode machines, %s", err.Error()))
+	}
+
+	for _, machine := range machineList.Items {
+		if role, ok := machine.Labels[machineLabelClusterAPIRole]; ok && role == machineRoleMaster {
+			providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
+			err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &providerSpec)
+			if err != nil {
+				return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode provider spec, %s", err.Error()))
+			}
+
+			phase := ""
+			if machine.Status.Phase != nil {
+				phase = *machine.Status.Phase
+			}
+
+			machineBasic := machineValidationData{
+				labelZone:         machine.Labels[machineLabelZone],
+				specZone:          *providerSpec.Zone,
+				size:              providerSpec.VMSize,
+				phase:             phase,
+				labelInstanceType: machine.Labels[machineLabelInstanceType],
+			}
+
+			machines[machine.Name] = machineBasic
+		}
+	}
+
+	return machines, nil
+}
+
+func validateClusterMachines(log *logrus.Entry, machines map[string]machineValidationData) (map[string]machineValidationData, error) {
+	if len(machines) != 3 {
+		return nil, fmt.Errorf("expected 3 machines, got %d", len(machines))
+	}
+
+	var validationErrs []error
+	filteredMachines := make(map[string]machineValidationData)
+	foundMachineSize := ""
+
+	for name, machine := range machines {
+		if machine.phase != "Running" {
+			phase := "nil"
+			if machine.phase != "" {
+				phase = machine.phase
+			}
+			err := fmt.Errorf("machine %s status phase is not Running, current phase is %s", name, phase)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if machine.labelZone != machine.specZone {
+			err := fmt.Errorf("machine %v has a mismatch between label zone %v and spec zone %v. These values should match", name, machine.labelZone, machine.specZone)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if machine.labelInstanceType == "" || machine.labelInstanceType != machine.size {
+			labelValue := machine.labelInstanceType
+			if labelValue == "" {
+				labelValue = "<missing>"
+			}
+			err := fmt.Errorf("machine %s has a mismatch between label instance-type %s and instance type defined in the spec %s. These values should match", name, labelValue, machine.size)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if foundMachineSize == "" {
+			foundMachineSize = machine.size // we'll keep the machine size of the first machine to compare it with the rest
+		}
+
+		if machine.size != foundMachineSize {
+			err := fmt.Errorf("machine %s has size %s, however previous machines had %s. All machines should have the same size", name, machine.size, foundMachineSize)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		filteredMachines[name] = machine
+	}
+
+	if err := errors.Join(validationErrs...); err != nil {
+		return nil, err
+	}
+
+	err := validateZoneDistribution(filteredMachines, func(m machineValidationData) string { return m.specZone })
+	if err != nil {
+		return nil, err
+	}
+	return filteredMachines, nil
+}
+
+func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminactions.AzureActions, resGroupName string, machines map[string]machineValidationData) (map[string]azureVMValidationData, error) {
+	masterVMs := make(map[string]azureVMValidationData)
+	clusterRGName := stringutils.LastTokenByte(resGroupName, '/')
+
+	var validationErrs []error
+	for machineName := range machines {
+		vmStatuses := []string{}
+		vmZones := []string{}
+
+		vm, err := azureAction.GetVirtualMachine(ctx, clusterRGName, machineName, mgmtcompute.InstanceView)
+		if err != nil {
+			return nil, err
+		}
+
+		if vm.InstanceView != nil && vm.InstanceView.Statuses != nil {
+			for _, status := range *vm.InstanceView.Statuses {
+				if status.Code == nil {
+					continue
+				}
+				vmStatuses = append(vmStatuses, *status.Code)
+			}
+		}
+
+		if vm.Zones != nil {
+			vmZones = *vm.Zones
+		}
+
+		if len(vmZones) == 0 {
+			err := fmt.Errorf("azure VM %v has no availability zone configured", machineName)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		err = validateVMPowerState(log, vmStatuses, machineName)
+		if err != nil {
+			validationErrs = append(validationErrs, err)
+		}
+
+		vmSize := ""
+		if vm.HardwareProfile != nil {
+			vmSize = string(vm.HardwareProfile.VMSize)
+		}
+
+		masterVM := azureVMValidationData{
+			vmSize: vmSize,
+			status: vmStatuses,
+			zone:   vmZones[0],
+		}
+
+		masterVMs[machineName] = masterVM
+	}
+
+	if err := errors.Join(validationErrs...); err != nil {
+		return nil, err
+	}
+
+	err := validateZoneDistribution(masterVMs, func(m azureVMValidationData) string { return m.zone })
+	if err != nil {
+		return nil, err
+	}
+	return masterVMs, nil
+}
+
+func validateClusterMachinesAndVMs(log *logrus.Entry, ocMachines map[string]machineValidationData, azureVMs map[string]azureVMValidationData) error {
+	// assumptions: keys in both maps should match, azure VMs are named after Openshift VMs
+	var validationErrs []error
+
+	for name, machineSpec := range ocMachines {
+		if _, ok := azureVMs[name]; !ok {
+			err := fmt.Errorf("machine %v not found in Azure resources", name)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if machineSpec.specZone != azureVMs[name].zone {
+			err := fmt.Errorf("machine %v has zone %v in its spec, however Azure VM is running in zone %v", name, machineSpec.specZone, azureVMs[name].zone)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+		}
+
+		if machineSpec.size != azureVMs[name].vmSize {
+			err := fmt.Errorf("machine %v has size %v in its spec, however Azure VM is running a %v VM", name, machineSpec.size, azureVMs[name].vmSize)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+		}
+	}
+
+	return errors.Join(validationErrs...)
+}
+
+func validateClusterMachinesAndNodes(log *logrus.Entry, ocMachines map[string]machineValidationData, ocNodes map[string]nodeValidationData) error {
+	// assumptions: keys in both maps should match, nodes are named after machines
+	var validationErrs []error
+
+	for name, machineSpec := range ocMachines {
+		if _, ok := ocNodes[name]; !ok {
+			err := fmt.Errorf("machine %s not found in cluster nodes", name)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+			continue
+		}
+
+		if machineSpec.size != ocNodes[name].nodeInstanceType {
+			err := fmt.Errorf("machine %s has size %s in its spec, however node has instance-type %s", name, machineSpec.size, ocNodes[name].nodeInstanceType)
+			log.Info(err)
+			validationErrs = append(validationErrs, err)
+		}
+	}
+
+	return errors.Join(validationErrs...)
+}
+
+func validateZoneDistribution[T any](items map[string]T, getZone func(T) string) error {
+	if len(items) != 3 {
+		return fmt.Errorf("expected 3 items, got %d", len(items))
+	}
+
+	zones := make(map[string]bool, 3)
+	for _, item := range items {
+		zones[getZone(item)] = true
+	}
+
+	if len(zones) != 3 {
+		return fmt.Errorf("items must be spread across 3 different zones, found %d zone(s)", len(zones))
+	}
+
+	return nil
+}
+
+func validateVMPowerState(log *logrus.Entry, vmStatuses []string, vmName string) error {
+	if len(vmStatuses) != 2 { // We only expect 2 power states: ProvisioningState and PowerState ... if we have more or less statuses than that, the VM is not valid
+		err := fmt.Errorf("expected 2 statuses for VM %s, but found %d: %s", vmName, len(vmStatuses), strings.Join(vmStatuses, ", "))
+		log.Info(err)
+		return err
+	}
+
+	var abnormalStatuses []string
+	for _, status := range vmStatuses {
+		if status != "ProvisioningState/succeeded" && status != "PowerState/running" {
+			abnormalStatuses = append(abnormalStatuses, status)
+		}
+	}
+
+	if len(abnormalStatuses) > 0 {
+		err := fmt.Errorf("found unexpected statuses for VM %s: %s", vmName, strings.Join(abnormalStatuses, ", "))
+		log.Info(err)
+		return err
+	}
+
+	return nil
+}
+
+func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions) (map[string]nodeValidationData, error) {
+	var validationErrs []error
+	rawNodes, err := kubeActions.KubeList(ctx, "Node", "")
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	nodeList := &corev1.NodeList{}
+	err = codec.NewDecoderBytes(rawNodes, &codec.JsonHandle{}).Decode(nodeList)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode nodes, %s", err.Error()))
+	}
+
+	controlPlaneNodesFound := make(map[string]nodeValidationData)
+	for _, node := range nodeList.Items {
+		if role, ok := node.Labels["node-role.kubernetes.io/master"]; ok && role == "" {
+			if node.Spec.Unschedulable {
+				err := fmt.Errorf("node %s is unschedulable", node.Name)
+				log.Info(err)
+				validationErrs = append(validationErrs, err)
+			}
+
+			for _, condition := range node.Status.Conditions {
+				if condition.Type == corev1.NodeReady && condition.Status != corev1.ConditionTrue {
+					err := fmt.Errorf("node %s is not ready", node.Name)
+					log.Info(err)
+					validationErrs = append(validationErrs, err)
+				}
+			}
+
+			nodeInfo := nodeValidationData{
+				nodeInstanceType: node.Labels[nodeLabelInstanceType],
+				betaInstanceType: node.Labels[nodeLabelBetaInstanceType],
+			}
+			controlPlaneNodesFound[node.Name] = nodeInfo
+
+			if nodeInfo.betaInstanceType != nodeInfo.nodeInstanceType {
+				err := fmt.Errorf("node %s has a mismatch between labels. %s: %s %s: %s", node.Name, nodeLabelInstanceType, nodeInfo.nodeInstanceType, nodeLabelBetaInstanceType, nodeInfo.betaInstanceType)
+				log.Info(err)
+				validationErrs = append(validationErrs, err)
+			}
+		}
+	}
+
+	if len(controlPlaneNodesFound) != 3 {
+		nodeNames := make([]string, 0, len(controlPlaneNodesFound))
+		for name := range controlPlaneNodesFound {
+			nodeNames = append(nodeNames, name)
+		}
+		err := fmt.Errorf("expected 3 control plane nodes, found %d: [%s]", len(controlPlaneNodesFound), strings.Join(nodeNames, ", "))
+		log.Info(err)
+		validationErrs = append(validationErrs, err)
+	}
+
+	if err := errors.Join(validationErrs...); err != nil {
+		return nil, err
+	}
+
+	return controlPlaneNodesFound, nil
+}

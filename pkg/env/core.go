@@ -6,12 +6,15 @@ package env
 import (
 	"context"
 	"crypto/fips140"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/go-autorest/autorest"
 
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
@@ -49,12 +52,17 @@ type Core interface {
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
 
+	// For hooking in fake clients, use the easily-fakable Core vs the
+	// concrete-everywhere AROEnvironment
+	ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions
+
 	Service() string
 	Logger() *logrus.Entry
 	LoggerForComponent(string) *logrus.Entry
 
 	// for ease of faking, load time in a consistent place everywhere
 	Now() time.Time
+	EnvironmentType() string
 }
 
 type core struct {
@@ -96,6 +104,14 @@ func (c *core) Now() time.Time {
 // database or serving components such as the frontend.
 func (c *core) LoggerForComponent(component string) *logrus.Entry {
 	return c.serviceLog.WithField("component", component)
+}
+
+func (c *core) EnvironmentType() string {
+	return os.Getenv("ENVIRONMENT")
+}
+
+func (c *core) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
+	return c.Environment().ArmClientOptions(middlewares...)
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {

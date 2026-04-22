@@ -219,8 +219,9 @@ EOF
 
 
 ask_to_create_Azure_deployment() {
+    
     local answer
-    read -p -r "Create Azure deployment in the current subscription ($AZURE_SUBSCRIPTION_ID)? (y / n / l (list existing deployments)) " answer
+    read -r -p "Create Azure deployment in the current subscription ($AZURE_SUBSCRIPTION_ID)? (y / n / l (list existing deployments)) " answer
 
     if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
         create_Azure_deployment

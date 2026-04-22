@@ -6,6 +6,7 @@ package azureerrors
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -340,6 +341,240 @@ func TestIsVMSKUError(t *testing.T) {
 			}
 			if gotProfileType != tt.wantProfileType {
 				t.Errorf("IsVMSKUError() profileType = %v, want %v", gotProfileType, tt.wantProfileType)
+			}
+		})
+	}
+}
+
+func TestIsStatusConflictError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "Another error",
+			err:  errors.New("something happened"),
+		},
+		{
+			name: "autorest detailederror",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+			},
+			want: true,
+		},
+		{
+			name: "azcore ResponseError",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+			},
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsStatusConflictError(tt.err)
+			if got != tt.want {
+				t.Error(got)
+			}
+		})
+	}
+}
+
+func TestResourceGroupsFromError(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		err     error
+		wantRGs []string
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+		},
+		{
+			name: "error with no resource group info",
+			err:  errors.New("something went wrong"),
+		},
+		{
+			name: "response URL returns single resource group",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusForbidden,
+				Response: &http.Response{
+					Request: &http.Request{
+						URL: &url.URL{
+							Path: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-managed-rg/providers/Microsoft.Network/loadBalancers/lb",
+						},
+					},
+				},
+			},
+			wantRGs: []string{"aro-managed-rg"},
+		},
+		{
+			name: "azcore response URL returns single resource group",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				ErrorCode:  "Conflict",
+				RawResponse: &http.Response{
+					Request: &http.Request{
+						URL: &url.URL{
+							Path: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-cluster-rg/providers/Microsoft.Network/publicIPAddresses/pip1",
+						},
+					},
+				},
+			},
+			wantRGs: []string{"my-cluster-rg"},
+		},
+		{
+			name: "response URL takes precedence over message",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_AUTHFAILED,
+					Message: "over scope '/subscriptions/sub/resourceGroups/rg-from-message/providers/...'",
+				},
+				Response: &http.Response{
+					Request: &http.Request{
+						URL: &url.URL{
+							Path: "/subscriptions/sub/resourceGroups/rg-from-url/providers/Microsoft.Network/loadBalancers/lb",
+						},
+					},
+				},
+			},
+			wantRGs: []string{"rg-from-url"},
+		},
+		{
+			name: "azcore ResponseError with no request in response",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusForbidden,
+				ErrorCode:  CODE_AUTHFAILED,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusForbidden,
+				},
+			},
+		},
+		{
+			name: "message fallback returns single resource group",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_AUTHFAILED,
+					Message: "does not have authorization over scope '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/loadBalancers/lb'",
+				},
+				StatusCode: http.StatusForbidden,
+			},
+			wantRGs: []string{"aro-managed-rg"},
+		},
+		{
+			name: "message with multiple resource groups returns all",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_AUTHFAILED,
+					Message: "principal '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet' does not have authorization over scope '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/loadBalancers/lb'",
+				},
+				StatusCode: http.StatusForbidden,
+			},
+			wantRGs: []string{"customer-vnet-rg", "aro-managed-rg"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRGs := ResourceGroupsFromError(tt.err)
+			if len(gotRGs) != len(tt.wantRGs) {
+				t.Errorf("ResourceGroupsFromError() = %v, want %v", gotRGs, tt.wantRGs)
+				return
+			}
+			for i := range gotRGs {
+				if gotRGs[i] != tt.wantRGs[i] {
+					t.Errorf("ResourceGroupsFromError()[%d] = %q, want %q", i, gotRGs[i], tt.wantRGs[i])
+				}
+			}
+		})
+	}
+}
+
+func TestIsManagedResourceGroupError(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		err        error
+		managedRG  string
+		wantResult bool
+	}{
+		{
+			name:       "nil error returns false",
+			managedRG:  "aro-managed-rg",
+			err:        nil,
+			wantResult: false,
+		},
+		{
+			name:      "matches managed resource group",
+			managedRG: "aro-managed-rg",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusForbidden,
+				Response: &http.Response{
+					Request: &http.Request{
+						URL: &url.URL{
+							Path: "/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/loadBalancers/lb",
+						},
+					},
+				},
+			},
+			wantResult: true,
+		},
+		{
+			name:      "does not match customer resource group",
+			managedRG: "aro-managed-rg",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusForbidden,
+				Response: &http.Response{
+					Request: &http.Request{
+						URL: &url.URL{
+							Path: "/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet",
+						},
+					},
+				},
+			},
+			wantResult: false,
+		},
+		{
+			name:      "case-insensitive match",
+			managedRG: "ARO-Managed-RG",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusNotFound,
+				Response: &http.Response{
+					Request: &http.Request{
+						URL: &url.URL{
+							Path: "/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Storage/storageAccounts/sa",
+						},
+					},
+				},
+			},
+			wantResult: true,
+		},
+		{
+			name:      "multiple resource groups matches managed RG appearing second",
+			managedRG: "aro-managed-rg",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_AUTHFAILED,
+					Message: "principal '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet' does not have authorization over scope '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/loadBalancers/lb'",
+				},
+				StatusCode: http.StatusForbidden,
+			},
+			wantResult: true,
+		},
+		{
+			name:      "multiple resource groups none match managed RG",
+			managedRG: "aro-managed-rg",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_AUTHFAILED,
+					Message: "principal '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet' does not have authorization over scope '/subscriptions/sub/resourceGroups/other-rg/providers/Microsoft.Network/loadBalancers/lb'",
+				},
+				StatusCode: http.StatusForbidden,
+			},
+			wantResult: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsManagedResourceGroupError(tt.err, tt.managedRG)
+			if got != tt.wantResult {
+				t.Errorf("IsManagedResourceGroupError() = %v, want %v", got, tt.wantResult)
 			}
 		})
 	}

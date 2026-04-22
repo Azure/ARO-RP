@@ -5,7 +5,7 @@ package adminactions
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -13,11 +13,21 @@ import (
 	"k8s.io/kubectl/pkg/drain"
 )
 
+const (
+	drainMaxAttempts = 3
+	drainRetryDelay  = 2 * time.Second
+)
+
 func (k *kubeActions) CordonNode(ctx context.Context, nodeName string, shouldCordon bool) error {
 	node, err := k.kubecli.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
+
+	drainLogWriter := k.log.Writer()
+	defer func() {
+		_ = drainLogWriter.Close()
+	}()
 
 	drainer := &drain.Helper{
 		Ctx:                 ctx,
@@ -29,16 +39,21 @@ func (k *kubeActions) CordonNode(ctx context.Context, nodeName string, shouldCor
 		DeleteEmptyDirData:  true,
 		DisableEviction:     true,
 		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
-			log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
+			k.log.Infof("deleted pod %s/%s", pod.Namespace, pod.Name)
 		},
-		Out:    log.Writer(),
-		ErrOut: log.Writer(),
+		Out:    drainLogWriter,
+		ErrOut: drainLogWriter,
 	}
 
 	return drain.RunCordonOrUncordon(drainer, node, shouldCordon)
 }
 
 func (k *kubeActions) DrainNode(ctx context.Context, nodeName string) error {
+	drainLogWriter := k.log.Writer()
+	defer func() {
+		_ = drainLogWriter.Close()
+	}()
+
 	drainer := &drain.Helper{
 		Ctx:                 ctx,
 		Client:              k.kubecli,
@@ -49,11 +64,35 @@ func (k *kubeActions) DrainNode(ctx context.Context, nodeName string) error {
 		DeleteEmptyDirData:  true,
 		DisableEviction:     true,
 		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
-			log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
+			k.log.Infof("deleted pod %s/%s", pod.Namespace, pod.Name)
 		},
-		Out:    log.Writer(),
-		ErrOut: log.Writer(),
+		Out:    drainLogWriter,
+		ErrOut: drainLogWriter,
 	}
 
 	return drain.RunNodeDrain(drainer, nodeName)
+}
+
+func (k *kubeActions) DrainNodeWithRetries(ctx context.Context, nodeName string) error {
+	var lastErr error
+	for attempt := range drainMaxAttempts {
+		err := k.DrainNode(ctx, nodeName)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+
+		if attempt == drainMaxAttempts-1 {
+			break
+		}
+
+		remainingRetries := drainMaxAttempts - attempt - 1
+		k.log.Infof("Drain attempt %d failed for %s: %v. Retrying %d more times.", attempt+1, nodeName, err, remainingRetries)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(drainRetryDelay):
+		}
+	}
+	return fmt.Errorf("could not drain node after %d attempts: %w", drainMaxAttempts, lastErr)
 }

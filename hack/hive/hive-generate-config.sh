@@ -4,62 +4,61 @@ set -o errexit \
     -o nounset
 
 main() {
+    local -r hive_commit_override="${1:-}"
+
+    # This is the commit sha that the image was built from and ensures we use the correct configs for the release
+    # Ensure it is the latest when testing pre production deployments
+    local -r default_commit="f48f47857f6a1dda25ad46957927ee6fe3afe1eb"
+    if [ -z "$hive_commit_override" ]; then
+        warn "Using default hive commit hash: $default_commit"
+        warn "Hive commit hashes can be found here: https://quay.io/repository/redhat-user-workloads/crt-redhat-acm-tenant/hive-operator/hive?tab=tags"
+    fi
+    local -r hive_image_commit_hash="${hive_commit_override:-$default_commit}"
+
+    info "Using hive commit: $hive_image_commit_hash"
+    # shellcheck disable=SC2034
+
     local -r tmpdir="$(mktemp -d)"
     # shellcheck disable=SC2064
     trap "cleanup $tmpdir" EXIT
 
-    # This is the commit sha that the image was built from and ensures we use the correct configs for the release
-    local -r default_commit="8796c4f534"
-    local -r hive_image_commit_hash="${1:-$default_commit}"
-    log "Using hive commit: $hive_image_commit_hash"
     # shellcheck disable=SC2034
-    local -r hive_operator_namespace="hive"
+    kustomize_bin="$(which kustomize 2> /dev/null)" \
+    || install_kustomize "$tmpdir" kustomize_bin
 
-    # shellcheck disable=SC2034
+    hive_repo_clone "$tmpdir"
+
+    hive_repo_hash_checkout "$tmpdir" "$hive_image_commit_hash"
+
     local -r hive_image="arointsvc.azurecr.io/redhat-services-prod/crt-redhat-acm-tenant/hive-operator/hive:${hive_image_commit_hash}"
-
-
-    # shellcheck disable=SC2034
-    local kustomize_bin
-    install_kustomize tmpdir \
-                      kustomize_bin
-    hive_repo_clone tmpdir
-    hive_repo_hash_checkout tmpdir \
-                            hive_image_commit_hash
     generate_hive_config kustomize_bin \
-                         hive_operator_namespace \
-                         hive_image \
-                         tmpdir
+                         "$HIVE_OPERATOR_NS" \
+                         "$hive_image" \
+                         "$tmpdir"
 
-    log "Hive config generated."
+    info "Hive config generated."
 }
 
 install_kustomize() {
-    local -n tmpd="$1"
+    local tmpd="$1"
     local -n kustomize="$2"
-    log "starting"
-
-    if kustomize="$(which kustomize 2> /dev/null)"; then
-        return 0
-    fi
+    info "starting"
 
     pushd "$tmpd" 1> /dev/null
 
     # This version is specified in the hive repo and is the only hard dependency for this script
     # https://github.com/openshift/hive/blob/master/vendor/github.com/openshift/build-machinery-go/make/targets/openshift/kustomize.mk#L7
     local -r kustomize_version="4.1.3"
-    log "kustomize not detected, downloading..."
+    info "kustomize not detected, downloading..."
     if ! curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v${kustomize_version}/hack/install_kustomize.sh" | bash -s "$kustomize_version" "$tmpd" 1> /dev/null; then
-        abort "error downloading kustomize"
+        fatal "error downloading kustomize"
     fi
 
-    if [ ! -d "${HOME}/bin" ]; then
-        mkdir -p "${HOME}/bin"
-    fi
+    [ -d "${HOME}/bin" ] || mkdir -p "${HOME}/bin"
 
     kustomize_new="${tmpd}/kustomize"
     kustomize_dest="${HOME}/bin/kustomize"
-    log "Installing $kustomize_new into $kustomize_dest"
+    info "Installing $kustomize_new into $kustomize_dest"
     mv "$kustomize_new" "$kustomize_dest"
 
     popd 1> /dev/null
@@ -68,77 +67,81 @@ install_kustomize() {
 }
 
 hive_repo_clone() {
-    local -n tmpd="$1"
-    log "starting"
+    local tmpd="$1"
+    info "starting"
 
     local -r repo="https://github.com/openshift/hive.git"
-    log "Cloning $repo into $tmpd for config generation"
+    info "Cloning $repo into $tmpd"
     if ! git clone "$repo" "$tmpd"; then
-        log "error cloning the hive repo"
-        return 1
+        fatal "error cloning the hive repo"
     fi
 }
 
 hive_repo_hash_checkout() {
-    local -n tmpd="$1"
-    local -n commit="$2"
-    log "starting"
-    log "Attempting to use commit: $commit"
+    local tmpd="$1"
+    local commit="$2"
+    info "starting"
+    info "Attempting to use commit: $commit"
 
     pushd "$tmpd" 1> /dev/null
-    git reset --hard "$commit"
-    if [ "$?" -ne 0 ] || [ "$( git rev-parse --short="${#commit}" HEAD )" != "$commit" ]; then
-        abort "error resetting the hive repo to the correct git hash '${commit}'"
+
+    if git reset --hard "$commit" && [ "$( git rev-parse --short="${#commit}" HEAD )" != "$commit" ]; then
+        fatal "error resetting the hive repo to the correct git hash '${commit}'"
     fi
 
     popd 1> /dev/null
 }
 
+# generate_hive_config()
 generate_hive_config() {
     local -n kustomize="$1"
-    local -n namespace="$2"
-    local -n image="$3"
-    local -n tmpd="$4"
-    log "starting"
+    local namespace="$2"
+    local image="$3"
+    local tmpd="$4"
+    info "starting"
     
     pushd "$tmpd" 1> /dev/null
-    # Create the hive operator install config using kustomize
     mkdir -p overlays/deploy
+
+    debug "copying template kustomization.yaml"
     cp overlays/template/kustomization.yaml overlays/deploy
-    pushd overlays/deploy >& /dev/null
+    pushd overlays/deploy 1> /dev/null
+    debug "Setting hive image."
     $kustomize edit set image registry.ci.openshift.org/openshift/hive-v4.0:hive="$image"
     $kustomize edit set namespace "$namespace"
-    popd >& /dev/null
+    popd 1> /dev/null
 
+    info "Building hive deployment"
     $kustomize build overlays/deploy > hive-deployment.yaml
 
-    # return to the repo directory to copy the generated config from $TMPDIR
     popd 1> /dev/null
-    mv "$tmpd/hive-deployment.yaml" ./hack/hive/hive-config/
+    mv "$tmpd/hive-deployment.yaml" "$HIVE_CONFIG"
 
-    # ensure the hive deployment uses the pull secret
-    yq -yi 'select(.kind == "ServiceAccount").imagePullSecrets = [{"name": "hive-global-pull-secret"}]' ./hack/hive/hive-config/hive-deployment.yaml
+    debug "Verifying hive deployment pull secret exists in deployment."
+    yq -i 'select(.kind == "ServiceAccount").imagePullSecrets = [{"name": "hive-global-pull-secret"}]' "$HIVE_CONFIG/hive-deployment.yaml"
 
-    if [ -d ./hack/hive/hive-config/crds ]; then
-        rm -rf ./hack/hive/hive-config/crds
+    crds_old="$HIVE_CONFIG/crds"
+    if [ -d "$crds_old" ]; then
+        info "Deleting $crds_old"
+        rm -rf "$HIVE_CONFIG/crds"
     fi
-    cp -R "$tmpd/config/crds" ./hack/hive/hive-config/
+
+    crds_new="$tmpd/config/crds"
+    info "Copying $crds_new into $HIVE_CONFIG"
+    cp -R "$crds_new" "$HIVE_CONFIG/"
 }
 
-if [ ! -f go.mod ] || [ ! -d ".git" ]; then
-    echo "this script must by run from the repo's root directory"
-    exit 1
-fi
+# declare -r source_file_not_found_err="not found. Are you in the ARO-RP repository root?"
+declare -r source_file_not_found_err="not found. Are you in the ARO-RP repository root?"
 
-declare -r util_script="hack/util.sh"
-if [ -f $util_script ]; then
-    # shellcheck source=util.sh
-    source "$util_script"
-fi
+declare -r util_lib="hack/util.sh"
+[ -f "$util_lib" ] || "$(echo "$util_lib $source_file_not_found_err"; exit 1)"
+# shellcheck source=../util.sh
+[ "${__hack_util_sourced:-'false'}" == "false" ] || . "$util_lib"
 
-cleanup() {
-    local tmpd="$1"
-    [ -d "$tmpd" ] && rm -fr "$tmpd"
-}
+declare -r hive_env="hack/hive/hive.env"
+[ -f "$hive_env" ] || fatal "$hive_env $source_file_not_found_err"
+# shellcheck source=./hive.env
+[ "${__hive_env_sourced:-'false'}" == "false" ] || . "$hive_env"
 
 main "$@"

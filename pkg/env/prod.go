@@ -22,6 +22,7 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -83,6 +84,8 @@ type prod struct {
 
 	log *logrus.Entry
 
+	environment string
+
 	features map[Feature]bool
 }
 
@@ -124,6 +127,7 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
 		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
 		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
+		environment:                       os.Getenv("ENVIRONMENT"),
 
 		log: log,
 
@@ -405,6 +409,10 @@ func (p *prod) Domain() string {
 	return os.Getenv("DOMAIN_NAME")
 }
 
+func (p *prod) EnvironmentType() string {
+	return p.environment
+}
+
 func (p *prod) FeatureIsSet(f Feature) bool {
 	return p.features[f]
 }
@@ -424,7 +432,14 @@ func (p *prod) FPClientID() string {
 }
 
 func (p *prod) Listen() (net.Listener, error) {
-	return net.Listen("tcp", ":8443")
+	switch p.Service() {
+	case strings.ToLower(string(SERVICE_MIMO_ACTUATOR)):
+		return net.Listen("tcp", ":8445")
+	case strings.ToLower(string(SERVICE_MIMO_SCHEDULER)):
+		return net.Listen("tcp", ":8446")
+	default:
+		return net.Listen("tcp", ":8443")
+	}
 }
 
 func (p *prod) GatewayDomains() []string {
@@ -447,7 +462,7 @@ func (p *prod) LiveConfig() liveconfig.Manager {
 	return p.liveConfig
 }
 
-func (p *prod) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (*azidentity.ClientCertificateCredential, error) {
+func (p *prod) FPNewClientCertificateCredential(tenantID string, additionalTenants []string) (azcore.TokenCredential, error) {
 	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
 
 	options := p.Environment().ClientCertificateCredentialOptions(additionalTenants)

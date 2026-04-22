@@ -28,6 +28,11 @@ func (m *manager) logVMSerialConsole(ctx context.Context, log_limit_kb int) (int
 		return items, nil
 	}
 
+	if m.doc == nil || m.doc.OpenShiftCluster == nil {
+		items = append(items, "cluster document missing")
+		return items, nil
+	}
+
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	vms, err := m.virtualMachines.List(ctx, resourceGroupName)
 	if err != nil {
