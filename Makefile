@@ -129,9 +129,8 @@ client: generate client-generate lint-go-fix lint-go
 
 .PHONY: client-generate
 client-generate: ## Fix stale client library
-	hack/apiclients/generate-swagger-checksum.sh 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
 # Only generate the clients we use in our dev Python extension or in e2e clients
-	hack/apiclients/build-dev-api-clients.sh "${AUTOREST_IMAGE}" 2024-08-12-preview 2025-07-25
+	hack/api/build-dev-api-clients.sh "${AUTOREST_IMAGE}" 2024-08-12-preview 2025-07-25
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -156,11 +155,17 @@ generate: install-tools generate-swagger-typespec ## Generate files & content fo
 
 .PHONY: generate-swagger-legacy
 generate-swagger-legacy:
-	go run ./hack/swagger github.com/Azure/ARO-RP/pkg/api/v20240812preview ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/preview/2024-08-12-preview
+	go run ./hack/swagger-legacy github.com/Azure/ARO-RP/pkg/api/v20240812preview ./swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/preview/2024-08-12-preview
+	$(MAKE) swagger-checksums
 
 .PHONY: generate-swagger-typespec
 generate-swagger-typespec:
-	hack/swagger/swagger-from-typespec.sh "${TYPESPEC_IMAGE}"
+	hack/api/swagger-from-typespec.sh "${TYPESPEC_IMAGE}"
+	$(MAKE) swagger-checksums
+
+.PHONY: swagger-checksums
+swagger-checksums:
+	hack/api/generate-swagger-checksum.sh 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
