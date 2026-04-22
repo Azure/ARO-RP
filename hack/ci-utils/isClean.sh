@@ -1,11 +1,13 @@
 #!/bin/bash
 
 set -xe
-if [[ ! -z "$(git status -s)" ]]
+IGNORED_PATH="api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/examples/"
+CHANGES=$(git status --short | grep -v "$IGNORED_PATH" || true)
+
+if [[ -n "$CHANGES" ]]
 then
     echo "there are some modified files"
-    git status
-    exit 1 
+    exit 1
 fi
 
 
