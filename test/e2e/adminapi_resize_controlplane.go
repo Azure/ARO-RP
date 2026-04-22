@@ -21,19 +21,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
 
-const masterMachineRoleLabelSelector = "machine.openshift.io/cluster-api-machine-role=master"
-const machineLabelInstanceType = "machine.openshift.io/instance-type"
-const nodeLabelInstanceType = "node.kubernetes.io/instance-type"
-
-
+const (
+	masterMachineRoleLabelSelector = "machine.openshift.io/cluster-api-machine-role=master"
+	machineLabelInstanceType       = "machine.openshift.io/instance-type"
+	nodeLabelInstanceType          = "node.kubernetes.io/instance-type"
+)
 
 func getControlPlaneVMs(ctx context.Context) []compute.VirtualMachine {
 	oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
@@ -52,7 +53,7 @@ func getControlPlaneVMs(ctx context.Context) []compute.VirtualMachine {
 // and returning the size of the first VM whose name contains "master".
 func getControlPlaneVMSize(ctx context.Context) string {
 	vms := getControlPlaneVMs(ctx)
-	Expect(vms).NotTo(HaveLen(0))
+	Expect(vms).NotTo(BeEmpty())
 	return string(vms[0].HardwareProfile.VMSize)
 }
 
