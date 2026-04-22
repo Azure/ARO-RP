@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -235,7 +235,9 @@ func balance(workers []string, bucketCount int, doc *api.PoolWorkerDocument) {
 	}
 }
 
-// Start the bucket refreshing loop, logging and setting `true` in doStop on failure.
+// Start the bucket refreshing loop, logging and calling onError() on startup
+// failure. bucketUpdateStartedOrErrored will complete when the worker has
+// failed, or the initial master allocation has succeeded.
 func StartBucketRefreshLoop(
 	ctx context.Context,
 	log *logrus.Entry,
@@ -245,13 +247,27 @@ func StartBucketRefreshLoop(
 	workerDocTTL time.Duration,
 	db database.PoolWorkers,
 	onBucketChange func([]int),
-	stop <-chan struct{}, doStop *atomic.Bool,
+	stop <-chan struct{},
+	onError context.CancelCauseFunc,
+	bucketUpdateStartedOrErrored *sync.WaitGroup,
 ) {
 	defer recover.Panic(log)
 
-	_err := BucketRefreshLoop(ctx, log, workerType, bucketCount, refreshInterval, workerDocTTL, db, onBucketChange, stop)
+	// We don't use wg.Go() here as we want Done() to happen when either it
+	// starts or the whole process fails
+	_signalWg := sync.OnceFunc(bucketUpdateStartedOrErrored.Done)
+
+	// If we error out/finish, signal the waitgroup
+	defer _signalWg()
+
+	_onBucketChange := func(i []int) {
+		onBucketChange(i)
+		_signalWg()
+	}
+
+	_err := BucketRefreshLoop(ctx, log, workerType, bucketCount, refreshInterval, workerDocTTL, db, _onBucketChange, stop)
 	if _err != nil {
 		log.Errorf("unable to start bucket worker, exiting: %s", _err.Error())
-		doStop.Store(true)
+		onError(_err)
 	}
 }

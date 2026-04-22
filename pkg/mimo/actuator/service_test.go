@@ -5,6 +5,7 @@ package actuator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -15,13 +16,16 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-test/deep"
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
@@ -430,3 +434,169 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		})
 	})
 })
+
+func TestActuatorGoesReady(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+
+	_, log := testlog.LogForTesting(t)
+	fixtures := testdatabase.NewFixture()
+	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now)
+	dbs := database.NewDBGroup().
+		WithMaintenanceManifests(manifests).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers)
+
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	fixtures.AddOpenShiftClusterDocuments(
+		&api.OpenShiftClusterDocument{
+			Key:    strings.ToLower(clusterResourceID),
+			Bucket: 1,
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: clusterResourceID,
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState: api.ProvisioningStateSucceeded,
+					NetworkProfile: api.NetworkProfile{
+						PodCIDR: "0.0.0.0/32",
+					},
+				},
+			},
+		},
+	)
+
+	// Apply the fixture
+	err := fixtures.
+		WithOpenShiftClusters(clusters).
+		WithSubscriptions(subscriptions).
+		Create()
+	r.NoError(err)
+
+	waitFor := &sync.WaitGroup{}
+	act := &fakeActuator{waitOnProcess: waitFor, whileRunning: func() {
+		// Verify the worker metric is incremented during the runtime
+		m.AssertSingleGauge(testmetrics.MetricsAssertion[int64]{
+			MetricName: "mimo.actuator.workers.active.count",
+			Dimensions: map[string]string{},
+			Value:      1,
+		})
+	}}
+	waitFor.Add(1)
+
+	svc := NewService(_env, log, nil, dbs, m)
+	svc.workerMaxStartupDelay = 0
+	svc.taskPollTime = time.Millisecond
+	svc.changefeedInterval = time.Millisecond
+	svc.readinessDelay = time.Millisecond
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+	svc.newActuatorInstance = func(ctx context.Context,
+		_env env.Interface,
+		log *logrus.Entry,
+		clusterResourceID string,
+		sub database.Subscriptions,
+		oc database.OpenShiftClusters,
+		mmf database.MaintenanceManifests,
+	) (Actuator, error) {
+		return act, nil
+	}
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go svc.Run(ctx, stop, done)
+
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.True(collect, svc.checkReady())
+	}, time.Second, time.Millisecond)
+
+	// Wait for at least one run, and then close
+	waitFor.Wait()
+	close(stop)
+
+	// Then wait for the worker to stop
+	<-done
+	r.Equal(int32(0), svc.workerCount.Load())
+
+	m.AssertFloats()
+	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "OpenShiftClusterDocument",
+			},
+			Value: 1,
+		},
+		// No running workers
+		{
+			MetricName: "mimo.actuator.workers.active.count",
+			Dimensions: map[string]string{},
+			Value:      0,
+		},
+	}...)
+}
+
+func TestActuatorStopsIfBucketFailureOnStartup(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+
+	hook, log := testlog.LogForTesting(t)
+	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now)
+	dbs := database.NewDBGroup().
+		WithMaintenanceManifests(manifests).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers)
+
+	// Error when it tries to get the master document
+	poolWorkersClient.SetError(errors.New("boom"))
+
+	svc := NewService(_env, log, nil, dbs, m)
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+
+	done := make(chan struct{})
+
+	go svc.Run(ctx, nil, done)
+
+	// Wait for the process to stop
+	<-done
+
+	// We will have no running workers
+	r.Equal(int32(0), svc.workerCount.Load())
+
+	m.AssertFloats()
+	m.AssertGauges()
+
+	err := testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
+		{
+			"level": gomega.Equal(logrus.ErrorLevel),
+			"msg":   gomega.Equal("error bootstrapping master PoolWorkerDocument (not a 412): boom"),
+		},
+		{
+			"level": gomega.Equal(logrus.ErrorLevel),
+			"msg":   gomega.Equal("unable to start bucket worker, exiting: boom"),
+		},
+		{
+			"level": gomega.Equal(logrus.ErrorLevel),
+			"msg":   gomega.Equal("bucket worker startup failed, exiting: boom"),
+		},
+	})
+	r.NoError(err)
+}

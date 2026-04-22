@@ -139,7 +139,7 @@ func fakeClusterMonitorBuilder(log *logrus.Entry, restConfig *rest.Config, oc *a
 	}
 
 	return &fakeMonitor{
-		timeout:        2 * time.Second,
+		timeout:        1 * time.Second,
 		clusterCounter: counter,
 	}, nil
 }

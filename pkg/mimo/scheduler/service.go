@@ -56,12 +56,11 @@ type service struct {
 
 	dbGroup schedulerDBs
 
-	m              metrics.Emitter
-	mu             sync.RWMutex
-	stopping       *atomic.Bool
-	workerCount    *atomic.Int32
-	workerRoutines sync.WaitGroup
-	newScheduler   newSchedulerFunc
+	m            metrics.Emitter
+	mu           sync.RWMutex
+	stopping     *atomic.Bool
+	workerCount  *atomic.Int32
+	newScheduler newSchedulerFunc
 
 	buckets  atomic.Value // []int
 	b        buckets.WorkerPool[*api.MaintenanceScheduleDocument]
@@ -136,7 +135,7 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 	}
 
 	s.clusters = newOpenShiftClusterCache(log, m, s.subs)
-	s.b = buckets.NewWorkerPool[*api.MaintenanceScheduleDocument](log, s.spawnWorker)
+	s.b = buckets.NewWorkerPool[*api.MaintenanceScheduleDocument](log, s.worker)
 	return s
 }
 
@@ -144,8 +143,12 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 	s.tasks = tasks
 }
 
-func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
+func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+
+	// Set up a cancel context for signalling exits (e.g. the stop channel
+	// closing, bucket fetching erroring)
+	ctx, cancel := context.WithCancelCause(_ctx)
 
 	dbPoolWorkers, err := s.dbGroup.PoolWorkers()
 	if err != nil {
@@ -196,7 +199,33 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			<-stop
 			s.baseLog.Print("stopping")
 			s.stopping.Store(true)
+			cancel(nil)
 		}()
+	}
+
+	if s.emitHeartbeat {
+		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", stop, s.checkReady)
+	}
+
+	waitForFirstBucketUpdate := &sync.WaitGroup{}
+	waitForFirstBucketUpdate.Add(1)
+
+	// Start the bucket worker update loop which will coordinate buckets between
+	// the MIMO instances
+	go buckets.StartBucketRefreshLoop(
+		_ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
+		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
+			s.buckets.Store(i)
+			s.lastBucketUpdate.Store(s.env.Now())
+		}, stop, cancel, waitForFirstBucketUpdate,
+	)
+
+	// Wait until we have collected our buckets before starting the poll loop/changefeeds
+	waitForFirstBucketUpdate.Wait()
+	if ctx.Err() != nil {
+		s.baseLog.Errorf("bucket worker startup failed, exiting: %s", context.Cause(ctx))
+		close(done)
+		return context.Cause(ctx)
 	}
 
 	err = s.startChangefeeds(ctx, stop)
@@ -204,21 +233,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		return err
 	}
 
-	if s.emitHeartbeat {
-		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", stop, s.checkReady)
-	}
-	// Start the bucket worker update loop which will coordinate buckets between
-	// the MIMO instances
-	go buckets.StartBucketRefreshLoop(
-		ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
-		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
-			s.buckets.Store(i)
-			s.lastBucketUpdate.Store(s.env.Now())
-		}, stop, s.stopping,
-	)
-
 	t := time.NewTicker(s.schedulePollInterval)
-	defer t.Stop()
 
 	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
 	for !s.stopping.Load() {
@@ -232,14 +247,14 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		select {
 		case <-t.C:
 		case <-ctx.Done():
-			s.baseLog.Warn("context closed, stopping")
+			s.baseLog.Warnf("context closed, stopping poll loop: %s", context.Cause(ctx))
 			s.stopping.Store(true)
 		}
 	}
 
 	// If we're here, we're exiting
 	s.baseLog.Print("exiting, waiting for all workers to finish")
-	s.workerRoutines.Wait()
+	s.b.StopAndWait()
 	close(done)
 	return nil
 }
@@ -365,12 +380,6 @@ func (s *service) checkReady() bool {
 		now.Sub(lastSubsChangefeed) < s.changefeedReadinessInterval &&
 		now.Sub(lastBucketUpdate) < s.bucketRefreshReadinessInterval &&
 		now.Sub(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
-}
-
-func (s *service) spawnWorker(stop <-chan struct{}, id string) {
-	s.workerRoutines.Go(func() {
-		s.worker(stop, id)
-	})
 }
 
 func (s *service) worker(stop <-chan struct{}, id string) {

@@ -29,6 +29,16 @@ type Actuator interface {
 	AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask)
 }
 
+type newActuatorInstance = func(
+	ctx context.Context,
+	_env env.Interface,
+	log *logrus.Entry,
+	clusterResourceID string,
+	sub database.Subscriptions,
+	oc database.OpenShiftClusters,
+	mmf database.MaintenanceManifests,
+) (Actuator, error)
+
 type actuator struct {
 	env                      env.Interface
 	log                      *logrus.Entry

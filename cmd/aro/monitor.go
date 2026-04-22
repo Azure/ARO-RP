@@ -5,7 +5,10 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sirupsen/logrus"
 
@@ -25,6 +28,9 @@ import (
 )
 
 func monitor(ctx context.Context, _log *logrus.Entry) error {
+	stop := make(chan struct{})
+	monitorWorkersDone := make(chan struct{})
+
 	_env, err := env.NewEnv(ctx, _log, env.SERVICE_MONITOR)
 	if err != nil {
 		return err
@@ -42,7 +48,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 	}
 
 	m := statsd.New(ctx, _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
-	go m.Run(nil)
+	go m.Run(monitorWorkersDone)
 
 	g, err := golang.NewMetrics(_env.LoggerForComponent("metrics"), m)
 	if err != nil {
@@ -58,7 +64,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 	})
 
 	clusterm := statsd.NewMetricsForCluster(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
-	go clusterm.Run(nil)
+	go clusterm.Run(monitorWorkersDone)
 
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
@@ -101,5 +107,15 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 
 	mon := pkgmonitor.NewMonitor(_env.LoggerForComponent("monitor"), dialer, dbg, m, clusterm, _env)
 
-	return mon.Run(ctx)
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, syscall.SIGTERM)
+
+	go mon.Run(ctx, stop, monitorWorkersDone)
+
+	<-sigterm
+	log.Print("received SIGTERM")
+	close(stop)
+	<-monitorWorkersDone
+
+	return nil
 }

@@ -273,9 +273,7 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors 
 	var wg sync.WaitGroup
 
 	for _, monitor := range monitors {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			err := monitor.Monitor(ctx)
 			if err != nil {
 				if errors.Is(err, &monitoring.MonitorPanic{}) {
@@ -283,7 +281,7 @@ func execute(ctx context.Context, log *logrus.Entry, done chan<- bool, monitors 
 				}
 				log.Error(err)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	done <- true
