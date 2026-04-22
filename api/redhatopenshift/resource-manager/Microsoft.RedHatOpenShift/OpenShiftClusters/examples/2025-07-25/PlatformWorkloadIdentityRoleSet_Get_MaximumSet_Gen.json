@@ -1,0 +1,37 @@
+{
+  "title": "Gets a mapping of an OpenShift version to identity requirements, which includes operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
+  "operationId": "PlatformWorkloadIdentityRoleSet_Get",
+  "parameters": {
+    "api-version": "2025-07-25",
+    "subscriptionId": "614D7761-D8F3-4DCB-9E03-833873BF661C",
+    "location": "rrojl",
+    "openShiftMinorVersion": "Replace this value with a string matching RegExp ^(\\d+)\\.(\\d+)"
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "properties": {
+          "openShiftVersion": "gzzznfvxukb",
+          "platformWorkloadIdentityRoles": [
+            {
+              "operatorName": "wltwjduibzlnsmzguktcsff",
+              "roleDefinitionName": "cfjyzrtyfejlkwoiohuewn",
+              "roleDefinitionId": "vgtcirclbqehscknxrxnsspamvu"
+            }
+          ]
+        },
+        "id": "rupcqbivmzvbfnnplvfmwbpvpsi",
+        "name": "pffffekrrctppvx",
+        "type": "pytejzzmaiu",
+        "systemData": {
+          "createdBy": "dhpwmkpugfmrdugjv",
+          "createdByType": "User",
+          "createdAt": "2026-04-22T18:54:45.162Z",
+          "lastModifiedBy": "zmhywxfxsinboncqcttemghznc",
+          "lastModifiedByType": "User",
+          "lastModifiedAt": "2026-04-22T18:54:45.163Z"
+        }
+      }
+    }
+  }
+}
