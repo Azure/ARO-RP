@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -25,25 +26,67 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
+
+const masterMachineRoleLabelSelector = "machine.openshift.io/cluster-api-machine-role=master"
+const machineLabelInstanceType = "machine.openshift.io/instance-type"
+const nodeLabelInstanceType = "node.kubernetes.io/instance-type"
+
+
+
+func getControlPlaneVMs(ctx context.Context) []compute.VirtualMachine {
+	oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+	Expect(err).NotTo(HaveOccurred())
+	clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+	vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
+	Expect(err).NotTo(HaveOccurred())
+
+	return slices.DeleteFunc(vms, func(vm compute.VirtualMachine) bool {
+		return !strings.Contains(*vm.Name, "master")
+	})
+}
 
 // getControlPlaneVMSize retrieves the VM size of one of the control plane
 // (master) VMs in the cluster by listing all VMs in the cluster resource group
 // and returning the size of the first VM whose name contains "master".
 func getControlPlaneVMSize(ctx context.Context) string {
-	oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
-	Expect(err).NotTo(HaveOccurred())
-	clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+	vms := getControlPlaneVMs(ctx)
+	Expect(vms).NotTo(HaveLen(0))
+	return string(vms[0].HardwareProfile.VMSize)
+}
 
-	vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
-	Expect(err).NotTo(HaveOccurred())
-	for _, vm := range vms {
-		if strings.Contains(*vm.Name, "master") {
-			return string(vm.HardwareProfile.VMSize)
-		}
+// validateMasterVMSizeLabels makes sure that master machine and node Resources in the cluster have the correct vmsize labels. It verifies that the following are equal to the targetSku
+// - metadata.labels."machine.openshift.io/instance-type" for machine
+// - spec.ProviderSpec.value.vmSize for machine
+// - metadata.labels."node.kubernetes.io/instance-type" for node
+// for each of the master nodes
+//
+// There is no return value, as this is supposed to be called directly from ginkgo test cases. This function validates the labels via [github.com/onsi/gomega.Expect] statements
+func validateMasterVMSizeLabels(ctx context.Context, targetSku string) {
+	masterMachinesList, err := clients.MachineAPI.MachineV1beta1().Machines("openshift-machine-api").List(ctx, metav1.ListOptions{
+		LabelSelector: masterMachineRoleLabelSelector,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	for _, ma := range masterMachinesList.Items {
+		By(fmt.Sprintf("Checking machine and node labels for %s", ma.GetName()))
+		sizeLabelVal, ok := ma.GetObjectMeta().GetLabels()[machineLabelInstanceType]
+		Expect(ok).To(BeTrue())
+		Expect(sizeLabelVal).To(Equal(targetSku))
+
+		var machineProvSpec machinev1beta1.AzureMachineProviderSpec
+		Expect(json.Unmarshal(ma.Spec.ProviderSpec.Value.Raw, &machineProvSpec)).ToNot(HaveOccurred())
+		Expect(machineProvSpec.VMSize).To(Equal(targetSku))
+
+		var curNode corev1.Node
+		err = clients.KubeClient.Get(ctx, types.NamespacedName{Name: ma.GetObjectMeta().GetName()}, &curNode)
+		Expect(err).ToNot(HaveOccurred())
+
+		nodeSizeLabelVal, ok := curNode.GetLabels()[nodeLabelInstanceType]
+		Expect(ok).To(BeTrue())
+		Expect(nodeSizeLabelVal).To(Equal(targetSku))
 	}
-
-	return ""
 }
 
 var _ = Describe("[Admin API] Resize control plane", func() {
@@ -91,8 +134,13 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 			params, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
-		postResizeSize := getControlPlaneVMSize(ctx)
-		Expect(postResizeSize).To(Equal(preResizeVMSize))
+
+		controlPlaneVms := getControlPlaneVMs(ctx)
+		Expect(controlPlaneVms).ToNot(BeEmpty())
+		for _, vm := range controlPlaneVms {
+			Expect(vm.HardwareProfile).ToNot(BeNil())
+			Expect(string(vm.HardwareProfile.VMSize)).To(Equal(preResizeVMSize))
+		}
 	})
 
 	It("Should not attempt to resize if there is no quota", func(ctx context.Context) {
@@ -170,32 +218,16 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		By("Validating vm size after resize")
-		postResizeVMSize := getControlPlaneVMSize(ctx)
-		Expect(postResizeVMSize).ToNot(BeZero())
-		Expect(postResizeVMSize).To(Equal(targetSku))
-
-		masterMachinesList, err := clients.MachineAPI.MachineV1beta1().Machines("openshift-machine-api").List(ctx, metav1.ListOptions{
-			LabelSelector: "machine.openshift.io/cluster-api-machine-role=master",
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		for _, ma := range masterMachinesList.Items {
-			By(fmt.Sprintf("Checking machine and node labels for %s", ma.GetName()))
-			sizeLabelVal, ok := ma.GetObjectMeta().GetLabels()["machine.openshift.io/instance-type"]
-			Expect(ok).To(BeTrue())
-			Expect(sizeLabelVal).To(Equal(targetSku))
-
-			var machineProvSpec machinev1beta1.AzureMachineProviderSpec
-			Expect(json.Unmarshal(ma.Spec.ProviderSpec.Value.Raw, &machineProvSpec)).ToNot(HaveOccurred())
-			Expect(machineProvSpec.VMSize).To(Equal(targetSku))
-
-			var curNode corev1.Node
-			err = clients.KubeClient.Get(ctx, types.NamespacedName{Name: ma.GetObjectMeta().GetName()}, &curNode)
-			Expect(err).ToNot(HaveOccurred())
-
-			nodeSizeLabelVal, ok := curNode.GetLabels()["node.kubernetes.io/instance-type"]
-			Expect(ok).To(BeTrue())
-			Expect(nodeSizeLabelVal).To(Equal(targetSku))
+		controlPlaneVms := getControlPlaneVMs(ctx)
+		Expect(controlPlaneVms).ToNot(BeEmpty())
+		for _, vm := range controlPlaneVms {
+			Expect(vm.HardwareProfile).ToNot(BeNil())
+			Expect(string(vm.HardwareProfile.VMSize)).To(Equal(targetSku))
+			Expect(vm.ProvisioningState).ToNot(BeNil())
+			Expect(*vm.ProvisioningState).ToNot(Equal(string(compute.ProvisioningStateSucceeded)))
 		}
+
+		By("Validating machine and node labels")
+		validateMasterVMSizeLabels(ctx, targetSku)
 	}, NodeTimeout(30*time.Minute))
 })
