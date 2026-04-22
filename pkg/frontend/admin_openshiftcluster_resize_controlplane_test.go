@@ -959,6 +959,9 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				if resp.DeallocateVM {
 					t.Fatal("deallocateVM = true, want false")
 				}
+				if !strings.Contains(string(b), `"deallocateVM":false`) {
+					t.Fatal("raw response body does not include \"deallocateVM\":false")
+				}
 				if resp.Summary.TotalNodes != 3 || resp.Summary.NodesResized != 1 || resp.Summary.NodesSkipped != 2 {
 					t.Fatalf("unexpected summary: %+v", resp.Summary)
 				}
