@@ -5,10 +5,13 @@ package statsd
 
 import (
 	"bufio"
+	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -315,5 +318,86 @@ func TestConnectionDetails(t *testing.T) {
 				t.Error(address)
 			}
 		})
+	}
+}
+
+func TestNewAddsEnvironmentDimension(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	mockEnv := mock_env.NewMockCore(controller)
+	mockEnv.EXPECT().LoggerForComponent("metrics").Return(&logrus.Entry{Logger: logrus.StandardLogger()})
+	mockEnv.EXPECT().Hostname().Return("test-hostname")
+	mockEnv.EXPECT().Location().Return("eastus")
+	mockEnv.EXPECT().Service().Return("rp")
+	mockEnv.EXPECT().EnvironmentType().Return("int")
+
+	c1, c2 := net.Pipe()
+
+	s := New(context.TODO(), mockEnv, "TestAccount", "TestNamespace", "")
+	s.conn = c1
+	go s.Run(nil)
+
+	// Emit with nil dimensions - Environment should still be added
+	s.EmitGauge("test.metric", 100, nil)
+
+	m, err := bufio.NewReader(c2).ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the metric contains Environment dimension
+	if !strings.Contains(m, `"Environment":"int"`) {
+		t.Errorf("Expected metric to contain Environment dimension with value 'int', got: %s", m)
+	}
+
+	// Verify other expected dimensions are present
+	if !strings.Contains(m, `"hostname":"test-hostname"`) {
+		t.Errorf("Expected metric to contain hostname dimension, got: %s", m)
+	}
+	if !strings.Contains(m, `"location":"eastus"`) {
+		t.Errorf("Expected metric to contain location dimension, got: %s", m)
+	}
+	if !strings.Contains(m, `"service":"rp"`) {
+		t.Errorf("Expected metric to contain service dimension, got: %s", m)
+	}
+}
+
+func TestNewMetricsForClusterAddsEnvironmentDimension(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	mockEnv := mock_env.NewMockCore(controller)
+	mockEnv.EXPECT().LoggerForComponent("clustermetrics").Return(&logrus.Entry{Logger: logrus.StandardLogger()})
+	mockEnv.EXPECT().Location().Return("westus2")
+	mockEnv.EXPECT().EnvironmentType().Return("int")
+
+	c1, c2 := net.Pipe()
+
+	s := NewMetricsForCluster(context.TODO(), mockEnv, "ClusterAccount", "BBM", "")
+	s.conn = c1
+	go s.Run(nil)
+
+	// Emit with empty dimensions map - Environment should still be added
+	s.EmitFloat("cluster.test.metric", 42.5, map[string]string{})
+
+	m, err := bufio.NewReader(c2).ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the metric contains Environment dimension
+	if !strings.Contains(m, `"Environment":"int"`) {
+		t.Errorf("Expected metric to contain Environment dimension with value 'int', got: %s", m)
+	}
+
+	// Verify location dimension is present
+	if !strings.Contains(m, `"location":"westus2"`) {
+		t.Errorf("Expected metric to contain location dimension, got: %s", m)
+	}
+
+	// Verify hostname is NOT present for cluster metrics
+	if strings.Contains(m, `"hostname"`) {
+		t.Errorf("Expected cluster metric to NOT contain hostname dimension, got: %s", m)
 	}
 }
