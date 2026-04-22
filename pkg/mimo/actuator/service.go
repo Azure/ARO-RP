@@ -73,7 +73,6 @@ type service struct {
 var _ Runnable = (*service)(nil)
 
 type actuatorDBs interface {
-	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithMaintenanceManifests
 	database.DatabaseGroupWithSubscriptions
