@@ -11,8 +11,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-// VirtualMachinesClient is a minimal interface for armcompute VirtualMachinesClient,
-// used for capacity-reservation-aware VM operations.
+// VirtualMachinesClient wraps the Azure SDK VirtualMachinesClient,
+// exposing only the methods needed for capacity-reservation-aware VM resize operations.
 type VirtualMachinesClient interface {
 	VirtualMachinesClientAddons
 }
@@ -23,7 +23,7 @@ type virtualMachinesClient struct {
 
 var _ VirtualMachinesClient = &virtualMachinesClient{}
 
-// NewDefaultVirtualMachinesClient creates a new VirtualMachinesClient with default options
+// NewDefaultVirtualMachinesClient creates a VirtualMachinesClient using the ARO environment's cloud configuration.
 func NewDefaultVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (VirtualMachinesClient, error) {
 	options := &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
@@ -33,7 +33,7 @@ func NewDefaultVirtualMachinesClient(environment *azureclient.AROEnvironment, su
 	return NewVirtualMachinesClient(subscriptionID, credential, options)
 }
 
-// NewVirtualMachinesClient creates a new VirtualMachinesClient
+// NewVirtualMachinesClient creates a VirtualMachinesClient with the supplied ARM client options.
 func NewVirtualMachinesClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (VirtualMachinesClient, error) {
 	clientFactory, err := armcompute.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {

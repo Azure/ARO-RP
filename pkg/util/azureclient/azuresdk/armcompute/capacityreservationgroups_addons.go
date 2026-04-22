@@ -13,7 +13,8 @@ import (
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 )
 
-// CapacityReservationGroupsClientAddons contains addons for CapacityReservationGroupsClient
+// CapacityReservationGroupsClientAddons is a convenience interface that wraps the SDK CapacityReservationGroupsClient
+// with simplified method signatures (no options parameters).
 type CapacityReservationGroupsClientAddons interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName, capacityReservationGroupName string, parameters armcompute.CapacityReservationGroup) (armcompute.CapacityReservationGroup, error)
 	Delete(ctx context.Context, resourceGroupName, capacityReservationGroupName string) error

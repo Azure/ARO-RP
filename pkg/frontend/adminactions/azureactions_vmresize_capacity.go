@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -81,15 +82,33 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 		return fmt.Errorf("deallocating VM %s: %w", vmName, err)
 	}
 
+	// From this point the VM is deallocated. Any error path must attempt to restart it
+	// to avoid leaving the control-plane node permanently offline.
+	// startAndCleanupCRG uses separate contexts so CRG cleanup gets its full retry
+	// budget even if the VM restart is slow.
+	startAndCleanupCRG := func(vmNames []string) {
+		startCtx, startCancel := context.WithTimeout(context.Background(), vmStartTimeout)
+		defer startCancel()
+		a.log.Infof("attempting to restart VM %s after failed resize (best-effort)", vmName)
+		if startErr := a.armVirtualMachines.StartAndWait(startCtx, clusterRG, vmName); startErr != nil {
+			a.log.Errorf("failed to restart VM %s during cleanup after failed resize: %v", vmName, startErr)
+		}
+		cleanCtx, cleanCancel := context.WithTimeout(context.Background(), crgCleanupTimeout)
+		defer cleanCancel()
+		if cleanErr := a.CRGDelete(cleanCtx, clusterRG, location, targetVMSize, []string{zone}, vmNames); cleanErr != nil {
+			a.log.Errorf("CRG cleanup failed for VM %s: %v", vmName, cleanErr)
+		}
+	}
+
 	// Re-read the VM after deallocation to avoid stale-state conflicts.
 	vm, err := a.armVirtualMachines.Get(ctx, clusterRG, vmName)
 	if err != nil {
-		cleanupCRG(nil)
+		startAndCleanupCRG(nil)
 		return fmt.Errorf("reading VM %s before resize: %w", vmName, err)
 	}
 
 	if vm.Properties == nil || vm.Properties.HardwareProfile == nil {
-		cleanupCRG(nil)
+		startAndCleanupCRG(nil)
 		return fmt.Errorf("VM %s has no hardware profile", vmName)
 	}
 
@@ -103,9 +122,16 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 
 	a.log.Infof("resizing VM %s to %s (with capacity reservation)", vmName, targetVMSize)
 	if err = a.armVirtualMachines.CreateOrUpdateAndWait(ctx, clusterRG, vmName, vm); err != nil {
-		// The update failed; the VM is unlikely to be associated. Pass nil to skip
-		// disassociation in cleanup so it doesn't fail on a non-existent association.
-		cleanupCRG(nil)
+		// The PUT may have partially applied even on error (e.g. a timeout hit before the
+		// response arrived). Probe the current VM state with a fresh context (the request ctx
+		// may already be canceled) to decide whether disassociation is needed during cleanup.
+		resizeVMNames := []string(nil)
+		probeCtx, probeCancel := context.WithTimeout(context.Background(), vmProbeTimeout)
+		if freshVM, probeErr := a.armVirtualMachines.Get(probeCtx, clusterRG, vmName); probeErr == nil && vmIsAssociatedWithCRG(freshVM, crgID) {
+			resizeVMNames = []string{vmName}
+		}
+		probeCancel()
+		startAndCleanupCRG(resizeVMNames)
 		return fmt.Errorf("resizing VM %s to %s: %w", vmName, targetVMSize, err)
 	}
 
@@ -126,6 +152,17 @@ func (a *azureActions) CRGResizeSingleVM(ctx context.Context, clusterRG, locatio
 		return fmt.Errorf("cleaning up capacity reservation group: %w", err)
 	}
 	return nil
+}
+
+// vmIsAssociatedWithCRG returns true if the VM's capacity reservation profile points to
+// the given CRG resource ID.
+func vmIsAssociatedWithCRG(vm armcompute.VirtualMachine, crgID string) bool {
+	if vm.Properties == nil || vm.Properties.CapacityReservation == nil {
+		return false
+	}
+	crg := vm.Properties.CapacityReservation.CapacityReservationGroup
+	// ARM resource IDs are case-insensitive; use EqualFold for a safe comparison.
+	return crg != nil && crg.ID != nil && strings.EqualFold(*crg.ID, crgID)
 }
 
 // vmIsInZone returns true if the VM is deployed in the given zone.
@@ -191,22 +228,6 @@ func (a *azureActions) CRGEnsureReservations(ctx context.Context, clusterRG, loc
 		return fmt.Errorf("creating target-SKU reservation for zone %s: %w", zone, err)
 	}
 	return nil
-}
-
-// CRGAssociateVM associates a single VM with the named CRG.
-// The VM is fetched fresh to avoid stale-state update conflicts.
-func (a *azureActions) CRGAssociateVM(ctx context.Context, clusterRG, vmName, crgID string) error {
-	vm, err := a.armVirtualMachines.Get(ctx, clusterRG, vmName)
-	if err != nil {
-		return fmt.Errorf("reading VM %s before association: %w", vmName, err)
-	}
-	if vm.Properties == nil {
-		return fmt.Errorf("VM %s has no properties in ARM response", vmName)
-	}
-	vm.Properties.CapacityReservation = &armcompute.CapacityReservationProfile{
-		CapacityReservationGroup: &armcompute.SubResource{ID: &crgID},
-	}
-	return a.armVirtualMachines.CreateOrUpdateAndWait(ctx, clusterRG, vmName, vm)
 }
 
 // CRGDelete deletes the resize CRG and all its capacity reservations.
@@ -275,6 +296,10 @@ const (
 	// crgCleanupTimeout is the budget given to CRGDelete: all retry intervals plus
 	// a two-minute buffer for Azure API round-trips.
 	crgCleanupTimeout = time.Duration(crgMaxRetries)*crgRetryInterval + 2*time.Minute
+	// vmStartTimeout is the budget for restarting a VM during error-path recovery.
+	vmStartTimeout = 10 * time.Minute
+	// vmProbeTimeout is the budget for the post-failure GET used to check CRG association.
+	vmProbeTimeout = 30 * time.Second
 )
 
 // deleteReservationWithRetry deletes a capacity reservation, retrying on 409 "OperationNotAllowed"
@@ -350,15 +375,23 @@ func isCapacityError(err error) bool {
 
 // isReferencedByVMError returns true when Azure refuses to delete a capacity reservation
 // because it is still referenced by a VM (eventual consistency after disassociation PUT).
+// Narrowed to the specific message pattern to avoid retrying unrelated OperationNotAllowed
+// errors (e.g. subscription policy restrictions) for the full 7.5-minute budget.
 func isReferencedByVMError(err error) bool {
 	var responseError *azcore.ResponseError
-	return errors.As(err, &responseError) && responseError.ErrorCode == "OperationNotAllowed"
+	return errors.As(err, &responseError) &&
+		responseError.ErrorCode == "OperationNotAllowed" &&
+		strings.Contains(err.Error(), "virtual machine")
 }
 
 // isNestedResourcesError returns true when Azure refuses to delete a CRG because
 // nested reservations are still visible in its resource hierarchy (eventual consistency
 // after reservation deletion).
+// Narrowed to the specific message pattern to avoid retrying unrelated CannotDeleteResource
+// errors (e.g. resource locks) for the full 7.5-minute budget.
 func isNestedResourcesError(err error) bool {
 	var responseError *azcore.ResponseError
-	return errors.As(err, &responseError) && responseError.ErrorCode == "CannotDeleteResource"
+	return errors.As(err, &responseError) &&
+		responseError.ErrorCode == "CannotDeleteResource" &&
+		strings.Contains(err.Error(), "nested resources")
 }

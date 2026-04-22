@@ -9,7 +9,8 @@ import (
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 )
 
-// VirtualMachinesClientAddons contains addons for VirtualMachinesClient
+// VirtualMachinesClientAddons is a convenience interface that wraps the SDK VirtualMachinesClient
+// with simplified method signatures (blocking pollers, no options parameters).
 type VirtualMachinesClientAddons interface {
 	Get(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error)
 	List(ctx context.Context, resourceGroupName string) ([]armcompute.VirtualMachine, error)

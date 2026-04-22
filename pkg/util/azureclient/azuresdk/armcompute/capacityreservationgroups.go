@@ -11,7 +11,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-// CapacityReservationGroupsClient is a minimal interface for armcompute CapacityReservationGroupsClient
+// CapacityReservationGroupsClient wraps the Azure SDK CapacityReservationGroupsClient,
+// exposing only the methods needed for CRG lifecycle management during VM resize.
 type CapacityReservationGroupsClient interface {
 	CapacityReservationGroupsClientAddons
 }
@@ -22,7 +23,7 @@ type capacityReservationGroupsClient struct {
 
 var _ CapacityReservationGroupsClient = &capacityReservationGroupsClient{}
 
-// NewDefaultCapacityReservationGroupsClient creates a new CapacityReservationGroupsClient with default options
+// NewDefaultCapacityReservationGroupsClient creates a CapacityReservationGroupsClient using the ARO environment's cloud configuration.
 func NewDefaultCapacityReservationGroupsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (CapacityReservationGroupsClient, error) {
 	options := &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
@@ -32,7 +33,7 @@ func NewDefaultCapacityReservationGroupsClient(environment *azureclient.AROEnvir
 	return NewCapacityReservationGroupsClient(subscriptionID, credential, options)
 }
 
-// NewCapacityReservationGroupsClient creates a new CapacityReservationGroupsClient
+// NewCapacityReservationGroupsClient creates a CapacityReservationGroupsClient with the supplied ARM client options.
 func NewCapacityReservationGroupsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (CapacityReservationGroupsClient, error) {
 	clientFactory, err := armcompute.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {

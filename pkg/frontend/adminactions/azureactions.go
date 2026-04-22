@@ -38,7 +38,6 @@ type AzureActions interface {
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	CRGCreate(ctx context.Context, clusterRG, location string, zones []string) (string, error)
 	CRGEnsureReservations(ctx context.Context, clusterRG, location, zone, targetSKU string) error
-	CRGAssociateVM(ctx context.Context, clusterRG, vmName, crgID string) error
 	CRGDelete(ctx context.Context, clusterRG, location, targetSKU string, zones []string, vmNames []string) error
 	CRGResizeSingleVM(ctx context.Context, clusterRG, location, vmName, zone, targetVMSize string) error
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)

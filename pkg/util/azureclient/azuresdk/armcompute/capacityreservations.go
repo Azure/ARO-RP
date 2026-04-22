@@ -11,7 +11,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-// CapacityReservationsClient is a minimal interface for armcompute CapacityReservationsClient
+// CapacityReservationsClient wraps the Azure SDK CapacityReservationsClient,
+// exposing only the methods needed for capacity reservation lifecycle management during VM resize.
 type CapacityReservationsClient interface {
 	CapacityReservationsClientAddons
 }
@@ -22,7 +23,7 @@ type capacityReservationsClient struct {
 
 var _ CapacityReservationsClient = &capacityReservationsClient{}
 
-// NewDefaultCapacityReservationsClient creates a new CapacityReservationsClient with default options
+// NewDefaultCapacityReservationsClient creates a CapacityReservationsClient using the ARO environment's cloud configuration.
 func NewDefaultCapacityReservationsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (CapacityReservationsClient, error) {
 	options := &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
@@ -32,7 +33,7 @@ func NewDefaultCapacityReservationsClient(environment *azureclient.AROEnvironmen
 	return NewCapacityReservationsClient(subscriptionID, credential, options)
 }
 
-// NewCapacityReservationsClient creates a new CapacityReservationsClient
+// NewCapacityReservationsClient creates a CapacityReservationsClient with the supplied ARM client options.
 func NewCapacityReservationsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (CapacityReservationsClient, error) {
 	clientFactory, err := armcompute.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {

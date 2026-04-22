@@ -14,11 +14,10 @@ import (
 	io "io"
 	reflect "reflect"
 
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
-
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAzureActions is a mock of AzureActions interface.
@@ -43,20 +42,6 @@ func NewMockAzureActions(ctrl *gomock.Controller) *MockAzureActions {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
-}
-
-// CRGAssociateVM mocks base method.
-func (m *MockAzureActions) CRGAssociateVM(ctx context.Context, clusterRG, vmName, crgID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CRGAssociateVM", ctx, clusterRG, vmName, crgID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CRGAssociateVM indicates an expected call of CRGAssociateVM.
-func (mr *MockAzureActionsMockRecorder) CRGAssociateVM(ctx, clusterRG, vmName, crgID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGAssociateVM", reflect.TypeOf((*MockAzureActions)(nil).CRGAssociateVM), ctx, clusterRG, vmName, crgID)
 }
 
 // CRGCreate mocks base method.

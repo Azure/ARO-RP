@@ -6,6 +6,7 @@ package adminactions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -162,38 +163,6 @@ func TestCRGEnsureReservations_AuthorizationFailed_ReturnsActionableError(t *tes
 	}
 	if !errors.Is(err, authErr) {
 		t.Errorf("expected error to wrap the auth error, got: %v", err)
-	}
-}
-
-// --- CRGAssociateVM tests ---
-
-func TestCRGAssociateVM_HappyPath(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	a, mockVMs, _, _ := newTestAzureActions(t, ctrl)
-	vm := masterVM("master-0", "1", "Standard_D8s_v3")
-
-	mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil)
-	mockVMs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", "master-0", gomock.Any()).Return(nil)
-
-	err := a.CRGAssociateVM(context.Background(), "cluster-rg", "master-0", "/subscriptions/sub/crg-id")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestCRGAssociateVM_GetFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	a, mockVMs, _, _ := newTestAzureActions(t, ctrl)
-
-	mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(armcomputev7.VirtualMachine{}, errors.New("not found"))
-
-	err := a.CRGAssociateVM(context.Background(), "cluster-rg", "master-0", "/subscriptions/sub/crg-id")
-	if err == nil {
-		t.Fatal("expected error, got nil")
 	}
 }
 
@@ -392,8 +361,13 @@ func TestCRGResizeSingleVM_ResizeFails_TriggersCleanup(t *testing.T) {
 		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
 		mockVMs.EXPECT().DeallocateAndWait(gomock.Any(), "cluster-rg", "master-0").Return(nil),
 		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
-		// Resize+associate fails — VM is unlikely to be associated, cleanup uses nil vmNames.
+		// Resize+associate fails.
 		mockVMs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", "master-0", gomock.Any()).Return(errors.New("resize failed")),
+		// Probe GET: fresh VM (separate Properties pointer — avoids aliasing with vm modified
+		// by production code before the resize call). Shows no CRG association.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(masterVM("master-0", "1", "Standard_D8s_v3"), nil),
+		// Best-effort restart since VM is deallocated.
+		mockVMs.EXPECT().StartAndWait(gomock.Any(), "cluster-rg", "master-0").Return(nil),
 		// Cleanup: zero capacity, no VM disassociation, delete reservation, delete CRG.
 		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
 		mockCRs.EXPECT().DeleteAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1").Return(nil),
@@ -504,5 +478,211 @@ func TestCRGResizeSingleVM_StartFails(t *testing.T) {
 	err := a.CRGResizeSingleVM(context.Background(), "cluster-rg", "eastus", "master-0", "1", "Standard_D16s_v3")
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+// TestCRGResizeSingleVM_GetAfterDeallocFails_RestartsVM verifies that a failure reading
+// the VM after deallocation still triggers a best-effort restart before CRG cleanup.
+func TestCRGResizeSingleVM_GetAfterDeallocFails_RestartsVM(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	a, mockVMs, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+	vm := masterVM("master-0", "1", "Standard_D8s_v3")
+
+	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
+
+	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
+		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
+			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
+		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
+		mockVMs.EXPECT().DeallocateAndWait(gomock.Any(), "cluster-rg", "master-0").Return(nil),
+		// Re-read after deallocation fails.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(armcomputev7.VirtualMachine{}, errors.New("transient read error")),
+		// VM is deallocated — best-effort restart must be attempted.
+		mockVMs.EXPECT().StartAndWait(gomock.Any(), "cluster-rg", "master-0").Return(nil),
+		// CRG cleanup with nil vmNames (VM was never associated).
+		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
+		mockCRs.EXPECT().DeleteAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1").Return(nil),
+		mockCRGs.EXPECT().Delete(gomock.Any(), "cluster-rg", capacityReservationGroupName).Return(nil),
+	)
+
+	err := a.CRGResizeSingleVM(context.Background(), "cluster-rg", "eastus", "master-0", "1", "Standard_D16s_v3")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// TestCRGResizeSingleVM_ResizeFails_VMAssociated_DisassociatesOnCleanup verifies that when
+// the probe GET after a failed CreateOrUpdateAndWait shows the VM is associated with the CRG
+// (partial PUT), cleanup correctly disassociates it.
+func TestCRGResizeSingleVM_ResizeFails_VMAssociated_DisassociatesOnCleanup(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	a, mockVMs, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+	vm := masterVM("master-0", "1", "Standard_D8s_v3")
+
+	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
+
+	// vmWithAssociation simulates what Azure returns when the CRG association was applied.
+	vmWithAssociation := masterVM("master-0", "1", "Standard_D16s_v3")
+	vmWithAssociation.Properties.CapacityReservation = &armcomputev7.CapacityReservationProfile{
+		CapacityReservationGroup: &armcomputev7.SubResource{ID: pointerutils.ToPtr(crgID)},
+	}
+
+	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
+		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
+			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
+		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
+		mockVMs.EXPECT().DeallocateAndWait(gomock.Any(), "cluster-rg", "master-0").Return(nil),
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
+		// Resize fails, but the PUT partially applied the CRG association.
+		mockVMs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", "master-0", gomock.Any()).Return(errors.New("timeout")),
+		// Probe GET reveals the VM is associated — cleanup must disassociate.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vmWithAssociation, nil),
+		// Best-effort restart.
+		mockVMs.EXPECT().StartAndWait(gomock.Any(), "cluster-rg", "master-0").Return(nil),
+		// CRGDelete with vmName — disassociation step is included.
+		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vmWithAssociation, nil),
+		mockVMs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", "master-0", gomock.Any()).Return(nil),
+		mockCRs.EXPECT().DeleteAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1").Return(nil),
+		mockCRGs.EXPECT().Delete(gomock.Any(), "cluster-rg", capacityReservationGroupName).Return(nil),
+	)
+
+	err := a.CRGResizeSingleVM(context.Background(), "cluster-rg", "eastus", "master-0", "1", "Standard_D16s_v3")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// TestCRGResizeSingleVM_RestartFails_CleanupStillRuns verifies that a failed best-effort
+// VM restart does not prevent CRG cleanup from proceeding.
+func TestCRGResizeSingleVM_RestartFails_CleanupStillRuns(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	a, mockVMs, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+	vm := masterVM("master-0", "1", "Standard_D8s_v3")
+
+	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg"
+
+	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
+		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", capacityReservationGroupName, gomock.Any()).
+			Return(armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil),
+		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
+		mockVMs.EXPECT().DeallocateAndWait(gomock.Any(), "cluster-rg", "master-0").Return(nil),
+		// Re-read succeeds but resize fails.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(vm, nil),
+		mockVMs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", "master-0", gomock.Any()).Return(errors.New("resize failed")),
+		// Probe GET: fresh VM (separate Properties pointer to avoid aliasing). Not associated.
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(masterVM("master-0", "1", "Standard_D8s_v3"), nil),
+		// Restart fails — cleanup must still proceed.
+		mockVMs.EXPECT().StartAndWait(gomock.Any(), "cluster-rg", "master-0").Return(errors.New("start failed")),
+		// CRG cleanup runs despite restart failure.
+		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1", gomock.Any()).Return(nil),
+		mockCRs.EXPECT().DeleteAndWait(gomock.Any(), "cluster-rg", capacityReservationGroupName, "cr-target-z1").Return(nil),
+		mockCRGs.EXPECT().Delete(gomock.Any(), "cluster-rg", capacityReservationGroupName).Return(nil),
+	)
+
+	err := a.CRGResizeSingleVM(context.Background(), "cluster-rg", "eastus", "master-0", "1", "Standard_D16s_v3")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestIsReferencedByVMError(t *testing.T) {
+	referencedByVMErr := func(code string) error {
+		return fmt.Errorf("the capacity reservation cannot be deleted as it is still being referenced by virtual machine(s): %w",
+			&azcore.ResponseError{ErrorCode: code, StatusCode: http.StatusConflict})
+	}
+	unrelatedErr := func(code string) error {
+		return fmt.Errorf("operation not allowed due to policy restriction: %w",
+			&azcore.ResponseError{ErrorCode: code, StatusCode: http.StatusConflict})
+	}
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "OperationNotAllowed with virtual machine message",
+			err:  referencedByVMErr("OperationNotAllowed"),
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed without virtual machine message (policy restriction)",
+			err:  unrelatedErr("OperationNotAllowed"),
+			want: false,
+		},
+		{
+			name: "different error code with virtual machine message",
+			err:  referencedByVMErr("SomeOtherCode"),
+			want: false,
+		},
+		{
+			name: "non-ResponseError",
+			err:  errors.New("virtual machine error"),
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isReferencedByVMError(tt.err)
+			if got != tt.want {
+				t.Errorf("isReferencedByVMError() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsNestedResourcesError(t *testing.T) {
+	nestedResourcesErr := func(code string) error {
+		return fmt.Errorf("cannot delete resource because it has nested resources: %w",
+			&azcore.ResponseError{ErrorCode: code, StatusCode: http.StatusConflict})
+	}
+	unrelatedErr := func(code string) error {
+		return fmt.Errorf("cannot delete resource due to a resource lock: %w",
+			&azcore.ResponseError{ErrorCode: code, StatusCode: http.StatusConflict})
+	}
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "CannotDeleteResource with nested resources message",
+			err:  nestedResourcesErr("CannotDeleteResource"),
+			want: true,
+		},
+		{
+			name: "CannotDeleteResource without nested resources message (resource lock)",
+			err:  unrelatedErr("CannotDeleteResource"),
+			want: false,
+		},
+		{
+			name: "different error code with nested resources message",
+			err:  nestedResourcesErr("SomeOtherCode"),
+			want: false,
+		},
+		{
+			name: "non-ResponseError",
+			err:  errors.New("nested resources error"),
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isNestedResourcesError(tt.err)
+			if got != tt.want {
+				t.Errorf("isNestedResourcesError() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
