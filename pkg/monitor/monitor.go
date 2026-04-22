@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type monitorDBs interface {
@@ -82,7 +83,7 @@ type monitor struct {
 }
 
 type Runnable interface {
-	Run(context.Context) error
+	Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error
 }
 
 func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, e env.Interface) Runnable {
@@ -122,7 +123,30 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 	return mon
 }
 
-func (mon *monitor) Run(ctx context.Context) error {
+func (mon *monitor) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
+	// Set up a cancel context for signalling exits (e.g. the stop channel
+	// closing, bucket fetching erroring)
+	ctx, cancel := context.WithCancelCause(_ctx)
+	defer cancel(nil)
+
+	// Since we wait for all Monitor tasks to complete, have
+	// changefeeds/dbs/metrics stop sending when the workers have fully
+	// completed.
+	workersDone := make(chan struct{})
+	defer close(workersDone)
+	defer close(done)
+
+	if stop != nil {
+		go func() {
+			defer recover.Panic(mon.baseLog)
+			select {
+			case <-stop:
+				cancel(nil)
+			case <-workersDone:
+			}
+		}()
+	}
+
 	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
 	if err != nil {
 		return err
@@ -140,19 +164,17 @@ func (mon *monitor) Run(ctx context.Context) error {
 		mon.hiveClusterManagers[1] = cl
 	}
 
-	err = mon.startChangefeeds(ctx, nil)
+	err = mon.startChangefeeds(ctx, workersDone)
 	if err != nil {
 		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
 		return err
 	}
-	go mon.changefeedMetrics(nil)
+	go mon.changefeedMetrics(workersDone)
 
-	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
+	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", workersDone, mon.checkReady)
 
-	return buckets.BucketRefreshLoop(
-		ctx,
-		mon.baseLog,
-		api.PoolWorkerTypeMonitor,
+	err = buckets.BucketRefreshLoop(
+		_ctx, mon.baseLog, api.PoolWorkerTypeMonitor,
 		mon.bucketCount,
 		mon.bucketRefreshInterval,
 		mon.bucketRefreshTTL,
@@ -161,8 +183,11 @@ func (mon *monitor) Run(ctx context.Context) error {
 			mon.clusters.UpdateBuckets(i)
 			mon.lastBucketUpdate.Store(mon.env.Now())
 		},
-		nil,
+		stop,
 	)
+	cancel(err)
+	mon.clusters.workerPool.StopAndWait()
+	return nil
 }
 
 func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {

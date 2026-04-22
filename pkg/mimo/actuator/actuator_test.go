@@ -90,7 +90,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		a = &actuator{
 			log: log,
 			env: _env,
-			now: now,
 
 			clusterResourceID: strings.ToLower(clusterResourceID),
 

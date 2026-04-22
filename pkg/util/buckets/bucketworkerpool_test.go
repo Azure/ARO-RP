@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/goleak"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -23,6 +25,8 @@ const (
 )
 
 func TestUpsertAndDelete(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+
 	_, log := testlog.LogForTesting(t)
 	worker := func(stop <-chan struct{}, id string) {
 		<-stop
@@ -220,6 +224,8 @@ func TestUpsertAndDelete(t *testing.T) {
 }
 
 func TestConcurrentUpsert(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+
 	_, log := testlog.LogForTesting(t)
 	worker := func(stop <-chan struct{}, id string) {
 		<-stop
@@ -230,23 +236,23 @@ func TestConcurrentUpsert(t *testing.T) {
 	doc := createMockClusterDoc("cluster-concurrent", 1, api.ProvisioningStateSucceeded)
 	workerPool.SetBuckets([]int{1})
 	wg := sync.WaitGroup{}
-	for i := 0; i < 3; i++ {
-		wg.Add(1)
-		go func() {
+	for range 3 {
+		wg.Go(func() {
 			// Holding the lock for a random duration, up to a second
 			// As we're upserting the same doc over and over, lenght should be 1
 			time.Sleep(time.Duration(rand.Intn(int(time.Second))))
 			workerPool.UpsertDoc(doc)
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 	if workerPool.CacheSize() != 1 {
 		t.Errorf("Expected 1 doc after the same concurrent upsert, found %d", workerPool.CacheSize())
 	}
+	workerPool.StopAndWait()
 }
 
 func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
 	_, log := testlog.LogForTesting(t)
 	worker := func(stop <-chan struct{}, id string) {
 		<-stop
@@ -269,10 +275,8 @@ func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
 	wg := sync.WaitGroup{}
 	panicChan := make(chan interface{}, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range numGoroutines {
+		wg.Go(func() {
 			defer func() {
 				// Catch any panic from double-closing channel
 				if r := recover(); r != nil {
@@ -281,7 +285,7 @@ func TestConcurrentDeleteChannelCloseSafety(t *testing.T) {
 			}()
 
 			workerPool.DeleteDoc(doc)
-		}()
+		})
 	}
 
 	wg.Wait()
