@@ -12,7 +12,7 @@ const (
 )
 
 type ResizeControlPlaneResponse struct {
-	Status       ResizeControlPlaneOperationStatus   `json:"status"`
+	Status       ResizeControlPlaneOperationStatus `json:"status"`
 	Message      string                            `json:"message,omitempty"`
 	ResourceID   string                            `json:"resourceId,omitempty"`
 	VMSize       string                            `json:"vmSize,omitempty"`
