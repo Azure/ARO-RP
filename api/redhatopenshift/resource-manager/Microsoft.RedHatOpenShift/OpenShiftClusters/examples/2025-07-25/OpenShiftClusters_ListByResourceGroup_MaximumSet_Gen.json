@@ -1,0 +1,130 @@
+{
+  "title": "Lists OpenShift clusters in the specified subscription and resource group.",
+  "operationId": "OpenShiftClusters_ListByResourceGroup",
+  "parameters": {
+    "api-version": "2025-07-25",
+    "subscriptionId": "614D7761-D8F3-4DCB-9E03-833873BF661C",
+    "resourceGroupName": "rgredhatopenshift"
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "value": [
+          {
+            "properties": {
+              "provisioningState": "AdminUpdating",
+              "clusterProfile": {
+                "pullSecret": "xsxwnkwecg",
+                "domain": "vmcphplsedfktrnoipqeaphxiuji",
+                "version": "m",
+                "resourceGroupId": "dmpwsa",
+                "fipsValidatedModules": "Disabled",
+                "oidcIssuer": "qkek"
+              },
+              "consoleProfile": {
+                "url": "xsmotgkmoaaewm"
+              },
+              "servicePrincipalProfile": {
+                "clientId": "uefiqrqlaycerevhqagwnutdr",
+                "clientSecret": "trboydqywwgaccpqazkibrd"
+              },
+              "platformWorkloadIdentityProfile": {
+                "upgradeableTo": "ypgxpugcuhrkmyfrhqld",
+                "platformWorkloadIdentities": {
+                  "key3097": {
+                    "resourceId": "bjrirbwkvkrbpuyvkjugbvraibgmt",
+                    "clientId": "gypt",
+                    "objectId": "cfptlrcwjm"
+                  }
+                }
+              },
+              "networkProfile": {
+                "podCidr": "pgzouvymzvznlhpratmvndbcxmk",
+                "serviceCidr": "tdocgtuh",
+                "outboundType": "Loadbalancer",
+                "loadBalancerProfile": {
+                  "managedOutboundIps": {
+                    "count": 10
+                  },
+                  "effectiveOutboundIps": [
+                    {
+                      "id": "wzwjhe"
+                    }
+                  ]
+                },
+                "preconfiguredNSG": "Disabled"
+              },
+              "masterProfile": {
+                "vmSize": "eblfwkbfxdnheoqtfwg",
+                "subnetId": "scigombthudpmox",
+                "encryptionAtHost": "Disabled",
+                "diskEncryptionSetId": "rwngocispzxhfesaxozhjx"
+              },
+              "workerProfiles": [
+                {
+                  "name": "zpwahttakprueesdbelvufshv",
+                  "vmSize": "ddcycqddndqvsuzqqkaqjephjlky",
+                  "diskSizeGB": 3,
+                  "subnetId": "dxvogi",
+                  "count": 16,
+                  "encryptionAtHost": "Disabled",
+                  "diskEncryptionSetId": "wj"
+                }
+              ],
+              "workerProfilesStatus": [
+                {
+                  "name": "zpwahttakprueesdbelvufshv",
+                  "vmSize": "ddcycqddndqvsuzqqkaqjephjlky",
+                  "diskSizeGB": 3,
+                  "subnetId": "dxvogi",
+                  "count": 16,
+                  "encryptionAtHost": "Disabled",
+                  "diskEncryptionSetId": "wj"
+                }
+              ],
+              "apiserverProfile": {
+                "visibility": "Private",
+                "url": "ukpcqhgonswylqexfxkuvpndt",
+                "ip": "zjgqikovkpnouetfckjvrmq"
+              },
+              "ingressProfiles": [
+                {
+                  "name": "okzmurcpptvijjgxyv",
+                  "visibility": "Private",
+                  "ip": "egedicccc"
+                }
+              ]
+            },
+            "identity": {
+              "principalId": "ulphckgq",
+              "tenantId": "ujeqvmfdisfhhnug",
+              "type": "None",
+              "userAssignedIdentities": {
+                "key1170": {
+                  "principalId": "nsvaoidcvkhcrietgup",
+                  "clientId": "goqdfqkp"
+                }
+              }
+            },
+            "tags": {
+              "key2824": "rzlnwgqivyzzuutlamfkdaqscwqh"
+            },
+            "location": "mjkj",
+            "id": "dojm",
+            "name": "miiwkxcctnyko",
+            "type": "yiogmosvqvhjktompttbsmyhnicbb",
+            "systemData": {
+              "createdBy": "dhpwmkpugfmrdugjv",
+              "createdByType": "User",
+              "createdAt": "2026-04-22T18:54:45.162Z",
+              "lastModifiedBy": "zmhywxfxsinboncqcttemghznc",
+              "lastModifiedByType": "User",
+              "lastModifiedAt": "2026-04-22T18:54:45.163Z"
+            }
+          }
+        ],
+        "nextLink": "https://microsoft.com/a"
+      }
+    }
+  }
+}
