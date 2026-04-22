@@ -107,6 +107,11 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 			AutomountServiceAccountToken: pointerutils.ToPtr(false),
 			ActiveDeadlineSeconds:        &activeDeadlineSeconds,
 			RestartPolicy:                corev1.RestartPolicyNever,
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser:  &runAsUser,
+				RunAsGroup: &runAsUser,
+				FSGroup:    &runAsUser,
+			},
 			ImagePullSecrets: []corev1.LocalObjectReference{
 				{Name: "hive-global-pull-secret"},
 			},
@@ -172,7 +177,6 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						RunAsUser:                &runAsUser,
 						RunAsNonRoot:             pointerutils.ToPtr(true),
 						AllowPrivilegeEscalation: pointerutils.ToPtr(false),
 						Capabilities: &corev1.Capabilities{
