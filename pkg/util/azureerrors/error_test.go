@@ -440,6 +440,30 @@ func TestIsRetryableError(t *testing.T) {
 			},
 		},
 		{
+			name: "azcore 409 with Retry-After header",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+				ErrorCode: "CanceledAndSupersededDueToAnotherOperation",
+			},
+			want: true,
+		},
+		{
+			name: "autorest 409 with Retry-After header",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New(`Code="CanceledAndSupersededDueToAnotherOperation" Message="Operation was canceled."`),
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+			},
+			want: true,
+		},
+		{
 			name: "autorest permanent 409 without Please retry later",
 			err: autorest.DetailedError{
 				StatusCode: http.StatusConflict,
