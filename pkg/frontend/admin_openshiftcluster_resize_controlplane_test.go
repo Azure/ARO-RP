@@ -691,6 +691,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 		resourceID     string
 		vmSize         string
 		deallocateVM   string
+		verbose        string
 		fixture        func(f *testdatabase.Fixture)
 		kubeMocks      func(*mock_adminactions.MockKubeActions)
 		azureMocks     func(*mock_adminactions.MockAzureActions)
@@ -734,6 +735,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			name:         "happy path - prevalidation and no-op resize",
 			vmSize:       "Standard_D8s_v3",
 			deallocateVM: "true",
+			verbose:      "",
 			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addClusterDoc(f)
@@ -801,6 +803,9 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 			assertResponse: func(t *testing.T, b []byte) {
 				resp := decodeResizeControlPlaneResponse(t, b)
+				if resp.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("status = %q, want %q", resp.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
 				if resp.ResourceID != testdatabase.GetResourcePath(mockSubID, "resourceName") {
 					t.Fatalf("resourceId = %q, want %q", resp.ResourceID, testdatabase.GetResourcePath(mockSubID, "resourceName"))
 				}
@@ -813,6 +818,18 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				if !strings.Contains(resp.Message, "Control plane resize completed successfully") {
 					t.Fatalf("message %q does not include success summary", resp.Message)
 				}
+				if resp.Preflight.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("preflight.status = %q, want %q", resp.Preflight.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
+				if strings.Contains(string(b), `"phases"`) {
+					t.Fatal("raw response body unexpectedly includes phases")
+				}
+				if strings.Contains(string(b), `"steps"`) {
+					t.Fatal("raw response body unexpectedly includes steps")
+				}
+				if strings.Contains(string(b), `"failedChecks"`) {
+					t.Fatal("raw response body unexpectedly includes failedChecks on success")
+				}
 
 				if resp.Summary.TotalNodes != 3 || resp.Summary.NodesResized != 0 || resp.Summary.NodesSkipped != 3 {
 					t.Fatalf("unexpected summary: %+v", resp.Summary)
@@ -820,31 +837,6 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				wantOrder := []string{"master-2", "master-1", "master-0"}
 				if strings.Join(resp.Summary.ExecutionOrder, ",") != strings.Join(wantOrder, ",") {
 					t.Fatalf("executionOrder = %v, want %v", resp.Summary.ExecutionOrder, wantOrder)
-				}
-
-				if len(resp.Phases) != 5 {
-					t.Fatalf("len(phases) = %d, want 5", len(resp.Phases))
-				}
-				wantPhaseNames := []string{
-					"request-setup",
-					"pre-flight-validation",
-					"discover-control-plane-machines",
-					"verify-control-plane-health",
-					"resize-control-plane-nodes",
-				}
-				for i, wantName := range wantPhaseNames {
-					if resp.Phases[i].Name != wantName {
-						t.Fatalf("phase[%d].name = %q, want %q", i, resp.Phases[i].Name, wantName)
-					}
-					if resp.Phases[i].Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
-						t.Fatalf("phase[%d].status = %q, want %q", i, resp.Phases[i].Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
-					}
-				}
-				if len(resp.Phases[1].Checks) != 7 {
-					t.Fatalf("len(pre-flight checks) = %d, want 7", len(resp.Phases[1].Checks))
-				}
-				if resp.Phases[1].Checks[0].Name != "api-server-readyz" {
-					t.Fatalf("first pre-flight check = %q, want %q", resp.Phases[1].Checks[0].Name, "api-server-readyz")
 				}
 
 				if len(resp.Nodes) != 3 {
@@ -864,6 +856,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			name:         "happy path - one node resized with deallocate false",
 			vmSize:       "Standard_D16s_v5",
 			deallocateVM: "false",
+			verbose:      "",
 			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addClusterDoc(f)
@@ -950,6 +943,9 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 			assertResponse: func(t *testing.T, b []byte) {
 				resp := decodeResizeControlPlaneResponse(t, b)
+				if resp.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("status = %q, want %q", resp.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
 				if resp.ResourceID != testdatabase.GetResourcePath(mockSubID, "resourceName") {
 					t.Fatalf("resourceId = %q, want %q", resp.ResourceID, testdatabase.GetResourcePath(mockSubID, "resourceName"))
 				}
@@ -962,19 +958,17 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				if !strings.Contains(string(b), `"deallocateVM":false`) {
 					t.Fatal("raw response body does not include \"deallocateVM\":false")
 				}
+				if resp.Preflight.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("preflight.status = %q, want %q", resp.Preflight.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
+				if strings.Contains(string(b), `"phases"`) {
+					t.Fatal("raw response body unexpectedly includes phases")
+				}
+				if strings.Contains(string(b), `"steps"`) {
+					t.Fatal("raw response body unexpectedly includes steps")
+				}
 				if resp.Summary.TotalNodes != 3 || resp.Summary.NodesResized != 1 || resp.Summary.NodesSkipped != 2 {
 					t.Fatalf("unexpected summary: %+v", resp.Summary)
-				}
-
-				resizePhase := findResizePhase(resp.Phases, "resize-control-plane-nodes")
-				if resizePhase == nil {
-					t.Fatalf("missing resize-control-plane-nodes phase in %+v", resp.Phases)
-				}
-				if resizePhase.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
-					t.Fatalf("resize phase status = %q, want %q", resizePhase.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
-				}
-				if !strings.Contains(resizePhase.Message, "Resized 1 node(s) and skipped 2 node(s).") {
-					t.Fatalf("resize phase message %q does not contain resized/skipped summary", resizePhase.Message)
 				}
 
 				resizedNode := findResizeNode(resp.Nodes, "master-2")
@@ -987,24 +981,8 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				if resizedNode.SourceVMSize != "Standard_D8s_v3" || resizedNode.TargetVMSize != "Standard_D16s_v5" {
 					t.Fatalf("master-2 sizes = %q -> %q, want Standard_D8s_v3 -> Standard_D16s_v5", resizedNode.SourceVMSize, resizedNode.TargetVMSize)
 				}
-				if len(resizedNode.Steps) != 9 {
-					t.Fatalf("len(master-2 steps) = %d, want 9", len(resizedNode.Steps))
-				}
-
-				stopStep := findResizeStep(resizedNode.Steps, "stop-vm")
-				if stopStep == nil {
-					t.Fatalf("missing stop-vm step in %+v", resizedNode.Steps)
-				}
-				if stopStep.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
-					t.Fatalf("stop-vm step status = %q, want %q", stopStep.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
-				}
-				if !strings.Contains(stopStep.Message, "deallocate=false") {
-					t.Fatalf("stop-vm step message %q does not mention deallocate=false", stopStep.Message)
-				}
-
-				updateNodeLabelsStep := findResizeStep(resizedNode.Steps, "update-node-labels")
-				if updateNodeLabelsStep == nil {
-					t.Fatalf("missing update-node-labels step in %+v", resizedNode.Steps)
+				if resizedNode.Message != "Node resized successfully." {
+					t.Fatalf("master-2 message = %q, want %q", resizedNode.Message, "Node resized successfully.")
 				}
 
 				for _, nodeName := range []string{"master-1", "master-0"} {
@@ -1019,9 +997,134 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			},
 		},
 		{
+			name:         "happy path - one node resized with verbose response",
+			vmSize:       "Standard_D16s_v5",
+			deallocateVM: "false",
+			verbose:      "true",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					CheckAPIServerReadyz(gomock.Any()).
+					Return(nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(healthyKubeAPIServerJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+					Return(healthyKubeAPIServerPodsJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(healthyEtcdJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(validServicePrincipalJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+					AnyTimes()
+
+				running := "Running"
+				k.EXPECT().
+					KubeList(gomock.Any(), "Machine", machineNamespace).
+					Return(masterMachineListJSON(
+						masterMachine("master-0", "Standard_D16s_v5", running),
+						masterMachine("master-1", "Standard_D16s_v5", running),
+						masterMachine("master-2", "Standard_D8s_v3", running),
+					), nil)
+
+				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-2", false).Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-2").
+						Return(machineJSON("master-2", "Standard_D8s_v3"), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+				)
+			},
+			azureMocks: func(a *mock_adminactions.MockAzureActions) {
+				gomock.InOrder(
+					a.EXPECT().
+						VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
+						Return(map[string]*armcompute.ResourceSKU{
+							"Standard_D16s_v5": {
+								Name:         pointerutils.ToPtr("Standard_D16s_v5"),
+								ResourceType: pointerutils.ToPtr("virtualMachines"),
+								Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+								LocationInfo: []*armcompute.ResourceSKULocationInfo{
+									{
+										Location: pointerutils.ToPtr("eastus"),
+									},
+								},
+								Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+								Capabilities: []*armcompute.ResourceSKUCapabilities{},
+							},
+						}, nil),
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", false).Return(nil),
+					a.EXPECT().VMResize(gomock.Any(), "master-2", "Standard_D16s_v5").Return(nil),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-2").Return(nil),
+				)
+			},
+			wantStatusCode: http.StatusOK,
+			assertResponse: func(t *testing.T, b []byte) {
+				resp := decodeResizeControlPlaneResponse(t, b)
+				if resp.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+					t.Fatalf("status = %q, want %q", resp.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
+				}
+				if !strings.Contains(string(b), `"phases"`) {
+					t.Fatal("raw response body does not include phases for verbose response")
+				}
+				if len(resp.Phases) != 5 {
+					t.Fatalf("len(phases) = %d, want 5", len(resp.Phases))
+				}
+				if len(resp.Phases[1].Checks) != 7 {
+					t.Fatalf("len(pre-flight checks) = %d, want 7", len(resp.Phases[1].Checks))
+				}
+
+				resizedNode := findResizeNode(resp.Nodes, "master-2")
+				if resizedNode == nil {
+					t.Fatalf("missing node report for master-2 in %+v", resp.Nodes)
+				}
+				if !strings.Contains(string(b), `"steps"`) {
+					t.Fatal("raw response body does not include steps for verbose response")
+				}
+				if len(resizedNode.Steps) != 9 {
+					t.Fatalf("len(master-2 steps) = %d, want 9", len(resizedNode.Steps))
+				}
+
+				stopStep := findResizeStep(resizedNode.Steps, "stop-vm")
+				if stopStep == nil {
+					t.Fatalf("missing stop-vm step in %+v", resizedNode.Steps)
+				}
+				if !strings.Contains(stopStep.Message, "deallocate=false") {
+					t.Fatalf("stop-vm step message %q does not mention deallocate=false", stopStep.Message)
+				}
+			},
+		},
+		{
 			name:         "invalid vm size",
 			vmSize:       "Standard_Invalid_Size",
 			deallocateVM: "true",
+			verbose:      "",
 			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addClusterDoc(f)
@@ -1036,6 +1139,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			name:         "cluster not found",
 			vmSize:       "Standard_D8s_v3",
 			deallocateVM: "true",
+			verbose:      "",
 			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addSubscriptionDoc(f)
@@ -1060,6 +1164,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			name:         "subscription not found",
 			vmSize:       "Standard_D8s_v3",
 			deallocateVM: "true",
+			verbose:      "",
 			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				addClusterDoc(f)
@@ -1084,12 +1189,25 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			name:           "invalid deallocateVM",
 			vmSize:         "Standard_D8s_v3",
 			deallocateVM:   "foo",
+			verbose:        "",
 			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture:        func(f *testdatabase.Fixture) {},
 			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
 			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: deallocateVM: The provided deallocateVM value 'foo' is invalid. Allowed values are 'true' or 'false'.`,
+		},
+		{
+			name:           "invalid verbose",
+			vmSize:         "Standard_D8s_v3",
+			deallocateVM:   "true",
+			verbose:        "foo",
+			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture:        func(f *testdatabase.Fixture) {},
+			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
+			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: verbose: The provided verbose value 'foo' is invalid. Allowed values are 'true' or 'false'.`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1126,8 +1244,13 @@ func TestAdminResizeControlPlane(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
+			requestURL := fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=%s&deallocateVM=%s", tt.resourceID, tt.vmSize, tt.deallocateVM)
+			if tt.verbose != "" {
+				requestURL = fmt.Sprintf("%s&verbose=%s", requestURL, tt.verbose)
+			}
+
 			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=%s&deallocateVM=%s", tt.resourceID, tt.vmSize, tt.deallocateVM),
+				requestURL,
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -1271,6 +1394,10 @@ func TestAdminResizeControlPlaneFailureDetails(t *testing.T) {
 		t.Fatalf("missing ResizeRequest detail in %+v", cloudErr.Details)
 	}
 
+	phaseDetail := findCloudErrorDetail(cloudErr.Details, "ResizePhase", "pre-flight-validation")
+	if phaseDetail == nil {
+		t.Fatalf("missing ResizePhase detail in %+v", cloudErr.Details)
+	}
 	nodeDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNode", "master-0")
 	if nodeDetail == nil {
 		t.Fatalf("missing ResizeNode detail in %+v", cloudErr.Details)

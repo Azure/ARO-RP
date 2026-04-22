@@ -12,14 +12,20 @@ const (
 )
 
 type ResizeControlPlaneResponse struct {
+	Status       ResizeControlPlaneOperationStatus   `json:"status"`
 	Message      string                            `json:"message,omitempty"`
 	ResourceID   string                            `json:"resourceId,omitempty"`
 	VMSize       string                            `json:"vmSize,omitempty"`
 	DeallocateVM bool                              `json:"deallocateVM"`
 	DurationMS   int64                             `json:"durationMs"`
 	Summary      ResizeControlPlaneSummary         `json:"summary,omitempty"`
-	Phases       []ResizeControlPlanePhase         `json:"phases,omitempty"`
+	Preflight    ResizeControlPlanePreflight       `json:"preflight,omitempty"`
+	FailedPhase  string                            `json:"failedPhase,omitempty"`
+	FailedNode   string                            `json:"failedNode,omitempty"`
+	FailedStep   string                            `json:"failedStep,omitempty"`
+	NextAction   string                            `json:"nextAction,omitempty"`
 	Nodes        []ResizeControlPlaneNodeOperation `json:"nodes,omitempty"`
+	Phases       []ResizeControlPlanePhase         `json:"phases,omitempty"`
 }
 
 type ResizeControlPlaneSummary struct {
@@ -27,6 +33,12 @@ type ResizeControlPlaneSummary struct {
 	NodesResized   int      `json:"nodesResized"`
 	NodesSkipped   int      `json:"nodesSkipped"`
 	ExecutionOrder []string `json:"executionOrder,omitempty"`
+}
+
+type ResizeControlPlanePreflight struct {
+	Status       ResizeControlPlaneOperationStatus `json:"status,omitempty"`
+	DurationMS   int64                             `json:"durationMs"`
+	FailedChecks []ResizeControlPlaneCheck         `json:"failedChecks,omitempty"`
 }
 
 type ResizeControlPlanePhase struct {
@@ -51,6 +63,8 @@ type ResizeControlPlaneNodeOperation struct {
 	Status       ResizeControlPlaneOperationStatus `json:"status,omitempty"`
 	DurationMS   int64                             `json:"durationMs"`
 	Message      string                            `json:"message,omitempty"`
+	FailedStep   string                            `json:"failedStep,omitempty"`
+	NextAction   string                            `json:"nextAction,omitempty"`
 	Steps        []ResizeControlPlaneStep          `json:"steps,omitempty"`
 }
 
