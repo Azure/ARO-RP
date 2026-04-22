@@ -183,16 +183,6 @@ func findResizeNode(nodes []adminapi.ResizeControlPlaneNodeOperation, name strin
 	return nil
 }
 
-func findResizePhase(phases []adminapi.ResizeControlPlanePhase, name string) *adminapi.ResizeControlPlanePhase {
-	for i := range phases {
-		if phases[i].Name == name {
-			return &phases[i]
-		}
-	}
-
-	return nil
-}
-
 func findResizeStep(steps []adminapi.ResizeControlPlaneStep, name string) *adminapi.ResizeControlPlaneStep {
 	for i := range steps {
 		if steps[i].Name == name {
