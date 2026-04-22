@@ -537,7 +537,62 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : No master VMs found in the cluster resource group.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 master VMs but found 0 in the cluster resource group. Resize cannot proceed until all control plane VMs are present.`,
+		},
+		{
+			name:       "MasterVMSizes returns partial inventory",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D8s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+				a.EXPECT().
+					MasterVMSizes(gomock.Any()).
+					Return([]string{"Standard_D8s_v3", "Standard_D8s_v3"}, nil)
+			},
+			kubeMocks:      allKubeChecksHealthyMock,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 master VMs but found 2 in the cluster resource group. Resize cannot proceed until all control plane VMs are present.`,
 		},
 		{
 			name:       "API server unreachable",

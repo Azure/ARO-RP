@@ -698,6 +698,9 @@ func TestAdminResizeControlPlane(t *testing.T) {
 							Capabilities: []*armcompute.ResourceSKUCapabilities{},
 						},
 					}, nil)
+				a.EXPECT().
+					MasterVMSizes(gomock.Any()).
+					Return([]string{"Standard_D8s_v3", "Standard_D8s_v3", "Standard_D8s_v3"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
