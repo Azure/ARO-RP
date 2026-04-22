@@ -303,7 +303,7 @@ e2e.test:
 
 .PHONY: e2e
 e2e:
-	go test ./test/e2e/... -tags e2e,codec.safe -timeout 180m --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 -ginkgo.label-filter="$(E2E_LABEL)" -ginkgo.focus="$(E2E_FOKUS)"
+	go test ./test/e2e/... -tags e2e,codec.safe -timeout 180m --ginkgo.v --ginkgo.flake-attempts=2 -ginkgo.label-filter="$(E2E_LABEL)" -ginkgo.focus="$(E2E_FOKUS)" -v
 
 .PHONY: e2etools
 e2etools:
