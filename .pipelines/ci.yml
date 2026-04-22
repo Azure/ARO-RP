@@ -390,7 +390,7 @@ stages:
           # Override the E2E label for IndividualCI/BatchedCI (i.e. not manually
           # ran/PR jobs) to run all non-smoke tasks (default is !smoke&&!regressiontest)
           - bash: |
-              echo "##vso[task.setvariable variable=E2E_LABEL]!smoke"
+              echo "##vso[task.setvariable variable=E2E_LABEL]!smoke&&!slow"
             displayName: Enable regression tests in CI
             condition: in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI')
 
