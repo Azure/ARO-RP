@@ -4,7 +4,6 @@ package scheduler
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -22,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -159,21 +157,6 @@ func TestSchedulerPolling(t *testing.T) {
 	}
 }
 
-type fakeScheduler struct {
-	hasRan        bool
-	waitOnProcess *sync.WaitGroup
-}
-
-func (f *fakeScheduler) AddMaintenanceTasks(_ map[api.MIMOTaskID]tasks.MaintenanceTask) {}
-func (f *fakeScheduler) Process(_ context.Context) (bool, error) {
-	if f.hasRan {
-		return false, nil
-	}
-	f.hasRan = true
-	f.waitOnProcess.Done()
-	return true, nil
-}
-
 func TestSchedulerStoppingWholeProcess(t *testing.T) {
 	require := require.New(t)
 	ctx := t.Context()
@@ -218,7 +201,7 @@ func TestSchedulerStoppingWholeProcess(t *testing.T) {
 
 	// Tell the whole service to stop
 	svc.stopping.Store(true)
-	svc.workerRoutines.Wait()
+	svc.b.StopAndWait()
 
 	m.AssertFloats()
 	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
@@ -264,7 +247,14 @@ func TestSchedulerStoppingSingleItem(t *testing.T) {
 	require.NoError(err)
 
 	waitFor := &sync.WaitGroup{}
-	sched := &fakeScheduler{waitOnProcess: waitFor}
+	sched := &fakeScheduler{waitOnProcess: waitFor, whileRunning: func() {
+		// Verify the worker metric is incremented during the runtime
+		m.AssertSingleGauge(testmetrics.MetricsAssertion[int64]{
+			MetricName: "mimo.scheduler.workers.active.count",
+			Dimensions: map[string]string{},
+			Value:      1,
+		})
+	}}
 
 	svc := NewService(_env, log, dbs, m)
 	svc.workerMaxStartupDelay = 0
@@ -291,7 +281,7 @@ func TestSchedulerStoppingSingleItem(t *testing.T) {
 	require.Empty(o1)
 
 	// Then wait for the worker to stop
-	svc.workerRoutines.Wait()
+	svc.b.StopAndWait()
 	require.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
@@ -424,7 +414,6 @@ func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 		WithPoolWorkers(poolWorkers)
 
 	svc := NewService(_env, log, dbs, m)
-	svc.schedulePollInterval = time.Millisecond
 	svc.serveHealthz = false
 	svc.emitHeartbeat = false
 	done := make(chan struct{})
@@ -438,15 +427,7 @@ func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 	r.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
-	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
-		{
-			MetricName: "changefeed.caches.size",
-			Dimensions: map[string]string{
-				"name": "MaintenanceScheduleDocument",
-			},
-			Value: 0,
-		},
-	}...)
+	m.AssertGauges()
 
 	err := testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
 		{
@@ -458,8 +439,8 @@ func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 			"msg":   gomega.Equal("unable to start bucket worker, exiting: boom"),
 		},
 		{
-			"level": gomega.Equal(logrus.InfoLevel),
-			"msg":   gomega.Equal("exiting, waiting for all workers to finish"),
+			"level": gomega.Equal(logrus.ErrorLevel),
+			"msg":   gomega.Equal("bucket worker startup failed, exiting: boom"),
 		},
 	})
 	r.NoError(err)

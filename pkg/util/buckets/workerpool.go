@@ -6,6 +6,7 @@ package buckets
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
@@ -32,6 +33,7 @@ type workerPool[E Workable] struct {
 
 	spawnWorker WorkerFunc
 	workerPool  sync.WaitGroup
+	stopping    *atomic.Bool
 }
 
 type WorkerPool[E Workable] interface {
@@ -50,6 +52,7 @@ func NewWorkerPool[W Workable](log *logrus.Entry, worker WorkerFunc) *workerPool
 
 		spawnWorker: worker,
 		docs:        xsync.NewMap[string, *cacheDoc[W]](),
+		stopping:    &atomic.Bool{},
 	}
 }
 
@@ -63,10 +66,6 @@ func (mon *workerPool[E]) Doc(key string) (r E, ok bool) {
 
 	v, ok := mon.docs.Load(key)
 	if v == nil || !ok {
-		mon.baseLog.Println("wanted ", key)
-		for k, v := range mon.docs.All() {
-			mon.baseLog.Println(k, v)
-		}
 		ok = false
 		return
 	}
@@ -102,7 +101,7 @@ func (c *workerPool[E]) UpsertDoc(doc E) {
 
 // workerPool.fixDoc ensures that there is a worker goroutine for the given document.
 func (c *workerPool[E]) fixDoc(v *cacheDoc[E]) {
-	if v.stop == nil {
+	if v.stop == nil && !c.stopping.Load() {
 		c.baseLog.Debugf("spawning worker for %s", v.doc.GetKey())
 		ch := make(chan struct{})
 		v.stop = ch
@@ -112,6 +111,7 @@ func (c *workerPool[E]) fixDoc(v *cacheDoc[E]) {
 
 // Stop stops all workers.
 func (c *workerPool[E]) StopAndWait() {
+	c.stopping.Store(true)
 	for _, v := range c.docs.All() {
 		if v.stop != nil {
 			close(v.stop)

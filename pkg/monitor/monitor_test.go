@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
@@ -33,6 +34,8 @@ var (
 )
 
 func TestMonitor(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+
 	numWorker := 3
 
 	// Setup test environment
@@ -62,16 +65,16 @@ func TestMonitor(t *testing.T) {
 		fakeClusterVisitMonitoringAttempts.Store(clusterDoc.ResourceID, &atomic.Int64{})
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx := t.Context()
 	wg := sync.WaitGroup{}
-	t.Cleanup(func() {
-		cancel()
-		wg.Wait()
-	})
+	stops := []chan struct{}{}
 
 	for _, mon := range workers {
+		stop := make(chan struct{})
+		done := make(chan struct{})
+		stops = append(stops, stop)
 		wg.Go(func() {
-			err := mon.Run(ctx)
+			err := mon.Run(ctx, stop, done)
 			if err != nil && err != context.DeadlineExceeded && err != context.Canceled {
 				t.Logf("Unexpected error: %v", err)
 			}
@@ -132,6 +135,13 @@ func TestMonitor(t *testing.T) {
 	for _, w := range workers {
 		require.True(t, w.checkReady(), "worker was not ready")
 	}
+
+	// Stop the workers
+	for _, stop := range stops {
+		close(stop)
+	}
+	// Wait for them to be done
+	wg.Wait()
 }
 
 func newFakeSubscription() *api.SubscriptionDocument {

@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -71,9 +72,11 @@ type service struct {
 	lastBucketUpdate atomic.Value // time.Time
 	startTime        time.Time
 
-	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
+	newActuatorInstance newActuatorInstance
+	tasks               map[api.MIMOTaskID]tasks.MaintenanceTask
 
-	serveHealthz bool
+	serveHealthz  bool
+	emitHeartbeat bool
 }
 
 var _ Runnable = (*service)(nil)
@@ -97,6 +100,8 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		stopping:    &atomic.Bool{},
 		workerCount: &atomic.Int32{},
 		bucketCount: bucket.Buckets,
+
+		newActuatorInstance: NewActuator,
 
 		startTime: env.Now(),
 
@@ -122,6 +127,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
 		readinessDelay:        time.Minute * 2,
 		serveHealthz:          true,
+		emitHeartbeat:         false,
 	}
 
 	s.b = buckets.NewBucketWorkerPool[*api.OpenShiftClusterDocument](log, s.worker)
@@ -132,7 +138,7 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 	s.tasks = tasks
 }
 
-func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
+func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
 
 	// Verify our databases are correct before starting, just in case
@@ -155,6 +161,10 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	if err != nil {
 		return fmt.Errorf("not all databases provided to dbGroup: %w", err)
 	}
+
+	// Set up a cancel context for signalling exits (e.g. the stop channel
+	// closing, bucket fetching erroring)
+	ctx, cancel := context.WithCancelCause(_ctx)
 
 	// Only enable the healthz endpoint if configured (disabled in unit tests)
 	if s.serveHealthz {
@@ -182,6 +192,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 
 		listener, err := s.env.Listen()
 		if err != nil {
+			cancel(nil)
 			return err
 		}
 
@@ -193,9 +204,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	t := time.NewTicker(s.changefeedInterval)
-	defer t.Stop()
-
 	if stop != nil {
 		go func() {
 			defer recover.Panic(s.baseLog)
@@ -203,19 +211,36 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			<-stop
 			s.baseLog.Print("stopping")
 			s.stopping.Store(true)
+			cancel(nil)
 		}()
 	}
-	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+
+	if s.emitHeartbeat {
+		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+	}
+
+	waitForFirstBucketUpdate := &sync.WaitGroup{}
+	waitForFirstBucketUpdate.Add(1)
 
 	// Start the bucket worker update loop which will coordinate buckets between
 	// the MIMO instances
 	go buckets.StartBucketRefreshLoop(
-		ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
+		_ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
 		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
 			s.b.SetBuckets(i)
 			s.lastBucketUpdate.Store(s.env.Now())
-		}, stop, s.stopping,
+		}, stop, cancel, waitForFirstBucketUpdate,
 	)
+
+	// Wait until we have collected our buckets before starting the poll loop
+	waitForFirstBucketUpdate.Wait()
+	if ctx.Err() != nil {
+		s.baseLog.Errorf("bucket worker startup failed, exiting: %s", context.Cause(ctx))
+		close(done)
+		return context.Cause(ctx)
+	}
+
+	t := time.NewTicker(s.changefeedInterval)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
 	for !s.stopping.Load() {
@@ -226,7 +251,12 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			lastGotDocs = old
 		}
 
-		<-t.C
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+			s.baseLog.Warnf("context closed, stopping poll loop: %s", context.Cause(ctx))
+			s.stopping.Store(true)
+		}
 	}
 
 	s.baseLog.Print("exiting, waiting for all workers to finish")
@@ -235,8 +265,9 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	return nil
 }
 
-// Temporary method of updating without the changefeed -- the reason why is
-// complicated
+// Poll the OpenShiftClusterDocuments as we only care about their resource ID
+// and bucket ID, and changefeeds don't allow us to filter down to specific
+// fields.
 func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClusterDocument) (map[string]*api.OpenShiftClusterDocument, error) {
 	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
 	if err != nil {
@@ -321,7 +352,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	// Wait for a randomised delay before starting
 	time.Sleep(delay)
 
-	a, err := NewActuator(context.Background(), s.env, log, id, s.dbGroup)
+	a, err := s.newActuatorInstance(context.Background(), s.env, log, id, s.dbGroup)
 	if err != nil {
 		log.Error(err)
 		return
@@ -331,10 +362,6 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	a.AddMaintenanceTasks(s.tasks)
 
 	t := time.NewTicker(s.taskPollTime)
-	defer func() {
-		log.Debugf("stopping worker for %s...", id)
-		t.Stop()
-	}()
 
 out:
 	for !s.stopping.Load() {
@@ -346,7 +373,6 @@ out:
 				s.workerCount.Add(-1)
 				s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workerCount.Load()), nil)
 			}()
-
 			_, err := a.Process(context.Background())
 			if err != nil {
 				log.Error(err)
@@ -359,4 +385,5 @@ out:
 			break out
 		}
 	}
+	log.Debugf("worker for %s finished", id)
 }

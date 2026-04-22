@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 	"sync"
+	"sync/atomic"
 
 	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
@@ -39,6 +40,7 @@ func NewBucketWorkerPool[E Bucketable](log *logrus.Entry, worker WorkerFunc) *bu
 
 			spawnWorker: worker,
 			docs:        xsync.NewMap[string, *cacheDoc[E]](),
+			stopping:    &atomic.Bool{},
 		},
 
 		buckets:  map[int]struct{}{},
