@@ -73,6 +73,18 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 				fmt.Sprintf("The provided deallocateVM value '%s' is invalid. Allowed values are 'true' or 'false'.", v))
 		}
 	}
+	verbose := false
+	if v := r.URL.Query().Get("verbose"); v != "" {
+		switch {
+		case strings.EqualFold(v, "true"):
+			verbose = true
+		case strings.EqualFold(v, "false"):
+			verbose = false
+		default:
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "verbose",
+				fmt.Sprintf("The provided verbose value '%s' is invalid. Allowed values are 'true' or 'false'.", v))
+		}
+	}
 
 	if err := validateAdminMasterVMSize(vmSize); err != nil {
 		return nil, err
@@ -125,17 +137,26 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 	})
 	if err != nil {
 		report.DurationMS = time.Since(operationStart).Milliseconds()
-		return nil, buildResizeControlPlaneCloudError(report, wrapResizeOperationError(
+		wrappedErr := wrapResizeOperationError(
 			"request-setup",
 			"",
 			"",
 			"Check RP access to the cluster document, subscription document, and admin action client initialization.",
-			err))
+			err)
+		applyResizeFailure(report, wrappedErr)
+		return nil, buildResizeControlPlaneCloudError(report, wrappedErr)
 	}
 
 	// Run all pre-flight validations (API server health, etcd health, SP, VM SKU, quota).
 	preflightStart := time.Now()
 	preflightResult, err := f.runPreResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize)
+	if preflightResult == nil {
+		preflightResult = &resizePreflightResult{}
+	}
+	report.Preflight = adminapi.ResizeControlPlanePreflight{
+		Status:     adminapi.ResizeControlPlaneOperationStatusSucceeded,
+		DurationMS: preflightResult.DurationMS,
+	}
 	preflightPhase := adminapi.ResizeControlPlanePhase{
 		Name:       "pre-flight-validation",
 		Status:     adminapi.ResizeControlPlaneOperationStatusSucceeded,
@@ -148,31 +169,34 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 		preflightPhase.Status = adminapi.ResizeControlPlaneOperationStatusFailed
 		preflightPhase.Message = fmt.Sprintf("Pre-flight validation failed after %s.",
 			formatResizeDuration(time.Duration(preflightPhase.DurationMS)*time.Millisecond))
+		report.Preflight.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+		report.Preflight.FailedChecks = failedResizeChecks(preflightResult.Checks)
 		report.Phases = append(report.Phases, preflightPhase)
 		report.DurationMS = time.Since(operationStart).Milliseconds()
-		return nil, buildResizeControlPlaneCloudError(report, wrapResizeOperationError(
+		wrappedErr := wrapResizeOperationError(
 			"pre-flight-validation",
 			"",
 			"",
 			"Resolve the validation failures listed in details before retrying the resize.",
-			err))
+			err)
+		applyResizeFailure(report, wrappedErr)
+		return nil, buildResizeControlPlaneCloudError(report, wrappedErr)
 	}
 	report.Phases = append(report.Phases, preflightPhase)
 
 	err = resizeControlPlaneWithReport(ctx, log, k, a, vmSize, deallocateVM, report)
 	if err != nil {
 		report.DurationMS = time.Since(operationStart).Milliseconds()
+		applyResizeFailure(report, err)
 		return nil, buildResizeControlPlaneCloudError(report, err)
 	}
 
+	report.Status = adminapi.ResizeControlPlaneOperationStatusSucceeded
 	report.DurationMS = time.Since(operationStart).Milliseconds()
-	report.Message = fmt.Sprintf(
-		"Control plane resize completed successfully in %s. Processed %d node(s): resized %d and skipped %d. Each resized node was cordoned, drained, stopped, resized, started, verified Ready, uncordoned, and had Machine/Node metadata updated.",
-		formatResizeDuration(time.Since(operationStart)),
-		report.Summary.TotalNodes,
-		report.Summary.NodesResized,
-		report.Summary.NodesSkipped,
-	)
+	report.Message = "Control plane resize completed successfully."
+	if !verbose {
+		compactResizeControlPlaneSuccessResponse(report)
+	}
 
 	b, err := json.Marshal(report)
 	if err != nil {
@@ -280,7 +304,7 @@ func resizeControlPlaneWithReport(
 			log.Infof("%s is already running %s, skipping", name, desiredVMSize)
 			nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusSkipped
 			nodeResult.DurationMS = time.Since(nodeStart).Milliseconds()
-			nodeResult.Message = "Node already running target VM size; no resize was required."
+			nodeResult.Message = "Node already running target VM size; no resize required."
 			nodesSkipped++
 			if report != nil {
 				report.Nodes = append(report.Nodes, nodeResult)
@@ -294,7 +318,8 @@ func resizeControlPlaneWithReport(
 		nodeResult.DurationMS = time.Since(nodeStart).Milliseconds()
 		if err != nil {
 			nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusFailed
-			nodeResult.Message = fmt.Sprintf("Resize failed for node %s. %s", name, resizeDiagnosticMessage(err))
+			nodeResult.Message = resizeDiagnosticMessage(err)
+			applyResizeFailureToNode(&nodeResult, err)
 			if report != nil {
 				report.Nodes = append(report.Nodes, nodeResult)
 			}
@@ -314,11 +339,7 @@ func resizeControlPlaneWithReport(
 
 		log.Infof("Successfully resized node %s to %s", name, desiredVMSize)
 		nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusSucceeded
-		nodeResult.Message = fmt.Sprintf(
-			"Node resized from %s to %s and post-resize metadata updates completed.",
-			machine.size,
-			desiredVMSize,
-		)
+		nodeResult.Message = "Node resized successfully."
 		nodesResized++
 		if report != nil {
 			report.Nodes = append(report.Nodes, nodeResult)
@@ -705,6 +726,60 @@ func newResizeControlPlaneResponse(resourceID, vmSize string, deallocateVM bool)
 		VMSize:       vmSize,
 		DeallocateVM: deallocateVM,
 	}
+}
+
+func compactResizeControlPlaneSuccessResponse(report *adminapi.ResizeControlPlaneResponse) {
+	if report == nil {
+		return
+	}
+
+	report.Phases = nil
+	for i := range report.Nodes {
+		report.Nodes[i].Steps = nil
+	}
+}
+
+func applyResizeFailure(report *adminapi.ResizeControlPlaneResponse, err error) {
+	if report == nil || err == nil {
+		return
+	}
+
+	report.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+
+	var opErr *resizeOperationError
+	if !errors.As(err, &opErr) {
+		return
+	}
+
+	report.FailedPhase = opErr.phase
+	report.FailedNode = opErr.node
+	report.FailedStep = opErr.step
+	report.NextAction = opErr.hint
+}
+
+func applyResizeFailureToNode(node *adminapi.ResizeControlPlaneNodeOperation, err error) {
+	if node == nil || err == nil {
+		return
+	}
+
+	var opErr *resizeOperationError
+	if !errors.As(err, &opErr) {
+		return
+	}
+
+	node.FailedStep = opErr.step
+	node.NextAction = opErr.hint
+}
+
+func failedResizeChecks(checks []adminapi.ResizeControlPlaneCheck) []adminapi.ResizeControlPlaneCheck {
+	failed := make([]adminapi.ResizeControlPlaneCheck, 0, len(checks))
+	for _, check := range checks {
+		if check.Status == adminapi.ResizeControlPlaneOperationStatusFailed {
+			failed = append(failed, check)
+		}
+	}
+
+	return failed
 }
 
 func runResizePhase(report *adminapi.ResizeControlPlaneResponse, name string, fn func(*adminapi.ResizeControlPlanePhase) error) error {
