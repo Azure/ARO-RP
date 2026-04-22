@@ -143,6 +143,7 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	// Set up a cancel context for signalling exits (e.g. the stop channel
 	// closing, bucket fetching erroring)
 	ctx, cancel := context.WithCancelCause(_ctx)
+	defer cancel(nil)
 
 	dbPoolWorkers, err := s.dbGroup.PoolWorkers()
 	if err != nil {

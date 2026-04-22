@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-test/deep"
-	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -586,16 +585,16 @@ func TestActuatorStopsIfBucketFailureOnStartup(t *testing.T) {
 
 	err := testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
 		{
-			"level": gomega.Equal(logrus.ErrorLevel),
-			"msg":   gomega.Equal("error bootstrapping master PoolWorkerDocument (not a 412): boom"),
+			"level": Equal(logrus.ErrorLevel),
+			"msg":   Equal("error bootstrapping master PoolWorkerDocument (not a 412): boom"),
 		},
 		{
-			"level": gomega.Equal(logrus.ErrorLevel),
-			"msg":   gomega.Equal("unable to start bucket worker, exiting: boom"),
+			"level": Equal(logrus.ErrorLevel),
+			"msg":   Equal("unable to start bucket worker, exiting: boom"),
 		},
 		{
-			"level": gomega.Equal(logrus.ErrorLevel),
-			"msg":   gomega.Equal("bucket worker startup failed, exiting: boom"),
+			"level": Equal(logrus.ErrorLevel),
+			"msg":   Equal("bucket worker startup failed, exiting: boom"),
 		},
 	})
 	r.NoError(err)
