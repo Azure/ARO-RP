@@ -23,6 +23,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	adminapi "github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -104,55 +105,128 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	a adminactions.AzureActions,
 	desiredVMSize string,
 ) ([]byte, error) {
+	_, err := f.runPreResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal("All pre-flight checks passed")
+}
+
+type resizePreflightResult struct {
+	Checks     []adminapi.ResizeControlPlaneCheck
+	DurationMS int64
+}
+
+func (f *frontend) runPreResizeControlPlaneVMsValidation(
+	ctx context.Context,
+	doc *api.OpenShiftClusterDocument,
+	subscriptionDoc *api.SubscriptionDocument,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	desiredVMSize string,
+) (*resizePreflightResult, error) {
+	start := time.Now()
+
 	// Run checks in parallel, collecting all errors so the caller sees every
 	// failure at once. For API server checks, run ClusterOperator status first
 	// and only run per-pod validation if the operator-level gate is healthy.
 	var (
 		mu      sync.Mutex
 		details []api.CloudErrorBody
+		checks  = map[string]adminapi.ResizeControlPlaneCheck{}
 	)
-	collect := func(err error) {
+
+	recordCheck := func(name string, status adminapi.ResizeControlPlaneOperationStatus, duration time.Duration, message string) {
+		mu.Lock()
+		defer mu.Unlock()
+		checks[name] = adminapi.ResizeControlPlaneCheck{
+			Name:       name,
+			Status:     status,
+			DurationMS: duration.Milliseconds(),
+			Message:    message,
+		}
+	}
+
+	collect := func(name string, duration time.Duration, err error, successMessage string) {
 		if err == nil {
+			recordCheck(name, adminapi.ResizeControlPlaneOperationStatusSucceeded, duration, successMessage)
 			return
 		}
+
+		recordCheck(name, adminapi.ResizeControlPlaneOperationStatusFailed, duration, resizeDiagnosticMessage(err))
+
 		mu.Lock()
 		defer mu.Unlock()
 		var ce *api.CloudError
 		if errors.As(err, &ce) && ce.CloudErrorBody != nil {
 			details = append(details, *ce.CloudErrorBody)
-		} else {
-			details = append(details, api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInternalServerError,
-				Message: err.Error(),
-			})
+			return
 		}
+
+		details = append(details, api.CloudErrorBody{
+			Code:    api.CloudErrorCodeInternalServerError,
+			Message: err.Error(),
+		})
 	}
 
+	apiServerReadyzStart := time.Now()
 	if err := k.CheckAPIServerReadyz(ctx); err != nil {
-		return nil, api.NewCloudError(
+		collect("api-server-readyz", time.Since(apiServerReadyzStart), err, "")
+		return buildResizePreflightResult(checks, time.Since(start)), api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver",
 			fmt.Sprintf("API server is reporting a non-ready status: %v", err))
 	}
+	collect("api-server-readyz", time.Since(apiServerReadyzStart), nil, "API server readyz endpoint reported Ready.")
 
 	var wg sync.WaitGroup
 
-	wg.Go(func() { collect(f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a)) })
 	wg.Go(func() {
+		checkStart := time.Now()
+		err := f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a)
+		collect("vm-size-and-quota", time.Since(checkStart), err, "Target VM size is supported and quota checks passed.")
+	})
+	wg.Go(func() {
+		operatorCheckStart := time.Now()
 		if err := validateAPIServerHealth(ctx, k); err != nil {
-			collect(err)
+			collect("kube-apiserver-operator", time.Since(operatorCheckStart), err, "")
+			recordCheck("kube-apiserver-pods", adminapi.ResizeControlPlaneOperationStatusSkipped, 0,
+				"Skipped because kube-apiserver operator validation failed.")
 			return
 		}
-		collect(validateAPIServerPods(ctx, k))
+
+		collect("kube-apiserver-operator", time.Since(operatorCheckStart), nil,
+			"kube-apiserver ClusterOperator reported healthy state.")
+
+		podCheckStart := time.Now()
+		err := validateAPIServerPods(ctx, k)
+		collect("kube-apiserver-pods", time.Since(podCheckStart), err,
+			"All kube-apiserver pods reported healthy state.")
 	})
-	wg.Go(func() { collect(validateEtcdHealth(ctx, k)) })
-	wg.Go(func() { collect(validateClusterSP(ctx, k)) })
-	wg.Go(func() { collect(checkCPMSNotActive(ctx, k)) })
+	wg.Go(func() {
+		checkStart := time.Now()
+		err := validateEtcdHealth(ctx, k)
+		collect("etcd-health", time.Since(checkStart), err, "etcd ClusterOperator reported healthy state.")
+	})
+	wg.Go(func() {
+		checkStart := time.Now()
+		err := validateClusterSP(ctx, k)
+		collect("cluster-service-principal", time.Since(checkStart), err,
+			"Cluster service principal condition reported valid credentials.")
+	})
+	wg.Go(func() {
+		checkStart := time.Now()
+		err := checkCPMSNotActive(ctx, k)
+		collect("control-plane-machine-set", time.Since(checkStart), err,
+			"ControlPlaneMachineSet is absent or inactive.")
+	})
 
 	wg.Wait()
 
+	result := buildResizePreflightResult(checks, time.Since(start))
 	if len(details) > 0 {
-		return nil, &api.CloudError{
+		return result, &api.CloudError{
 			StatusCode: http.StatusBadRequest,
 			CloudErrorBody: &api.CloudErrorBody{
 				Code:    api.CloudErrorCodeInvalidParameter,
@@ -162,7 +236,33 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 		}
 	}
 
-	return json.Marshal("All pre-flight checks passed")
+	return result, nil
+}
+
+func buildResizePreflightResult(checks map[string]adminapi.ResizeControlPlaneCheck, duration time.Duration) *resizePreflightResult {
+	order := []string{
+		"api-server-readyz",
+		"vm-size-and-quota",
+		"kube-apiserver-operator",
+		"kube-apiserver-pods",
+		"etcd-health",
+		"cluster-service-principal",
+		"control-plane-machine-set",
+	}
+
+	result := &resizePreflightResult{
+		Checks:     make([]adminapi.ResizeControlPlaneCheck, 0, len(checks)),
+		DurationMS: duration.Milliseconds(),
+	}
+
+	for _, name := range order {
+		check, ok := checks[name]
+		if ok {
+			result.Checks = append(result.Checks, check)
+		}
+	}
+
+	return result
 }
 
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and

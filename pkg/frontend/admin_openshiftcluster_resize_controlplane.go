@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -29,6 +30,7 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	adminapi "github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -46,12 +48,13 @@ func (f *frontend) postAdminResizeControlPlane(w http.ResponseWriter, r *http.Re
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._postAdminResizeControlPlane(log, ctx, r)
+	b, err := f._postAdminResizeControlPlane(log, ctx, r)
 
-	adminReply(log, w, nil, nil, err)
+	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.Context, r *http.Request) error {
+func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.Context, r *http.Request) ([]byte, error) {
+	operationStart := time.Now()
 	resType := chi.URLParam(r, "resourceType")
 	resName := chi.URLParam(r, "resourceName")
 	resGroupName := chi.URLParam(r, "resourceGroupName")
@@ -66,66 +69,185 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 		case strings.EqualFold(v, "false"):
 			deallocateVM = false
 		default:
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "deallocateVM",
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "deallocateVM",
 				fmt.Sprintf("The provided deallocateVM value '%s' is invalid. Allowed values are 'true' or 'false'.", v))
+		}
+	}
+	verbose := false
+	if v := r.URL.Query().Get("verbose"); v != "" {
+		switch {
+		case strings.EqualFold(v, "true"):
+			verbose = true
+		case strings.EqualFold(v, "false"):
+			verbose = false
+		default:
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "verbose",
+				fmt.Sprintf("The provided verbose value '%s' is invalid. Allowed values are 'true' or 'false'.", v))
 		}
 	}
 
 	if err := validateAdminMasterVMSize(vmSize); err != nil {
-		return err
+		return nil, err
 	}
 
-	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	report := newResizeControlPlaneResponse(resourceID, vmSize, deallocateVM)
+
+	var (
+		doc             *api.OpenShiftClusterDocument
+		subscriptionDoc *api.SubscriptionDocument
+		k               adminactions.KubeActions
+		a               adminactions.AzureActions
+	)
+
+	err := runResizePhase(report, "request-setup", func(phase *adminapi.ResizeControlPlanePhase) error {
+		dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+		if err != nil {
+			return err
+		}
+
+		doc, err = dbOpenShiftClusters.Get(ctx, resourceID)
+		switch {
+		case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+			return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+				fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName))
+		case err != nil:
+			return err
+		}
+
+		report.ResourceID = doc.OpenShiftCluster.ID
+
+		subscriptionDoc, err = f.getSubscriptionDocument(ctx, doc.Key)
+		if err != nil {
+			return err
+		}
+
+		k, err = f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
+		if err != nil {
+			return err
+		}
+
+		a, err = f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+		if err != nil {
+			return err
+		}
+
+		phase.Message = fmt.Sprintf("Loaded cluster documents and initialized Kubernetes and Azure action clients for cluster location %s.",
+			doc.OpenShiftCluster.Location)
+		return nil
+	})
 	if err != nil {
-		return err
-	}
-
-	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
-	switch {
-	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
-			fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName))
-	case err != nil:
-		return err
-	}
-
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return err
-	}
-
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
-	if err != nil {
-		return err
-	}
-
-	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
-	if err != nil {
-		return err
+		report.DurationMS = time.Since(operationStart).Milliseconds()
+		wrappedErr := wrapResizeOperationError(
+			"request-setup",
+			"",
+			"",
+			"Check RP access to the cluster document, subscription document, and admin action client initialization.",
+			err)
+		applyResizeFailure(report, wrappedErr)
+		return nil, buildResizeControlPlaneCloudError(report, wrappedErr)
 	}
 
 	// Run all pre-flight validations (API server health, etcd health, SP, VM SKU, quota).
-	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize)
+	preflightStart := time.Now()
+	preflightResult, err := f.runPreResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize)
+	if preflightResult == nil {
+		preflightResult = &resizePreflightResult{}
+	}
+	report.Preflight = adminapi.ResizeControlPlanePreflight{
+		Status:     adminapi.ResizeControlPlaneOperationStatusSucceeded,
+		DurationMS: preflightResult.DurationMS,
+	}
+	preflightPhase := adminapi.ResizeControlPlanePhase{
+		Name:       "pre-flight-validation",
+		Status:     adminapi.ResizeControlPlaneOperationStatusSucceeded,
+		DurationMS: time.Since(preflightStart).Milliseconds(),
+		Message: fmt.Sprintf("Validated %d pre-flight check(s) before starting control plane changes.",
+			len(preflightResult.Checks)),
+		Checks: preflightResult.Checks,
+	}
 	if err != nil {
-		return err
+		preflightPhase.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+		preflightPhase.Message = fmt.Sprintf("Pre-flight validation failed after %s.",
+			formatResizeDuration(time.Duration(preflightPhase.DurationMS)*time.Millisecond))
+		report.Preflight.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+		report.Preflight.FailedChecks = failedResizeChecks(preflightResult.Checks)
+		report.Phases = append(report.Phases, preflightPhase)
+		report.DurationMS = time.Since(operationStart).Milliseconds()
+		wrappedErr := wrapResizeOperationError(
+			"pre-flight-validation",
+			"",
+			"",
+			"Resolve the validation failures listed in details before retrying the resize.",
+			err)
+		applyResizeFailure(report, wrappedErr)
+		return nil, buildResizeControlPlaneCloudError(report, wrappedErr)
+	}
+	report.Phases = append(report.Phases, preflightPhase)
+
+	err = resizeControlPlaneWithReport(ctx, log, k, a, vmSize, deallocateVM, report)
+	if err != nil {
+		report.DurationMS = time.Since(operationStart).Milliseconds()
+		applyResizeFailure(report, err)
+		return nil, buildResizeControlPlaneCloudError(report, err)
 	}
 
-	return resizeControlPlane(ctx, log, k, a, vmSize, deallocateVM)
+	report.Status = adminapi.ResizeControlPlaneOperationStatusSucceeded
+	report.DurationMS = time.Since(operationStart).Milliseconds()
+	report.Message = "Control plane resize completed successfully."
+	if !verbose {
+		compactResizeControlPlaneSuccessResponse(report)
+	}
+
+	b, err := json.Marshal(report)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
-// resizeControlPlane orchestrates the full control plane resize operation,
-// processing each master node sequentially in reverse name order.
-func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
-	// getControlPlaneMachines filters by machine.openshift.io/cluster-api-machine-role=master,
-	// so the returned map only contains control plane machines.
-	machines, err := getControlPlaneMachines(ctx, k)
+func resizeControlPlaneWithReport(
+	ctx context.Context,
+	log *logrus.Entry,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	desiredVMSize string,
+	deallocateVM bool,
+	report *adminapi.ResizeControlPlaneResponse,
+) error {
+	var machines map[string]machineValidationData
+
+	err := runResizePhase(report, "discover-control-plane-machines", func(phase *adminapi.ResizeControlPlanePhase) error {
+		var err error
+		// getControlPlaneMachines filters by machine.openshift.io/cluster-api-machine-role=master,
+		// so the returned map only contains control plane machines.
+		machines, err = getControlPlaneMachines(ctx, k)
+		if err != nil {
+			return wrapResizeOperationError(
+				"discover-control-plane-machines",
+				"",
+				"",
+				"Check Machine API availability and the control plane Machine resources in openshift-machine-api.",
+				err,
+			)
+		}
+
+		if len(machines) == 0 {
+			return wrapResizeOperationError(
+				"discover-control-plane-machines",
+				"",
+				"",
+				"Check that control plane Machine resources exist in openshift-machine-api before retrying.",
+				api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
+					"No control plane machines found. Resize cannot proceed."),
+			)
+		}
+
+		phase.Message = fmt.Sprintf("Discovered %d control plane machine(s).", len(machines))
+		return nil
+	})
 	if err != nil {
 		return err
-	}
-
-	if len(machines) == 0 {
-		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
-			"No control plane machines found. Resize cannot proceed.")
 	}
 
 	// Reverse lexicographic order: master-2 → master-1 → master-0.
@@ -134,26 +256,106 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 	sortedNames := slices.SortedFunc(maps.Keys(machines), func(a, b string) int {
 		return cmp.Compare(b, a)
 	})
+	if report != nil {
+		report.Summary.TotalNodes = len(sortedNames)
+		report.Summary.ExecutionOrder = append(report.Summary.ExecutionOrder[:0], sortedNames...)
+	}
 
-	// Guard the whole operation before touching any VM. Even when a machine
-	// already matches the target SKU, we must not continue to the next resize
-	// while another control plane node is NotReady or still cordoned.
-	if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, sortedNames); err != nil {
+	err = runResizePhase(report, "verify-control-plane-health", func(phase *adminapi.ResizeControlPlanePhase) error {
+		// Guard the whole operation before touching any VM. Even when a machine
+		// already matches the target SKU, we must not continue to the next resize
+		// while another control plane node is NotReady or still cordoned.
+		if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, sortedNames); err != nil {
+			return wrapResizeOperationError(
+				"verify-control-plane-health",
+				"",
+				"",
+				"Ensure every control plane node is Ready and schedulable before retrying the resize.",
+				err,
+			)
+		}
+
+		phase.Message = fmt.Sprintf("Verified that all %d control plane node(s) were Ready and schedulable before resize started.",
+			len(sortedNames))
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 
+	phaseStart := time.Now()
+	resizePhase := adminapi.ResizeControlPlanePhase{
+		Name:   "resize-control-plane-nodes",
+		Status: adminapi.ResizeControlPlaneOperationStatusSucceeded,
+	}
+	nodesResized := 0
+	nodesSkipped := 0
+
 	for _, name := range sortedNames {
 		machine := machines[name]
+		nodeResult := adminapi.ResizeControlPlaneNodeOperation{
+			Name:         name,
+			SourceVMSize: machine.size,
+			TargetVMSize: desiredVMSize,
+		}
+		nodeStart := time.Now()
+
 		if machine.size == desiredVMSize {
 			log.Infof("%s is already running %s, skipping", name, desiredVMSize)
+			nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusSkipped
+			nodeResult.DurationMS = time.Since(nodeStart).Milliseconds()
+			nodeResult.Message = "Node already running target VM size; no resize required."
+			nodesSkipped++
+			if report != nil {
+				report.Nodes = append(report.Nodes, nodeResult)
+				report.Summary.NodesSkipped = nodesSkipped
+			}
 			continue
 		}
 
 		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, desiredVMSize)
-		if err := resizeControlPlaneNode(ctx, log, k, a, name, desiredVMSize, deallocateVM); err != nil {
+		err := resizeControlPlaneNodeWithReport(ctx, log, k, a, name, desiredVMSize, deallocateVM, &nodeResult)
+		nodeResult.DurationMS = time.Since(nodeStart).Milliseconds()
+		if err != nil {
+			nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+			nodeResult.Message = resizeDiagnosticMessage(err)
+			applyResizeFailureToNode(&nodeResult, err)
+			if report != nil {
+				report.Nodes = append(report.Nodes, nodeResult)
+			}
+			resizePhase.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+			resizePhase.DurationMS = time.Since(phaseStart).Milliseconds()
+			resizePhase.Message = fmt.Sprintf(
+				"Resize failed while processing node %s after resizing %d node(s) and skipping %d node(s).",
+				name,
+				nodesResized,
+				nodesSkipped,
+			)
+			if report != nil {
+				report.Phases = append(report.Phases, resizePhase)
+			}
 			return fmt.Errorf("failed to resize node %s: %w", name, err)
 		}
+
 		log.Infof("Successfully resized node %s to %s", name, desiredVMSize)
+		nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusSucceeded
+		nodeResult.Message = "Node resized successfully."
+		nodesResized++
+		if report != nil {
+			report.Nodes = append(report.Nodes, nodeResult)
+			report.Summary.NodesResized = nodesResized
+		}
+	}
+
+	resizePhase.DurationMS = time.Since(phaseStart).Milliseconds()
+	resizePhase.Message = fmt.Sprintf(
+		"Processed %d control plane node(s) in reverse name order. Resized %d node(s) and skipped %d node(s).",
+		len(sortedNames),
+		nodesResized,
+		nodesSkipped,
+	)
+	if report != nil {
+		report.Phases = append(report.Phases, resizePhase)
 	}
 
 	return nil
@@ -162,53 +364,115 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 // resizeControlPlaneNode performs the full resize sequence for a single
 // control plane node: cordon → drain → stop → resize → start → wait
 // ready → uncordon → update Machine metadata → update Node labels.
-func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool) error {
+func resizeControlPlaneNodeWithReport(
+	ctx context.Context,
+	log *logrus.Entry,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	machineName, desiredVMSize string,
+	deallocateVM bool,
+	nodeResult *adminapi.ResizeControlPlaneNodeOperation,
+) error {
+	recordStep := func(name, failurePrefix, successMessage, failureHint string, fn func() error) error {
+		stepStart := time.Now()
+		err := fn()
+		step := adminapi.ResizeControlPlaneStep{
+			Name:       name,
+			DurationMS: time.Since(stepStart).Milliseconds(),
+		}
+		if err != nil {
+			step.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+			step.Message = resizeDiagnosticMessage(err)
+			nodeResult.Steps = append(nodeResult.Steps, step)
+			return wrapResizeOperationError("resize-control-plane-nodes", machineName, name, failureHint,
+				fmt.Errorf("%s: %w", failurePrefix, err))
+		}
+
+		step.Status = adminapi.ResizeControlPlaneOperationStatusSucceeded
+		step.Message = successMessage
+		nodeResult.Steps = append(nodeResult.Steps, step)
+		return nil
+	}
+
 	log.Infof("Cordoning node %s", machineName)
-	if err := cordonNode(ctx, k, machineName); err != nil {
-		return fmt.Errorf("cordoning node: %w", err)
+	if err := recordStep("cordon", "cordoning node", "Cordoned node successfully.",
+		"Check Kubernetes API connectivity and node object permissions before retrying.", func() error {
+			return cordonNode(ctx, k, machineName)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Draining node %s", machineName)
-	if err := k.DrainNodeWithRetries(ctx, machineName); err != nil {
-		return fmt.Errorf("draining node: %w", err)
+	if err := recordStep("drain", "draining node", "Drained node successfully.",
+		"Check for PodDisruptionBudgets or workloads that prevented eviction on the node.", func() error {
+			return k.DrainNodeWithRetries(ctx, machineName)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Stopping VM %s (deallocate=%v)", machineName, deallocateVM)
-	if err := a.VMStopAndWait(ctx, machineName, deallocateVM); err != nil {
-		return fmt.Errorf("stopping VM: %w", err)
+	if err := recordStep("stop-vm", "stopping VM", fmt.Sprintf("Stopped VM successfully (deallocate=%v).", deallocateVM),
+		"Check Azure Compute activity for VM stop failures or deallocation problems.", func() error {
+			return a.VMStopAndWait(ctx, machineName, deallocateVM)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Resizing VM %s to %s", machineName, desiredVMSize)
-	if err := a.VMResize(ctx, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("resizing VM: %w", err)
+	if err := recordStep("resize-vm", "resizing VM", fmt.Sprintf("Resized VM to %s successfully.", desiredVMSize),
+		"Check Azure Compute activity for resize or allocation failures on the VM.", func() error {
+			return a.VMResize(ctx, machineName, desiredVMSize)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Starting VM %s", machineName)
-	if err := a.VMStartAndWait(ctx, machineName); err != nil {
-		return fmt.Errorf("starting VM: %w", err)
+	if err := recordStep("start-vm", "starting VM", "Started VM successfully.",
+		"Check Azure Compute activity for VM start failures.", func() error {
+			return a.VMStartAndWait(ctx, machineName)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Waiting for node %s to become Ready", machineName)
-	if err := waitForNodeReady(ctx, log, k, machineName); err != nil {
-		return fmt.Errorf("waiting for node ready: %w", err)
+	if err := recordStep("wait-for-node-ready", "waiting for node ready", "Node reported Ready after restart.",
+		"Check kubelet startup, node conditions, and control plane component health on the node.", func() error {
+			return waitForNodeReady(ctx, log, k, machineName)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Uncordoning node %s", machineName)
-	if err := uncordonNode(ctx, k, machineName); err != nil {
-		return fmt.Errorf("uncordoning node: %w", err)
+	if err := recordStep("uncordon", "uncordoning node", "Uncordoned node successfully.",
+		"Check Kubernetes API connectivity and node schedulability before retrying.", func() error {
+			return uncordonNode(ctx, k, machineName)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Updating Machine object for %s", machineName)
-	if err := updateMachineVMSize(ctx, k, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("updating Machine object: %w", err)
+	if err := recordStep("update-machine-object", "updating Machine object", "Updated Machine object with the new VM size.",
+		"Check Machine API reconciliation and conflicting updates to the Machine resource.", func() error {
+			return updateMachineVMSize(ctx, k, machineName, desiredVMSize)
+		}); err != nil {
+		return err
 	}
 
 	log.Infof("Updating Node labels for %s", machineName)
-	if err := updateNodeInstanceTypeLabels(ctx, k, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("updating Node labels: %w", err)
+	if err := recordStep("update-node-labels", "updating Node labels", "Updated Node instance-type labels to the new VM size.",
+		"Check Kubernetes API write access and conflicting updates to the Node resource.", func() error {
+			return updateNodeInstanceTypeLabels(ctx, k, machineName, desiredVMSize)
+		}); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+// resizeControlPlane orchestrates the full control plane resize operation,
+// processing each master node sequentially in reverse name order.
+func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
+	return resizeControlPlaneWithReport(ctx, log, k, a, desiredVMSize, deallocateVM, nil)
 }
 
 func cordonNode(ctx context.Context, k adminactions.KubeActions, nodeName string) error {
@@ -424,4 +688,288 @@ func doUpdateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActi
 	delete(obj.Object, "status")
 
 	return k.KubeCreateOrUpdate(ctx, &obj)
+}
+
+type resizeOperationError struct {
+	phase string
+	node  string
+	step  string
+	hint  string
+	err   error
+}
+
+func (e *resizeOperationError) Error() string {
+	return e.err.Error()
+}
+
+func (e *resizeOperationError) Unwrap() error {
+	return e.err
+}
+
+func wrapResizeOperationError(phase, node, step, hint string, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	return &resizeOperationError{
+		phase: phase,
+		node:  node,
+		step:  step,
+		hint:  hint,
+		err:   err,
+	}
+}
+
+func newResizeControlPlaneResponse(resourceID, vmSize string, deallocateVM bool) *adminapi.ResizeControlPlaneResponse {
+	return &adminapi.ResizeControlPlaneResponse{
+		ResourceID:   resourceID,
+		VMSize:       vmSize,
+		DeallocateVM: deallocateVM,
+	}
+}
+
+func compactResizeControlPlaneSuccessResponse(report *adminapi.ResizeControlPlaneResponse) {
+	if report == nil {
+		return
+	}
+
+	report.Phases = nil
+	for i := range report.Nodes {
+		report.Nodes[i].Steps = nil
+	}
+}
+
+func applyResizeFailure(report *adminapi.ResizeControlPlaneResponse, err error) {
+	if report == nil || err == nil {
+		return
+	}
+
+	report.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+
+	var opErr *resizeOperationError
+	if !errors.As(err, &opErr) {
+		return
+	}
+
+	report.FailedPhase = opErr.phase
+	report.FailedNode = opErr.node
+	report.FailedStep = opErr.step
+	report.NextAction = opErr.hint
+}
+
+func applyResizeFailureToNode(node *adminapi.ResizeControlPlaneNodeOperation, err error) {
+	if node == nil || err == nil {
+		return
+	}
+
+	var opErr *resizeOperationError
+	if !errors.As(err, &opErr) {
+		return
+	}
+
+	node.FailedStep = opErr.step
+	node.NextAction = opErr.hint
+}
+
+func failedResizeChecks(checks []adminapi.ResizeControlPlaneCheck) []adminapi.ResizeControlPlaneCheck {
+	failed := make([]adminapi.ResizeControlPlaneCheck, 0, len(checks))
+	for _, check := range checks {
+		if check.Status == adminapi.ResizeControlPlaneOperationStatusFailed {
+			failed = append(failed, check)
+		}
+	}
+
+	return failed
+}
+
+func runResizePhase(report *adminapi.ResizeControlPlaneResponse, name string, fn func(*adminapi.ResizeControlPlanePhase) error) error {
+	phase := adminapi.ResizeControlPlanePhase{
+		Name:   name,
+		Status: adminapi.ResizeControlPlaneOperationStatusSucceeded,
+	}
+
+	start := time.Now()
+	err := fn(&phase)
+	phase.DurationMS = time.Since(start).Milliseconds()
+	if err != nil {
+		phase.Status = adminapi.ResizeControlPlaneOperationStatusFailed
+		if phase.Message == "" {
+			phase.Message = resizeDiagnosticMessage(err)
+		}
+	}
+
+	if report != nil {
+		report.Phases = append(report.Phases, phase)
+	}
+
+	return err
+}
+
+func buildResizeControlPlaneCloudError(report *adminapi.ResizeControlPlaneResponse, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	elapsedMS := int64(0)
+	if report != nil {
+		elapsedMS = report.DurationMS
+	}
+
+	statusCode := http.StatusInternalServerError
+	errorCode := api.CloudErrorCodeInternalServerError
+	underlyingMessage := resizeDiagnosticMessage(err)
+
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) && cloudErr.CloudErrorBody != nil {
+		statusCode = cloudErr.StatusCode
+		if cloudErr.Code != "" {
+			errorCode = cloudErr.Code
+		}
+		underlyingMessage = cloudErr.Message
+	}
+
+	var opErr *resizeOperationError
+	errors.As(err, &opErr)
+
+	target := resizeErrorTarget(opErr)
+	details := []api.CloudErrorBody{}
+	if report != nil {
+		details = append(details, api.CloudErrorBody{
+			Code:    "ResizeRequest",
+			Target:  report.ResourceID,
+			Message: fmt.Sprintf("Requested VM size %s with deallocateVM=%t. Elapsed time before failure: %s.", report.VMSize, report.DeallocateVM, formatResizeDurationMS(elapsedMS)),
+		})
+	}
+
+	details = append(details, api.CloudErrorBody{
+		Code:    errorCode,
+		Target:  target,
+		Message: underlyingMessage,
+	})
+	details = append(details, resizeResponseAsCloudErrorDetails(report)...)
+	if opErr != nil && opErr.hint != "" {
+		details = append(details, api.CloudErrorBody{
+			Code:    "InvestigationHint",
+			Target:  target,
+			Message: opErr.hint,
+		})
+	}
+
+	return &api.CloudError{
+		StatusCode: statusCode,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code:    errorCode,
+			Target:  target,
+			Message: fmt.Sprintf("Control plane resize failed during %s after %s. %s", resizeFailureDescription(opErr), formatResizeDurationMS(elapsedMS), underlyingMessage),
+			Details: details,
+		},
+	}
+}
+
+func resizeResponseAsCloudErrorDetails(report *adminapi.ResizeControlPlaneResponse) []api.CloudErrorBody {
+	if report == nil {
+		return nil
+	}
+
+	details := make([]api.CloudErrorBody, 0, len(report.Phases)+len(report.Nodes))
+	for _, phase := range report.Phases {
+		phaseDetail := api.CloudErrorBody{
+			Code:    "ResizePhase",
+			Target:  phase.Name,
+			Message: fmt.Sprintf("%s in %s. %s", strings.ToLower(string(phase.Status)), formatResizeDurationMS(phase.DurationMS), phase.Message),
+		}
+		for _, check := range phase.Checks {
+			phaseDetail.Details = append(phaseDetail.Details, api.CloudErrorBody{
+				Code:    "ResizeValidationCheck",
+				Target:  check.Name,
+				Message: fmt.Sprintf("%s in %s. %s", strings.ToLower(string(check.Status)), formatResizeDurationMS(check.DurationMS), check.Message),
+			})
+		}
+		details = append(details, phaseDetail)
+	}
+
+	for _, node := range report.Nodes {
+		nodeDetail := api.CloudErrorBody{
+			Code:   "ResizeNode",
+			Target: node.Name,
+			Message: fmt.Sprintf("%s in %s. %s Source VM size: %s. Target VM size: %s.",
+				strings.ToLower(string(node.Status)),
+				formatResizeDurationMS(node.DurationMS),
+				node.Message,
+				node.SourceVMSize,
+				node.TargetVMSize,
+			),
+		}
+		for _, step := range node.Steps {
+			nodeDetail.Details = append(nodeDetail.Details, api.CloudErrorBody{
+				Code:    "ResizeNodeStep",
+				Target:  fmt.Sprintf("%s/%s", node.Name, step.Name),
+				Message: fmt.Sprintf("%s in %s. %s", strings.ToLower(string(step.Status)), formatResizeDurationMS(step.DurationMS), step.Message),
+			})
+		}
+		details = append(details, nodeDetail)
+	}
+
+	return details
+}
+
+func resizeFailureDescription(opErr *resizeOperationError) string {
+	if opErr == nil {
+		return "the resize operation"
+	}
+
+	if opErr.step != "" && opErr.node != "" {
+		return fmt.Sprintf("step %q for node %q", opErr.step, opErr.node)
+	}
+	if opErr.node != "" {
+		return fmt.Sprintf("node %q", opErr.node)
+	}
+	if opErr.phase != "" {
+		return fmt.Sprintf("phase %q", opErr.phase)
+	}
+
+	return "the resize operation"
+}
+
+func resizeErrorTarget(opErr *resizeOperationError) string {
+	if opErr == nil {
+		return "resizecontrolplane"
+	}
+
+	if opErr.step != "" && opErr.node != "" {
+		return fmt.Sprintf("%s/%s", opErr.node, opErr.step)
+	}
+	if opErr.node != "" {
+		return opErr.node
+	}
+	if opErr.phase != "" {
+		return opErr.phase
+	}
+
+	return "resizecontrolplane"
+}
+
+func resizeDiagnosticMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) && cloudErr.CloudErrorBody != nil && cloudErr.Message != "" {
+		return cloudErr.Message
+	}
+
+	return err.Error()
+}
+
+func formatResizeDuration(duration time.Duration) string {
+	if duration < time.Millisecond {
+		return "<1ms"
+	}
+
+	return duration.Round(time.Millisecond).String()
+}
+
+func formatResizeDurationMS(durationMS int64) string {
+	return formatResizeDuration(time.Duration(durationMS) * time.Millisecond)
 }
