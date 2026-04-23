@@ -1119,9 +1119,24 @@ func getPlatformWIRoleSetsInCosmosDB(ctx context.Context) ([]*api.PlatformWorklo
 	return parsedResponse.Value, err
 }
 
+func shouldInsertDefaultVersionInCosmosdb(versionsInDB []*api.OpenShiftVersion) bool {
+	for _, versionFromDB := range versionsInDB {
+		if versionFromDB == nil {
+			continue
+		}
+
+		if versionFromDB.Properties.Default {
+			return false
+		}
+	}
+
+	return true
+}
+
 // ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
-// cosmos DB IF it doesn't already contain an entry for the default version. It
-// is hardcoded to use the local-RP endpoint
+// cosmos DB when no default version is already present. If the local-dev
+// fallback version document already exists without being marked default, this
+// repairs that document via the local-RP endpoint.
 //
 // It returns without an error when a default version is already present or a
 // default version was successfully put into the db.
@@ -1131,14 +1146,12 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 		return fmt.Errorf("couldn't query versions in cosmosdb: %w", err)
 	}
 
-	for _, versionFromDB := range versionsInDB {
-		if versionFromDB.Properties.Version == version.DefaultInstallStream.Version.String() {
-			c.log.Debugf("Version %s already in DB. Not overwriting existing one.", version.DefaultInstallStream.Version.String())
-			return nil
-		}
+	defaultVersion := version.DefaultInstallStream
+	if !shouldInsertDefaultVersionInCosmosdb(versionsInDB) {
+		c.log.Debug("A default version already exists in DB. Not overwriting existing entry.")
+		return nil
 	}
 
-	defaultVersion := version.DefaultInstallStream
 	b, err := json.Marshal(&api.OpenShiftVersion{
 		Properties: api.OpenShiftVersionProperties{
 			Version:           defaultVersion.Version.String(),
@@ -1147,6 +1160,7 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 			// if it is not overridden with ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC or LiveConfig
 			InstallerPullspec: fmt.Sprintf("arointsvc.azurecr.io/aro-installer:release-%s", version.DefaultInstallStream.Version.MinorVersion()),
 			Enabled:           true,
+			Default:           true,
 		},
 	})
 	if err != nil {

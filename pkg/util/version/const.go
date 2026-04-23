@@ -38,9 +38,9 @@ type Stream struct {
 	PullSpec string  `json:"-"`
 }
 
-// Install stream data for production and INT has moved to RP-Config.
-// This default is left here ONLY for use by local development mode,
-// until we can come up with a better solution.
+// DefaultInstallStream is NOT used for production or INT; install stream data for those
+// environments is configured via RP-Config. This constant is kept only as a fallback for
+// local development mode until we can come up with a better solution.
 var DefaultInstallStream = Stream{
 	Version:  NewVersion(4, 19, 24),
 	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:3ef832b8bb0d56331035ba54af36c36be46d6c6dc1a41e300055692f02bb001d",
