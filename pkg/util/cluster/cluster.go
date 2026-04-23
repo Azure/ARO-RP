@@ -35,6 +35,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
@@ -74,10 +75,10 @@ type ClusterConfig struct {
 	NoInternet            bool   `mapstructure:"NO_INTERNET"`
 	MockMSIObjectID       string `mapstructure:"MOCK_MSI_OBJECT_ID"`
 
-	MasterVMSize  string   `mapstructure:"MASTER_VM_SIZE"`
-	WorkerVMSize  string   `mapstructure:"WORKER_VM_SIZE"`
-	MasterVMSizes []string `mapstructure:"MASTER_VM_SIZES"`
-	WorkerVMSizes []string `mapstructure:"WORKER_VM_SIZES"`
+	MasterVMSize           vms.VMSize   `mapstructure:"MASTER_VM_SIZE"`
+	WorkerVMSize           vms.VMSize   `mapstructure:"WORKER_VM_SIZE"`
+	CandidateMasterVMSizes []vms.VMSize `mapstructure:"MASTER_VM_SIZES"`
+	CandidateWorkerVMSizes []vms.VMSize `mapstructure:"WORKER_VM_SIZES"`
 }
 
 func (cc *ClusterConfig) IsLocalDevelopmentMode() bool {
@@ -111,22 +112,6 @@ const (
 	localDefaultURL        string = "https://localhost:8443"
 )
 
-func DefaultMasterVmSizes() []string {
-	return []string{
-		api.VMSizeStandardD8sV5.String(),
-		api.VMSizeStandardD8sV4.String(),
-		api.VMSizeStandardD8sV3.String(),
-	}
-}
-
-func DefaultWorkerVmSizes() []string {
-	return []string{
-		api.VMSizeStandardD4sV5.String(),
-		api.VMSizeStandardD4sV4.String(),
-		api.VMSizeStandardD4sV3.String(),
-	}
-}
-
 func insecureLocalClient() *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
@@ -137,6 +122,8 @@ func insecureLocalClient() *http.Client {
 	}
 }
 
+// NewClusterConfigFromEnv should only be used in the context of CI or local
+// development.
 func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	var conf ClusterConfig
 	viper.AutomaticEnv()
@@ -181,28 +168,18 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	}
 
 	// Set VM size defaults only if user hasn't provided any values
-	if len(conf.MasterVMSizes) == 0 {
+	if len(conf.CandidateMasterVMSizes) == 0 {
 		if conf.MasterVMSize == "" {
-			conf.MasterVMSizes = DefaultMasterVmSizes()
+			conf.CandidateMasterVMSizes = vms.GetCICandidateMasterVMSizes()
 		} else {
-			conf.MasterVMSizes = []string{conf.MasterVMSize}
+			conf.CandidateMasterVMSizes = []vms.VMSize{conf.MasterVMSize}
 		}
 	}
-	if len(conf.WorkerVMSizes) == 0 {
+	if len(conf.CandidateWorkerVMSizes) == 0 {
 		if conf.WorkerVMSize == "" {
-			// No explicit worker VM size set - use defaults.
-			// In local dev mode, use D2s sizes only (RequireD2sWorkers feature flag).
-			if conf.IsLocalDevelopmentMode() {
-				conf.WorkerVMSizes = []string{
-					api.VMSizeStandardD2sV5.String(),
-					api.VMSizeStandardD2sV4.String(),
-					api.VMSizeStandardD2sV3.String(),
-				}
-			} else {
-				conf.WorkerVMSizes = DefaultWorkerVmSizes()
-			}
+			conf.CandidateWorkerVMSizes = vms.GetCICandidateWorkerVMSizes()
 		} else {
-			conf.WorkerVMSizes = []string{conf.WorkerVMSize}
+			conf.CandidateWorkerVMSizes = []vms.VMSize{conf.WorkerVMSize}
 		}
 	}
 
@@ -792,7 +769,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
 		}
@@ -829,7 +806,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
+		if err := c.deleteWimiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
 		}
@@ -989,8 +966,8 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			}
 		}
 
-		oc.Properties.MasterProfile.VMSize = api.VMSize(c.Config.MasterVMSizes[masterIdx])
-		oc.Properties.WorkerProfiles[0].VMSize = api.VMSize(c.Config.WorkerVMSizes[workerIdx])
+		oc.Properties.MasterProfile.VMSize = c.Config.CandidateMasterVMSizes[masterIdx]
+		oc.Properties.WorkerProfiles[0].VMSize = c.Config.CandidateWorkerVMSizes[workerIdx]
 		c.log.Infof("Creating cluster %s with master VM size %s and worker VM size %s",
 			clusterName, oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
 		err = c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, &oc)
@@ -1008,13 +985,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		case azureerrors.VMProfileWorker:
 			c.log.WithError(err).Errorf("error creating cluster with worker VM size %s, trying next size", oc.Properties.WorkerProfiles[0].VMSize)
 			workerIdx++
-			if workerIdx >= len(c.Config.WorkerVMSizes) {
+			if workerIdx >= len(c.Config.CandidateWorkerVMSizes) {
 				return fmt.Errorf("exhausted all worker VM sizes: %w", err)
 			}
 		case azureerrors.VMProfileMaster:
 			c.log.WithError(err).Errorf("error creating cluster with master VM size %s, trying next size", oc.Properties.MasterProfile.VMSize)
 			masterIdx++
-			if masterIdx >= len(c.Config.MasterVMSizes) {
+			if masterIdx >= len(c.Config.CandidateMasterVMSizes) {
 				return fmt.Errorf("exhausted all master VM sizes: %w", err)
 			}
 		default:
@@ -1023,10 +1000,10 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			c.log.WithError(err).Errorf("error creating cluster with VM sizes (master: %s, worker: %s), cannot determine failing profile",
 				oc.Properties.MasterProfile.VMSize, oc.Properties.WorkerProfiles[0].VMSize)
 			workerIdx++
-			if workerIdx >= len(c.Config.WorkerVMSizes) {
+			if workerIdx >= len(c.Config.CandidateWorkerVMSizes) {
 				workerIdx = 0
 				masterIdx++
-				if masterIdx >= len(c.Config.MasterVMSizes) {
+				if masterIdx >= len(c.Config.CandidateMasterVMSizes) {
 					return fmt.Errorf("exhausted all VM size combinations: %w", err)
 				}
 			}
@@ -1311,12 +1288,12 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	return nil
 }
 
-func (c *Cluster) deleteMiwiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
+func (c *Cluster) deleteWimiRoleAssignments(ctx context.Context, vnetResourceGroup string) error {
 	if !c.Config.UseWorkloadIdentity {
-		c.log.Print("Skipping deletion of miwi role assignments")
+		c.log.Print("Skipping deletion of wimi role assignments")
 		return nil
 	}
-	c.log.Print("deleting miwi role assignments")
+	c.log.Print("deleting wimi role assignments")
 
 	var wiRoleSets []api.PlatformWorkloadIdentityRoleSetProperties
 	if err := json.Unmarshal([]byte(c.Config.WorkloadIdentityRoles), &wiRoleSets); err != nil {

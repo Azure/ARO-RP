@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
 )
@@ -217,15 +217,23 @@ func validateNetworkInterfaceName(nicName string) error {
 	return nil
 }
 
-func validateAdminMasterVMSize(vmSize string) error {
+func validateAdminMasterVMSize(vmSize string, isCI bool) error {
 	// check to ensure that the target size is supported as a master size
-	for k := range validate.SupportedVMSizesByRole(validate.VMRoleMaster) {
+	for k := range adminSupportedVMSizesByRole(isCI)[vms.VMRoleMaster] {
 		if strings.EqualFold(string(k), vmSize) {
 			return nil
 		}
 	}
 
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmSize '%s' is unsupported for master.", vmSize))
+}
+
+func adminSupportedVMSizesByRole(isCI bool) map[vms.VMRole]map[vms.VMSize]vms.VMSizeStruct {
+	if isCI {
+		return vms.SupportedVMSizesByRoleForTesting
+	}
+
+	return vms.SupportedVMSizesByRole
 }
 
 // validateInstallVersion validates the install version set in the clusterprofile.version

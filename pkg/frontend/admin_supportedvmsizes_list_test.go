@@ -8,45 +8,46 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestSupportedvmsizes(t *testing.T) {
-	mastervmsizes := validate.SupportedVMSizesByRole(validate.VMRoleMaster)
-	workervmsizes := validate.SupportedVMSizesByRole(validate.VMRoleWorker)
+	mastervmsizes := vms.SupportedVMSizesByRole[vms.VMRoleMaster]
+	workervmsizes := vms.SupportedVMSizesByRole[vms.VMRoleWorker]
 
 	type test struct {
 		name         string
-		vmRole       string
-		wantResponse map[api.VMSize]api.VMSizeStruct
+		vmRole       vms.VMRole
+		wantResponse map[vms.VMSize]vms.VMSizeStruct
 		wantError    string
 	}
 
 	for _, tt := range []*test{
 		{
 			name:         "vmRole is invalid",
-			vmRole:       "invalidVMRole",
+			vmRole:       vms.VMRole("invalidVMRole"),
 			wantError:    `400: InvalidParameter: : The provided vmRole 'invalidVMRole' is invalid. vmRole can only be master or worker`,
 			wantResponse: nil,
 		},
 		{
 			name:         "vmRole is empty",
-			vmRole:       "",
+			vmRole:       vms.VMRole(""),
 			wantError:    `400: InvalidParameter: : The provided vmRole '' is invalid. vmRole can only be master or worker`,
 			wantResponse: nil,
 		},
 		{
 			name:         "master as vmRole",
-			vmRole:       "master",
+			vmRole:       vms.VMRoleMaster,
 			wantError:    "",
 			wantResponse: mastervmsizes,
 		},
 		{
 			name:         "worker as vmRole",
-			vmRole:       "worker",
+			vmRole:       vms.VMRoleWorker,
 			wantError:    "",
 			wantResponse: workervmsizes,
 		},
@@ -56,7 +57,7 @@ func TestSupportedvmsizes(t *testing.T) {
 			gotResponse, err := f.supportedVMSizesForRole(tt.vmRole)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 			if gotResponse != nil || tt.wantResponse != nil {
-				v := map[api.VMSize]api.VMSizeStruct{}
+				v := map[vms.VMSize]vms.VMSizeStruct{}
 				err = json.Unmarshal(gotResponse, &v)
 				if err != nil {
 					t.Error(err)
@@ -66,5 +67,24 @@ func TestSupportedvmsizes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSupportedvmsizesIncludesTestingSizesInCI(t *testing.T) {
+	controller := gomock.NewController(t)
+	mockEnv := mock_env.NewMockInterface(controller)
+	mockEnv.EXPECT().IsCI().Return(true)
+
+	f := &frontend{env: mockEnv}
+	gotResponse, err := f.supportedVMSizesForRole(vms.VMRoleMaster)
+	utilerror.AssertErrorMessage(t, err, "")
+
+	got := map[vms.VMSize]vms.VMSizeStruct{}
+	if err := json.Unmarshal(gotResponse, &got); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := got[vms.VMSizeStandardD4sV3]; !ok {
+		t.Fatalf("expected CI master list to include %q, got %v", vms.VMSizeStandardD4sV3, got)
 	}
 }
