@@ -127,7 +127,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		s.Properties.NetworkSecurityGroup = nil
 
 		m.log.Printf("disconnecting network security group from subnet %s", *s.ID)
-		err = retry.OnError(deleteRetryBackoff, m.isRetryable("disconnecting NSG from subnet "+*s.ID), func() error {
+		err = retry.OnError(transientRetryBackoff, m.isRetryable("disconnecting NSG from subnet "+*s.ID), func() error {
 			return m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 		})
 		if err != nil {
@@ -149,30 +149,6 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 	}
 
 	return nil
-}
-
-// deleteRetryBackoff is the backoff for transient ARM errors during delete and disconnect operations.
-// Note: retry.OnError inter-retry sleeps are not context-interruptible (uses time.Sleep, not ctx-aware);
-// Steps=4 means up to 4 attempts (3 inter-attempt sleeps); worst-case uninterruptible sleep is 15s+30s+60s=105s.
-// The wrapped function receives ctx and fails fast on cancellation between retries.
-// mutated in tests; tests using this must not run in parallel.
-var deleteRetryBackoff = wait.Backoff{
-	Steps:    4,
-	Duration: 15 * time.Second,
-	Factor:   2.0,
-	Jitter:   0.1,
-	Cap:      60 * time.Second,
-}
-
-// isRetryable returns a retry predicate that logs a warning and returns true for transient ARM errors.
-func (m *manager) isRetryable(desc string) func(error) bool {
-	return func(err error) bool {
-		if azureerrors.IsRetryableError(err) {
-			m.log.Warnf("transient error on %s, retrying: %v", desc, err)
-			return true
-		}
-		return false
-	}
 }
 
 // deleteOrder maps resource types to the deletion level.  We walk the levels
@@ -261,7 +237,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 			}
 
 			var future mgmtfeatures.ResourcesDeleteByIDFuture
-			err = retry.OnError(deleteRetryBackoff, m.isRetryable("deleting "+*resource.ID), func() error {
+			err = retry.OnError(transientRetryBackoff, m.isRetryable("deleting "+*resource.ID), func() error {
 				var deleteErr error
 				future, deleteErr = m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
 				return deleteErr

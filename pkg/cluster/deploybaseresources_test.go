@@ -16,9 +16,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -572,21 +574,99 @@ func TestAttachNSGs(t *testing.T) {
 				}).Times(1)
 			},
 		},
+		{
+			// Same as above but for autorest 409 "Please retry later" errors. Returns (false, nil) into the poll loop.
+			name: "Transient retryable error (autorest 409 Please retry later) is treated as continue-poll signal",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(autorest.DetailedError{
+					StatusCode: http.StatusConflict,
+					Original:   errors.New("ConflictingConcurrentWriteNotAllowed: Please retry later."),
+				}).Times(1)
+			},
+		},
+		{
+			// Same as above but for autorest 409+Retry-After errors. Returns (false, nil) into the poll loop.
+			name: "Transient retryable error (autorest 409 Retry-After) is treated as continue-poll signal",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(autorest.DetailedError{
+					StatusCode: http.StatusConflict,
+					Response:   &http.Response{Header: http.Header{"Retry-After": []string{"5"}}},
+				}).Times(1)
+			},
+		},
 	} {
-		controller := gomock.NewController(t)
-		defer controller.Finish()
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
 
-		armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
-		tt.mocks(armSubnets)
+			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+			tt.mocks(armSubnets)
 
-		m := &manager{
-			log:        logrus.NewEntry(logrus.StandardLogger()),
-			doc:        tt.oc,
-			armSubnets: armSubnets,
-		}
+			m := &manager{
+				log:        logrus.NewEntry(logrus.StandardLogger()),
+				doc:        tt.oc,
+				armSubnets: armSubnets,
+			}
 
-		err := m._attachNSGs(ctx, 1*time.Millisecond, 30*time.Second)
-		utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			err := m._attachNSGs(ctx, 1*time.Millisecond, 30*time.Second)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
 	}
 }
 
@@ -736,6 +816,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 			tt.mocks(armSubnets)
 
 			m := &manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -755,6 +836,119 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
+}
+
+func TestSetMasterSubnetPoliciesRetry(t *testing.T) {
+	subnetID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet"
+	wantSubnet := sdknetwork.Subnet{
+		Properties: &sdknetwork.SubnetPropertiesFormat{
+			PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+		},
+	}
+
+	for _, tt := range []struct {
+		name     string
+		firstErr error
+	}{
+		{
+			name:     "retry on 429 (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name:     "retry on 409 Please retry later (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusConflict, Original: errors.New("ConflictingConcurrentWriteNotAllowed: Please retry later.")},
+		},
+		{
+			name:     "retry on 429 (azcore): succeeds on second attempt",
+			firstErr: &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name: "retry on azcore 409+Retry-After: succeeds on second attempt",
+			firstErr: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
+		{
+			name: "retry on 409 Retry-After (autorest): succeeds on second attempt",
+			firstErr: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Response:   &http.Response{Header: http.Header{"Retry-After": []string{"1"}}},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			origBackoff := transientRetryBackoff
+			transientRetryBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { transientRetryBackoff = origBackoff }()
+
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+			armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
+			first := armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(tt.firstErr)
+			armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(nil).After(first)
+
+			m := &manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{SubnetID: subnetID},
+						},
+					},
+				},
+				armSubnets: armSubnets,
+			}
+
+			assert.NoError(t, m.setMasterSubnetPolicies(context.Background()))
+		})
+	}
+}
+
+// TestSetMasterSubnetPoliciesRetryExhausted verifies that retry exhaustion propagates the error.
+// Uses a single representative error (autorest 429); the exhaustion path is the same for all retryable errors.
+func TestSetMasterSubnetPoliciesRetryExhausted(t *testing.T) {
+	origBackoff := transientRetryBackoff
+	transientRetryBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0}
+	defer func() { transientRetryBackoff = origBackoff }()
+
+	subnetID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet"
+	wantSubnet := sdknetwork.Subnet{
+		Properties: &sdknetwork.SubnetPropertiesFormat{
+			PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+		},
+	}
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+	armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
+	armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(
+		autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+	)
+
+	m := &manager{
+		log: logrus.NewEntry(logrus.StandardLogger()),
+		doc: &api.OpenShiftClusterDocument{
+			OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: subnetID},
+				},
+			},
+		},
+		armSubnets: armSubnets,
+	}
+
+	err := m.setMasterSubnetPolicies(context.Background())
+	require.Error(t, err)
+	var cloudErr *api.CloudError
+	assert.NotErrorAs(t, err, &cloudErr, "exhausted 429 passes through as-is: setMasterSubnetPolicies returns raw error when retry exhausted")
 }
 
 func TestEnsureInfraID(t *testing.T) {
