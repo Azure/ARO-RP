@@ -26,9 +26,14 @@ if [[ -z "$sp" ]]; then
     exit 1
 fi
 mockClientID=$(get_mock_msi_clientID "$sp")
+require_non_empty_value "$mockClientID" "mock MSI client ID" || exit 1
 mockTenantID=$(get_mock_msi_tenantID "$sp")
+require_non_empty_value "$mockTenantID" "mock MSI tenant ID" || exit 1
 base64EncodedCert=$(get_mock_msi_cert "$sp")
-mockObjectID=$(get_mock_msi_objectID "$mockClientID")
+require_non_empty_value "$base64EncodedCert" "mock MSI certificate" || exit 1
+if ! mockObjectID=$(get_mock_msi_objectID "$mockClientID"); then
+    exit 1
+fi
 
 setup_platform_identity
 cluster_msi_role_assignment "${mockClientID}"

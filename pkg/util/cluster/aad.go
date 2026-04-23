@@ -82,15 +82,36 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 	defer cancel()
 
 	// NOTE: Do not override err with the error returned by
-	// wait.PollImmediateUntil. Doing this will not propagate the latest error
-	// to the user in case when wait exceeds the timeout
-	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	// wait.PollImmediateUntilWithContext. Doing this will not propagate the latest error
+	// to the user in case when wait exceeds the timeout.
+	_ = wait.PollImmediateUntilWithContext(timeoutCtx, 10*time.Second, func(ctx context.Context) (bool, error) {
 		requestBody := msgraph_models.NewServicePrincipal()
 		requestBody.SetAppId(&appID)
 		result, err = c.spGraphClient.ServicePrincipals().Post(ctx, requestBody, nil)
 
-		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok &&
-			*oDataError.GetErrorEscaped().GetCode() == "accessDenied" {
+		if err == nil {
+			return true, nil
+		}
+
+		var oDataError *msgraph_errors.ODataError
+		if errors.As(err, &oDataError) {
+			mainErr := oDataError.GetErrorEscaped()
+			if mainErr != nil {
+				code := ""
+				message := ""
+				requestID := ""
+
+				if v := mainErr.GetCode(); v != nil {
+					code = *v
+				}
+				if v := mainErr.GetMessage(); v != nil {
+					message = *v
+				}
+				if innerErr := mainErr.GetInnerError(); innerErr != nil && innerErr.GetRequestId() != nil {
+					requestID = *innerErr.GetRequestId()
+				}
+
+				if code == "accessDenied" || code == "Authorization_RequestDenied" {
 			// goal is to retry the following error:
 			// graphrbac.ServicePrincipalsClient#Create: Failure responding to
 			// request: StatusCode=403 -- Original Error: autorest/azure:
@@ -100,9 +121,16 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 			// using this permission, the backing application of the service
 			// principal being created must in the local
 			// tenant"},"requestId":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}}]
-
-			return false, nil
+					log := c.log.WithField("appID", appID).WithField("graphErrorCode", code)
+					if requestID != "" {
+						log = log.WithField("graphRequestID", requestID)
+					}
+					log.Warnf("retrying service principal creation after Graph error: %s", message)
+					return false, nil
+				}
+			}
 		}
+
 		return err == nil, err
 	}, timeoutCtx.Done())
 	if err != nil {
