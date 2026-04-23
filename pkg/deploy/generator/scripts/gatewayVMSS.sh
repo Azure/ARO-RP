@@ -94,8 +94,11 @@ main() {
 [FILTER]
 	Name modify
 	Match journald
-	Remove_wildcard _
-	Remove TIMESTAMP
+	Remove_wildcard _*
+	Remove_wildcard JOB_*
+	Remove_wildcard CODE_*
+	Remove_wildcard COREDUMP_*
+	Remove_wildcard TIMESTAMP
 
 [OUTPUT]
 	Name forward
