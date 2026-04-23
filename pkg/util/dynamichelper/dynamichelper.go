@@ -177,9 +177,8 @@ func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntim
 	return clienthelper.Merge(old.(client.Object), new.(client.Object))
 }
 
-// isAdmissionRegistrationResource returns true for ValidatingAdmissionPolicy
-// and ValidatingAdmissionPolicyBinding resources that should be managed via
-// server-side apply rather than the Gatekeeper-specific path.
+// isAdmissionRegistrationResource returns true for admissionregistration resources
+// that should be managed via server-side apply rather than the Gatekeeper-specific path.
 func isAdmissionRegistrationResource(uns *unstructured.Unstructured) bool {
 	return uns.GroupVersionKind().Group == "admissionregistration.k8s.io"
 }
