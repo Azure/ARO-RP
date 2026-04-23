@@ -74,12 +74,25 @@ Plus parallel files for: `openshiftclustercredentials`, `openshiftclusteradminku
 
 ## Swagger Generation
 
+## For v20250725 and later API versions
+
+The source of truth is now the Typespec contained in `api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShiftClusters/OpenShiftClusters/*.tsp` rather than the Go types defined in `pkg/api/$VERSION`. Currently the Go types for v20250725 are maintained separately from the TypeSpec, but we aim to generate the Go types from the TypeSpec soon.
+
 ```
-pkg/api/v*/openshiftcluster.go  →  hack/swagger/swagger.go  →  swagger/{stable|preview}/{version}/redhatopenshift.json
+api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShiftClusters/OpenShiftClusters/*.tsp -> hack/api/swagger-from-typespec.sh
 ```
 
-- Generator: `hack/swagger/swagger.go` wraps `pkg/swagger/swagger.go`
-- Target: `make generate-swagger`
+- Generator: `hack/api/swagger-from-typespec.sh` wraps invocations of the `npm` scripts from `api/package.json`, which take place inside a container built using `Dockerfile.typespec`
+- Target: `make generate-swagger-typespec`
+
+### For v20240812preview and preceding API versions
+
+```
+pkg/api/v*/openshiftcluster.go  →  hack/swagger-legacy/swagger.go  →  swagger/{stable|preview}/{version}/redhatopenshift.json
+```
+
+- Generator: `hack/swagger-legacy/swagger.go` wraps `pkg/swagger/swagger.go`
+- Target: `make generate-swagger-legacy`
 - Triggered by `//go:generate` in each version's `generate.go`
 
 ## Client Generation (destructive)
