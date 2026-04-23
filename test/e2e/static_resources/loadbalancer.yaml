@@ -17,11 +17,9 @@ spec:
         - name: nginx
           image: mcr.microsoft.com/azurelinux/base/nginx:1
           command:
-            [
-              "/bin/sh",
-              "-c",
-              "mkdir -p /usr/share/nginx/html && echo 'hello world' > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'",
-            ]
+            - "/bin/sh"
+            - "-c"
+            - "mkdir -p /usr/share/nginx/html && echo 'hello world' > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"
           ports:
             - containerPort: 80
               name: http-web-svc

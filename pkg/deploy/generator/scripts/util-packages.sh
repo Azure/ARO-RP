@@ -28,7 +28,9 @@ configure_rpm_repos() {
     configure_repo_azurelinux_extended "$1" "${2:-1}"
 }
 
-# dnf_install_pkgs
+# tdnf_install_pkgs
+#
+# Azure Linux 3: use tdnf (same family as the extended-repo setup in configure_repo_azurelinux_extended).
 #
 # args:
 #   1) pkgs - nameref, string array
@@ -37,12 +39,12 @@ configure_rpm_repos() {
 #       * Time to wait before retrying command
 #   3) retries - integer, optional
 #       * Amount of times to retry command, defaults to 5
-dnf_install_pkgs() {
+tdnf_install_pkgs() {
     local -n pkgs="$1"
     log "starting"
 
     local -a cmd=(
-        dnf
+        tdnf
         -y
         install
     )
@@ -57,7 +59,7 @@ dnf_install_pkgs() {
 }
 
 
-# dnf_update_pkgs
+# tdnf_update_pkgs
 #
 # args:
 #   1) excludes - nameref, string array, optional
@@ -67,12 +69,12 @@ dnf_install_pkgs() {
 #       * Time to wait before retrying command
 #   3) retries - integer, optional
 #       * Amount of times to retry command, defaults to 5
-dnf_update_pkgs() {
+tdnf_update_pkgs() {
     local -n excludes="${1:-empty_str}"
     log "starting"
 
     local -a cmd=(
-        dnf
+        tdnf
         -y
         # Replaced with excludes
         ""
