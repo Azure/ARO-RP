@@ -26,7 +26,7 @@ main() {
         "-x WALinuxAgent-udev"
     )
 
-    dnf_update_pkgs exclude_pkgs \
+    tdnf_update_pkgs exclude_pkgs \
                     retry_wait_time \
                     "$pkg_retry_count"
 
@@ -45,7 +45,7 @@ main() {
         firewalld
     )
 
-    dnf_install_pkgs install_pkgs \
+    tdnf_install_pkgs install_pkgs \
                       retry_wait_time \
                       "$pkg_retry_count"
 
