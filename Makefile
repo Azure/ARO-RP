@@ -159,7 +159,7 @@ generate-swagger-legacy:
 	$(MAKE) swagger-checksums
 
 .PHONY: generate-swagger-typespec
-generate-swagger-typespec:
+generate-swagger-typespec: api-npm-install
 	hack/api/swagger-from-typespec.sh "${TYPESPEC_IMAGE}"
 	$(MAKE) swagger-checksums
 
@@ -212,6 +212,20 @@ image-autorest:
 .PHONY: image-typespec
 image-typespec:
 	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.typespec -t ${TYPESPEC_IMAGE} .
+
+.PHONY: api-npm-install
+api-npm-install:
+# Hack: Run `npm install` in `api` from inside the container such that `node_modules` gets initialized using packages for $PLATFORM rather
+# than for the host's architecture. This is needed because hack/api/swagger-from-typespec.sh mounts `api` so that it can conveniently
+# write the generated files to its directory structure.
+	rm -rf api/node_modules
+	docker run \
+		--platform=$(PLATFORM) \
+		--rm \
+		-v $(shell pwd)/api:/api:z \
+		-w /api \
+		--entrypoint npm \
+		"${TYPESPEC_IMAGE}" install
 
 .PHONY: image-fluentbit
 image-fluentbit:
