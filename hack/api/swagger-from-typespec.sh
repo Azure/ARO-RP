@@ -42,9 +42,9 @@ find "$SPEC_BASE_DIR" -mindepth 2 -maxdepth 2 -type d ! -name examples | sort | 
             --platform=${PLATFORM:-linux/$(go env GOARCH)} \
             --rm \
             -v $PWD/api:/api:z \
-            -w "/$api_version_dir" \
-            --entrypoint oav \
-            "${TYPESPEC_IMAGE}" generate-examples redhatopenshift.json
+            -w /api \
+            --entrypoint npm \
+            "${TYPESPEC_IMAGE}" run examples -- ${api_version_dir#*/}/redhatopenshift.json
         mv $api_version_dir/examples/* $api_version_example_dir/
         rm -rf $api_version_dir/examples
     )

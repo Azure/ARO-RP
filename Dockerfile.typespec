@@ -9,4 +9,4 @@ COPY api/package*.json ./
 
 RUN npm install
 
-ENTRYPOINT ["tps"]
+ENTRYPOINT ["tsp"]

@@ -18,7 +18,8 @@
   "scripts": {
     "format": "tsp format \"**/*.tsp\"",
     "format-check": "tsp format --check \"**/*.tsp\"",
-    "compile": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error"
+    "compile": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error",
+    "examples": "oav generate-examples"
   },
   "devDependencies": {
     "@typespec/compiler": "~1.9.0",
