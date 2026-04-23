@@ -212,6 +212,7 @@ stages:
 
   - stage: E2E # E2E Stage using Docker Compose
     dependsOn: [Set_Tag_Stage, Containerized_CI]
+    condition: and(succeeded(), ne(variables['System.PullRequest.IsDraft'], 'True'))
     variables:
       TAG: $[ stageDependencies.Set_Tag_Stage.Set_Tag_Variable.outputs['SetTag.TAG'] ]
     jobs:
