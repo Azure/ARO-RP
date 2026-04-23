@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -33,6 +32,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
+var (
+	defaultWorkerMaxStartupDelay          = time.Minute
+	defaultBucketRefreshInterval          = 10 * time.Second
+	defaultBucketRefreshTTL               = 60 * time.Second
+	defaultBucketRefreshReadinessInterval = defaultBucketRefreshTTL
+)
+
 type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{}) error
 }
@@ -44,29 +50,32 @@ type service struct {
 
 	dbGroup actuatorDBs
 
-	m              metrics.Emitter
-	mu             sync.RWMutex
-	cond           *sync.Cond
-	stopping       *atomic.Bool
-	workers        *atomic.Int32
-	workerRoutines sync.WaitGroup
+	m           metrics.Emitter
+	stopping    *atomic.Bool
+	workerCount *atomic.Int32
 
-	b buckets.BucketWorker[*api.OpenShiftClusterDocument]
+	b           buckets.BucketWorkerPool[*api.OpenShiftClusterDocument]
+	bucketCount int
 
-	changefeedBatchSize         int
-	changefeedInterval          time.Duration
-	changefeedReadinessInterval time.Duration
-	taskPollTime                time.Duration
+	changefeedBatchSize            int
+	changefeedInterval             time.Duration
+	changefeedReadinessInterval    time.Duration
+	taskPollTime                   time.Duration
+	bucketRefreshInterval          time.Duration
+	bucketRefreshTTL               time.Duration
+	bucketRefreshReadinessInterval time.Duration
+	workerMaxStartupDelay          time.Duration
+	readinessDelay                 time.Duration
 
-	lastChangefeed atomic.Value // time.Time
-	startTime      time.Time
+	lastChangefeed   atomic.Value // time.Time
+	lastBucketUpdate atomic.Value // time.Time
+	startTime        time.Time
 
-	now         func() time.Time
-	workerDelay func() time.Duration
+	newActuatorInstance newActuatorInstance
+	tasks               map[api.MIMOTaskID]tasks.MaintenanceTask
 
-	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
-
-	serveHealthz bool
+	serveHealthz  bool
+	emitHeartbeat bool
 }
 
 var _ Runnable = (*service)(nil)
@@ -75,9 +84,10 @@ type actuatorDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithPoolWorkers
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter, ownedBuckets []int) *service {
+func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
@@ -85,13 +95,14 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 
 		dbGroup: dbg,
 
-		m:        m,
-		stopping: &atomic.Bool{},
-		workers:  &atomic.Int32{},
+		m:           m,
+		stopping:    &atomic.Bool{},
+		workerCount: &atomic.Int32{},
+		bucketCount: bucket.Buckets,
 
-		startTime:   time.Now(),
-		workerDelay: func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
-		now:         time.Now,
+		newActuatorInstance: NewActuator,
+
+		startTime: env.Now(),
 
 		// For the OpenShiftClusterDocument polling we temporarily use a query
 		// which retrieves ID and bucket rather than polling an incremental
@@ -107,13 +118,18 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		// prioritise responsiveness
 		taskPollTime: 90 * time.Second,
 
-		serveHealthz: true,
+		// Bucket timing is set lower to prioritise responsiveness to VM changes
+		bucketRefreshInterval:          defaultBucketRefreshInterval,
+		bucketRefreshTTL:               defaultBucketRefreshTTL,
+		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
+
+		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
+		readinessDelay:        time.Minute * 2,
+		serveHealthz:          true,
+		emitHeartbeat:         false,
 	}
 
-	s.cond = sync.NewCond(&s.mu)
-	s.b = buckets.NewBucketWorker[*api.OpenShiftClusterDocument](log, s.spawnWorker, &s.mu)
-	s.b.SetBuckets(ownedBuckets)
-
+	s.b = buckets.NewBucketWorkerPool[*api.OpenShiftClusterDocument](log, s.worker)
 	return s
 }
 
@@ -121,8 +137,18 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 	s.tasks = tasks
 }
 
-func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
+func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+
+	// Set up a cancel context for signalling exits (e.g. the stop channel
+	// closing, bucket fetching erroring)
+	ctx, cancel := context.WithCancelCause(_ctx)
+	defer cancel(nil)
+
+	dbPoolWorkers, err := s.dbGroup.PoolWorkers()
+	if err != nil {
+		return err
+	}
 
 	// Only enable the healthz endpoint if configured (disabled in unit tests)
 	if s.serveHealthz {
@@ -161,9 +187,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	t := time.NewTicker(s.changefeedInterval)
-	defer t.Stop()
-
 	if stop != nil {
 		go func() {
 			defer recover.Panic(s.baseLog)
@@ -171,10 +194,36 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			<-stop
 			s.baseLog.Print("stopping")
 			s.stopping.Store(true)
-			s.cond.Signal()
+			cancel(nil)
 		}()
 	}
-	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+
+	if s.emitHeartbeat {
+		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+	}
+
+	waitForFirstBucketUpdate := &sync.WaitGroup{}
+	waitForFirstBucketUpdate.Add(1)
+
+	// Start the bucket worker update loop which will coordinate buckets between
+	// the MIMO instances
+	go buckets.StartBucketRefreshLoop(
+		_ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
+		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
+			s.b.SetBuckets(i)
+			s.lastBucketUpdate.Store(s.env.Now())
+		}, stop, cancel, waitForFirstBucketUpdate,
+	)
+
+	// Wait until we have collected our buckets before starting the poll loop
+	waitForFirstBucketUpdate.Wait()
+	if ctx.Err() != nil {
+		s.baseLog.Errorf("bucket worker startup failed, exiting: %s", context.Cause(ctx))
+		close(done)
+		return context.Cause(ctx)
+	}
+
+	t := time.NewTicker(s.changefeedInterval)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
 	for !s.stopping.Load() {
@@ -185,19 +234,23 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			lastGotDocs = old
 		}
 
-		<-t.C
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+			s.baseLog.Warnf("context closed, stopping poll loop: %s", context.Cause(ctx))
+			s.stopping.Store(true)
+		}
 	}
 
-	if !s.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
-		s.waitForWorkerCompletion()
-	}
-	s.baseLog.Print("exiting")
+	s.baseLog.Print("exiting, waiting for all workers to finish")
+	s.b.StopAndWait()
 	close(done)
 	return nil
 }
 
-// Temporary method of updating without the changefeed -- the reason why is
-// complicated
+// Poll the OpenShiftClusterDocuments as we only care about their resource ID
+// and bucket ID, and changefeeds don't allow us to filter down to specific
+// fields.
 func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClusterDocument) (map[string]*api.OpenShiftClusterDocument, error) {
 	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
 	if err != nil {
@@ -231,10 +284,6 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 		docMap[strings.ToLower(d.Key)] = d
 	}
 
-	// Acquire lock for when we're mutating the changefeed cache
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// remove docs that don't exist in the new set (removed clusters)
 	for oldCluster := range oldDocs {
 		_, ok := docMap[strings.ToLower(oldCluster)]
@@ -251,48 +300,35 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	}
 
 	// Store when we last fetched the clusters
-	s.lastChangefeed.Store(s.now())
+	s.lastChangefeed.Store(s.env.Now())
 
 	// Emit a metric containing the size of our cache
-	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
+	s.m.EmitGauge("changefeed.caches.size", int64(s.b.CacheSize()), map[string]string{
 		"name": "OpenShiftClusterDocument",
 	})
 
 	return docMap, nil
 }
 
-func (s *service) waitForWorkerCompletion() {
-	s.mu.Lock()
-	for s.workers.Load() > 0 {
-		s.cond.Wait()
-	}
-	s.mu.Unlock()
-}
-
 func (s *service) checkReady() bool {
+	lastBucketUpdate, ok := s.lastBucketUpdate.Load().(time.Time)
+	if !ok {
+		return false
+	}
 	lastChangefeedTime, ok := s.lastChangefeed.Load().(time.Time)
 	if !ok {
 		return false
 	}
 
-	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) // did we update our list of clusters recently?
-	} else {
-		return (time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
-			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
-	}
-}
-
-func (s *service) spawnWorker(stop <-chan struct{}, id string) {
-	s.workerRoutines.Add(1)
-	go s.worker(stop, id)
+	return (time.Since(lastBucketUpdate) < s.bucketRefreshReadinessInterval) && // did we list buckets successfully recently?
+		(time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
+		(time.Since(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
 }
 
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
-	defer s.workerRoutines.Done()
 
-	delay := s.workerDelay()
+	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*rand.Float64())
 	log := utillog.EnrichWithResourceID(s.baseLog, id)
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
@@ -317,7 +353,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 		return
 	}
 
-	a, err := NewActuator(context.Background(), s.env, log, id, dbSubscriptions, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
+	a, err := s.newActuatorInstance(context.Background(), s.env, log, id, dbSubscriptions, dbOpenShiftClusters, dbMaintenanceManifests)
 	if err != nil {
 		log.Error(err)
 		return
@@ -327,22 +363,17 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	a.AddMaintenanceTasks(s.tasks)
 
 	t := time.NewTicker(s.taskPollTime)
-	defer func() {
-		log.Debugf("stopping worker for %s...", id)
-		t.Stop()
-	}()
 
 out:
 	for !s.stopping.Load() {
 		func() {
-			s.workers.Add(1)
-			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
+			s.workerCount.Add(1)
+			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workerCount.Load()), nil)
 
 			defer func() {
-				s.workers.Add(-1)
-				s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
+				s.workerCount.Add(-1)
+				s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workerCount.Load()), nil)
 			}()
-
 			_, err := a.Process(context.Background())
 			if err != nil {
 				log.Error(err)
@@ -355,54 +386,5 @@ out:
 			break out
 		}
 	}
-}
-
-// DetermineBuckets uses the hostname to figure out which subset of buckets we
-// should be serving.
-func DetermineBuckets(env env.Core, hostnameFunc func() (string, error)) []int {
-	_log := env.Logger()
-
-	// We have a VMSS with 3 VMs in prod
-	vmCount := 3
-
-	b := []int{}
-	if !env.IsLocalDevelopmentMode() {
-		name, err := hostnameFunc()
-		if err != nil {
-			// if we can't get the hostname then just run all of them
-			_log.Warn("unable to get the hostname for bucket determination")
-		} else {
-			// figure out which VMSS host we're running on - e.g. rp-v20000101.01-000001"
-			splitName := strings.Split(name, "-")
-			if len(splitName) > 1 {
-				num, err := strconv.Atoi(splitName[len(splitName)-1])
-				if err != nil {
-					_log.Warningf("hostname %s doesn't end in a number, unable to partition buckets", name)
-				} else {
-					if num >= vmCount {
-						// Rather than guess, we fall back to all buckets. This
-						// means that a VMSS replacement of -3 might have some
-						// weird behaviour, but because we get a lock on the
-						// OpenShiftClusterObject before we do anything to the
-						// cluster, it should be fine.
-						_log.Warningf("vmss number is %d, currently only handles 3 partitions (vm numbers 0-2), falling back to all", num)
-					} else {
-						// For the 3 VMs, VM 1 will serve buckets 0,3,6...,
-						// VM 2 will serve 1,4,7... VM 3 will serve 2,5,8...
-						for i := num; i < bucket.Buckets; i += vmCount {
-							b = append(b, i)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// We haven't figured out our buckets so fall back to all
-	if len(b) == 0 {
-		for i := range 256 {
-			b = append(b, i)
-		}
-	}
-	return b
+	log.Debugf("worker for %s finished", id)
 }

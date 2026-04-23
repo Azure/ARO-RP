@@ -87,6 +87,7 @@ require (
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.14
 	github.com/vincent-petithory/dataurl v1.0.0
+	go.uber.org/goleak v1.3.0
 	go.uber.org/mock v0.5.2
 	golang.org/x/crypto v0.47.0
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
@@ -278,7 +279,6 @@ require (
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
-	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect

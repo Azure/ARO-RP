@@ -6,9 +6,6 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"net/http"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -18,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -28,23 +24,28 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type monitorDBs interface {
-	database.DatabaseGroupWithMonitors
+	database.DatabaseGroupWithPoolWorkers
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithSubscriptions
 }
 
 // Defaults for the different durations. We use different values in tests to speed them up.
 var (
-	defaultMonitorDelay                = time.Duration(rand.Intn(60)) * time.Second
-	defaultMonitorInterval             = time.Minute
-	defaultMonitorReadinessDelay       = 2 * time.Minute
-	defaultChangefeedInteval           = 10 * time.Second
-	defaultChangefeedReadinessInterval = time.Minute
+	defaultWorkerMaxStartupDelay          = time.Minute
+	defaultMonitorInterval                = time.Minute
+	defaultMonitorReadinessDelay          = 2 * time.Minute
+	defaultChangefeedInteval              = 10 * time.Second
+	defaultChangefeedReadinessInterval    = time.Minute
+	defaultBucketRefreshInterval          = 10 * time.Second
+	defaultBucketRefreshTTL               = 60 * time.Second
+	defaultBucketRefreshReadinessInterval = defaultBucketRefreshTTL
 )
 
 type monitor struct {
@@ -55,16 +56,15 @@ type monitor struct {
 
 	m        metrics.Emitter
 	clusterm metrics.Emitter
-	mu       sync.RWMutex
 	clusters *clusterChangeFeedResponder
 	subs     changefeed.SubscriptionsCache
 	env      env.Interface
 
-	isMaster    bool
-	bucketCount int
+	bucketCount      int
+	workerCount      *atomic.Int32
+	lastBucketUpdate atomic.Value // time.Time
 
-	lastBucketlist atomic.Value // time.Time
-	startTime      time.Time
+	startTime time.Time
 
 	hiveClusterManagers map[int]hive.ClusterManager
 
@@ -72,15 +72,18 @@ type monitor struct {
 	nsgMonitorBuilder     func(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, trigger <-chan time.Time) monitoring.Monitor
 	hiveMonitorBuilder    func(log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool, hiveClusterManager hive.ClusterManager) (monitoring.Monitor, error)
 
-	delay                   time.Duration // Time until the monitor starts running
-	interval                time.Duration // Interval between monitor runs
-	changefeedInterval      time.Duration // Interval between changefeed runs (updates to cluster docs)
-	readyIfChangefeedWithin time.Duration // Time that the changefeed should have been changed within to be healthy
-	readyDelay              time.Duration // Minimal time until the monitor will allow itself to be marked ready
+	workerMaxStartupDelay          time.Duration // Time until monitor workers start running
+	interval                       time.Duration // Interval between monitor runs
+	changefeedInterval             time.Duration // Interval between changefeed runs (updates to cluster docs)
+	bucketRefreshInterval          time.Duration
+	bucketRefreshTTL               time.Duration // TTL for worker PoolWorker documents
+	bucketRefreshReadinessInterval time.Duration
+	readyIfChangefeedWithin        time.Duration // Time that the changefeed should have been changed within to be healthy
+	readyDelay                     time.Duration // Minimal time until the monitor will allow itself to be marked ready
 }
 
 type Runnable interface {
-	Run(context.Context) error
+	Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error
 }
 
 func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, e env.Interface) Runnable {
@@ -96,8 +99,9 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		env:      e,
 
 		bucketCount: bucket.Buckets,
+		workerCount: &atomic.Int32{},
 
-		startTime: time.Now(),
+		startTime: e.Now(),
 
 		hiveClusterManagers: map[int]hive.ClusterManager{},
 
@@ -105,19 +109,45 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, c
 		nsgMonitorBuilder:     nsg.NewMonitor,
 		hiveMonitorBuilder:    hivemon.NewHiveMonitor,
 
-		delay:                   defaultMonitorDelay,
-		interval:                defaultMonitorInterval,
-		changefeedInterval:      defaultChangefeedInteval,
-		readyIfChangefeedWithin: defaultChangefeedReadinessInterval,
-		readyDelay:              defaultMonitorReadinessDelay,
+		workerMaxStartupDelay:          defaultWorkerMaxStartupDelay,
+		interval:                       defaultMonitorInterval,
+		changefeedInterval:             defaultChangefeedInteval,
+		bucketRefreshInterval:          defaultBucketRefreshInterval,
+		bucketRefreshTTL:               defaultBucketRefreshTTL,
+		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
+		readyIfChangefeedWithin:        defaultChangefeedReadinessInterval,
+		readyDelay:                     defaultMonitorReadinessDelay,
 	}
 
-	mon.clusters = NewClusterChangefeedResponder(log, mon.worker)
+	mon.clusters = NewClusterChangefeedResponder(log, e.Now, mon.worker)
 	return mon
 }
 
-func (mon *monitor) Run(ctx context.Context) error {
-	dbMonitors, err := mon.dbGroup.Monitors()
+func (mon *monitor) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
+	// Set up a cancel context for signalling exits (e.g. the stop channel
+	// closing, bucket fetching erroring)
+	ctx, cancel := context.WithCancelCause(_ctx)
+	defer cancel(nil)
+
+	// Since we wait for all Monitor tasks to complete, have
+	// changefeeds/dbs/metrics stop sending when the workers have fully
+	// completed.
+	workersDone := make(chan struct{})
+	defer close(workersDone)
+	defer close(done)
+
+	if stop != nil {
+		go func() {
+			defer recover.Panic(mon.baseLog)
+			select {
+			case <-stop:
+				cancel(nil)
+			case <-workersDone:
+			}
+		}()
+	}
+
+	dbPoolWorkers, err := mon.dbGroup.PoolWorkers()
 	if err != nil {
 		return err
 	}
@@ -134,56 +164,30 @@ func (mon *monitor) Run(ctx context.Context) error {
 		mon.hiveClusterManagers[1] = cl
 	}
 
-	// We always need a master document to exist so that we can attempt to
-	// dequeue it. If it already exists we will get a StatusPreconditionFailed
-	// error, which is expected and we can ignore. The leasing of the master
-	// document is in `mon.master()`.
-	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
-		ID: "master",
-	})
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-		mon.baseLog.Error(fmt.Errorf("error bootstrapping master MonitorDocument (not a 412): %w", err))
-		return err
-	}
-
-	err = mon.startChangefeeds(ctx, nil)
+	err = mon.startChangefeeds(ctx, workersDone)
 	if err != nil {
 		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
 		return err
 	}
-	go mon.changefeedMetrics(nil)
+	go mon.changefeedMetrics(workersDone)
 
-	t := time.NewTicker(mon.changefeedInterval)
-	defer t.Stop()
+	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", workersDone, mon.checkReady)
 
-	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
-
-	for {
-		// register ourself as a monitor, ttl of 60s default
-		err = dbMonitors.MonitorHeartbeat(ctx, int(mon.changefeedInterval.Seconds()*6))
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as a monitor, continuing: %w", err))
-		}
-
-		// try to become master and share buckets across registered monitors
-		err = mon.master(ctx)
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error registering ourselves as the master: %w", err))
-		}
-
-		// read our bucket allocation from the master
-		err = mon.listBuckets(ctx)
-		if err != nil {
-			mon.baseLog.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
-		} else {
-			mon.lastBucketlist.Store(time.Now())
-		}
-
-		if err = ctx.Err(); err != nil {
-			return err
-		}
-		<-t.C
-	}
+	err = buckets.BucketRefreshLoop(
+		_ctx, mon.baseLog, api.PoolWorkerTypeMonitor,
+		mon.bucketCount,
+		mon.bucketRefreshInterval,
+		mon.bucketRefreshTTL,
+		dbPoolWorkers,
+		func(i []int) {
+			mon.clusters.UpdateBuckets(i)
+			mon.lastBucketUpdate.Store(mon.env.Now())
+		},
+		stop,
+	)
+	cancel(err)
+	mon.clusters.workerPool.StopAndWait()
+	return nil
 }
 
 func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) error {
@@ -221,7 +225,7 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 // minutes before indicating health.  This ensures that there will be a gap in
 // our health metric if we crash or restart.
 func (mon *monitor) checkReady() bool {
-	lastBucketTime, ok := mon.lastBucketlist.Load().(time.Time)
+	lastBucketTime, ok := mon.clusters.GetLastBucketUpdate()
 	if !ok {
 		return false
 	}
@@ -233,7 +237,7 @@ func (mon *monitor) checkReady() bool {
 	if !ok {
 		return false
 	}
-	return (time.Since(lastBucketTime) < mon.readyIfChangefeedWithin) && // did we list buckets successfully recently?
+	return (time.Since(lastBucketTime) < mon.bucketRefreshReadinessInterval) && // did we list buckets successfully recently?
 		(time.Since(lastClusterChangefeedTime) < mon.readyIfChangefeedWithin) && // did we process the cluster change feed recently?
 		(time.Since(lastSubscriptionChangefeedTime) < mon.readyIfChangefeedWithin) && // did we process the subscription change feed recently?
 		(time.Since(mon.startTime) > mon.readyDelay) // are we running for at least (the default) 2 minutes?

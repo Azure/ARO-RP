@@ -875,16 +875,16 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
             "location": "[resourceGroup().location]",
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/PoolWorkers')]",
             "properties": {
                 "options": {},
                 "resource": {
                     "defaultTtl": -1,
-                    "id": "Monitors",
+                    "id": "PoolWorkers",
                     "partitionKey": {
                         "kind": "Hash",
                         "paths": [
-                            "/id"
+                            "/workerType"
                         ]
                     }
                 }
@@ -1128,11 +1128,11 @@
             "apiVersion": "2023-04-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'Monitors')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), 'ARO', 'PoolWorkers')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ],
             "location": "[resourceGroup().location]",
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors/renewLease')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/PoolWorkers/renewLease')]",
             "properties": {
                 "resource": {
                     "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",

@@ -29,7 +29,6 @@ const (
 	collAsyncOperations                 = "AsyncOperations"
 	collBilling                         = "Billing"
 	collGateway                         = "Gateway"
-	collMonitors                        = "Monitors"
 	collOpenShiftClusters               = "OpenShiftClusters"
 	collOpenShiftVersion                = "OpenShiftVersions"
 	collPlatformWorkloadIdentityRoleSet = "PlatformWorkloadIdentityRoleSets"
@@ -37,6 +36,7 @@ const (
 	collSubscriptions                   = "Subscriptions"
 	collMaintenanceManifests            = "MaintenanceManifests"
 	collMaintenanceSchedules            = "MaintenanceSchedules"
+	collPoolWorkers                     = "PoolWorkers"
 )
 
 type IDable interface {
