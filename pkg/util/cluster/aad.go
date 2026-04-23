@@ -112,15 +112,15 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 				}
 
 				if code == "accessDenied" || code == "Authorization_RequestDenied" {
-			// goal is to retry the following error:
-			// graphrbac.ServicePrincipalsClient#Create: Failure responding to
-			// request: StatusCode=403 -- Original Error: autorest/azure:
-			// Service returned an error. Status=403 Code="Unknown"
-			// Message="Unknown service error"
-			// Details=[{"odata.error":{"code":"Authorization_RequestDenied","date":"yyyy-mm-ddThh:mm:ss","message":{"lang":"en","value":"When
-			// using this permission, the backing application of the service
-			// principal being created must in the local
-			// tenant"},"requestId":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}}]
+					// goal is to retry the following error:
+					// graphrbac.ServicePrincipalsClient#Create: Failure responding to
+					// request: StatusCode=403 -- Original Error: autorest/azure:
+					// Service returned an error. Status=403 Code="Unknown"
+					// Message="Unknown service error"
+					// Details=[{"odata.error":{"code":"Authorization_RequestDenied","date":"yyyy-mm-ddThh:mm:ss","message":{"lang":"en","value":"When
+					// using this permission, the backing application of the service
+					// principal being created must in the local
+					// tenant"},"requestId":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}}]
 					log := c.log.WithField("appID", appID).WithField("graphErrorCode", code)
 					if requestID != "" {
 						log = log.WithField("graphRequestID", requestID)
@@ -132,7 +132,7 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 		}
 
 		return err == nil, err
-	}, timeoutCtx.Done())
+	})
 	if err != nil {
 		return "", err
 	}

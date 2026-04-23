@@ -35,8 +35,8 @@ if ! mockObjectID=$(get_mock_msi_objectID "$mockClientID"); then
     exit 1
 fi
 
-setup_platform_identity
-cluster_msi_role_assignment "${mockClientID}"
+setup_platform_identity || exit 1
+cluster_msi_role_assignment "${mockClientID}" || exit 1
 
 # Print the extracted values
 echo "Cluster MSI Client ID: $mockClientID"
