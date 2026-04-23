@@ -23,6 +23,7 @@ var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 	mimo.OPERATOR_FLAGS_UPDATE_ID: UpdateOperatorFlags,
 	mimo.MDSD_CERT_ROTATION_ID:    MDSDCertRotation,
 	mimo.MSI_CERT_RENEWAL_ID:      MSICertificateRenewal,
+	mimo.MIGRATE_LB_ZONES_ID:      MigrateInternalLoadBalancerZones,
 }
 
 func run(t utilmimo.TaskContext, s []steps.Step) error {
