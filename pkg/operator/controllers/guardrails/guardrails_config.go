@@ -67,6 +67,9 @@ const (
 	gkDeploymentPath  = "staticresources"
 	gkTemplatePath    = "policies/gktemplates"
 	gkConstraintsPath = "policies/gkconstraints"
+
+	vapPolicyPath  = "policies-vap/vap"
+	vapBindingPath = "policies-vap/vap-binding"
 )
 
 //go:embed staticresources
@@ -77,6 +80,12 @@ var gkPolicyTemplates embed.FS
 
 //go:embed policies/gkconstraints
 var gkPolicyConstraints embed.FS
+
+//go:embed policies-vap/vap
+var vapPolicies embed.FS
+
+//go:embed policies-vap/vap-binding
+var vapBindings embed.FS
 
 func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster) *config.GuardRailsDeploymentConfig {
 	// apply the default value if the flag is empty or missing
@@ -147,6 +156,21 @@ func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
 	}
 	ver411, _ := version.ParseVersion("4.11.0")
 	return clusterVersion.Lt(ver411), nil
+}
+
+func (r *Reconciler) VersionLT417(ctx context.Context) (bool, error) {
+	cv := &configv1.ClusterVersion{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return false, err
+	}
+	clusterVersion, err := version.GetClusterVersion(cv)
+	if err != nil {
+		r.log.Errorf("error getting the OpenShift version: %v", err)
+		return false, err
+	}
+	ver417, _ := version.ParseVersion("4.17.0")
+	return clusterVersion.Lt(ver417), nil
 }
 
 func (r *Reconciler) getGatekeeperDeployedNs(ctx context.Context, instance *arov1alpha1.Cluster) (string, error) {
