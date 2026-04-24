@@ -31,6 +31,7 @@ gomock_reflect_*
 /e2e-report.xml
 /deploy/config.yaml
 **/*.swp
+/api/node_modules/
 /portal/v2/node_modules/
 portal/v2/.vscode/
 .idea*

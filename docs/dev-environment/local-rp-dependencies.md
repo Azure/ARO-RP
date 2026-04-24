@@ -38,7 +38,8 @@
     sudo dnf install -y \
         gpgme-devel \
         libassuan-devel \
-        openssl
+        openssl \
+        nodejs
     ```
 2. Dependencies for Fedora 37+
     ```sh
@@ -79,7 +80,9 @@
     sudo apt install -y \
         libgpgme-dev \
         libbtrfs-dev \
-        libdevmapper-dev
+        libdevmapper-dev \
+        nodejs \
+        npm
     ```
 
 #### Debian Optional Dependencies
@@ -98,7 +101,8 @@
         gnu-tar \
         grep \
         gettext \
-        gpgme diffutils
+        gpgme diffutils \
+        node
     ```
 
 #### Optional MacOS Dependencies
