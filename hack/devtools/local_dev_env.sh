@@ -92,7 +92,7 @@ get_service_principal_object_id() {
             break
         fi
 
-        echo "INFO: Service principal object ID not available yet for ${servicePrincipalID} (attempt ${attempt}/${maxAttempts}), retrying..."
+        echo "INFO: Service principal object ID not available yet for ${servicePrincipalID} (attempt ${attempt}/${maxAttempts}), retrying..." >&2
         sleep 10
         attempt=$((attempt + 1))
     done
@@ -132,7 +132,7 @@ get_platform_workloadIdentity_role_sets() {
 assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
-    
+
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${CLUSTER_RESOURCEGROUP}"
     local roles
 
@@ -270,7 +270,7 @@ EOF
 
 
 ask_to_create_Azure_deployment() {
-    
+
     local answer
     read -r -p "Create Azure deployment in the current subscription ($AZURE_SUBSCRIPTION_ID)? (y / n / l (list existing deployments)) " answer
 
