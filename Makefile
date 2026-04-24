@@ -9,6 +9,7 @@ COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcela
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke&&!regressiontest
+E2E_FOKUS ?=
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
 
@@ -300,6 +301,10 @@ tunnel:
 e2e.test:
 	go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
 
+.PHONY: e2e
+e2e:
+	go test ./test/e2e/... -tags e2e,codec.safe -timeout 180m --ginkgo.v --ginkgo.flake-attempts=2 -ginkgo.label-filter="$(E2E_LABEL)" -ginkgo.focus="$(E2E_FOKUS)" -v
+
 .PHONY: e2etools
 e2etools:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
@@ -325,7 +330,7 @@ validate-go: validate-go-action $(GOLANGCI_LINT)
 
 .PHONY: validate-go-action
 validate-go-action: validate-imports validate-lint-go-fix validate-gh-actions
-	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
+	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,python/az/aro/build/lib/azext_aro,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)

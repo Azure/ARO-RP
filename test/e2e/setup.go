@@ -80,6 +80,9 @@ const (
 	// These tests focus on core OCP health, ARO-specific customizations,
 	// and Azure integration.
 	install = "install"
+	// slow is for tests that take a long time to run. They should be skipped
+	// except when their execution is explicitly enabled via a label selector.
+	slow = "slow"
 )
 
 //go:embed static_resources
@@ -104,13 +107,14 @@ type clientSet struct {
 	Subnet                armnetwork.SubnetsClient
 	VirtualNetworks       armnetwork.VirtualNetworksClient
 	Storage               storage.AccountsClient
+	Usages                compute.UsageClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
 	HiveRestConfig     *rest.Config
 	Monitoring         monitoringclient.Interface
 	Kubernetes         kubernetes.Interface
-	Client             client.Client
+	KubeClient         client.Client
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
 	Route              routeclient.Interface
@@ -537,12 +541,13 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Subnet:                subnetsClient,
 		VirtualNetworks:       virtualNetworksClient,
 		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Usages:                compute.NewUsageClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
 		Dynamic:            dynamiccli,
-		Client:             controllerRuntimeClient,
+		KubeClient:         controllerRuntimeClient,
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
