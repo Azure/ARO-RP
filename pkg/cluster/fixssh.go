@@ -122,7 +122,7 @@ NICs:
 					return err
 				}
 
-				elbBackendPoolsUpdated = updateELBBackendPools(log, oc, *ipc, infraID, *nic.Name, *elb.ID)
+				elbBackendPoolsUpdated = updateELBBackendPools(log, oc, ipc, infraID, *nic.Name, *elb.ID)
 			}
 		}
 
@@ -178,7 +178,7 @@ func updateILBBackendPools(log *logrus.Entry, oc *api.OpenShiftCluster, ipc *arm
 	return updated
 }
 
-func updateELBBackendPools(log *logrus.Entry, oc *api.OpenShiftCluster, ipc armnetwork_sdk.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
+func updateELBBackendPools(log *logrus.Entry, oc *api.OpenShiftCluster, ipc *armnetwork_sdk.InterfaceIPConfiguration, infraID string, nicName string, lbID string) bool {
 	updated := false
 	elbBackendPoolID := infraID
 	if oc.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {

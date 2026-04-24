@@ -75,7 +75,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	r, err := azure.ParseResourceID(a.clusterResourceID)
 	if err != nil {
 		err = fmt.Errorf("failed parsing ResourceID: %w", err)
-		a.log.Error(err)
+		return false, err
 	}
 
 	mmf, err := a.dbs.MaintenanceManifests()
