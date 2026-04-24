@@ -350,9 +350,14 @@ func newClusterRole(roleName string) *unstructured.Unstructured {
 		Object: map[string]interface{}{
 			"rules": []rbacv1.PolicyRule{
 				{
-					Verbs: []string{"get", "create"},
+					Verbs:     []string{"get"},
+					Resources: []string{"pods"},
+					APIGroups: []string{""},
+				},
+				{
+					Verbs: []string{"create"},
 					// pods/exec is required for the fix-peers pod to exec commands on peer etcd nodes.
-					Resources: []string{"pods", "pods/exec"},
+					Resources: []string{"pods/exec"},
 					APIGroups: []string{""},
 				},
 			},
