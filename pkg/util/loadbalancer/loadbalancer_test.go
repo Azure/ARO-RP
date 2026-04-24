@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
@@ -123,6 +124,31 @@ func TestRemoveLoadBalancerFrontendIPConfiguration(t *testing.T) {
 			expectedLB:    originalLB,
 			expectedErr:   fmt.Sprintf("frontend IP Configuration %s has external references, remove the external references prior to removing the frontend IP configuration", *publicIngressFIPConfigID),
 		},
+		{
+			name:          "removal of frontend ip config succeeds with explicit empty references",
+			fipResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/empty-ref-fip",
+			currentLB: armnetwork.LoadBalancer{
+				Properties: &armnetwork.LoadBalancerPropertiesFormat{
+					FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+						{
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/empty-ref-fip"),
+							Name: pointerutils.ToPtr("empty-ref-fip"),
+							Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+								LoadBalancingRules: []*armnetwork.SubResource{},
+								InboundNatPools:    []*armnetwork.SubResource{},
+								InboundNatRules:    []*armnetwork.SubResource{},
+								OutboundRules:      []*armnetwork.SubResource{},
+							},
+						},
+					},
+				},
+			},
+			expectedLB: armnetwork.LoadBalancer{
+				Properties: &armnetwork.LoadBalancerPropertiesFormat{
+					FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := RemoveFrontendIPConfiguration(&tt.currentLB, tt.fipResourceID)
@@ -174,6 +200,14 @@ func TestRemoveLoadBalancerProbe(t *testing.T) {
 			},
 			Probes: []*armnetwork.Probe{
 				{
+					Name: pointerutils.ToPtr("testProbeEmptyReferences"),
+					ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/testProbeEmptyReferences"),
+					Properties: &armnetwork.ProbePropertiesFormat{
+						Port:               pointerutils.ToPtr(int32(8081)),
+						LoadBalancingRules: []*armnetwork.SubResource{},
+					},
+				},
+				{
 					Name: pointerutils.ToPtr("testProbeNoAttachments"),
 					ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/testProbeNoAttachments"),
 					Properties: &armnetwork.ProbePropertiesFormat{
@@ -210,6 +244,79 @@ func TestRemoveLoadBalancerProbe(t *testing.T) {
 		expectedLB    armnetwork.LoadBalancer
 		expectedErr   string
 	}{
+		{
+			name:          "remove probe with explicit empty references",
+			fipResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/testProbeEmptyReferences",
+			currentLB:     probesLB,
+			expectedLB: armnetwork.LoadBalancer{
+				Properties: &armnetwork.LoadBalancerPropertiesFormat{
+					FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+						{
+							Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+								PublicIPAddress: &armnetwork.PublicIPAddress{
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
+								},
+							},
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+							Name: pointerutils.ToPtr("public-lb-ip-v4"),
+						},
+						{
+							Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+							ID:   publicIngressFIPConfigID,
+							Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+								LoadBalancingRules: []*armnetwork.SubResource{
+									{
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+									},
+									{
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+									},
+								},
+								PublicIPAddress: &armnetwork.PublicIPAddress{
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+								},
+							},
+						},
+						{
+							Name: pointerutils.ToPtr("adce98f85c7dd47c5a21263a5e39c083"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083"),
+							Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+								PublicIPAddress: &armnetwork.PublicIPAddress{
+									ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-adce98f85c7dd47c5a21263a5e39c083"),
+								},
+							},
+						},
+					},
+					Probes: []*armnetwork.Probe{
+						{
+							Name: pointerutils.ToPtr("testProbeNoAttachments"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/testProbeNoAttachments"),
+							Properties: &armnetwork.ProbePropertiesFormat{
+								Port: pointerutils.ToPtr(int32(8080)),
+							},
+						},
+						{
+							Name: pointerutils.ToPtr("testProbeInUse"),
+							ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/testProbeInUse"),
+							Properties: &armnetwork.ProbePropertiesFormat{
+								Port: pointerutils.ToPtr(int32(8443)),
+								LoadBalancingRules: []*armnetwork.SubResource{
+									{
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+									},
+									{
+										ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Name:     pointerutils.ToPtr(infraID),
+				Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+				Location: pointerutils.ToPtr(location),
+			},
+		},
 		{
 			name:          "remove probe with no attached resources",
 			fipResourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/testProbeNoAttachments",
@@ -290,4 +397,148 @@ func TestRemoveLoadBalancerProbe(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.expectedErr)
 		})
 	}
+}
+
+func TestRemoveLoadBalancingRule(t *testing.T) {
+	rule80ID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80"
+	rule443ID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-443"
+
+	lb := armnetwork.LoadBalancer{
+		Properties: &armnetwork.LoadBalancerPropertiesFormat{
+			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+				{
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+					Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+						LoadBalancingRules: []*armnetwork.SubResource{
+							{ID: pointerutils.ToPtr(rule80ID)},
+							{ID: pointerutils.ToPtr(rule443ID)},
+						},
+					},
+				},
+			},
+			BackendAddressPools: []*armnetwork.BackendAddressPool{
+				{
+					Name: pointerutils.ToPtr("test-backend-pool"),
+					Properties: &armnetwork.BackendAddressPoolPropertiesFormat{
+						LoadBalancingRules: []*armnetwork.SubResource{
+							{ID: pointerutils.ToPtr(rule80ID)},
+							{ID: pointerutils.ToPtr(rule443ID)},
+						},
+					},
+				},
+			},
+			Probes: []*armnetwork.Probe{
+				{
+					Name: pointerutils.ToPtr("test-probe"),
+					Properties: &armnetwork.ProbePropertiesFormat{
+						LoadBalancingRules: []*armnetwork.SubResource{
+							{ID: pointerutils.ToPtr(rule80ID)},
+							{ID: pointerutils.ToPtr(rule443ID)},
+						},
+					},
+				},
+			},
+			LoadBalancingRules: []*armnetwork.LoadBalancingRule{
+				{
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+					ID:   pointerutils.ToPtr(rule80ID),
+				},
+				{
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+					ID:   pointerutils.ToPtr(rule443ID),
+				},
+			},
+		},
+	}
+
+	err := RemoveLoadBalancingRule(&lb, rule80ID)
+	require.NoError(t, err)
+
+	if assert.NotNil(t, lb.Properties) {
+		if assert.Len(t, lb.Properties.LoadBalancingRules, 1) {
+			assert.Equal(t, rule443ID, *lb.Properties.LoadBalancingRules[0].ID)
+		}
+		if assert.Len(t, lb.Properties.FrontendIPConfigurations, 1) &&
+			assert.NotNil(t, lb.Properties.FrontendIPConfigurations[0].Properties) &&
+			assert.Len(t, lb.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules, 1) {
+			assert.Equal(t, rule443ID, *lb.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules[0].ID)
+		}
+		if assert.Len(t, lb.Properties.BackendAddressPools, 1) &&
+			assert.NotNil(t, lb.Properties.BackendAddressPools[0].Properties) &&
+			assert.Len(t, lb.Properties.BackendAddressPools[0].Properties.LoadBalancingRules, 1) {
+			assert.Equal(t, rule443ID, *lb.Properties.BackendAddressPools[0].Properties.LoadBalancingRules[0].ID)
+		}
+		if assert.Len(t, lb.Properties.Probes, 1) &&
+			assert.NotNil(t, lb.Properties.Probes[0].Properties) &&
+			assert.Len(t, lb.Properties.Probes[0].Properties.LoadBalancingRules, 1) {
+			assert.Equal(t, rule443ID, *lb.Properties.Probes[0].Properties.LoadBalancingRules[0].ID)
+		}
+	}
+
+	t.Run("remove last rule retains explicit empty slices", func(t *testing.T) {
+		lb := armnetwork.LoadBalancer{
+			Properties: &armnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+					{
+						Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+							LoadBalancingRules: []*armnetwork.SubResource{
+								{ID: pointerutils.ToPtr(rule80ID)},
+							},
+						},
+					},
+				},
+				BackendAddressPools: []*armnetwork.BackendAddressPool{
+					{
+						Name: pointerutils.ToPtr("test-backend-pool"),
+						Properties: &armnetwork.BackendAddressPoolPropertiesFormat{
+							LoadBalancingRules: []*armnetwork.SubResource{
+								{ID: pointerutils.ToPtr(rule80ID)},
+							},
+						},
+					},
+				},
+				Probes: []*armnetwork.Probe{
+					{
+						Name: pointerutils.ToPtr("test-probe"),
+						Properties: &armnetwork.ProbePropertiesFormat{
+							LoadBalancingRules: []*armnetwork.SubResource{
+								{ID: pointerutils.ToPtr(rule80ID)},
+							},
+						},
+					},
+				},
+				LoadBalancingRules: []*armnetwork.LoadBalancingRule{
+					{
+						Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+						ID:   pointerutils.ToPtr(rule80ID),
+					},
+				},
+			},
+		}
+
+		err := RemoveLoadBalancingRule(&lb, rule80ID)
+		require.NoError(t, err)
+
+		if assert.NotNil(t, lb.Properties) {
+			if assert.NotNil(t, lb.Properties.LoadBalancingRules) {
+				assert.Empty(t, lb.Properties.LoadBalancingRules)
+			}
+			if assert.Len(t, lb.Properties.FrontendIPConfigurations, 1) &&
+				assert.NotNil(t, lb.Properties.FrontendIPConfigurations[0].Properties) &&
+				assert.NotNil(t, lb.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules) {
+				assert.Empty(t, lb.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules)
+			}
+			if assert.Len(t, lb.Properties.BackendAddressPools, 1) &&
+				assert.NotNil(t, lb.Properties.BackendAddressPools[0].Properties) &&
+				assert.NotNil(t, lb.Properties.BackendAddressPools[0].Properties.LoadBalancingRules) {
+				assert.Empty(t, lb.Properties.BackendAddressPools[0].Properties.LoadBalancingRules)
+			}
+			if assert.Len(t, lb.Properties.Probes, 1) &&
+				assert.NotNil(t, lb.Properties.Probes[0].Properties) &&
+				assert.NotNil(t, lb.Properties.Probes[0].Properties.LoadBalancingRules) {
+				assert.Empty(t, lb.Properties.Probes[0].Properties.LoadBalancingRules)
+			}
+		}
+	})
 }

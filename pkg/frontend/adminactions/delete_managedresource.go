@@ -37,6 +37,7 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 	}
 
 	apiVersion := azureclient.APIVersion(strings.ToLower(idParts.ResourceType.String()))
+	resourceType := strings.ToLower(idParts.ResourceType.String())
 
 	_, err = a.resources.GetByID(ctx, resourceID, apiVersion)
 	if err != nil {
@@ -44,13 +45,18 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 	}
 
 	// FrontendIPConfiguration cannot be deleted with DeleteByIDAndWait (DELETE method is invalid on frontendIPConfiguration resourceID)
-	if idParts.ResourceType.String() == "Microsoft.Network/loadBalancers/frontendIPConfigurations" {
+	if resourceType == "microsoft.network/loadbalancers/frontendipconfigurations" {
 		return a.deleteFrontendIPConfiguration(ctx, resourceID, idParts.ResourceGroupName, idParts.Parent.Name)
 	}
 
 	// HealthProbes cannot be deleted with DeleteByIDAndWait either.
-	if idParts.ResourceType.String() == "Microsoft.Network/loadBalancers/probes" {
+	if resourceType == "microsoft.network/loadbalancers/probes" {
 		return a.deleteHealthProbe(ctx, resourceID, idParts.ResourceGroupName, idParts.Parent.Name)
+	}
+
+	// LoadBalancingRules must be removed via an update to the parent load balancer.
+	if resourceType == "microsoft.network/loadbalancers/loadbalancingrules" {
+		return a.deleteLoadBalancingRule(ctx, resourceID, idParts.ResourceGroupName, idParts.Parent.Name)
 	}
 
 	return a.resources.DeleteByIDAndWait(ctx, resourceID, apiVersion)
@@ -77,6 +83,20 @@ func (a *azureActions) deleteHealthProbe(ctx context.Context, resourceID string,
 	}
 
 	err = loadbalancer.RemoveHealthProbe(&lb.LoadBalancer, resourceID)
+	if err != nil {
+		return err
+	}
+
+	return a.loadBalancers.CreateOrUpdateAndWait(ctx, rg, loadBalancerName, lb.LoadBalancer, nil)
+}
+
+func (a *azureActions) deleteLoadBalancingRule(ctx context.Context, resourceID string, rg string, loadBalancerName string) error {
+	lb, err := a.loadBalancers.Get(ctx, rg, loadBalancerName, nil)
+	if err != nil {
+		return err
+	}
+
+	err = loadbalancer.RemoveLoadBalancingRule(&lb.LoadBalancer, resourceID)
 	if err != nil {
 		return err
 	}

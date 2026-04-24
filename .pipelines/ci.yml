@@ -410,8 +410,14 @@ stages:
               export SKIP_MIWI_ROLE_ASSIGNMENT=true
               . ./hack/devtools/local_dev_env.sh
               echo "Creating MIWI env file"
-              create_miwi_env_file
+              create_miwi_env_file || exit 1
               . ./env
+              for required_var in MOCK_MSI_CLIENT_ID MOCK_MSI_OBJECT_ID MOCK_MSI_TENANT_ID MOCK_MSI_CERT; do
+                if [ -z "${!required_var:-}" ]; then
+                  echo "##vso[task.logissue type=error] ${required_var} is empty after create_miwi_env_file."
+                  exit 1
+                fi
+              done
               az acr login --name arosvcdev
               deploy_e2e_db
               register_sub
@@ -428,10 +434,18 @@ stages:
               fi
             displayName: ⚙️  Run E2E Test Suite for MIWI
           - bash: |
-              . ./env
-              echo "deleting mock msi service principal $MOCK_MSI_OBJECT_ID"
-              az ad sp delete --id $MOCK_MSI_OBJECT_ID
+              if [ -f ./env ]; then
+                . ./env
+              fi
+              sp_identifier="${MOCK_MSI_OBJECT_ID:-${MOCK_MSI_CLIENT_ID:-}}"
+              if [ -z "${sp_identifier}" ]; then
+                echo "skipping mock msi service principal cleanup because no service principal identifier is available"
+                exit 0
+              fi
+              echo "deleting mock msi service principal ${sp_identifier}"
+              az ad sp delete --id "${sp_identifier}"
             displayName: Delete Mock MSI Service Principal
+            condition: always()
 
           # Log the output from the services in case of failure
           - bash: |
