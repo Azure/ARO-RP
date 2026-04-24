@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
@@ -202,7 +203,7 @@ func TestRemoveLoadBalancerProbe(t *testing.T) {
 					Name: pointerutils.ToPtr("testProbeEmptyReferences"),
 					ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/testProbeEmptyReferences"),
 					Properties: &armnetwork.ProbePropertiesFormat{
-						Port:              pointerutils.ToPtr(int32(8081)),
+						Port:               pointerutils.ToPtr(int32(8081)),
 						LoadBalancingRules: []*armnetwork.SubResource{},
 					},
 				},
@@ -451,7 +452,7 @@ func TestRemoveLoadBalancingRule(t *testing.T) {
 	}
 
 	err := RemoveLoadBalancingRule(&lb, rule80ID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	if assert.NotNil(t, lb.Properties) {
 		if assert.Len(t, lb.Properties.LoadBalancingRules, 1) {
@@ -517,26 +518,26 @@ func TestRemoveLoadBalancingRule(t *testing.T) {
 		}
 
 		err := RemoveLoadBalancingRule(&lb, rule80ID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		if assert.NotNil(t, lb.Properties) {
 			if assert.NotNil(t, lb.Properties.LoadBalancingRules) {
-				assert.Len(t, lb.Properties.LoadBalancingRules, 0)
+				assert.Empty(t, lb.Properties.LoadBalancingRules)
 			}
 			if assert.Len(t, lb.Properties.FrontendIPConfigurations, 1) &&
 				assert.NotNil(t, lb.Properties.FrontendIPConfigurations[0].Properties) &&
 				assert.NotNil(t, lb.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules) {
-				assert.Len(t, lb.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules, 0)
+				assert.Empty(t, lb.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules)
 			}
 			if assert.Len(t, lb.Properties.BackendAddressPools, 1) &&
 				assert.NotNil(t, lb.Properties.BackendAddressPools[0].Properties) &&
 				assert.NotNil(t, lb.Properties.BackendAddressPools[0].Properties.LoadBalancingRules) {
-				assert.Len(t, lb.Properties.BackendAddressPools[0].Properties.LoadBalancingRules, 0)
+				assert.Empty(t, lb.Properties.BackendAddressPools[0].Properties.LoadBalancingRules)
 			}
 			if assert.Len(t, lb.Properties.Probes, 1) &&
 				assert.NotNil(t, lb.Properties.Probes[0].Properties) &&
 				assert.NotNil(t, lb.Properties.Probes[0].Properties.LoadBalancingRules) {
-				assert.Len(t, lb.Properties.Probes[0].Properties.LoadBalancingRules, 0)
+				assert.Empty(t, lb.Properties.Probes[0].Properties.LoadBalancingRules)
 			}
 		}
 	})
