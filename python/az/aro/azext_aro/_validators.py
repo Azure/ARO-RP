@@ -318,17 +318,21 @@ def validate_enable_managed_identity(namespace):
     if not namespace.enable_managed_identity:
         return
 
-    if namespace.client_id is not None:
+    if namespace.client_id:
         raise InvalidArgumentValueError('Must not specify --client-id when --enable-managed-identity is True')
 
-    if namespace.client_secret is not None:
+    if namespace.client_secret:
         raise InvalidArgumentValueError('Must not specify --client-secret when --enable-managed-identity is True')
 
-    if not namespace.platform_workload_identities:
-        raise RequiredArgumentMissingError('Enabling managed identity requires platform workload identities to be provided')  # pylint: disable=line-too-long
+    if namespace.platform_workload_identities and not namespace.mi_user_assigned:
+        raise RequiredArgumentMissingError("Must specify cluster identity with platform workload identities")
 
-    if not namespace.mi_user_assigned:
-        raise RequiredArgumentMissingError('Enabling managed identity requires cluster identity to be provided')
+    if not namespace.platform_workload_identities and namespace.mi_user_assigned:
+        raise RequiredArgumentMissingError("Must specify platform workload identities with cluster identity")
+
+    if not namespace.platform_workload_identities and not namespace.mi_user_assigned and not namespace.version:
+        raise RequiredArgumentMissingError("Enabling managed identity requires cluster version, "
+                                           "or specify user created cluster identity and platform workload identities.")
 
 
 def validate_platform_workload_identities(isCreate):

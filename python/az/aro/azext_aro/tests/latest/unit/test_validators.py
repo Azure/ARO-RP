@@ -994,12 +994,12 @@ def test_validate_load_balancer_managed_outbound_ip_count(test_description, name
 
 test_validate_enable_managed_identity_data = [
     (
-        "Should not raise any exception when empty",
+        "Should not raise any exception when 'enable_managed_identity' is empty",
         Mock(enable_managed_identity=None),
         None, None,
     ),
     (
-        "Should not raise any exception when False",
+        "Should not raise any exception when 'enable_managed_identity' is False",
         Mock(enable_managed_identity=False),
         None, None
     ),
@@ -1016,21 +1016,13 @@ test_validate_enable_managed_identity_data = [
         InvalidArgumentValueError, 'Must not specify --client-secret when --enable-managed-identity is True'
     ),
     (
-        "Should raise RequiredArgumentMissingError when no platform workload identities are set",
+        "Should raise RequiredArgumentMissingError if managed identities are enabled (with identity auto-creation) but no version is specified",
         Mock(enable_managed_identity=True,
              client_id=None, client_secret=None,
-             version="4.14.0",
-             platform_workload_identities=[]),
-        RequiredArgumentMissingError, 'Enabling managed identity requires platform workload identities to be provided'
-    ),
-    (
-        "Should raise RequiredArgumentMissingError when cluster identity is not set",
-        Mock(enable_managed_identity=True,
-             client_id=None, client_secret=None,
-             version="4.14.0",
-             platform_workload_identities=[("foo", Mock(resource_id='Foo'))],
+             version=None,
+             platform_workload_identities=None,
              mi_user_assigned=None),
-        RequiredArgumentMissingError, 'Enabling managed identity requires cluster identity to be provided'
+        RequiredArgumentMissingError, "Enabling managed identity requires cluster version, or specify user created cluster identity and platform workload identities."
     ),
     (
         "Should not raise any exception when valid",
@@ -1040,6 +1032,33 @@ test_validate_enable_managed_identity_data = [
              platform_workload_identities=[("foo", Mock(resource_id='Foo'))],
              mi_user_assigned="foo"),
         None, None
+    ),
+    (
+        "Should not raise any exception when valid (auto-create identities)",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.20.1",
+             platform_workload_identities=None,
+             mi_user_assigned=None),
+        None, None
+    ),
+    (
+        "Should raise RequiredArgumentMissingError when platform workload identities are set, but not cluster identity",
+        Mock(enabled_managed_identity=True,
+             client_id=None, client_secret=None,
+             version=None,
+             platform_workload_identities=[("foo", Mock(resource_id="bar"))],
+             mi_user_assigned=None),
+        RequiredArgumentMissingError, "Must specify cluster identity with platform workload identities"
+    ),
+    (
+        "Should raise RequiredArgumentMissingError when cluster identity is set, but not platform workload identities",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version=None,
+             platform_workload_identities=None,
+             mi_user_assigned="foo"),
+        RequiredArgumentMissingError, "Must specify platform workload identities with cluster identity"
     )
 ]
 
