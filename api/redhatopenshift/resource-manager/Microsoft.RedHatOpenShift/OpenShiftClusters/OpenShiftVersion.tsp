@@ -14,8 +14,7 @@ namespace Microsoft.RedHatOpenShift;
  * OpenShiftVersion represents an OpenShift version that can be installed.
  */
 @subscriptionResource
-model OpenShiftVersion
-  is Azure.ResourceManager.ProxyResource<OpenShiftVersionProperties> {
+model OpenShiftVersion is Azure.ResourceManager.ProxyResource<OpenShiftVersionProperties> {
   ...ResourceNameParameter<
     Resource = OpenShiftVersion,
     KeyName = "openShiftVersion",
@@ -56,17 +55,10 @@ interface OpenShiftVersions {
    * The operation returns the installable OpenShift versions as a string.
    */
   @summary("Lists all OpenShift versions available to install in the specified location.")
-  list is OpenShiftVersionsOps.List<
-    OpenShiftVersion,
-    Response = ArmResponse<OpenShiftVersionList>
-  >;
+  list is OpenShiftVersionsOps.List<OpenShiftVersion, Response = ArmResponse<OpenShiftVersionList>>;
 }
 
 @@maxLength(OpenShiftVersion.name, 63);
 @@minLength(OpenShiftVersion.name, 1);
-@@doc(OpenShiftVersion.name,
-  "The desired version value of the OpenShiftVersion resource."
-);
-@@doc(OpenShiftVersion.properties,
-  "The properties for the OpenShiftVersion resource."
-);
+@@doc(OpenShiftVersion.name, "The desired version value of the OpenShiftVersion resource.");
+@@doc(OpenShiftVersion.properties, "The properties for the OpenShiftVersion resource.");

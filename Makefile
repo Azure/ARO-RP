@@ -33,8 +33,6 @@ FLUENTBIT_VERSION = 4.2.2
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
-# Just use the `latest` tag since the TypeSpec version is set in api/package.json
-TYPESPEC_IMAGE = arointsvc.azurecr.io/typespec:latest
 GATEKEEPER_VERSION = v3.19.2
 
 include .bingo/Variables.mk
@@ -159,8 +157,8 @@ generate-swagger-legacy:
 	$(MAKE) swagger-checksums
 
 .PHONY: generate-swagger-typespec
-generate-swagger-typespec: api-npm-install
-	hack/api/swagger-from-typespec.sh "${TYPESPEC_IMAGE}"
+generate-swagger-typespec:
+	hack/api/swagger-from-typespec.sh
 	$(MAKE) swagger-checksums
 
 .PHONY: swagger-checksums
@@ -208,24 +206,6 @@ image-aro-multistage:
 .PHONY: image-autorest
 image-autorest:
 	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
-
-.PHONY: image-typespec
-image-typespec:
-	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.typespec -t ${TYPESPEC_IMAGE} .
-
-.PHONY: api-npm-install
-api-npm-install:
-# Hack: Run `npm install` in `api` from inside the container such that `node_modules` gets initialized using packages for $PLATFORM rather
-# than for the host's architecture. This is needed because hack/api/swagger-from-typespec.sh mounts `api` so that it can conveniently
-# write the generated files to its directory structure.
-	rm -rf api/node_modules
-	docker run \
-		--platform=$(PLATFORM) \
-		--rm \
-		-v $(shell pwd)/api:/api:z \
-		-w /api \
-		--entrypoint npm \
-		"${TYPESPEC_IMAGE}" install
 
 .PHONY: image-fluentbit
 image-fluentbit:
