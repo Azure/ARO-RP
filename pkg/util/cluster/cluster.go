@@ -461,37 +461,6 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		}
 	}
 
-	// Verify all created identities are readable before proceeding.
-	// ARM may need time to propagate newly created managed identities,
-	// and the RP will reject the cluster PUT if it can't read them.
-	if err := c.waitForWorkloadIdentities(ctx, vnetResourceGroup, platformWorkloadIdentityRoles); err != nil {
-		return fmt.Errorf("workload identities failed readiness check: %w", err)
-	}
-
-	return nil
-}
-
-// waitForWorkloadIdentities polls each managed identity with a Get call
-// to confirm it is visible through ARM before the caller proceeds to
-// cluster creation.  Newly created identities sometimes take a few
-// seconds to become readable.
-func (c *Cluster) waitForWorkloadIdentities(ctx context.Context, resourceGroup string, roles []api.PlatformWorkloadIdentityRole) error {
-	for _, wi := range roles {
-		c.log.Infof("verifying WI is readable: %s", wi.OperatorName)
-		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			_, err := c.msiClient.Get(timeoutCtx, resourceGroup, wi.OperatorName, nil)
-			if err != nil {
-				c.log.Warnf("WI %s not yet readable: %s", wi.OperatorName, err)
-				return false, nil // retry
-			}
-			return true, nil
-		}, timeoutCtx.Done())
-		cancel()
-		if err != nil {
-			return fmt.Errorf("timed out waiting for workload identity %s to become readable: %w", wi.OperatorName, err)
-		}
-	}
 	return nil
 }
 

@@ -92,7 +92,7 @@ get_service_principal_object_id() {
             break
         fi
 
-        echo "INFO: Service principal object ID not available yet for ${servicePrincipalID} (attempt ${attempt}/${maxAttempts}), retrying..."
+        echo "INFO: Service principal object ID not available yet for ${servicePrincipalID} (attempt ${attempt}/${maxAttempts}), retrying..." >&2
         sleep 10
         attempt=$((attempt + 1))
     done
