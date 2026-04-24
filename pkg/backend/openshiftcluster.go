@@ -326,12 +326,21 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		if doc.OpenShiftCluster.Properties.LastProvisioningState.IsTerminal() {
 			provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
 		}
-		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
 		if backendErr == nil {
 			adminUpdateError = pointerutils.ToPtr("")
+			if provisioningState == api.ProvisioningStateSucceeded {
+				failedProvisioningState = ""
+			} else {
+				failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
+			}
 		} else {
 			adminUpdateError = pointerutils.ToPtr(backendErr.Error())
+			if doc.OpenShiftCluster.Properties.FailedProvisioningState == "" {
+				failedProvisioningState = api.ProvisioningStateAdminUpdating
+			} else {
+				failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
+			}
 		}
 	}
 

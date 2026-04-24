@@ -511,6 +511,73 @@ func TestBackendTry(t *testing.T) {
 			},
 		},
 		{
+			name: "StateAdminUpdating run failure with empty failedProvisioningState sets it to AdminUpdating",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateAdminUpdating,
+							LastProvisioningState:   api.ProvisioningStateFailed,
+							FailedProvisioningState: "",
+							MaintenanceTask:         api.MaintenanceTaskEverything,
+							MaintenanceState:        api.MaintenanceStateUnplanned,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+				})
+			},
+			checker: func(c *testdatabase.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key:      strings.ToLower(resourceID),
+					Dequeues: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateAdminUpdating,
+							LastAdminUpdateError:    "admin update failed",
+							MaintenanceState:        api.MaintenanceStateUnplanned,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
+						},
+					},
+				})
+			},
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+				manager.EXPECT().AdminUpdate(gomock.Any()).Return(errors.New("admin update failed"))
+			},
+		},
+		{
 			name: "StateDeleting success deletes the document",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
