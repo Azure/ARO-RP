@@ -274,6 +274,10 @@ func execWebSocketFrames(ctx context.Context, log *logrus.Entry, wsConn *websock
 				case <-ctx.Done():
 					errCh <- ctx.Err()
 					return
+				case <-pingStop:
+					// execWebSocketFrames returned (e.g., consumer write error); nobody is draining frameCh.
+					errCh <- errors.New("exec stream closed")
+					return
 				}
 			case 3:
 				var status metav1.Status
