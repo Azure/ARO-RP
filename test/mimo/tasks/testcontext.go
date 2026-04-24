@@ -161,7 +161,10 @@ func (t *fakeTestContext) GetOpenShiftClusterProperties() api.OpenShiftClusterPr
 }
 
 func (t *fakeTestContext) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
-	return t.ocDb.PatchWithLease(ctx, t.doc.Key, f)
+	if t.doc == nil {
+		panic("didn't set up OpenShiftClusterDocument in test")
+	}
+	return t.ocDb.Patch(ctx, t.doc.Key, f)
 }
 
 // Result
