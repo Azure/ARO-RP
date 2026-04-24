@@ -10,7 +10,7 @@ function checksum() {
 
   for spec_path in \
     "swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/$FOLDER/$API_VERSION/redhatopenshift.json" \
-    "api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/$FOLDER/$API_VERSION/redhatopenshift.json"; do
+    "api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/$FOLDER/$API_VERSION/redhatopenshift.json"; do
     if [ -f "$spec_path" ]; then
       sha256sum "$spec_path" >>.sha256sum
       found=1
