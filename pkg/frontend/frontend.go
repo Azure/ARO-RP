@@ -395,6 +395,9 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Put("/mdsdcertificaterenew", f.putAdminMaintManifestMdsdCertificateRenew)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/exec", f.postAdminOpenShiftClusterExec)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/runjob", f.postAdminOpenShiftClusterRunJob)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdkeycount", f.postAdminOpenShiftClusterEtcdKeyCount)
 
 				r.Get("/controlplanestatuscheckafterresize", f.getControlPlaneStatusCheckAfterResize)
 				// MIMO

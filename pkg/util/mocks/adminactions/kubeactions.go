@@ -11,6 +11,7 @@ package mock_adminactions
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -158,6 +159,34 @@ func (m *MockKubeActions) KubeDelete(ctx context.Context, groupKind, namespace, 
 func (mr *MockKubeActionsMockRecorder) KubeDelete(ctx, groupKind, namespace, name, force, propagationPolicy any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDelete", reflect.TypeOf((*MockKubeActions)(nil).KubeDelete), ctx, groupKind, namespace, name, force, propagationPolicy)
+}
+
+// KubeExecStream mocks base method.
+func (m *MockKubeActions) KubeExecStream(ctx context.Context, namespace, pod, container string, command []string, stdout, stderr io.Writer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KubeExecStream", ctx, namespace, pod, container, command, stdout, stderr)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// KubeExecStream indicates an expected call of KubeExecStream.
+func (mr *MockKubeActionsMockRecorder) KubeExecStream(ctx, namespace, pod, container, command, stdout, stderr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeExecStream", reflect.TypeOf((*MockKubeActions)(nil).KubeExecStream), ctx, namespace, pod, container, command, stdout, stderr)
+}
+
+// KubeFollowPodLogs mocks base method.
+func (m *MockKubeActions) KubeFollowPodLogs(ctx context.Context, namespace, podName, containerName string, w io.Writer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KubeFollowPodLogs", ctx, namespace, podName, containerName, w)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// KubeFollowPodLogs indicates an expected call of KubeFollowPodLogs.
+func (mr *MockKubeActionsMockRecorder) KubeFollowPodLogs(ctx, namespace, podName, containerName, w any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeFollowPodLogs", reflect.TypeOf((*MockKubeActions)(nil).KubeFollowPodLogs), ctx, namespace, podName, containerName, w)
 }
 
 // KubeGet mocks base method.

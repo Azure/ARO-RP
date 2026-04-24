@@ -104,7 +104,7 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 
 // rxKubernetesString is weaker than Kubernetes validation, but strong enough to
 // prevent mischief
-var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
+var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{1,255}$`)
 
 func validatePermittedClusterwideObjects(gvr schema.GroupVersionResource) bool {
 	permittedGroups := map[string]bool{
@@ -159,12 +159,12 @@ func validateAdminKubernetesObjects(method string, gvr schema.GroupVersionResour
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Write access to RBAC is forbidden.")
 	}
 
-	if !rxKubernetesString.MatchString(namespace) {
+	if namespace != "" && !rxKubernetesString.MatchString(namespace) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided namespace '%s' is invalid.", namespace))
 	}
 
 	if (method != http.MethodGet && name == "") ||
-		!rxKubernetesString.MatchString(name) {
+		(name != "" && !rxKubernetesString.MatchString(name)) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided name '%s' is invalid.", name))
 	}
 
@@ -180,28 +180,47 @@ func validateAdminKubernetesObjectsForceDelete(groupKind string) error {
 }
 
 func validateAdminVMName(vmName string) error {
-	if vmName == "" || !rxKubernetesString.MatchString(vmName) {
+	if vmName == "" || vmName[0] == '.' || vmName[0] == '-' || !rxKubernetesString.MatchString(vmName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided vmName '%s' is invalid.", vmName))
 	}
 
 	return nil
 }
 
-func validateAdminKubernetesPodLogs(namespace, podName, containerName string) error {
-	if podName == "" || !rxKubernetesString.MatchString(podName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided pod name '%s' is invalid.", podName))
-	}
-
+// validateAdminNamespacePodContainer checks namespace before podName (intentional:
+// namespace allowlist is the primary constraint; pod-name validation is secondary).
+func validateAdminNamespacePodContainer(namespace, podName, container string) error {
 	if namespace == "" || !rxKubernetesString.MatchString(namespace) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided namespace '%s' is invalid.", namespace))
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+			fmt.Sprintf("The provided namespace '%s' is invalid.", namespace))
 	}
-	// Checking if the namespace is an OpenShift namespace not a customer workload namespace.
 	if !utilnamespace.IsOpenShiftNamespace(namespace) {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", fmt.Sprintf("Access to the provided namespace '%s' is forbidden.", namespace))
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
+			fmt.Sprintf("Access to the provided namespace '%s' is forbidden.", namespace))
 	}
+	if podName == "" || !rxKubernetesString.MatchString(podName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+			fmt.Sprintf("The provided pod name '%s' is invalid.", podName))
+	}
+	if container == "" || !rxKubernetesString.MatchString(container) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+			fmt.Sprintf("The provided container name '%s' is invalid.", container))
+	}
+	return nil
+}
 
-	if containerName == "" || !rxKubernetesString.MatchString(containerName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided container name '%s' is invalid.", containerName))
+func validateAdminExec(namespace, podName, container, command string) error {
+	if err := validateAdminNamespacePodContainer(namespace, podName, container); err != nil {
+		return err
+	}
+	// Command content is unrestricted beyond the length cap (admin-only endpoint).
+	if command == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+			"The provided command must not be empty.")
+	}
+	if len(command) > 4096 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+			"The provided command must not exceed 4096 bytes.")
 	}
 	return nil
 }
