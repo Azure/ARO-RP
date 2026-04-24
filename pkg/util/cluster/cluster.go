@@ -414,7 +414,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	})
 
 	c.log.Info("Assigning role to mock msi client")
-	c.roleassignments.Create(
+	_, err = c.roleassignments.Create(
 		ctx,
 		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
 		uuid.DefaultGenerator.Generate(),
@@ -426,6 +426,9 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			},
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("failed assigning role to mock msi client: %w", err)
+	}
 
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
@@ -448,7 +451,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			},
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed assigning roleassignment to WI: %w", err)
 		}
 
 		if wi.OperatorName != "aro-Cluster" {
