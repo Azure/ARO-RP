@@ -13,8 +13,7 @@ namespace Microsoft.RedHatOpenShift;
 /**
  * OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
  */
-model OpenShiftCluster
-  is Azure.ResourceManager.TrackedResource<OpenShiftClusterProperties> {
+model OpenShiftCluster is Azure.ResourceManager.TrackedResource<OpenShiftClusterProperties> {
   ...ResourceNameParameter<
     Resource = OpenShiftCluster,
     KeyName = "resourceName",
@@ -63,10 +62,7 @@ interface OpenShiftClusters {
    * The operation returns nothing.
    */
   @summary("Deletes a OpenShift cluster with the specified subscription, resource group and resource name.")
-  delete is ArmResourceDeleteWithoutOkAsync<
-    OpenShiftCluster,
-    Error = CloudError
-  >;
+  delete is ArmResourceDeleteWithoutOkAsync<OpenShiftCluster, Error = CloudError>;
 
   /**
    * The operation returns properties of each OpenShift cluster.
@@ -113,9 +109,5 @@ interface OpenShiftClusters {
 
 @@doc(OpenShiftCluster.name, "The name of the OpenShift cluster resource.");
 @@doc(OpenShiftCluster.properties, "The cluster properties.");
-@@doc(OpenShiftClusters.createOrUpdate::parameters.resource,
-  "The OpenShift cluster resource."
-);
-@@doc(OpenShiftClusters.update::parameters.properties,
-  "The OpenShift cluster resource."
-);
+@@doc(OpenShiftClusters.createOrUpdate::parameters.resource, "The OpenShift cluster resource.");
+@@doc(OpenShiftClusters.update::parameters.properties, "The OpenShift cluster resource.");

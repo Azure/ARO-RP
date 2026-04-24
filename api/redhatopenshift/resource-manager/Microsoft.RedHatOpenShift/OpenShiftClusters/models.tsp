@@ -270,8 +270,7 @@ model OpenShiftVersionProperties {
 /**
  * PlatformWorkloadIdentityRoleSetList represents a List of role sets.
  */
-model PlatformWorkloadIdentityRoleSetList
-  is Azure.Core.Page<PlatformWorkloadIdentityRoleSet>;
+model PlatformWorkloadIdentityRoleSetList is Azure.Core.Page<PlatformWorkloadIdentityRoleSet>;
 
 /**
  * PlatformWorkloadIdentityRoleSetProperties represents the properties of a PlatformWorkloadIdentityRoleSet resource.
