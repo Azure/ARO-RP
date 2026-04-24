@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
@@ -126,7 +127,9 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		s.Properties.NetworkSecurityGroup = nil
 
 		m.log.Printf("disconnecting network security group from subnet %s", *s.ID)
-		err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+		err = retry.OnError(transientRetryBackoff, m.isRetryable("disconnecting NSG from subnet "+*s.ID), func() error {
+			return m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+		})
 		if err != nil {
 			b, _ := json.Marshal(err)
 
@@ -233,7 +236,12 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				}
 			}
 
-			future, err := m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
+			var future mgmtfeatures.ResourcesDeleteByIDFuture
+			err = retry.OnError(transientRetryBackoff, m.isRetryable("deleting "+*resource.ID), func() error {
+				var deleteErr error
+				future, deleteErr = m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
+				return deleteErr
+			})
 			if err != nil {
 				return deleteByIdCloudError(err)
 			}
@@ -242,6 +250,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 		}
 
 		// wait for all the deletions to complete
+		// Note: WaitForCompletionRef is not wrapped with retry; LRO polling errors propagate immediately.
 		for i, future := range futures {
 			m.log.Printf("waiting for deletion of %s", *resourceMap[level][i].ID)
 
@@ -256,8 +265,9 @@ func (m *manager) deleteResources(ctx context.Context) error {
 }
 
 func deleteByIdCloudError(err error) error {
+	// Non-autorest errors pass through unchanged; only autorest.DetailedError is mapped to *api.CloudError. Original is nil when retry.OnError exhausts retries.
 	detailedError, ok := err.(autorest.DetailedError)
-	if !ok {
+	if !ok || detailedError.Original == nil {
 		return err
 	}
 	switch {

@@ -41,6 +41,11 @@ func shouldRetry(resp *http.Response, err error) bool {
 		}
 	}
 
+	// 409 is not in autorest.StatusCodesForRetry; retry only when the Retry-After header is present.
+	if resp.StatusCode == http.StatusConflict && resp.Header.Get("Retry-After") != "" {
+		return true
+	}
+
 	// Check if the body contains the certain strings that can be retried.
 	b, err := io.ReadAll(resp.Body)
 	// Close the original body to release the HTTP connection, even on read error

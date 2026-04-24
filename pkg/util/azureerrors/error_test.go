@@ -5,8 +5,10 @@ package azureerrors
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -375,6 +377,109 @@ func TestIsStatusConflictError(t *testing.T) {
 			got := IsStatusConflictError(tt.err)
 			if got != tt.want {
 				t.Error(got)
+			}
+		})
+	}
+}
+
+func TestIsRetryableError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+		},
+		{
+			name: "generic error",
+			err:  errors.New("something happened"),
+		},
+		{
+			name: "autorest 429",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusTooManyRequests,
+			},
+			want: true,
+		},
+		{
+			name: "azcore 429",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusTooManyRequests,
+			},
+			want: true,
+		},
+		{
+			name: "autorest transient 409 with Please retry later",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New(`Code="ConflictingConcurrentWriteNotAllowed" Message="The operation was interrupted by a conflicting concurrent write on the same entity. Please retry later."`),
+			},
+			want: true,
+		},
+		{
+			name: "azcore transient 409 with Please retry later",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Body:       io.NopCloser(strings.NewReader(`{"code":"ConflictingConcurrentWriteNotAllowed","message":"Please retry later."}`)),
+				},
+				ErrorCode: "ConflictingConcurrentWriteNotAllowed",
+			},
+			want: true,
+		},
+		{
+			name: "azcore 409 without body (not retryable)",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+				},
+				ErrorCode: "ConflictingConcurrentWriteNotAllowed",
+			},
+		},
+		{
+			name: "azcore 409 with Retry-After header",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+				ErrorCode: "CanceledAndSupersededDueToAnotherOperation",
+			},
+			want: true,
+		},
+		{
+			name: "autorest 409 with Retry-After header",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New(`Code="CanceledAndSupersededDueToAnotherOperation" Message="Operation was canceled."`),
+				Response: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "autorest permanent 409 without Please retry later",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+				Original:   errors.New(`Code="ScopeLocked" Message="The scope is locked."`),
+			},
+		},
+		{
+			name: "error containing RetryableError",
+			err:  errors.New("RetryableError: something"),
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsRetryableError(tt.err)
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -15,6 +15,7 @@ import (
 
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
@@ -28,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -420,6 +422,11 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
 						return false, nil
 					}
+					// Transient error: return (false, nil) to keep the PollImmediateUntil loop running; timeoutCtx is the hard bound.
+					if azureerrors.IsRetryableError(err) {
+						m.log.Warnf("transient error attaching NSG to subnet %s, retrying: %v", subnetID, err)
+						return false, nil
+					}
 					return false, err
 				}
 			}
@@ -472,10 +479,12 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		return nil
 	}
 
-	err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+	err = retry.OnError(transientRetryBackoff, m.isRetryable("setting master subnet policies for subnet "+r.Name), func() error {
+		return m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+	})
 
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
+		if detailedErr.Original != nil && strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{

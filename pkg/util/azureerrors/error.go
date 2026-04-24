@@ -368,17 +368,28 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true if the error is a transient/retryable error
-// such as 429 Too Many Requests or contains RetryableError code
+// IsRetryableError returns true for transient ARM errors: 429, 409+Retry-After, 409+"Please retry later", or "RetryableError" in the message. Azcore checks require RawResponse to be non-nil.
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
 
+	// azcore.ResponseError.Error() includes the response body when RawResponse is non-nil.
+	errMsg := err.Error()
+
 	var responseError *azcore.ResponseError
 	if errors.As(err, &responseError) {
 		if responseError.StatusCode == http.StatusTooManyRequests {
 			return true
+		}
+		if responseError.StatusCode == http.StatusConflict {
+			if responseError.RawResponse != nil && responseError.RawResponse.Header.Get("Retry-After") != "" {
+				return true
+			}
+			// ARM error ConflictingConcurrentWriteNotAllowed signals a transient conflict via "Please retry later".
+			if strings.Contains(errMsg, "Please retry later") {
+				return true
+			}
 		}
 	}
 
@@ -387,8 +398,16 @@ func IsRetryableError(err error) bool {
 		if detailedErr.StatusCode == http.StatusTooManyRequests {
 			return true
 		}
+		if detailedErr.StatusCode == http.StatusConflict {
+			if detailedErr.Response != nil && detailedErr.Response.Header.Get("Retry-After") != "" {
+				return true
+			}
+			// ARM error ConflictingConcurrentWriteNotAllowed signals a transient conflict via "Please retry later".
+			if strings.Contains(errMsg, "Please retry later") {
+				return true
+			}
+		}
 	}
 
-	// Check for RetryableError in error message (nested Azure errors)
-	return strings.Contains(err.Error(), "RetryableError")
+	return strings.Contains(errMsg, "RetryableError")
 }
