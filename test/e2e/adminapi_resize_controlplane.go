@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"slices"
@@ -58,6 +59,39 @@ func getControlPlaneVMSize(ctx context.Context) string {
 	return string(vms[0].HardwareProfile.VMSize)
 }
 
+// nextLargerSupportedMasterVMSize returns the supported master VM size in the
+// same family as currentVMSize that has the smallest core count strictly
+// greater than currentVMSize's core count. It returns an error if currentVMSize
+// is not in the supported master list, or if no larger size exists in the same
+// family.
+func nextLargerSupportedMasterVMSize(currentVMSize string) (string, error) {
+	supportedMasterSizes := validate.SupportedVMSizesByRole(validate.VMRoleMaster)
+	currentInfo, ok := supportedMasterSizes[api.VMSize(currentVMSize)]
+	if !ok {
+		return "", fmt.Errorf("current VM size %q is not in the supported master list", currentVMSize)
+	}
+
+	targetSku := ""
+	targetCores := math.MaxInt
+	for size, info := range supportedMasterSizes {
+		if info.Family != currentInfo.Family {
+			continue
+		}
+		if info.CoreCount <= currentInfo.CoreCount {
+			continue
+		}
+		if info.CoreCount < targetCores {
+			targetCores = info.CoreCount
+			targetSku = string(size)
+		}
+	}
+
+	if targetSku == "" {
+		return "", fmt.Errorf("no supported master VM size larger than %q (family %s, %d cores) is available", currentVMSize, currentInfo.Family, currentInfo.CoreCount)
+	}
+	return targetSku, nil
+}
+
 // validateMasterVMSizeLabels makes sure that master machine and node Resources in the cluster have the correct vmsize labels. It verifies that the following are equal to the targetSku
 // - metadata.labels."machine.openshift.io/instance-type" for machine
 // - spec.ProviderSpec.value.vmSize for machine
@@ -81,8 +115,10 @@ func validateMasterVMSizeLabels(ctx context.Context, targetSku string) {
 		Expect(json.Unmarshal(ma.Spec.ProviderSpec.Value.Raw, &machineProvSpec)).ToNot(HaveOccurred())
 		Expect(machineProvSpec.VMSize).To(Equal(targetSku))
 
+		Expect(ma.Status.NodeRef).ToNot(BeNil())
+
 		var curNode corev1.Node
-		err = clients.KubeClient.Get(ctx, types.NamespacedName{Name: ma.GetObjectMeta().GetName()}, &curNode)
+		err = clients.KubeClient.Get(ctx, types.NamespacedName{Name: ma.Status.NodeRef.Name}, &curNode)
 		Expect(err).ToNot(HaveOccurred())
 
 		nodeSizeLabelVal, ok := curNode.GetLabels()[nodeLabelInstanceType]
@@ -154,10 +190,10 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 		targetSku := ""
 		for size, sizeInfo := range supportedSizes {
 			for _, u := range usageRes {
-				if u.Name == nil || u.Name.Value == nil || *u.Name.Value != sizeInfo.Family {
-					continue
-				}
-				if u.Limit == nil {
+				if u.Name == nil ||
+					u.Name.Value == nil ||
+					*u.Name.Value != sizeInfo.Family ||
+					u.Limit == nil {
 					continue
 				}
 
@@ -187,19 +223,17 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 		Expect(out.Details[0].Code).To(Equal("ResourceQuotaExceeded"))
 	})
 
-	It("should do the resize when target size is different", Label(slow), Serial, func(ctx context.Context) {
+	It("should do the resize when target size is different", Label(slow), FlakeAttempts(1), Serial, func(ctx context.Context) {
 		By("Getting the current machine size")
 		preResizeVMSize := getControlPlaneVMSize(ctx)
 		Expect(preResizeVMSize).ToNot(BeZero())
 
-		// if we're on D, resize to same E series VM, and vice-versa
-		targetSku := ""
-		if strings.HasPrefix(preResizeVMSize, "Standard_D") {
-			targetSku = strings.Replace(preResizeVMSize, "Standard_D", "Standard_E", 1)
-		} else if strings.HasPrefix(preResizeVMSize, "Standard_E") {
-			targetSku = strings.Replace(preResizeVMSize, "Standard_E", "Standard_D", 1)
-		} else {
-			Skip(fmt.Sprintf("Cowardly refusing to resize the cluster, only know how to handle E and D vms, this cluster has: %s", preResizeVMSize))
+		// Pick the next-larger VM size within the same family from the
+		// supported-master list. This keeps the resize on a well-tested size
+		// while avoiding arbitrary family swaps.
+		targetSku, err := nextLargerSupportedMasterVMSize(preResizeVMSize)
+		if err != nil {
+			Skip(err.Error())
 		}
 
 		By(fmt.Sprintf("Resizing from %s to %s", preResizeVMSize, targetSku))
@@ -208,15 +242,16 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 			"vmSize":       []string{targetSku},
 		}
 
-		var requestError *api.CloudError
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/resizecontrolplane", params, true, nil, requestError)
+		requestError := api.CloudError{}
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/resizecontrolplane", params, true, nil, &requestError)
 		// err will be [io.EOF] when request is successful, as response body will
 		// be empty. In case of error, response body will be parsed into an [api.CloudError]
 		if err == io.EOF {
 			err = nil
 		}
 		Expect(err).NotTo(HaveOccurred())
-		Expect(requestError).NotTo(HaveOccurred())
+		Expect(requestError.Code).To(BeEmpty(), "unexpected CloudError: %+v", requestError)
+		Expect(requestError.Message).To(BeEmpty(), "unexpected CloudError: %+v", requestError)
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		By("Validating vm size after resize")
