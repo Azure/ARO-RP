@@ -9,11 +9,11 @@ find "$SPEC_BASE_DIR" -mindepth 2 -maxdepth 2 -type d ! -name examples | sort | 
     (
         api_version=$(basename "$api_version_dir")
         api_version_example_dir="$SPEC_BASE_DIR/examples/$api_version"
-        rm -rf $api_version_example_dir
+        rm -rf "$api_version_example_dir"
     )
 done
 
-npm install
+npm ci
 npm run format
 npm run compile
 
@@ -25,6 +25,6 @@ find "$SPEC_BASE_DIR" -mindepth 2 -maxdepth 2 -type d ! -name examples | sort | 
         mkdir -p $api_version_example_dir
         npm run examples -- ${api_version_dir}/redhatopenshift.json
         mv $api_version_dir/examples/* $api_version_example_dir/
-        rm -rf $api_version_dir/examples
+        rm -rf "$api_version_dir/examples"
     )
 done
