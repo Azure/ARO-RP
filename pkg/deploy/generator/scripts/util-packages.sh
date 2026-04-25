@@ -1,5 +1,10 @@
 #!/bin/bash
 # Repository and package management related functions
+#
+# Azure Linux 3 (RP and gateway VMSS): use tdnf only—extended repos via
+# configure_repo_azurelinux_extended, updates/installs via tdnf_update_pkgs and
+# tdnf_install_pkgs. This matches the dev-environment Azure Linux path (e.g. PR
+# #4777). dnf is not used here; tdnf is the supported package tool on Azure Linux 3.
 
 # configure_repo_azurelinux_extended()
 configure_repo_azurelinux_extended() {
