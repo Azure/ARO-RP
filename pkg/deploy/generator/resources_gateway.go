@@ -298,10 +298,17 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 							},
 						},
 					},
-					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
-						ImageReference: &mgmtcompute.ImageReference{
-							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/azure-linux-3-gen2-fips/versions/latest"),
-						},
+				StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+					ImageReference: &mgmtcompute.ImageReference{
+						// The Mariner 2 FIPS *marketplace* SKU was not on the platform-image
+						// allowlist for Automatic OS Upgrades, so ARO previously used the non-FIPS
+						// marketplace image and configured FIPS manually at boot.
+						// Azure Linux 3 FIPS is consumed via the 1P Shared Gallery
+						// (/sharedGalleries/CblMariner.1P/...), which follows the gallery-based
+						// automatic OS upgrade path and is not gated by that allowlist.
+						// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#automatic-os-image-upgrade-for-custom-images
+						SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/azure-linux-3-gen2-fips/versions/latest"),
+					},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
