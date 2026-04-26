@@ -121,7 +121,7 @@ fabric==3.2.2
 filelock==3.20.3
 flake8==7.3.0
 gitdb==4.0.12
-GitPython==3.1.46
+GitPython==3.1.47
 humanfriendly==10.0
 idna==3.11
 imagesize==1.4.1
