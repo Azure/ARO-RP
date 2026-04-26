@@ -1,21 +1,21 @@
 #!/bin/bash
 # Repository and package management related functions
+#
+# Azure Linux 3 (RP and gateway VMSS): use tdnf only—extended repos via
+# configure_repo_azurelinux_extended, updates/installs via tdnf_update_pkgs and
+# tdnf_install_pkgs. This matches the dev-environment Azure Linux path (e.g. PR
+# #4777). dnf is not used here; tdnf is the supported package tool on Azure Linux 3.
 
-# configure_repo_mariner_extended()
-configure_repo_mariner_extended() {
-    local -r extended_repo_config="https://packages.microsoft.com/cbl-mariner/2.0/prod/extended/x86_64/config.repo"
-    curl -sSL "$extended_repo_config" -o /etc/yum.repos.d/mariner-extended.repo
-
-    local -r repo_name="cbl-mariner2.0prodextendedx86_64"
-
+# configure_repo_azurelinux_extended()
+configure_repo_azurelinux_extended() {
     local -ra cmd=(
-        dnf
-        update
+        tdnf
+        install
         -y
-        --enablerepo="$repo_name"
+        azurelinux-repos-extended
     )
 
-    log "Enabling repo $repo_name"
+    log "Enabling repo azurelinux-repos-extended"
     retry cmd "$1" "${2:-}"
 }
 
@@ -30,10 +30,12 @@ configure_repo_mariner_extended() {
 configure_rpm_repos() {
     log "starting"
 
-    configure_repo_mariner_extended "$1" "${2:-1}"
+    configure_repo_azurelinux_extended "$1" "${2:-1}"
 }
 
-# dnf_install_pkgs
+# tdnf_install_pkgs
+#
+# Azure Linux 3: use tdnf (same family as the extended-repo setup in configure_repo_azurelinux_extended).
 #
 # args:
 #   1) pkgs - nameref, string array
@@ -42,16 +44,16 @@ configure_rpm_repos() {
 #       * Time to wait before retrying command
 #   3) retries - integer, optional
 #       * Amount of times to retry command, defaults to 5
-dnf_install_pkgs() {
+tdnf_install_pkgs() {
     local -n pkgs="$1"
     log "starting"
 
     local -a cmd=(
-        dnf
+        tdnf
         -y
         install
     )
-    
+
     # Reference: https://www.shellcheck.net/wiki/SC2206
     # append pkgs array to cmd
     mapfile -O $(( ${#cmd[@]} + 1 )) -d ' ' cmd <<< "${pkgs[@]}"
@@ -62,22 +64,22 @@ dnf_install_pkgs() {
 }
 
 
-# dnf_update_pkgs
+# tdnf_update_pkgs
 #
 # args:
 #   1) excludes - nameref, string array, optional
 #       * Packages to exclude from updating
-#       * Each index must be prefixed with -x 
+#       * Each index must be prefixed with -x
 #   2) wait_time - nameref, integer
 #       * Time to wait before retrying command
 #   3) retries - integer, optional
 #       * Amount of times to retry command, defaults to 5
-dnf_update_pkgs() {
+tdnf_update_pkgs() {
     local -n excludes="${1:-empty_str}"
     log "starting"
 
     local -a cmd=(
-        dnf
+        tdnf
         -y
         # Replaced with excludes
         ""

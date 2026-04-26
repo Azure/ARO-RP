@@ -300,12 +300,14 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
-							// cbl-mariner-2-gen2-fips is not supported by Automatic OS Updates
-							// therefore the non fips image is used, and fips is configured manually
-							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
-							// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#vmss-deployment-with-1p-image-galleryarm-template
-							// https://eng.ms/docs/cloud-ai-platform/azure-core/core-compute-and-host/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryimagereference#cbl-mariner-2-images
-							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
+							// The Mariner 2 FIPS *marketplace* SKU was not on the platform-image
+							// allowlist for Automatic OS Upgrades, so ARO previously used the non-FIPS
+							// marketplace image and configured FIPS manually at boot.
+							// Azure Linux 3 FIPS is consumed via the 1P Shared Gallery
+							// (/sharedGalleries/CblMariner.1P/...), which follows the gallery-based
+							// automatic OS upgrade path and is not gated by that allowlist.
+							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#automatic-os-image-upgrade-for-custom-images
+							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/azure-linux-3-gen2-fips/versions/latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
