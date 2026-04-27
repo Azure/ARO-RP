@@ -8,30 +8,42 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
-var loadBalancerService = corev1.Service{
+var testStorageClass = storagev1.StorageClass{
 	ObjectMeta: metav1.ObjectMeta{
-		Name: "test",
+		Name: "test-storageclass",
 	},
-	Spec: corev1.ServiceSpec{
-		Type: corev1.ServiceTypeLoadBalancer,
-		Ports: []corev1.ServicePort{
-			{
-				Name:     "service-443",
-				Protocol: corev1.ProtocolTCP,
-				Port:     int32(443),
-			},
+	Provisioner: "disk.csi.azure.com",
+	Parameters: map[string]string{
+		"skuname": "Premium_LRS",
+	},
+	ReclaimPolicy: pointerutils.ToPtr(corev1.PersistentVolumeReclaimDelete),
+	// Immediate binding so it creates it without us having to make a pod
+	VolumeBindingMode: pointerutils.ToPtr(storagev1.VolumeBindingImmediate),
+}
+
+var diskPVC = corev1.PersistentVolumeClaim{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "testdisk-pvc",
+	},
+	Spec: corev1.PersistentVolumeClaimSpec{
+		StorageClassName: pointerutils.ToPtr("test-storageclass"),
+		AccessModes: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
 		},
+		// 1GB
+		Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: *resource.NewScaledQuantity(1, resource.Giga)}},
 	},
 }
 
@@ -39,60 +51,39 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should be possible to delete managed cluster resources", func(ctx context.Context) {
-		var service *corev1.Service
-		var lbRuleID string
-		var fipConfigID string
-		var pipAddressID string
-
+		var pvc *corev1.PersistentVolumeClaim
 		const namespace = "default"
 
-		By("creating a test service of type loadbalancer")
-		creationFunc := clients.Kubernetes.CoreV1().Services(namespace).Create
-		CreateK8sObjectWithRetry(ctx, creationFunc, &loadBalancerService, metav1.CreateOptions{})
+		By("creating a disk storage class")
+		stc := clients.Kubernetes.StorageV1().StorageClasses()
+		CreateK8sObjectWithRetry(ctx, stc.Create, &testStorageClass, metav1.CreateOptions{})
+
+		By("creating a disk pvc")
+		pvcs := clients.Kubernetes.CoreV1().PersistentVolumeClaims(namespace)
+		CreateK8sObjectWithRetry(ctx, pvcs.Create, &diskPVC, metav1.CreateOptions{})
 
 		defer func() {
-			By("cleaning up the k8s loadbalancer service")
-			CleanupK8sResource[*corev1.Service](
-				ctx, clients.Kubernetes.CoreV1().Services(namespace), loadBalancerService.Name,
-			)
+			By("cleaning up the k8s pvc")
+			CleanupK8sResource(ctx, pvcs, diskPVC.Name)
+			By("cleaning up the storageclass")
+			CleanupK8sResource(ctx, stc, testStorageClass.Name)
 		}()
 
-		// wait for ingress IP to be assigned as this indicate the service is ready
+		// wait for disk to be created
 		Eventually(func(g Gomega, ctx context.Context) {
-			getFunc := clients.Kubernetes.CoreV1().Services(namespace).Get
-			service = GetK8sObjectWithRetry(ctx, getFunc, loadBalancerService.Name, metav1.GetOptions{})
-			g.Expect(service.Status.LoadBalancer.Ingress).To(HaveLen(1))
+			pvc = GetK8sObjectWithRetry(ctx, pvcs.Get, diskPVC.Name, metav1.GetOptions{})
+			g.Expect(pvc.Status.Phase).To(Equal(corev1.ClaimBound))
+			g.Expect(pvc.Spec.VolumeName).ToNot(BeEmpty())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
-		By("getting the newly created k8s service frontend IP configuration")
+		By("getting the newly created pvc info")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		rgName := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
-		lbName, err := getInfraID(ctx)
-		Expect(err).NotTo(HaveOccurred())
+		pvcID := *oc.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Compute/disks/" + pvc.Spec.VolumeName
 
-		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		for _, fipConfig := range lb.Properties.FrontendIPConfigurations {
-			Expect(fipConfig.Properties.PublicIPAddress).NotTo(BeNil())
-			if !strings.Contains(*fipConfig.Properties.PublicIPAddress.ID, "default-v4") && !strings.Contains(*fipConfig.Properties.PublicIPAddress.ID, "pip-v4") {
-				Expect(fipConfig.Properties.LoadBalancingRules).To(HaveLen(1))
-				lbRuleID = *fipConfig.Properties.LoadBalancingRules[0].ID
-				fipConfigID = *fipConfig.ID
-				pipAddressID = *fipConfig.Properties.PublicIPAddress.ID
-			}
-		}
-
-		By("deleting the associated loadbalancer rule")
-		testDeleteManagedResourceOK(ctx, lbRuleID)
-
-		By("deleting the associated frontend ip config")
-		testDeleteManagedResourceOK(ctx, fipConfigID)
-
-		By("deleting the associated public ip address")
-		testDeleteManagedResourceOK(ctx, pipAddressID)
+		By("deleting the underlying PVC")
+		testDeleteManagedResourceOK(ctx, pvcID)
 	})
 
 	It("should NOT be possible to delete a resource not within the cluster's managed resource group", func(ctx context.Context) {
