@@ -102,6 +102,67 @@ var originalLB = armnetwork.LoadBalancer{
 	Location: &location,
 }
 
+func loadBalancerWithRuleReferences() armnetwork.LoadBalancer {
+	rule80ID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80"
+	rule443ID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-443"
+
+	return armnetwork.LoadBalancer{
+		SKU: &armnetwork.LoadBalancerSKU{
+			Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+		},
+		Properties: &armnetwork.LoadBalancerPropertiesFormat{
+			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
+				{
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973"),
+					ID:   pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+					Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
+						LoadBalancingRules: []*armnetwork.SubResource{
+							{ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80")},
+							{ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443")},
+						},
+					},
+				},
+			},
+			BackendAddressPools: []*armnetwork.BackendAddressPool{
+				{
+					Name: pointerutils.ToPtr("test-backend-pool"),
+					Properties: &armnetwork.BackendAddressPoolPropertiesFormat{
+						LoadBalancingRules: []*armnetwork.SubResource{
+							{ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80")},
+							{ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443")},
+						},
+					},
+				},
+			},
+			Probes: []*armnetwork.Probe{
+				{
+					Name: pointerutils.ToPtr("testProbeInUse"),
+					Properties: &armnetwork.ProbePropertiesFormat{
+						Port: pointerutils.ToPtr(int32(8443)),
+						LoadBalancingRules: []*armnetwork.SubResource{
+							{ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80")},
+							{ID: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443")},
+						},
+					},
+				},
+			},
+			LoadBalancingRules: []*armnetwork.LoadBalancingRule{
+				{
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+					ID:   pointerutils.ToPtr(rule80ID),
+				},
+				{
+					Name: pointerutils.ToPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+					ID:   pointerutils.ToPtr(rule443ID),
+				},
+			},
+		},
+		Name:     &infraID,
+		Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
+		Location: &location,
+	}
+}
+
 func TestDeleteManagedResource(t *testing.T) {
 	// Run tests
 	for _, tt := range []struct {
@@ -284,6 +345,58 @@ func TestDeleteManagedResource(t *testing.T) {
 					Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
 					Location: &location,
 				}, nil).Return(nil)
+			},
+		},
+		{
+			name:        "load balancing rule delete",
+			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80",
+			expectedErr: "",
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
+				lbFixture := loadBalancerWithRuleReferences()
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: lbFixture}, nil)
+				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, gomock.AssignableToTypeOf(armnetwork.LoadBalancer{}), nil).DoAndReturn(
+					func(ctx context.Context, resourceGroupName, loadBalancerName string, parameters armnetwork.LoadBalancer, options *armnetwork.LoadBalancersClientBeginCreateOrUpdateOptions) error {
+						expectedRemainingRuleID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-443"
+
+						if parameters.Properties == nil {
+							t.Fatal("expected load balancer properties to be set")
+						}
+						if len(parameters.Properties.LoadBalancingRules) != 1 || parameters.Properties.LoadBalancingRules[0].ID == nil || *parameters.Properties.LoadBalancingRules[0].ID != expectedRemainingRuleID {
+							t.Fatalf("expected exactly one remaining top-level load balancing rule %s, got %#v", expectedRemainingRuleID, parameters.Properties.LoadBalancingRules)
+						}
+						if len(parameters.Properties.FrontendIPConfigurations) != 1 || parameters.Properties.FrontendIPConfigurations[0].Properties == nil ||
+							len(parameters.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules) != 1 ||
+							parameters.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules[0].ID == nil ||
+							*parameters.Properties.FrontendIPConfigurations[0].Properties.LoadBalancingRules[0].ID != "ae3506385907e44eba9ef9bf76eac973-TCP-443" {
+							t.Fatalf("expected frontend IP config references to retain only the remaining rule, got %#v", parameters.Properties.FrontendIPConfigurations)
+						}
+						if len(parameters.Properties.BackendAddressPools) != 1 || parameters.Properties.BackendAddressPools[0].Properties == nil ||
+							len(parameters.Properties.BackendAddressPools[0].Properties.LoadBalancingRules) != 1 ||
+							parameters.Properties.BackendAddressPools[0].Properties.LoadBalancingRules[0].ID == nil ||
+							*parameters.Properties.BackendAddressPools[0].Properties.LoadBalancingRules[0].ID != "ae3506385907e44eba9ef9bf76eac973-TCP-443" {
+							t.Fatalf("expected backend pool references to retain only the remaining rule, got %#v", parameters.Properties.BackendAddressPools)
+						}
+						if len(parameters.Properties.Probes) != 1 || parameters.Properties.Probes[0].Properties == nil ||
+							len(parameters.Properties.Probes[0].Properties.LoadBalancingRules) != 1 ||
+							parameters.Properties.Probes[0].Properties.LoadBalancingRules[0].ID == nil ||
+							*parameters.Properties.Probes[0].Properties.LoadBalancingRules[0].ID != "ae3506385907e44eba9ef9bf76eac973-TCP-443" {
+							t.Fatalf("expected probe references to retain only the remaining rule, got %#v", parameters.Properties.Probes)
+						}
+						return nil
+					},
+				)
+			},
+		},
+		{
+			name:        "load balancing rule delete with mixed-case resource type",
+			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/LoadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80",
+			expectedErr: "",
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
+				lbFixture := loadBalancerWithRuleReferences()
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/LoadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: lbFixture}, nil)
+				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, gomock.AssignableToTypeOf(armnetwork.LoadBalancer{}), nil).Return(nil)
 			},
 		},
 	} {
