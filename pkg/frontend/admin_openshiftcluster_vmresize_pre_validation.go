@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +21,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -32,6 +36,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 // getPreResizeControlPlaneVMsValidation is the HTTP handler; the underscore
@@ -94,7 +99,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return nil, err
 	}
 
-	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
+	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize, log)
 }
 
 func (f *frontend) preResizeControlPlaneVMsValidation(
@@ -104,6 +109,7 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	k adminactions.KubeActions,
 	a adminactions.AzureActions,
 	desiredVMSize string,
+	log *logrus.Entry,
 ) ([]byte, error) {
 	// Run checks in parallel, collecting all errors so the caller sees every
 	// failure at once. For API server checks, run ClusterOperator status first
@@ -141,11 +147,17 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	// when the API server is unreachable (lazy init leaves staticMapper nil).
 	// Since these run in child goroutines, the HTTP Panic middleware cannot
 	// catch them — an unrecovered panic here would crash the entire RP process.
-	safeGo := func(fn func() error) func() {
+	safeGo := func(checkName string, fn func() error) func() {
 		return func() {
 			defer func() {
 				if r := recover(); r != nil {
-					collect(fmt.Errorf("panic: %v\n%s", r, debug.Stack()))
+					log.Errorf("recovered panic during %s pre-flight validation: %#v\n%s", checkName, r, debug.Stack())
+					collect(api.NewCloudError(
+						http.StatusInternalServerError,
+						api.CloudErrorCodeInternalServerError,
+						"",
+						fmt.Sprintf("Recovered panic during %s pre-flight validation. Check RP logs for details.", checkName),
+					))
 				}
 			}()
 			collect(fn())
@@ -154,16 +166,16 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 
 	var wg sync.WaitGroup
 
-	wg.Go(safeGo(func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, a) }))
-	wg.Go(safeGo(func() error {
+	wg.Go(safeGo("VM SKU/quota", func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, k, a) }))
+	wg.Go(safeGo("API server", func() error {
 		if err := validateAPIServerHealth(ctx, k); err != nil {
 			return err
 		}
 		return validateAPIServerPods(ctx, k)
 	}))
-	wg.Go(safeGo(func() error { return validateEtcdHealth(ctx, k) }))
-	wg.Go(safeGo(func() error { return validateClusterSP(ctx, k) }))
-	wg.Go(safeGo(func() error { return checkCPMSNotActive(ctx, k) }))
+	wg.Go(safeGo("etcd", func() error { return validateEtcdHealth(ctx, k) }))
+	wg.Go(safeGo("service principal", func() error { return validateClusterSP(ctx, k) }))
+	wg.Go(safeGo("control plane machine set", func() error { return checkCPMSNotActive(ctx, k) }))
 
 	wg.Wait()
 
@@ -457,6 +469,7 @@ func (f *frontend) validateVMSKU(
 	doc *api.OpenShiftClusterDocument,
 	subscriptionDoc *api.SubscriptionDocument,
 	desiredVMSize string,
+	k adminactions.KubeActions,
 	a adminactions.AzureActions,
 ) error {
 	if desiredVMSize == "" {
@@ -484,15 +497,9 @@ func (f *frontend) validateVMSKU(
 		return err
 	}
 
-	currentVMSizes, err := a.MasterVMSizes(ctx)
+	currentVMSizes, err := currentControlPlaneVMSizes(ctx, doc, k, a)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Failed to retrieve current master VM sizes from Azure: %v", err))
-	}
-
-	if len(currentVMSizes) < 3 {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Expected 3 master VMs but found %d in the cluster resource group. Resize cannot proceed until all control plane VMs are present.", len(currentVMSizes)))
+		return err
 	}
 
 	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSizes, desiredVMSize)
@@ -501,4 +508,43 @@ func (f *frontend) validateVMSKU(
 	}
 
 	return nil
+}
+
+func currentControlPlaneVMSizes(
+	ctx context.Context,
+	doc *api.OpenShiftClusterDocument,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+) ([]string, error) {
+	machines, err := getControlPlaneMachines(ctx, k)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(machines) != api.ControlPlaneNodeCount {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("Expected %d control plane machines but found %d. Resize cannot proceed until all control plane machines are present.",
+				api.ControlPlaneNodeCount, len(machines)))
+	}
+
+	clusterRGName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	machineNames := slices.Sorted(maps.Keys(machines))
+	sizes := make([]string, 0, len(machineNames))
+
+	for _, machineName := range machineNames {
+		vm, err := a.GetVirtualMachine(ctx, clusterRGName, machineName, mgmtcompute.InstanceView)
+		if err != nil {
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+				fmt.Sprintf("Failed to retrieve current control plane VM %q from Azure: %v", machineName, err))
+		}
+
+		if vm.VirtualMachineProperties == nil || vm.HardwareProfile == nil {
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+				fmt.Sprintf("Control plane VM %q has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.", machineName))
+		}
+
+		sizes = append(sizes, string(vm.HardwareProfile.VMSize))
+	}
+
+	return sizes, nil
 }

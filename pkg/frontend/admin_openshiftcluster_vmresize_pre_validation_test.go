@@ -117,7 +117,39 @@ func healthyKubeAPIServerPodsJSON() []byte {
 	)
 }
 
+func azureVMWithSize(vmSize string) mgmtcompute.VirtualMachine {
+	return mgmtcompute.VirtualMachine{
+		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+			HardwareProfile: &mgmtcompute.HardwareProfile{
+				VMSize: mgmtcompute.VirtualMachineSizeTypes(vmSize),
+			},
+		},
+	}
+}
+
+func expectControlPlaneVMGetCalls(a *mock_adminactions.MockAzureActions, resourceGroupName string, vmSizes map[string]string) {
+	for _, machineName := range []string{"master-0", "master-1", "master-2"} {
+		vmSize, ok := vmSizes[machineName]
+		if !ok {
+			continue
+		}
+
+		a.EXPECT().
+			GetVirtualMachine(gomock.Any(), resourceGroupName, machineName, mgmtcompute.InstanceView).
+			Return(azureVMWithSize(vmSize), nil)
+	}
+}
+
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
+	running := "Running"
+	allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+		masterMachine("master-0", "Standard_D8s_v3", running),
+		masterMachine("master-1", "Standard_D8s_v3", running),
+		masterMachine("master-2", "Standard_D8s_v3", running),
+	))
+}
+
+func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeActions, machineList []byte) {
 	k.EXPECT().
 		CheckAPIServerReadyz(gomock.Any()).
 		Return(nil).
@@ -142,6 +174,10 @@ func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 		KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", "openshift-machine-api", "cluster").
 		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
 		AnyTimes()
+	k.EXPECT().
+		KubeList(gomock.Any(), "Machine", machineNamespace).
+		Return(machineList, nil).
+		AnyTimes()
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
@@ -159,6 +195,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
+		notContains    []string
 	}
 
 	for _, tt := range []*test{
@@ -209,9 +246,11 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 							Capabilities: []*armcompute.ResourceSKUCapabilities{},
 						},
 					}, nil)
-				a.EXPECT().
-					MasterVMSizes(gomock.Any()).
-					Return([]string{"Standard_D8s_v3", "Standard_D8s_v3", "Standard_D8s_v3"}, nil)
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusOK,
@@ -430,7 +469,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
 		},
 		{
-			name:       "MasterVMSizes returns error",
+			name:       "GetVirtualMachine returns error",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			vmSize:     "Standard_D8s_v3",
 			fixture: func(f *testdatabase.Fixture) {
@@ -477,15 +516,15 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 				a.EXPECT().
-					MasterVMSizes(gomock.Any()).
-					Return(nil, fmt.Errorf("authorization denied"))
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+					Return(mgmtcompute.VirtualMachine{}, fmt.Errorf("authorization denied"))
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Failed to retrieve current master VM sizes from Azure: authorization denied`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
 		},
 		{
-			name:       "MasterVMSizes returns empty slice",
+			name:       "control plane VM missing HardwareProfile",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			vmSize:     "Standard_D8s_v3",
 			fixture: func(f *testdatabase.Fixture) {
@@ -532,15 +571,18 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 				a.EXPECT().
-					MasterVMSizes(gomock.Any()).
-					Return([]string{}, nil)
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+					Return(azureVMWithSize("Standard_D8s_v3"), nil)
+				a.EXPECT().
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
+					Return(mgmtcompute.VirtualMachine{}, nil)
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 master VMs but found 0 in the cluster resource group. Resize cannot proceed until all control plane VMs are present.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
 		},
 		{
-			name:       "MasterVMSizes returns partial inventory",
+			name:       "control plane machine inventory incomplete",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			vmSize:     "Standard_D8s_v3",
 			fixture: func(f *testdatabase.Fixture) {
@@ -586,13 +628,110 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 							Capabilities: []*armcompute.ResourceSKUCapabilities{},
 						},
 					}, nil)
-				a.EXPECT().
-					MasterVMSizes(gomock.Any()).
-					Return([]string{"Standard_D8s_v3", "Standard_D8s_v3"}, nil)
 			},
-			kubeMocks:      allKubeChecksHealthyMock,
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				running := "Running"
+				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+					masterMachine("master-0", "Standard_D8s_v3", running),
+					masterMachine("master-1", "Standard_D8s_v3", running),
+				))
+			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 master VMs but found 2 in the cluster resource group. Resize cannot proceed until all control plane VMs are present.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
+		},
+		{
+			name:       "panic recovery is sanitized",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D8s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				running := "Running"
+				k.EXPECT().
+					CheckAPIServerReadyz(gomock.Any()).
+					Return(nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(healthyKubeAPIServerJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+					Return(healthyKubeAPIServerPodsJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					DoAndReturn(func(context.Context, string, string, string) ([]byte, error) {
+						panic("simulated panic")
+					}).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(validServicePrincipalJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", "openshift-machine-api", "cluster").
+					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+					AnyTimes()
+				k.EXPECT().
+					KubeList(gomock.Any(), "Machine", machineNamespace).
+					Return(masterMachineListJSON(
+						masterMachine("master-0", "Standard_D8s_v3", running),
+						masterMachine("master-1", "Standard_D8s_v3", running),
+						masterMachine("master-2", "Standard_D8s_v3", running),
+					), nil).
+					AnyTimes()
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Recovered panic during etcd pre-flight validation. Check RP logs for details.`,
+			notContains:    []string{"runtime/debug.Stack", "goroutine", "simulated panic"},
 		},
 		{
 			name:       "API server unreachable",
@@ -679,11 +818,19 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+
+			for _, needle := range tt.notContains {
+				if strings.Contains(string(b), needle) {
+					t.Errorf("response unexpectedly contained %q", needle)
+				}
+			}
 		})
 	}
 }
 
 func TestCheckResizeComputeQuota(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	type test struct {
@@ -1006,6 +1153,8 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
