@@ -181,7 +181,7 @@ ExecStart=/usr/bin/podman run \
   -e MISE_ADDRESS \
   -e ARO_LOG_LEVEL \
   -e ENVIRONMENT \
-  -m 2g \
+  -m 4g \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -p 443:8443 \
