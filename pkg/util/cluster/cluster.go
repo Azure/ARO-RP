@@ -436,7 +436,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			Location: pointerutils.ToPtr(c.Config.Location),
 		}, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed creating WI '%s': %w", wi.OperatorName, err)
 		}
 		_, err = c.roleassignments.Create(
 			ctx,
@@ -451,7 +451,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			},
 		)
 		if err != nil {
-			return fmt.Errorf("failed assigning roleassignment to WI: %w", err)
+			return fmt.Errorf("failed assigning roleassignment to WI '%s': %w", wi.OperatorName, err)
 		}
 
 		if wi.OperatorName != "aro-Cluster" {
@@ -467,13 +467,14 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 func (c *Cluster) Create(ctx context.Context) error {
 	c.log.Info("Creating cluster")
 	clusterGet, err := c.openshiftclusters.Get(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName)
-	c.log.Info("Got cluster ref")
 	if err == nil {
 		if clusterGet.Properties.ProvisioningState == api.ProvisioningStateFailed {
 			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry: %s, %s", clusterGet.ID, c.Config.VnetResourceGroup)
 		}
 		c.log.Print("cluster already exists, skipping create")
 		return nil
+	} else {
+		c.log.Info("Got cluster ref")
 	}
 
 	appDetails := appDetails{}
