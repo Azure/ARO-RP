@@ -123,7 +123,7 @@ clean: ## Remove build artifacts
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
-client: generate client-generate lint-go-fix lint-go
+client: generate generate-swagger-typespec client-generate lint-go-fix lint-go
 
 .PHONY: client-generate
 client-generate: ## Fix stale client library
@@ -147,7 +147,7 @@ discoverycache: ## Fix out-of-date discovery cache
 	$(MAKE) generate
 
 .PHONY: generate
-generate: install-tools generate-swagger-typespec ## Generate files & content for serving ARO-RP
+generate: install-tools ## Generate files & content for serving ARO-RP
 	go generate ./...
 	$(MAKE) imports
 
