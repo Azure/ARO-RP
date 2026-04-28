@@ -32,34 +32,8 @@ jobs:
           cache: npm
           cache-dependency-path: api/package-lock.json
 
-      - name: Install API dependencies
-        working-directory: ./api
-        run: npm ci
-
-      - name: Compile API typespec
-        working-directory: ./api
-        run: npm run format && npm run compile
+      - name: Generate from TypeSpec
+        run: hack/api/swagger-from-typespec.sh
 
       - name: Verify no diffs in api or swagger
-        run: |
-          API_CHANGES="$(git status --porcelain -- api)"
-          SWAGGER_CHANGES="$(git status --porcelain -- swagger)"
-          HAS_CHANGES=0
-
-          if [[ -n "$API_CHANGES" ]]; then
-            echo "Unexpected changes detected in api/:"
-            echo "$API_CHANGES"
-            git --no-pager diff -- api || true
-            HAS_CHANGES=1
-          fi
-
-          if [[ -n "$SWAGGER_CHANGES" ]]; then
-            echo "Unexpected changes detected in swagger/:"
-            echo "$SWAGGER_CHANGES"
-            git --no-pager diff -- swagger || true
-            HAS_CHANGES=1
-          fi
-
-          if [[ "$HAS_CHANGES" -ne 0 ]]; then
-            exit 1
-          fi
+        run: hack/ci-utils/isClean.sh
