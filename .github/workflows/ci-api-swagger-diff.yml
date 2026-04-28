@@ -38,7 +38,7 @@ jobs:
 
       - name: Compile API typespec
         working-directory: ./api
-        run: npm run compile
+        run: npm run format && npm run compile
 
       - name: Verify no diffs in api or swagger
         run: |
