@@ -13,6 +13,15 @@ import (
 func MigrateInternalLoadBalancerZones(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
 	s := []steps.Step{
 		steps.Action(cluster.MigrateInternalLoadBalancerZonesStep),
+		steps.Action(cluster.FixSSHStep),
+	}
+
+	return run(t, s)
+}
+
+func FixSSH(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
+	s := []steps.Step{
+		steps.Action(cluster.FixSSHStep),
 	}
 
 	return run(t, s)

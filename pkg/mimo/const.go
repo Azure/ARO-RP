@@ -12,4 +12,5 @@ const (
 	MDSD_CERT_ROTATION_ID    api.MIMOTaskID = "a4477c3a-ddbb-41a0-88e8-b5cda67b623a"
 	MSI_CERT_RENEWAL_ID      api.MIMOTaskID = "7c3f8e2d-9a4b-4f1e-8c5d-2b6a9e7f3d1c"
 	MIGRATE_LB_ZONES_ID      api.MIMOTaskID = "c28a07c1-462f-42d2-8031-4b0222256596"
+	FIX_SSH_ID               api.MIMOTaskID = "888fc221-b059-49db-bd02-22ad86cccd6b"
 )
