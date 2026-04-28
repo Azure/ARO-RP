@@ -37,7 +37,7 @@ var _ = Describe("Update clusters", func() {
 				Name:      "openshift-azure-operator",
 			},
 		}
-		err := clients.Client.Delete(ctx, cr)
+		err := clients.KubeClient.Delete(ctx, cr)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
@@ -46,7 +46,7 @@ var _ = Describe("Update clusters", func() {
 
 		By("checking that the CredentialsRequest has been recreated")
 		cr = &cloudcredentialv1.CredentialsRequest{}
-		err = clients.Client.Get(ctx, crNamespacedName, cr)
+		err = clients.KubeClient.Get(ctx, crNamespacedName, cr)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
