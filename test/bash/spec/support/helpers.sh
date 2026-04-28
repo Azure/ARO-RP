@@ -1,4 +1,5 @@
-REPO_ROOT="$(pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "${SHELLSPEC_HELPERDIR}/../../.." && pwd)}"
+export REPO_ROOT
 
 ensure_test_workspace() {
   if [ -n "${TEST_ROOT:-}" ] && [ -d "${TEST_ROOT}" ]; then
@@ -18,6 +19,27 @@ ensure_test_workspace() {
 
   PATH="${MOCK_BIN}:${ORIGINAL_PATH}"
   export TEST_ROOT SCRIPT_FIXTURE_DIR MOCK_BIN CALL_LOG ORIGINAL_PATH PATH
+}
+
+reset_absolute_test_state() {
+  rm -rf /etc/proxy
+  rm -rf /root/.docker
+  rm -rf /var/lib/etcd
+  rm -rf /var/lib/etcd-backup-*
+  rm -f /etc/sysconfig/aro-gateway
+  rm -f /etc/sysconfig/aro-rp
+  rm -f /etc/sysconfig/proxy
+  rm -f /etc/systemd/system/aro-gateway.service
+  rm -f /etc/systemd/system/aro-rp.service
+  rm -f /etc/systemd/system/proxy.service
+  rm -f /etc/cron.weekly/pull-image
+  rm -f /etc/cron.weekly/yumupdate
+  rm -f /etc/cron.daily/restart-proxy
+  rm -f /etc/kubernetes/manifests/etcd-pod.yaml
+  rm -f /etc/resolv.conf.dnsmasq
+  rm -f /etc/NetworkManager/conf.d/aro-dns.conf
+  rm -f /usr/lib64/libjq.so.1
+  rm -f /usr/lib64/libonig.so.5
 }
 
 copy_fixture() {
