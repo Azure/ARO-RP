@@ -12,9 +12,15 @@ permissions:
   contents: read
 
 jobs:
-  npm-audit-portal-v2:
-    name: npm-audit-portal-v2
+  npm-audit:
+    name: npm-audit-${{ matrix.package-dir }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package-dir:
+        - portal/v2
+        - api
     steps:
     - name: Checkout repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -25,7 +31,7 @@ jobs:
         node-version: 16.16.0
 
     - name: Run NPM Audit
-      run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh
+      run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh "${{ matrix.package-dir }}"
       shell: bash
 
   npm-build-check:
