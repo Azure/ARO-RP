@@ -172,6 +172,7 @@ somethingElse:
 				AROController: base.AROController{
 					Log:    log,
 					Client: clientBuilder.Build(),
+					Name:   ControllerName,
 				},
 				jsonHandle: new(codec.JsonHandle),
 			}
@@ -193,6 +194,8 @@ somethingElse:
 			if strings.TrimSpace(cm.Data["config.yaml"]) != strings.TrimSpace(tt.wantConfig) {
 				t.Error(cm.Data["config.yaml"])
 			}
+
+			utilconditions.AssertControllerConditions(t, ctx, r.Client, tt.wantConditions)
 		})
 	}
 }
@@ -303,6 +306,7 @@ func TestReconcilePVC(t *testing.T) {
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
 					Client: clientFake,
+					Name:   ControllerName,
 				},
 				jsonHandle: new(codec.JsonHandle),
 			}
@@ -326,6 +330,8 @@ func TestReconcilePVC(t *testing.T) {
 			if !reflect.DeepEqual(pvcList.Items, tt.want) {
 				t.Error(cmp.Diff(pvcList.Items, tt.want))
 			}
+
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
 		})
 	}
 }
