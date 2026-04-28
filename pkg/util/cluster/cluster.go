@@ -413,21 +413,23 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
 
-	c.log.Info("Assigning role to mock msi client")
-	_, err = c.roleassignments.Create(
-		ctx,
-		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
-		uuid.DefaultGenerator.Generate(),
-		mgmtauthorization.RoleAssignmentCreateParameters{
-			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
-				PrincipalID:      &c.Config.MockMSIObjectID,
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
+	if c.Config.IsLocalDevelopmentMode() {
+		c.log.Info("Assigning role to mock msi client")
+		_, err = c.roleassignments.Create(
+			ctx,
+			fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
+			uuid.DefaultGenerator.Generate(),
+			mgmtauthorization.RoleAssignmentCreateParameters{
+				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+					RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
+					PrincipalID:      &c.Config.MockMSIObjectID,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
 			},
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed assigning role to mock msi client: %w", err)
+		)
+		if err != nil {
+			return fmt.Errorf("failed assigning role to mock msi client: %w", err)
+		}
 	}
 
 	for _, wi := range platformWorkloadIdentityRoles {
