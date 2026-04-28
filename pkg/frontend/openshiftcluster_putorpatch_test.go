@@ -978,6 +978,39 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			wantError: "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
+			name: "update a cluster from failed with empty failedProvisioningState",
+			request: func() *v20240812preview.OpenShiftCluster {
+				cluster := getServicePrincipalOpenShiftClusterRequest()
+				cluster.Properties.NetworkProfile.OutboundType = v20240812preview.OutboundTypeLoadbalancer
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = v20240812preview.PreconfiguredNSGDisabled
+				cluster.Properties.NetworkProfile.LoadBalancerProfile = &v20240812preview.LoadBalancerProfile{
+					ManagedOutboundIPs: &v20240812preview.ManagedOutboundIPs{
+						Count: 1,
+					},
+				}
+				return cluster
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(mockSubscriptionDocument)
+				f.AddOpenShiftClusterDocuments(getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateFailed, "", ""))
+			},
+			wantSystemDataEnriched: true,
+			wantAsync:              true,
+			wantStatusCode:         http.StatusOK,
+			wantDocuments: func(checker *testdatabase.Checker) {
+				checker.AddAsyncOperationDocuments(getAsynchronousOperationDocument(api.ProvisioningStateUpdating, api.ProvisioningStateUpdating))
+				doc := getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateUpdating, "", "")
+				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
+				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			wantResponse: func() *v20240812preview.OpenShiftCluster {
+				response := getExistingServicePrincipalOpenShiftClusterResponse()
+				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				return response
+			},
+		},
+		{
 			name: "update a Workload Identity cluster from succeeded",
 			request: func() *v20240812preview.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
@@ -1569,6 +1602,31 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				return nil
 			},
 			wantError: "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
+		},
+		{
+			name: "update a cluster from failed with empty failedProvisioningState",
+			request: func() *v20240812preview.OpenShiftCluster {
+				return &v20240812preview.OpenShiftCluster{}
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(mockSubscriptionDocument)
+				f.AddOpenShiftClusterDocuments(getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateFailed, "", ""))
+			},
+			wantSystemDataEnriched: true,
+			wantAsync:              true,
+			wantStatusCode:         http.StatusOK,
+			wantDocuments: func(checker *testdatabase.Checker) {
+				checker.AddAsyncOperationDocuments(getAsynchronousOperationDocument(api.ProvisioningStateUpdating, api.ProvisioningStateUpdating))
+				doc := getExistingServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateUpdating, "", "")
+				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
+				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			wantResponse: func() *v20240812preview.OpenShiftCluster {
+				response := getExistingServicePrincipalOpenShiftClusterResponse()
+				response.Properties.ProvisioningState = v20240812preview.ProvisioningStateUpdating
+				return response
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

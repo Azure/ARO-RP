@@ -305,9 +305,15 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		_, err = ocb.dbOpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
 	}()
 
-	if initialProvisioningState != api.ProvisioningStateAdminUpdating &&
-		provisioningState == api.ProvisioningStateFailed {
-		failedProvisioningState = initialProvisioningState
+	if provisioningState == api.ProvisioningStateFailed {
+		if initialProvisioningState == api.ProvisioningStateAdminUpdating {
+			failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
+			if failedProvisioningState == "" {
+				failedProvisioningState = api.ProvisioningStateAdminUpdating
+			}
+		} else {
+			failedProvisioningState = initialProvisioningState
+		}
 	}
 
 	// If cluster is in the non-terminal state we are still in the same
@@ -327,6 +333,9 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 			provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
 		}
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
+		if failedProvisioningState == "" && backendErr != nil {
+			failedProvisioningState = api.ProvisioningStateAdminUpdating
+		}
 
 		if backendErr == nil {
 			adminUpdateError = pointerutils.ToPtr("")
