@@ -393,38 +393,10 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		}
 
 		c.log.Info("Assigning role to mock msi client")
-		for i := 0; i < 5; i++ {
-			_, err = c.roleassignments.Create(
-				ctx,
-				fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
-				uuid.DefaultGenerator.Generate(),
-				mgmtauthorization.RoleAssignmentCreateParameters{
-					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-						RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
-						PrincipalID:      &c.Config.MockMSIObjectID,
-						PrincipalType:    mgmtauthorization.ServicePrincipal,
-					},
-				},
-			)
-
-			// Ignore if the role assignment already exists
-			if detailedError, ok := err.(autorest.DetailedError); ok {
-				if detailedError.StatusCode == http.StatusConflict {
-					err = nil
-				}
-			}
-
-			if err != nil && i < 4 {
-				// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
-				// Retry a few times.
-				c.log.Print(err)
-				continue
-			}
-			if err != nil {
-				return fmt.Errorf("failed assigning role to mock msi client: %w", err)
-			}
-
-			break
+		scope := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup)
+		roleDefID := "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"
+		if err := c.createRoleAssignmentWithRetry(ctx, scope, roleDefID, c.Config.MockMSIObjectID); err != nil {
+			return fmt.Errorf("failed assigning role to mock msi client: %w", err)
 		}
 	}
 
@@ -480,13 +452,13 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		}
 	}
 
-	// Assign the ARO federated credential role from cluster identity to each operator identity
+	// Assign the ARO federated credential role to the cluster identity at the scope of each operator identity
 	aroClusterInfo, ok := operatorIdentities[aroClusterIdentityOperatorName]
 	if !ok {
 		return fmt.Errorf("%s identity not found", aroClusterIdentityOperatorName)
 	}
 
-	c.log.Infof("Assigning federated credential role from %s to operator identities", aroClusterIdentityOperatorName)
+	c.log.Infof("Assigning federated credential role to %s at the scope of each operator identity", aroClusterIdentityOperatorName)
 	for operatorName, operatorInfo := range operatorIdentities {
 		if operatorName == aroClusterIdentityOperatorName {
 			continue // Don't assign to itself
