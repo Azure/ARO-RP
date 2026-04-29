@@ -4,10 +4,7 @@ package common
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
-	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -21,14 +18,18 @@ const (
 )
 
 var RetryOptions = policy.RetryOptions{
-	TryTimeout:  10 * time.Minute,
-	ShouldRetry: shouldRetry,
+	TryTimeout:    10 * time.Minute,
+	MaxRetries:    3,                // 4 total attempts
+	RetryDelay:    15 * time.Second, // ARM conflicts need time to clear; also governs 500/503 without Retry-After
+	MaxRetryDelay: 60 * time.Second,
+	ShouldRetry:   shouldRetry,
 }
 
-// shouldRetry checks if the response is retriable.
+// shouldRetry retries on HTTP infrastructure signals only. Body-based semantic
+// detection is handled at the call-site level via arm.Retryable() and
+// IsRetryableError, after the SDK has fully deserialized the response.
 func shouldRetry(resp *http.Response, err error) bool {
 	if err != nil {
-		// Retry if it gets an error because the error given to the function is not a non-retriable error.
 		// https://github.com/Azure/azure-sdk-for-go/blob/cd497f0dad7a56807501606bb7e20cf710f863db/sdk/azcore/runtime/policy_retry.go#L151-L164
 		return true
 	}
@@ -40,20 +41,6 @@ func shouldRetry(resp *http.Response, err error) bool {
 			return true
 		}
 	}
-
-	// Check if the body contains the certain strings that can be retried.
-	b, err := io.ReadAll(resp.Body)
-	// Close the original body to release the HTTP connection, even on read error
-	resp.Body.Close()
-	if err != nil {
-		return true
-	}
-	// resp.Body is a shared object (pointer), so we need to restore it
-	// to original state so it can be read again by the SDK or for retries
-	resp.Body = io.NopCloser(bytes.NewReader(b))
-
-	body := string(b)
-	return strings.Contains(body, ErrCodeInvalidClientSecretProvided) ||
-		strings.Contains(body, ErrCodeMissingRequiredParameters) ||
-		strings.Contains(body, AuthorizationFailed)
+	// 409 with Retry-After header indicates a transient ARM conflict.
+	return resp.StatusCode == http.StatusConflict && resp.Header.Get("Retry-After") != ""
 }

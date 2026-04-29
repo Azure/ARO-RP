@@ -17,6 +17,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+// transientConflictBody is the body substring ARM includes in transient 409 conflict responses
+// such as ConflictingConcurrentWriteNotAllowed. It is undocumented; it is based on observed
+// production responses, not an official ARM error reference.
+const transientConflictBody = "Please retry later"
+
 const (
 	CODE_AUTHFAILED       = "AuthorizationFailed"
 	CODE_DEPLOYACTIVE     = "DeploymentActive"
@@ -361,13 +366,59 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true if the error is a transient/retryable error
-// such as 429 Too Many Requests or contains RetryableError code
+// IsRetryableError returns true for transient ARM errors: 429, 409+Retry-After, 409 with transientConflictBody in the body, or "RetryableError" in the message.
+// For azcore errors, 429 is detected from StatusCode alone; RawResponse is needed only for the 409 Retry-After header check and for response-body content to appear in Error().
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	// Check for RetryableError in error message (nested Azure errors)
-	return isStatusCodeError(err, http.StatusTooManyRequests) || strings.Contains(err.Error(), "RetryableError")
+	// azcore.ResponseError.Error() includes the response body when RawResponse is non-nil.
+	errMsg := err.Error()
+
+	// api.CloudError wraps storage 429s (ThrottlingLimitExceeded) that the ARM roundtripper converts.
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) && cloudErr.StatusCode == http.StatusTooManyRequests {
+		return true
+	}
+
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		if responseError.StatusCode == http.StatusTooManyRequests {
+			return true
+		}
+		if responseError.StatusCode == http.StatusConflict {
+			if responseError.RawResponse != nil && responseError.RawResponse.Header.Get("Retry-After") != "" {
+				return true
+			}
+			if strings.Contains(errMsg, transientConflictBody) {
+				return true
+			}
+		}
+	}
+
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		if detailedErr.StatusCode == http.StatusTooManyRequests {
+			return true
+		}
+		if detailedErr.StatusCode == http.StatusConflict {
+			if detailedErr.Response != nil && detailedErr.Response.Header.Get("Retry-After") != "" {
+				return true
+			}
+			if strings.Contains(errMsg, transientConflictBody) {
+				return true
+			}
+		}
+	}
+
+	// AADSTS errors indicate transient AAD token propagation failures (e.g. newly
+	// issued secret not yet propagated). These appear in the error message string
+	// once the SDK has deserialized the response. The same codes are also defined
+	// as named constants in azureclient/azuresdk/common/options.go.
+	if strings.Contains(errMsg, "AADSTS7000215") || strings.Contains(errMsg, "AADSTS7000216") {
+		return true
+	}
+
+	return strings.Contains(errMsg, "RetryableError")
 }
