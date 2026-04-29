@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -18,8 +20,8 @@ func validateEncryptionAtHostFeature(
 	ctx context.Context,
 	azEnv *azureclient.AROEnvironment,
 	environment env.Interface,
-	subscriptionID, tenantID string,
-) error {
+	subscriptionID, tenantID string) error {
+
 	fpAuthorizer, err := environment.FPAuthorizer(
 		tenantID, nil,
 		environment.Environment().ResourceManagerScope)
@@ -27,52 +29,44 @@ func validateEncryptionAtHostFeature(
 		return err
 	}
 
-	resourcesClient := features.NewResourcesClient(
+	providersClient := features.NewProvidersClient(
 		azEnv, subscriptionID, fpAuthorizer)
 
-	resourceID := fmt.Sprintf(
-		"/subscriptions/%s/providers/Microsoft.Features"+
-			"/features/EncryptionAtHost",
-		subscriptionID)
-
-	feature, err := resourcesClient.GetByID(
-		ctx, resourceID, "2021-07-01")
+	top := int32(0)
+	providers, err := providersClient.List(ctx, &top, "")
 	if err != nil {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf(
-				"Microsoft.Compute/EncryptionAtHost"+
-					" is not registered for"+
-					" subscription %s.",
-				subscriptionID))
+		if detailed, ok := err.(autorest.DetailedError); ok {
+			if detailed.StatusCode == http.StatusNotFound {
+				return api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodeInvalidParameter,
+					"encryptionAtHost",
+					fmt.Sprintf(
+						"Microsoft.Compute/EncryptionAtHost"+
+							" is not registered for"+
+							" subscription %s.",
+						subscriptionID))
+			}
+		}
+		return err
 	}
 
-	if feature.Properties == nil {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf(
-				"Microsoft.Compute/EncryptionAtHost"+
-					" is not registered for"+
-					" subscription %s.",
-				subscriptionID))
+	for _, provider := range providers {
+		if provider.Namespace != nil &&
+			*provider.Namespace == "Microsoft.Compute" &&
+			provider.RegistrationState != nil &&
+			*provider.RegistrationState == "Registered" {
+			return nil
+		}
 	}
 
-	properties, ok := feature.Properties.(map[string]interface{})
-	if !ok || properties["state"] != "Registered" {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf(
-				"Microsoft.Compute/EncryptionAtHost"+
-					" is not registered for"+
-					" subscription %s.",
-				subscriptionID))
-	}
-
-	return nil
+	return api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidParameter,
+		"encryptionAtHost",
+		fmt.Sprintf(
+			"Microsoft.Compute/EncryptionAtHost"+
+				" is not registered for"+
+				" subscription %s.",
+			subscriptionID))
 }
