@@ -66,8 +66,43 @@ get_mock_msi_tenantID() {
     echo "$1" | jq -r .tenant
 }
 
+require_non_empty_value() {
+    local value="${1}"
+    local name="${2}"
+
+    if [[ -z "${value}" ]]; then
+        echo "ERROR: ${name} is empty." >&2
+        return 1
+    fi
+}
+
+get_service_principal_object_id() {
+    local servicePrincipalID="${1}"
+    local objectID=""
+    local attempt=1
+    local maxAttempts=12
+
+    while [[ "${attempt}" -le "${maxAttempts}" ]]; do
+        if objectID=$(az ad sp show --id "${servicePrincipalID}" --query id --output tsv 2>/dev/null) && [[ -n "${objectID}" ]]; then
+            echo "${objectID}"
+            return 0
+        fi
+
+        if [[ "${attempt}" -eq "${maxAttempts}" ]]; then
+            break
+        fi
+
+        echo "INFO: Service principal object ID not available yet for ${servicePrincipalID} (attempt ${attempt}/${maxAttempts}), retrying..." >&2
+        sleep 10
+        attempt=$((attempt + 1))
+    done
+
+    echo "ERROR: Failed to resolve service principal object ID for ${servicePrincipalID} after ${maxAttempts} attempts." >&2
+    return 1
+}
+
 get_mock_msi_objectID() {
-    az ad sp list --all --filter "appId eq '$1'" --output json | jq -r ".[] | .id"
+    get_service_principal_object_id "$1"
 }
 
 get_mock_msi_cert() {
@@ -97,7 +132,7 @@ get_platform_workloadIdentity_role_sets() {
 assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
-    
+
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${CLUSTER_RESOURCEGROUP}"
     local roles
 
@@ -108,7 +143,10 @@ assign_role_to_identity() {
 
     if [[ "$roles" == "" ]] || [[ "$roles" == "[]" ]] ; then
         echo "INFO: Assigning role to identity: ${objectId}"
-        az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json
+        if ! az role assignment create --assignee-object-id "${objectId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json; then
+            echo "ERROR: Failed to assign role ${roleId} to identity: ${objectId}" >&2
+            return 1
+        fi
         echo ""
     else
         echo "INFO: Role already assigned to identity: ${objectId}"
@@ -124,7 +162,10 @@ create_platform_identity_and_assign_role() {
 
     if ! identity=$(az identity show --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null); then
         echo "INFO: Creating platform identity for operator: ${operatorName}"
-        identity=$(az identity create --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+        if ! identity=$(az identity create --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json); then
+            echo "ERROR: Failed to create platform identity for operator: ${operatorName}" >&2
+            return 1
+        fi
     fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
@@ -142,7 +183,7 @@ create_platform_identity_and_assign_role() {
     # Storage Operator don't require access to customer BYO virtual network
     if [[ "${operatorName}" != "StorageOperator" ]]; then
 
-        assign_role_to_identity "${principalId}" "${roleDefinitionId}"
+        assign_role_to_identity "${principalId}" "${roleDefinitionId}" || return 1
     fi
 }
 
@@ -159,7 +200,7 @@ setup_platform_identity() {
         operatorName=$(echo "$role" | jq -r '.operatorName')
         roleDefinitionId=$(echo "$role" | jq -r '.roleDefinitionId' | awk -F'/' '{print $NF}')
 
-        create_platform_identity_and_assign_role "${operatorName}" "${roleDefinitionId}"
+        create_platform_identity_and_assign_role "${operatorName}" "${roleDefinitionId}" || return 1
 
     done <<< "$platformWorkloadIdentityRoles"
 
@@ -167,7 +208,7 @@ setup_platform_identity() {
     echo "INFO: Creating cluster identity under RG ($CLUSTER_RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
     echo ""
 
-    create_platform_identity_and_assign_role "Cluster" "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
+    create_platform_identity_and_assign_role "Cluster" "ef318e2a-8334-4a05-9e4a-295a196c6a6e" || return 1
 }
 
 cluster_msi_role_assignment() {
@@ -175,7 +216,9 @@ cluster_msi_role_assignment() {
     local FEDERATED_CREDENTIAL_ROLE_ID="ef318e2a-8334-4a05-9e4a-295a196c6a6e"
     local clusterMSIObjectID
 
-    clusterMSIObjectID=$(az ad sp show --id "${clusterMSIAppID}" --query '{objectId: id}' --output json | jq -r .objectId)
+    if ! clusterMSIObjectID=$(get_service_principal_object_id "${clusterMSIAppID}"); then
+        return 1
+    fi
 
     echo "INFO: Assigning role to cluster MSI: ${clusterMSIAppID}"
     assign_role_to_identity "${clusterMSIObjectID}" "${FEDERATED_CREDENTIAL_ROLE_ID}"
@@ -184,15 +227,23 @@ cluster_msi_role_assignment() {
 create_miwi_env_file() {
     echo "INFO: Creating default env config file for managed/workload identity development..."
 
-    mockMSI=$(create_mock_msi)
+    if ! mockMSI=$(create_mock_msi); then
+        echo "ERROR: Failed to create mock MSI service principal." >&2
+        return 1
+    fi
     mockClientID=$(get_mock_msi_clientID "$mockMSI")
+    require_non_empty_value "${mockClientID}" "mock MSI client ID" || return 1
     mockTenantID=$(get_mock_msi_tenantID "$mockMSI")
+    require_non_empty_value "${mockTenantID}" "mock MSI tenant ID" || return 1
     mockCert=$(get_mock_msi_cert "$mockMSI")
-    mockObjectID=$(get_mock_msi_objectID "$mockClientID")
-    
+    require_non_empty_value "${mockCert}" "mock MSI certificate" || return 1
+    if ! mockObjectID=$(get_mock_msi_objectID "$mockClientID"); then
+        return 1
+    fi
+
     if [[ $SKIP_MIWI_ROLE_ASSIGNMENT != "true" ]]; then
-      setup_platform_identity
-      cluster_msi_role_assignment "${mockClientID}"
+      setup_platform_identity || return 1
+      cluster_msi_role_assignment "${mockClientID}" || return 1
     fi
 
     cat >> env <<EOF
@@ -219,7 +270,7 @@ EOF
 
 
 ask_to_create_Azure_deployment() {
-    
+
     local answer
     read -r -p "Create Azure deployment in the current subscription ($AZURE_SUBSCRIPTION_ID)? (y / n / l (list existing deployments)) " answer
 

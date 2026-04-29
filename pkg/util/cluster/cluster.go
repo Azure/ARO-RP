@@ -413,19 +413,46 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 		RoleDefinitionID: "/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e",
 	})
 
-	c.log.Info("Assigning role to mock msi client")
-	c.roleassignments.Create(
-		ctx,
-		fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
-		uuid.DefaultGenerator.Generate(),
-		mgmtauthorization.RoleAssignmentCreateParameters{
-			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
-				PrincipalID:      &c.Config.MockMSIObjectID,
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		},
-	)
+	if c.Config.IsLocalDevelopmentMode() {
+		if c.Config.MockMSIObjectID == "" {
+			return fmt.Errorf("MockMSIObjectID is not set in localdev mode")
+		}
+
+		c.log.Info("Assigning role to mock msi client")
+		for i := 0; i < 5; i++ {
+			_, err = c.roleassignments.Create(
+				ctx,
+				fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, vnetResourceGroup),
+				uuid.DefaultGenerator.Generate(),
+				mgmtauthorization.RoleAssignmentCreateParameters{
+					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+						RoleDefinitionID: pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/ef318e2a-8334-4a05-9e4a-295a196c6a6e"),
+						PrincipalID:      &c.Config.MockMSIObjectID,
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				},
+			)
+
+			// Ignore if the role assignment already exists
+			if detailedError, ok := err.(autorest.DetailedError); ok {
+				if detailedError.StatusCode == http.StatusConflict {
+					err = nil
+				}
+			}
+
+			if err != nil && i < 4 {
+				// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
+				// Retry a few times.
+				c.log.Print(err)
+				continue
+			}
+			if err != nil {
+				return fmt.Errorf("failed assigning role to mock msi client: %w", err)
+			}
+
+			break
+		}
+	}
 
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
@@ -448,7 +475,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 			},
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed assigning roleassignment to WI: %w", err)
 		}
 
 		if wi.OperatorName != "aro-Cluster" {
@@ -876,6 +903,11 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 		c.log.Infof("deleting WI: %s", wi.OperatorName)
 		_, err := c.msiClient.Delete(ctx, resourceGroup, wi.OperatorName, nil)
 		if err != nil {
+			// If the identity was not found, we can assume that it wasn't created yet, or otherwise doesn't need to be deleted.
+			if azureerrors.IsNotFoundError(err) {
+				c.log.Infof("workload identity %s not found, skipping deletion", wi.OperatorName)
+				continue
+			}
 			return err
 		}
 	}
@@ -1329,6 +1361,11 @@ func (c *Cluster) deleteMiwiRoleAssignments(ctx context.Context, vnetResourceGro
 	for _, wi := range platformWorkloadIdentityRoles {
 		resp, err := c.msiClient.Get(ctx, vnetResourceGroup, wi.OperatorName, nil)
 		if err != nil {
+			// If the identity was not found, we can assume that it wasn't created yet, or otherwise doesn't need to be deleted.
+			if azureerrors.IsNotFoundError(err) {
+				c.log.Infof("workload identity %s not found, skipping role assignment deletion", wi.OperatorName)
+				continue
+			}
 			return err
 		}
 		roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *resp.Properties.PrincipalID))
