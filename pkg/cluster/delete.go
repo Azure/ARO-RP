@@ -62,7 +62,11 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 			return err
 		}
 	}
-	return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
+	err = m.armInterfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
+	if azureerrors.IsNotFoundError(err) {
+		return nil
+	}
+	return err
 }
 
 func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string) error {
@@ -232,7 +236,12 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				}
 			}
 
-			future, err := m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
+			var future mgmtfeatures.ResourcesDeleteByIDFuture
+			err = m.retryable("deleting "+*resource.ID, func() error {
+				var deleteErr error
+				future, deleteErr = m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
+				return deleteErr
+			})
 			if err != nil {
 				return deleteByIdCloudError(err)
 			}
@@ -241,6 +250,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 		}
 
 		// wait for all the deletions to complete
+		// Note: WaitForCompletionRef is not wrapped with retry; LRO polling errors propagate immediately.
 		for i, future := range futures {
 			m.log.Printf("waiting for deletion of %s", *resourceMap[level][i].ID)
 
@@ -255,8 +265,10 @@ func (m *manager) deleteResources(ctx context.Context) error {
 }
 
 func deleteByIdCloudError(err error) error {
+	// Non-autorest errors pass through unchanged; only autorest.DetailedError is mapped to *api.CloudError.
+	// Some autorest.DetailedError values may have a nil Original, so guard it to avoid panics when calling Error().
 	detailedError, ok := err.(autorest.DetailedError)
-	if !ok {
+	if !ok || detailedError.Original == nil {
 		return err
 	}
 	switch {
@@ -296,7 +308,10 @@ func (m *manager) deleteRoleAssignments(ctx context.Context) error {
 		}
 
 		m.log.Infof("deleting role assignment %s", *assignment.Name)
-		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+		err := m.retryableDelete("deleting role assignment "+*assignment.Name, func() error {
+			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+			return e
+		})
 		if err != nil {
 			return err
 		}
@@ -321,7 +336,10 @@ func (m *manager) deleteRoleDefinition(ctx context.Context) error {
 		}
 
 		m.log.Infof("deleting role definition %s", *definition.Name)
-		_, err := m.roleDefinitions.Delete(ctx, (*definition.AssignableScopes)[0], *definition.Name)
+		err := m.retryableDelete("deleting role definition "+*definition.Name, func() error {
+			_, e := m.roleDefinitions.Delete(ctx, (*definition.AssignableScopes)[0], *definition.Name)
+			return e
+		})
 		if err != nil {
 			return err
 		}
@@ -450,6 +468,12 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 					*federatedCredential.Name,
 					&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
 				)
+<<<<<<< HEAD
+=======
+				if azureerrors.IsNotFoundError(err) {
+					err = nil
+				}
+>>>>>>> dbd78aace (fixup! pkg/cluster: wrap autorest ARM write call sites with transient retry)
 				if err != nil {
 					if azureerrors.IsStatusNotFoundError(err) {
 						m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
@@ -503,7 +527,9 @@ func (m *manager) shouldDeleteResourceGroup(ctx context.Context, name string) (b
 }
 
 func (m *manager) deleteResourceGroup(ctx context.Context, name string) error {
-	err := m.resourceGroups.DeleteAndWait(ctx, name)
+	err := m.retryable("deleting resource group "+name, func() error {
+		return m.resourceGroups.DeleteAndWait(ctx, name)
+	})
 
 	detailedErr, isDetailedErr := err.(autorest.DetailedError)
 	if azureerrors.ResourceGroupNotFound(err) || (isDetailedErr && (detailedErr.StatusCode == http.StatusNotFound)) {
@@ -527,7 +553,14 @@ func (m *manager) Delete(ctx context.Context) error {
 
 	m.log.Print("deleting private endpoint")
 	err = m.armFPPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, nil)
+<<<<<<< HEAD
+	if err != nil && !azureerrors.IsNotFoundError(err) {
+=======
+	if azureerrors.IsNotFoundError(err) {
+		err = nil
+	}
 	if err != nil {
+>>>>>>> dbd78aace (fixup! pkg/cluster: wrap autorest ARM write call sites with transient retry)
 		return err
 	}
 

@@ -17,19 +17,25 @@ func (m *manager) removeBootstrap(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	m.log.Print("removing bootstrap vm")
-	err := m.virtualMachines.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap", nil)
+	err := m.retryableDelete("removing bootstrap vm", func() error {
+		return m.virtualMachines.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap", nil)
+	})
 	if err != nil {
 		return err
 	}
 
 	m.log.Print("removing bootstrap disk")
-	err = m.disks.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap_OSDisk")
+	err = m.retryableDelete("removing bootstrap disk", func() error {
+		return m.disks.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap_OSDisk")
+	})
 	if err != nil {
 		return err
 	}
 
 	m.log.Print("removing bootstrap nic")
-	return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap-nic", nil)
+	return m.retryableDelete("removing bootstrap nic", func() error {
+		return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap-nic", nil)
+	})
 }
 
 func (m *manager) removeBootstrapIgnition(ctx context.Context) error {

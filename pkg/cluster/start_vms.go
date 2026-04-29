@@ -67,7 +67,9 @@ func (m *manager) startVMs(ctx context.Context) error {
 		for _, vm := range vmsToStart {
 			vm := vm // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				return m.virtualMachines.StartAndWait(groupCtx, resourceGroupName, *vm.Name)
+				return m.retryable("starting vm "+*vm.Name, func() error {
+					return m.virtualMachines.StartAndWait(groupCtx, resourceGroupName, *vm.Name)
+				})
 			})
 		}
 		return g.Wait()

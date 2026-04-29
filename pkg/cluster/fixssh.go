@@ -16,6 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -302,7 +303,7 @@ func deleteOrphanedNIC(ctx context.Context, log *logrus.Entry, interfacesClient 
 	// Delete orphaned NIC (no VM associated and at this point we know it's a master NIC that's been removed from all backend pools)
 	log.Infof("Deleting orphaned control plane machine NIC %s, not associated with any VM.", *nic.Name)
 	err = interfacesClient.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
-	if err != nil {
+	if err != nil && !azureerrors.IsNotFoundError(err) {
 		log.Errorf("Failed to delete orphaned NIC %s", *nic.Name)
 		return err
 	}

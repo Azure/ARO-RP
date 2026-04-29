@@ -7,17 +7,84 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
+	"time"
 
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
+
+func TestStartVMsRetry(t *testing.T) {
+	// must not be called with t.Parallel(); mutates package-level transientRetryBackoff
+	clusterRGName := "test-cluster"
+	vm := mgmtcompute.VirtualMachine{
+		Name: pointerutils.ToPtr("test-vm"),
+		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+			InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+				Statuses: &[]mgmtcompute.InstanceViewStatus{
+					{Code: pointerutils.ToPtr("PowerState/deallocated")},
+				},
+			},
+		},
+	}
+
+	for _, tt := range []struct {
+		name     string
+		firstErr error
+	}{
+		{
+			name:     "retry on autorest 429: succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name:     "retry on autorest 409 Please retry later: succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusConflict, Original: errors.New("ConflictingConcurrentWriteNotAllowed: Please retry later.")},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			origBackoff := transientRetryBackoff
+			transientRetryBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { transientRetryBackoff = origBackoff }()
+
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
+			vmClient.EXPECT().List(gomock.Any(), clusterRGName).Return([]mgmtcompute.VirtualMachine{{Name: vm.Name}}, nil)
+			vmClient.EXPECT().Get(gomock.Any(), clusterRGName, "test-vm", mgmtcompute.InstanceView).Return(vm, nil)
+			first := vmClient.EXPECT().StartAndWait(gomock.Any(), clusterRGName, "test-vm").Return(tt.firstErr)
+			vmClient.EXPECT().StartAndWait(gomock.Any(), clusterRGName, "test-vm").Return(nil).After(first)
+
+			m := &manager{
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				virtualMachines: vmClient,
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+							},
+						},
+					},
+				},
+			}
+
+			assert.NoError(t, m.startVMs(context.Background()))
+		})
+	}
+}
 
 func TestStartVMs(t *testing.T) {
 	ctx := context.Background()

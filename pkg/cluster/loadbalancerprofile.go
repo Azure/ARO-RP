@@ -13,6 +13,7 @@ import (
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -224,6 +225,9 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 func (m *manager) deleteIPAddress(ctx context.Context, resourceGroupName string, ipName string, ch chan<- deleteIPResult) {
 	m.log.Infof("deleting managed public IP Address: %s", ipName)
 	err := m.armPublicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName, nil)
+	if azureerrors.IsNotFoundError(err) {
+		err = nil
+	}
 	ch <- deleteIPResult{
 		name: ipName,
 		err:  err,

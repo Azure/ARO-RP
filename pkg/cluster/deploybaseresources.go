@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -141,7 +142,10 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
 	// re-PUTting our RG should re-create RP RBAC after a customer subscription
 	// migrates between tenants.
-	_, err = m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
+	err = m.retryable("creating resource group "+resourceGroup, func() error {
+		_, e := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
+		return e
+	})
 
 	var serviceError *azure.ServiceError
 	// CreateOrUpdate wraps DetailedError wrapping a *RequestError (if error generated in ResourceGroup CreateOrUpdateResponder at least)
@@ -411,13 +415,14 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 					ID: pointerutils.ToPtr(nsgID),
 				}
 
-				// Because we attempt to attach the NSG immediately after the base resource deployment
-				// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
-				// an error to occur here. So if this particular error occurs, return nil to retry.
-				// But if some other type of error occurs, just return that error.
+				// NSG may not be ready immediately after deployment; nsgNotReadyErrorRegex and IsRetryableError both continue the poll.
 				err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 				if err != nil {
 					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
+						return false, nil
+					}
+					if azureerrors.IsRetryableError(err) {
+						m.log.Warnf("error attaching NSG to subnet %s, retrying: %v", subnetID, err)
 						return false, nil
 					}
 					return false, err
@@ -475,7 +480,7 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
+		if detailedErr.Original != nil && strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{

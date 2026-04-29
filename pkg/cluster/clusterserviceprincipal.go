@@ -54,7 +54,10 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 
 	for _, assignment := range toDelete {
 		m.log.Infof("deleting role assignment %s", *assignment.Name)
-		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+		err := m.retryableDelete("deleting role assignment "+*assignment.Name, func() error {
+			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+			return e
+		})
 		if err != nil {
 			return err
 		}
