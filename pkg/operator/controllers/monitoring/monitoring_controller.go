@@ -77,15 +77,16 @@ func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconcile
 func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MonitoringEnabled) {
-		r.Log.Debug("controller is disabled")
+		r.Log.Debug("monitoring controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.Log.Debug("running")
+	r.Log.Debug("monitoring controller reconciliation running")
 	for _, f := range []func(context.Context) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
@@ -98,6 +99,7 @@ func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 		}
 	}
 
+	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
 }
 
