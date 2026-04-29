@@ -32,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 const (
@@ -105,17 +106,21 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 	}
 
 	// Run all pre-flight validations (API server health, etcd health, SP, VM SKU, quota).
-	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize)
+	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize, log)
 	if err != nil {
 		return err
 	}
 
-	return resizeControlPlane(ctx, log, k, a, vmSize, deallocateVM)
+	clusterResourceGroupName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	executionCtx, cancel := newResizeControlPlaneExecutionContext(ctx)
+	defer cancel()
+
+	return resizeControlPlane(executionCtx, log, k, a, vmSize, deallocateVM, clusterResourceGroupName)
 }
 
 // resizeControlPlane orchestrates the full control plane resize operation,
 // processing each master node sequentially in reverse name order.
-func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
+func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool, clusterResourceGroupName string) error {
 	// getControlPlaneMachines filters by machine.openshift.io/cluster-api-machine-role=master,
 	// so the returned map only contains control plane machines.
 	machines, err := getControlPlaneMachines(ctx, k)
@@ -135,77 +140,64 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 		return cmp.Compare(b, a)
 	})
 
-	// Guard the whole operation before touching any VM. Even when a machine
-	// already matches the target SKU, we must not continue to the next resize
-	// while another control plane node is NotReady or still cordoned.
-	if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, sortedNames); err != nil {
-		return err
-	}
+	operation := newResizeControlPlaneOperation(ctx, log, k, a, desiredVMSize, deallocateVM, clusterResourceGroupName)
 
 	for _, name := range sortedNames {
+		// Re-evaluate control plane health before every iteration. Even when a
+		// machine already matches the target SKU, we must not continue to the
+		// next resize while another control plane node is NotReady or cordoned.
+		if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, sortedNames); err != nil {
+			if len(operation.nodes) == 0 {
+				return err
+			}
+			rollbackCtx, cancelRollback := newResizeControlPlaneRollbackContext(ctx)
+			defer cancelRollback()
+			rollbackErr := operation.rollbackAll(rollbackCtx)
+			return &resizeControlPlaneError{
+				baseErr:     err,
+				forward:     operation.forward,
+				rollback:    operation.rollback,
+				rollbackErr: rollbackErr,
+			}
+		}
+
 		machine := machines[name]
 		if machine.size == desiredVMSize {
 			log.Infof("%s is already running %s, skipping", name, desiredVMSize)
 			continue
 		}
 
+		snapshot, err := operation.captureNodeSnapshot(ctx, name, machine)
+		if err != nil {
+			if len(operation.nodes) == 0 {
+				return err
+			}
+			rollbackCtx, cancelRollback := newResizeControlPlaneRollbackContext(ctx)
+			defer cancelRollback()
+			rollbackErr := operation.rollbackAll(rollbackCtx)
+			return &resizeControlPlaneError{
+				baseErr:     err,
+				forward:     operation.forward,
+				rollback:    operation.rollback,
+				rollbackErr: rollbackErr,
+			}
+		}
+		nodeState := &controlPlaneNodeProgress{snapshot: snapshot}
+		operation.nodes = append(operation.nodes, nodeState)
+
 		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, desiredVMSize)
-		if err := resizeControlPlaneNode(ctx, log, k, a, name, desiredVMSize, deallocateVM); err != nil {
-			return fmt.Errorf("failed to resize node %s: %w", name, err)
+		if err := operation.resizeNode(ctx, nodeState); err != nil {
+			rollbackCtx, cancelRollback := newResizeControlPlaneRollbackContext(ctx)
+			defer cancelRollback()
+			rollbackErr := operation.rollbackAll(rollbackCtx)
+			return &resizeControlPlaneError{
+				baseErr:     fmt.Errorf("failed to resize node %s: %w", name, err),
+				forward:     operation.forward,
+				rollback:    operation.rollback,
+				rollbackErr: rollbackErr,
+			}
 		}
 		log.Infof("Successfully resized node %s to %s", name, desiredVMSize)
-	}
-
-	return nil
-}
-
-// resizeControlPlaneNode performs the full resize sequence for a single
-// control plane node: cordon → drain → stop → resize → start → wait
-// ready → uncordon → update Machine metadata → update Node labels.
-func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool) error {
-	log.Infof("Cordoning node %s", machineName)
-	if err := cordonNode(ctx, k, machineName); err != nil {
-		return fmt.Errorf("cordoning node: %w", err)
-	}
-
-	log.Infof("Draining node %s", machineName)
-	if err := k.DrainNodeWithRetries(ctx, machineName); err != nil {
-		return fmt.Errorf("draining node: %w", err)
-	}
-
-	log.Infof("Stopping VM %s (deallocate=%v)", machineName, deallocateVM)
-	if err := a.VMStopAndWait(ctx, machineName, deallocateVM); err != nil {
-		return fmt.Errorf("stopping VM: %w", err)
-	}
-
-	log.Infof("Resizing VM %s to %s", machineName, desiredVMSize)
-	if err := a.VMResize(ctx, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("resizing VM: %w", err)
-	}
-
-	log.Infof("Starting VM %s", machineName)
-	if err := a.VMStartAndWait(ctx, machineName); err != nil {
-		return fmt.Errorf("starting VM: %w", err)
-	}
-
-	log.Infof("Waiting for node %s to become Ready", machineName)
-	if err := waitForNodeReady(ctx, log, k, machineName); err != nil {
-		return fmt.Errorf("waiting for node ready: %w", err)
-	}
-
-	log.Infof("Uncordoning node %s", machineName)
-	if err := uncordonNode(ctx, k, machineName); err != nil {
-		return fmt.Errorf("uncordoning node: %w", err)
-	}
-
-	log.Infof("Updating Machine object for %s", machineName)
-	if err := updateMachineVMSize(ctx, k, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("updating Machine object: %w", err)
-	}
-
-	log.Infof("Updating Node labels for %s", machineName)
-	if err := updateNodeInstanceTypeLabels(ctx, k, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("updating Node labels: %w", err)
 	}
 
 	return nil
@@ -369,8 +361,16 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 }
 
 func updateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
+	return setNodeInstanceTypeLabels(ctx, k, nodeName, vmSize, vmSize)
+}
+
+func restoreNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, nodeInstanceType, betaInstanceType string) error {
+	return setNodeInstanceTypeLabels(ctx, k, nodeName, nodeInstanceType, betaInstanceType)
+}
+
+func setNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, nodeInstanceType, betaInstanceType string) error {
 	return retryKubeObjectUpdate(ctx, "Node", func() error {
-		return doUpdateNodeInstanceTypeLabels(ctx, k, nodeName, vmSize)
+		return doSetNodeInstanceTypeLabels(ctx, k, nodeName, nodeInstanceType, betaInstanceType)
 	})
 }
 
@@ -396,7 +396,7 @@ func retryKubeObjectUpdate(ctx context.Context, objectType string, updateFn func
 	return fmt.Errorf("could not update %s object after %d attempts: %w", objectType, kubeObjectUpdateMaxAttempts, lastErr)
 }
 
-func doUpdateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
+func doSetNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, nodeInstanceType, betaInstanceType string) error {
 	rawNode, err := k.KubeGet(ctx, "Node", "", nodeName)
 	if err != nil {
 		return err
@@ -411,8 +411,16 @@ func doUpdateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActi
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[nodeLabelInstanceType] = vmSize
-	labels[nodeLabelBetaInstanceType] = vmSize
+	if nodeInstanceType == "" {
+		delete(labels, nodeLabelInstanceType)
+	} else {
+		labels[nodeLabelInstanceType] = nodeInstanceType
+	}
+	if betaInstanceType == "" {
+		delete(labels, nodeLabelBetaInstanceType)
+	} else {
+		labels[nodeLabelBetaInstanceType] = betaInstanceType
+	}
 	node.SetLabels(labels)
 
 	objMap, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&node)

@@ -93,7 +93,7 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return nil, err
 	}
 
-	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
+	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize, log)
 }
 
 func (f *frontend) preResizeControlPlaneVMsValidation(
@@ -103,6 +103,7 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	k adminactions.KubeActions,
 	a adminactions.AzureActions,
 	desiredVMSize string,
+	log *logrus.Entry,
 ) ([]byte, error) {
 	// Run checks in parallel, collecting all errors so the caller sees every
 	// failure at once. For API server checks, run ClusterOperator status first
@@ -162,7 +163,82 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 		}
 	}
 
+	collect(validateResizeControlPlaneInventory(log, ctx, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
+	if len(details) > 0 {
+		return nil, &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInvalidParameter,
+				Message: "Pre-flight validation failed.",
+				Details: details,
+			},
+		}
+	}
+
 	return json.Marshal("All pre-flight checks passed")
+}
+
+func validateResizeControlPlaneInventory(
+	log *logrus.Entry,
+	ctx context.Context,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	clusterResourceGroupID string,
+) error {
+	machines, err := getClusterMachines(ctx, k)
+	if err != nil {
+		return err
+	}
+
+	ocMachines, err := validateClusterMachines(log, machines)
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed,
+			"controlPlaneInventory",
+			fmt.Sprintf("Control plane machine inventory is inconsistent: %v", err),
+		)
+	}
+
+	ocNodes, err := validateClusterNodes(log, ctx, k)
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed,
+			"controlPlaneInventory",
+			fmt.Sprintf("Control plane node inventory is inconsistent: %v", err),
+		)
+	}
+
+	if err := validateClusterMachinesAndNodes(log, ocMachines, ocNodes); err != nil {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed,
+			"controlPlaneInventory",
+			fmt.Sprintf("Control plane machine and node inventory is inconsistent: %v", err),
+		)
+	}
+
+	azureVMs, err := getAzureVMs(log, ctx, a, clusterResourceGroupID, ocMachines)
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed,
+			"controlPlaneInventory",
+			fmt.Sprintf("Control plane Azure VM inventory is inconsistent: %v", err),
+		)
+	}
+
+	if err := validateClusterMachinesAndVMs(log, ocMachines, azureVMs); err != nil {
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed,
+			"controlPlaneInventory",
+			fmt.Sprintf("Control plane machine and Azure VM inventory is inconsistent: %v", err),
+		)
+	}
+
+	return nil
 }
 
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
