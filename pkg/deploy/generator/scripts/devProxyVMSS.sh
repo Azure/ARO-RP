@@ -1,5 +1,5 @@
 #!/bin/bash
-#Adding retry logic to yum commands in order to avoid stalling out on resource locks
+#Adding retry logic to tdnf commands in order to avoid stalling out on resource locks
 echo "installing moby-engine (docker)"
 for attempt in {1..60}; do
 	tdnf install -y moby-engine moby-cli && break
@@ -61,12 +61,12 @@ systemctl restart proxy.service
 EOF
 chmod +x /etc/cron.weekly/pull-image
 
-cat >/etc/cron.weekly/yumupdate <<'EOF'
+cat >/etc/cron.weekly/tdnfupdate <<'EOF'
 #!/bin/bash
 
-yum update -y
+tdnf update -y
 EOF
-chmod +x /etc/cron.weekly/yumupdate
+chmod +x /etc/cron.weekly/tdnfupdate
 
 cat >/etc/cron.daily/restart-proxy <<'EOF'
 #!/bin/bash
