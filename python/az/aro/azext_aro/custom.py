@@ -78,7 +78,7 @@ class RoleAssignmentScope(enum.Enum):
     WORKER_SUBNET = enum.auto()
 
 
-def rp_mode_development():
+def rp_mode_development() -> bool:
     return os.environ.get('RP_MODE', '').lower() == 'development'
 
 
@@ -118,6 +118,7 @@ def aro_create(*,  # pylint: disable=too-many-locals
                tags=None,
                version=None,
                no_wait=False):
+
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
@@ -231,7 +232,27 @@ def aro_create(*,  # pylint: disable=too-many-locals
         platform_workload_identity_profile=None,
     )
 
-    if enable_managed_identity is True:
+    if enable_managed_identity:
+        if not platform_workload_identities and not mi_user_assigned:
+            identities = aro_identity_create_required(
+                cmd=cmd,
+                client=client,
+                resource_group_name=resource_group_name,
+                location=location,
+                version=version,
+                master_subnet=master_subnet,
+                worker_subnet=worker_subnet,
+                vnet=vnet,
+                disk_encryption_set=disk_encryption_set,
+                vnet_resource_group_name=vnet_resource_group_name
+            )
+
+            mi_user_assigned = identities[0]["id"]
+            platform_workload_identities = [
+                (elem["name"], openshiftcluster.PlatformWorkloadIdentity(resource_id=elem["id"]))
+                for elem in identities[1:]
+            ]
+
         oc.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile(
             platform_workload_identities=dict(platform_workload_identities)
         )
@@ -240,8 +261,6 @@ def aro_create(*,  # pylint: disable=too-many-locals
             type='UserAssigned',
             user_assigned_identities={mi_user_assigned: {}}
         )
-
-        # TODO - perform client-side validation of required identity permissions
 
     else:
         oc.service_principal_profile = openshiftcluster.ServicePrincipalProfile(
@@ -258,7 +277,7 @@ def aro_create(*,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def _report_validation_issues(errors_and_warnings, warnings_as_text):
+def _report_validation_issues(errors_and_warnings, warnings_as_text) -> None:
     warnings = [issue for issue in errors_and_warnings if issue[2] == "Warning"]
     errors = [issue for issue in errors_and_warnings if issue[2] != "Warning"]
 
@@ -306,7 +325,7 @@ def validate(*,  # pylint: disable=too-many-locals
              enable_managed_identity=False,
              platform_workload_identities=None,  # pylint: disable=unused-argument
              mi_user_assigned=None,  # pylint: disable=unused-argument
-             warnings_as_text=False):
+             warnings_as_text=False) -> None:
 
     class mockoc:  # pylint: disable=too-few-public-methods
         def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id, preconfigured_nsg):
@@ -388,8 +407,7 @@ def aro_validate(*,  # pylint: disable=too-many-locals,too-many-statements
                  service_cidr=None,
                  enable_managed_identity=False,
                  platform_workload_identities=None,
-                 mi_user_assigned=None,
-                 ):
+                 mi_user_assigned=None) -> None:
 
     validate(cmd=cmd,
              client=client,
@@ -413,7 +431,13 @@ def aro_validate(*,  # pylint: disable=too-many-locals,too-many-statements
              warnings_as_text=False)
 
 
-def aro_delete(*, cmd, client, resource_group_name, resource_name, no_wait=False, delete_identities=None):
+def aro_delete(*,
+               cmd,
+               client,
+               resource_group_name,
+               resource_name,
+               no_wait=False,
+               delete_identities=None) -> None | typing.Any:
     # TODO: clean up rbac
     rp_client_sp_id = None
 
@@ -510,7 +534,7 @@ def aro_list_credentials(client, resource_group_name, resource_name):
     return client.open_shift_clusters.list_credentials(resource_group_name, resource_name)
 
 
-def aro_get_admin_kubeconfig(client, resource_group_name, resource_name, file="kubeconfig"):
+def aro_get_admin_kubeconfig(client, resource_group_name, resource_name, file="kubeconfig") -> None:
     query_result = client.open_shift_clusters.list_admin_credentials(resource_group_name, resource_name)
     file_mode = "x"
     yaml_data = b64decode(query_result.kubeconfig).decode('UTF-8')
@@ -522,7 +546,7 @@ def aro_get_admin_kubeconfig(client, resource_group_name, resource_name, file="k
     logger.info("Kubeconfig written to file: %s", file)
 
 
-def aro_get_versions(client, location):
+def aro_get_versions(client, location) -> list[typing.Any]:
     items = client.open_shift_versions.list(location)
     versions = []
     for item in items:
@@ -598,7 +622,7 @@ def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
                        parameters=oc_update)
 
 
-def generate_random_id():
+def generate_random_id() -> str:
     random_id = (random.choice('abcdefghijklmnopqrstuvwxyz') +
                  ''.join(random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
                          for _ in range(7)))
@@ -656,7 +680,7 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
     return subnet_resources
 
 
-def get_cluster_network_resources(cli_ctx, oc, fail):
+def get_cluster_network_resources(cli_ctx, oc, fail) -> set[typing.Any]:
     master_subnet = oc.master_profile.subnet_id
     worker_subnets = set()
 
@@ -685,7 +709,7 @@ def get_cluster_network_resources(cli_ctx, oc, fail):
     return get_network_resources(cli_ctx, worker_subnets | {master_subnet}, vnet, fail, oc)
 
 
-def get_network_resources(cli_ctx, subnets, vnet, fail, oc):
+def get_network_resources(cli_ctx, subnets, vnet, fail, oc) -> set[typing.Any]:
     subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets, fail, oc)
 
     resources = set()
@@ -695,7 +719,7 @@ def get_network_resources(cli_ctx, subnets, vnet, fail, oc):
     return resources
 
 
-def get_disk_encryption_resources(oc):
+def get_disk_encryption_resources(oc) -> set[typing.Any]:
     disk_encryption_set = oc.master_profile.disk_encryption_set_id
     resources = set()
     if disk_encryption_set:
@@ -717,7 +741,7 @@ def cluster_application_update(cli_ctx,
                                oc,
                                client_id,
                                client_secret,
-                               refresh_cluster_credentials):
+                               refresh_cluster_credentials) -> tuple[typing.Any, typing.Any]:
     # QUESTION: is there possible unification with the create path?
 
     rp_client_sp_id = None
@@ -777,7 +801,7 @@ def cluster_application_update(cli_ctx,
     return client_id, client_secret
 
 
-def resolve_rp_client_id():
+def resolve_rp_client_id() -> str:
     if rp_mode_development():
         return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
@@ -863,19 +887,21 @@ def aro_identity_create_required(*,
                                  vnet,
                                  disk_encryption_set=None,
                                  vnet_resource_group_name=None) -> list[dict[str, typing.Any]]:  # pylint: disable=unused-argument
+    """
+    Create Identities and assign necessary roles for a given OpenShift version.
+
+    In the list of created identities returned, the cluster identity is the
+    zeroth element in the list while the rest are Platform Workload Identities.
+    """
     # FIXME:
     # pylint: disable=too-many-locals
-
+    identities = []
     progress = cmd.cli_ctx.get_progress_controller()
-    progress.add(message="Reticulating splines")
 
-    created: list[dict | None] = []
+    progress.add(message="Validating OpenShift version")
     _validate_version(client, version, location)
 
-    progress.add(message="Creating top-level cluster identity")
-    cluster_id = create_identity(cmd, location, resource_group_name, "aro-cluster")
-    created.append(cluster_id)
-
+    progress.add(message="Gathering necessary scopes for network resources")
     network_scopes = _determine_required_scopes_from_network_resources(
         cmd,
         disk_encryption_set,
@@ -884,10 +910,14 @@ def aro_identity_create_required(*,
         worker_subnet
     )
 
+    progress.add(message="Creating cluster identity")
+    cluster_identity = create_identity(cmd, location, resource_group_name, "aro-cluster")
+    identities.append(cluster_identity)
+
     for role in _get_pwi_role_set(client, version, location).platform_workload_identity_roles:
         progress.add(message=f"Creating {role.operator_name} identity")
         identity = create_identity(cmd, location, resource_group_name, role.operator_name)
-        created.append(identity)
+        identities.append(identity)
 
         scopes = _determine_required_scopes_from_role_set(cmd, role)
         for scope in scopes:
@@ -896,13 +926,12 @@ def aro_identity_create_required(*,
             if not network_scopes[scope]:
                 continue
 
-            ra = create_role_assignment(
+            create_role_assignment(
                 cmd.cli_ctx,
                 identity["principalId"],
                 f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
                 network_scopes[scope]
             )
-            created.append(ra)
 
         progress.add(message="Creating cluster identity's federated credential "
                      f"role assignment over {role.operator_name} identity")
@@ -912,8 +941,7 @@ def aro_identity_create_required(*,
             type="roleDefinitions",
             name=ARO_FEDERATED_CREDENTIAL_ROLE
         )
-        topra = create_role_assignment(cmd.cli_ctx, cluster_id["principalId"], defn, identity["id"])
-        created.append(topra)
+        create_role_assignment(cmd.cli_ctx, cluster_identity["principalId"], defn, identity["id"])
 
     progress.add(message="Creating first party service principal's role assignment over virtual network")
     firstparty_principal = AADManager(cmd.cli_ctx).get_service_principal_id(FP_CLIENT_ID)
@@ -923,19 +951,17 @@ def aro_identity_create_required(*,
         type="roleDefinitions",
         name=FP_SERVICE_PRINCIPAL_ROLE,
     )
-    spra = create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, vnet)
-    created.append(spra)
+    create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, vnet)
 
     if disk_encryption_set:
         progress.add(message="Creating first party service principal's role assignment over disk encryption set")
-        desra = create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, disk_encryption_set)
-        created.append(desra)
+        create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, disk_encryption_set)
 
     progress.end()
-    return [v for v in created if v]
+    return identities
 
 
-def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
+def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids) -> None:
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc, fail)),
