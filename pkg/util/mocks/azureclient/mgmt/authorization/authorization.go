@@ -195,6 +195,21 @@ func (mr *MockRoleDefinitionsClientMockRecorder) Delete(ctx, scope, roleDefiniti
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).Delete), ctx, scope, roleDefinitionID)
 }
 
+// GetByID mocks base method.
+func (m *MockRoleDefinitionsClient) GetByID(ctx context.Context, roleDefinitionID string) (authorization.RoleDefinition, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, roleDefinitionID)
+	ret0, _ := ret[0].(authorization.RoleDefinition)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockRoleDefinitionsClientMockRecorder) GetByID(ctx, roleDefinitionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).GetByID), ctx, roleDefinitionID)
+}
+
 // List mocks base method.
 func (m *MockRoleDefinitionsClient) List(ctx context.Context, scope, filter string) ([]authorization.RoleDefinition, error) {
 	m.ctrl.T.Helper()
