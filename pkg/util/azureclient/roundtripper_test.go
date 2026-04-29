@@ -5,8 +5,10 @@ package azureclient
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -158,6 +160,70 @@ func TestUpdateCorrelationDataAndEnrichLogWithResponse(t *testing.T) {
 			dur, ok := l.Data[durationMilliseconds].(int64)
 			if !ok || dur < 0 {
 				t.Fatalf("expected non-negative duration_milliseconds, got %v", l.Data[durationMilliseconds])
+			}
+		})
+	}
+}
+
+func TestAzureErrorCode(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		body     string
+		wantCode string
+	}{
+		{
+			name:     "nil body",
+			body:     "",
+			wantCode: "",
+		},
+		{
+			name:     "nested error.code",
+			body:     `{"error":{"code":"ConflictingConcurrentWriteNotAllowed","message":"Please retry later."}}`,
+			wantCode: "ConflictingConcurrentWriteNotAllowed",
+		},
+		{
+			name:     "top-level code",
+			body:     `{"code":"TooManyRequests","message":"Rate limited."}`,
+			wantCode: "TooManyRequests",
+		},
+		{
+			name:     "nested takes priority over top-level",
+			body:     `{"error":{"code":"Inner"},"code":"Outer"}`,
+			wantCode: "Inner",
+		},
+		{
+			name:     "invalid JSON returns empty",
+			body:     `not json`,
+			wantCode: "",
+		},
+		{
+			name:     "body restored after parse",
+			body:     `{"error":{"code":"ScopeLocked","message":"locked."}}`,
+			wantCode: "ScopeLocked",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var res *http.Response
+			if tt.body == "" && tt.name == "nil body" {
+				res = &http.Response{Body: nil}
+			} else {
+				res = &http.Response{Body: io.NopCloser(strings.NewReader(tt.body))}
+			}
+
+			got := azureErrorCode(res)
+			if got != tt.wantCode {
+				t.Errorf("azureErrorCode() = %q, want %q", got, tt.wantCode)
+			}
+
+			// Verify body was restored and is re-readable.
+			if tt.name == "body restored after parse" && res.Body != nil {
+				b, err := io.ReadAll(res.Body)
+				if err != nil {
+					t.Fatalf("re-reading body: %v", err)
+				}
+				if string(b) != tt.body {
+					t.Errorf("body not restored: got %q, want %q", string(b), tt.body)
+				}
 			}
 		})
 	}

@@ -4,6 +4,9 @@ package azureclient
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -130,8 +133,11 @@ func logOutboundFailureIfNeeded(correlationData *api.CorrelationData, req *http.
 		statusCode = res.StatusCode
 	}
 
-	if statusCode == http.StatusConflict {
+	switch statusCode {
+	case http.StatusConflict:
 		errorMessage = "OutboundRequestConflict"
+	case http.StatusTooManyRequests:
+		errorMessage = "OutboundRequestTooManyRequests"
 	}
 
 	if err == nil && statusCode < 400 {
@@ -145,11 +151,46 @@ func logOutboundFailureIfNeeded(correlationData *api.CorrelationData, req *http.
 		responseCode:     statusCode,
 	})
 
+	if res != nil {
+		if ra := res.Header.Get("Retry-After"); ra != "" {
+			l = l.WithField("retry_after", ra)
+		}
+		if code := azureErrorCode(res); code != "" {
+			l = l.WithField("error_code", code)
+		}
+	}
+
 	if err != nil {
 		l = l.WithError(err)
 	}
 
 	l.Warn(errorMessage)
+}
+
+// azureErrorCode extracts the ARM error code from the response body without consuming it.
+func azureErrorCode(res *http.Response) string {
+	if res.Body == nil {
+		return ""
+	}
+	b, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	res.Body = io.NopCloser(bytes.NewReader(b))
+	if err != nil {
+		return ""
+	}
+	var body struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(b, &body); err != nil {
+		return ""
+	}
+	if body.Error.Code != "" {
+		return body.Error.Code
+	}
+	return body.Code
 }
 
 func outboundHTTPLoggingEnabled() bool {

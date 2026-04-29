@@ -17,9 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-// transientConflictBody is the body substring ARM includes in transient 409 conflict responses
-// such as ConflictingConcurrentWriteNotAllowed. It is undocumented; it is based on observed
-// production responses, not an official ARM error reference.
+// transientConflictBody is the ARM body text for transient 409s; undocumented, observed in production.
 const transientConflictBody = "Please retry later"
 
 const (
@@ -366,14 +364,12 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true for transient ARM errors: 429, 409+Retry-After, 409 with transientConflictBody in the body, or "RetryableError" in the message.
-// For azcore errors, 429 is detected from StatusCode alone; RawResponse is needed only for the 409 Retry-After header check and for response-body content to appear in Error().
+// IsRetryableError returns true for transient ARM errors: 429, 409+Retry-After, 409+transientConflictBody, or "RetryableError" in the message.
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	// azcore.ResponseError.Error() includes the response body when RawResponse is non-nil.
 	errMsg := err.Error()
 
 	// api.CloudError wraps storage 429s (ThrottlingLimitExceeded) that the ARM roundtripper converts.

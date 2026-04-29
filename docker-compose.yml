@@ -110,6 +110,7 @@ services:
       PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS:
       SKIP_MIWI_ROLE_ASSIGNMENT:
       USE_WI:
+      ARO_ARM_FAULT_FIRST:
     ports:
       - "8443:8443"
     healthcheck:
