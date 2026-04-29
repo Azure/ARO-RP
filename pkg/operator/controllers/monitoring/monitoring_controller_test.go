@@ -32,24 +32,41 @@ import (
 
 var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
 
+func defaultConditions() []operatorv1.OperatorCondition {
+	return []operatorv1.OperatorCondition{
+		utilconditions.ControllerDefaultAvailable(ControllerName),
+		utilconditions.ControllerDefaultProgressing(ControllerName),
+		utilconditions.ControllerDefaultDegraded(ControllerName),
+	}
+}
+
+func degradedConditions() []operatorv1.OperatorCondition {
+	return []operatorv1.OperatorCondition{
+		utilconditions.ControllerDefaultAvailable(ControllerName),
+		utilconditions.ControllerDefaultProgressing(ControllerName),
+		{
+			Type:    ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+			Status:  operatorv1.ConditionTrue,
+			Message: "previous error",
+		},
+	}
+}
+
 func TestReconcileMonitoringConfig(t *testing.T) {
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
-	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	log := logrus.NewEntry(logrus.StandardLogger())
 	type test struct {
-		name           string
-		configMap      *corev1.ConfigMap
-		wantConfig     string
-		wantConditions []operatorv1.OperatorCondition
+		name            string
+		configMap       *corev1.ConfigMap
+		startConditions []operatorv1.OperatorCondition
+		wantConfig      string
+		wantConditions  []operatorv1.OperatorCondition
 	}
 
 	for _, tt := range []*test{
 		{
 			name:           "ConfigMap does not exist - enable",
 			wantConfig:     `{}`,
-			wantConditions: defaultConditions,
+			wantConditions: defaultConditions(),
 		},
 		{
 			name: "empty config.yaml",
@@ -60,7 +77,7 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 				},
 			},
 			wantConfig:     ``,
-			wantConditions: defaultConditions,
+			wantConditions: defaultConditions(),
 		},
 		{
 			name: "settings restored to default and extra fields are preserved",
@@ -100,7 +117,7 @@ alertmanagerMain:
 prometheusK8s:
   extraField: prometheus
 `,
-			wantConditions: defaultConditions,
+			wantConditions: defaultConditions(),
 		},
 		{
 			name: "empty volumeClaimTemplate struct is cleared out",
@@ -123,7 +140,7 @@ alertmanagerMain:
 prometheusK8s:
   bugs: not-here
 `,
-			wantConditions: defaultConditions,
+			wantConditions: defaultConditions(),
 		},
 		{
 			name: "other monitoring components are configured",
@@ -146,7 +163,19 @@ alertmanagerMain:
 somethingElse:
   configured: true
 `,
-			wantConditions: defaultConditions,
+			wantConditions: defaultConditions(),
+		},
+		{
+			name: "pre-existing Degraded condition is cleared on successful reconciliation",
+			configMap: &corev1.ConfigMap{
+				ObjectMeta: cmMetadata,
+				Data: map[string]string{
+					"config.yaml": ``,
+				},
+			},
+			startConditions: degradedConditions(),
+			wantConfig:      ``,
+			wantConditions:  defaultConditions(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -161,6 +190,9 @@ somethingElse:
 						operator.MonitoringEnabled: operator.FlagTrue,
 					},
 				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions: tt.startConditions,
+				},
 			}
 
 			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
@@ -172,14 +204,12 @@ somethingElse:
 				AROController: base.AROController{
 					Log:    log,
 					Client: clientBuilder.Build(),
+					Name:   ControllerName,
 				},
 				jsonHandle: new(codec.JsonHandle),
 			}
-			request := ctrl.Request{}
-			request.Name = "cluster-monitoring-config"
-			request.Namespace = "openshift-monitoring"
 
-			_, err := r.Reconcile(ctx, request)
+			_, err := r.Reconcile(ctx, ctrl.Request{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -193,15 +223,13 @@ somethingElse:
 			if strings.TrimSpace(cm.Data["config.yaml"]) != strings.TrimSpace(tt.wantConfig) {
 				t.Error(cm.Data["config.yaml"])
 			}
+
+			utilconditions.AssertControllerConditions(t, ctx, r.Client, tt.wantConditions)
 		})
 	}
 }
 
 func TestReconcilePVC(t *testing.T) {
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
-	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	volumeMode := corev1.PersistentVolumeFilesystem
 	tests := []struct {
 		name           string
@@ -234,7 +262,7 @@ func TestReconcilePVC(t *testing.T) {
 				},
 			},
 			want:           []corev1.PersistentVolumeClaim{},
-			wantConditions: defaultConditions,
+			wantConditions: defaultConditions(),
 		},
 		{
 			name: "Should preserve 1 pvc",
@@ -278,7 +306,7 @@ func TestReconcilePVC(t *testing.T) {
 					},
 				},
 			},
-			wantConditions: defaultConditions,
+			wantConditions: defaultConditions(),
 		},
 	}
 
@@ -303,14 +331,12 @@ func TestReconcilePVC(t *testing.T) {
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
 					Client: clientFake,
+					Name:   ControllerName,
 				},
 				jsonHandle: new(codec.JsonHandle),
 			}
-			request := ctrl.Request{}
-			request.Name = "cluster-monitoring-config"
-			request.Namespace = "openshift-monitoring"
 
-			_, err := r.Reconcile(ctx, request)
+			_, err := r.Reconcile(ctx, ctrl.Request{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -326,6 +352,8 @@ func TestReconcilePVC(t *testing.T) {
 			if !reflect.DeepEqual(pvcList.Items, tt.want) {
 				t.Error(cmp.Diff(pvcList.Items, tt.want))
 			}
+
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
 		})
 	}
 }
