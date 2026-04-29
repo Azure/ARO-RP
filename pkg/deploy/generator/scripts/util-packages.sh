@@ -4,7 +4,7 @@
 # configure_repo_azurelinux_extended()
 configure_repo_azurelinux_extended() {
     local -ra cmd=(
-        dnf
+        tdnf
         install
         -y
         azurelinux-repos-extended
