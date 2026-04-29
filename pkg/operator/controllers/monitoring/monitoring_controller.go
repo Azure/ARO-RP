@@ -77,6 +77,7 @@ func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconcile
 func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
