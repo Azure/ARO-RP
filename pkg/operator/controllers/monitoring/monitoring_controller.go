@@ -82,11 +82,11 @@ func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MonitoringEnabled) {
-		r.Log.Debug("controller is disabled")
+		r.Log.Debug("monitoring controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.Log.Debug("running")
+	r.Log.Debug("monitoring controller reconciliation running")
 	for _, f := range []func(context.Context) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
