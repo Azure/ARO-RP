@@ -185,7 +185,7 @@ func isAdmissionRegistrationResource(uns *unstructured.Unstructured) bool {
 
 // ensureByServerSideApply creates or updates a single unstructured object
 // using server-side apply. This correctly reconciles all fields, unlike
-// ensureUnstructuredObj which only compares Gatekeeper's enforcementAction.
+// ensureGatekeeperConstraint which only compares Gatekeeper's enforcementAction.
 func (dh *dynamicHelper) ensureByServerSideApply(ctx context.Context, uns *unstructured.Unstructured) error {
 	gvr, err := dh.Resolve(uns.GroupVersionKind().GroupKind().String(), uns.GroupVersionKind().Version)
 	if err != nil {
