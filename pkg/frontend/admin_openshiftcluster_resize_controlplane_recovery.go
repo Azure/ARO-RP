@@ -346,6 +346,9 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 
 	if state.vmResized {
 		err := o.runStep(ctx, nodeName, resizeStepRestoreVMSize, true, "restoring original VM size", func(ctx context.Context) error {
+			// Rollback always uses a deallocated stop so restoring the original SKU
+			// takes the most conservative Azure path, even if the forward request
+			// preferred a non-deallocated stop.
 			if err := o.a.VMStopAndWait(ctx, nodeName, true); err != nil {
 				return fmt.Errorf("stopping VM before restoring original size: %w", err)
 			}

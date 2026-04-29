@@ -153,29 +153,26 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	wg.Wait()
 
 	if len(details) > 0 {
-		return nil, &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInvalidParameter,
-				Message: "Pre-flight validation failed.",
-				Details: details,
-			},
-		}
+		return nil, preResizeControlPlaneValidationError(details)
 	}
 
 	collect(validateResizeControlPlaneInventory(log, ctx, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
 	if len(details) > 0 {
-		return nil, &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInvalidParameter,
-				Message: "Pre-flight validation failed.",
-				Details: details,
-			},
-		}
+		return nil, preResizeControlPlaneValidationError(details)
 	}
 
 	return json.Marshal("All pre-flight checks passed")
+}
+
+func preResizeControlPlaneValidationError(details []api.CloudErrorBody) *api.CloudError {
+	return &api.CloudError{
+		StatusCode: http.StatusBadRequest,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code:    api.CloudErrorCodeInvalidParameter,
+			Message: "Pre-flight validation failed.",
+			Details: details,
+		},
+	}
 }
 
 func validateResizeControlPlaneInventory(
