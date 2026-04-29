@@ -289,11 +289,11 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 
 func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) error {
 	const (
-		kubeAPIServerNamespace = "openshift-kube-apiserver"
-		kubeAPIServerAppLabel  = "openshift-kube-apiserver"
+		kubeAPIServerNamespace     = "openshift-kube-apiserver"
+		kubeAPIServerLabelSelector = "app=openshift-kube-apiserver"
 	)
 
-	rawPods, err := k.KubeList(ctx, "Pod", kubeAPIServerNamespace)
+	rawPods, err := k.KubeList(ctx, "Pod", kubeAPIServerNamespace, kubeAPIServerLabelSelector)
 	if err != nil {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
@@ -309,18 +309,14 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 			fmt.Sprintf("Failed to parse pod list: %v", err))
 	}
 
-	var apiServerPodCount int
 	var unhealthyPods []string
 	for _, pod := range podList.Items {
-		if pod.Labels["app"] != kubeAPIServerAppLabel {
-			continue
-		}
-
-		apiServerPodCount++
-		if healthy, reason := isPodHealthy(&pod); !healthy {
-			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, reason))
+		if err := validatePodHealth(&pod); err != nil {
+			unhealthyPods = append(unhealthyPods, fmt.Sprintf("%s (%s)", pod.Name, err.Error()))
 		}
 	}
+
+	apiServerPodCount := len(podList.Items)
 
 	if apiServerPodCount != api.ControlPlaneNodeCount {
 		return api.NewCloudError(
@@ -341,21 +337,21 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 	return nil
 }
 
-func isPodHealthy(pod *corev1.Pod) (bool, string) {
+func validatePodHealth(pod *corev1.Pod) error {
 	if pod.Status.Phase != corev1.PodRunning {
-		return false, fmt.Sprintf("phase: %s", pod.Status.Phase)
+		return fmt.Errorf("phase: %s", pod.Status.Phase)
 	}
 
 	for _, cond := range pod.Status.Conditions {
 		if cond.Type == corev1.PodReady {
 			if cond.Status != corev1.ConditionTrue {
-				return false, "not ready"
+				return fmt.Errorf("not ready")
 			}
-			return true, ""
+			return nil
 		}
 	}
 
-	return false, "Ready condition not found"
+	return fmt.Errorf("ready condition not found")
 }
 
 // validateEtcdHealth verifies that the etcd ClusterOperator is healthy.

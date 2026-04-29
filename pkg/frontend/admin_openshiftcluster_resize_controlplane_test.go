@@ -650,7 +650,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					Return(healthyKubeAPIServerJSON(), nil).
 					AnyTimes()
 				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
 					Return(healthyKubeAPIServerPodsJSON(), nil).
 					AnyTimes()
 				k.EXPECT().
