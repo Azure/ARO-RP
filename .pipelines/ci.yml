@@ -292,6 +292,10 @@ stages:
               docker compose up --quiet-pull --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?
+
+              # Extract test results from container
+              docker cp run-e2e:/tmp/e2e-report.xml ./e2e-report.xml || echo "No test results present"
+
               if [ $E2E_EXIT_CODE -ne 0 ]; then
                 echo "##vso[task.logissue type=error] E2E tests failed. Check the logs for more details."
                 exit $E2E_EXIT_CODE
@@ -427,6 +431,10 @@ stages:
               docker compose up --quiet-pull --exit-code-from e2e e2e
               # Check if the E2E tests failed
               E2E_EXIT_CODE=$?
+
+              # Extract test results from container
+              docker cp run-e2e:/tmp/e2e-report.xml ./e2e-report.xml || echo "No test results present"
+
               if [ $E2E_EXIT_CODE -ne 0 ]; then
                 echo "##vso[task.logissue type=error] E2E tests failed. Check the logs for more details."
                 exit $E2E_EXIT_CODE
