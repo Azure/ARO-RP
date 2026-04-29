@@ -33,7 +33,15 @@ func (s skuValidator) ValidateVMSku(ctx context.Context, azEnv *azureclient.AROE
 	if err != nil {
 		return err
 	}
-
+	if oc.Properties.MasterProfile.EncryptionAtHost ==
+		api.EncryptionAtHostEnabled {
+		err = validateEncryptionAtHostFeature(
+			ctx, azEnv, environment,
+			subscriptionID, tenantID)
+		if err != nil {
+			return err
+		}
+	}
 	return validateVMSku(ctx, oc, armResourceSKUsClient)
 }
 
