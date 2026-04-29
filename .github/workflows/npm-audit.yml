@@ -28,7 +28,7 @@ jobs:
     - name: setup Node.JS
       uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       with:
-        node-version: 16.16.0
+        node-version: 20.12.0
 
     - name: Run NPM Audit
       run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh "${{ matrix.package-dir }}"
@@ -44,7 +44,7 @@ jobs:
     - name: setup Node.JS
       uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       with:
-        node-version: 16.16.0
+        node-version: 20.12.0
 
     - name: Run NPM Build
       working-directory: ./portal/v2
