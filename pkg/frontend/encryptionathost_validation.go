@@ -18,8 +18,8 @@ func validateEncryptionAtHostFeature(
 	ctx context.Context,
 	azEnv *azureclient.AROEnvironment,
 	environment env.Interface,
-	subscriptionID, tenantID string) error {
-
+	subscriptionID, tenantID string,
+) error {
 	fpAuthorizer, err := environment.FPAuthorizer(
 		tenantID, nil,
 		environment.Environment().ResourceManagerScope)
@@ -27,31 +27,52 @@ func validateEncryptionAtHostFeature(
 		return err
 	}
 
-	providersClient := features.NewProvidersClient(
+	resourcesClient := features.NewResourcesClient(
 		azEnv, subscriptionID, fpAuthorizer)
 
-	providers, err := providersClient.List(ctx, nil, "")
+	resourceID := fmt.Sprintf(
+		"/subscriptions/%s/providers/Microsoft.Features"+
+			"/features/EncryptionAtHost",
+		subscriptionID)
+
+	feature, err := resourcesClient.GetByID(
+		ctx, resourceID, "2021-07-01")
 	if err != nil {
-		return err
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
+			"",
+			fmt.Sprintf(
+				"Microsoft.Compute/EncryptionAtHost"+
+					" is not registered for"+
+					" subscription %s.",
+				subscriptionID))
 	}
 
-	for _, provider := range providers {
-		if *provider.Namespace == "Microsoft.Compute" {
-			for _, resourceType := range *provider.ResourceTypes {
-				if *resourceType.ResourceType == "encryptionAtHost" {
-					return nil
-				}
-			}
-			return api.NewCloudError(
-				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidParameter,
-				"",
-				fmt.Sprintf(
-					"Microsoft.Compute/EncryptionAtHost"+
-						" is not registered for"+
-						" subscription %s.",
-					subscriptionID))
-		}
+	if feature.Properties == nil {
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
+			"",
+			fmt.Sprintf(
+				"Microsoft.Compute/EncryptionAtHost"+
+					" is not registered for"+
+					" subscription %s.",
+				subscriptionID))
 	}
+
+	properties, ok := feature.Properties.(map[string]interface{})
+	if !ok || properties["state"] != "Registered" {
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
+			"",
+			fmt.Sprintf(
+				"Microsoft.Compute/EncryptionAtHost"+
+					" is not registered for"+
+					" subscription %s.",
+				subscriptionID))
+	}
+
 	return nil
 }
