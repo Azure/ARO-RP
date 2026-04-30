@@ -33,7 +33,7 @@ func MigrateInternalLoadBalancerZonesStep(ctx context.Context) error {
 
 	_, err = cluster.MigrateInternalLoadBalancerZones(ctx, th.Environment(), th.Log(), th.PatchOpenShiftClusterDocument, lbc, pls, resSkus, th.GetOpenShiftClusterDocument())
 	if err != nil {
-		return mimo.TerminalError(err)
+		return mimo.TransientError(err)
 	}
 
 	return nil
@@ -57,7 +57,7 @@ func FixSSHStep(ctx context.Context) error {
 
 	err = cluster.FixSSH(ctx, th.Log(), lbc, ifc, th.GetOpenShiftClusterDocument().OpenShiftCluster)
 	if err != nil {
-		return mimo.TerminalError(err)
+		return mimo.TransientError(err)
 	}
 
 	return nil
