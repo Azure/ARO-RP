@@ -209,6 +209,21 @@ func TestRetryOptionsIntegration(t *testing.T) {
 			wantRequests: 2,
 			wantCode:     http.StatusOK,
 		},
+		{
+			// 429 is in autorest.StatusCodesForRetry → shouldRetry returns true → SDK retries.
+			name:         "429: SDK retries and succeeds",
+			firstCode:    http.StatusTooManyRequests,
+			wantRequests: 2,
+			wantCode:     http.StatusOK,
+		},
+		{
+			// 400 is not in StatusCodesForRetry and has no Retry-After → shouldRetry returns false.
+			// Proves the wiring rejects non-retryable responses without retrying.
+			name:         "400 without Retry-After: SDK does not retry",
+			firstCode:    http.StatusBadRequest,
+			wantRequests: 1,
+			wantCode:     http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {

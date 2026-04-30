@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azurezones"
@@ -116,7 +117,9 @@ func MigrateInternalLoadBalancerZones(
 	}
 	// firstly, create a temporary frontend IP configuration
 	lb.Properties.FrontendIPConfigurations = append(lb.Properties.FrontendIPConfigurations, temporaryFIPConfig)
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "adding temporary frontend IP to load balancer "+lbName)
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)
@@ -129,7 +132,9 @@ func MigrateInternalLoadBalancerZones(
 		},
 	}
 	log.Infof("associating temporary frontend IP (%s) to PLS", temporaryFIPName)
-	err = armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	}, log, "associating temporary frontend IP to PLS")
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - PLS MAY NOW BE DISCONNECTED FROM LB: '%v'", err)
 		return doc, fmt.Errorf("failure disassociating LB frontend IP from PLS: %w", err)
@@ -140,7 +145,9 @@ func MigrateInternalLoadBalancerZones(
 	lb.Properties.FrontendIPConfigurations = []*armnetwork_sdk.FrontendIPConfiguration{temporaryFIPConfig}
 	lb.Properties.LoadBalancingRules = []*armnetwork_sdk.LoadBalancingRule{}
 	log.Info("removing old frontend IP")
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "removing old frontend IP from load balancer "+lbName)
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)
@@ -209,7 +216,9 @@ func MigrateInternalLoadBalancerZones(
 	)
 
 	log.Info("updating internal load balancer with zone-redundant frontend IP")
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "updating load balancer "+lbName+" with zone-redundant frontend IP")
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)
@@ -222,7 +231,9 @@ func MigrateInternalLoadBalancerZones(
 			ID: pointerutils.ToPtr(frontendConfigID),
 		},
 	}
-	err = armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armClusterPrivateLinkServices.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID+"-pls", pls.PrivateLinkService, nil)
+	}, log, "reassociating frontend IP with PLS")
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - PLS MAY NOW BE DISCONNECTED FROM LB: '%v'", err)
 		return doc, fmt.Errorf("failure disassociating LB frontend IP from PLS: %w", err)
@@ -231,7 +242,9 @@ func MigrateInternalLoadBalancerZones(
 	// STEP FIVE: remove bogus frontend IP to clean up
 	log.Info("cleaning up temporary frontend IP")
 	lb.Properties.FrontendIPConfigurations = []*armnetwork_sdk.FrontendIPConfiguration{newFrontendIP}
-	err = armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return armLoadBalancersClient.CreateOrUpdateAndWait(ctx, resourceGroupName, lbName, *lb, nil)
+	}, log, "cleaning up temporary frontend IP from load balancer "+lbName)
 	if err != nil {
 		log.Errorf("FAILURE IN CRITICAL SECTION - API-INT RULES MAY NOW BE MISSING: '%v'", err)
 		return doc, fmt.Errorf("failure updating internal load balancer: %w", err)

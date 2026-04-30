@@ -7,6 +7,8 @@ import (
 	"context"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -18,8 +20,12 @@ func (m *manager) fixSREKubeconfig(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
-	if err != nil {
+	var pg graph.PersistedGraph
+	if err := arm.Retryable(ctx, func() error {
+		var e error
+		pg, e = m.graph.LoadPersisted(ctx, resourceGroup, account)
+		return e
+	}, m.log, "loading persisted graph"); err != nil {
 		return err
 	}
 

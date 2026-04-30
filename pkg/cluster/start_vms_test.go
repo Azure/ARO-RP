@@ -17,17 +17,19 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestStartVMsRetry(t *testing.T) {
-	// must not be called with t.Parallel(); mutates package-level transientRetryBackoff
+	// must not be called with t.Parallel(); mutates package-level arm.TransientBackoff
 	clusterRGName := "test-cluster"
 	vm := mgmtcompute.VirtualMachine{
 		Name: pointerutils.ToPtr("test-vm"),
@@ -52,11 +54,25 @@ func TestStartVMsRetry(t *testing.T) {
 			name:     "retry on autorest 409 Please retry later: succeeds on second attempt",
 			firstErr: autorest.DetailedError{StatusCode: http.StatusConflict, Original: errors.New("ConflictingConcurrentWriteNotAllowed: Please retry later.")},
 		},
+		{
+			name:     "retry on azcore 429: succeeds on second attempt",
+			firstErr: &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name: "retry on azcore 409+Retry-After: succeeds on second attempt",
+			firstErr: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+					Header:     http.Header{"Retry-After": []string{"1"}},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			origBackoff := transientRetryBackoff
-			transientRetryBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
-			defer func() { transientRetryBackoff = origBackoff }()
+			origBackoff := arm.TransientBackoff
+			arm.TransientBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()

@@ -13,7 +13,7 @@ import (
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -94,7 +94,9 @@ func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb sdknet
 	removeOutboundIPsFromLB(lb)
 	addOutboundIPsToLB(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, lb, desiredOutboundIPs)
 
-	err = m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID, lb, nil)
+	err = arm.Retryable(ctx, func() error {
+		return m.armLoadBalancers.CreateOrUpdateAndWait(ctx, resourceGroupName, infraID, lb, nil)
+	}, m.log, "updating load balancer "+infraID)
 	if err != nil {
 		return err
 	}
@@ -224,10 +226,9 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 
 func (m *manager) deleteIPAddress(ctx context.Context, resourceGroupName string, ipName string, ch chan<- deleteIPResult) {
 	m.log.Infof("deleting managed public IP Address: %s", ipName)
-	err := m.armPublicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName, nil)
-	if azureerrors.IsNotFoundError(err) {
-		err = nil
-	}
+	err := arm.RetryableDelete(ctx, func() error {
+		return m.armPublicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName, nil)
+	}, m.log, "deleting managed public IP Address "+ipName)
 	ch <- deleteIPResult{
 		name: ipName,
 		err:  err,
@@ -382,7 +383,9 @@ func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPR
 	m.log.Infof("creating public IP Address: %s", name)
 	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location)
 
-	err := m.armPublicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress, nil)
+	err := arm.Retryable(ctx, func() error {
+		return m.armPublicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress, nil)
+	}, m.log, "creating public IP Address "+name)
 	ch <- createIPResult{
 		ip:  publicIPAddress,
 		err: err,

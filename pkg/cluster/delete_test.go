@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -30,6 +29,7 @@ import (
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
@@ -403,139 +403,11 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 	}
 }
 
-func TestRetryableDelete(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		err     error
-		wantErr bool
-	}{
-		{
-			name:    "404 from inner f() is swallowed and nil returned",
-			err:     autorest.DetailedError{StatusCode: http.StatusNotFound},
-			wantErr: false,
-		},
-		{
-			name:    "non-404 error propagates unchanged",
-			err:     autorest.DetailedError{StatusCode: http.StatusConflict},
-			wantErr: true,
-		},
-		{
-			name:    "nil error propagates unchanged",
-			err:     nil,
-			wantErr: false,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			origBackoff := transientRetryBackoff
-			transientRetryBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond}
-			defer func() { transientRetryBackoff = origBackoff }()
-
-			m := &manager{log: logrus.NewEntry(logrus.StandardLogger())}
-			err := m.retryableDelete("test-op", func() error {
-				return tt.err
-			})
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestRetryableDeleteRetryPath(t *testing.T) {
-	origBackoff := transientRetryBackoff
-	transientRetryBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
-	defer func() { transientRetryBackoff = origBackoff }()
-
-	calls := 0
-	m := &manager{log: logrus.NewEntry(logrus.StandardLogger())}
-	err := m.retryableDelete("test-retry-op", func() error {
-		calls++
-		if calls == 1 {
-			return autorest.DetailedError{StatusCode: http.StatusTooManyRequests}
-		}
-		return nil
-	})
-	require.NoError(t, err)
-	assert.Equal(t, 2, calls, "expected inner function to be called twice: once for transient error, once for success")
-}
-
-func TestIsRetryable(t *testing.T) {
-	for _, tt := range []struct {
-		name       string
-		err        error
-		wantRetry  bool
-		wantLogMsg string
-	}{
-		{
-			name:       "retryable 429 returns true and logs",
-			err:        autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
-			wantRetry:  true,
-			wantLogMsg: "error on test-op, retrying:",
-		},
-		{
-			name:      "non-retryable error returns false",
-			err:       errors.New("permanent failure"),
-			wantRetry: false,
-		},
-		{
-			name:       "retryable azcore 429 returns true and logs",
-			err:        &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
-			wantRetry:  true,
-			wantLogMsg: "error on test-op, retrying:",
-		},
-		{
-			name: "retryable autorest 409+Retry-After returns true and logs",
-			err: autorest.DetailedError{
-				StatusCode: http.StatusConflict,
-				Response: &http.Response{
-					StatusCode: http.StatusConflict,
-					Header:     http.Header{"Retry-After": []string{"1"}},
-				},
-			},
-			wantRetry:  true,
-			wantLogMsg: "error on test-op, retrying:",
-		},
-		{
-			name: "retryable azcore 409+Retry-After returns true and logs",
-			err: &azcore.ResponseError{
-				StatusCode: http.StatusConflict,
-				RawResponse: &http.Response{
-					StatusCode: http.StatusConflict,
-					Header:     http.Header{"Retry-After": []string{"1"}},
-				},
-			},
-			wantRetry:  true,
-			wantLogMsg: "error on test-op, retrying:",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			logger, hook := logrustest.NewNullLogger()
-			logger.SetLevel(logrus.WarnLevel)
-
-			m := &manager{log: logrus.NewEntry(logger)}
-			predicate := m.isRetryable("test-op")
-
-			got := predicate(tt.err)
-			assert.Equal(t, tt.wantRetry, got)
-
-			if tt.wantLogMsg != "" {
-				require.Len(t, hook.Entries, 1)
-				assert.Contains(t, hook.LastEntry().Message, tt.wantLogMsg)
-				assert.Equal(t, logrus.WarnLevel, hook.LastEntry().Level)
-			} else {
-				assert.Empty(t, hook.Entries)
-			}
-		})
-	}
-}
-
 // TestDisconnectSecurityGroupRetryExhausted verifies that when the azcore subnet call fails, the error is propagated.
 func TestDisconnectSecurityGroupRetryExhausted(t *testing.T) {
-	origBackoff := transientRetryBackoff
-	transientRetryBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
-	defer func() { transientRetryBackoff = origBackoff }()
+	origBackoff := arm.TransientBackoff
+	arm.TransientBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
+	defer func() { arm.TransientBackoff = origBackoff }()
 
 	subscription := "00000000-0000-0000-0000-000000000000"
 	resourceGroup := "test-rg"
@@ -1224,9 +1096,9 @@ func TestDeleteResourcesRetry(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			origBackoff := transientRetryBackoff
-			transientRetryBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
-			defer func() { transientRetryBackoff = origBackoff }()
+			origBackoff := arm.TransientBackoff
+			arm.TransientBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -1270,9 +1142,9 @@ func TestDeleteResourcesRetry(t *testing.T) {
 // TestDeleteResourcesRetryExhausted verifies that retry exhaustion propagates the error.
 // Uses a single representative error (autorest 429); the exhaustion path is the same for all retryable errors.
 func TestDeleteResourcesRetryExhausted(t *testing.T) {
-	origBackoff := transientRetryBackoff
-	transientRetryBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
-	defer func() { transientRetryBackoff = origBackoff }()
+	origBackoff := arm.TransientBackoff
+	arm.TransientBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0} // Steps: 1 = 1 attempt, 0 retries
+	defer func() { arm.TransientBackoff = origBackoff }()
 
 	subscription := "00000000-0000-0000-0000-000000000000"
 	resourceGroup := "test-rg"

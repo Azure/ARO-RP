@@ -838,12 +838,64 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 	}
 }
 
+func TestSetMasterSubnetPoliciesRetry(t *testing.T) {
+	// must not be called with t.Parallel(); mutates package-level arm.TransientBackoff
+	subnetID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet"
+	wantSubnet := sdknetwork.Subnet{
+		Properties: &sdknetwork.SubnetPropertiesFormat{
+			PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+		},
+	}
+
+	for _, tt := range []struct {
+		name     string
+		firstErr error
+	}{
+		{
+			name:     "retry on autorest 429: succeeds on second attempt",
+			firstErr: autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
+		},
+		{
+			name:     "retry on azcore 429: succeeds on second attempt",
+			firstErr: &azcore.ResponseError{StatusCode: http.StatusTooManyRequests},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			origBackoff := arm.TransientBackoff
+			arm.TransientBackoff = wait.Backoff{Steps: 2, Duration: time.Millisecond, Factor: 2.0}
+			defer func() { arm.TransientBackoff = origBackoff }()
+
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
+			armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
+			first := armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(tt.firstErr)
+			armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(nil).After(first)
+
+			m := &manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{SubnetID: subnetID},
+						},
+					},
+				},
+				armSubnets: armSubnets,
+			}
+
+			assert.NoError(t, m.setMasterSubnetPolicies(context.Background()))
+		})
+	}
+}
+
 // TestSetMasterSubnetPoliciesRetryExhausted verifies that when the azcore subnet call fails, the error is propagated.
 // Uses a single representative error (autorest 429); the exhaustion path is the same for all retryable errors.
 func TestSetMasterSubnetPoliciesRetryExhausted(t *testing.T) {
-	origBackoff := transientRetryBackoff
-	transientRetryBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0}
-	defer func() { transientRetryBackoff = origBackoff }()
+	origBackoff := arm.TransientBackoff
+	arm.TransientBackoff = wait.Backoff{Steps: 1, Duration: time.Millisecond, Factor: 2.0}
+	defer func() { arm.TransientBackoff = origBackoff }()
 
 	subnetID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet"
 	wantSubnet := sdknetwork.Subnet{

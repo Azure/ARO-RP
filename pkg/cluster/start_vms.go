@@ -11,6 +11,7 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -67,9 +68,9 @@ func (m *manager) startVMs(ctx context.Context) error {
 		for _, vm := range vmsToStart {
 			vm := vm // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				return m.retryable("starting vm "+*vm.Name, func() error {
+				return arm.Retryable(groupCtx, func() error {
 					return m.virtualMachines.StartAndWait(groupCtx, resourceGroupName, *vm.Name)
-				})
+				}, m.log, "starting vm "+*vm.Name)
 			})
 		}
 		return g.Wait()

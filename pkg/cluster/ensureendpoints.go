@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
@@ -30,7 +31,7 @@ func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 	}
 
 	for _, subnetId := range subnetIds {
-		r, err := arm.ParseResourceID(subnetId)
+		r, err := armsdk.ParseResourceID(subnetId)
 		if err != nil {
 			return err
 		}
@@ -42,7 +43,9 @@ func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 		if !shouldUpdate {
 			continue
 		}
-		err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, subnet.Subnet, nil)
+		err = arm.Retryable(ctx, func() error {
+			return m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, subnet.Subnet, nil)
+		}, m.log, "enabling service endpoints on subnet "+subnetId)
 		if err != nil {
 			return err
 		}

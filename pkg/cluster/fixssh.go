@@ -15,8 +15,8 @@ import (
 	armnetwork_sdk "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -129,7 +129,9 @@ NICs:
 
 		if ilbBackendPoolsUpdated || elbBackendPoolsUpdated {
 			log.Infof("Updating Network Interface %s", *nic.Name)
-			err = interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+			err = arm.Retryable(ctx, func() error {
+				return interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+			}, log, "updating network interface "+*nic.Name)
 			if err != nil {
 				return err
 			}
@@ -208,7 +210,9 @@ func checkAndUpdateLB(ctx context.Context, log *logrus.Entry, lbClient armnetwor
 
 	if updateLB(log, lb, lbName) {
 		log.Infof("Updating Load Balancer %s", lbName)
-		err = lbClient.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, *lb, nil)
+		err = arm.Retryable(ctx, func() error {
+			return lbClient.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, *lb, nil)
+		}, log, "updating load balancer "+lbName)
 		if err != nil {
 			return nil, err
 		}
@@ -295,15 +299,19 @@ func deleteOrphanedNIC(ctx context.Context, log *logrus.Entry, interfacesClient 
 			Subnet: &armnetwork_sdk.Subnet{ID: pointerutils.ToPtr(masterSubnetID)},
 		},
 	}}
-	err := interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+	err := arm.Retryable(ctx, func() error {
+		return interfacesClient.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)
+	}, log, "removing IP configurations from NIC "+*nic.Name)
 	if err != nil {
 		log.Errorf("Removing IPConfigurations from NIC %s has failed with err %s", *nic.Name, err)
 		return err
 	}
 	// Delete orphaned NIC (no VM associated and at this point we know it's a master NIC that's been removed from all backend pools)
 	log.Infof("Deleting orphaned control plane machine NIC %s, not associated with any VM.", *nic.Name)
-	err = interfacesClient.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
-	if err != nil && !azureerrors.IsNotFoundError(err) {
+	err = arm.RetryableDelete(ctx, func() error {
+		return interfacesClient.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
+	}, log, "deleting orphaned NIC "+*nic.Name)
+	if err != nil {
 		log.Errorf("Failed to delete orphaned NIC %s", *nic.Name)
 		return err
 	}
