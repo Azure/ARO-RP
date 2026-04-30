@@ -187,5 +187,4 @@ Success should be measured through:
 
 ## Related Documents
 
-- `docs/constraint-driven-agentic-development.md`
-- `docs/jira-epic-constraint-driven-agentic-development.md`
+- `docs/agent-guides/constraint-driven-agentic-development.md`
