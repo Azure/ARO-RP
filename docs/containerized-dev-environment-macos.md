@@ -49,12 +49,6 @@ If you are on Apple Silicon, add the following to your `env` file:
 export PLATFORM=linux/arm64
 ```
 
-If you don't have ACR access, also add:
-
-```bash
-export FEDORA_REGISTRY=registry.fedoraproject.org
-```
-
 ### 4. Build the container image
 
 ```bash
