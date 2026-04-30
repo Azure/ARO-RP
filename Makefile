@@ -9,7 +9,7 @@ COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcela
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke&&!regressiontest&&!slow
-E2E_FOKUS ?=
+E2E_FOCUS ?=
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
 
@@ -305,13 +305,15 @@ secrets-update:
 tunnel:
 	go run ./hack/tunnel $(shell az network public-ip show -g ${RESOURCEGROUP} -n rp-pip --query 'ipAddress')
 
+# Compile e2e tests and generate binary e2e.test to run tests later
 .PHONY: e2e.test
 e2e.test:
 	go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
 
+# Compile and run e2e tests without producing a binary. Supports both E2E_LABEL to limit e2e tests based on their labels, as well as E2E_FOCUS to filter tests to run based on their description. (see https://onsi.github.io/ginkgo/#description-based-filtering for more information)
 .PHONY: e2e
 e2e:
-	go test ./test/e2e/... -tags e2e,codec.safe -timeout 180m --ginkgo.v --ginkgo.flake-attempts=2 -ginkgo.label-filter="$(E2E_LABEL)" -ginkgo.focus="$(E2E_FOKUS)" -v
+	go test ./test/e2e/... -tags e2e,codec.safe -timeout 180m --ginkgo.v --ginkgo.flake-attempts=2 -ginkgo.label-filter="$(E2E_LABEL)" -ginkgo.focus="$(E2E_FOCUS)" -v
 
 .PHONY: e2etools
 e2etools:
@@ -320,6 +322,7 @@ e2etools:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/portalauth
 	$(BINGO) get -l gojq
 
+# Run pre-compiled e2e binary e2e.test. Respects E2E_LABEL to filter tests by label
 .PHONY: test-e2e
 test-e2e: e2e.test
 	./e2e.test $(E2E_FLAGS) --ginkgo.label-filter="$(E2E_LABEL)"
