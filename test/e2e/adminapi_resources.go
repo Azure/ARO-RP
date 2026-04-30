@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-var _ = Describe("[Admin API] List Azure resources action", func() {
+var _ = Describe("[Admin API] List Azure resources action", Label(install), func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must list Azure resources for a cluster", func(ctx context.Context) {
