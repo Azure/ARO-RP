@@ -11,34 +11,54 @@ const (
 	BannerEnabled                      = "aro.banner.enabled"
 	CheckerEnabled                     = "aro.checker.enabled"
 	CPMSEnabled                        = "aro.cpms.enabled"
-	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
-	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
-	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
-	ImageConfigEnabled                 = "aro.imageconfig.enabled"
-	IngressEnabled                     = "aro.ingress.enabled"
-	MachineEnabled                     = "aro.machine.enabled"
-	MachineSetEnabled                  = "aro.machineset.enabled"
-	MachineHealthCheckEnabled          = "aro.machinehealthcheck.enabled"
-	MachineHealthCheckManaged          = "aro.machinehealthcheck.managed"
-	MonitoringEnabled                  = "aro.monitoring.enabled"
-	NodeDrainerEnabled                 = "aro.nodedrainer.enabled"
-	PullSecretEnabled                  = "aro.pullsecret.enabled"
-	PullSecretManaged                  = "aro.pullsecret.managed"
-	RbacEnabled                        = "aro.rbac.enabled"
-	RouteFixEnabled                    = "aro.routefix.enabled"
-	StorageAccountsEnabled             = "aro.storageaccounts.enabled"
-	WorkaroundEnabled                  = "aro.workaround.enabled"
-	AutosizedNodesEnabled              = "aro.autosizednodes.enabled"
-	MuoEnabled                         = "rh.srep.muo.enabled"
-	MuoManaged                         = "rh.srep.muo.managed"
-	GuardrailsEnabled                  = "aro.guardrails.enabled"
-	GuardrailsDeployManaged            = "aro.guardrails.deploy.managed"
-	CloudProviderConfigEnabled         = "aro.cloudproviderconfig.enabled"
-	ForceReconciliation                = "aro.forcereconciliation"
-	EtcHostsEnabled                    = "aro.etchosts.enabled" // true = enable etchosts controller
-	EtcHostsManaged                    = "aro.etchosts.managed" // true = apply etchosts mc | false = remove etchosts mc
-	FlagTrue                           = "true"
-	FlagFalse                          = "false"
+	// DNSEnabled is the new flag controlling whether the DNS controller runs.
+	// New clusters use this flag. For existing clusters that only have the
+	// legacy aro.dnsmasq.enabled flag, the controller falls back to it.
+	DNSEnabled = "aro.dns.enabled"
+
+	// DnsmasqEnabled is the legacy flag. Kept for backward compatibility with
+	// existing clusters whose CosmosDB documents predate the rename.
+	DnsmasqEnabled = "aro.dnsmasq.enabled"
+
+	// RestartDnsmasqEnabled controls whether a NM dispatcher restart script is
+	// included in the dnsmasq MachineConfig. Only relevant for dnsmasq mode.
+	RestartDnsmasqEnabled = "aro.restartdnsmasq.enabled"
+
+	// DNS Type flag for CustomDNS feature
+	// Values: "" (default=dnsmasq), "dnsmasq", "clusterhosted"
+	// "clusterhosted" enables CustomDNS (CoreDNS static pod) for 4.21+ clusters
+	DNSType = "aro.dns.type"
+
+	// DNS Type values
+	DNSTypeDnsmasq       = "dnsmasq"
+	DNSTypeClusterHosted = "clusterhosted"
+
+	GenevaLoggingEnabled       = "aro.genevalogging.enabled"
+	ImageConfigEnabled         = "aro.imageconfig.enabled"
+	IngressEnabled             = "aro.ingress.enabled"
+	MachineEnabled             = "aro.machine.enabled"
+	MachineSetEnabled          = "aro.machineset.enabled"
+	MachineHealthCheckEnabled  = "aro.machinehealthcheck.enabled"
+	MachineHealthCheckManaged  = "aro.machinehealthcheck.managed"
+	MonitoringEnabled          = "aro.monitoring.enabled"
+	NodeDrainerEnabled         = "aro.nodedrainer.enabled"
+	PullSecretEnabled          = "aro.pullsecret.enabled"
+	PullSecretManaged          = "aro.pullsecret.managed"
+	RbacEnabled                = "aro.rbac.enabled"
+	RouteFixEnabled            = "aro.routefix.enabled"
+	StorageAccountsEnabled     = "aro.storageaccounts.enabled"
+	WorkaroundEnabled          = "aro.workaround.enabled"
+	AutosizedNodesEnabled      = "aro.autosizednodes.enabled"
+	MuoEnabled                 = "rh.srep.muo.enabled"
+	MuoManaged                 = "rh.srep.muo.managed"
+	GuardrailsEnabled          = "aro.guardrails.enabled"
+	GuardrailsDeployManaged    = "aro.guardrails.deploy.managed"
+	CloudProviderConfigEnabled = "aro.cloudproviderconfig.enabled"
+	ForceReconciliation        = "aro.forcereconciliation"
+	EtcHostsEnabled            = "aro.etchosts.enabled" // true = enable etchosts controller
+	EtcHostsManaged            = "aro.etchosts.managed" // true = apply etchosts mc | false = remove etchosts mc
+	FlagTrue                   = "true"
+	FlagFalse                  = "false"
 
 	// Guardrails policies switches
 	GuardrailsPolicyMachineDenyManaged           = "aro.guardrails.policies.aro-machines-deny.managed"
@@ -63,32 +83,36 @@ func DefaultOperatorFlags() map[string]string {
 		BannerEnabled:                      FlagFalse,
 		CheckerEnabled:                     FlagTrue,
 		CPMSEnabled:                        FlagFalse,
-		DnsmasqEnabled:                     FlagTrue,
+		DNSEnabled:                         FlagTrue,
 		RestartDnsmasqEnabled:              FlagFalse,
-		GenevaLoggingEnabled:               FlagTrue,
-		ImageConfigEnabled:                 FlagTrue,
-		IngressEnabled:                     FlagTrue,
-		MachineEnabled:                     FlagTrue,
-		MachineSetEnabled:                  FlagTrue,
-		MachineHealthCheckEnabled:          FlagTrue,
-		MachineHealthCheckManaged:          FlagTrue,
-		MonitoringEnabled:                  FlagFalse,
-		NodeDrainerEnabled:                 FlagTrue,
-		PullSecretEnabled:                  FlagTrue,
-		PullSecretManaged:                  FlagTrue,
-		RbacEnabled:                        FlagTrue,
-		RouteFixEnabled:                    FlagTrue,
-		StorageAccountsEnabled:             FlagTrue,
-		WorkaroundEnabled:                  FlagTrue,
-		AutosizedNodesEnabled:              FlagTrue,
-		MuoEnabled:                         FlagTrue,
-		MuoManaged:                         FlagTrue,
-		GuardrailsEnabled:                  FlagTrue,
-		GuardrailsDeployManaged:            FlagTrue,
-		CloudProviderConfigEnabled:         FlagTrue,
-		ForceReconciliation:                FlagFalse,
-		EtcHostsEnabled:                    FlagTrue,
-		EtcHostsManaged:                    FlagTrue,
+
+		// DNS Type: blank (default) = dnsmasq, "dnsmasq" = force dnsmasq, "clusterhosted" = CustomDNS (4.21+)
+		DNSType: "",
+
+		GenevaLoggingEnabled:       FlagTrue,
+		ImageConfigEnabled:         FlagTrue,
+		IngressEnabled:             FlagTrue,
+		MachineEnabled:             FlagTrue,
+		MachineSetEnabled:          FlagTrue,
+		MachineHealthCheckEnabled:  FlagTrue,
+		MachineHealthCheckManaged:  FlagTrue,
+		MonitoringEnabled:          FlagFalse,
+		NodeDrainerEnabled:         FlagTrue,
+		PullSecretEnabled:          FlagTrue,
+		PullSecretManaged:          FlagTrue,
+		RbacEnabled:                FlagTrue,
+		RouteFixEnabled:            FlagTrue,
+		StorageAccountsEnabled:     FlagTrue,
+		WorkaroundEnabled:          FlagTrue,
+		AutosizedNodesEnabled:      FlagTrue,
+		MuoEnabled:                 FlagTrue,
+		MuoManaged:                 FlagTrue,
+		GuardrailsEnabled:          FlagTrue,
+		GuardrailsDeployManaged:    FlagTrue,
+		CloudProviderConfigEnabled: FlagTrue,
+		ForceReconciliation:        FlagFalse,
+		EtcHostsEnabled:            FlagTrue,
+		EtcHostsManaged:            FlagTrue,
 
 		// Guardrails policies switches
 		GuardrailsPolicyMachineDenyManaged:           FlagTrue,
