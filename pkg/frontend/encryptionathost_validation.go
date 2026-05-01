@@ -32,8 +32,7 @@ func validateEncryptionAtHostFeature(
 	providersClient := features.NewProvidersClient(
 		azEnv, subscriptionID, fpAuthorizer)
 
-	top := int32(0)
-	providers, err := providersClient.List(ctx, &top, "")
+	providers, err := providersClient.List(ctx, nil, "")
 	if err != nil {
 		if detailed, ok := err.(autorest.DetailedError); ok {
 			if detailed.StatusCode == http.StatusNotFound {
