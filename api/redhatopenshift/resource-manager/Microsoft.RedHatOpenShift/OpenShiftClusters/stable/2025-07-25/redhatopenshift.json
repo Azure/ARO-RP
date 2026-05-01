@@ -488,7 +488,7 @@
         "tags": [
           "OpenShiftClusters"
         ],
-        "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "summary": "Updates a OpenShift cluster with the specified subscription, resource group and resource name.",
         "description": "The operation returns properties of a OpenShift cluster.",
         "parameters": [
           {

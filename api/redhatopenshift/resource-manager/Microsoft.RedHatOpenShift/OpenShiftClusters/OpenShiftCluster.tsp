@@ -45,7 +45,7 @@ interface OpenShiftClusters {
   /**
    * The operation returns properties of a OpenShift cluster.
    */
-  @summary("Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.")
+  @summary("Updates a OpenShift cluster with the specified subscription, resource group and resource name.")
   @patch(#{ implicitOptionality: false })
   update is ArmCustomPatchAsync<
     OpenShiftCluster,
