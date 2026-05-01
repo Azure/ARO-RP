@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -64,16 +63,6 @@ func (f *frontend) generateDiagnosticsKubeconfig(ctx context.Context, log *logru
 	kubeconfig, err := cluster.GenerateKubeconfig(pg, "system:aro-diagnostics", nil, time.Hour, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate diagnostics kubeconfig: %w", err)
-	}
-
-	// In development mode, the Hive cluster cannot resolve api-int.* private DNS
-	// names, so we rewrite to the external api.* endpoint. In production, the
-	// Hive cluster has proper network connectivity and should use api-int.* directly.
-	if f.env.IsLocalDevelopmentMode() {
-		kubeconfig, err = holmes.MakeExternalKubeconfig(kubeconfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert to external kubeconfig: %w", err)
-		}
 	}
 
 	return kubeconfig, nil

@@ -144,13 +144,15 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 		return fmt.Errorf("failed to generate diagnostics kubeconfig: %w", err)
 	}
 
+	apiServerIP := doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP
+
 	log.Infof("starting Holmes investigation for cluster %s (question_length=%d)", resourceID, len(req.Question))
 
 	// Set Content-Type before streaming begins. Once bytes are written to w,
 	// the response is committed and errors cannot be reported via adminReply.
 	w.Header().Set("Content-Type", "text/plain")
 
-	err = f.hiveClusterManager.InvestigateCluster(ctx, hiveNamespace, kubeconfig, f.holmesConfig, req.Question, w)
+	err = f.hiveClusterManager.InvestigateCluster(ctx, hiveNamespace, kubeconfig, f.holmesConfig, apiServerIP, req.Question, w)
 	if err != nil {
 		return fmt.Errorf("failed to investigate cluster: %w", err)
 	}

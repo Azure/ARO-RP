@@ -153,17 +153,17 @@ func (mr *MockClusterManagerMockRecorder) Install(ctx, sub, doc, version, custom
 }
 
 // InvestigateCluster mocks base method.
-func (m *MockClusterManager) InvestigateCluster(ctx context.Context, hiveNamespace string, kubeconfig []byte, holmesConfig *holmes.HolmesConfig, question string, w io.Writer) error {
+func (m *MockClusterManager) InvestigateCluster(ctx context.Context, hiveNamespace string, kubeconfig []byte, holmesConfig *holmes.HolmesConfig, apiServerIP, question string, w io.Writer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InvestigateCluster", ctx, hiveNamespace, kubeconfig, holmesConfig, question, w)
+	ret := m.ctrl.Call(m, "InvestigateCluster", ctx, hiveNamespace, kubeconfig, holmesConfig, apiServerIP, question, w)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InvestigateCluster indicates an expected call of InvestigateCluster.
-func (mr *MockClusterManagerMockRecorder) InvestigateCluster(ctx, hiveNamespace, kubeconfig, holmesConfig, question, w any) *gomock.Call {
+func (mr *MockClusterManagerMockRecorder) InvestigateCluster(ctx, hiveNamespace, kubeconfig, holmesConfig, apiServerIP, question, w any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvestigateCluster", reflect.TypeOf((*MockClusterManager)(nil).InvestigateCluster), ctx, hiveNamespace, kubeconfig, holmesConfig, question, w)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvestigateCluster", reflect.TypeOf((*MockClusterManager)(nil).InvestigateCluster), ctx, hiveNamespace, kubeconfig, holmesConfig, apiServerIP, question, w)
 }
 
 // IsClusterDeploymentReady mocks base method.

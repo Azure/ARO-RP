@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"time"
 
 	_ "embed"
@@ -17,6 +18,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -28,7 +32,7 @@ var holmesConfigYAML string
 // InvestigateCluster creates an investigation pod on the Hive cluster, streams its logs, and cleans up.
 // It accepts kubeconfig bytes, creates a temporary secret to hold them, and removes
 // the secret (along with the pod and configmap) when the investigation completes.
-func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace string, kubeconfig []byte, holmesConfig *holmes.HolmesConfig, question string, w io.Writer) error {
+func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace string, kubeconfig []byte, holmesConfig *holmes.HolmesConfig, apiServerIP string, question string, w io.Writer) error {
 	id := uuid.New().String()[:8]
 	configMapName := "holmes-config-" + id
 	podName := "holmes-investigate-" + id
@@ -98,6 +102,12 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 	// 2. Create the investigation pod.
 	activeDeadlineSeconds := int64(holmesConfig.DefaultTimeout)
 	runAsUser := int64(1000)
+
+	apiHostname, err := apiServerHostname(kubeconfig)
+	if err != nil {
+		return fmt.Errorf("failed to extract API server hostname from kubeconfig: %w", err)
+	}
+
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
@@ -107,6 +117,12 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 			AutomountServiceAccountToken: pointerutils.ToPtr(false),
 			ActiveDeadlineSeconds:        &activeDeadlineSeconds,
 			RestartPolicy:                corev1.RestartPolicyNever,
+			HostAliases: []corev1.HostAlias{
+				{
+					IP:        apiServerIP,
+					Hostnames: []string{apiHostname},
+				},
+			},
 			SecurityContext: &corev1.PodSecurityContext{
 				RunAsUser:  &runAsUser,
 				RunAsGroup: &runAsUser,
@@ -324,4 +340,21 @@ func (hr *clusterManager) streamPodLogs(ctx context.Context, namespace, name str
 	}
 
 	return nil
+}
+
+func apiServerHostname(kubeconfig []byte) (string, error) {
+	var cfg clientcmdv1.Config
+	if err := yaml.Unmarshal(kubeconfig, &cfg); err != nil {
+		return "", fmt.Errorf("failed to unmarshal kubeconfig: %w", err)
+	}
+	if len(cfg.Clusters) == 0 {
+		return "", fmt.Errorf("kubeconfig has no clusters")
+	}
+
+	u, err := url.Parse(cfg.Clusters[0].Cluster.Server)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse server URL: %w", err)
+	}
+
+	return u.Hostname(), nil
 }
