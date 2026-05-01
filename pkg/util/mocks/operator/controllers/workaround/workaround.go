@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	v1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	version "github.com/Azure/ARO-RP/pkg/util/version"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockWorkaround is a mock of Workaround interface.
