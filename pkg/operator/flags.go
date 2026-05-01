@@ -28,6 +28,7 @@ const (
 	RouteFixEnabled                    = "aro.routefix.enabled"
 	StorageAccountsEnabled             = "aro.storageaccounts.enabled"
 	WorkaroundEnabled                  = "aro.workaround.enabled"
+	CopyFailWorkaroundEnabled          = "aro.workaround.copyfail.enabled"
 	AutosizedNodesEnabled              = "aro.autosizednodes.enabled"
 	MuoEnabled                         = "rh.srep.muo.enabled"
 	MuoManaged                         = "rh.srep.muo.managed"
@@ -80,6 +81,7 @@ func DefaultOperatorFlags() map[string]string {
 		RouteFixEnabled:                    FlagTrue,
 		StorageAccountsEnabled:             FlagTrue,
 		WorkaroundEnabled:                  FlagTrue,
+		CopyFailWorkaroundEnabled:          FlagTrue,
 		AutosizedNodesEnabled:              FlagTrue,
 		MuoEnabled:                         FlagTrue,
 		MuoManaged:                         FlagTrue,

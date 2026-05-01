@@ -55,7 +55,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 		{
 			name: "is required",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
-				c := mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(true)
+				c := mw.EXPECT().IsRequired(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 				mw.EXPECT().Ensure(gomock.Any()).After(c).Return(nil)
 			},
 			want: ctrl.Result{RequeueAfter: time.Hour},
@@ -63,7 +63,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 		{
 			name: "is not required",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
-				c := mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(false)
+				c := mw.EXPECT().IsRequired(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 				mw.EXPECT().Remove(gomock.Any()).After(c).Return(nil)
 			},
 			want: ctrl.Result{RequeueAfter: time.Hour},
@@ -71,7 +71,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 		{
 			name: "has error",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
-				mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(true)
+				mw.EXPECT().IsRequired(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 				mw.EXPECT().Name().Return("test").AnyTimes()
 				mw.EXPECT().Ensure(gomock.Any()).Return(fmt.Errorf("oops"))
 			},
