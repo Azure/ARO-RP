@@ -13,10 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	v1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	version "github.com/Azure/ARO-RP/pkg/util/version"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockWorkaround is a mock of Workaround interface.
@@ -58,17 +57,18 @@ func (mr *MockWorkaroundMockRecorder) Ensure(arg0 any) *gomock.Call {
 }
 
 // IsRequired mocks base method.
-func (m *MockWorkaround) IsRequired(clusterVersion version.Version, cluster *v1alpha1.Cluster) bool {
+func (m *MockWorkaround) IsRequired(ctx context.Context, clusterVersion version.Version, cluster *v1alpha1.Cluster) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsRequired", clusterVersion, cluster)
+	ret := m.ctrl.Call(m, "IsRequired", ctx, clusterVersion, cluster)
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // IsRequired indicates an expected call of IsRequired.
-func (mr *MockWorkaroundMockRecorder) IsRequired(clusterVersion, cluster any) *gomock.Call {
+func (mr *MockWorkaroundMockRecorder) IsRequired(ctx, clusterVersion, cluster any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRequired", reflect.TypeOf((*MockWorkaround)(nil).IsRequired), clusterVersion, cluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRequired", reflect.TypeOf((*MockWorkaround)(nil).IsRequired), ctx, clusterVersion, cluster)
 }
 
 // Name mocks base method.
