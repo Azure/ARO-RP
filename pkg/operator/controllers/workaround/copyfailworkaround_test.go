@@ -174,7 +174,7 @@ func TestCopyFailWorkaround(t *testing.T) {
 			} else {
 				r.NoError(err)
 
-				r.EqualValues(tC.expectedMachineConfig, got, "failed: %s", deep.Equal(got, tC.expectedMachineConfig))
+				r.Equal(tC.expectedMachineConfig, got, "failed: %s", deep.Equal(got, tC.expectedMachineConfig))
 			}
 		})
 	}
