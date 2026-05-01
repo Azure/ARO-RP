@@ -5,6 +5,8 @@ package workaround
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -44,7 +46,7 @@ type Reconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
 		log:         log,
-		workarounds: []Workaround{NewSystemReserved(log, client)},
+		workarounds: []Workaround{NewSystemReserved(log, client), NewCopyFailWorkaround(log, client)},
 		client:      client,
 	}
 }
@@ -75,19 +77,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		r.log.Errorf("error getting the OpenShift version: %v", err)
 		return reconcile.Result{}, err
 	}
-
+	errs := []error{}
 	for _, wa := range r.workarounds {
-		if wa.IsRequired(clusterVersion, instance) {
+		req, err := wa.IsRequired(ctx, clusterVersion, instance)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("workaround %s failed checking requirement: %w", wa.Name(), err))
+			continue
+		}
+
+		if req {
 			err = wa.Ensure(ctx)
 		} else {
 			err = wa.Remove(ctx)
 		}
 
 		if err != nil {
-			r.log.Errorf("workaround %s returned error %v", wa.Name(), err)
-			return reconcile.Result{}, err
+			_err := fmt.Errorf("workaround %s returned error: %w", wa.Name(), err)
+			errs = append(errs, _err)
+			r.log.Error(_err.Error())
 		}
 	}
+	if len(errs) > 0 {
+		return reconcile.Result{}, errors.Join(errs...)
+	}
+
 	return reconcile.Result{RequeueAfter: time.Hour}, nil
 }
 
