@@ -49,11 +49,11 @@ func (sr *systemreserved) Name() string {
 	return "SystemReserved fix for bz-1857446"
 }
 
-func (sr *systemreserved) IsRequired(clusterVersion version.Version, cluster *arov1alpha1.Cluster) bool {
+func (sr *systemreserved) IsRequired(ctx context.Context, clusterVersion version.Version, cluster *arov1alpha1.Cluster) (bool, error) {
 	if cluster.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
-		return false
+		return false, nil
 	}
-	return clusterVersion.Lt(sr.versionFixed)
+	return clusterVersion.Lt(sr.versionFixed), nil
 }
 
 func (sr *systemreserved) Ensure(ctx context.Context) error {
