@@ -30,7 +30,7 @@ type copyfailworkaround struct {
 
 var _ Workaround = &copyfailworkaround{}
 
-func NewAlgifAEADDisable(log *logrus.Entry, client client.Client) *copyfailworkaround {
+func NewCopyFailWorkaround(log *logrus.Entry, client client.Client) *copyfailworkaround {
 	ch := clienthelper.NewWithClient(log, client)
 	return &copyfailworkaround{log: log, ch: ch}
 }

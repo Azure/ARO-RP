@@ -46,7 +46,7 @@ type Reconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
 		log:         log,
-		workarounds: []Workaround{NewSystemReserved(log, client)},
+		workarounds: []Workaround{NewSystemReserved(log, client), NewCopyFailWorkaround(log, client)},
 		client:      client,
 	}
 }
@@ -97,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			r.log.Error(_err.Error())
 		}
 	}
-	if errs != nil {
+	if len(errs) > 0 {
 		return reconcile.Result{}, errors.Join(errs...)
 	}
 
