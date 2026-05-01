@@ -132,7 +132,7 @@ func TestCopyFailWorkaround(t *testing.T) {
 				tC.addHooks(cl)
 			}
 
-			workaround := NewAlgifAEADDisable(log, cl)
+			workaround := NewCopyFailWorkaround(log, cl)
 
 			clusterVersion, err := apiversion.ParseVersion("4.99.0")
 			r.NoError(err)
@@ -168,13 +168,15 @@ func TestCopyFailWorkaround(t *testing.T) {
 			got := &mcv1.MachineConfig{}
 			err = cl.Get(t.Context(), types.NamespacedName{Name: "99-master-disable-algif-aead"}, got)
 			if tC.expectedMachineConfig == nil {
-				if !kerrors.IsNotFound(err) {
-					t.Errorf("found machineconfig when it should not exist: %s", err.Error())
+				if err == nil {
+					t.Error("found machineconfig when it should not exist")
+				} else if !kerrors.IsNotFound(err) {
+					t.Errorf("error when fetching machineconfig: %v", err.Error())
 				}
 			} else {
 				r.NoError(err)
 
-				r.Equal(tC.expectedMachineConfig, got, "failed: %s", deep.Equal(got, tC.expectedMachineConfig))
+				r.Equal(tC.expectedMachineConfig, got, "failed: %v", deep.Equal(got, tC.expectedMachineConfig))
 			}
 		})
 	}
