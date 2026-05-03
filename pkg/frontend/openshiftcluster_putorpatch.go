@@ -375,6 +375,15 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		return nil, err
 	}
 
+	if doc == nil {
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"",
+			"internal error: nil cluster document returned from database",
+		)
+	}
+
 	// We remove sensitive data from document to prevent sensitive data being
 	// returned to the customer.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
