@@ -21,7 +21,8 @@ configure_repo_azurelinux_extended() {
 #   1) wait_time - nameref, integer
 #       * Time to wait before retrying command
 #   2) retries - integer, optional
-#       * Amount of times to retry command, defaults to 5
+#       * Retries for repo enablement; callers often use a small value (e.g. 5).
+#         Package update/install steps may warrant a larger count separately.
 configure_rpm_repos() {
     log "starting"
 
