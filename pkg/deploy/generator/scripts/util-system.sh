@@ -1,29 +1,6 @@
 #!/bin/bash
 # This file is intended to be sourced by bootstrapping scripts for commonly used functions
 
-# get_boot_dev_uuid
-#
-# Get the boot devices uuid
-# args:
-#
-#   * 1) boot_dev_uuid - nameref, string; Empty variable for boot device uuid assignment
-#
-# Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
-get_boot_dev_uuid() {
-    local -n boot_dev_uuid="$1"
-    # Set boot_uuid variable for the boot partition if different from the root
-    boot_dev="$(df /boot/ | tail -1 | cut -d' ' -f1)"
-    root_dev="$(df / | tail -1 | cut -d' ' -f1)"
-
-    boot_dev_uuid="$root_dev"
-    if [ "$boot_dev" != "$root_dev" ]; then
-        # shellcheck disable=SC2034
-        boot_dev_uuid="boot=UUID=$(blkid "$boot_dev" -s UUID -o value)"
-    fi
-}
-
 # fips_verify
 #
 # Verify that fips mode is enabled

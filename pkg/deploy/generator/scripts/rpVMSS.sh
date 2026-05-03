@@ -17,8 +17,9 @@ main() {
     configure_sshd
 
     local -ri pkg_retry_count=60
+    local -ri repo_retry_count=5
     configure_rpm_repos retry_wait_time \
-                        "$pkg_retry_count"
+                        "$repo_retry_count"
 
     # shellcheck disable=SC2034
     local -ar exclude_pkgs=(

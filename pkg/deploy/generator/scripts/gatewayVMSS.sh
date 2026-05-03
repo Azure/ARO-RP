@@ -13,11 +13,12 @@ main() {
     local -ri retry_wait_time=30
     # shellcheck disable=SC2068
     local -ri pkg_retry_count=60
+    local -ri repo_retry_count=5
 
     create_required_dirs
     configure_sshd
     configure_rpm_repos retry_wait_time \
-                    "$pkg_retry_count"
+                    "$repo_retry_count"
 
     # shellcheck disable=SC2034
     local -ar exclude_pkgs=(
