@@ -315,6 +315,7 @@ const (
 	VMSizeStandardD8dsV5  VMSize = "Standard_D8ds_v5"
 	VMSizeStandardD16dsV5 VMSize = "Standard_D16ds_v5"
 	VMSizeStandardD32dsV5 VMSize = "Standard_D32ds_v5"
+	VMSizeStandardD48dsV5 VMSize = "Standard_D48ds_v5"
 	VMSizeStandardD64dsV5 VMSize = "Standard_D64ds_v5"
 	VMSizeStandardD96dsV5 VMSize = "Standard_D96ds_v5"
 
