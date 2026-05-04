@@ -6,8 +6,8 @@
 # Verify that fips mode is enabled
 #
 # Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
+# Azure Linux 3 FIPS images are preconfigured for FIPS mode; this function verifies
+# that mode is enabled after boot.
 fips_verify() {
     fips_enabled_proc="$(cat /proc/sys/crypto/fips_enabled)"
     fips_enabled_sysctl="$(sysctl -n crypto.fips_enabled)"
