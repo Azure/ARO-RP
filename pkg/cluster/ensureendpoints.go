@@ -58,7 +58,7 @@ func (m *manager) getSubnetIds() ([]string, error) {
 
 	for _, wp := range workerProfiles {
 		if len(wp.SubnetID) == 0 {
-			return nil, fmt.Errorf("WorkerProfile '%s' has no SubnetID; check that the corresponding MachineSet is valid", wp.Name)
+			continue
 		}
 		subnets = append(subnets, wp.SubnetID)
 	}

@@ -115,7 +115,16 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 		var err error
 
 		workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
-		workerSubnetId := workerProfiles[0].SubnetID
+		var workerSubnetId string
+		for _, wp := range workerProfiles {
+			if wp.SubnetID != "" {
+				workerSubnetId = wp.SubnetID
+				break
+			}
+		}
+		if workerSubnetId == "" {
+			return fmt.Errorf("no valid worker subnet found")
+		}
 
 		r, err := arm.ParseResourceID(workerSubnetId)
 		if err != nil {
