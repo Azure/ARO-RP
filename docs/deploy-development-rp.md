@@ -79,7 +79,9 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
         1>/dev/null
       ```
 
-### Mock MSI setup required for MIWI installs
+### Mock MSI setup required for managed identity installs
+
+A managed service identity (MSI) is used in production to grant the ARO-RP additional permissions over customer identities. In development, we mock this with a service principal, since there is no ARM -> MSI-RP -> ARO-RP interactions in development or INT.
 
 1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to
 mock a cluster MSI. This script will also create the platform identities, platform identity role assignments, and role assignment on mock cluster MSI to federate the platform identities. Platform identities will be created in resource group `RESOURCEGROUP` and subscription `SUBSCRIPTION`. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`. Additionally, save the value for `Platform workload identity role sets`.
@@ -98,11 +100,11 @@ mock a cluster MSI. This script will also create the platform identities, platfo
    - `RP_MODE`: Set to `development` to use a development RP running at
      https://localhost:8443/.
    
-### MIWI setup
+### Managed identity setup
 
 1. Create a resource group for your cluster and managed identities
 
-1. Source the local dev script and run the command to set up the miwi env file for you
+1. Source the local dev script and run the command to set up the managed identity env file for you
 
    ```bash
    source ./hack/devtools/local_dev_env.sh
@@ -122,23 +124,6 @@ mock a cluster MSI. This script will also create the platform identities, platfo
    **Note** if installing a version other than 4.14 you will need to change your local `PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS` env var to point to your desired version
 
    - `go run ./cmd/aro update-role-sets`
-
-1. Add a new installable OCP version to your local RP instance. This version should be a 4.14.38+ or 4.15.35+ version and use one of the current aro-installer images in our INT repo
-
-   - for 4.16
-   ```
-   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.16.30", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:7aacace57ab6ec468dd98b0b3e0f3fc440b29afce21b90bd716fed0db487e9e9", "installerPullspec": "arosvc.azurecr.io/aro-installer:4.16@sha256:27871abbc88cdfda21c81ed1a00050e71df8c88b4bb53f96104f6d0661c0b9bf"}}'
-   ```
-
-   - for 4.15
-   ```
-   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.15.35", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:8c8433f95d09b051e156ff638f4ccc95543918c3aed92b8c09552a8977a2a1a2", "installerPullspec": "arointsvc.azurecr.io/aro-installer@sha256:e733a9b3fe549273098d7b6acd6b45a84819020f4170a6062a8185661417fe91"}}'
-   ```
-
-   - for 4.14
-   ```
-   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.14.38", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:98e43d1e848f0ad303ed4d8d427e92f7aaeaf2f670a3bfcdbeeeaa591b63fefd", "installerPullspec": "arointsvc.azurecr.io/aro-installer@sha256:e084ce2895fd1356d07e7f8a47f79ac43b75e3a146b211c843f58d5cb88d9c70"}}'
-   ```
 
 ## Run the RP and create a cluster
 
@@ -164,34 +149,60 @@ mock a cluster MSI. This script will also create the platform identities, platfo
     make run-rp
     ```
 
+### Prepare local RP for cluster installation
+
+1. Add new installable OCP version(s) to your local RP instance. Use one of the current aro-installer images in our INT repo.
+
+   - for 4.20
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.20.15", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:a60fbe523d8ad802ab9bcbb4c505f5fe4467283fc748e4978fe9a3b280145d75", "installerPullspec": "arointsvc.azurecr.io/aro-installer:4.20@sha256:031a21c1fc8fe35408baab7fdcece726578c476b2c7d187409904bd4d3b81423"}}'
+   ```
+
+   - for 4.19
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.19.24", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:3ef832b8bb0d56331035ba54af36c36be46d6c6dc1a41e300055692f02bb001d", "installerPullspec": "arointsvc.azurecr.io/aro-installer:4.19@sha256:8dd2ac71807026f58cf7edae2b12452ee0a2667ea5ab5cee7356a5cefa226ebe"}}'
+   ```
+
+   - for 4.18
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.18.34", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:14bd3c04daa885009785d48f4973e2890751a7ec116cc14d17627245cda54d7b", "installerPullspec": "arointsvc.azurecr.io/aro-installer:4.18@sha256:1658c42be718a73df82bfb26bb6ba26e6afb15749eafa30250524ad444528e6a"}}'
+   ```
+
+   - for 4.17
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.17.49", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:d1c2044e31dd213e8b67aa19f63a7bdb93e0424c3d6f932a66e7d1513a9ca1e2", "installerPullspec": "arointsvc.azurecr.io/aro-installer:4.17@sha256:b2c982cca38cb0e9a988dcf357cb3be08b4700a263e8a335067b2934587e8492"}}'
+   ```
+
+   - for 4.16
+   ```
+   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.16.57", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:9be78983e01f2fd4a8652543a3a997923818f2d62e0968f15ff30d0084233b49", "installerPullspec": "arointsvc.azurecr.io/aro-installer:4.16@sha256:58955815b59cbfbb5b02db10c7b5b7faeb50a94c3ce44f7a92bbf1cdffecfa01"}}'
+   ```
+
+2. Manually register your subscription to your local RP:
+
+    ```bash
+    curl -k -X PUT -H 'Content-Type: application/json' -d '{
+    "state": "Registered",
+    "properties": {
+        "tenantId": "'"$AZURE_TENANT_ID"'",
+        "registeredFeatures": [
+            {
+                "name": "Microsoft.RedHatOpenShift/RedHatEngineering",
+                "state": "Registered"
+            }
+        ]
+    }
+    }' "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
+    ```
+
 ### Create a service principal cluster
 
 1. To create a cluster, use one of the following methods:
 
-   **NOTE:** clusters created by a local dev RP will not be represented by Azure resources in ARM
+   **NOTE:** clusters created by a local dev RP will not be represented by an openShiftCluster resource in ARM
 
-   1. Manually create the cluster using the public documentation.
-
-      Before following the instructions in [Create, access, and manage an Azure Red Hat
-      OpenShift 4 Cluster][1],
-      you will need to add the OCP version you want to install to your DB by
-      [put(ting) a new OpenShift installation version](#openshift-version),
-      and you will also need to manually register your subscription to your local RP:
-
-      ```bash
-      curl -k -X PUT -H 'Content-Type: application/json' -d '{
-      "state": "Registered",
-      "properties": {
-         "tenantId": "'"$AZURE_TENANT_ID"'",
-         "registeredFeatures": [
-             {
-                 "name": "Microsoft.RedHatOpenShift/RedHatEngineering",
-                 "state": "Registered"
-             }
-         ]
-      }
-      }' "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
-      ```
+   1. Manually create the cluster using the instructions in [Create, access, and manage an Azure Red Hat
+      OpenShift 4 Cluster][1]
 
       Note that, as there is no default version defined, you will need to provide the `--version` argument
       to `az aro create` with one of the versions you added to your DB.
@@ -218,7 +229,7 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 
-### Create a MIWI cluster
+### Create a managed identity cluster
 
 1. Ensure the required environment variables are set:
 
@@ -241,6 +252,8 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 1. Create the cluster
 
    **Note** If the identities are not in the same resource group as the cluster, you can optionally use full resource IDs for each managed and cluster identity
+
+    **Note** In order to create with managed identities, cluster version must be at least `4.14`.
 
    ```bash
    az aro create \
