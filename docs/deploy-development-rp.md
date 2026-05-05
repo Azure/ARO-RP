@@ -81,7 +81,7 @@ It uses hacks scripts around a lot of the setup to make things easier to bootstr
 
 ### Mock MSI setup required for managed identity installs
 
-A managed service identity (MSI) is used in production to grant the ARO-RP additional permissions over customer identities. In development, we mock this with a service principal, since there is no ARM -> MSI-RP -> ARO-RP interactions in development or INT.
+A managed service identity (MSI) is used in production to grant the ARO-RP additional permissions over customer identities. In development, we mock this with a service principal, since there are no ARM -> MSI-RP -> ARO-RP interactions in development or INT.
 
 1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to
 mock a cluster MSI. This script will also create the platform identities, platform identity role assignments, and role assignment on mock cluster MSI to federate the platform identities. Platform identities will be created in resource group `RESOURCEGROUP` and subscription `SUBSCRIPTION`. Save the output values for cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`. Additionally, save the value for `Platform workload identity role sets`.
@@ -253,7 +253,7 @@ mock a cluster MSI. This script will also create the platform identities, platfo
 
    **Note** If the identities are not in the same resource group as the cluster, you can optionally use full resource IDs for each managed and cluster identity
 
-    **Note** In order to create with managed identities, cluster version must be at least `4.14`.
+   **Note** In order to create with managed identities, cluster version must be at least `4.14`.
 
    ```bash
    az aro create \
@@ -263,7 +263,7 @@ mock a cluster MSI. This script will also create the platform identities, platfo
    --vnet ${CLUSTER_VNET} \
    --master-subnet master-subnet \
    --worker-subnet worker-subnet \
-   --version 4.15.35 \
+   --version 4.20.15 \
    --master-vm-size Standard_D8s_v5 \
    --enable-managed-identity \
    --assign-cluster-identity aro-Cluster \
