@@ -283,6 +283,7 @@ func TestReconcileVAP(t *testing.T) {
 			flags: arov1alpha1.OperatorFlags{
 				operator.GuardrailsEnabled:                            operator.FlagTrue,
 				operator.GuardrailsDeployManaged:                      operator.FlagTrue,
+				operator.GuardrailsMethod:                             operator.GuardrailsMethodAuto,
 				operator.GuardrailsPolicyMachineDenyManaged:           operator.FlagTrue,
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
@@ -300,6 +301,7 @@ func TestReconcileVAP(t *testing.T) {
 			flags: arov1alpha1.OperatorFlags{
 				operator.GuardrailsEnabled:                            operator.FlagTrue,
 				operator.GuardrailsDeployManaged:                      operator.FlagTrue,
+				operator.GuardrailsMethod:                             operator.GuardrailsMethodAuto,
 				operator.GuardrailsPolicyMachineDenyManaged:           operator.FlagTrue,
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
@@ -323,6 +325,7 @@ func TestReconcileVAP(t *testing.T) {
 			flags: arov1alpha1.OperatorFlags{
 				operator.GuardrailsEnabled:       operator.FlagTrue,
 				operator.GuardrailsDeployManaged: operator.FlagFalse,
+				operator.GuardrailsMethod:        operator.GuardrailsMethodAuto,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// 3 policies × (binding delete + policy delete) = 6 deletions
@@ -503,5 +506,146 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 	}
 	if slices.Contains(ensured, "ValidatingAdmissionPolicy/aro-machines-deny") {
 		t.Fatalf("did not expect aro-machines-deny policy to be re-ensured after it was disabled, got %v", ensured)
+	}
+}
+
+func TestResolveGuardrailsMethod(t *testing.T) {
+	r := &Reconciler{log: logrus.NewEntry(logrus.StandardLogger())}
+
+	tests := []struct {
+		method        string
+		lt417         bool
+		useGatekeeper bool
+	}{
+		// < 4.17 always uses Gatekeeper, regardless of method.
+		{operator.GuardrailsMethodGatekeeper, true, true},
+		{operator.GuardrailsMethodVAP, true, true},
+		{operator.GuardrailsMethodAuto, true, true},
+		{"", true, true},
+		{"nonsense", true, true},
+
+		// >= 4.17 honours the method.
+		{operator.GuardrailsMethodGatekeeper, false, true},
+		{operator.GuardrailsMethodVAP, false, false},
+		{operator.GuardrailsMethodAuto, false, false},
+		{"VAP", false, false},  // case-insensitive
+		{"Auto", false, false}, // case-insensitive
+		{"nonsense", false, true},
+		{"", false, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.method+"/"+map[bool]string{true: "lt417", false: "ge417"}[tt.lt417], func(t *testing.T) {
+			got := r.resolveGuardrailsMethod(tt.method, tt.lt417)
+			if got != tt.useGatekeeper {
+				t.Errorf("resolveGuardrailsMethod(%q, lt417=%v) = %v, want %v",
+					tt.method, tt.lt417, got, tt.useGatekeeper)
+			}
+		})
+	}
+}
+
+// TestReconcileMethodSelection covers the new aro.guardrails.method flag end-
+// to-end on a >= 4.17 cluster. It confirms that:
+//   - method=gatekeeper deploys Gatekeeper even on 4.17+ (rollback path).
+//   - missing method (existing-cluster default) also yields Gatekeeper.
+//   - method=vap deploys VAP.
+func TestReconcileMethodSelection(t *testing.T) {
+	cv := clusterVersionForTest("4.17.0")
+
+	tests := []struct {
+		name     string
+		flags    arov1alpha1.OperatorFlags
+		depMocks func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
+		dhMocks  func(*mock_dynamichelper.MockInterface)
+	}{
+		{
+			name: "method=gatekeeper on 4.17+ deploys Gatekeeper (rollback)",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagTrue,
+				operator.GuardrailsMethod:        operator.GuardrailsMethodGatekeeper,
+			},
+			depMocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.GuardRailsDeploymentConfig{})).Return(nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), "gatekeeper-audit").Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), "gatekeeper-controller-manager").Return(true, nil)
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				// stopVAPTicker + best-effort removeAllVAP (no policies managed).
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+		},
+		{
+			name: "method missing on 4.17+ falls back to Gatekeeper",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagTrue,
+				// no GuardrailsMethod -> GetWithDefault returns "gatekeeper"
+			},
+			depMocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.GuardRailsDeploymentConfig{})).Return(nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), "gatekeeper-audit").Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), "gatekeeper-controller-manager").Return(true, nil)
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+		},
+		{
+			name: "method=vap on 4.17+ deploys VAP",
+			flags: arov1alpha1.OperatorFlags{
+				operator.GuardrailsEnabled:                            operator.FlagTrue,
+				operator.GuardrailsDeployManaged:                      operator.FlagTrue,
+				operator.GuardrailsMethod:                             operator.GuardrailsMethodVAP,
+				operator.GuardrailsPolicyMachineDenyManaged:           operator.FlagTrue,
+				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
+				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
+				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			cluster := &arov1alpha1.Cluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Cluster",
+					APIVersion: "aro.openshift.io/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: tt.flags,
+					ACRDomain:     "acrtest.example.com",
+				},
+			}
+
+			dep := mock_deployer.NewMockDeployer(controller)
+			dh := mock_dynamichelper.NewMockInterface(controller)
+			if tt.depMocks != nil {
+				tt.depMocks(dep, cluster)
+			}
+			if tt.dhMocks != nil {
+				tt.dhMocks(dh)
+			}
+
+			r := &Reconciler{
+				log:               logrus.NewEntry(logrus.StandardLogger()),
+				deployer:          dep,
+				dh:                dh,
+				client:            ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
+				readinessTimeout:  0 * time.Second,
+				readinessPollTime: 1 * time.Second,
+			}
+			if _, err := r.Reconcile(context.Background(), reconcile.Request{}); err != nil {
+				t.Fatalf("Reconcile() error = %v", err)
+			}
+		})
 	}
 }

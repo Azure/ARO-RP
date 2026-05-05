@@ -80,14 +80,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(operator.GuardrailsDeployManaged, "")
 
+	// aro.guardrails.method picks the enforcement engine. Existing clusters
+	// with no value for this flag default to "gatekeeper" so the controller
+	// preserves their current behaviour. New clusters get "auto" via
+	// DefaultOperatorFlags.
+	method := instance.Spec.OperatorFlags.GetWithDefault(operator.GuardrailsMethod, operator.GuardrailsMethodGatekeeper)
+
 	lt417, err := r.VersionLT417(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
+	useGatekeeper := r.resolveGuardrailsMethod(method, lt417)
+
 	// managed=false: clean up whatever policy mechanism this version uses
 	if strings.EqualFold(managed, "false") {
-		return r.cleanupManaged(ctx, instance, lt417)
+		return r.cleanupManaged(ctx, instance, useGatekeeper)
 	}
 
 	// managed is blank/missing: no action
@@ -96,8 +104,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	// Pre-4.17 clusters use the Gatekeeper / Rego workflow
-	if lt417 {
+	// Gatekeeper path: required on clusters < 4.17, and on >= 4.17 when the
+	// method flag explicitly selects "gatekeeper" (e.g. as a rollback path).
+	if useGatekeeper {
+		// On >= 4.17 we may be switching back from VAP -- best-effort drop the
+		// VAP policies first so we don't leave stale enforcement behind.
+		if !lt417 {
+			r.stopVAPTicker()
+			if err := r.removeAllVAP(ctx); err != nil {
+				r.log.Warnf("failed to remove VAP policies during gatekeeper switchover: %s", err.Error())
+			}
+		}
 		return r.deployGatekeeper(ctx, instance)
 	}
 
@@ -163,21 +180,49 @@ func (r *Reconciler) deployGatekeeper(ctx context.Context, instance *arov1alpha1
 	return reconcile.Result{}, nil
 }
 
-// cleanupManaged handles the managed=false path. The resources to remove
-// depend on the cluster version: pre-4.17 uses Gatekeeper, 4.17+ uses VAP
-// (and may also need leftover Gatekeeper resources removed).
-func (r *Reconciler) cleanupManaged(ctx context.Context, instance *arov1alpha1.Cluster, lt417 bool) (ctrl.Result, error) {
+// resolveGuardrailsMethod normalises the aro.guardrails.method flag and the
+// cluster version into a single decision: should we use Gatekeeper, or VAP?
+//
+//	method     | < 4.17     | >= 4.17
+//	-----------+------------+---------
+//	gatekeeper | gatekeeper | gatekeeper
+//	vap        | gatekeeper | vap
+//	auto       | gatekeeper | vap
+//	unknown    | gatekeeper | gatekeeper (safe fall-back)
+//
+// VAP is unavailable on clusters < 4.17, so a request for "vap" on those
+// clusters silently falls back to Gatekeeper.
+func (r *Reconciler) resolveGuardrailsMethod(method string, lt417 bool) bool {
 	if lt417 {
+		return true
+	}
+	switch strings.ToLower(method) {
+	case operator.GuardrailsMethodVAP, operator.GuardrailsMethodAuto:
+		return false
+	case operator.GuardrailsMethodGatekeeper:
+		return true
+	default:
+		r.log.Warnf("unrecognised guardrails method (%s), defaulting to gatekeeper", method)
+		return true
+	}
+}
+
+// cleanupManaged handles the managed=false path. The resources to remove
+// depend on which enforcement engine the controller is currently managing.
+// useGatekeeper reflects the resolved method for this cluster (see
+// resolveGuardrailsMethod).
+func (r *Reconciler) cleanupManaged(ctx context.Context, instance *arov1alpha1.Cluster, useGatekeeper bool) (ctrl.Result, error) {
+	if useGatekeeper {
 		return r.cleanupGatekeeperManaged(ctx, instance)
 	}
 
-	// v4.17+: remove VAP policies
+	// VAP path (>= 4.17): remove our VAP policies, and also clean up any
+	// leftover Gatekeeper resources from before the switch.
 	r.stopVAPTicker()
 	if err := r.removeAllVAP(ctx); err != nil {
 		r.log.Warnf("failed to remove VAP policies: %s", err.Error())
 	}
 
-	// also clean up Gatekeeper if it is still present (upgrade scenario)
 	if r.gatekeeperCleanupNeeded(ctx, instance) {
 		if err := r.cleanupGatekeeper(ctx, instance); err != nil {
 			return reconcile.Result{}, err
