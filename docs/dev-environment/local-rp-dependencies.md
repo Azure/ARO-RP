@@ -350,7 +350,7 @@ sudo dnf install -y \
 > [!TIP]
 > For a minimal development environment, the recommended approach is to use the containerized setup. This runs the RP inside a container with your local workspace mounted, facilitating debugging and quick code changes.
 >
-> **See [Containerized Development Environment](containerized-dev-environment.md) for a complete setup guide.**
+> **See [Containerized Development Environment](../containerized-dev-environment.md) for a complete setup guide.**
 
 The containerized development environment requires only these locally installed tools:
 
