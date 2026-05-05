@@ -60,18 +60,14 @@ var _ = Describe("ARO Cluster", Label(install), func() {
 		Expect(co.Spec.AZEnvironment).NotTo(BeNil())
 		Expect(azEnvironmentList).To(ContainElement(co.Spec.AZEnvironment))
 
+		By("verifying Environment is set")
+		Expect(co.Spec.Environment).NotTo(BeEmpty())
+
 		By("verifying GenevaLogging exists")
 		Expect(co.Spec.GenevaLogging).NotTo(BeNil())
 
 		By("verifying OperatorFlags are set and equivalent to latest defaults")
-		// Exclude dynamically set flags that are not part of defaults
-		actualFlags := make(map[string]string)
-		for k, v := range co.Spec.OperatorFlags {
-			if k != "aro.environment" { // Skip dynamic environment flag
-				actualFlags[k] = v
-			}
-		}
-		Expect(actualFlags).To(BeEquivalentTo(operator.DefaultOperatorFlags()))
+		Expect(co.Spec.OperatorFlags).To(BeEquivalentTo(operator.DefaultOperatorFlags()))
 
 		By("verifying InternetChecker exists")
 		Expect(co.Spec.InternetChecker).NotTo(BeNil())

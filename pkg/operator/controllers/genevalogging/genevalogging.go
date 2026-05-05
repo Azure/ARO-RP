@@ -161,7 +161,7 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "ENVIRONMENT",
-									Value: cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", ""),
+									Value: cluster.Spec.Environment,
 								},
 							},
 							Resources: corev1.ResourceRequirements{
@@ -249,7 +249,7 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								},
 								{
 									Name:  "MONITORING_ENVIRONMENT",
-									Value: cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", ""),
+									Value: cluster.Spec.Environment,
 								},
 								{
 									Name:  "MONITORING_TENANT",

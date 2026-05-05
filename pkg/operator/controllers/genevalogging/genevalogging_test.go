@@ -189,6 +189,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 		name              string
 		request           ctrl.Request
 		operatorFlags     arov1alpha1.OperatorFlags
+		environment       string
 		validateDaemonset func(*appsv1.DaemonSet) []error
 		mocks             func(mockDh *mock_dynamichelper.MockInterface)
 		wantErrMsg        string
@@ -347,11 +348,11 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			},
 		},
 		{
-			name: "ENVIRONMENT env var set to 'prod' from aro.environment operator flag",
+			name: "ENVIRONMENT env var set to 'prod' from cluster.Spec.Environment",
 			operatorFlags: arov1alpha1.OperatorFlags{
 				operator.GenevaLoggingEnabled: operator.FlagTrue,
-				"aro.environment":             "prod",
 			},
+			environment: "prod",
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
 					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
@@ -364,32 +365,16 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			wantConditions: defaultConditions,
 		},
 		{
-			name: "ENVIRONMENT env var set to 'int' from aro.environment operator flag",
+			name: "ENVIRONMENT env var set to 'int' from cluster.Spec.Environment",
 			operatorFlags: arov1alpha1.OperatorFlags{
 				operator.GenevaLoggingEnabled: operator.FlagTrue,
-				"aro.environment":             "int",
 			},
+			environment: "int",
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
 					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
 				}
 				errs = append(errs, validateEnvironmentVars(d, "int")...)
-				return
-			},
-			mocks:          nominalMocks,
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "ENVIRONMENT env var empty when aro.environment flag not set",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-				errs = append(errs, validateEnvironmentVars(d, "")...)
 				return
 			},
 			mocks:          nominalMocks,
@@ -409,6 +394,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
 					OperatorFlags: tt.operatorFlags,
 					ACRDomain:     "acrDomain",
+					Environment:   tt.environment,
 				},
 			}
 

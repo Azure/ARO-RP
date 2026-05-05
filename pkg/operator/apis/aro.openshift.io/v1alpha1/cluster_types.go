@@ -104,6 +104,7 @@ type ClusterSpec struct {
 	ACRDomain                string              `json:"acrDomain,omitempty"`
 	AZEnvironment            string              `json:"azEnvironment,omitempty"`
 	Location                 string              `json:"location,omitempty"`
+	Environment              string              `json:"environment,omitempty"`
 	InfraID                  string              `json:"infraId,omitempty"`
 	StorageSuffix            string              `json:"storageSuffix,omitempty"`
 	ArchitectureVersion      int                 `json:"architectureVersion,omitempty"`

@@ -361,17 +361,10 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 			APIIntIP:                 o.oc.Properties.APIServerProfile.IntIP,
 			IngressIP:                ingressIP,
 			GatewayPrivateEndpointIP: o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
+			Environment:              o.env.EnvironmentType(),
 			// Update the OperatorFlags from the version in the RP
 			OperatorFlags: arov1alpha1.OperatorFlags(o.oc.Properties.OperatorFlags),
 		},
-	}
-
-	// Set aro.environment operator flag for ENVIRONMENT in cluster logs
-	if cluster.Spec.OperatorFlags == nil {
-		cluster.Spec.OperatorFlags = arov1alpha1.OperatorFlags{}
-	}
-	if _, exists := cluster.Spec.OperatorFlags["aro.environment"]; !exists {
-		cluster.Spec.OperatorFlags["aro.environment"] = o.env.EnvironmentType()
 	}
 
 	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
