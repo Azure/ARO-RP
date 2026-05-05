@@ -26,12 +26,17 @@ spec:
     expression: |
       ["system:kube-controller-manager", "system:kube-scheduler", "system:admin", "system:aro-service"]
   - name: isExempted
+    # Use prefix/exact matching to avoid substring bypasses such as
+    # "not-system:node-foo" or "my-system:nodegroup" being granted
+    # exemption. system:nodes / system:serviceaccounts cover the
+    # built-in groups (and their per-namespace variants for SAs);
+    # system:masters is matched exactly.
     expression: |
       !has(request.userInfo) ||
       !has(request.userInfo.username) ||
       request.userInfo.username in variables.exemptedUsers ||
       (has(request.userInfo.groups) && request.userInfo.groups.exists(g,
-        g.contains("system:node") || g.contains("system:serviceaccount") || g.contains("system:masters")
+        g.startsWith("system:nodes") || g.startsWith("system:serviceaccounts") || g == "system:masters"
       ))
   - name: isMasterMachine
     expression: |

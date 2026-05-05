@@ -202,7 +202,11 @@ func (dh *dynamicHelper) ensureByServerSideApply(ctx context.Context, uns *unstr
 		Namespace(uns.GetNamespace()).
 		Patch(ctx, uns.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
 			FieldManager: "aro-operator",
-			Force:        pointerutils.ToPtr(true),
+			// Force: true is safe here because the aro-operator is the
+			// sole owner of the VAP resources it creates. Do NOT extend
+			// this path to resources whose ownership is shared with
+			// other controllers without revisiting this assumption.
+			Force: pointerutils.ToPtr(true),
 		})
 	if err != nil {
 		return fmt.Errorf("server-side apply %s/%s: %w", uns.GroupVersionKind().GroupKind(), uns.GetName(), err)

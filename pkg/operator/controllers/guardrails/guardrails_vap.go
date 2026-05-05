@@ -177,6 +177,8 @@ func (r *Reconciler) vapTicker(ctx context.Context, instance *arov1alpha1.Cluste
 		select {
 		case <-done:
 			return
+		case <-ctx.Done():
+			return
 		case <-ticker.C:
 			err = r.deployVAP(ctx)
 			if err != nil {

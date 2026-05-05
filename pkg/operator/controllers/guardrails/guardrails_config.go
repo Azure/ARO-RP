@@ -6,6 +6,7 @@ package guardrails
 import (
 	"context"
 	"embed"
+	"fmt"
 	"strings"
 	"time"
 
@@ -143,10 +144,12 @@ func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConf
 	return r.deployer.IsReady(ctx, deployConfig.Namespace, "gatekeeper-controller-manager")
 }
 
-func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
+// clusterVersionLessThan returns true when the cluster's current OpenShift
+// version is strictly less than target. target must be a parseable version
+// string (e.g. "4.11.0", "4.17.0").
+func (r *Reconciler) clusterVersionLessThan(ctx context.Context, target string) (bool, error) {
 	cv := &configv1.ClusterVersion{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
-	if err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv); err != nil {
 		return false, err
 	}
 	clusterVersion, err := version.GetClusterVersion(cv)
@@ -154,23 +157,19 @@ func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
 		return false, err
 	}
-	ver411, _ := version.ParseVersion("4.11.0")
-	return clusterVersion.Lt(ver411), nil
+	ver, err := version.ParseVersion(target)
+	if err != nil {
+		return false, fmt.Errorf("parsing target version %s: %w", target, err)
+	}
+	return clusterVersion.Lt(ver), nil
+}
+
+func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
+	return r.clusterVersionLessThan(ctx, "4.11.0")
 }
 
 func (r *Reconciler) VersionLT417(ctx context.Context) (bool, error) {
-	cv := &configv1.ClusterVersion{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
-	if err != nil {
-		return false, err
-	}
-	clusterVersion, err := version.GetClusterVersion(cv)
-	if err != nil {
-		r.log.Errorf("error getting the OpenShift version: %v", err)
-		return false, err
-	}
-	ver417, _ := version.ParseVersion("4.17.0")
-	return clusterVersion.Lt(ver417), nil
+	return r.clusterVersionLessThan(ctx, "4.17.0")
 }
 
 func (r *Reconciler) getGatekeeperDeployedNs(ctx context.Context, instance *arov1alpha1.Cluster) (string, error) {

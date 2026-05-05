@@ -172,6 +172,8 @@ func (r *Reconciler) gkTicker(ctx context.Context, instance *arov1alpha1.Cluster
 		select {
 		case <-done:
 			return
+		case <-ctx.Done():
+			return
 		case <-ticker.C:
 			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
