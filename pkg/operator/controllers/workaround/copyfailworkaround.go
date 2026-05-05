@@ -9,7 +9,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -38,20 +37,7 @@ func NewCopyFailWorkaround(log *logrus.Entry, client client.Client) *copyfailwor
 // IsRequired implements [Workaround].
 func (a *copyfailworkaround) IsRequired(ctx context.Context, clusterVersion version.Version, cluster *v1alpha1.Cluster) (bool, error) {
 	enabled := cluster.Spec.OperatorFlags.GetSimpleBoolean(operator.CopyFailWorkaroundEnabled)
-	if !enabled {
-		return false, nil
-	}
-
-	// check if it is a FIPS cluster -- don't do it if there's a 99-master-fips
-	mc := &mcv1.MachineConfig{}
-	err := a.ch.GetOne(ctx, types.NamespacedName{Name: "99-master-fips"}, mc)
-	if kerrors.IsNotFound(err) {
-		return true, nil
-	} else if err != nil {
-		return false, err
-	}
-
-	return false, nil
+	return enabled, nil
 }
 
 // Ensure implements [Workaround].

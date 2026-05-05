@@ -25,6 +25,12 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
+func expectedMasterMachineConfig() *mcv1.MachineConfig {
+	mc := makeMachineConfig("master")
+	mc.ResourceVersion = "1"
+	return mc
+}
+
 func TestCopyFailWorkaround(t *testing.T) {
 	errFail := errors.New("failed client")
 
@@ -53,23 +59,8 @@ func TestCopyFailWorkaround(t *testing.T) {
 			clusterFlags: map[string]string{
 				"aro.workaround.copyfail.enabled": "true",
 			},
-			expectedIsRequired: true,
-			expectedMachineConfig: &mcv1.MachineConfig{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: mcv1.SchemeGroupVersion.String(),
-					Kind:       "MachineConfig",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "99-master-disable-algif-aead",
-					Labels: map[string]string{
-						"machineconfiguration.openshift.io/role": "master",
-					},
-					ResourceVersion: "1",
-				},
-				Spec: mcv1.MachineConfigSpec{
-					KernelArguments: []string{"initcall_blacklist=algif_aead_init"},
-				},
-			},
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterMachineConfig(),
 		},
 		{
 			desc: "enabled, apply errors",
@@ -85,23 +76,7 @@ func TestCopyFailWorkaround(t *testing.T) {
 			},
 		},
 		{
-			desc: "enabled, isRequired errors",
-			clusterFlags: map[string]string{
-				"aro.workaround.copyfail.enabled": "true",
-			},
-			expectedIsRequired:    false,
-			expectedErrIsRequired: errFail,
-			addHooks: func(hc *clienthelper.HookingClient) {
-				hc.WithPreGetHook(func(key client.ObjectKey, obj client.Object) error {
-					if key.Name == "99-master-fips" {
-						return errFail
-					}
-					return nil
-				})
-			},
-		},
-		{
-			desc: "enabled, is a FIPS cluster",
+			desc: "enabled, apply succeeds on FIPS cluster",
 			clusterFlags: map[string]string{
 				"aro.workaround.copyfail.enabled": "true",
 			},
@@ -118,7 +93,8 @@ func TestCopyFailWorkaround(t *testing.T) {
 					},
 				},
 			},
-			expectedIsRequired: false,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterMachineConfig(),
 		},
 	}
 	for _, tC := range testCases {
