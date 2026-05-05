@@ -50,9 +50,7 @@ tdnf_install_pkgs() {
         install
     )
 
-    # Reference: https://www.shellcheck.net/wiki/SC2206
-    # append pkgs array to cmd
-    mapfile -O $(( ${#cmd[@]} + 1 )) -d ' ' cmd <<< "${pkgs[@]}"
+    cmd+=("${pkgs[@]}")
     local -r cmd
 
     log "Attempting to install packages: ${pkgs[*]}"
@@ -77,19 +75,12 @@ tdnf_update_pkgs() {
     local -a cmd=(
         tdnf
         -y
-        # Replaced with excludes
-        ""
-        update
-        --allowerasing
     )
 
     if [ -n "${excludes}" ]; then
-        # Reference https://www.shellcheck.net/wiki/SC2206
-        mapfile -O 2 cmd <<< "${excludes[@]}"
-    else
-        # Remove empty string if we aren't replacing them, probably doesn't matter, but why not be safe
-        unset "cmd[2]"
+        cmd+=("${excludes[@]}")
     fi
+    cmd+=(update --allowerasing)
     local -r cmd
 
     log "Updating all packages excluding \"${excludes[*]:-}\""
