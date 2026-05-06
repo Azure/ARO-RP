@@ -5,10 +5,30 @@ This directory documents the two guardrails implementations currently used by th
 - **Gatekeeper / Rego** for OpenShift **earlier than 4.17**
 - **ValidatingAdmissionPolicy (VAP)** for OpenShift **4.17 and later**
 
-At runtime the controller selects the implementation based on cluster version:
+At runtime the controller picks the implementation from the combination of the
+`aro.guardrails.method` operator flag and the cluster's OpenShift version.
+VAP is only available on 4.17+, so requests for VAP on older clusters silently
+fall back to Gatekeeper.
 
-- pre-4.17: deploy and reconcile Gatekeeper resources
-- 4.17+: reconcile VAP resources and clean up any leftover Gatekeeper resources from upgrades
+| `aro.guardrails.method` | < 4.17     | >= 4.17    |
+| ----------------------- | ---------- | ---------- |
+| `gatekeeper`            | Gatekeeper | Gatekeeper |
+| `vap`                   | Gatekeeper | VAP        |
+| `auto`                  | Gatekeeper | VAP        |
+| unknown / missing value | Gatekeeper | Gatekeeper |
+
+Defaults:
+
+- New clusters get `aro.guardrails.method = "auto"` from
+  [`DefaultOperatorFlags`](../../../flags.go), so they automatically use VAP
+  on 4.17+ and Gatekeeper on older versions.
+- Existing clusters that never received the flag fall back to `"gatekeeper"`
+  in the controller (`GetWithDefault`), so an upgrade does not silently flip
+  them to VAP. To opt them in, set `aro.guardrails.method` explicitly to
+  `"vap"` or `"auto"`.
+- Setting `aro.guardrails.method = "gatekeeper"` on a 4.17+ cluster is
+  supported as a rollback path: the controller will best-effort remove any
+  VAP policies it previously deployed before re-deploying Gatekeeper.
 
 The entry points for that behavior are in [pkg/operator/controllers/guardrails/guardrails_controller.go](../guardrails_controller.go), [pkg/operator/controllers/guardrails/guardrails_policy.go](../guardrails_policy.go), and [pkg/operator/controllers/guardrails/guardrails_vap.go](../guardrails_vap.go).
 
@@ -34,6 +54,9 @@ Both implementations are driven by the same operator flags:
 
 - `aro.guardrails.enabled`
 - `aro.guardrails.deploy.managed`
+- `aro.guardrails.method` - selects the enforcement engine. One of
+  `gatekeeper`, `vap`, `auto`. See the table at the top of this document for
+  how the value combines with the cluster version.
 - `aro.guardrails.policies.<policy-name>.managed`
 - `aro.guardrails.policies.<policy-name>.enforcement`
 
@@ -46,17 +69,20 @@ Examples:
 
 The controller periodically re-applies the active policy resources so externally deleted resources are recreated.
 
-## Gatekeeper approach (pre-4.17)
+## Gatekeeper approach (pre-4.17, or `aro.guardrails.method = "gatekeeper"`)
 
 ### What is deployed
 
-For clusters below 4.17, the controller:
+When the resolved method is Gatekeeper - either because the cluster is
+below 4.17, or because `aro.guardrails.method = "gatekeeper"` is set on a
+4.17+ cluster as a rollback path - the controller:
 
-1. deploys Gatekeeper into the guardrails namespace
-2. waits for `gatekeeper-audit` and `gatekeeper-controller-manager` to become ready
-3. creates or updates generated `ConstraintTemplate` resources
-4. creates or updates the `Constraint` resources from [gkconstraints](gkconstraints)
-5. periodically re-applies the constraints via the reconciliation ticker
+1. on 4.17+, best-effort removes any previously deployed VAP policies
+2. deploys Gatekeeper into the guardrails namespace
+3. waits for `gatekeeper-audit` and `gatekeeper-controller-manager` to become ready
+4. creates or updates generated `ConstraintTemplate` resources
+5. creates or updates the `Constraint` resources from [gkconstraints](gkconstraints)
+6. periodically re-applies the constraints via the reconciliation ticker
 
 If `aro.guardrails.deploy.managed=false`, the controller cleans up Gatekeeper resources that it manages.
 
@@ -320,11 +346,12 @@ Verify the constraint:
 oc get constraint
 ```
 
-## VAP approach (4.17+)
+## VAP approach (4.17+ with `aro.guardrails.method` of `vap` or `auto`)
 
 ### What is deployed
 
-For clusters 4.17 and later, the controller does **not** deploy Gatekeeper. Instead it:
+When the resolved method is VAP (4.17+ cluster with `aro.guardrails.method`
+of `vap` or `auto`), the controller does **not** deploy Gatekeeper. Instead it:
 
 1. detects and removes old Gatekeeper resources left behind by upgraded clusters
 2. reads policy YAML from [../policies-vap/vap](../policies-vap/vap)
@@ -413,9 +440,13 @@ Recent e2e coverage includes:
 
 Use this path only for clusters **4.17 and later**, where VAP is natively supported.
 
-Run the operator locally as above, then enable managed guardrails:
+Run the operator locally as above, then enable managed guardrails. On an
+existing cluster you must also set `aro.guardrails.method` to `vap` or
+`auto` because existing clusters fall back to `gatekeeper` when the flag is
+absent:
 
 ```sh
+oc patch cluster.aro.openshift.io cluster --type json -p '[{"op":"replace","path":"/spec/operatorflags/aro.guardrails.method","value":"auto"}]'
 oc patch cluster.aro.openshift.io cluster --type json -p '[{"op":"replace","path":"/spec/operatorflags/aro.guardrails.deploy.managed","value":"true"}]'
 oc patch cluster.aro.openshift.io cluster --type json -p '[{"op":"replace","path":"/spec/operatorflags/aro.guardrails.enabled","value":"true"}]'
 ```
