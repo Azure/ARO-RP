@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# Note: setup_logging and setup_error_trap are called after sourcing util.sh
 set -o errexit \
     -o pipefail \
     -o nounset
 
 main() {
+    log "=== Starting Gateway VMSS setup ===" 0
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
@@ -150,6 +152,8 @@ ENVIRONMENT='$ENVIRONMENT'"
 
     enable_services gateway_services
 
+    log "=== Gateway VMSS setup completed successfully ===" 0
+
     reboot_vm
 }
 
@@ -165,5 +169,9 @@ if [ -f "$util" ]; then
     # shellcheck source=util.sh
     source "$util"
 fi
+
+# Initialize logging and error traps (must be after sourcing util.sh)
+setup_logging
+setup_error_trap
 
 main "$@"

@@ -1,6 +1,47 @@
 #!/bin/bash
 # Internal Functions and Constants
 
+# CSE_LOG_FILE - persistent log file for debugging CSE failures
+# Logs are written here AND to stdout for Azure diagnostics
+declare -r CSE_LOG_FILE="/var/log/azure/aro-vmss-setup.log"
+
+# Initialize log file and directory
+setup_logging() {
+    mkdir -p "$(dirname "$CSE_LOG_FILE")"
+    touch "$CSE_LOG_FILE"
+    chmod 644 "$CSE_LOG_FILE"
+    echo "=== ARO VMSS Setup Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$CSE_LOG_FILE"
+    echo "Hostname: $(hostname)" | tee -a "$CSE_LOG_FILE"
+    echo "Script: $0" | tee -a "$CSE_LOG_FILE"
+    echo "======================================" | tee -a "$CSE_LOG_FILE"
+}
+
+# ERR trap handler - logs which command failed before exit
+err_handler() {
+    local -r exit_code=$?
+    local -r line_number=$1
+    local -r bash_lineno=$2
+    local -r last_command="$3"
+    local -r func_name="${FUNCNAME[1]:-main}"
+
+    local err_msg="ERROR: Command failed with exit code $exit_code"
+    err_msg="$err_msg\n  Function: $func_name"
+    err_msg="$err_msg\n  Line: $line_number (BASH_LINENO: $bash_lineno)"
+    err_msg="$err_msg\n  Command: $last_command"
+    err_msg="$err_msg\n  Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+    echo -e "$err_msg" | tee -a "$CSE_LOG_FILE" >&2
+    echo "=== VMSS Setup FAILED ===" | tee -a "$CSE_LOG_FILE" >&2
+
+    exit "$exit_code"
+}
+
+# Set up error trap - must be called after errexit is set
+setup_error_trap() {
+    # shellcheck disable=SC2016
+    trap 'err_handler ${LINENO} ${BASH_LINENO} "$BASH_COMMAND"' ERR
+}
+
 # declare -r empty_str=""
 #
 # empty_str - constant
@@ -77,7 +118,7 @@ xtrace_toggle() {
 
 # log()
 #
-# Wrapper for echo that includes the function name
+# Wrapper for echo that includes timestamp, function name, and writes to persistent log
 # args:
 #   1) msg - string
 #   2) stack_level - int
@@ -86,16 +127,32 @@ xtrace_toggle() {
 log() {
     local -r msg="${1:-"log message is empty"}"
     local -r stack_level="${2:-1}"
-    echo "${FUNCNAME[${stack_level}]}: ${msg}"
+    local -r timestamp="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+    local -r func_name="${FUNCNAME[${stack_level}]}"
+    local -r log_line="[$timestamp] $func_name: $msg"
+
+    # Write to both stdout and persistent log file
+    echo "$log_line" | tee -a "$CSE_LOG_FILE"
 }
 
 # abort()
 #
 # Wrapper for log that exits with an error code
+# Logs to both stdout and persistent log file
 abort() {
     local -ri origin_stacklevel=2
-    log "${1}" "$origin_stacklevel"
-    log "Exiting"
+    local -r timestamp="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+    echo "[$timestamp] ABORT: ${FUNCNAME[1]}: ${1}" | tee -a "$CSE_LOG_FILE" >&2
+    echo "[$timestamp] Stack trace:" | tee -a "$CSE_LOG_FILE" >&2
+
+    # Print stack trace for debugging
+    local i=0
+    while caller $i 2>/dev/null | tee -a "$CSE_LOG_FILE" >&2; do
+        ((i++))
+    done
+
+    echo "[$timestamp] === VMSS Setup ABORTED ===" | tee -a "$CSE_LOG_FILE" >&2
     exit 1
 }
 
@@ -135,17 +192,27 @@ retry() {
     local -n wait_time="$2"
     local -ri retries="${3:-5}"
 
-    
+
     for attempt in $(seq 1 $retries); do
-        log "attempt #${attempt} - ${FUNCNAME[2]}"
+        log "Retry attempt #${attempt}/${retries} for: ${cmd_retry[*]}"
         # shellcheck disable=SC2068
         ${cmd_retry[@]} &
 
-        wait -f $! && return 0
-        sleep "$wait_time"
+        if wait -f $!; then
+            log "Command succeeded on attempt #${attempt}: ${cmd_retry[*]}"
+            return 0
+        fi
+
+        local -r exit_code=$?
+        log "Command failed with exit code ${exit_code} on attempt #${attempt}: ${cmd_retry[*]}"
+
+        if [ "$attempt" -lt "$retries" ]; then
+            log "Waiting ${wait_time} seconds before retry..."
+            sleep "$wait_time"
+        fi
     done
 
-    abort "${cmd_retry[*]} failed after #$retries attempts"
+    abort "Command failed after ${retries} attempts: ${cmd_retry[*]}"
 }
 
 # verify_role()

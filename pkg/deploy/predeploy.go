@@ -598,6 +598,80 @@ func (d *deployer) isVMInstanceHealthy(ctx context.Context, resourceGroupName st
 	instanceUnhealthy := r.VMHealth == nil || r.VMHealth.Status == nil || r.VMHealth.Status.Code == nil || *r.VMHealth.Status.Code != "HealthState/healthy"
 	if err != nil || instanceUnhealthy {
 		d.log.Printf("instance %s is unhealthy", vmInstanceID)
+
+		// Log detailed extension status for debugging CSE failures
+		if err == nil && r.Extensions != nil {
+			for _, ext := range *r.Extensions {
+				if ext.Name == nil {
+					continue
+				}
+				// Focus on CustomScript extension errors
+				if ext.Type != nil && *ext.Type == "Microsoft.Azure.Extensions.CustomScript" {
+					d.log.Printf("CustomScript extension '%s' details:", *ext.Name)
+
+					if ext.TypeHandlerVersion != nil {
+						d.log.Printf("  Version: %s", *ext.TypeHandlerVersion)
+					}
+
+					// Log detailed status messages
+					if ext.Statuses != nil {
+						d.log.Printf("  Status details:")
+						for _, status := range *ext.Statuses {
+							level := "INFO"
+							if status.Level != "" {
+								level = string(status.Level)
+							}
+							code := "N/A"
+							if status.Code != nil {
+								code = *status.Code
+							}
+							displayStatus := "N/A"
+							if status.DisplayStatus != nil {
+								displayStatus = *status.DisplayStatus
+							}
+							message := ""
+							if status.Message != nil {
+								message = *status.Message
+							}
+
+							d.log.Printf("    [%s] %s - %s", level, code, displayStatus)
+							if message != "" {
+								d.log.Printf("    Message: %s", message)
+							}
+						}
+					}
+
+					// Log substatuses which often contain detailed error information
+					if ext.Substatuses != nil && len(*ext.Substatuses) > 0 {
+						d.log.Printf("  Substatus details:")
+						for _, substatus := range *ext.Substatuses {
+							level := "INFO"
+							if substatus.Level != "" {
+								level = string(substatus.Level)
+							}
+							code := "N/A"
+							if substatus.Code != nil {
+								code = *substatus.Code
+							}
+							displayStatus := "N/A"
+							if substatus.DisplayStatus != nil {
+								displayStatus = *substatus.DisplayStatus
+							}
+							message := ""
+							if substatus.Message != nil {
+								message = *substatus.Message
+							}
+
+							d.log.Printf("    [%s] %s - %s", level, code, displayStatus)
+							if message != "" {
+								d.log.Printf("    Message: %s", message)
+							}
+						}
+					}
+				}
+			}
+		}
+
 		return false
 	}
 	return true
