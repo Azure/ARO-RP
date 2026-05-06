@@ -1,11 +1,25 @@
 #!/bin/bash
+# shellcheck disable=SC2034
 # Internal Functions and Constants
+
+#############################
+### Azure Cloud Constants ###
+#############################
+
+# declare -r us_gov_cloud="AzureUSGovernment"
+#
+# us_gov_cloud - constant
+#   * Is the name of AZURECLOUDNAME for US government cloud
+declare -r us_gov_cloud="AzureUSGovernment"
+
+#######################################
+### Internal Script Logic Constants ###
+#######################################
 
 # declare -r empty_str=""
 #
 # empty_str - constant
 #   * used by functions for optional nameref string arguments
-# shellcheck disable=SC2034
 declare -r empty_str=""
 
 # declare -r role_gateway="gateway"
@@ -25,12 +39,6 @@ declare -r role_rp="rp"
 # role_devproxy - constant
 #   * Is used to determine which VMSS is being bootstrapped
 declare -r role_devproxy="devproxy"
-
-# declare -r us_gov_cloud="AzureUSGovernment"
-#
-# us_gov_cloud - constant
-#   * Is the name of AZURECLOUDNAME for US government cloud
-declare -r us_gov_cloud="AzureUSGovernment"
 
 # declare -i XTRACE_SET=1
 #
