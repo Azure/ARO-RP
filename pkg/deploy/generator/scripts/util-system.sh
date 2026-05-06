@@ -205,8 +205,10 @@ pull_container_images() {
         return "$status"
    }
 
+
+    local -r registry_name="$(az resource show --ids "$ACRRESOURCEID" --query 'properties.loginServer' -o tsv)"
     local -r acr_name="${ACRRESOURCEID##*/}"
-    local -r registry_name="${acr_name}.azurecr.io"
+
     cmd=(_ "$acr_name" "$registry_name")
     retry cmd retry_time
 
