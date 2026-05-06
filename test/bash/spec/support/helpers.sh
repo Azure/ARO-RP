@@ -199,5 +199,8 @@ set_vmss_environment() {
 }
 
 extract_template_body() {
-  sed '1d;$d' "$1"
+  sed -e '/^[[:space:]]*{{[[:space:]]*define[[:space:]].*}}[[:space:]]*$/d' \
+      -e '/^[[:space:]]*{{[[:space:]]*end[[:space:]]*}}[[:space:]]*$/d' \
+      -e '/^[[:space:]]*$/d' \
+      "$1"
 }

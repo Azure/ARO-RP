@@ -6,7 +6,15 @@ set -o pipefail
 
 readonly repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly shellspec_image="${BASH_TEST_IMAGE:-shellspec/shellspec-debian:0.28.1}"
-readonly report_dir="${BASH_TEST_REPORT_DIR:-/tmp/shellspec-report}"
+readonly default_report_base="${TMPDIR:-/tmp}/aro-bash-test-report"
+
+prepare_report_dir() {
+    local report_dir
+    report_dir="${BASH_TEST_REPORT_DIR:-${default_report_base}}"
+    rm -rf "${report_dir}"
+    mkdir -p "${report_dir}"
+    printf '%s\n' "${report_dir}"
+}
 
 container_engine_usable() {
     "$1" info >/dev/null 2>&1
@@ -32,23 +40,7 @@ detect_jobs() {
         echo "${BASH_TEST_JOBS}"
         return 0
     fi
-
-    if command -v nproc >/dev/null 2>&1; then
-        nproc
-        return 0
-    fi
-
-    if command -v getconf >/dev/null 2>&1; then
-        getconf _NPROCESSORS_ONLN
-        return 0
-    fi
-
-    if command -v sysctl >/dev/null 2>&1; then
-        sysctl -n hw.ncpu
-        return 0
-    fi
-
-    echo 4
+    echo 1
 }
 
 detect_platform() {
@@ -63,14 +55,17 @@ detect_platform() {
 }
 
 main() {
-    local engine jobs mount_arg
+    local engine jobs mount_arg report_dir report_mount
     engine="$(detect_container_engine)"
     jobs="$(detect_jobs)"
+    report_dir="$(prepare_report_dir)"
 
     if [[ "${engine}" == "podman" ]]; then
         mount_arg="${repo_root}:/work:Z"
+        report_mount="${report_dir}:/report:Z"
     else
         mount_arg="${repo_root}:/work"
+        report_mount="${report_dir}:/report"
     fi
 
     local -a platform_args=()
@@ -81,16 +76,18 @@ main() {
     fi
 
     echo "Running ShellSpec with ${engine} using image ${shellspec_image}"
+    echo "ShellSpec JUnit report directory: ${report_dir}"
 
     "${engine}" run --rm \
         "${platform_args[@]}" \
         -v "${mount_arg}" \
+        -v "${report_mount}" \
         -w /work \
         "${shellspec_image}" \
         --jobs "${jobs}" \
         --format documentation \
         --output junit \
-        --reportdir "${report_dir}" \
+        --reportdir /report \
         "$@"
 }
 

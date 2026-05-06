@@ -35,5 +35,11 @@ setup_test_workspace() {
 cleanup_test_workspace() {
   reset_absolute_test_state
   rm -f /etc/ssh/sshd_config
-  rm -rf "${TMPDIR:-/tmp}"/aro-bash-tests.*
+  if [ "${TEST_ROOT:-}" ]; then
+    case "$TEST_ROOT" in
+      "${TMPDIR:-/tmp}"/aro-bash-tests.*)
+        rm -rf -- "$TEST_ROOT"
+        ;;
+    esac
+  fi
 }
