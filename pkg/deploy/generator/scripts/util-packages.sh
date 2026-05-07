@@ -75,12 +75,13 @@ tdnf_update_pkgs() {
     local -a cmd=(
         tdnf
         -y
+        update
+        --allowerasing
     )
 
     if [ -n "${excludes}" ]; then
         cmd+=("${excludes[@]}")
     fi
-    cmd+=(update --allowerasing)
     local -r cmd
 
     log "Updating all packages excluding \"${excludes[*]:-}\""
