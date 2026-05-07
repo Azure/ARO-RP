@@ -29,6 +29,19 @@ type copyfailworkaround struct {
 
 var _ Workaround = &copyfailworkaround{}
 
+var fixedPatchVersions map[string]version.Version = map[string]version.Version{
+	"4.21": version.NewVersion(4, 21, 14),
+	"4.20": version.NewVersion(4, 20, 21),
+	"4.19": version.NewVersion(4, 19, 30),
+	"4.18": version.NewVersion(4, 18, 40),
+	"4.17": version.NewVersion(4, 17, 53),
+	"4.16": version.NewVersion(4, 16, 61),
+	"4.15": version.NewVersion(4, 15, 64),
+	"4.14": version.NewVersion(4, 14, 65),
+	"4.13": version.NewVersion(4, 13, 66),
+	"4.12": version.NewVersion(4, 12, 89),
+}
+
 func NewCopyFailWorkaround(log *logrus.Entry, client client.Client) *copyfailworkaround {
 	ch := clienthelper.NewWithClient(log, client)
 	return &copyfailworkaround{log: log, ch: ch}
@@ -37,7 +50,20 @@ func NewCopyFailWorkaround(log *logrus.Entry, client client.Client) *copyfailwor
 // IsRequired implements [Workaround].
 func (a *copyfailworkaround) IsRequired(ctx context.Context, clusterVersion version.Version, cluster *v1alpha1.Cluster) (bool, error) {
 	enabled := cluster.Spec.OperatorFlags.GetSimpleBoolean(operator.CopyFailWorkaroundEnabled)
-	return enabled, nil
+	if !enabled {
+		return false, nil
+	}
+
+	if clusterVersion.Gt(version.NewVersion(4, 22, 0)) {
+		return false, nil
+	}
+
+	clusterMinorVersion := clusterVersion.MinorVersion()
+	if fixedPatchVersion, ok := fixedPatchVersions[clusterMinorVersion]; ok {
+		return clusterVersion.Lt(fixedPatchVersion), nil
+	}
+
+	return true, nil
 }
 
 // Ensure implements [Workaround].
