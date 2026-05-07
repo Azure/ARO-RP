@@ -29,7 +29,7 @@ type copyfailworkaround struct {
 
 var _ Workaround = &copyfailworkaround{}
 
-var fixedPatchVersions map[string]version.Version = map[string]version.Version{
+var fixedPatchVersions = map[string]version.Version{
 	"4.21": version.NewVersion(4, 21, 14),
 	"4.20": version.NewVersion(4, 20, 21),
 	"4.19": version.NewVersion(4, 19, 30),
