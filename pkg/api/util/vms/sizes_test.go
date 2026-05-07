@@ -38,6 +38,18 @@ func TestLookupVMSizeFindsKnownAndUnknownSizes(t *testing.T) {
 			wantCoreCount: 4,
 		},
 		{
+			name:          "finds rebased worker DDSv5 carry-forward",
+			vmSize:        VMSizeStandardD48dsV5,
+			wantFound:     true,
+			wantCoreCount: 48,
+		},
+		{
+			name:          "finds rebased worker EDSv5 carry-forward",
+			vmSize:        VMSizeStandardE96dsV5,
+			wantFound:     true,
+			wantCoreCount: 96,
+		},
+		{
 			name:             "finds CI-only worker size with minimum version",
 			vmSize:           VMSizeStandardD2sV6,
 			wantFound:        true,

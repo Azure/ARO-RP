@@ -81,6 +81,20 @@ func TestVMSizeIsValid(t *testing.T) {
 			isCI:          false,
 			desiredResult: true,
 		},
+		{
+			name:          "Standard_D48ds_v5 is supported for use in ARO as worker node",
+			vmSize:        vms.VMSizeStandardD48dsV5,
+			isMaster:      false,
+			isCI:          false,
+			desiredResult: true,
+		},
+		{
+			name:          "Standard_E96ds_v5 is supported for use in ARO as worker node",
+			vmSize:        vms.VMSizeStandardE96dsV5,
+			isMaster:      false,
+			isCI:          false,
+			desiredResult: true,
+		},
 		// CI mode tests
 		{
 			name:          "CI mode: Standard_D2s_v3 is valid as worker",

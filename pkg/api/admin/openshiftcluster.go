@@ -274,6 +274,7 @@ type MasterProfile struct {
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
 }
+
 // WorkerProfile represents a worker profile.
 type WorkerProfile struct {
 	Name                string           `json:"name,omitempty"`
