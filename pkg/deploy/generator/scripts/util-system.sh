@@ -206,7 +206,7 @@ pull_container_images() {
    }
 
 
-    local -r registry_name="$(az resource show --ids "$ACRRESOURCEID" --query 'properties.loginServer' -o tsv)"
+    local -r registry_name="${ACRRESOURCEID##*/}$(az cloud show --query 'suffixes.acrLoginServerEndpoint' -o tsv)"
     local -r acr_name="${ACRRESOURCEID##*/}"
 
     cmd=(_ "$acr_name" "$registry_name")
