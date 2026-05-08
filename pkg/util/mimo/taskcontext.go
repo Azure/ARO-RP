@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
@@ -30,7 +31,11 @@ type TaskContext interface {
 	// OpenShiftCluster
 	GetClusterUUID() string
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
-	GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument
+	GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument
+
+	// PatchOpenShiftClusterDocument works without a lease and only operates on
+	// the single document in this context
+	PatchOpenShiftClusterDocument(context.Context, database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
 
 	// Kubernetes client
 	ClientHelper() (clienthelper.Interface, error)

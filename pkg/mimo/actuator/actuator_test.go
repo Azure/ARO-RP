@@ -79,20 +79,23 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		clusters, clustersClient = testdatabase.NewFakeOpenShiftClusters()
 		subscriptions, subscriptionsClient = testdatabase.NewFakeSubscriptions()
 
+		dbs := database.NewDBGroup().
+			WithMaintenanceManifests(manifests).
+			WithSubscriptions(subscriptions).
+			WithOpenShiftClusters(clusters)
+
 		hook, log = testlog.New()
 
 		a = &actuator{
 			log: log,
 			env: _env,
+			now: now,
 
 			clusterResourceID: strings.ToLower(clusterResourceID),
 
-			mmf: manifests,
-			oc:  clusters,
-			sub: subscriptions,
+			dbs: dbs,
 
 			tasks: map[api.MIMOTaskID]tasks.MaintenanceTask{},
-			now:   now,
 
 			taskRunTimeout:           time.Second,
 			manifestQueryBatchLength: -1,

@@ -6,6 +6,7 @@ package actuator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -72,9 +73,9 @@ type service struct {
 var _ Runnable = (*service)(nil)
 
 type actuatorDBs interface {
-	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithOpenShiftClusters
 	database.DatabaseGroupWithMaintenanceManifests
+	database.DatabaseGroupWithSubscriptions
 }
 
 func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg actuatorDBs, m metrics.Emitter, ownedBuckets []int) *service {
@@ -123,6 +124,22 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 
 func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+
+	// Verify our databases are correct before starting, just in case
+	_, err := s.dbGroup.MaintenanceManifests()
+	if err != nil {
+		return fmt.Errorf("not all databases provided to dbGroup: %w", err)
+	}
+
+	_, err = s.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return fmt.Errorf("not all databases provided to dbGroup: %w", err)
+	}
+
+	_, err = s.dbGroup.Subscriptions()
+	if err != nil {
+		return fmt.Errorf("not all databases provided to dbGroup: %w", err)
+	}
 
 	// Only enable the healthz endpoint if configured (disabled in unit tests)
 	if s.serveHealthz {
@@ -299,25 +316,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	// Wait for a randomised delay before starting
 	time.Sleep(delay)
 
-	dbSubscriptions, err := s.dbGroup.Subscriptions()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	dbOpenShiftClusters, err := s.dbGroup.OpenShiftClusters()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	dbMaintenanceManifests, err := s.dbGroup.MaintenanceManifests()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	a, err := NewActuator(context.Background(), s.env, log, id, dbSubscriptions, dbOpenShiftClusters, dbMaintenanceManifests, s.now)
+	a, err := NewActuator(context.Background(), s.env, log, id, s.dbGroup, s.now)
 	if err != nil {
 		log.Error(err)
 		return

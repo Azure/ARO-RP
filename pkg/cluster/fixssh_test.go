@@ -205,6 +205,84 @@ func ifListNewCluster(ilbID string, elbID string, withSSHBackendPool bool) []*ar
 	return ifList
 }
 
+// Return a list of interfaces that mocks the state of a normal cluster that has
+// master NICs missing their LB address pool assignments.
+// 7 NICs total: 3 for masters, 1 for the private link service and 3 workers
+func ifListMissingBackendPoolMasters(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	var ifList []*armnetwork.Interface
+	// 3 master NICs with VM attachments
+	for i := range 3 {
+		var backendPools []string
+		if withSSHBackendPool {
+			backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, i))
+		}
+		nicName := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(backendPools, masterSubnetID, nicName, true, true).Interface)
+	}
+	// 1 NIC in the master subnet with a name that does not match the master NIC name regex, ie the private link service NIC
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, "infra-pls-nic", false, true).Interface)
+	// 3 NICs in the worker subnet, don't need to add backend pools, these get skipped anyway
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-worker-east%d-12345-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, "worker-subnet", nicName, true, false).Interface)
+	}
+
+	return ifList
+}
+
+// What should be expected when ifListMissingBackendPoolMasters is fixed
+// (different than the normal create cluster because of ordering)
+// 7 NICs total: 3 for masters, 1 for the private link service and 3 workers
+func ifListAfterMissingBackendPoolMasters(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	var ifList []*armnetwork.Interface
+	// 3 master NICs with VM attachments
+	for i := range 3 {
+		var backendPools []string
+		if withSSHBackendPool {
+			backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, i))
+		}
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", ilbID, infraID, "-internal-controlplane-v4"))
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", elbID, infraID, "-public-lb-control-plane-v4"))
+		nicName := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(backendPools, masterSubnetID, nicName, true, true).Interface)
+	}
+	// 1 NIC in the master subnet with a name that does not match the master NIC name regex, ie the private link service NIC
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, "infra-pls-nic", false, true).Interface)
+	// 3 NICs in the worker subnet, don't need to add backend pools, these get skipped anyway
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-worker-east%d-12345-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, "worker-subnet", nicName, true, false).Interface)
+	}
+
+	return ifList
+}
+
+// What should be expected when ifListMissingBackendPoolMasters is fixed
+// (different than the normal create cluster because of ordering) in a UDR cluster
+// 7 NICs total: 3 for masters, 1 for the private link service and 3 workers
+func ifListAfterMissingBackendPoolMastersInUDR(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
+	var ifList []*armnetwork.Interface
+	// 3 master NICs with VM attachments
+	for i := range 3 {
+		var backendPools []string
+		if withSSHBackendPool {
+			backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/ssh-%d", ilbID, i))
+		}
+		backendPools = append(backendPools, fmt.Sprintf("%s/backendAddressPools/%s%s", ilbID, infraID, "-internal-controlplane-v4"))
+		nicName := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(backendPools, masterSubnetID, nicName, true, true).Interface)
+	}
+	// 1 NIC in the master subnet with a name that does not match the master NIC name regex, ie the private link service NIC
+	ifList = append(ifList, &configureInterface(nil, masterSubnetID, "infra-pls-nic", false, true).Interface)
+	// 3 NICs in the worker subnet, don't need to add backend pools, these get skipped anyway
+	for i := range 3 {
+		nicName := fmt.Sprintf("%s-worker-east%d-12345-nic", infraID, i)
+		ifList = append(ifList, &configureInterface(nil, "worker-subnet", nicName, true, false).Interface)
+	}
+
+	return ifList
+}
+
 // Return a list of interfaces that mocks the state after the first successful CPMS update of a new cluster
 // 10 NICs total: 3 for the old masters, 3 for the new masters, 3 workers and 1 for the private link service
 func ifListAfterFirstCPMSUpdate(ilbID string, elbID string, withSSHBackendPool bool) []*armnetwork.Interface {
@@ -320,6 +398,7 @@ func TestFixSSH(t *testing.T) {
 		afterFirstCPMSUpdate               bool
 		afterFirstCPMSUpdatePrivateCluster bool
 		afterMultipleCPMSUpdates           bool
+		hasNICsMissingPools                bool
 		interfacesListError                bool
 		emptyInterfacesList                bool
 		deleteNICError                     bool
@@ -329,6 +408,7 @@ func TestFixSSH(t *testing.T) {
 		wantError                          string
 		ilbBackendPool                     string
 		elbBackendPool                     string
+		userDefinedRoutingEnabled          bool
 	}{
 		{
 			name:          "Updates resources correctly for newly created cluster",
@@ -342,6 +422,35 @@ func TestFixSSH(t *testing.T) {
 			elb:           infraID + "-public-lb",
 			elbV1ID:       "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
 			elbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+		},
+		{
+			name:                "Updates resources correctly for newly created cluster that has a master missing in the NIC list",
+			ilb:                 infraID + "-internal-lb",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:        lbBefore,
+			interfaces:          ifListMissingBackendPoolMasters,
+			iNameOldF:           "%s-master%d-nic",
+			newCluster:          true,
+			writeExpected:       true,
+			hasNICsMissingPools: true,
+			elb:                 infraID + "-public-lb",
+			elbV1ID:             "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+		},
+		{
+			name:                      "Updates resources correctly for newly created UDR cluster that has a master missing in the NIC list",
+			ilb:                       infraID + "-internal-lb",
+			ilbID:                     "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:              lbBefore,
+			interfaces:                ifListMissingBackendPoolMasters,
+			iNameOldF:                 "%s-master%d-nic",
+			newCluster:                true,
+			writeExpected:             true,
+			hasNICsMissingPools:       true,
+			userDefinedRoutingEnabled: true,
+			elb:                       infraID + "-public-lb",
+			elbV1ID:                   "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:                     "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
 			name:                 "Updates public cluster resources correctly after first CPMS update",
@@ -455,9 +564,11 @@ func TestFixSSH(t *testing.T) {
 
 			if tt.newCluster {
 				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(tt.interfaces(tt.ilbID, tt.elbID, true), nil)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
+				if !tt.userDefinedRoutingEnabled {
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
+				}
 			}
 
 			if tt.afterFirstCPMSUpdate {
@@ -508,6 +619,18 @@ func TestFixSSH(t *testing.T) {
 				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: tt.loadbalancer(tt.elbID)}, nil)
 			}
 
+			if tt.hasNICsMissingPools && tt.userDefinedRoutingEnabled {
+				ifList := ifListAfterMissingBackendPoolMastersInUDR(tt.ilbID, tt.elbID, true)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[0], createOrUpdateOptions)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 1), *ifList[1], createOrUpdateOptions)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 2), *ifList[2], createOrUpdateOptions)
+			} else if tt.hasNICsMissingPools {
+				ifList := ifListAfterMissingBackendPoolMasters(tt.ilbID, tt.elbID, true)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), *ifList[0], createOrUpdateOptions)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 1), *ifList[1], createOrUpdateOptions)
+				armInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 2), *ifList[2], createOrUpdateOptions)
+			}
+
 			if tt.interfacesListError {
 				armInterfaces.EXPECT().List(gomock.Any(), resourceGroup, &armnetwork.InterfacesClientListOptions{}).Return(nil, fmt.Errorf("interfaces list error"))
 			}
@@ -523,6 +646,11 @@ func TestFixSSH(t *testing.T) {
 				armInterfaces.EXPECT().DeleteAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameOldF, infraID, 0), nil).Return(fmt.Errorf("failed to delete orphaned NIC"))
 			}
 
+			outboundType := api.OutboundTypeLoadbalancer
+			if tt.userDefinedRoutingEnabled {
+				outboundType = api.OutboundTypeUserDefinedRouting
+			}
+
 			m := &manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				doc: &api.OpenShiftClusterDocument{
@@ -534,6 +662,9 @@ func TestFixSSH(t *testing.T) {
 							},
 							MasterProfile: api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.MasterProfile,
 							InfraID:       infraID,
+							NetworkProfile: api.NetworkProfile{
+								OutboundType: outboundType,
+							},
 						},
 					},
 				},

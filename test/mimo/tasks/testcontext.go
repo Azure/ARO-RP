@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
@@ -28,6 +29,8 @@ type fakeTestContext struct {
 
 	doc    *api.OpenShiftClusterDocument
 	subDoc *api.SubscriptionDocument
+
+	ocDb database.OpenShiftClusters
 
 	interfacesClient          *armnetwork.InterfacesClient
 	loadBalancerClient        *armnetwork.LoadBalancersClient
@@ -97,6 +100,12 @@ func WithRegistriesClient(c armcontainerregistry.RegistriesClient) Option {
 	}
 }
 
+func WithOpenShiftDatabase(d database.OpenShiftClusters) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.ocDb = d
+	}
+}
+
 func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entry, now func() time.Time, o ...Option) *fakeTestContext {
 	ftc := &fakeTestContext{
 		Context: ctx,
@@ -110,7 +119,7 @@ func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entr
 	return ftc
 }
 
-func (t *fakeTestContext) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
+func (t *fakeTestContext) GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument {
 	if t.doc == nil {
 		panic("didn't set up OpenShiftClusterDocument in test")
 	}
@@ -149,6 +158,13 @@ func (t *fakeTestContext) GetOpenShiftClusterProperties() api.OpenShiftClusterPr
 		panic("didn't set up OpenShiftClusterDocument in test")
 	}
 	return t.doc.OpenShiftCluster.Properties
+}
+
+func (t *fakeTestContext) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+	if t.doc == nil {
+		panic("didn't set up OpenShiftClusterDocument in test")
+	}
+	return t.ocDb.Patch(ctx, t.doc.Key, f)
 }
 
 // Result

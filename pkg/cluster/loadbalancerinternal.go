@@ -31,7 +31,11 @@ var (
 )
 
 func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
-	doc, err := MigrateInternalLoadBalancerZones(ctx, m.env, m.log, m.db, m.armLoadBalancers, m.armClusterPrivateLinkServices, m.armResourceSKUs, m.doc)
+	updateFunc := func(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+		return m.db.PatchWithLease(ctx, m.doc.Key, f)
+	}
+
+	doc, err := MigrateInternalLoadBalancerZones(ctx, m.env, m.log, updateFunc, m.armLoadBalancers, m.armClusterPrivateLinkServices, m.armResourceSKUs, m.doc)
 	if err != nil {
 		return err
 	}
@@ -41,7 +45,7 @@ func (m *manager) migrateInternalLoadBalancerZones(ctx context.Context) error {
 
 func MigrateInternalLoadBalancerZones(
 	ctx context.Context,
-	_env env.Interface, log *logrus.Entry, db database.OpenShiftClusters, armLoadBalancersClient armnetwork.LoadBalancersClient, armClusterPrivateLinkServices armnetwork.PrivateLinkServicesClient, resourceSkusClient armcompute.ResourceSKUsClient, doc *api.OpenShiftClusterDocument,
+	_env env.Interface, log *logrus.Entry, updateOc database.OpenShiftClusterDocumentMutatorRunner, armLoadBalancersClient armnetwork.LoadBalancersClient, armClusterPrivateLinkServices armnetwork.PrivateLinkServicesClient, resourceSkusClient armcompute.ResourceSKUsClient, doc *api.OpenShiftClusterDocument,
 ) (*api.OpenShiftClusterDocument, error) {
 	location := doc.OpenShiftCluster.Location
 	resourceGroupName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -236,7 +240,7 @@ func MigrateInternalLoadBalancerZones(
 	log.Info("critical section complete, api-int migrated")
 
 	// Update the document with the internal LB zones
-	doc, err = db.PatchWithLease(ctx, doc.Key, func(oscd *api.OpenShiftClusterDocument) error {
+	doc, err = updateOc(ctx, func(oscd *api.OpenShiftClusterDocument) error {
 		oscd.OpenShiftCluster.Properties.Zones = controlPlaneZones
 		return nil
 	})
