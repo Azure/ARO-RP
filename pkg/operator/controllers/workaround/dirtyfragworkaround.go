@@ -37,6 +37,8 @@ var _ Workaround = &dirtyfragworkaround{}
 
 const ipsecModeDisabled = "Disabled"
 
+var marshalDirtyfragIgnition = json.Marshal
+
 func NewDirtyfragWorkaround(log *logrus.Entry, client client.Client) *dirtyfragworkaround {
 	ch := clienthelper.NewWithClient(log, client)
 	return &dirtyfragworkaround{log: log, ch: ch}
@@ -66,8 +68,11 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 		if err != nil {
 			return false, fmt.Errorf("failed to parse Network resource: %w", err)
 		}
-		if found && ipsecConfig["mode"] != ipsecModeDisabled {
-			return false, nil
+		if found {
+			mode, ok := ipsecConfig["mode"].(string)
+			if ok && mode != ipsecModeDisabled {
+				return false, nil
+			}
 		}
 	}
 
@@ -76,7 +81,12 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 
 // Ensure implements [Workaround].
 func (a *dirtyfragworkaround) Ensure(ctx context.Context) error {
-	return a.ch.Ensure(ctx, makeDirtyfragMachineConfig("master"))
+	mc, err := makeDirtyfragMachineConfig("master")
+	if err != nil {
+		return err
+	}
+
+	return a.ch.Ensure(ctx, mc)
 }
 
 // Name implements [Workaround].
@@ -93,7 +103,7 @@ func (a *dirtyfragworkaround) Remove(ctx context.Context) error {
 	)
 }
 
-func makeDirtyfragMachineConfig(role string) *mcv1.MachineConfig {
+func makeDirtyfragMachineConfig(role string) (*mcv1.MachineConfig, error) {
 	// File content to write
 	content := `install esp4 /bin/false
 install esp6 /bin/false
@@ -123,7 +133,10 @@ install rxrpc /bin/false
 	}
 
 	// Marshal to JSON
-	ignitionJSON, _ := json.Marshal(ignitionConfig)
+	ignitionJSON, err := marshalDirtyfragIgnition(ignitionConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal dirtyfrag ignition config: %w", err)
+	}
 
 	return &mcv1.MachineConfig{
 		TypeMeta: metav1.TypeMeta{
@@ -141,5 +154,5 @@ install rxrpc /bin/false
 				Raw: ignitionJSON,
 			},
 		},
-	}
+	}, nil
 }
