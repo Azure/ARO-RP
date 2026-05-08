@@ -90,6 +90,15 @@ update_secrets_env() {
         --resource-group "${RESOURCEGROUP}" \
         --query "properties.endpoint" -o tsv)
 
+    if [[ -z "${api_key}" ]]; then
+        echo "Error: failed to retrieve API key for ${HOLMES_AOAI_ACCOUNT_NAME}."
+        exit 1
+    fi
+    if [[ -z "${api_base}" ]]; then
+        echo "Error: failed to retrieve endpoint for ${HOLMES_AOAI_ACCOUNT_NAME}."
+        exit 1
+    fi
+
     local secrets_file="secrets/env"
 
     if [[ ! -f "${secrets_file}" ]]; then
@@ -97,20 +106,21 @@ update_secrets_env() {
         exit 1
     fi
 
-    # Remove existing Holmes lines
-    sed -i'' -e '/^export HOLMES_AZURE_API_KEY=/d' "${secrets_file}"
-    sed -i'' -e '/^export HOLMES_AZURE_API_BASE=/d' "${secrets_file}"
-    sed -i'' -e '/^export HOLMES_AZURE_API_VERSION=/d' "${secrets_file}"
-    sed -i'' -e '/^# Holmes Azure OpenAI/d' "${secrets_file}"
+    # Remove existing Holmes lines and append new credentials via temp file for portability
+    local tmp_file
+    tmp_file=$(mktemp)
+    grep -v -E '^export HOLMES_AZURE_API_(KEY|BASE|VERSION)=|^# Holmes Azure OpenAI' \
+        "${secrets_file}" > "${tmp_file}"
 
-    # Append Holmes secrets
-    cat >> "${secrets_file}" <<EOF
+    cat >> "${tmp_file}" <<EOF
 
 # Holmes Azure OpenAI credentials
 export HOLMES_AZURE_API_KEY='${api_key}'
 export HOLMES_AZURE_API_BASE='${api_base}'
 export HOLMES_AZURE_API_VERSION='${HOLMES_API_VERSION}'
 EOF
+
+    mv "${tmp_file}" "${secrets_file}"
 
     echo "secrets/env updated with HOLMES_AZURE_API_KEY, HOLMES_AZURE_API_BASE, HOLMES_AZURE_API_VERSION."
 }

@@ -694,7 +694,9 @@ Due to cross tenant ACR access, token credentials must be generated for arointsv
 The Holmes admin API requires an Azure OpenAI resource for cluster investigation.
 
 ```bash
-# After sourcing env
+# Ensure secrets/env exists (the deploy script writes credentials there)
+make secrets
+
 source env
 ./hack/devtools/deploy-holmes-aoai.sh
 
