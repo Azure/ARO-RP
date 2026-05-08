@@ -246,16 +246,26 @@ func TestDirtyfragWorkaround(t *testing.T) {
 func TestDirtyfragWorkaroundEnsureMarshalError(t *testing.T) {
 	r := require.New(t)
 	_, log := testlog.LogForTesting(t)
+	expectedErr := errors.New("marshal failed")
+	ensureCalled := false
 
 	marshalDirtyfragIgnition = func(v interface{}) ([]byte, error) {
-		return nil, errors.New("marshal failed")
+		return nil, expectedErr
 	}
 	t.Cleanup(func() {
 		marshalDirtyfragIgnition = json.Marshal
 	})
 
-	workaround := NewDirtyfragWorkaround(log, ctrlfake.NewClientBuilder().Build())
+	cl := clienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build())
+	cl.WithPreCreateHook(func(obj client.Object) error {
+		ensureCalled = true
+		return nil
+	})
+
+	workaround := NewDirtyfragWorkaround(log, cl)
 
 	err := workaround.Ensure(t.Context())
+	r.ErrorIs(err, expectedErr)
 	r.EqualError(err, "failed to marshal dirtyfrag ignition config: marshal failed")
+	r.False(ensureCalled)
 }
