@@ -29,6 +29,7 @@ const (
 	StorageAccountsEnabled             = "aro.storageaccounts.enabled"
 	WorkaroundEnabled                  = "aro.workaround.enabled"
 	CopyFailWorkaroundEnabled          = "aro.workaround.copyfail.enabled"
+	DirtyfragWorkaroundEnabled         = "aro.workaround.dirtyfrag.enabled"
 	AutosizedNodesEnabled              = "aro.autosizednodes.enabled"
 	MuoEnabled                         = "rh.srep.muo.enabled"
 	MuoManaged                         = "rh.srep.muo.managed"
@@ -82,6 +83,7 @@ func DefaultOperatorFlags() map[string]string {
 		StorageAccountsEnabled:             FlagTrue,
 		WorkaroundEnabled:                  FlagTrue,
 		CopyFailWorkaroundEnabled:          FlagTrue,
+		DirtyfragWorkaroundEnabled:         FlagTrue,
 		AutosizedNodesEnabled:              FlagTrue,
 		MuoEnabled:                         FlagTrue,
 		MuoManaged:                         FlagTrue,
