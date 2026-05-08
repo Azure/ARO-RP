@@ -4,6 +4,7 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -21,13 +22,17 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	apiversion "github.com/Azure/ARO-RP/pkg/api/util/version"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func expectedMasterDirtyfragMachineConfig() *mcv1.MachineConfig {
-	mc := makeDirtyfragMachineConfig("master")
+	mc, err := makeDirtyfragMachineConfig("master")
+	if err != nil {
+		panic(err)
+	}
 	mc.ResourceVersion = "1"
 	return mc
 }
@@ -52,13 +57,13 @@ func TestDirtyfragWorkaround(t *testing.T) {
 		{
 			desc: "disabled explicitly, nothing done",
 			clusterFlags: map[string]string{
-				"aro.workaround.dirtyfrag.enabled": "false",
+				operator.DirtyfragWorkaroundEnabled: operator.FlagFalse,
 			},
 		},
 		{
 			desc: "enabled, network configuration not present",
 			clusterFlags: map[string]string{
-				"aro.workaround.dirtyfrag.enabled": "true",
+				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
 			},
 			expectedIsRequired:    true,
 			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
@@ -66,7 +71,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 		{
 			desc: "enabled, non-ipsec cluster",
 			clusterFlags: map[string]string{
-				"aro.workaround.dirtyfrag.enabled": "true",
+				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
 			},
 			objects: []client.Object{
 				// The necessary parameters for this ipsec config were introduced in
@@ -95,9 +100,37 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
 		},
 		{
+			desc: "enabled, ipsec mode not a string",
+			clusterFlags: map[string]string{
+				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
+			},
+			objects: []client.Object{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "operator.openshift.io/v1",
+						"kind":       "Network",
+						"metadata": map[string]interface{}{
+							"name": "cluster",
+						},
+						"spec": map[string]interface{}{
+							"defaultNetwork": map[string]interface{}{
+								"ovnKubernetesConfig": map[string]interface{}{
+									"ipsecConfig": map[string]interface{}{
+										"mode": true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
 			desc: "enabled, ipsec cluster",
 			clusterFlags: map[string]string{
-				"aro.workaround.dirtyfrag.enabled": "true",
+				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
 			},
 			objects: []client.Object{
 				// The necessary parameters for this ipsec config were introduced in
@@ -128,7 +161,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 		{
 			desc: "enabled, apply errors",
 			clusterFlags: map[string]string{
-				"aro.workaround.dirtyfrag.enabled": "true",
+				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
 			},
 			expectedIsRequired: true,
 			expectedErr:        errFail,
@@ -208,4 +241,21 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDirtyfragWorkaroundEnsureMarshalError(t *testing.T) {
+	r := require.New(t)
+	_, log := testlog.LogForTesting(t)
+
+	marshalDirtyfragIgnition = func(v interface{}) ([]byte, error) {
+		return nil, errors.New("marshal failed")
+	}
+	t.Cleanup(func() {
+		marshalDirtyfragIgnition = json.Marshal
+	})
+
+	workaround := NewDirtyfragWorkaround(log, ctrlfake.NewClientBuilder().Build())
+
+	err := workaround.Ensure(t.Context())
+	r.EqualError(err, "failed to marshal dirtyfrag ignition config: marshal failed")
 }
