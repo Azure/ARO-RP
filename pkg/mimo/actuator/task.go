@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
@@ -29,6 +30,7 @@ type th struct {
 
 	oc  *api.OpenShiftClusterDocument
 	sub *api.SubscriptionDocument
+	dbs actuatorDBs
 
 	_ch clienthelper.Interface
 
@@ -38,13 +40,14 @@ type th struct {
 // force interface checking
 var _ mimo.TaskContext = &th{}
 
-func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) *th {
+func newTaskContext(ctx context.Context, env env.Interface, log *logrus.Entry, dbs actuatorDBs, oc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) *th {
 	return &th{
 		ctx: ctx,
 		env: env,
 		log: log,
 		oc:  oc,
 		sub: sub,
+		dbs: dbs,
 		_ch: nil,
 	}
 }
@@ -116,8 +119,16 @@ func (t *th) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
 	return t.oc.OpenShiftCluster.Properties
 }
 
-// GetOpenshiftClusterDocument implements mimo.TaskContext.
-func (t *th) GetOpenshiftClusterDocument() *api.OpenShiftClusterDocument {
+func (t *th) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+	db, err := t.dbs.OpenShiftClusters()
+	if err != nil {
+		return nil, err
+	}
+	return db.Patch(ctx, t.oc.Key, f)
+}
+
+// GetOpenShiftClusterDocument implements mimo.TaskContext.
+func (t *th) GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument {
 	return t.oc
 }
 

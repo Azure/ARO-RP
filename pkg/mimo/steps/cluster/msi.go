@@ -21,7 +21,7 @@ func EnsureClusterMsiCertificate(ctx context.Context) error {
 		return mimo.TerminalError(err)
 	}
 
-	oc := th.GetOpenshiftClusterDocument()
+	oc := th.GetOpenShiftClusterDocument()
 
 	if !oc.OpenShiftCluster.UsesWorkloadIdentity() {
 		th.SetResultMessage("cluster does not use workload identity")
