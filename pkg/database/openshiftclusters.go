@@ -92,6 +92,10 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 
 	doc, err = c.c.Create(ctx, doc.PartitionKey, doc, nil)
 
+	if doc == nil && err == nil {
+		return nil, fmt.Errorf("cosmosdb create returned nil document with nil error")
+	}
+
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
 	}
@@ -211,7 +215,12 @@ func (c *openShiftClusters) update(ctx context.Context, doc *api.OpenShiftCluste
 		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
-	return c.c.Replace(ctx, doc.PartitionKey, doc, options)
+	doc, err := c.c.Replace(ctx, doc.PartitionKey, doc, options)
+	if doc == nil && err == nil {
+		return nil, fmt.Errorf("cosmosdb replace returned nil document with nil error")
+	}
+
+	return doc, err
 }
 
 func (c *openShiftClusters) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
