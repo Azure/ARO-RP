@@ -33,6 +33,9 @@ type trackingResponseWriter struct {
 }
 
 func (tw *trackingResponseWriter) Write(b []byte) (int, error) {
+	if atomic.LoadInt64(&tw.written) == 0 {
+		tw.Header().Set("Content-Type", "text/plain")
+	}
 	n, err := tw.ResponseWriter.Write(b)
 	atomic.AddInt64(&tw.written, int64(n))
 	return n, err
@@ -84,7 +87,7 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 
 	// Reject control characters that could affect CLI argument parsing.
 	for _, ch := range req.Question {
-		if ch < 0x20 && ch != ' ' {
+		if (ch < 0x20 && ch != ' ') || ch == 0x7f {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "question", "The question must not contain control characters.")
 		}
 	}
@@ -137,20 +140,19 @@ func (f *frontend) _postAdminOpenShiftClusterInvestigate(ctx context.Context, r 
 
 	// Generate a short-lived (1h) read-only kubeconfig for the diagnostics identity.
 	// This uses the cluster CA from the persisted graph to sign a fresh client cert.
-	// In development mode, the endpoint is rewritten from api-int.* to api.* since
-	// the Hive cluster cannot resolve private DNS there.
+	// The investigation pod uses HostAliases for api-int.* DNS resolution, so no
+	// endpoint rewriting is needed.
 	kubeconfig, err := f.generateDiagnosticsKubeconfig(ctx, log, doc)
 	if err != nil {
 		return fmt.Errorf("failed to generate diagnostics kubeconfig: %w", err)
 	}
 
 	apiServerIP := doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP
+	if apiServerIP == "" {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "cluster does not have a private endpoint IP configured")
+	}
 
 	log.Infof("starting Holmes investigation for cluster %s (question_length=%d)", resourceID, len(req.Question))
-
-	// Set Content-Type before streaming begins. Once bytes are written to w,
-	// the response is committed and errors cannot be reported via adminReply.
-	w.Header().Set("Content-Type", "text/plain")
 
 	err = f.hiveClusterManager.InvestigateCluster(ctx, hiveNamespace, kubeconfig, f.holmesConfig, apiServerIP, req.Question, w)
 	if err != nil {
