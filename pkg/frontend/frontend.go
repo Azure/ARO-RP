@@ -544,7 +544,7 @@ func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b 
 				err = cloudErr
 				break
 			}
-			err = cloudErrorWithWrappedMessage(err, cloudErr)
+			err = api.WrapCloudErrorWithMessage(err, cloudErr)
 		case errors.As(err, &statusErr):
 			err = statusErr
 		default:
@@ -560,39 +560,6 @@ func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b 
 		}
 	}
 	reply(log, w, header, b, err)
-}
-
-func cloudErrorWithWrappedMessage(wrappedErr error, cloudErr *api.CloudError) *api.CloudError {
-	if cloudErr == nil {
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError,
-			"",
-			wrappedErr.Error(),
-		)
-	}
-
-	if cloudErr.CloudErrorBody == nil {
-		return &api.CloudError{
-			StatusCode: cloudErr.StatusCode,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInternalServerError,
-				Message: wrappedErr.Error(),
-				Target:  "",
-			},
-		}
-	}
-
-	details := append([]api.CloudErrorBody(nil), cloudErr.Details...)
-	return &api.CloudError{
-		StatusCode: cloudErr.StatusCode,
-		CloudErrorBody: &api.CloudErrorBody{
-			Code:    cloudErr.Code,
-			Message: wrappedErr.Error(),
-			Target:  cloudErr.Target,
-			Details: details,
-		},
-	}
 }
 
 func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
