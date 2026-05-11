@@ -432,6 +432,13 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 
 	err := &resizeControlPlaneError{
 		baseErr: api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "controlPlaneInventory", "inventory mismatch"),
+		forward: []resizeStepRecord{
+			{nodeName: "master-0", step: resizeStepStop, duration: 10 * time.Millisecond},
+			{nodeName: "master-0", step: resizeStepResize, duration: 10 * time.Millisecond, err: errors.New("Azure resize error")},
+		},
+		rollback: []resizeStepRecord{
+			{nodeName: "master-0", step: resizeStepStart, rollback: true, duration: 10 * time.Millisecond},
+		},
 	}
 
 	adminReply(log, recorder, nil, nil, err)
@@ -448,5 +455,25 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 	errorBody := body["error"]
 	if errorBody["code"] != api.CloudErrorCodeRequestNotAllowed {
 		t.Fatalf("error code = %v, want %s", errorBody["code"], api.CloudErrorCodeRequestNotAllowed)
+	}
+	if errorBody["target"] != "controlPlaneInventory" {
+		t.Fatalf("error target = %v, want %s", errorBody["target"], "controlPlaneInventory")
+	}
+
+	message, ok := errorBody["message"].(string)
+	if !ok {
+		t.Fatalf("error message has unexpected type %T", errorBody["message"])
+	}
+	for _, expected := range []string{
+		"inventory mismatch",
+		"Steps taken:",
+		"master-0:stop",
+		"master-0:resize failed",
+		"Rollback:",
+		"master-0:start",
+	} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("error message %q does not contain %q", message, expected)
+		}
 	}
 }
