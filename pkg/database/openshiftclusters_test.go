@@ -61,9 +61,13 @@ func TestCreateReturnsErrorWhenCosmosDBReturnsNilNil(t *testing.T) {
 		t.Fatalf("expected nil result when error occurs, got %v", result)
 	}
 
-	expectedErrMsg := "cosmosdb create returned nil document with nil error"
-	if err.Error() != expectedErrMsg {
-		t.Errorf("expected error message %q, got %q", expectedErrMsg, err.Error())
+	cosmosErr, ok := err.(*cosmosdb.Error)
+	if !ok {
+		t.Fatalf("expected *cosmosdb.Error, got %T", err)
+	}
+
+	if cosmosErr.StatusCode != 500 {
+		t.Errorf("expected status code 500, got %d", cosmosErr.StatusCode)
 	}
 }
 
@@ -96,8 +100,12 @@ func TestUpdateReturnsErrorWhenCosmosDBReturnsNilNil(t *testing.T) {
 		t.Fatalf("expected nil result when error occurs, got %v", result)
 	}
 
-	expectedErrMsg := "cosmosdb replace returned nil document with nil error"
-	if err.Error() != expectedErrMsg {
-		t.Errorf("expected error message %q, got %q", expectedErrMsg, err.Error())
+	cosmosErr, ok := err.(*cosmosdb.Error)
+	if !ok {
+		t.Fatalf("expected *cosmosdb.Error, got %T", err)
+	}
+
+	if cosmosErr.StatusCode != 500 {
+		t.Errorf("expected status code 500, got %d", cosmosErr.StatusCode)
 	}
 }
