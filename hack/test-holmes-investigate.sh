@@ -23,7 +23,7 @@
 #   export ARO_INSTALL_VIA_HIVE=true
 #   export ARO_ADOPT_BY_HIVE=true
 #   export ARO_PODMAN_SOCKET="unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')"
-#   export HOLMES_IMAGE="quay.io/haoran/holmesgpt:latest"
+#   export HOLMES_IMAGE="arointsvc.azurecr.io/holmesgpt:latest"  # optional, overrides default
 #   export HOLMES_AZURE_API_KEY="<your-azure-openai-key>"
 #   export HOLMES_AZURE_API_BASE="<your-azure-openai-endpoint>"
 #   export HOLMES_AZURE_API_VERSION="2025-04-01-preview"

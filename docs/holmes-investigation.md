@@ -57,13 +57,14 @@ All three resources are cleaned up after the investigation completes (or fails).
 
 1. Ensure prerequisites: VPN connected, `secrets/env` generated, `aks.kubeconfig` generated
 
-2. Export Holmes environment variables:
+2. Export environment variables:
    ```bash
    source env && source secrets/env
    export HIVE_KUBE_CONFIG_PATH=$(realpath aks.kubeconfig)
    export ARO_INSTALL_VIA_HIVE=true
    export ARO_ADOPT_BY_HIVE=true
    export HOLMES_IMAGE="arointsvc.azurecr.io/holmesgpt:latest"
+   # You can override HOLMES_IMAGE with a different image for testing
    ```
 
 3. Start the local RP: `make runlocal-rp`
