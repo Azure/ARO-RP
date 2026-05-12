@@ -93,10 +93,15 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 		return nil, err
 	}
 
+	key := doc.Key
+	partitionKey := doc.PartitionKey
 	doc, err = c.c.Create(ctx, doc.PartitionKey, doc, nil)
 
 	if doc == nil && err == nil {
-		return nil, fmt.Errorf("creating OpenShift cluster: CosmosDB returned nil document with no error: %w", &cosmosdb.Error{StatusCode: http.StatusInternalServerError})
+		return nil, &cosmosdb.Error{
+			StatusCode: http.StatusInternalServerError,
+			Message:    fmt.Sprintf("creating OpenShift cluster: CosmosDB returned nil document with no error for key %q and partition key %q", key, partitionKey),
+		}
 	}
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
