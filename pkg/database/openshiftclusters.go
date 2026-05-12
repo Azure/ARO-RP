@@ -26,10 +26,7 @@ const (
 	OpenshiftClustersClusterResourceIDOnlyQuery = `SELECT doc.id, doc.key, doc.bucket FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState NOT IN ("Creating", "Deleting")`
 )
 
-type (
-	OpenShiftClusterDocumentMutator       func(*api.OpenShiftClusterDocument) error
-	OpenShiftClusterDocumentMutatorRunner func(context.Context, OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
-)
+type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
 
 type openShiftClusters struct {
 	c             cosmosdb.OpenShiftClusterDocumentClient
@@ -94,6 +91,10 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	doc, err = c.c.Create(ctx, doc.PartitionKey, doc, nil)
+
+	if doc == nil && err == nil {
+		return nil, fmt.Errorf("creating OpenShift cluster: CosmosDB returned nil document with no error: %w", &cosmosdb.Error{StatusCode: http.StatusInternalServerError})
+	}
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -214,7 +215,15 @@ func (c *openShiftClusters) update(ctx context.Context, doc *api.OpenShiftCluste
 		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
-	return c.c.Replace(ctx, doc.PartitionKey, doc, options)
+	updatedDoc, err := c.c.Replace(ctx, doc.PartitionKey, doc, options)
+	if updatedDoc == nil && err == nil {
+		return nil, &cosmosdb.Error{
+			StatusCode: http.StatusInternalServerError,
+			Message:    fmt.Sprintf("OpenShiftClusters Replace returned nil document with nil error for key %q", doc.Key),
+		}
+	}
+
+	return updatedDoc, err
 }
 
 func (c *openShiftClusters) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
