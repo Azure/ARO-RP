@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/cpms"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/dynamicworkaround"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/etchosts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails"
@@ -124,6 +125,14 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", workaround.ControllerName),
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", workaround.ControllerName, err)
+		}
+		if err = (dynamicworkaround.NewReconciler(
+			log.WithField("controller", dynamicworkaround.ControllerName),
+			client,
+			dynamicworkaround.NewKeyVaultFetcher(),
+			dynamicworkaround.NewDefaultSecretsClientFactory(),
+		)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", dynamicworkaround.ControllerName, err)
 		}
 		if err = (routefix.NewReconciler(
 			log.WithField("controller", routefix.ControllerName),
