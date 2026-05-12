@@ -28,6 +28,10 @@ const (
 
 type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
 
+// OpenShiftClusterDocumentMutatorRunner is kept as a compatibility alias for
+// callers that still reference the old exported type name.
+type OpenShiftClusterDocumentMutatorRunner = OpenShiftClusterDocumentMutator
+
 type openShiftClusters struct {
 	c             cosmosdb.OpenShiftClusterDocumentClient
 	collc         cosmosdb.CollectionClient
