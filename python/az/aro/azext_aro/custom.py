@@ -914,34 +914,17 @@ def aro_identity_create_required(*,
     cluster_identity = create_identity(cmd, location, resource_group_name, "aro-cluster")
     identities.append(cluster_identity)
 
-    for role in _get_pwi_role_set(client, version, location).platform_workload_identity_roles:
-        progress.add(message=f"Creating {role.operator_name} identity")
-        identity = create_identity(cmd, location, resource_group_name, role.operator_name)
-        identities.append(identity)
-
-        scopes = _determine_required_scopes_from_role_set(cmd, role)
-        for scope in scopes:
-            progress.add(message=f"Creating {role.operator_name} identity's role assignments over network resources")
-
-            if not network_scopes[scope]:
-                continue
-
-            create_role_assignment(
-                cmd.cli_ctx,
-                identity["principalId"],
-                f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
-                network_scopes[scope]
-            )
-
-        progress.add(message="Creating cluster identity's federated credential "
-                     f"role assignment over {role.operator_name} identity")
-        defn = resource_id(
-            subscription=get_subscription_id(cmd.cli_ctx),
-            namespace="Microsoft.Authorization",
-            type="roleDefinitions",
-            name=ARO_FEDERATED_CREDENTIAL_ROLE
+    roles = _get_pwi_role_set(client, version, location).platform_workload_identity_roles
+    for role in roles:
+        identity = create_identity_and_role_assignments(
+            cmd=cmd,
+            role=role,
+            location=location,
+            resource_group_name=resource_group_name,
+            network_scopes=network_scopes,
+            cluster_identity=cluster_identity
         )
-        create_role_assignment(cmd.cli_ctx, cluster_identity["principalId"], defn, identity["id"])
+        identities.append(identity)
 
     progress.add(message="Creating first party service principal's role assignment over virtual network")
     firstparty_principal = AADManager(cmd.cli_ctx).get_service_principal_id(FP_CLIENT_ID)
@@ -1055,3 +1038,41 @@ def _determine_required_scopes_from_network_resources(cmd,
         RoleAssignmentScope.VNET: vnet,
         RoleAssignmentScope.WORKER_SUBNET: worker_subnet,
     }
+
+def create_identity_and_role_assignments(*,
+                                         cmd,
+                                         role,
+                                         location,
+                                         resource_group_name,
+                                         network_scopes,
+                                         cluster_identity):
+    progress = cmd.cli_ctx.get_progress_controller()
+
+    progress.add(message=f"Creating {role.operator_name} identity")
+    identity = create_identity(cmd, location, resource_group_name, role.operator_name)
+
+    scopes = _determine_required_scopes_from_role_set(cmd, role)
+    for scope in scopes:
+        progress.add(message=f"Creating {role.operator_name} identity's role assignments over network resources")
+
+        if not network_scopes[scope]:
+            continue
+
+        create_role_assignment(
+            cmd.cli_ctx,
+            identity["principalId"],
+            f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
+            network_scopes[scope]
+        )
+
+    progress.add(message="Creating cluster identity's federated credential "
+        f"role assignment over {role.operator_name} identity")
+    defn = resource_id(
+        subscription=get_subscription_id(cmd.cli_ctx),
+        namespace="Microsoft.Authorization",
+        type="roleDefinitions",
+        name=ARO_FEDERATED_CREDENTIAL_ROLE
+    )
+    create_role_assignment(cmd.cli_ctx, cluster_identity["principalId"], defn, identity["id"])
+
+    return identity
