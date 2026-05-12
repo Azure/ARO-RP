@@ -28,9 +28,9 @@ endif
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-AZURELINUX_VERSION = 3.0.20250910
+MARINER_VERSION = 20260102
 FLUENTBIT_VERSION = 4.2.2
-FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(AZURELINUX_VERSION)
+FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.7.2
 AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
@@ -201,7 +201,7 @@ image-autorest:
 
 .PHONY: image-fluentbit
 image-fluentbit:
-	docker build --platform=$(PLATFORM) --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg AZURELINUX_VERSION=$(AZURELINUX_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=$(PLATFORM) --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 .PHONY: image-proxy
 image-proxy:
