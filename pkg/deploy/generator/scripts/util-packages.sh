@@ -79,7 +79,7 @@ tdnf_update_pkgs() {
         --allowerasing
     )
 
-    if [ -n "${excludes}" ]; then
+    if [ "${#excludes[@]}" -gt 0 ]; then
         cmd+=("${excludes[@]}")
     fi
     local -r cmd
