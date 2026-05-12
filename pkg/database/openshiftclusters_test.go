@@ -48,7 +48,8 @@ func TestCreateReturnsErrorWhenCosmosDBReturnsNilNil(t *testing.T) {
 	db := NewOpenShiftClustersWithProvidedClient(mockClient, nil, "test-uuid", uuid.DefaultGenerator)
 
 	doc := &api.OpenShiftClusterDocument{
-		Key: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster",
+		Key:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster",
+		PartitionKey: "00000000-0000-0000-0000-000000000000",
 		OpenShiftCluster: &api.OpenShiftCluster{
 			ID: "test-id",
 		},
