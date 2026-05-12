@@ -33,6 +33,7 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 		archVersion api.ArchitectureVersion
 		subnetID    string
 		wpStatus    bool
+		wpEmpty     bool
 		wantNSGID   string
 		wantErr     string
 	}{
@@ -73,6 +74,15 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 			subnetID:    "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
 			wantNSGID:   "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-nsg",
 		},
+		{
+			name:        "worker arch v2 skip empty SubnetID",
+			infraID:     "test-1234",
+			archVersion: api.ArchitectureVersionV2,
+			wpStatus:    true,
+			wpEmpty:     true,
+			subnetID:    "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
+			wantNSGID:   "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-nsg",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc.Properties.InfraID = tt.infraID
@@ -84,6 +94,11 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 						SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
 					},
 				}
+			}
+			if tt.wpEmpty {
+				oc.Properties.WorkerProfilesStatus = append(oc.Properties.WorkerProfilesStatus, api.WorkerProfile{
+					SubnetID: "",
+				})
 			}
 
 			nsgID, err := NetworkSecurityGroupID(oc, tt.subnetID)
