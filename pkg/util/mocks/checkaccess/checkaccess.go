@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	client "github.com/Azure/checkaccess-v2-go-sdk/client"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRemotePDPClient is a mock of RemotePDPClient interface.

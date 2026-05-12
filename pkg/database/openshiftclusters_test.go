@@ -5,6 +5,10 @@ package database
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -61,13 +65,19 @@ func TestCreateReturnsErrorWhenCosmosDBReturnsNilNil(t *testing.T) {
 		t.Fatalf("expected nil result when error occurs, got %v", result)
 	}
 
-	cosmosErr, ok := err.(*cosmosdb.Error)
-	if !ok {
-		t.Fatalf("expected *cosmosdb.Error, got %T", err)
+	// The error should be wrapped, so we need to unwrap it
+	var cosmosErr *cosmosdb.Error
+	if !errors.As(err, &cosmosErr) {
+		t.Fatalf("expected wrapped *cosmosdb.Error, got %T", err)
 	}
 
-	if cosmosErr.StatusCode != 500 {
+	if cosmosErr.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status code 500, got %d", cosmosErr.StatusCode)
+	}
+
+	// Verify the error message contains descriptive text
+	if !strings.Contains(err.Error(), "creating OpenShift cluster") {
+		t.Errorf("expected error message to contain 'creating OpenShift cluster', got %q", err.Error())
 	}
 }
 
@@ -105,7 +115,13 @@ func TestUpdateReturnsErrorWhenCosmosDBReturnsNilNil(t *testing.T) {
 		t.Fatalf("expected *cosmosdb.Error, got %T", err)
 	}
 
-	if cosmosErr.StatusCode != 500 {
+	if cosmosErr.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status code 500, got %d", cosmosErr.StatusCode)
+	}
+
+	// Verify the error message contains descriptive text
+	expectedMsg := fmt.Sprintf("OpenShiftClusters Replace returned nil document with nil error for key %q", doc.Key)
+	if cosmosErr.Message != expectedMsg {
+		t.Errorf("expected error message %q, got %q", expectedMsg, cosmosErr.Message)
 	}
 }

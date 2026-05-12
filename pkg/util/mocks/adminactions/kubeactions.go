@@ -13,15 +13,13 @@ import (
 	context "context"
 	reflect "reflect"
 
+	adminactions "github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	gomock "go.uber.org/mock/gomock"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
-
-	adminactions "github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 )
 
 // MockKubeActions is a mock of KubeActions interface.

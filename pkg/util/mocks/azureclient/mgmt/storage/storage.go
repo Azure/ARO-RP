@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	storage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAccountsClient is a mock of AccountsClient interface.

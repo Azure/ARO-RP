@@ -12,9 +12,8 @@ package mock_dataplane
 import (
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockClientFactory is a mock of ClientFactory interface.

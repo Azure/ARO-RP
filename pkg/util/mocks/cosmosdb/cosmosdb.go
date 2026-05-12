@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	cosmosdb "github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPermissionClient is a mock of PermissionClient interface.
