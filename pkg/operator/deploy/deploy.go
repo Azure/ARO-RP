@@ -361,7 +361,7 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 			APIIntIP:                 o.oc.Properties.APIServerProfile.IntIP,
 			IngressIP:                ingressIP,
 			GatewayPrivateEndpointIP: o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
-			Environment:              o.env.EnvironmentType(),
+			Environment:              "", // TEST: empty value to verify fluent-bit behavior with missing environment
 			// Update the OperatorFlags from the version in the RP
 			OperatorFlags: arov1alpha1.OperatorFlags(o.oc.Properties.OperatorFlags),
 		},
