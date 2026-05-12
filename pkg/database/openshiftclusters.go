@@ -26,11 +26,10 @@ const (
 	OpenshiftClustersClusterResourceIDOnlyQuery = `SELECT doc.id, doc.key, doc.bucket FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState NOT IN ("Creating", "Deleting")`
 )
 
-type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
-
-// OpenShiftClusterDocumentMutatorRunner is kept as a compatibility alias for
-// callers that still reference the old exported type name.
-type OpenShiftClusterDocumentMutatorRunner = OpenShiftClusterDocumentMutator
+type (
+	OpenShiftClusterDocumentMutator       func(*api.OpenShiftClusterDocument) error
+	OpenShiftClusterDocumentMutatorRunner func(context.Context, OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
+)
 
 type openShiftClusters struct {
 	c             cosmosdb.OpenShiftClusterDocumentClient
