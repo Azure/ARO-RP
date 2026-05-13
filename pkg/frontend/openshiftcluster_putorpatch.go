@@ -375,10 +375,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		return nil, err
 	}
 	if doc == nil {
-		return nil, api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError,
-			"", "internal error: nil document returned with no error")
+		return nil, fmt.Errorf("internal error: nil document returned with no error")
 	}
 	// We remove sensitive data from document to prevent sensitive data being
 	// returned to the customer.
