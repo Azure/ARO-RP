@@ -108,9 +108,11 @@ update_secrets_env() {
 
     # Remove existing Holmes lines and append new credentials via temp file for portability
     local tmp_file
-    tmp_file=$(mktemp)
+    tmp_file=$(mktemp "${secrets_file}.XXXXXX")
+
+    # Handle case where all lines might match the filter (use || true to avoid exit 1 with set -e)
     grep -v -E '^export HOLMES_AZURE_API_(KEY|BASE|VERSION)=|^# Holmes Azure OpenAI' \
-        "${secrets_file}" > "${tmp_file}"
+        "${secrets_file}" > "${tmp_file}" || true
 
     cat >> "${tmp_file}" <<EOF
 
