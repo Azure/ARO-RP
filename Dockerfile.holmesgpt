@@ -1,0 +1,64 @@
+ARG BASE_REGISTRY=registry.access.redhat.com
+ARG REPOSITORY=ubi9/python-311
+ARG TAG=latest
+FROM ${BASE_REGISTRY}/${REPOSITORY}:${TAG} AS builder
+ARG HOLMESGPT_REPO=https://github.com/robusta-dev/holmesgpt
+ARG HOLMESGPT_REF
+
+RUN test -n "${HOLMESGPT_REF}" || { echo "ERROR: HOLMESGPT_REF build arg must be set (e.g., --build-arg HOLMESGPT_REF=v0.23.0)"; exit 1; }
+
+USER root
+WORKDIR /build
+
+RUN dnf install -y gcc gcc-c++ make git tar gzip \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
+
+RUN python -m venv /venv --upgrade-deps
+ENV PATH="/venv/bin:$PATH"
+RUN HOLMESGPT_TARBALL_URL="${HOLMESGPT_REPO}/archive/refs/tags/${HOLMESGPT_REF}.tar.gz" \
+    && curl -fsSL "${HOLMESGPT_TARBALL_URL}" -o /tmp/holmesgpt.tar.gz \
+    || (case "${HOLMESGPT_REF}" in \
+          v*) ALT_REF="${HOLMESGPT_REF#v}" ;; \
+          *) ALT_REF="v${HOLMESGPT_REF}" ;; \
+        esac \
+        && curl -fsSL "${HOLMESGPT_REPO}/archive/refs/tags/${ALT_REF}.tar.gz" -o /tmp/holmesgpt.tar.gz) \
+    && mkdir -p /build/src \
+    && tar -xzf /tmp/holmesgpt.tar.gz -C /build/src --strip-components=1 \
+    && rm -f /tmp/holmesgpt.tar.gz \
+    && pip install --no-cache-dir /build/src
+
+#### Runtime container
+FROM ${BASE_REGISTRY}/${REPOSITORY}:${TAG}
+
+USER root
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/venv/bin:$PATH"
+ENV HOME=/tmp
+
+COPY --from=builder /venv /venv
+COPY --from=builder /build/src/holmes_cli.py /app/holmes_cli.py
+
+# Install kubectl
+ARG TARGETPLATFORM
+ARG KUBECTL_VERSION=v1.34.6
+RUN dnf install -y jq \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf \
+    && PLATFORM="${TARGETPLATFORM:-linux/amd64}" \
+    && ARCH="$(case "${PLATFORM}" in \
+        linux/arm64) echo arm64 ;; \
+        linux/amd64) echo amd64 ;; \
+        *) echo "Unsupported platform: ${PLATFORM}" && exit 1 ;; \
+      esac)" \
+    && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl" -o /usr/local/bin/kubectl \
+    && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl.sha256" -o /tmp/kubectl.sha256 \
+    && echo "$(cat /tmp/kubectl.sha256)  /usr/local/bin/kubectl" | sha256sum -c - \
+    && rm -f /tmp/kubectl.sha256 \
+    && chmod 0555 /usr/local/bin/kubectl \
+    && kubectl version --client=true
+
+USER 1001
+ENTRYPOINT ["python", "holmes_cli.py"]
