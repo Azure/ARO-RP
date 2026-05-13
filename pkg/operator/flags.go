@@ -52,6 +52,18 @@ const (
 	GuardrailsPolicyDryrun                       = "dryrun"
 	GuardrailsPolicyWarn                         = "warn"
 	GuardrailsPolicyDeny                         = "deny"
+
+	// GuardrailsMethod selects how the Guardrails controller enforces
+	// policies on a cluster. Allowed values:
+	//   * "gatekeeper" - always deploy the OPA/Gatekeeper stack
+	//   * "vap"        - always deploy ValidatingAdmissionPolicy resources
+	//                    (ignored on clusters < 4.17 since VAP is unavailable;
+	//                    Gatekeeper is used on those clusters instead)
+	//   * "auto"       - Gatekeeper on clusters < 4.17, VAP on clusters >= 4.17
+	GuardrailsMethod           = "aro.guardrails.method"
+	GuardrailsMethodGatekeeper = "gatekeeper"
+	GuardrailsMethodVAP        = "vap"
+	GuardrailsMethodAuto       = "auto"
 )
 
 // DefaultOperatorFlags returns flags for new clusters
@@ -101,5 +113,10 @@ func DefaultOperatorFlags() map[string]string {
 		GuardrailsPolicyMachineConfigDenyEnforcement: GuardrailsPolicyDryrun,
 		GuardrailsPolicyPrivNamespaceDenyManaged:     FlagTrue,
 		GuardrailsPolicyPrivNamespaceDenyEnforcement: GuardrailsPolicyDryrun,
+
+		// New clusters opt-in to automatic VAP-on-4.17+ selection. Existing
+		// clusters that do not yet have this flag fall back to Gatekeeper via
+		// the GetWithDefault call in the Guardrails controller.
+		GuardrailsMethod: GuardrailsMethodAuto,
 	}
 }

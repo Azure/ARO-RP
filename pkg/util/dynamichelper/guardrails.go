@@ -23,9 +23,10 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-// the UnstructuredObj related stuff is specifically for the Guardrails
-// to handle the gatekeeper Constraint as it does not have a scheme that can be imported
-func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, uns *unstructured.Unstructured) error {
+// ensureGatekeeperConstraint handles Gatekeeper Constraint resources which
+// do not have a scheme that can be imported. It only compares the
+// spec.enforcementAction field to decide whether an update is needed.
+func (dh *dynamicHelper) ensureGatekeeperConstraint(ctx context.Context, uns *unstructured.Unstructured) error {
 	gvr, err := dh.Resolve(uns.GroupVersionKind().GroupKind().String(), uns.GroupVersionKind().Version)
 	if err != nil {
 		return err

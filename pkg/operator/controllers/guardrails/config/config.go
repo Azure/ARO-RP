@@ -25,3 +25,7 @@ type GuardRailsDeploymentConfig struct {
 type GuardRailsPolicyConfig struct {
 	Enforcement string
 }
+
+type GuardRailsVAPBindingConfig struct {
+	ValidationAction string
+}

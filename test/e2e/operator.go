@@ -17,6 +17,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
 
@@ -41,6 +43,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	utilversion "github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -709,48 +712,197 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		gkAuditDeployment             = "gatekeeper-audit"
 	)
 
-	It("Controller Manager must be restored if deleted", func(ctx context.Context) {
+	isGuardrailsEnabled := func(ctx context.Context) bool {
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		return instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) &&
+			instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag)
+	}
 
-		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
-			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
-			Skip("Guardrails Controller is not enabled, skipping test")
+	clusterIsAtLeast417 := func(ctx context.Context) bool {
+		cv, err := clients.ConfigClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		clusterVer, err := utilversion.GetClusterVersion(cv)
+		if err != nil {
+			return false
 		}
+		ver417, _ := utilversion.ParseVersion("4.17.0")
+		return !clusterVer.Lt(ver417)
+	}
 
-		getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
-		deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
+	// --- Pre-4.17 Gatekeeper tests ---
 
-		By("waiting for the gatekeeper Controller Manager deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
+	Context("Gatekeeper (pre-4.17)", func() {
+		BeforeEach(func(ctx context.Context) {
+			if !isGuardrailsEnabled(ctx) {
+				Skip("Guardrails Controller is not enabled")
+			}
+			if clusterIsAtLeast417(ctx) {
+				Skip("Cluster is v4.17+, Gatekeeper is replaced by VAP")
+			}
+		})
 
-		By("deleting the gatekeeper Controller Manager deployment")
-		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkControllerManagerDeployment, metav1.DeleteOptions{})
+		It("Controller Manager must be restored if deleted", func(ctx context.Context) {
+			getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
+			deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
 
-		By("waiting for the gatekeeper Controller Manager deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
+			By("waiting for the gatekeeper Controller Manager deployment to be ready")
+			GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
+
+			By("deleting the gatekeeper Controller Manager deployment")
+			DeleteK8sObjectWithRetry(ctx, deleteFunc, gkControllerManagerDeployment, metav1.DeleteOptions{})
+
+			By("waiting for the gatekeeper Controller Manager deployment to be reconciled")
+			GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
+		})
+
+		It("Audit must be restored if deleted", func(ctx context.Context) {
+			getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
+			deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
+
+			By("waiting for the gatekeeper Audit deployment to be ready")
+			GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+
+			By("deleting the gatekeeper Audit deployment")
+			DeleteK8sObjectWithRetry(ctx, deleteFunc, gkAuditDeployment, metav1.DeleteOptions{})
+
+			By("waiting for the gatekeeper Audit deployment to be reconciled")
+			GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+		})
+
+		It("Gatekeeper constraint must exist when policy is managed", func(ctx context.Context) {
+			templateObj := &unstructured.Unstructured{}
+			templateObj.SetAPIVersion("constraints.gatekeeper.sh/v1beta1")
+			templateObj.SetKind("ARODenyLabels")
+
+			constraintClient, err := clients.Dynamic.GetClient(templateObj)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("verifying aro-machines-deny constraint exists")
+			Eventually(func(g Gomega, ctx context.Context) {
+				obj, err := constraintClient.Get(ctx, "aro-machines-deny", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(obj.GetName()).To(Equal("aro-machines-deny"))
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		})
 	})
 
-	It("Audit must be restored if deleted", func(ctx context.Context) {
-		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+	// --- 4.17+ VAP tests ---
 
-		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
-			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
-			Skip("Guardrails Controller is not enabled, skipping test")
-		}
+	Context("ValidatingAdmissionPolicy (v4.17+)", func() {
+		var vapClient func(ctx context.Context, name string, options metav1.GetOptions) (*unstructured.Unstructured, error)
+		var vapBindingClient func(ctx context.Context, name string, options metav1.GetOptions) (*unstructured.Unstructured, error)
 
-		getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
-		deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
+		BeforeEach(func(ctx context.Context) {
+			if !isGuardrailsEnabled(ctx) {
+				Skip("Guardrails Controller is not enabled")
+			}
+			if !clusterIsAtLeast417(ctx) {
+				Skip("Cluster is pre-4.17, using Gatekeeper instead of VAP")
+			}
 
-		By("waiting for the gatekeeper Audit deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+			vapObj := &unstructured.Unstructured{}
+			vapObj.SetAPIVersion("admissionregistration.k8s.io/v1")
+			vapObj.SetKind("ValidatingAdmissionPolicy")
+			vc, err := clients.Dynamic.GetClient(vapObj)
+			Expect(err).NotTo(HaveOccurred())
+			vapClient = vc.Get
 
-		By("deleting the gatekeeper Audit deployment")
-		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkAuditDeployment, metav1.DeleteOptions{})
+			bindingObj := &unstructured.Unstructured{}
+			bindingObj.SetAPIVersion("admissionregistration.k8s.io/v1")
+			bindingObj.SetKind("ValidatingAdmissionPolicyBinding")
+			bc, err := clients.Dynamic.GetClient(bindingObj)
+			Expect(err).NotTo(HaveOccurred())
+			vapBindingClient = bc.Get
+		})
 
-		By("waiting for the gatekeeper Audit deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
+		It("should have all expected VAP policies created", func(ctx context.Context) {
+			expectedPolicies := []string{
+				"aro-machines-deny",
+				"aro-machine-config-deny",
+				"aro-privileged-namespace-deny",
+			}
+
+			for _, name := range expectedPolicies {
+				By(fmt.Sprintf("verifying ValidatingAdmissionPolicy %s exists", name))
+				Eventually(func(g Gomega, ctx context.Context) {
+					obj, err := vapClient(ctx, name, metav1.GetOptions{})
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(obj.GetName()).To(Equal(name))
+				}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+			}
+		})
+
+		It("should have all expected VAP bindings created", func(ctx context.Context) {
+			expectedBindings := []string{
+				"aro-machines-deny-binding",
+				"aro-machine-config-deny-binding",
+				"aro-privileged-namespace-deny-binding",
+			}
+
+			for _, name := range expectedBindings {
+				By(fmt.Sprintf("verifying ValidatingAdmissionPolicyBinding %s exists", name))
+				Eventually(func(g Gomega, ctx context.Context) {
+					obj, err := vapBindingClient(ctx, name, metav1.GetOptions{})
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(obj.GetName()).To(Equal(name))
+				}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+			}
+		})
+
+		It("should remove and recreate VAP policy when toggled via operator flags", func(ctx context.Context) {
+			policyName := "aro-machines-deny"
+			bindingName := "aro-machines-deny-binding"
+
+			By("verifying the VAP policy exists before disabling")
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := vapClient(ctx, policyName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("disabling the aro-machines-deny policy via operator flag")
+			patchPayload := []byte(`[{"op": "replace", "path": "/spec/operatorflags/aro.guardrails.policies.aro-machines-deny.managed", "value": "false"}]`)
+			_, err := clients.AROClusters.AroV1alpha1().Clusters().Patch(ctx, "cluster", types.JSONPatchType, patchPayload, metav1.PatchOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func(ctx context.Context) {
+				revert := []byte(`[{"op": "replace", "path": "/spec/operatorflags/aro.guardrails.policies.aro-machines-deny.managed", "value": "true"}]`)
+				_, err := clients.AROClusters.AroV1alpha1().Clusters().Patch(ctx, "cluster", types.JSONPatchType, revert, metav1.PatchOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			By("waiting for the VAP policy to be removed")
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := vapClient(ctx, policyName, metav1.GetOptions{})
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("waiting for the VAP binding to be removed")
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := vapBindingClient(ctx, bindingName, metav1.GetOptions{})
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("re-enabling the aro-machines-deny policy via operator flag")
+			reEnable := []byte(`[{"op": "replace", "path": "/spec/operatorflags/aro.guardrails.policies.aro-machines-deny.managed", "value": "true"}]`)
+			_, err = clients.AROClusters.AroV1alpha1().Clusters().Patch(ctx, "cluster", types.JSONPatchType, reEnable, metav1.PatchOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("waiting for the VAP policy to be recreated")
+			Eventually(func(g Gomega, ctx context.Context) {
+				obj, err := vapClient(ctx, policyName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(obj.GetName()).To(Equal(policyName))
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("waiting for the VAP binding to be recreated")
+			Eventually(func(g Gomega, ctx context.Context) {
+				obj, err := vapBindingClient(ctx, bindingName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(obj.GetName()).To(Equal(bindingName))
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		})
 	})
 })
 
