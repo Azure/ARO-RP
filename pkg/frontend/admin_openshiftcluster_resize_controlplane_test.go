@@ -862,7 +862,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					Return(healthyKubeAPIServerJSON(), nil).
 					AnyTimes()
 				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
 					Return(healthyKubeAPIServerPodsJSON(), nil).
 					AnyTimes()
 				k.EXPECT().
@@ -1006,7 +1006,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					Return(healthyKubeAPIServerJSON(), nil).
 					AnyTimes()
 				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
 					Return(healthyKubeAPIServerPodsJSON(), nil).
 					AnyTimes()
 				k.EXPECT().
@@ -1310,7 +1310,7 @@ func TestAdminResizeControlPlaneFailureDetails(t *testing.T) {
 	k.EXPECT().CheckAPIServerReadyz(gomock.Any()).Return(nil).AnyTimes()
 	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 		Return(healthyKubeAPIServerJSON(), nil).AnyTimes()
-	k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
 		Return(healthyKubeAPIServerPodsJSON(), nil).AnyTimes()
 	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 		Return(healthyEtcdJSON(), nil).AnyTimes()
@@ -1457,7 +1457,7 @@ func TestAdminResizeControlPlanePreflightFailureDetails(t *testing.T) {
 	k.EXPECT().CheckAPIServerReadyz(gomock.Any()).Return(nil).AnyTimes()
 	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 		Return(healthyKubeAPIServerJSON(), nil).AnyTimes()
-	k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
 		Return(healthyKubeAPIServerPodsJSON(), nil).AnyTimes()
 	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 		Return(healthyEtcdJSON(), nil).AnyTimes()
