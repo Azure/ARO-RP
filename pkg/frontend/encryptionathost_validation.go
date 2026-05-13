@@ -8,21 +8,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
-
-type featureResult struct {
-	Properties *featureResultProperties `json:"properties"`
-}
-
-type featureResultProperties struct {
-	State string `json:"state"`
-}
 
 func validateEncryptionAtHostFeature(
 	ctx context.Context,
@@ -30,56 +21,41 @@ func validateEncryptionAtHostFeature(
 	environment env.Interface,
 	subscriptionID, tenantID string,
 ) error {
-	fpAuthorizer, err := environment.FPAuthorizer(
-		tenantID, nil,
-		environment.Environment().ResourceManagerScope)
+	fpCred, err := environment.FPNewClientCertificateCredential(tenantID, nil)
 	if err != nil {
 		return err
 	}
 
-	client := autorest.NewClientWithUserAgent("")
-	client.Authorizer = fpAuthorizer
-
-	url := fmt.Sprintf(
-		"%ssubscriptions/%s/providers/Microsoft.Features/providers/Microsoft.Compute/features/EncryptionAtHost",
-		azEnv.ResourceManagerEndpoint,
-		subscriptionID)
-
-	req, err := autorest.CreatePreparer(
-		autorest.AsGet(),
-		autorest.WithBaseURL(url),
-		autorest.WithQueryParameters(map[string]interface{}{
-			"api-version": "2021-07-01",
-		}),
-	).Prepare((&http.Request{}).WithContext(ctx))
+	featuresClient, err := armfeatures.NewClient(subscriptionID, fpCred, azEnv.ArmClientOptions())
 	if err != nil {
 		return err
 	}
 
-	resp, err := autorest.SendWithSender(client, req)
+	resp, err := featuresClient.Get(ctx, "Microsoft.Compute", "EncryptionAtHost", nil)
 	if err != nil {
 		return err
 	}
 
-	var result featureResult
-	err = autorest.Respond(resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK),
-		autorest.ByUnmarshallingJSON(&result),
-		autorest.ByClosing())
-	if err != nil {
-		return err
-	}
-
-	if result.Properties == nil ||
-		result.Properties.State != "Registered" {
+	if resp.Properties == nil || resp.Properties.State == nil {
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
 			"encryptionAtHost",
 			fmt.Sprintf(
 				"Microsoft.Compute/EncryptionAtHost"+
-					" is not registered for"+
+					" feature has no state for"+
 					" subscription %s.",
+				subscriptionID))
+	}
+
+	if *resp.Properties.State != "Registered" {
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
+			"encryptionAtHost",
+			fmt.Sprintf(
+				"Microsoft.Compute/EncryptionAtHost feature is not registered on subscription %s. "+
+					"Please register the feature on your subscription before creating the cluster.",
 				subscriptionID))
 	}
 
