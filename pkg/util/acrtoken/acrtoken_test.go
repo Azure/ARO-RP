@@ -272,16 +272,15 @@ func setupManager(controller *gomock.Controller, tc *mock_armcontainerregistry.M
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().ACRResourceID().AnyTimes().Return(registryResourceID)
 	env.EXPECT().ACRDomain().AnyTimes().Return(registryDomain)
+	env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time { return time.UnixMilli(1000) })
 	r, _ := azure.ParseResourceID(registryResourceID)
 	u := deterministicuuid.NewTestUUIDGenerator(0x22)
-	now := func() time.Time { return time.UnixMilli(1000) }
 	return &manager{
 		env:        env,
 		r:          r,
 		tokens:     tc,
 		registries: rc,
 		uuid:       u,
-		now:        now,
 	}
 }
 
@@ -426,5 +425,75 @@ func TestNewAndPutRegistryProfile(t *testing.T) {
 			},
 		}) {
 		t.Error(err)
+	}
+}
+
+func TestShouldRotate(t *testing.T) {
+	tests := []struct {
+		name                        string
+		registryProfile             *api.RegistryProfile
+		shouldRotate                bool
+		shouldBeValid               bool
+		shouldGiveRemainingRotation time.Duration
+		shouldGiveRemainingValidity time.Duration
+	}{
+		{
+			name:          "nil registryprofile causes rotation",
+			shouldRotate:  true,
+			shouldBeValid: false,
+		},
+		{
+			name:                        "nil issue date causes rotation",
+			registryProfile:             &api.RegistryProfile{},
+			shouldRotate:                true,
+			shouldBeValid:               false,
+			shouldGiveRemainingRotation: 0,
+		},
+		{
+			name: "old token causes rotation",
+			registryProfile: &api.RegistryProfile{
+				IssueDate: pointerutils.ToPtr(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+			},
+			shouldRotate:                true,
+			shouldBeValid:               false,
+			shouldGiveRemainingRotation: -time.Hour * 24 * (365 - 140),
+			shouldGiveRemainingValidity: 0,
+		},
+		{
+			name: "future token (somehow) does not cause rotation",
+			registryProfile: &api.RegistryProfile{
+				IssueDate: pointerutils.ToPtr(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)),
+			},
+			shouldRotate:                false,
+			shouldBeValid:               true,
+			shouldGiveRemainingRotation: time.Hour * 24 * (365 + 140),
+			shouldGiveRemainingValidity: time.Hour * 24 * (365 + 180),
+		},
+		{
+			name: "current token does not cause rotation",
+			registryProfile: &api.RegistryProfile{
+				IssueDate: pointerutils.ToPtr(time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC)),
+			},
+			shouldRotate:                false,
+			shouldBeValid:               true,
+			shouldGiveRemainingRotation: time.Hour * 24 * (140 - 31),
+			shouldGiveRemainingValidity: time.Hour * 24 * (180 - 31),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := require.New(t)
+			controller := gomock.NewController(t)
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) })
+
+			gotShouldRotate, gotValid, gotRemainingRotation, gotRemainingValidity := ShouldRotateToken(env, tt.registryProfile)
+			r.Equal(tt.shouldRotate, gotShouldRotate)
+			r.Equal(tt.shouldBeValid, gotValid)
+			r.Equal(tt.shouldGiveRemainingRotation, gotRemainingRotation)
+			r.Equal(tt.shouldGiveRemainingValidity, gotRemainingValidity)
+		})
 	}
 }

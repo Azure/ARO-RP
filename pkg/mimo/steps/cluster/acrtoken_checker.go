@@ -7,15 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
-)
-
-const (
-	daysValid        = 90
-	daysShouldRotate = 45
 )
 
 // EnsureACRTokenIsValid checks the expiry date of the Azure Container Registry (ACR) Token from the RegistryProfile.
@@ -29,25 +23,18 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	env := th.Environment()
 	registryProfiles := th.GetOpenShiftClusterProperties().RegistryProfiles
 	rp := acrtoken.GetRegistryProfileFromSlice(env, registryProfiles)
-	if rp != nil {
-		now := time.Now().UTC()
-		issueDate := rp.IssueDate
 
-		if issueDate == nil {
-			return mimo.TerminalError(errors.New("no issue date detected, please rotate token"))
-		}
-
-		daysInterval := int32(now.Sub(*issueDate).Hours() / 24)
-
-		switch {
-		case daysInterval > daysValid:
-			return mimo.TerminalError(fmt.Errorf("azure container registry (acr) token is not valid, %d days have passed", daysInterval))
-		case daysInterval >= daysShouldRotate:
-			return mimo.TerminalError(fmt.Errorf("%d days have passed since azure container registry (acr) token was issued, please rotate the token now", daysInterval))
-		default:
-			th.SetResultMessage("azure container registry (acr) token is valid")
-		}
+	if rp == nil || rp.IssueDate == nil {
+		return mimo.TerminalError(errors.New("no issue date detected, please rotate token"))
 	}
 
-	return mimo.TerminalError(errors.New("no registry profile detected"))
+	shouldRotate, isValid, timeUntilNextRotate, validityRemaining := acrtoken.ShouldRotateToken(env, rp)
+
+	if !isValid {
+		return mimo.TerminalError(errors.New("token is expired"))
+	} else if shouldRotate {
+		return mimo.TerminalError(fmt.Errorf("%s since ACR token should be rotated, %s validity remaining, please rotate", timeUntilNextRotate.String(), validityRemaining.String()))
+	}
+	th.SetResultMessage(fmt.Sprintf("token validity has %s remaining, should be rotated in %s", validityRemaining.String(), timeUntilNextRotate.String()))
+	return nil
 }

@@ -35,14 +35,15 @@ func TestEnsureACRToken(t *testing.T) {
 	ctx := context.Background()
 
 	startOf2024 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	hundredDaysInThePast := time.Now().UTC().AddDate(0, 0, -100)
-	fiftyDaysInThePast := time.Now().UTC().AddDate(0, 0, -50)
+	expiredTime := startOf2024.AddDate(0, 0, -365)
+	duringRenewalTime := startOf2024.AddDate(0, 0, -150)
 
 	for _, tt := range []struct {
-		name     string
-		azureEnv azureclient.AROEnvironment
-		oc       func() *api.OpenShiftCluster
-		wantErr  string
+		name       string
+		azureEnv   azureclient.AROEnvironment
+		oc         func() *api.OpenShiftCluster
+		wantErr    string
+		wantResult string
 	}{
 		{
 			name:     "not found",
@@ -52,7 +53,7 @@ func TestEnsureACRToken(t *testing.T) {
 					Properties: api.OpenShiftClusterProperties{},
 				}
 			},
-			wantErr: "TerminalError: no registry profile detected",
+			wantErr: "TerminalError: no issue date detected, please rotate token",
 		},
 		{
 			name:     "No issue date",
@@ -82,18 +83,18 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      publicACR,
 								Username:  user,
-								IssueDate: &startOf2024,
+								IssueDate: &expiredTime,
 							},
 							{
 								Name:      intACR,
 								Username:  user,
-								IssueDate: &hundredDaysInThePast,
+								IssueDate: &expiredTime,
 							},
 						},
 					},
 				}
 			},
-			wantErr: "TerminalError: azure container registry (acr) token is not valid, 100 days have passed",
+			wantErr: "TerminalError: token is expired",
 		},
 		{
 			name:     "Should rotate token",
@@ -110,13 +111,36 @@ func TestEnsureACRToken(t *testing.T) {
 							{
 								Name:      intACR,
 								Username:  user,
-								IssueDate: &fiftyDaysInThePast,
+								IssueDate: &duringRenewalTime,
 							},
 						},
 					},
 				}
 			},
-			wantErr: "TerminalError: 50 days have passed since azure container registry (acr) token was issued, please rotate the token now",
+			wantErr: "TerminalError: -240h0m0s since ACR token should be rotated, 720h0m0s validity remaining, please rotate",
+		},
+		{
+			name:     "valid token",
+			azureEnv: azureclient.PublicCloud,
+			oc: func() *api.OpenShiftCluster {
+				return &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						RegistryProfiles: []*api.RegistryProfile{
+							{
+								Name:      publicACR,
+								Username:  user,
+								IssueDate: &startOf2024,
+							},
+							{
+								Name:      intACR,
+								Username:  user,
+								IssueDate: &startOf2024,
+							},
+						},
+					},
+				}
+			},
+			wantResult: "token validity has 4320h0m0s remaining, should be rotated in 3360h0m0s",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -125,12 +149,15 @@ func TestEnsureACRToken(t *testing.T) {
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().ACRDomain().AnyTimes().Return(intACR)
 			_env.EXPECT().Environment().AnyTimes().Return(&tt.azureEnv)
+			_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
+				return startOf2024
+			})
 			_, log := testlog.New()
 
 			builder := fake.NewClientBuilder()
 			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 			tc := testtasks.NewFakeTestContext(
-				ctx, _env, log, func() time.Time { return time.Unix(100, 0) },
+				ctx, _env, log, func() time.Time { return startOf2024 },
 				testtasks.WithClientHelper(ch),
 				testtasks.WithOpenShiftClusterDocument(&api.OpenShiftClusterDocument{ID: clusterUUID, OpenShiftCluster: tt.oc()}),
 			)
@@ -139,9 +166,13 @@ func TestEnsureACRToken(t *testing.T) {
 			if tt.wantErr != "" && err != nil {
 				utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			} else if tt.wantErr != "" && err == nil {
-				t.Errorf("wanted error %s", tt.wantErr)
+				t.Errorf("wanted error %s, got %s", tt.wantErr, err)
 			} else if tt.wantErr == "" {
 				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			if tt.wantResult != "" {
+				g.Expect(tc.GetResultMessage()).To(Equal(tt.wantResult))
 			}
 		})
 	}
