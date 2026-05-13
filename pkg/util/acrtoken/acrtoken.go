@@ -20,7 +20,7 @@ import (
 )
 
 // Maximum lifetime of the ACR token
-var (
+const (
 	ACR_TOKEN_ROTATE_DAYS   = 140
 	ACR_TOKEN_LIFETIME_DAYS = 180
 	ACR_TOKEN_ROTATE        = time.Hour * 24 * time.Duration(ACR_TOKEN_ROTATE_DAYS)
@@ -215,6 +215,9 @@ func (m *manager) Delete(ctx context.Context, registryProfile *api.RegistryProfi
 	return err
 }
 
+// ShouldRotateToken returns whether a token should be rotated, is before its
+// validity expiry, and how long until it should be rotated and expiry will
+// happen.
 func ShouldRotateToken(_env env.Core, registryProfile *api.RegistryProfile) (shouldRotate bool, isValid bool, timeUntilNextRotate time.Duration, timeUntilTokenExpiry time.Duration) {
 	if registryProfile == nil || registryProfile.IssueDate == nil {
 		return true, false, 0, 0
