@@ -181,6 +181,8 @@ func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeAction
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
+	t.Parallel()
+
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
@@ -773,7 +775,10 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			wantError:      `500: InternalServerError: kube-apiserver: API server is reporting a non-ready status: connection refused`,
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
 			defer ti.done()
 
