@@ -216,7 +216,7 @@ func TestRotateTokenPassword(t *testing.T) {
 	}
 }
 
-func TestRotateTokenPasswordNilStruct(t *testing.T) {
+func TestRotateTokenPasswordOnlyUsernameStruct(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
 	tokens := mock_armcontainerregistry.NewMockTokensClient(controller)

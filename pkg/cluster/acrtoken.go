@@ -111,6 +111,10 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	}
 
 	registryProfile := token.GetRegistryProfile(m.doc.OpenShiftCluster)
+	if registryProfile == nil {
+		// this should never happen, but just in case
+		return m.ensureACRToken(ctx)
+	}
 
 	// Only rotate the token if required
 	shouldRotate, _, durationUntilRotate, validityRemaining := acrtoken.ShouldRotateToken(m.env, registryProfile)
