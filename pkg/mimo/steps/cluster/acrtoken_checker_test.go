@@ -117,7 +117,7 @@ func TestEnsureACRToken(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "TerminalError: -240h0m0s since ACR token should be rotated, 720h0m0s validity remaining, please rotate",
+			wantErr: "TerminalError: token able to be renewed for 240h0m0s, 720h0m0s validity remaining, please rotate",
 		},
 		{
 			name:     "valid token",
@@ -166,7 +166,7 @@ func TestEnsureACRToken(t *testing.T) {
 			if tt.wantErr != "" && err != nil {
 				utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			} else if tt.wantErr != "" && err == nil {
-				t.Errorf("wanted error %s, got %s", tt.wantErr, err)
+				t.Errorf("wanted error %s, got %v", tt.wantErr, err)
 			} else if tt.wantErr == "" {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
