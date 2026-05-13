@@ -17,16 +17,16 @@ main() {
     configure_sshd
 
     local -ri pkg_retry_count=60
+    local -ri repo_retry_count=5
     configure_rpm_repos retry_wait_time \
-                        "$pkg_retry_count"
+                        "$repo_retry_count"
 
     # shellcheck disable=SC2034
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
-        "-x WALinuxAgent-udev"
     )
 
-    dnf_update_pkgs exclude_pkgs \
+    tdnf_update_pkgs exclude_pkgs \
                     retry_wait_time \
                     "$pkg_retry_count"
 
@@ -45,7 +45,7 @@ main() {
         firewalld
     )
 
-    dnf_install_pkgs install_pkgs \
+    tdnf_install_pkgs install_pkgs \
                       retry_wait_time \
                       "$pkg_retry_count"
 
