@@ -573,7 +573,8 @@ def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
 
     if oc.service_principal_profile and (platform_workload_identities or mi_user_assigned):
         raise InvalidArgumentValueError(
-            "Cannot assign platform workload identities to a cluster with service principal"
+            "Cannot assign platform workload identities or a cluster identity "
+            "to a cluster with service principal."
         )
 
     if oc.service_principal_profile:
@@ -600,7 +601,8 @@ def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
             oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile()
 
         if platform_workload_identities:
-            oc_update.platform_workload_identity_profile.platform_workload_identities = dict(platform_workload_identities)  # pylint: disable=line-too-long
+            oc_update.platform_workload_identity_profile.platform_workload_identities = \
+                dict(platform_workload_identities)
 
         if upgradeable_to:
             oc_update.platform_workload_identity_profile.upgradeable_to = upgradeable_to
@@ -609,9 +611,10 @@ def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
         oc_update.network_profile = openshiftcluster.NetworkProfile()
         oc_update.network_profile.load_balancer_profile = openshiftcluster.LoadBalancerProfile()
         oc_update.network_profile.load_balancer_profile.managed_outbound_ips = openshiftcluster.ManagedOutboundIPs()
-        oc_update.network_profile.load_balancer_profile.managed_outbound_ips.count = load_balancer_managed_outbound_ip_count  # pylint: disable=line-too-long
+        oc_update.network_profile.load_balancer_profile.managed_outbound_ips.count = \
+            load_balancer_managed_outbound_ip_count
 
-    if upgradeable_to and not platform_workload_identities and not mi_user_assigned:
+    if upgradeable_to and not platform_workload_identities and not mi_user_assigned and not oc.service_principal_profile:  # pylint: disable=line-too-long
         oc_update = ensure_platform_workload_identities_for_upgrade(
             cmd,
             client,
