@@ -117,8 +117,8 @@
                     }
                 ],
                 "sku": {
-                    "name": "VpnGw1",
-                    "tier": "VpnGw1"
+                    "name": "VpnGw1AZ",
+                    "tier": "VpnGw1AZ"
                 },
                 "vpnClientConfiguration": {
                     "vpnClientAddressPool": {

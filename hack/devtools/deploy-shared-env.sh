@@ -226,6 +226,23 @@ vpn_configuration() {
     rm vpnclientconfiguration.zip
 }
 
+# legacy vpn configuration (currently used in v4-westeurope)
+# rather than a combined vnet, there are 2 (one aks-net, and one dev-vnet)
+vpn_aks_configuration() {
+    echo "########## VPN Configuration ##########"
+    curl -so vpnclientconfiguration.zip "$(az network vnet-gateway vpn-client generate \
+        -g "$RESOURCEGROUP" \
+        -n aks-vpn \
+        -o tsv)"
+    export CLIENTCERTIFICATE="$(openssl x509 -inform der -in secrets/vpn-client.crt)"
+    export PRIVATEKEY="$(openssl pkey -inform der -in secrets/vpn-client.key)"
+    unzip -qc vpnclientconfiguration.zip 'OpenVPN\\vpnconfig.ovpn' \
+        | envsubst \
+        | grep -v '^log ' >"secrets/vpn-aks-$LOCATION.ovpn"
+    rm vpnclientconfiguration.zip
+}
+
+
 validate_arm_template_state() {
     ARM_TEMPLATE_STATE=$(az deployment group show -n $1 -g $RESOURCEGROUP --query properties.provisioningState -o tsv)
     if [[ $ARM_TEMPLATE_STATE == "Failed" ]]; then
