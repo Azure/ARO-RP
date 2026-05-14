@@ -715,7 +715,7 @@ export ARO_ENABLE_OUTBOUND_HTTP_LOGGING=true
 | development | false/unset                           | ❌ No                    | ✅ Yes                    |
 | development | `true`                                | ✅ Yes                   | ✅ Yes                    |
 
-> [!Note]
+> [!NOTE]
 > This setting only affects development mode. In production, outbound HTTP
 > logging is always enabled for compliance requirements.
 
