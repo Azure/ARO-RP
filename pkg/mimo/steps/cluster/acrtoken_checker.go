@@ -32,7 +32,8 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 
 	if !isValid {
 		return mimo.TerminalError(errors.New("token is expired"))
-	} else if shouldRotate {
+	}
+	if shouldRotate {
 		return mimo.TerminalError(fmt.Errorf("token able to be renewed for %s, %s validity remaining, please rotate", timeUntilNextRotate.Abs().String(), validityRemaining.String()))
 	}
 	th.SetResultMessage(fmt.Sprintf("token validity has %s remaining, should be rotated in %s", validityRemaining.String(), timeUntilNextRotate.String()))
