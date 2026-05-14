@@ -612,7 +612,14 @@ def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
         oc_update.network_profile.load_balancer_profile.managed_outbound_ips.count = load_balancer_managed_outbound_ip_count  # pylint: disable=line-too-long
 
     if upgradeable_to and not platform_workload_identities and not mi_user_assigned:
-        oc_update = ensure_platform_workload_identities_for_upgrade(cmd, client, resource_group_name, oc, oc_update, upgradeable_to)
+        oc_update = ensure_platform_workload_identities_for_upgrade(
+            cmd,
+            client,
+            resource_group_name,
+            oc,
+            oc_update,
+            upgradeable_to
+        )
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_update,
                        resource_group_name=resource_group_name,
@@ -1037,6 +1044,7 @@ def _determine_required_scopes_from_network_resources(cmd,
         RoleAssignmentScope.WORKER_SUBNET: worker_subnet,
     }
 
+
 def create_identity_and_role_assignments(*,
                                          cmd,
                                          role,
@@ -1064,7 +1072,7 @@ def create_identity_and_role_assignments(*,
         )
 
     progress.add(message="Creating cluster identity's federated credential "
-        f"role assignment over {role.operator_name} identity")
+                 f"role assignment over {role.operator_name} identity")
     defn = resource_id(
         subscription=get_subscription_id(cmd.cli_ctx),
         namespace="Microsoft.Authorization",
@@ -1082,12 +1090,19 @@ def create_identity_and_role_assignments(*,
 
     return identity
 
+
+# pylint: disable=too-many-positional-arguments
 def ensure_platform_workload_identities_for_upgrade(cmd, client, resource_group_name, oc, oc_update, upgradeable_to):
     oc_update.identity = oc.identity
-    oc_update.platform_workload_identity_profile.platform_workload_identities = oc.platform_workload_identity_profile.platform_workload_identities
+    oc_update.platform_workload_identity_profile.platform_workload_identities = \
+        oc.platform_workload_identity_profile.platform_workload_identities
 
-    target_platform_workload_identity_roles = _get_pwi_role_set(client, upgradeable_to, oc.location).platform_workload_identity_roles
-    existing_operator_identities = [k for k in oc.platform_workload_identity_profile.platform_workload_identities.keys()]
+    target_platform_workload_identity_roles = _get_pwi_role_set(
+        client,
+        upgradeable_to,
+        oc.location
+    ).platform_workload_identity_roles
+    existing_operator_identities = list(oc.platform_workload_identity_profile.platform_workload_identities.keys())
     target_operator_identities = [elem.operator_name for elem in target_platform_workload_identity_roles]
 
     dissection = set(target_operator_identities) - set(existing_operator_identities)
@@ -1124,5 +1139,6 @@ def ensure_platform_workload_identities_for_upgrade(cmd, client, resource_group_
                 cluster_identity=cluster_identity
             )
 
-            oc_update.platform_workload_identity_profile.platform_workload_identities[operator_name] = openshiftcluster.PlatformWorkloadIdentity(resource_id=identity["id"])
+            oc_update.platform_workload_identity_profile.platform_workload_identities[operator_name] = \
+                openshiftcluster.PlatformWorkloadIdentity(resource_id=identity["id"])
     return oc_update
