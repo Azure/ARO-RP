@@ -295,7 +295,7 @@ running off of your local laptop.
 
     1. Setup insecure-tls `oc`:
 
-        To interact with the cluster using using `oc` you will need to add the
+        To interact with the cluster using `oc` you will need to add the
         `--insecure-skip-tls-verify` flag to all commands or use this handy
         alias:
 
