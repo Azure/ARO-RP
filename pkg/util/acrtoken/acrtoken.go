@@ -21,10 +21,10 @@ import (
 
 // Maximum lifetime of the ACR token
 const (
-	ACR_TOKEN_ROTATE_DAYS   = 140
-	ACR_TOKEN_LIFETIME_DAYS = 180
-	ACR_TOKEN_ROTATE        = time.Hour * 24 * time.Duration(ACR_TOKEN_ROTATE_DAYS)
-	ACR_TOKEN_LIFETIME      = time.Hour * 24 * time.Duration(ACR_TOKEN_LIFETIME_DAYS)
+	ACRTokenRotateAfterDays = 140
+	ACRTokenMaxLifetimeDays = 180
+	ACRTokenRotateAfter     = time.Hour * 24 * time.Duration(ACRTokenRotateAfterDays)
+	ACRTokenMaxLifetime     = time.Hour * 24 * time.Duration(ACRTokenMaxLifetimeDays)
 )
 
 type Manager interface {
@@ -223,8 +223,8 @@ func ShouldRotateToken(_env env.Core, registryProfile *api.RegistryProfile) (sho
 		return true, false, 0, 0
 	}
 	now := _env.Now()
-	rotateIfAfter := registryProfile.IssueDate.Add(ACR_TOKEN_ROTATE)
-	validityEnd := registryProfile.IssueDate.Add(ACR_TOKEN_LIFETIME)
+	rotateIfAfter := registryProfile.IssueDate.Add(ACRTokenRotateAfter)
+	validityEnd := registryProfile.IssueDate.Add(ACRTokenMaxLifetime)
 
 	shouldRotate = now.After(rotateIfAfter)
 	isValid = validityEnd.After(now)
