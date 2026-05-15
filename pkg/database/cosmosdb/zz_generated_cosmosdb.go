@@ -144,7 +144,11 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 		return resp, err
 	}
 
-	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
+	// CRITICAL FIX: Do not add Content-Type check here. CosmosDB guarantees JSON response body on
+	// success but may omit the header. Checking Content-Type causes silent (nil, nil) returns.
+	// See ARO-25422.
+	// WARNING: This file is auto-generated — preserve this fix if regenerating.
+	if out != nil {
 		return resp, d.Decode(&out)
 	}
 
