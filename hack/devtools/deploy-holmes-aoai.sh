@@ -114,15 +114,16 @@ update_secrets_env() {
     tmp_file=$(mktemp -p "$(dirname "${secrets_file}")")
 
     # Handle case where all lines might match the filter (use || true to avoid exit 1 with set -e)
-    grep -v -E '^export HOLMES_AZURE_API_(KEY|BASE|VERSION)=|^# Holmes Azure OpenAI' \
+    # Also remove blank lines that precede Holmes section to prevent accumulation
+    grep -v -E '^export HOLMES_AZURE_API_(KEY|BASE|VERSION)=|^# Holmes Azure OpenAI|^[[:space:]]*$' \
         "${secrets_file}" > "${tmp_file}" || true
 
+    # Use printf %q for safe escaping of credential values (handles any special characters)
     cat >> "${tmp_file}" <<EOF
-
 # Holmes Azure OpenAI credentials
-export HOLMES_AZURE_API_KEY='${api_key}'
-export HOLMES_AZURE_API_BASE='${api_base}'
-export HOLMES_AZURE_API_VERSION='${HOLMES_API_VERSION}'
+export HOLMES_AZURE_API_KEY=$(printf %q "${api_key}")
+export HOLMES_AZURE_API_BASE=$(printf %q "${api_base}")
+export HOLMES_AZURE_API_VERSION=$(printf %q "${HOLMES_API_VERSION}")
 EOF
 
     mv "${tmp_file}" "${secrets_file}"
