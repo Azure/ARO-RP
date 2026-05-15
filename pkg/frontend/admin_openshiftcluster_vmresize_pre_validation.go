@@ -93,17 +93,17 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return nil, err
 	}
 
-	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize, log)
+	return f.preResizeControlPlaneVMsValidation(ctx, log, doc, subscriptionDoc, k, a, desiredVMSize)
 }
 
 func (f *frontend) preResizeControlPlaneVMsValidation(
 	ctx context.Context,
+	log *logrus.Entry,
 	doc *api.OpenShiftClusterDocument,
 	subscriptionDoc *api.SubscriptionDocument,
 	k adminactions.KubeActions,
 	a adminactions.AzureActions,
 	desiredVMSize string,
-	log *logrus.Entry,
 ) ([]byte, error) {
 	// Run checks in parallel, collecting all errors so the caller sees every
 	// failure at once. For API server checks, run ClusterOperator status first
@@ -156,7 +156,7 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 		return nil, preResizeControlPlaneValidationError(details)
 	}
 
-	collect(validateResizeControlPlaneInventory(log, ctx, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
+	collect(validateResizeControlPlaneInventory(ctx, log, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
 	if len(details) > 0 {
 		return nil, preResizeControlPlaneValidationError(details)
 	}
@@ -176,8 +176,8 @@ func preResizeControlPlaneValidationError(details []api.CloudErrorBody) *api.Clo
 }
 
 func validateResizeControlPlaneInventory(
-	log *logrus.Entry,
 	ctx context.Context,
+	log *logrus.Entry,
 	k adminactions.KubeActions,
 	a adminactions.AzureActions,
 	clusterResourceGroupID string,

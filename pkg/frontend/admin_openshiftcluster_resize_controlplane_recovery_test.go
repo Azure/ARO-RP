@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -81,6 +82,8 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 			k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 		)
 
+		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+			Return(healthyEtcdJSON(), nil).AnyTimes()
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"failed to resize node master-0: resizing VM: Azure resize error",
@@ -156,6 +159,8 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 			k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 		)
 
+		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+			Return(healthyEtcdJSON(), nil).AnyTimes()
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"failed to resize node master-1: draining node: could not drain node after 3 retries: drain error",
@@ -215,6 +220,8 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 			k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 		)
 
+		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+			Return(healthyEtcdJSON(), nil).AnyTimes()
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"Control plane node master-2 is not Ready",
@@ -277,6 +284,8 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 			k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 		)
 
+		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+			Return(healthyEtcdJSON(), nil).AnyTimes()
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"failed to capture Azure VM state for master-1",
@@ -406,7 +415,7 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 	gomock.InOrder(
 		a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
 		a.EXPECT().VMResize(gomock.Any(), "master-0", "Standard_D8s_v3").Return(nil),
-		a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(errors.New("start failed after size restore")),
+		a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(errors.New("start failed after size restore")).Times(azureOperationMaxAttempts),
 		k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
 			Return(machineJSON("master-0", desiredSize), nil),
 		k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
@@ -418,7 +427,8 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 	err := op.rollbackNode(ctx, state)
 	assertErrorContainsAll(t, err,
 		"restoring original VM size",
-		"starting VM after restoring original size: start failed after size restore",
+		"start VM after rollback",
+		"start failed after size restore",
 	)
 
 	if state.schedulabilityNeedsRestore != true {
@@ -476,4 +486,116 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 			t.Fatalf("error message %q does not contain %q", message, expected)
 		}
 	}
+}
+
+func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	_, log := testlog.New()
+
+	err := &resizeControlPlaneError{
+		baseErr: fmt.Errorf("failed to resize node master-0: %w",
+			&resizeStepError{
+				nodeName: "master-0", step: resizeStepResize,
+				err: fmt.Errorf("resizing VM: %w", errors.New("Azure resize error")),
+			}),
+		forward: []resizeStepRecord{
+			{nodeName: "master-0", step: resizeStepStop, duration: 10 * time.Millisecond},
+			{nodeName: "master-0", step: resizeStepResize, duration: 10 * time.Millisecond, err: errors.New("Azure resize error")},
+		},
+		rollback: []resizeStepRecord{
+			{nodeName: "master-0", step: resizeStepStart, rollback: true, duration: 10 * time.Millisecond},
+		},
+	}
+
+	adminReply(log, recorder, nil, nil, err)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("status code = %d, want %d", recorder.Code, http.StatusInternalServerError)
+	}
+
+	var body map[string]map[string]any
+	if decodeErr := json.Unmarshal(recorder.Body.Bytes(), &body); decodeErr != nil {
+		t.Fatalf("failed to decode response body: %v", decodeErr)
+	}
+
+	errorBody := body["error"]
+	if errorBody["code"] != api.CloudErrorCodeInternalServerError {
+		t.Fatalf("error code = %v, want %s", errorBody["code"], api.CloudErrorCodeInternalServerError)
+	}
+
+	message, ok := errorBody["message"].(string)
+	if !ok {
+		t.Fatalf("error message has unexpected type %T", errorBody["message"])
+	}
+	for _, expected := range []string{
+		"Azure resize error",
+		"Steps taken:",
+		"master-0:stop",
+		"master-0:resize failed",
+		"Rollback:",
+		"master-0:start",
+	} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("error message %q does not contain %q", message, expected)
+		}
+	}
+}
+
+func TestRetryAzureOperation(t *testing.T) {
+	t.Run("succeeds on first attempt", func(t *testing.T) {
+		calls := 0
+		err := retryAzureOperation(context.Background(), "test op", func() error {
+			calls++
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if calls != 1 {
+			t.Fatalf("expected 1 call, got %d", calls)
+		}
+	})
+
+	t.Run("succeeds on second attempt", func(t *testing.T) {
+		calls := 0
+		err := retryAzureOperation(context.Background(), "test op", func() error {
+			calls++
+			if calls == 1 {
+				return errors.New("transient")
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if calls != 2 {
+			t.Fatalf("expected 2 calls, got %d", calls)
+		}
+	})
+
+	t.Run("fails after max attempts", func(t *testing.T) {
+		calls := 0
+		err := retryAzureOperation(context.Background(), "test op", func() error {
+			calls++
+			return errors.New("persistent")
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if calls != azureOperationMaxAttempts {
+			t.Fatalf("expected %d calls, got %d", azureOperationMaxAttempts, calls)
+		}
+		assertErrorContainsAll(t, err, "could not complete test op", "persistent")
+	})
+
+	t.Run("respects context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err := retryAzureOperation(ctx, "test op", func() error {
+			return errors.New("will retry")
+		})
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context.Canceled, got %v", err)
+		}
+	})
 }

@@ -90,6 +90,37 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 		return err
 	}
 
+	switch doc.OpenShiftCluster.Properties.ProvisioningState {
+	case api.ProvisioningStateAdminUpdating, api.ProvisioningStateUpdating,
+		api.ProvisioningStateCreating, api.ProvisioningStateDeleting:
+		return api.NewCloudError(
+			http.StatusConflict,
+			api.CloudErrorCodeRequestNotAllowed, "",
+			fmt.Sprintf("Cannot resize control plane while cluster is in %q state.",
+				doc.OpenShiftCluster.Properties.ProvisioningState))
+	}
+
+	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
+	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+	// Prevent the backend from dequeuing this document for processing.
+	// The resize operation is handled synchronously by the frontend, not
+	// by the backend's async pipeline. Setting Dequeues >= 5 keeps it
+	// out of the backend dequeue query while we hold the lock.
+	oldDequeues := doc.Dequeues
+	doc.Dequeues = 5
+	doc, err = dbOpenShiftClusters.Update(ctx, doc)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		doc.OpenShiftCluster.Properties.ProvisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
+		doc.Dequeues = oldDequeues
+		if _, restoreErr := dbOpenShiftClusters.Update(context.Background(), doc); restoreErr != nil {
+			log.Errorf("Failed to restore provisioning state after resize: %v", restoreErr)
+		}
+	}()
+
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return err
@@ -106,7 +137,7 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 	}
 
 	// Run all pre-flight validations (API server health, etcd health, SP, VM SKU, quota).
-	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize, log)
+	_, err = f.preResizeControlPlaneVMsValidation(ctx, log, doc, subscriptionDoc, k, a, vmSize)
 	if err != nil {
 		return err
 	}
@@ -146,7 +177,7 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 		// Re-evaluate control plane health before every iteration. Even when a
 		// machine already matches the target SKU, we must not continue to the
 		// next resize while another control plane node is NotReady or cordoned.
-		if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, sortedNames); err != nil {
+		if err := ensureControlPlaneAndEtcdHealthy(ctx, k, sortedNames); err != nil {
 			if len(operation.nodes) == 0 {
 				return err
 			}

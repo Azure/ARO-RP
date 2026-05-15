@@ -578,6 +578,8 @@ func TestResizeControlPlane(t *testing.T) {
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			a := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(k, a)
+			k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+				Return(healthyEtcdJSON(), nil).AnyTimes()
 
 			err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 			if len(tt.wantErrContains) > 0 {
@@ -836,6 +838,35 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: deallocateVM: The provided deallocateVM value 'foo' is invalid. Allowed values are 'true' or 'false'.`,
+		},
+		{
+			name:         "rejects concurrent resize when cluster is AdminUpdating",
+			vmSize:       "Standard_D8s_v3",
+			deallocateVM: "true",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateAdminUpdating,
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				addSubscriptionDoc(f)
+			},
+			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
+			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode: http.StatusConflict,
+			wantError:      `409: RequestNotAllowed: : Cannot resize control plane while cluster is in "AdminUpdating" state.`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

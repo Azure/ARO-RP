@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
@@ -29,6 +30,12 @@ const (
 	// Rollback needs a larger per-master budget because a late failure can
 	// require stop -> resize back -> start -> waitReady before metadata restore.
 	resizeControlPlanePerNodeRollbackTimeout = time.Hour
+
+	azureOperationMaxAttempts = 3
+	azureOperationRetryDelay  = 5 * time.Second
+
+	etcdHealthPollTimeout  = 10 * time.Minute
+	etcdHealthPollInterval = 10 * time.Second
 )
 
 type resizeStep string
@@ -47,14 +54,16 @@ const (
 	resizeStepRestoreMachine        resizeStep = "restoreMachine"
 	resizeStepRestoreNodeLabels     resizeStep = "restoreNodeLabels"
 	resizeStepRestoreSchedulability resizeStep = "restoreSchedulability"
+	resizeStepWaitEtcd              resizeStep = "waitEtcdHealthy"
 )
 
 type resizeStepRecord struct {
-	nodeName string
-	step     resizeStep
-	rollback bool
-	duration time.Duration
-	err      error
+	nodeName       string
+	step           resizeStep
+	rollback       bool
+	duration       time.Duration
+	err            error
+	originalVMSize string
 }
 
 type resizeStepError struct {
@@ -132,6 +141,23 @@ type resizeControlPlaneOperation struct {
 	nodes                    []*controlPlaneNodeProgress
 }
 
+// newResizeControlPlaneExecutionContext creates a context decoupled from the
+// HTTP request lifecycle. The resize operation must complete even if the client
+// disconnects or the ARM load balancer times out (typical: 4-10 min).
+//
+// Trade-offs:
+//   - The HTTP response may be written to a dead connection; the SRE must check
+//     logs or cluster state to confirm the outcome.
+//   - If the RP pod is recycled (graceful shutdown), this context will NOT be
+//     cancelled. The goroutine continues until SIGKILL after the termination
+//     grace period. This can leave the cluster in a partially resized state
+//     requiring manual recovery via the Azure portal.
+//   - The CosmosDB provisioning state lock (ProvisioningStateAdminUpdating)
+//     ensures a concurrent resize attempt will be rejected with 409, but the
+//     lock may not be released if the pod is killed mid-operation.
+//
+// This endpoint is restricted to on-call SREs via Geneva Actions
+// (ClientPlatformServiceOperator claim).
 func newResizeControlPlaneExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(
 		context.WithoutCancel(parent),
@@ -139,6 +165,11 @@ func newResizeControlPlaneExecutionContext(parent context.Context) (context.Cont
 	)
 }
 
+// newResizeControlPlaneRollbackContext creates a context for rollback operations.
+// Like the execution context, it uses WithoutCancel to ensure rollback completes
+// even if the original request is cancelled. The rollback budget is larger
+// because restoring the original VM size requires stop -> resize -> start ->
+// waitReady before metadata can be restored.
 func newResizeControlPlaneRollbackContext(parent context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(
 		context.WithoutCancel(parent),
@@ -231,25 +262,38 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 		)
 	}
 
-	return controlPlaneNodeSnapshot{
+	snapshot := controlPlaneNodeSnapshot{
 		machineName:                  machineName,
 		originalVMSize:               actualVMSize,
 		originalMachineSize:          machine.size,
 		originalNodeInstanceType:     nodeInstanceType,
 		originalNodeBetaInstanceType: betaInstanceType,
 		originallySchedulable:        !node.Spec.Unschedulable,
-	}, nil
+	}
+
+	o.log.WithFields(logrus.Fields{
+		"node":           machineName,
+		"originalVMSize": actualVMSize,
+		"targetVMSize":   o.desiredVMSize,
+	}).Info("captured node snapshot for resize operation")
+
+	return snapshot, nil
 }
 
 func (o *resizeControlPlaneOperation) runStep(ctx context.Context, nodeName string, step resizeStep, rollback bool, wrapPrefix string, fn func(context.Context) error) error {
+	return o.runStepWithSnapshot(ctx, nodeName, "", step, rollback, wrapPrefix, fn)
+}
+
+func (o *resizeControlPlaneOperation) runStepWithSnapshot(ctx context.Context, nodeName, originalVMSize string, step resizeStep, rollback bool, wrapPrefix string, fn func(context.Context) error) error {
 	start := time.Now()
 	err := fn(ctx)
 	record := resizeStepRecord{
-		nodeName: nodeName,
-		step:     step,
-		rollback: rollback,
-		duration: time.Since(start),
-		err:      err,
+		nodeName:       nodeName,
+		step:           step,
+		rollback:       rollback,
+		duration:       time.Since(start),
+		err:            err,
+		originalVMSize: originalVMSize,
 	}
 	if rollback {
 		o.rollback = append(o.rollback, record)
@@ -312,6 +356,12 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 	}
 	state.vmStopped = false
 
+	if err := o.runStep(ctx, nodeName, resizeStepWaitEtcd, false, "waiting for etcd healthy", func(ctx context.Context) error {
+		return waitForEtcdHealthy(ctx, o.log, o.k)
+	}); err != nil {
+		return err
+	}
+
 	if state.snapshot.originallySchedulable {
 		if err := o.runStep(ctx, nodeName, resizeStepUncordon, false, "uncordoning node", func(ctx context.Context) error {
 			return uncordonNode(ctx, o.k, nodeName)
@@ -338,6 +388,45 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 	return nil
 }
 
+func waitForEtcdHealthy(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions) error {
+	ctx, cancel := context.WithTimeout(ctx, etcdHealthPollTimeout)
+	defer cancel()
+
+	return wait.PollImmediateUntilWithContext(ctx, etcdHealthPollInterval, func(ctx context.Context) (bool, error) {
+		if err := validateEtcdHealth(ctx, k); err != nil {
+			log.Infof("Waiting for etcd to become healthy: %v", err)
+			return false, nil
+		}
+		return true, nil
+	})
+}
+
+func ensureControlPlaneAndEtcdHealthy(ctx context.Context, k adminactions.KubeActions, nodeNames []string) error {
+	if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, nodeNames); err != nil {
+		return err
+	}
+	return validateEtcdHealth(ctx, k)
+}
+
+func retryAzureOperation(ctx context.Context, operationDesc string, fn func() error) error {
+	var lastErr error
+	for attempt := range azureOperationMaxAttempts {
+		lastErr = fn()
+		if lastErr == nil {
+			return nil
+		}
+		if attempt == azureOperationMaxAttempts-1 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(azureOperationRetryDelay):
+		}
+	}
+	return fmt.Errorf("could not complete %s after %d attempts: %w", operationDesc, azureOperationMaxAttempts, lastErr)
+}
+
 func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *controlPlaneNodeProgress) error {
 	nodeName := state.snapshot.machineName
 	var rollbackErrs []error
@@ -349,19 +438,29 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 			// Rollback always uses a deallocated stop so restoring the original SKU
 			// takes the most conservative Azure path, even if the forward request
 			// preferred a non-deallocated stop.
-			if err := o.a.VMStopAndWait(ctx, nodeName, true); err != nil {
+			if err := retryAzureOperation(ctx, "stop VM for rollback", func() error {
+				return o.a.VMStopAndWait(ctx, nodeName, true)
+			}); err != nil {
 				return fmt.Errorf("stopping VM before restoring original size: %w", err)
 			}
-			if err := o.a.VMResize(ctx, nodeName, state.snapshot.originalVMSize); err != nil {
+			if err := retryAzureOperation(ctx, "resize VM for rollback", func() error {
+				return o.a.VMResize(ctx, nodeName, state.snapshot.originalVMSize)
+			}); err != nil {
 				return fmt.Errorf("restoring VM size to %s: %w", state.snapshot.originalVMSize, err)
 			}
 			vmSizeRestored = true
 			state.vmResized = false
-			if err := o.a.VMStartAndWait(ctx, nodeName); err != nil {
+			o.log.Infof("VM size for %s successfully restored to %s; continuing with VM start", nodeName, state.snapshot.originalVMSize)
+			if err := retryAzureOperation(ctx, "start VM after rollback", func() error {
+				return o.a.VMStartAndWait(ctx, nodeName)
+			}); err != nil {
 				return fmt.Errorf("starting VM after restoring original size: %w", err)
 			}
 			if err := waitForNodeReady(ctx, o.log, o.k, nodeName); err != nil {
 				return fmt.Errorf("waiting for node ready after restoring original size: %w", err)
+			}
+			if err := waitForEtcdHealthy(ctx, o.log, o.k); err != nil {
+				return fmt.Errorf("waiting for etcd healthy after restoring original size: %w", err)
 			}
 			nodeReadyForSchedRestore = true
 			return nil
@@ -374,7 +473,9 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 	} else if state.vmStopped {
 		nodeReadyForSchedRestore = false
 		if err := o.runStep(ctx, nodeName, resizeStepStart, true, "starting VM during rollback", func(ctx context.Context) error {
-			return o.a.VMStartAndWait(ctx, nodeName)
+			return retryAzureOperation(ctx, "start VM during rollback", func() error {
+				return o.a.VMStartAndWait(ctx, nodeName)
+			})
 		}); err != nil {
 			rollbackErrs = append(rollbackErrs, err)
 		} else if err := o.runStep(ctx, nodeName, resizeStepWaitReady, true, "waiting for node ready during rollback", func(ctx context.Context) error {
@@ -428,6 +529,11 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 func (o *resizeControlPlaneOperation) rollbackAll(ctx context.Context) error {
 	var errs []error
 	for i := len(o.nodes) - 1; i >= 0; i-- {
+		if i < len(o.nodes)-1 {
+			if err := validateEtcdHealth(ctx, o.k); err != nil {
+				o.log.Warnf("etcd not fully healthy before rollback of %s: %v", o.nodes[i].snapshot.machineName, err)
+			}
+		}
 		if err := o.rollbackNode(ctx, o.nodes[i]); err != nil {
 			errs = append(errs, err)
 		}
@@ -446,9 +552,14 @@ func formatResizeStepRecords(records []resizeStepRecord) string {
 			duration = time.Millisecond
 		}
 
-		entry := fmt.Sprintf("%s:%s (%s)", record.nodeName, record.step, duration)
+		nodeID := record.nodeName
+		if record.originalVMSize != "" {
+			nodeID = fmt.Sprintf("%s[%s]", record.nodeName, record.originalVMSize)
+		}
+
+		entry := fmt.Sprintf("%s:%s (%s)", nodeID, record.step, duration)
 		if record.err != nil {
-			entry = fmt.Sprintf("%s failed (%s): %v", fmt.Sprintf("%s:%s", record.nodeName, record.step), duration, record.err)
+			entry = fmt.Sprintf("%s failed (%s): %v", fmt.Sprintf("%s:%s", nodeID, record.step), duration, record.err)
 		}
 		parts = append(parts, entry)
 	}

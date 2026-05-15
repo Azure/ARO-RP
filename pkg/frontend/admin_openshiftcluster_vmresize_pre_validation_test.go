@@ -264,7 +264,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 				masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
 			), nil)
 
-		err := validateResizeControlPlaneInventory(log, ctx, k, a, "/subscriptions/000/resourceGroups/test-cluster")
+		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
 		assertErrorContainsAll(t, err,
 			"Control plane machine inventory is inconsistent",
 			"All machines should have the same size",
@@ -293,7 +293,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 				controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3"),
 			), nil)
 
-		err := validateResizeControlPlaneInventory(log, ctx, k, a, "/subscriptions/000/resourceGroups/test-cluster")
+		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
 		assertErrorContainsAll(t, err,
 			"Control plane machine and node inventory is inconsistent",
 			"machine master-1 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v5",
@@ -351,7 +351,7 @@ func TestPreResizeControlPlaneVMsValidationRejectsHeterogeneousInventory(t *test
 			masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
 		), nil)
 
-	_, err := f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, "Standard_D8s_v3", log)
+	_, err := f.preResizeControlPlaneVMsValidation(ctx, log, doc, subscriptionDoc, k, a, "Standard_D8s_v3")
 	assertErrorContainsAll(t, err,
 		"Pre-flight validation failed",
 		"controlPlaneInventory",
