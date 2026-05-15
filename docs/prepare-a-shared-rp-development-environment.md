@@ -687,14 +687,17 @@ Due to cross tenant ACR access, token credentials must be generated for arointsv
    cat <my-acr-cred-file>.json | base64 -w0
    ```
 
-1. Add the secret to the Libary variable group that is connected to the global keyvault
+1. Add the secret to the Library variable group that is connected to the global keyvault
 
 ### Deploy Holmes Azure OpenAI (optional)
 
 The Holmes admin API requires an Azure OpenAI resource for cluster investigation.
 
+**Prerequisites:** Azure storage account access for `make secrets` command.
+
 ```bash
 # Ensure secrets/env exists (the deploy script writes credentials there)
+# Note: Requires Azure storage account access
 make secrets
 
 source env

@@ -78,6 +78,9 @@ deploy_holmes_aoai_model() {
 update_secrets_env() {
     echo "########## Updating secrets/env with Holmes Azure OpenAI credentials ##########"
 
+    # Ensure we're working from repo root to handle relative paths correctly
+    cd "$(git rev-parse --show-toplevel)"
+
     local api_key
     api_key=$(az cognitiveservices account keys list \
         --name "${HOLMES_AOAI_ACCOUNT_NAME}" \
@@ -108,7 +111,7 @@ update_secrets_env() {
 
     # Remove existing Holmes lines and append new credentials via temp file for portability
     local tmp_file
-    tmp_file=$(mktemp "${secrets_file}.XXXXXX")
+    tmp_file=$(mktemp -p "$(dirname "${secrets_file}")")
 
     # Handle case where all lines might match the filter (use || true to avoid exit 1 with set -e)
     grep -v -E '^export HOLMES_AZURE_API_(KEY|BASE|VERSION)=|^# Holmes Azure OpenAI' \
