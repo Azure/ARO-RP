@@ -114,6 +114,8 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 
 	keyvault := mock_azsecrets.NewMockClient(controller)
 	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)
+	// Return "not found" for any secret other than RPServerSecretName (e.g., Holmes config secrets).
+	keyvault.EXPECT().GetSecret(gomock.Any(), gomock.Not(gomock.Eq(env.RPServerSecretName)), gomock.Any(), gomock.Any()).AnyTimes().Return(azsecrets.GetSecretResponse{}, fmt.Errorf("secret not found"))
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 
@@ -123,6 +125,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
+	_env.EXPECT().ACRDomain().AnyTimes().Return("arosvc.azurecr.io")
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer(true, true))

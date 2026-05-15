@@ -25,13 +25,13 @@ import (
 // kubeconfig for the ARO service, based on the admin kubeconfig found in the
 // graph.
 func (m *manager) generateAROServiceKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
-	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, installer.TenYears, true)
+	return GenerateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, installer.TenYears, true)
 }
 
 // generateAROSREKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
 func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
-	return generateKubeconfig(pg, "system:aro-sre", nil, installer.TenYears, true)
+	return GenerateKubeconfig(pg, "system:aro-sre", nil, installer.TenYears, true)
 }
 
 // checkUserAdminKubeconfigUpdated checks if the user kubeconfig is
@@ -82,7 +82,7 @@ func (m *manager) checkUserAdminKubeconfigUpdated() bool {
 // generateUserAdminKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO User, based on the admin kubeconfig found in the graph.
 func (m *manager) generateUserAdminKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
-	return generateKubeconfig(pg, "system:admin", nil, installer.OneYear, false)
+	return GenerateKubeconfig(pg, "system:admin", nil, installer.OneYear, false)
 }
 
 func (m *manager) generateKubeconfigs(ctx context.Context) error {
@@ -127,7 +127,8 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	return err
 }
 
-func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) ([]byte, error) {
+// GenerateKubeconfig generates a kubeconfig with a client certificate signed by the cluster CA.
+func GenerateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) ([]byte, error) {
 	var ca *installer.AdminKubeConfigSignerCertKey
 	var adminInternalClient *installer.AdminInternalClient
 	err := pg.GetByName(false, "*tls.AdminKubeConfigSignerCertKey", &ca)

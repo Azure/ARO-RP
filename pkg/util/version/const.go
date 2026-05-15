@@ -82,3 +82,8 @@ func MiseImage(acrDomain string) string {
 func OTelImage(acrDomain string) string {
 	return "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
 }
+
+// HolmesImage contains the location of the HolmesGPT investigation container image
+func HolmesImage(acrDomain string) string {
+	return acrDomain + "/holmesgpt:latest"
+}
