@@ -687,7 +687,32 @@ Due to cross tenant ACR access, token credentials must be generated for arointsv
    cat <my-acr-cred-file>.json | base64 -w0
    ```
 
-1. Add the secret to the Libary variable group that is connected to the global keyvault
+1. Add the secret to the Library variable group that is connected to the global keyvault
+
+### Deploy Holmes Azure OpenAI (optional)
+
+The Holmes admin API requires an Azure OpenAI resource for cluster investigation.
+
+**Prerequisites:** Azure storage account access for `make secrets` command.
+
+```bash
+# Ensure secrets/env exists (the deploy script writes credentials there)
+# Note: Requires Azure storage account access
+make secrets
+
+source env
+./hack/devtools/deploy-holmes-aoai.sh
+
+# Push updated secrets to shared storage
+make secrets-update
+```
+
+This creates:
+- Azure OpenAI account: `${RESOURCEGROUP}-holmes-aoai`
+- GPT model deployment: `gpt-5.2`
+
+The script writes `HOLMES_AZURE_API_KEY`, `HOLMES_AZURE_API_BASE`, and `HOLMES_AZURE_API_VERSION` to `secrets/env`.
+Non-secret config (`HOLMES_IMAGE`, `HOLMES_MODEL`, etc.) is in `env.example`.
 
 ### PR E2E Only - Add keyvault permissions to aro-v4-e2e-devops-spn
 
