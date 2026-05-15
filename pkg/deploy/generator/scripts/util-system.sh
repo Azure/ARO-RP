@@ -370,12 +370,6 @@ create_required_dirs() {
     done
 }
 
-# firewalld_configure_backend
-firewalld_configure_backend() {
-    log "starting"
-    log "Using default nftables backend on Azure Linux 3"
-}
-
 # firewalld_configure
 #
 # args:
@@ -385,7 +379,7 @@ firewalld_configure() {
     local -n ports="$1"
     log "starting"
 
-    firewalld_configure_backend
+    log "Using default nftables backend on Azure Linux 3"
 
     # shellcheck disable=SC2034
     local -ra service=(
