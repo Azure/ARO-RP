@@ -19,6 +19,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
+// Maximum lifetime of the ACR token
+const (
+	ACRTokenRotateAfterDays = 140
+	ACRTokenMaxLifetimeDays = 180
+	ACRTokenRotateAfter     = time.Hour * 24 * time.Duration(ACRTokenRotateAfterDays)
+	ACRTokenMaxLifetime     = time.Hour * 24 * time.Duration(ACRTokenMaxLifetimeDays)
+)
+
 type Manager interface {
 	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
 	NewRegistryProfile() *api.RegistryProfile
@@ -36,7 +44,6 @@ type manager struct {
 	registries armcontainerregistry.RegistriesClient
 
 	uuid uuid.Generator
-	now  func() time.Time
 }
 
 func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClient, registriesClient armcontainerregistry.RegistriesClient) (Manager, error) {
@@ -52,7 +59,6 @@ func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClien
 		tokens:     tokensClient,
 		registries: registriesClient,
 		uuid:       uuid.DefaultGenerator,
-		now:        time.Now,
 	}
 
 	return m, nil
@@ -79,7 +85,7 @@ func GetRegistryProfileFromSlice(_env env.Interface, registryProfiles []*api.Reg
 }
 
 func (m *manager) NewRegistryProfile() *api.RegistryProfile {
-	currentTime := m.now().UTC()
+	currentTime := m.env.Now().UTC()
 	return &api.RegistryProfile{
 		Name:      m.env.ACRDomain(),
 		Username:  "token-" + m.uuid.Generate(),
@@ -207,4 +213,24 @@ func (m *manager) Delete(ctx context.Context, registryProfile *api.RegistryProfi
 		return nil
 	}
 	return err
+}
+
+// ShouldRotateToken returns whether a token should be rotated, is before its
+// validity expiry, and how long until it should be rotated and expiry will
+// happen.
+func ShouldRotateToken(_env env.Core, registryProfile *api.RegistryProfile) (shouldRotate bool, isValid bool, timeUntilNextRotate time.Duration, timeUntilTokenExpiry time.Duration) {
+	if registryProfile == nil || registryProfile.IssueDate == nil {
+		return true, false, 0, 0
+	}
+	now := _env.Now()
+	rotateIfAfter := registryProfile.IssueDate.Add(ACRTokenRotateAfter)
+	validityEnd := registryProfile.IssueDate.Add(ACRTokenMaxLifetime)
+
+	shouldRotate = now.After(rotateIfAfter)
+	isValid = validityEnd.After(now)
+	timeUntilNextRotate = rotateIfAfter.Sub(now)
+	if isValid {
+		timeUntilTokenExpiry = validityEnd.Sub(now)
+	}
+	return
 }

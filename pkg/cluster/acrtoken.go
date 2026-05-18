@@ -83,7 +83,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		currentTime := time.Now().UTC()
+		currentTime := m.env.Now().UTC()
 		rp.Password = api.SecureString(password)
 		rp.IssueDate = &currentTime
 
@@ -111,6 +111,19 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	}
 
 	registryProfile := token.GetRegistryProfile(m.doc.OpenShiftCluster)
+	if registryProfile == nil {
+		// this should never happen, but just in case
+		return m.ensureACRToken(ctx)
+	}
+
+	// Only rotate the token if required
+	shouldRotate, _, durationUntilRotate, validityRemaining := acrtoken.ShouldRotateToken(m.env, registryProfile)
+	m.log.Infof("token has %s validity remaining, should rotate in %s", validityRemaining.String(), durationUntilRotate.String())
+	if !shouldRotate {
+		return nil
+	}
+
+	m.log.Infof("rotating ACR token")
 	err = token.RotateTokenPassword(ctx, registryProfile)
 	if err != nil {
 		return err
