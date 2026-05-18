@@ -32,7 +32,7 @@ def create_identity(cmd, location, group, name) -> typing.Any:
     })
 
 
-def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope, name=None) -> typing.Any:
+def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope, name=None) -> typing.Any | None:
     if not name:
         name = str(uuid.uuid4())
 

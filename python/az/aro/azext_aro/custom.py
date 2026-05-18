@@ -571,50 +571,58 @@ def aro_update(cmd,  # pylint: disable=too-many-positional-arguments
 
     oc_update = openshiftcluster.OpenShiftClusterUpdate()
 
-    if platform_workload_identities is not None and oc.service_principal_profile is not None:
+    if oc.service_principal_profile and (platform_workload_identities or mi_user_assigned):
         raise InvalidArgumentValueError(
-            "Cannot assign platform workload identities to a cluster with service principal"
+            "Cannot assign platform workload identities or a cluster identity "
+            "to a cluster with service principal."
         )
 
-    if mi_user_assigned is not None and oc.service_principal_profile is not None:
-        raise InvalidArgumentValueError(
-            "Cannot assign platform workload identities to a cluster with service principal"
-        )
-
-    if oc.service_principal_profile is not None:
+    if oc.service_principal_profile:
         client_id, client_secret = cluster_application_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_credentials)  # pylint: disable=line-too-long
 
-        if client_id is not None or client_secret is not None:
+        if client_id or client_secret:
             # construct update payload
             oc_update.service_principal_profile = openshiftcluster.ServicePrincipalProfile()
 
-            if client_secret is not None:
+            if client_secret:
                 oc_update.service_principal_profile.client_secret = client_secret
 
-            if client_id is not None:
+            if client_id:
                 oc_update.service_principal_profile.client_id = client_id
 
-    if mi_user_assigned is not None:
+    if mi_user_assigned:
         oc_update.identity = openshiftcluster.ManagedServiceIdentity(
             type='UserAssigned',
             user_assigned_identities={mi_user_assigned: {}}
         )
 
-    if oc.platform_workload_identity_profile is not None:
-        if platform_workload_identities is not None or upgradeable_to is not None:
+    if oc.platform_workload_identity_profile:
+        if platform_workload_identities or upgradeable_to:
             oc_update.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile()
 
-        if platform_workload_identities is not None:
-            oc_update.platform_workload_identity_profile.platform_workload_identities = dict(platform_workload_identities)  # pylint: disable=line-too-long
+        if platform_workload_identities:
+            oc_update.platform_workload_identity_profile.platform_workload_identities = \
+                dict(platform_workload_identities)
 
-        if upgradeable_to is not None:
+        if upgradeable_to:
             oc_update.platform_workload_identity_profile.upgradeable_to = upgradeable_to
 
-    if load_balancer_managed_outbound_ip_count is not None:
+    if load_balancer_managed_outbound_ip_count:
         oc_update.network_profile = openshiftcluster.NetworkProfile()
         oc_update.network_profile.load_balancer_profile = openshiftcluster.LoadBalancerProfile()
         oc_update.network_profile.load_balancer_profile.managed_outbound_ips = openshiftcluster.ManagedOutboundIPs()
-        oc_update.network_profile.load_balancer_profile.managed_outbound_ips.count = load_balancer_managed_outbound_ip_count  # pylint: disable=line-too-long
+        oc_update.network_profile.load_balancer_profile.managed_outbound_ips.count = \
+            load_balancer_managed_outbound_ip_count
+
+    if upgradeable_to and not platform_workload_identities and not mi_user_assigned and not oc.service_principal_profile:  # pylint: disable=line-too-long
+        oc_update = ensure_platform_workload_identities_for_upgrade(
+            cmd,
+            client,
+            resource_group_name,
+            oc,
+            oc_update,
+            upgradeable_to
+        )
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_update,
                        resource_group_name=resource_group_name,
@@ -914,34 +922,17 @@ def aro_identity_create_required(*,
     cluster_identity = create_identity(cmd, location, resource_group_name, "aro-cluster")
     identities.append(cluster_identity)
 
-    for role in _get_pwi_role_set(client, version, location).platform_workload_identity_roles:
-        progress.add(message=f"Creating {role.operator_name} identity")
-        identity = create_identity(cmd, location, resource_group_name, role.operator_name)
-        identities.append(identity)
-
-        scopes = _determine_required_scopes_from_role_set(cmd, role)
-        for scope in scopes:
-            progress.add(message=f"Creating {role.operator_name} identity's role assignments over network resources")
-
-            if not network_scopes[scope]:
-                continue
-
-            create_role_assignment(
-                cmd.cli_ctx,
-                identity["principalId"],
-                f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
-                network_scopes[scope]
-            )
-
-        progress.add(message="Creating cluster identity's federated credential "
-                     f"role assignment over {role.operator_name} identity")
-        defn = resource_id(
-            subscription=get_subscription_id(cmd.cli_ctx),
-            namespace="Microsoft.Authorization",
-            type="roleDefinitions",
-            name=ARO_FEDERATED_CREDENTIAL_ROLE
+    roles = _get_pwi_role_set(client, version, location).platform_workload_identity_roles
+    for role in roles:
+        identity = create_identity_and_role_assignments(
+            cmd=cmd,
+            role=role,
+            location=location,
+            resource_group_name=resource_group_name,
+            network_scopes=network_scopes,
+            cluster_identity=cluster_identity
         )
-        create_role_assignment(cmd.cli_ctx, cluster_identity["principalId"], defn, identity["id"])
+        identities.append(identity)
 
     progress.add(message="Creating first party service principal's role assignment over virtual network")
     firstparty_principal = AADManager(cmd.cli_ctx).get_service_principal_id(FP_CLIENT_ID)
@@ -1055,3 +1046,102 @@ def _determine_required_scopes_from_network_resources(cmd,
         RoleAssignmentScope.VNET: vnet,
         RoleAssignmentScope.WORKER_SUBNET: worker_subnet,
     }
+
+
+def create_identity_and_role_assignments(*,
+                                         cmd,
+                                         role,
+                                         location,
+                                         resource_group_name,
+                                         network_scopes,
+                                         cluster_identity):
+    progress = cmd.cli_ctx.get_progress_controller()
+
+    progress.add(message=f"Creating {role.operator_name} identity")
+    identity = create_identity(cmd, location, resource_group_name, role.operator_name)
+
+    scopes = _determine_required_scopes_from_role_set(cmd, role)
+    for scope in scopes:
+        progress.add(message=f"Creating {role.operator_name} identity's role assignments over network resources")
+
+        if not network_scopes[scope]:
+            continue
+
+        create_role_assignment(
+            cmd.cli_ctx,
+            identity["principalId"],
+            f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
+            network_scopes[scope]
+        )
+
+    progress.add(message="Creating cluster identity's federated credential "
+                 f"role assignment over {role.operator_name} identity")
+    defn = resource_id(
+        subscription=get_subscription_id(cmd.cli_ctx),
+        namespace="Microsoft.Authorization",
+        type="roleDefinitions",
+        name=ARO_FEDERATED_CREDENTIAL_ROLE
+    )
+
+    # hack
+    try:
+        cluster_principal_id = cluster_identity.principal_id
+    except AttributeError:
+        cluster_principal_id = cluster_identity["principalId"]
+
+    create_role_assignment(cmd.cli_ctx, cluster_principal_id, defn, identity["id"])
+
+    return identity
+
+
+# pylint: disable=too-many-positional-arguments
+def ensure_platform_workload_identities_for_upgrade(cmd, client, resource_group_name, oc, oc_update, upgradeable_to):
+    oc_update.identity = oc.identity
+    oc_update.platform_workload_identity_profile.platform_workload_identities = \
+        oc.platform_workload_identity_profile.platform_workload_identities
+
+    target_platform_workload_identity_roles = _get_pwi_role_set(
+        client,
+        upgradeable_to,
+        oc.location
+    ).platform_workload_identity_roles
+    existing_operator_identities = list(oc.platform_workload_identity_profile.platform_workload_identities.keys())
+    target_operator_identities = [elem.operator_name for elem in target_platform_workload_identity_roles]
+
+    dissection = set(target_operator_identities) - set(existing_operator_identities)
+
+    if dissection:
+        master_parts = parse_resource_id(oc.master_profile.subnet_id)
+        vnet = resource_id(
+            subscription=str(master_parts["subscription"]),
+            resource_group=str(master_parts["resource_group"]),
+            namespace="Microsoft.Network",
+            type="virtualNetworks",
+            name=str(master_parts["name"])
+        )
+
+        network_scopes = _determine_required_scopes_from_network_resources(
+            cmd,
+            oc.master_profile.disk_encryption_set_id,
+            vnet,
+            oc.master_profile.subnet_id,
+            oc.worker_profiles[0].subnet_id
+        )
+
+        # jank town
+        cluster_identity = list(oc.identity.user_assigned_identities.values())[0]
+
+        for operator_name in dissection:
+            role = [elem for elem in target_platform_workload_identity_roles if elem.operator_name == operator_name][0]
+            identity = create_identity_and_role_assignments(
+                cmd=cmd,
+                role=role,
+                location=oc.location,
+                resource_group_name=resource_group_name,
+                network_scopes=network_scopes,
+                cluster_identity=cluster_identity
+            )
+
+            oc_update.platform_workload_identity_profile.platform_workload_identities[operator_name] = \
+                openshiftcluster.PlatformWorkloadIdentity(resource_id=identity["id"])
+    return oc_update
