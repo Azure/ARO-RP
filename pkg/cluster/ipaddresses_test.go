@@ -428,7 +428,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				subnet.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				dns.EXPECT().CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantErr: "no valid worker subnet found",
+			wantErr: "no valid worker subnet found: all worker profiles have empty subnetId; set properties.workerProfiles[].subnetId",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
