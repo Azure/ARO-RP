@@ -164,7 +164,7 @@ func (mon *monitor) Run(_ctx context.Context, stop <-chan struct{}, done chan<- 
 		mon.hiveClusterManagers[1] = cl
 	}
 
-	err = mon.startChangefeeds(ctx, workersDone)
+	err = mon.startChangefeeds(ctx, ctx.Done())
 	if err != nil {
 		mon.baseLog.Error(fmt.Errorf("failed to start changefeed subscriber: %w", err))
 		return err

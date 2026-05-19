@@ -113,14 +113,21 @@ func (c *workerPool[E]) fixDoc(v *cacheDoc[E]) {
 func (c *workerPool[E]) StopAndWait() {
 	c.stopping.Store(true)
 	for _, v := range c.docs.All() {
-		if v.stop != nil {
-			close(v.stop)
-			v.stop = nil
-		}
+		c.stopWorker(v.doc)
 	}
 	c.workerPool.Wait()
 }
 
 func (c *workerPool[E]) WaitForWorkerCompletion() {
 	c.workerPool.Wait()
+}
+
+func (c *workerPool[E]) stopWorker(doc E) {
+	c.docs.Compute(doc.GetKey(), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
+		if loaded && oldValue.stop != nil {
+			close(oldValue.stop)
+			oldValue.stop = nil
+		}
+		return nil, xsync.CancelOp
+	})
 }
