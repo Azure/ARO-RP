@@ -28,9 +28,7 @@ const (
 )
 
 type Manager interface {
-	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
 	NewRegistryProfile() *api.RegistryProfile
-	PutRegistryProfile(oc *api.OpenShiftCluster, registryProfile *api.RegistryProfile)
 	EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, error)
 	RotateTokenPassword(ctx context.Context, registryProfile *api.RegistryProfile) error
 	Delete(ctx context.Context, registryProfile *api.RegistryProfile) error
@@ -64,26 +62,6 @@ func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClien
 	return m, nil
 }
 
-func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
-	for i, registryProfile := range oc.Properties.RegistryProfiles {
-		if registryProfile.Name == m.env.ACRDomain() {
-			return oc.Properties.RegistryProfiles[i]
-		}
-	}
-
-	return nil
-}
-
-func GetRegistryProfileFromSlice(_env env.Interface, registryProfiles []*api.RegistryProfile) *api.RegistryProfile {
-	for _, registryProfile := range registryProfiles {
-		if registryProfile.Name == _env.ACRDomain() {
-			return registryProfile
-		}
-	}
-
-	return nil
-}
-
 func (m *manager) NewRegistryProfile() *api.RegistryProfile {
 	currentTime := m.env.Now().UTC()
 	return &api.RegistryProfile{
@@ -91,17 +69,6 @@ func (m *manager) NewRegistryProfile() *api.RegistryProfile {
 		Username:  "token-" + m.uuid.Generate(),
 		IssueDate: &currentTime,
 	}
-}
-
-func (m *manager) PutRegistryProfile(oc *api.OpenShiftCluster, registryProfile *api.RegistryProfile) {
-	for i, _existingRegistryProfile := range oc.Properties.RegistryProfiles {
-		if _existingRegistryProfile.Name == registryProfile.Name {
-			oc.Properties.RegistryProfiles[i] = registryProfile
-			return
-		}
-	}
-
-	oc.Properties.RegistryProfiles = append(oc.Properties.RegistryProfiles, registryProfile)
 }
 
 // EnsureTokenAndPassword ensures a token exists with the given username,

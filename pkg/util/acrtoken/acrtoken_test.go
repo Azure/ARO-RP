@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -314,58 +313,7 @@ func generateCredentialsParameters(tpn sdkarmcontainerregistry.TokenPasswordName
 	}
 }
 
-func TestGetRegistryProfiles(t *testing.T) {
-	a := require.New(t)
-	controller := gomock.NewController(t)
-	mgr := setupManager(controller, nil, nil)
-
-	ocWithProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-				{
-					Name:     "arointsvc.example.com",
-					Username: "foo",
-				},
-			},
-		},
-	}
-	ocWithoutProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-			},
-		},
-	}
-
-	// GetRegistryProfile finds it successfully
-	r := mgr.GetRegistryProfile(ocWithProfile)
-	a.NotNil(r)
-	a.Equal("arointsvc.example.com", r.Name)
-	a.Equal("foo", r.Username)
-
-	// GetRegistryProfile can't find it as it doesn't exist
-	r = mgr.GetRegistryProfile(ocWithoutProfile)
-	a.Nil(r)
-
-	// GetRegistryProfileFromSlice finds it successfully
-	r = GetRegistryProfileFromSlice(mgr.env, ocWithProfile.Properties.RegistryProfiles)
-	a.NotNil(r)
-	a.Equal("arointsvc.example.com", r.Name)
-	a.Equal("foo", r.Username)
-
-	// GetRegistryProfileFromSlice can't find it as it doesn't exist
-	r = GetRegistryProfileFromSlice(mgr.env, ocWithoutProfile.Properties.RegistryProfiles)
-	a.Nil(r)
-}
-
-func TestNewAndPutRegistryProfile(t *testing.T) {
+func TestNewARegistryProfile(t *testing.T) {
 	a := require.New(t)
 	controller := gomock.NewController(t)
 	mgr := setupManager(controller, nil, nil)
@@ -374,58 +322,6 @@ func TestNewAndPutRegistryProfile(t *testing.T) {
 	a.NotNil(newProfile)
 	a.Equal("token-22222222-2222-2222-2222-222222220001", newProfile.Username)
 	a.Equal("1970-01-01T00:00:01Z", newProfile.IssueDate.Format(time.RFC3339))
-
-	ocWithProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "arointsvc.example.com",
-					Username: "foo",
-				},
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-			},
-		},
-	}
-	ocWithoutProfile := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []*api.RegistryProfile{
-				{
-					Name:     "notwanted.example.com",
-					Username: "other",
-				},
-			},
-		},
-	}
-
-	// If it doesn't exist, it appends it
-	mgr.PutRegistryProfile(ocWithoutProfile, newProfile)
-	a.Len(ocWithoutProfile.Properties.RegistryProfiles, 2)
-
-	// If it does exist, it replaces it
-	mgr.PutRegistryProfile(ocWithProfile, newProfile)
-	a.Len(ocWithProfile.Properties.RegistryProfiles, 2)
-
-	// Check that it has been replaced
-	aLongTimeAgo := time.UnixMilli(1000)
-
-	for _, err := range deep.Equal(
-		ocWithProfile.Properties.RegistryProfiles,
-		[]*api.RegistryProfile{
-			{
-				Name:      "arointsvc.example.com",
-				Username:  "token-22222222-2222-2222-2222-222222220001",
-				IssueDate: &aLongTimeAgo,
-			},
-			{
-				Name:     "notwanted.example.com",
-				Username: "other",
-			},
-		}) {
-		t.Error(err)
-	}
 }
 
 func TestShouldRotate(t *testing.T) {
