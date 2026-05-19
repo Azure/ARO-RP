@@ -13,10 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockProvidersValidator is a mock of ProvidersValidator interface.

@@ -8,16 +8,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armfeatures"
 )
-
-type FeaturesClient interface {
-	Get(ctx context.Context, resourceProviderNamespace string, featureName string, options *armfeatures.ClientGetOptions) (armfeatures.ClientGetResponse, error)
-}
 
 type FeaturesValidator interface {
 	ValidateSubscriptionFeatures(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
@@ -39,7 +34,7 @@ func (f featuresValidator) ValidateSubscriptionFeatures(ctx context.Context, azE
 			return err
 		}
 
-		featuresClient, err := armfeatures.NewClient(subscriptionID, fpCred, azEnv.ArmClientOptions())
+		featuresClient, err := armfeatures.NewFeaturesClient(subscriptionID, fpCred, azEnv.ArmClientOptions())
 		if err != nil {
 			return err
 		}
@@ -51,7 +46,7 @@ func (f featuresValidator) ValidateSubscriptionFeatures(ctx context.Context, azE
 
 func validateEncryptionAtHostFeature(
 	ctx context.Context,
-	featuresClient FeaturesClient,
+	featuresClient armfeatures.FeaturesClient,
 	subscriptionID, fieldPath string,
 ) error {
 	resp, err := featuresClient.Get(ctx, "Microsoft.Compute", "EncryptionAtHost", nil)

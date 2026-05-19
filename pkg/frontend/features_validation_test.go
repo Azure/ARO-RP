@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
 
-	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
+	mock_armfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armfeatures"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
@@ -63,7 +63,7 @@ func TestValidateEncryptionAtHostFeature(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			featuresClient := mock_frontend.NewMockFeaturesClient(controller)
+			featuresClient := mock_armfeatures.NewMockFeaturesClient(controller)
 
 			var mockResponse armfeatures.ClientGetResponse
 			if tt.mockPropertiesNil {
