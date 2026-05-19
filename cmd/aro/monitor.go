@@ -110,11 +110,19 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGTERM)
 
-	go mon.Run(ctx, stop, monitorWorkersDone)
+	go func() {
+		err := mon.Run(ctx, stop, monitorWorkersDone)
+		if err != nil {
+			log.Printf("failed to start: %s", err.Error())
+		}
+	}()
 
-	<-sigterm
-	log.Print("received SIGTERM")
-	close(stop)
+	go func() {
+		<-sigterm
+		log.Print("received SIGTERM")
+		close(stop)
+	}()
+
 	<-monitorWorkersDone
 
 	return nil
