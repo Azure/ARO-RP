@@ -13,10 +13,11 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockFeaturesValidator is a mock of FeaturesValidator interface.
