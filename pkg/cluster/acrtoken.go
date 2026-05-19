@@ -61,14 +61,14 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		return err
 	}
 
-	rp := token.GetRegistryProfile(m.doc.OpenShiftCluster)
+	rp := m.doc.OpenShiftCluster.GetRegistryProfile(m.env.ACRDomain())
 	if rp == nil {
 		// 1. choose a name and establish the intent to create a token with
 		// that name
 		rp = token.NewRegistryProfile()
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			token.PutRegistryProfile(doc.OpenShiftCluster, rp)
+			doc.OpenShiftCluster.PutRegistryProfile(rp)
 			return nil
 		})
 		if err != nil {
@@ -88,7 +88,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		rp.IssueDate = &currentTime
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			token.PutRegistryProfile(doc.OpenShiftCluster, rp)
+			doc.OpenShiftCluster.PutRegistryProfile(rp)
 			return nil
 		})
 		if err != nil {
@@ -110,7 +110,7 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return err
 	}
 
-	registryProfile := token.GetRegistryProfile(m.doc.OpenShiftCluster)
+	registryProfile := m.doc.OpenShiftCluster.GetRegistryProfile(m.env.ACRDomain())
 	if registryProfile == nil {
 		// this should never happen, but just in case
 		return m.ensureACRToken(ctx)
@@ -130,7 +130,7 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		token.PutRegistryProfile(doc.OpenShiftCluster, registryProfile)
+		doc.OpenShiftCluster.PutRegistryProfile(registryProfile)
 		return nil
 	})
 	if err != nil {
