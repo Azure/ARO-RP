@@ -62,5 +62,4 @@ var _ = Describe("[Admin API] ETCD key count action", func() {
 		}
 		Expect(dataLines).NotTo(BeEmpty(), "expected at least one '<count> <namespace>' line in response:\n%s", output)
 	})
-
 })

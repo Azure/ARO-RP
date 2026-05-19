@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
@@ -64,5 +65,9 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 }
 
 func GetTokenCredential(environment *azureclient.AROEnvironment) (azcore.TokenCredential, error) {
-	return azidentity.NewDefaultAzureCredential(environment.DefaultAzureCredentialOptions())
+	if v, ok := os.LookupEnv("AZURE_FEDERATED_TOKEN_FILE"); ok && v != "" {
+		return azidentity.NewWorkloadIdentityCredential(environment.WorkloadIdentityCredentialOptions())
+	}
+
+	return azidentity.NewEnvironmentCredential(environment.EnvironmentCredentialOptions())
 }
