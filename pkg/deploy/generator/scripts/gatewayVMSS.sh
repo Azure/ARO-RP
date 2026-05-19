@@ -22,7 +22,8 @@ main() {
 
     # shellcheck disable=SC2034
     local -ar exclude_pkgs=(
-        "-x WALinuxAgent"
+        "-x"
+        "WALinuxAgent"
     )
 
     tdnf_update_pkgs exclude_pkgs \
