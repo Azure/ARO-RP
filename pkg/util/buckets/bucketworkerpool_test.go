@@ -239,7 +239,7 @@ func TestConcurrentUpsert(t *testing.T) {
 	for range 3 {
 		wg.Go(func() {
 			// Holding the lock for a random duration, up to a second
-			// As we're upserting the same doc over and over, lenght should be 1
+			// As we're upserting the same doc over and over, length should be 1
 			time.Sleep(time.Duration(rand.Intn(int(time.Second))))
 			workerPool.UpsertDoc(doc)
 		})

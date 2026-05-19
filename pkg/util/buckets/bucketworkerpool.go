@@ -103,8 +103,7 @@ func (c *bucketWorkerPool[E]) fixDoc(v *cacheDoc[E]) {
 
 	if !ours && v.stop != nil {
 		c.baseLog.Debugf("we no longer own cluster, closing worker for %s", v.doc.GetID())
-		close(v.stop)
-		v.stop = nil
+		c.stopWorker(v.doc)
 	} else if ours {
 		c.workerPool.fixDoc(v)
 	}
