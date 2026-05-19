@@ -104,6 +104,7 @@ type frontend struct {
 	skuValidator       SkuValidator
 	quotaValidator     QuotaValidator
 	providersValidator ProvidersValidator
+	featuresValidator  FeaturesValidator
 
 	clusterEnricher clusterdata.BestEffortEnricher
 
@@ -188,6 +189,7 @@ func NewFrontend(ctx context.Context,
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},
 		providersValidator: providersValidator{},
+		featuresValidator:  featuresValidator{},
 
 		clusterEnricher: enricher,
 

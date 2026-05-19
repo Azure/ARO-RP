@@ -455,6 +455,11 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 		return err
 	}
 
+	err = f.featuresValidator.ValidateSubscriptionFeatures(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	if err != nil {
+		return err
+	}
+
 	err = f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
 	if err != nil {
 		return err

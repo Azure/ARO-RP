@@ -15,22 +15,45 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
+type FeaturesClient interface {
+	Get(ctx context.Context, resourceProviderNamespace string, featureName string, options *armfeatures.ClientGetOptions) (armfeatures.ClientGetResponse, error)
+}
+
+type FeaturesValidator interface {
+	ValidateSubscriptionFeatures(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
+}
+
+type featuresValidator struct{}
+
+func (f featuresValidator) ValidateSubscriptionFeatures(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
+	var fieldPath string
+	if oc.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled {
+		fieldPath = "properties.masterProfile.encryptionAtHost"
+	} else if oc.Properties.WorkerProfiles[0].EncryptionAtHost == api.EncryptionAtHostEnabled {
+		fieldPath = "properties.workerProfiles[0].encryptionAtHost"
+	}
+
+	if fieldPath != "" {
+		fpCred, err := environment.FPNewClientCertificateCredential(tenantID, nil)
+		if err != nil {
+			return err
+		}
+
+		featuresClient, err := armfeatures.NewClient(subscriptionID, fpCred, azEnv.ArmClientOptions())
+		if err != nil {
+			return err
+		}
+
+		return validateEncryptionAtHostFeature(ctx, featuresClient, subscriptionID, fieldPath)
+	}
+	return nil
+}
+
 func validateEncryptionAtHostFeature(
 	ctx context.Context,
-	azEnv *azureclient.AROEnvironment,
-	environment env.Interface,
-	subscriptionID, tenantID string,
+	featuresClient FeaturesClient,
+	subscriptionID, fieldPath string,
 ) error {
-	fpCred, err := environment.FPNewClientCertificateCredential(tenantID, nil)
-	if err != nil {
-		return err
-	}
-
-	featuresClient, err := armfeatures.NewClient(subscriptionID, fpCred, azEnv.ArmClientOptions())
-	if err != nil {
-		return err
-	}
-
 	resp, err := featuresClient.Get(ctx, "Microsoft.Compute", "EncryptionAtHost", nil)
 	if err != nil {
 		return err
@@ -38,9 +61,9 @@ func validateEncryptionAtHostFeature(
 
 	if resp.Properties == nil || resp.Properties.State == nil {
 		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"encryptionAtHost",
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"",
 			fmt.Sprintf(
 				"Microsoft.Compute/EncryptionAtHost"+
 					" feature has no state for"+
@@ -52,7 +75,7 @@ func validateEncryptionAtHostFeature(
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"encryptionAtHost",
+			fieldPath,
 			fmt.Sprintf(
 				"Microsoft.Compute/EncryptionAtHost feature is not registered on subscription %s. "+
 					"Please register the feature on your subscription before creating the cluster.",
