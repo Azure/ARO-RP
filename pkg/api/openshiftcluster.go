@@ -60,6 +60,27 @@ func (oc *OpenShiftCluster) HasUserAssignedIdentities() bool {
 	return oc.Identity != nil && oc.Identity.UserAssignedIdentities != nil && len(oc.Identity.UserAssignedIdentities) > 0
 }
 
+func (oc *OpenShiftCluster) PutRegistryProfile(registryProfile *RegistryProfile) {
+	for i, _existingRegistryProfile := range oc.Properties.RegistryProfiles {
+		if _existingRegistryProfile.Name == registryProfile.Name {
+			oc.Properties.RegistryProfiles[i] = registryProfile
+			return
+		}
+	}
+
+	oc.Properties.RegistryProfiles = append(oc.Properties.RegistryProfiles, registryProfile)
+}
+
+func (oc *OpenShiftCluster) GetRegistryProfile(name string) *RegistryProfile {
+	for i, registryProfile := range oc.Properties.RegistryProfiles {
+		if registryProfile.Name == name {
+			return oc.Properties.RegistryProfiles[i]
+		}
+	}
+
+	return nil
+}
+
 // CreatedByType by defines user type, which executed the request
 // This field should match common-types field names for swagger and sdk generation
 type CreatedByType string
