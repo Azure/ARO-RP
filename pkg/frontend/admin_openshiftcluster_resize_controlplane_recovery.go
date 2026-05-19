@@ -24,12 +24,7 @@ import (
 )
 
 const (
-	// The forward path historically used a 45 minute budget. Keep that as a
-	// per-master execution budget instead of a fixed whole-operation cap.
-	resizeControlPlanePerNodeExecutionTimeout = 45 * time.Minute
-	// Rollback needs a larger per-master budget because a late failure can
-	// require stop -> resize back -> start -> waitReady before metadata restore.
-	resizeControlPlanePerNodeRollbackTimeout = time.Hour
+	resizeControlPlanePerNodeTimeout = 45 * time.Minute
 
 	azureOperationMaxAttempts = 3
 	azureOperationRetryDelay  = 5 * time.Second
@@ -38,52 +33,9 @@ const (
 	etcdHealthPollInterval = 10 * time.Second
 )
 
-type resizeStep string
-
-const (
-	resizeStepCordon                resizeStep = "cordon"
-	resizeStepDrain                 resizeStep = "drain"
-	resizeStepStop                  resizeStep = "stop"
-	resizeStepResize                resizeStep = "resize"
-	resizeStepStart                 resizeStep = "start"
-	resizeStepWaitReady             resizeStep = "waitReady"
-	resizeStepUncordon              resizeStep = "uncordon"
-	resizeStepUpdateMachine         resizeStep = "updateMachine"
-	resizeStepUpdateNodeLabels      resizeStep = "updateNodeLabels"
-	resizeStepRestoreVMSize         resizeStep = "restoreVMSize"
-	resizeStepRestoreMachine        resizeStep = "restoreMachine"
-	resizeStepRestoreNodeLabels     resizeStep = "restoreNodeLabels"
-	resizeStepRestoreSchedulability resizeStep = "restoreSchedulability"
-	resizeStepWaitEtcd              resizeStep = "waitEtcdHealthy"
-)
-
-type resizeStepRecord struct {
-	nodeName       string
-	step           resizeStep
-	rollback       bool
-	duration       time.Duration
-	err            error
-	originalVMSize string
-}
-
-type resizeStepError struct {
-	nodeName string
-	step     resizeStep
-	err      error
-}
-
-func (e *resizeStepError) Error() string {
-	return e.err.Error()
-}
-
-func (e *resizeStepError) Unwrap() error {
-	return e.err
-}
-
 type resizeControlPlaneError struct {
 	baseErr     error
-	forward     []resizeStepRecord
-	rollback    []resizeStepRecord
+	steps       []string
 	rollbackErr error
 }
 
@@ -91,13 +43,9 @@ func (e *resizeControlPlaneError) Error() string {
 	var b strings.Builder
 	b.WriteString(e.baseErr.Error())
 
-	if len(e.forward) > 0 {
-		b.WriteString(". Steps taken: ")
-		b.WriteString(formatResizeStepRecords(e.forward))
-	}
-	if len(e.rollback) > 0 {
-		b.WriteString(". Rollback: ")
-		b.WriteString(formatResizeStepRecords(e.rollback))
+	if len(e.steps) > 0 {
+		b.WriteString(". Steps: ")
+		b.WriteString(strings.Join(e.steps, ", "))
 	}
 	if e.rollbackErr != nil {
 		b.WriteString(". Rollback errors: ")
@@ -136,8 +84,7 @@ type resizeControlPlaneOperation struct {
 	desiredVMSize            string
 	deallocateVM             bool
 	clusterResourceGroupName string
-	forward                  []resizeStepRecord
-	rollback                 []resizeStepRecord
+	steps                    []string
 	nodes                    []*controlPlaneNodeProgress
 }
 
@@ -145,40 +92,16 @@ type resizeControlPlaneOperation struct {
 // HTTP request lifecycle. The resize operation must complete even if the client
 // disconnects or the ARM load balancer times out (typical: 4-10 min).
 //
-// Trade-offs:
-//   - The HTTP response may be written to a dead connection; the SRE must check
-//     logs or cluster state to confirm the outcome.
-//   - If the RP pod is recycled (graceful shutdown), this context will NOT be
-//     cancelled. The goroutine continues until SIGKILL after the termination
-//     grace period. This can leave the cluster in a partially resized state
-//     requiring manual recovery via the Azure portal.
-//   - The CosmosDB provisioning state lock (ProvisioningStateAdminUpdating)
-//     ensures a concurrent resize attempt will be rejected with 409, but the
-//     lock may not be released if the pod is killed mid-operation.
-//
 // This endpoint is restricted to on-call SREs via Geneva Actions
 // (ClientPlatformServiceOperator claim).
 func newResizeControlPlaneExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(
 		context.WithoutCancel(parent),
-		time.Duration(api.ControlPlaneNodeCount)*resizeControlPlanePerNodeExecutionTimeout,
-	)
-}
-
-// newResizeControlPlaneRollbackContext creates a context for rollback operations.
-// Like the execution context, it uses WithoutCancel to ensure rollback completes
-// even if the original request is cancelled. The rollback budget is larger
-// because restoring the original VM size requires stop -> resize -> start ->
-// waitReady before metadata can be restored.
-func newResizeControlPlaneRollbackContext(parent context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(
-		context.WithoutCancel(parent),
-		time.Duration(api.ControlPlaneNodeCount)*resizeControlPlanePerNodeRollbackTimeout,
+		time.Duration(api.ControlPlaneNodeCount)*resizeControlPlanePerNodeTimeout,
 	)
 }
 
 func newResizeControlPlaneOperation(
-	_ context.Context,
 	log *logrus.Entry,
 	k adminactions.KubeActions,
 	a adminactions.AzureActions,
@@ -193,6 +116,14 @@ func newResizeControlPlaneOperation(
 		desiredVMSize:            desiredVMSize,
 		deallocateVM:             deallocateVM,
 		clusterResourceGroupName: clusterResourceGroupName,
+	}
+}
+
+func (o *resizeControlPlaneOperation) recordStep(node, step string, d time.Duration, err error) {
+	if err != nil {
+		o.steps = append(o.steps, fmt.Sprintf("%s:%s failed (%s): %v", node, step, d.Truncate(time.Millisecond), err))
+	} else {
+		o.steps = append(o.steps, fmt.Sprintf("%s:%s (%s)", node, step, d.Truncate(time.Millisecond)))
 	}
 }
 
@@ -280,107 +211,66 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 	return snapshot, nil
 }
 
-func (o *resizeControlPlaneOperation) runStep(ctx context.Context, nodeName string, step resizeStep, rollback bool, wrapPrefix string, fn func(context.Context) error) error {
-	return o.runStepWithSnapshot(ctx, nodeName, "", step, rollback, wrapPrefix, fn)
-}
-
-func (o *resizeControlPlaneOperation) runStepWithSnapshot(ctx context.Context, nodeName, originalVMSize string, step resizeStep, rollback bool, wrapPrefix string, fn func(context.Context) error) error {
-	start := time.Now()
-	err := fn(ctx)
-	record := resizeStepRecord{
-		nodeName:       nodeName,
-		step:           step,
-		rollback:       rollback,
-		duration:       time.Since(start),
-		err:            err,
-		originalVMSize: originalVMSize,
-	}
-	if rollback {
-		o.rollback = append(o.rollback, record)
-	} else {
-		o.forward = append(o.forward, record)
-	}
-	if err != nil {
-		return &resizeStepError{
-			nodeName: nodeName,
-			step:     step,
-			err:      fmt.Errorf("%s: %w", wrapPrefix, err),
-		}
-	}
-
-	return nil
-}
-
 func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *controlPlaneNodeProgress) error {
 	nodeName := state.snapshot.machineName
 
+	run := func(step string, fn func() error) error {
+		start := time.Now()
+		err := fn()
+		o.recordStep(nodeName, step, time.Since(start), err)
+		if err != nil {
+			return fmt.Errorf("%s: %w", step, err)
+		}
+		return nil
+	}
+
 	if state.snapshot.originallySchedulable {
-		if err := o.runStep(ctx, nodeName, resizeStepCordon, false, "cordoning node", func(ctx context.Context) error {
-			return cordonNode(ctx, o.k, nodeName)
-		}); err != nil {
+		if err := run("cordon", func() error { return cordonNode(ctx, o.k, nodeName) }); err != nil {
 			return err
 		}
 		state.schedulabilityNeedsRestore = true
 	}
 
-	if err := o.runStep(ctx, nodeName, resizeStepDrain, false, "draining node", func(ctx context.Context) error {
-		return o.k.DrainNodeWithRetries(ctx, nodeName)
-	}); err != nil {
+	if err := run("drain", func() error { return o.k.DrainNodeWithRetries(ctx, nodeName) }); err != nil {
 		return err
 	}
 
-	if err := o.runStep(ctx, nodeName, resizeStepStop, false, "stopping VM", func(ctx context.Context) error {
-		return o.a.VMStopAndWait(ctx, nodeName, o.deallocateVM)
-	}); err != nil {
+	if err := run("stop", func() error { return o.a.VMStopAndWait(ctx, nodeName, o.deallocateVM) }); err != nil {
 		return err
 	}
 	state.vmStopped = true
 
-	if err := o.runStep(ctx, nodeName, resizeStepResize, false, "resizing VM", func(ctx context.Context) error {
-		return o.a.VMResize(ctx, nodeName, o.desiredVMSize)
-	}); err != nil {
+	if err := run("resize", func() error { return o.a.VMResize(ctx, nodeName, o.desiredVMSize) }); err != nil {
 		return err
 	}
 	state.vmResized = true
 
-	if err := o.runStep(ctx, nodeName, resizeStepStart, false, "starting VM", func(ctx context.Context) error {
-		return o.a.VMStartAndWait(ctx, nodeName)
-	}); err != nil {
+	if err := run("start", func() error { return o.a.VMStartAndWait(ctx, nodeName) }); err != nil {
 		return err
 	}
 
-	if err := o.runStep(ctx, nodeName, resizeStepWaitReady, false, "waiting for node ready", func(ctx context.Context) error {
-		return waitForNodeReady(ctx, o.log, o.k, nodeName)
-	}); err != nil {
+	if err := run("waitReady", func() error { return waitForNodeReady(ctx, o.log, o.k, nodeName) }); err != nil {
 		return err
 	}
 	state.vmStopped = false
 
-	if err := o.runStep(ctx, nodeName, resizeStepWaitEtcd, false, "waiting for etcd healthy", func(ctx context.Context) error {
-		return waitForEtcdHealthy(ctx, o.log, o.k)
-	}); err != nil {
+	if err := run("waitEtcd", func() error { return waitForEtcdHealthy(ctx, o.log, o.k) }); err != nil {
 		return err
 	}
 
 	if state.snapshot.originallySchedulable {
-		if err := o.runStep(ctx, nodeName, resizeStepUncordon, false, "uncordoning node", func(ctx context.Context) error {
-			return uncordonNode(ctx, o.k, nodeName)
-		}); err != nil {
+		if err := run("uncordon", func() error { return uncordonNode(ctx, o.k, nodeName) }); err != nil {
 			return err
 		}
 		state.schedulabilityNeedsRestore = false
 	}
 
-	if err := o.runStep(ctx, nodeName, resizeStepUpdateMachine, false, "updating Machine object", func(ctx context.Context) error {
-		return updateMachineVMSize(ctx, o.k, nodeName, o.desiredVMSize)
-	}); err != nil {
+	if err := run("updateMachine", func() error { return updateMachineVMSize(ctx, o.k, nodeName, o.desiredVMSize) }); err != nil {
 		return err
 	}
 	state.machineUpdated = true
 
-	if err := o.runStep(ctx, nodeName, resizeStepUpdateNodeLabels, false, "updating Node labels", func(ctx context.Context) error {
-		return updateNodeInstanceTypeLabels(ctx, o.k, nodeName, o.desiredVMSize)
-	}); err != nil {
+	if err := run("updateNodeLabels", func() error { return updateNodeInstanceTypeLabels(ctx, o.k, nodeName, o.desiredVMSize) }); err != nil {
 		return err
 	}
 	state.nodeLabelsUpdated = true
@@ -434,10 +324,8 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 	nodeReadyForSchedRestore := !state.vmStopped && !state.vmResized
 
 	if state.vmResized {
-		err := o.runStep(ctx, nodeName, resizeStepRestoreVMSize, true, "restoring original VM size", func(ctx context.Context) error {
-			// Rollback always uses a deallocated stop so restoring the original SKU
-			// takes the most conservative Azure path, even if the forward request
-			// preferred a non-deallocated stop.
+		start := time.Now()
+		err := func() error {
 			if err := retryAzureOperation(ctx, "stop VM for rollback", func() error {
 				return o.a.VMStopAndWait(ctx, nodeName, true)
 			}); err != nil {
@@ -464,7 +352,8 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 			}
 			nodeReadyForSchedRestore = true
 			return nil
-		})
+		}()
+		o.recordStep(nodeName, "restoreVMSize", time.Since(start), err)
 		if err != nil {
 			rollbackErrs = append(rollbackErrs, err)
 		} else {
@@ -472,26 +361,31 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 		}
 	} else if state.vmStopped {
 		nodeReadyForSchedRestore = false
-		if err := o.runStep(ctx, nodeName, resizeStepStart, true, "starting VM during rollback", func(ctx context.Context) error {
-			return retryAzureOperation(ctx, "start VM during rollback", func() error {
-				return o.a.VMStartAndWait(ctx, nodeName)
-			})
-		}); err != nil {
-			rollbackErrs = append(rollbackErrs, err)
-		} else if err := o.runStep(ctx, nodeName, resizeStepWaitReady, true, "waiting for node ready during rollback", func(ctx context.Context) error {
-			return waitForNodeReady(ctx, o.log, o.k, nodeName)
-		}); err != nil {
-			rollbackErrs = append(rollbackErrs, err)
+		start := time.Now()
+		startErr := retryAzureOperation(ctx, "start VM during rollback", func() error {
+			return o.a.VMStartAndWait(ctx, nodeName)
+		})
+		o.recordStep(nodeName, "start", time.Since(start), startErr)
+		if startErr != nil {
+			rollbackErrs = append(rollbackErrs, startErr)
 		} else {
-			state.vmStopped = false
-			nodeReadyForSchedRestore = true
+			start = time.Now()
+			waitErr := waitForNodeReady(ctx, o.log, o.k, nodeName)
+			o.recordStep(nodeName, "waitReady", time.Since(start), waitErr)
+			if waitErr != nil {
+				rollbackErrs = append(rollbackErrs, waitErr)
+			} else {
+				state.vmStopped = false
+				nodeReadyForSchedRestore = true
+			}
 		}
 	}
 
 	if state.machineUpdated && vmSizeRestored {
-		if err := o.runStep(ctx, nodeName, resizeStepRestoreMachine, true, "restoring Machine object", func(ctx context.Context) error {
-			return updateMachineVMSize(ctx, o.k, nodeName, state.snapshot.originalMachineSize)
-		}); err != nil {
+		start := time.Now()
+		err := updateMachineVMSize(ctx, o.k, nodeName, state.snapshot.originalMachineSize)
+		o.recordStep(nodeName, "restoreMachine", time.Since(start), err)
+		if err != nil {
 			rollbackErrs = append(rollbackErrs, err)
 		} else {
 			state.machineUpdated = false
@@ -499,9 +393,10 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 	}
 
 	if state.nodeLabelsUpdated && vmSizeRestored {
-		if err := o.runStep(ctx, nodeName, resizeStepRestoreNodeLabels, true, "restoring Node labels", func(ctx context.Context) error {
-			return restoreNodeInstanceTypeLabels(ctx, o.k, nodeName, state.snapshot.originalNodeInstanceType, state.snapshot.originalNodeBetaInstanceType)
-		}); err != nil {
+		start := time.Now()
+		err := restoreNodeInstanceTypeLabels(ctx, o.k, nodeName, state.snapshot.originalNodeInstanceType, state.snapshot.originalNodeBetaInstanceType)
+		o.recordStep(nodeName, "restoreNodeLabels", time.Since(start), err)
+		if err != nil {
 			rollbackErrs = append(rollbackErrs, err)
 		} else {
 			state.nodeLabelsUpdated = false
@@ -509,14 +404,15 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 	}
 
 	if state.schedulabilityNeedsRestore && nodeReadyForSchedRestore {
-		var restoreFn func(context.Context) error
+		start := time.Now()
+		var err error
 		if state.snapshot.originallySchedulable {
-			restoreFn = func(ctx context.Context) error { return uncordonNode(ctx, o.k, nodeName) }
+			err = uncordonNode(ctx, o.k, nodeName)
 		} else {
-			restoreFn = func(ctx context.Context) error { return cordonNode(ctx, o.k, nodeName) }
+			err = cordonNode(ctx, o.k, nodeName)
 		}
-
-		if err := o.runStep(ctx, nodeName, resizeStepRestoreSchedulability, true, "restoring node schedulability", restoreFn); err != nil {
+		o.recordStep(nodeName, "restoreSchedulability", time.Since(start), err)
+		if err != nil {
 			rollbackErrs = append(rollbackErrs, err)
 		} else {
 			state.schedulabilityNeedsRestore = false
@@ -539,30 +435,4 @@ func (o *resizeControlPlaneOperation) rollbackAll(ctx context.Context) error {
 		}
 	}
 	return errors.Join(errs...)
-}
-
-func formatResizeStepRecords(records []resizeStepRecord) string {
-	parts := make([]string, 0, len(records))
-	for _, record := range records {
-		duration := record.duration.Truncate(time.Millisecond)
-		if duration <= 0 {
-			duration = record.duration
-		}
-		if duration <= 0 {
-			duration = time.Millisecond
-		}
-
-		nodeID := record.nodeName
-		if record.originalVMSize != "" {
-			nodeID = fmt.Sprintf("%s[%s]", record.nodeName, record.originalVMSize)
-		}
-
-		entry := fmt.Sprintf("%s:%s (%s)", nodeID, record.step, duration)
-		if record.err != nil {
-			entry = fmt.Sprintf("%s failed (%s): %v", fmt.Sprintf("%s:%s", nodeID, record.step), duration, record.err)
-		}
-		parts = append(parts, entry)
-	}
-
-	return strings.Join(parts, ", ")
 }

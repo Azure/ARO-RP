@@ -86,15 +86,12 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 			Return(healthyEtcdJSON(), nil).AnyTimes()
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
-			"failed to resize node master-0: resizing VM: Azure resize error",
-			"Steps taken:",
+			"failed to resize node master-0: resize: Azure resize error",
+			"Steps:",
 			"master-0:cordon",
 			"master-0:drain",
 			"master-0:stop",
 			"master-0:resize failed",
-			"Rollback:",
-			"master-0:start",
-			"master-0:waitReady",
 			"master-0:restoreSchedulability",
 		)
 	})
@@ -163,8 +160,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 			Return(healthyEtcdJSON(), nil).AnyTimes()
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
-			"failed to resize node master-1: draining node: could not drain node after 3 retries: drain error",
-			"Rollback:",
+			"failed to resize node master-1: drain: could not drain node after 3 retries: drain error",
 			"master-1:restoreSchedulability",
 			"master-2:restoreVMSize",
 			"master-2:restoreMachine",
@@ -225,7 +221,6 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"Control plane node master-2 is not Ready",
-			"Rollback:",
 			"master-2:restoreVMSize",
 			"master-2:restoreMachine",
 			"master-2:restoreNodeLabels",
@@ -289,7 +284,6 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
 		assertErrorContainsAll(t, err,
 			"failed to capture Azure VM state for master-1",
-			"Rollback:",
 			"master-2:restoreVMSize",
 			"master-2:restoreMachine",
 			"master-2:restoreNodeLabels",
@@ -314,34 +308,10 @@ func TestNewResizeControlPlaneExecutionContext(t *testing.T) {
 		t.Fatal("execution context should have a deadline")
 	}
 
-	expected := time.Duration(api.ControlPlaneNodeCount) * resizeControlPlanePerNodeExecutionTimeout
+	expected := time.Duration(api.ControlPlaneNodeCount) * resizeControlPlanePerNodeTimeout
 	remaining := time.Until(deadline)
 	if remaining < expected-time.Second || remaining > expected {
 		t.Fatalf("execution deadline remaining %s, want close to %s", remaining, expected)
-	}
-}
-
-func TestNewResizeControlPlaneRollbackContext(t *testing.T) {
-	parent, cancelParent := context.WithCancel(context.Background())
-	ctx, cancel := newResizeControlPlaneRollbackContext(parent)
-	cancelParent()
-	defer cancel()
-
-	select {
-	case <-ctx.Done():
-		t.Fatalf("rollback context should outlive parent cancellation: %v", ctx.Err())
-	default:
-	}
-
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		t.Fatal("rollback context should have a deadline")
-	}
-
-	expected := time.Duration(api.ControlPlaneNodeCount) * resizeControlPlanePerNodeRollbackTimeout
-	remaining := time.Until(deadline)
-	if remaining < expected-time.Second || remaining > expected {
-		t.Fatalf("rollback deadline remaining %s, want close to %s", remaining, expected)
 	}
 }
 
@@ -355,7 +325,7 @@ func TestRecordOriginalVMSizeUsesAzureActualVM(t *testing.T) {
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
 
-	op := newResizeControlPlaneOperation(ctx, log, k, a, "Standard_D16s_v5", true, "test-cluster")
+	op := newResizeControlPlaneOperation(log, k, a, "Standard_D16s_v5", true, "test-cluster")
 	machine := machineValidationData{
 		size:              "Standard_D8s_v3",
 		phase:             "Running",
@@ -375,7 +345,7 @@ func TestRecordOriginalVMSizeUsesAzureActualVM(t *testing.T) {
 
 	k = mock_adminactions.NewMockKubeActions(ctrl)
 	a = mock_adminactions.NewMockAzureActions(ctrl)
-	op = newResizeControlPlaneOperation(ctx, log, k, a, "Standard_D16s_v5", true, "test-cluster")
+	op = newResizeControlPlaneOperation(log, k, a, "Standard_D16s_v5", true, "test-cluster")
 
 	gomock.InOrder(
 		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
@@ -396,7 +366,7 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
-	op := newResizeControlPlaneOperation(ctx, log, k, a, "Standard_D16s_v5", true, "test-cluster")
+	op := newResizeControlPlaneOperation(log, k, a, desiredSize, true, "test-cluster")
 	state := &controlPlaneNodeProgress{
 		snapshot: controlPlaneNodeSnapshot{
 			machineName:                  "master-0",
@@ -426,8 +396,7 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 
 	err := op.rollbackNode(ctx, state)
 	assertErrorContainsAll(t, err,
-		"restoring original VM size",
-		"start VM after rollback",
+		"starting VM after restoring original size",
 		"start failed after size restore",
 	)
 
@@ -442,12 +411,10 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 
 	err := &resizeControlPlaneError{
 		baseErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "controlPlaneInventory", "inventory mismatch"),
-		forward: []resizeStepRecord{
-			{nodeName: "master-0", step: resizeStepStop, duration: 10 * time.Millisecond},
-			{nodeName: "master-0", step: resizeStepResize, duration: 10 * time.Millisecond, err: errors.New("Azure resize error")},
-		},
-		rollback: []resizeStepRecord{
-			{nodeName: "master-0", step: resizeStepStart, rollback: true, duration: 10 * time.Millisecond},
+		steps: []string{
+			"master-0:stop (10ms)",
+			"master-0:resize failed (10ms): Azure resize error",
+			"master-0:start (10ms)",
 		},
 	}
 
@@ -476,10 +443,9 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"inventory mismatch",
-		"Steps taken:",
+		"Steps:",
 		"master-0:stop",
 		"master-0:resize failed",
-		"Rollback:",
 		"master-0:start",
 	} {
 		if !strings.Contains(message, expected) {
@@ -493,17 +459,11 @@ func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {
 	_, log := testlog.New()
 
 	err := &resizeControlPlaneError{
-		baseErr: fmt.Errorf("failed to resize node master-0: %w",
-			&resizeStepError{
-				nodeName: "master-0", step: resizeStepResize,
-				err: fmt.Errorf("resizing VM: %w", errors.New("Azure resize error")),
-			}),
-		forward: []resizeStepRecord{
-			{nodeName: "master-0", step: resizeStepStop, duration: 10 * time.Millisecond},
-			{nodeName: "master-0", step: resizeStepResize, duration: 10 * time.Millisecond, err: errors.New("Azure resize error")},
-		},
-		rollback: []resizeStepRecord{
-			{nodeName: "master-0", step: resizeStepStart, rollback: true, duration: 10 * time.Millisecond},
+		baseErr: fmt.Errorf("failed to resize node master-0: resize: %w", errors.New("Azure resize error")),
+		steps: []string{
+			"master-0:stop (10ms)",
+			"master-0:resize failed (10ms): Azure resize error",
+			"master-0:start (10ms)",
 		},
 	}
 
@@ -529,10 +489,9 @@ func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"Azure resize error",
-		"Steps taken:",
+		"Steps:",
 		"master-0:stop",
 		"master-0:resize failed",
-		"Rollback:",
 		"master-0:start",
 	} {
 		if !strings.Contains(message, expected) {

@@ -408,8 +408,7 @@ func TestResizeControlPlane(t *testing.T) {
 				)
 			},
 			wantErrContains: []string{
-				"failed to resize node master-0: draining node: could not drain node after 3 retries: drain error",
-				"Rollback:",
+				"failed to resize node master-0: drain: could not drain node after 3 retries: drain error",
 				"master-0:restoreSchedulability",
 			},
 		},
@@ -434,8 +433,7 @@ func TestResizeControlPlane(t *testing.T) {
 				)
 			},
 			wantErrContains: []string{
-				"failed to resize node master-0: stopping VM: Azure capacity error",
-				"Rollback:",
+				"failed to resize node master-0: stop: Azure capacity error",
 				"master-0:restoreSchedulability",
 			},
 		},
@@ -464,9 +462,8 @@ func TestResizeControlPlane(t *testing.T) {
 				)
 			},
 			wantErrContains: []string{
-				"failed to resize node master-0: resizing VM: Azure resize error",
-				"Steps taken:",
-				"Rollback:",
+				"failed to resize node master-0: resize: Azure resize error",
+				"Steps:",
 				"master-0:start",
 				"master-0:waitReady",
 				"master-0:restoreSchedulability",
@@ -500,8 +497,7 @@ func TestResizeControlPlane(t *testing.T) {
 				)
 			},
 			wantErrContains: []string{
-				"failed to resize node master-0: starting VM: start failed",
-				"Rollback:",
+				"failed to resize node master-0: start: start failed",
 				"master-0:restoreVMSize",
 				"master-0:restoreSchedulability",
 			},
@@ -537,8 +533,7 @@ func TestResizeControlPlane(t *testing.T) {
 				)
 			},
 			wantErrContains: []string{
-				"failed to resize node master-0: uncordoning node: uncordon failure",
-				"Rollback:",
+				"failed to resize node master-0: uncordon: uncordon failure",
 				"master-0:restoreVMSize",
 				"master-0:restoreSchedulability",
 			},

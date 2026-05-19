@@ -140,25 +140,23 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 		return cmp.Compare(b, a)
 	})
 
-	operation := newResizeControlPlaneOperation(ctx, log, k, a, desiredVMSize, deallocateVM, clusterResourceGroupName)
+	operation := newResizeControlPlaneOperation(log, k, a, desiredVMSize, deallocateVM, clusterResourceGroupName)
+
+	triggerRollback := func(baseErr error) error {
+		rollbackErr := operation.rollbackAll(ctx)
+		return &resizeControlPlaneError{
+			baseErr:     baseErr,
+			steps:       operation.steps,
+			rollbackErr: rollbackErr,
+		}
+	}
 
 	for _, name := range sortedNames {
-		// Re-evaluate control plane health before every iteration. Even when a
-		// machine already matches the target SKU, we must not continue to the
-		// next resize while another control plane node is NotReady or cordoned.
 		if err := ensureControlPlaneAndEtcdHealthy(ctx, k, sortedNames); err != nil {
 			if len(operation.nodes) == 0 {
 				return err
 			}
-			rollbackCtx, cancelRollback := newResizeControlPlaneRollbackContext(ctx)
-			defer cancelRollback()
-			rollbackErr := operation.rollbackAll(rollbackCtx)
-			return &resizeControlPlaneError{
-				baseErr:     err,
-				forward:     operation.forward,
-				rollback:    operation.rollback,
-				rollbackErr: rollbackErr,
-			}
+			return triggerRollback(err)
 		}
 
 		machine := machines[name]
@@ -172,30 +170,14 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 			if len(operation.nodes) == 0 {
 				return err
 			}
-			rollbackCtx, cancelRollback := newResizeControlPlaneRollbackContext(ctx)
-			defer cancelRollback()
-			rollbackErr := operation.rollbackAll(rollbackCtx)
-			return &resizeControlPlaneError{
-				baseErr:     err,
-				forward:     operation.forward,
-				rollback:    operation.rollback,
-				rollbackErr: rollbackErr,
-			}
+			return triggerRollback(err)
 		}
 		nodeState := &controlPlaneNodeProgress{snapshot: snapshot}
 		operation.nodes = append(operation.nodes, nodeState)
 
 		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, desiredVMSize)
 		if err := operation.resizeNode(ctx, nodeState); err != nil {
-			rollbackCtx, cancelRollback := newResizeControlPlaneRollbackContext(ctx)
-			defer cancelRollback()
-			rollbackErr := operation.rollbackAll(rollbackCtx)
-			return &resizeControlPlaneError{
-				baseErr:     fmt.Errorf("failed to resize node %s: %w", name, err),
-				forward:     operation.forward,
-				rollback:    operation.rollback,
-				rollbackErr: rollbackErr,
-			}
+			return triggerRollback(fmt.Errorf("failed to resize node %s: %w", name, err))
 		}
 		log.Infof("Successfully resized node %s to %s", name, desiredVMSize)
 	}
