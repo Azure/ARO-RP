@@ -90,16 +90,6 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 		return err
 	}
 
-	switch doc.OpenShiftCluster.Properties.ProvisioningState {
-	case api.ProvisioningStateAdminUpdating, api.ProvisioningStateUpdating,
-		api.ProvisioningStateCreating, api.ProvisioningStateDeleting:
-		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed, "",
-			fmt.Sprintf("Cannot resize control plane while cluster is in %q state.",
-				doc.OpenShiftCluster.Properties.ProvisioningState))
-	}
-
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return err
