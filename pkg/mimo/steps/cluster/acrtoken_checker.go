@@ -21,8 +21,8 @@ func EnsureACRTokenIsValid(ctx context.Context) error {
 	}
 
 	env := th.Environment()
-	registryProfiles := th.GetOpenShiftClusterProperties().RegistryProfiles
-	rp := acrtoken.GetRegistryProfileFromSlice(env, registryProfiles)
+	doc := th.GetOpenShiftClusterDocument()
+	rp := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
 
 	if rp == nil || rp.IssueDate == nil {
 		return mimo.TerminalError(errors.New("no issue date detected, please rotate token"))
