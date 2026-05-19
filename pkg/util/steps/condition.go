@@ -35,6 +35,8 @@ var timeoutConditionErrors = map[string]string{
 	"ensureAROOperatorRunningDesiredVersion": "ARO Cluster Operator is not running desired version.",
 	"hiveClusterDeploymentReady":             "Timed out waiting for the condition to be ready.",
 	"hiveClusterInstallationComplete":        "Timed out waiting for the condition to complete.",
+	"aroCredentialsRequestReconciled":        "ARO Credentials Request has not been reconciled successfully.",
+	"clusterOperatorsHaveSettled":            "Critical cluster operators have not settled successfully.",
 }
 
 // conditionFunction is a function that takes a context and returns whether the
@@ -113,7 +115,7 @@ func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
 
 	message, exists := timeoutConditionErrors[funcName]
 	if !exists {
-		return originalErr
+		message = fmt.Sprintf("Timed out waiting for the condition '%s'.", funcName)
 	}
 	return api.NewCloudError(
 		http.StatusInternalServerError,

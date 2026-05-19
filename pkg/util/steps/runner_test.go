@@ -232,11 +232,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: 500: DeploymentFailed: : Timed out waiting for the condition 'timingOutCondition'. Please retry, and if the issue persists, raise an Azure support ticket"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "500: DeploymentFailed: : Timed out waiting for the condition 'timingOutCondition'. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			name: "A Condition that returns a timeout error causes a different failure from a timed out Condition",
@@ -262,11 +262,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: 500: DeploymentFailed: : Timed out waiting for the condition 'internalTimeoutCondition'. Please retry, and if the issue persists, raise an Azure support ticket"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition encountered internal timeout: timed out waiting for the condition",
+			wantErr: "500: DeploymentFailed: : Timed out waiting for the condition 'internalTimeoutCondition'. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
@@ -287,11 +287,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: 500: DeploymentFailed: : Timed out waiting for the condition 'alwaysFalseCondition'. Please retry, and if the issue persists, raise an Azure support ticket"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "500: DeploymentFailed: : Timed out waiting for the condition 'alwaysFalseCondition'. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

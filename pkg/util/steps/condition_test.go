@@ -28,6 +28,12 @@ func (n *teststruct) hiveClusterDeploymentReady(context.Context) (bool, error) {
 func (n *teststruct) hiveClusterInstallationComplete(context.Context) (bool, error) {
 	return false, nil
 }
+func (n *teststruct) aroCredentialsRequestReconciled(context.Context) (bool, error) {
+	return false, nil
+}
+func (n *teststruct) clusterOperatorsHaveSettled(context.Context) (bool, error) {
+	return false, nil
+}
 
 func TestEnrichConditionTimeoutError(t *testing.T) {
 	// When stringifying a method on a struct, golang adds -fm -- this is not
@@ -44,11 +50,11 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 		// Verify response for func's mention in timeoutConditionErrors and
 		// Emit generic Error if an unknown func
 		{
-			// unknown function
+			// unknown function - still gets a CloudError with the function name
 			desc:        "test conditionfail for func - unknownFunc",
 			function:    timingOutCondition,
 			originalErr: "timed out waiting for the condition",
-			wantErr:     "timed out waiting for the condition",
+			wantErr:     "500: DeploymentFailed: : Timed out waiting for the condition 'timingOutCondition'. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - attachNSGs",
@@ -104,6 +110,16 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 			desc:     "test conditionfail for func - hiveClusterInstallationComplete",
 			function: s.hiveClusterInstallationComplete,
 			wantErr:  "500: DeploymentFailed: : Timed out waiting for the condition to complete. Please retry, and if the issue persists, raise an Azure support ticket",
+		},
+		{
+			desc:     "test conditionfail for func - aroCredentialsRequestReconciled",
+			function: s.aroCredentialsRequestReconciled,
+			wantErr:  "500: DeploymentFailed: : ARO Credentials Request has not been reconciled successfully. Please retry, and if the issue persists, raise an Azure support ticket",
+		},
+		{
+			desc:     "test conditionfail for func - clusterOperatorsHaveSettled",
+			function: s.clusterOperatorsHaveSettled,
+			wantErr:  "500: DeploymentFailed: : Critical cluster operators have not settled successfully. Please retry, and if the issue persists, raise an Azure support ticket",
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
