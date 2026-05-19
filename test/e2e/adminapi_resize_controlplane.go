@@ -126,7 +126,7 @@ func validateMasterVMSizeLabels(ctx context.Context, targetSku string) {
 	}
 }
 
-var _ = Describe("[Admin API] Resize control plane", func() {
+var _ = Describe("[Admin API] Resize control plane", Serial, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should reject an unsupported VM size", func(ctx context.Context) {
@@ -222,7 +222,7 @@ var _ = Describe("[Admin API] Resize control plane", func() {
 		Expect(out.Details[0].Code).To(Equal("ResourceQuotaExceeded"))
 	})
 
-	It("should do the resize when target size is different", Label(slow), FlakeAttempts(1), Serial, func(ctx context.Context) {
+	It("should do the resize when target size is different", Label(slow), FlakeAttempts(1), func(ctx context.Context) {
 		By("Getting the current machine size")
 		preResizeVMSize := getControlPlaneVMSize(ctx)
 		Expect(preResizeVMSize).ToNot(BeZero())
