@@ -100,27 +100,6 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 				doc.OpenShiftCluster.Properties.ProvisioningState))
 	}
 
-	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
-	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
-	// Prevent the backend from dequeuing this document for processing.
-	// The resize operation is handled synchronously by the frontend, not
-	// by the backend's async pipeline. Setting Dequeues >= 5 keeps it
-	// out of the backend dequeue query while we hold the lock.
-	oldDequeues := doc.Dequeues
-	doc.Dequeues = 5
-	doc, err = dbOpenShiftClusters.Update(ctx, doc)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		doc.OpenShiftCluster.Properties.ProvisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
-		doc.Dequeues = oldDequeues
-		if _, restoreErr := dbOpenShiftClusters.Update(context.Background(), doc); restoreErr != nil {
-			log.Errorf("Failed to restore provisioning state after resize: %v", restoreErr)
-		}
-	}()
-
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return err
