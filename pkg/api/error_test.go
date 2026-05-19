@@ -28,18 +28,18 @@ func TestWrapCloudErrorWithMessage(t *testing.T) {
 	})
 
 	t.Run("preserves cloud error status and metadata", func(t *testing.T) {
-		inner := NewCloudError(http.StatusConflict, CloudErrorCodeRequestNotAllowed, "controlPlaneInventory", "inner")
+		inner := NewCloudError(http.StatusBadRequest, CloudErrorCodeInvalidParameter, "controlPlaneInventory", "inner")
 		inner.Details = []CloudErrorBody{
 			{Code: "Nested", Message: "nested message", Target: "nestedTarget"},
 		}
 
 		err := WrapCloudErrorWithMessage(errors.New("outer failure with rollback context"), inner)
 
-		if err.StatusCode != http.StatusConflict {
-			t.Fatalf("status = %d, want %d", err.StatusCode, http.StatusConflict)
+		if err.StatusCode != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", err.StatusCode, http.StatusBadRequest)
 		}
-		if err.Code != CloudErrorCodeRequestNotAllowed {
-			t.Fatalf("code = %q, want %q", err.Code, CloudErrorCodeRequestNotAllowed)
+		if err.Code != CloudErrorCodeInvalidParameter {
+			t.Fatalf("code = %q, want %q", err.Code, CloudErrorCodeInvalidParameter)
 		}
 		if err.Target != "controlPlaneInventory" {
 			t.Fatalf("target = %q, want %q", err.Target, "controlPlaneInventory")

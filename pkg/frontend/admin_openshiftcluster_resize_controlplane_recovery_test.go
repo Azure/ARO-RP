@@ -441,7 +441,7 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 	_, log := testlog.New()
 
 	err := &resizeControlPlaneError{
-		baseErr: api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "controlPlaneInventory", "inventory mismatch"),
+		baseErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "controlPlaneInventory", "inventory mismatch"),
 		forward: []resizeStepRecord{
 			{nodeName: "master-0", step: resizeStepStop, duration: 10 * time.Millisecond},
 			{nodeName: "master-0", step: resizeStepResize, duration: 10 * time.Millisecond, err: errors.New("Azure resize error")},
@@ -453,8 +453,8 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 
 	adminReply(log, recorder, nil, nil, err)
 
-	if recorder.Code != http.StatusConflict {
-		t.Fatalf("status code = %d, want %d", recorder.Code, http.StatusConflict)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status code = %d, want %d", recorder.Code, http.StatusBadRequest)
 	}
 
 	var body map[string]map[string]any
@@ -463,8 +463,8 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 	}
 
 	errorBody := body["error"]
-	if errorBody["code"] != api.CloudErrorCodeRequestNotAllowed {
-		t.Fatalf("error code = %v, want %s", errorBody["code"], api.CloudErrorCodeRequestNotAllowed)
+	if errorBody["code"] != api.CloudErrorCodeInvalidParameter {
+		t.Fatalf("error code = %v, want %s", errorBody["code"], api.CloudErrorCodeInvalidParameter)
 	}
 	if errorBody["target"] != "controlPlaneInventory" {
 		t.Fatalf("error target = %v, want %s", errorBody["target"], "controlPlaneInventory")

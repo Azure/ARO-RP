@@ -190,8 +190,8 @@ func validateResizeControlPlaneInventory(
 	ocMachines, err := validateClusterMachines(log, machines)
 	if err != nil {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"controlPlaneInventory",
 			fmt.Sprintf("Control plane machine inventory is inconsistent: %v", err),
 		)
@@ -200,8 +200,8 @@ func validateResizeControlPlaneInventory(
 	ocNodes, err := validateClusterNodes(log, ctx, k)
 	if err != nil {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"controlPlaneInventory",
 			fmt.Sprintf("Control plane node inventory is inconsistent: %v", err),
 		)
@@ -209,8 +209,8 @@ func validateResizeControlPlaneInventory(
 
 	if err := validateClusterMachinesAndNodes(log, ocMachines, ocNodes); err != nil {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"controlPlaneInventory",
 			fmt.Sprintf("Control plane machine and node inventory is inconsistent: %v", err),
 		)
@@ -219,8 +219,8 @@ func validateResizeControlPlaneInventory(
 	azureVMs, err := getAzureVMs(log, ctx, a, clusterResourceGroupID, ocMachines)
 	if err != nil {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"controlPlaneInventory",
 			fmt.Sprintf("Control plane Azure VM inventory is inconsistent: %v", err),
 		)
@@ -228,8 +228,8 @@ func validateResizeControlPlaneInventory(
 
 	if err := validateClusterMachinesAndVMs(log, ocMachines, azureVMs); err != nil {
 		return api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"controlPlaneInventory",
 			fmt.Sprintf("Control plane machine and Azure VM inventory is inconsistent: %v", err),
 		)

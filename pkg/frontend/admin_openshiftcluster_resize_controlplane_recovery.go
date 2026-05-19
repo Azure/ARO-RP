@@ -199,16 +199,16 @@ func newResizeControlPlaneOperation(
 func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, machineName string, machine machineValidationData) (controlPlaneNodeSnapshot, error) {
 	if machine.phase != "Running" {
 		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"",
 			fmt.Sprintf("control plane machine %s is not Running (phase=%s)", machineName, machine.phase),
 		)
 	}
 	if machine.labelInstanceType == "" || machine.labelInstanceType != machine.size {
 		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"",
 			fmt.Sprintf("control plane machine %s has mismatched Machine metadata: label instance-type %q, spec size %q", machineName, machine.labelInstanceType, machine.size),
 		)
@@ -225,8 +225,8 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 	actualVMSize := string(vm.HardwareProfile.VMSize)
 	if !strings.EqualFold(actualVMSize, machine.size) {
 		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"",
 			fmt.Sprintf("actual Azure VM size %s does not match Machine spec size %s for %s", actualVMSize, machine.size, machineName),
 		)
@@ -247,16 +247,16 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 	betaInstanceType := labels[nodeLabelBetaInstanceType]
 	if nodeInstanceType != betaInstanceType {
 		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"",
 			fmt.Sprintf("node %s has inconsistent instance type labels: %s=%q, %s=%q", machineName, nodeLabelInstanceType, nodeInstanceType, nodeLabelBetaInstanceType, betaInstanceType),
 		)
 	}
 	if !strings.EqualFold(nodeInstanceType, machine.size) {
 		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusConflict,
-			api.CloudErrorCodeRequestNotAllowed,
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
 			"",
 			fmt.Sprintf("node %s instance type labels do not match Machine spec size %s", machineName, machine.size),
 		)
