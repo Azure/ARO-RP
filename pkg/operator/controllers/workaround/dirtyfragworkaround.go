@@ -13,13 +13,12 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -61,12 +60,7 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 		return false, nil
 	}
 
-	network := &unstructured.Unstructured{}
-	network.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "operator.openshift.io",
-		Version: "v1",
-		Kind:    "Network",
-	})
+	network := &operatorv1.Network{}
 
 	err := a.ch.Get(ctx, types.NamespacedName{Name: "cluster"}, network)
 	if err != nil && !kerrors.IsNotFound(err) {
@@ -74,16 +68,19 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 	}
 
 	if err == nil {
-		ipsecConfig, found, err := unstructured.NestedMap(network.Object, "spec", "defaultNetwork", "ovnKubernetesConfig", "ipsecConfig")
-		if err != nil {
-			return false, fmt.Errorf("failed to parse Network resource: %w", err)
+		// Spec.DefaultNetwork.OVNKubernetesConfig.IPsecConfig is 'disabled' by
+		// default, so treat nils as disabled
+		ovnConfig := network.Spec.DefaultNetwork.OVNKubernetesConfig
+		if ovnConfig == nil {
+			return true, nil
 		}
-		if found {
-			mode, ok := ipsecConfig["mode"].(string)
-			if ok && mode != ipsecModeDisabled {
-				return false, nil
-			}
+		ipsecConfig := network.Spec.DefaultNetwork.OVNKubernetesConfig.IPsecConfig
+		if ipsecConfig == nil || ipsecConfig.Mode == operatorv1.IPsecModeDisabled {
+			return true, nil
 		}
+	} else if kerrors.IsNotFound(err) {
+		// missing = apply
+		return true, nil
 	}
 
 	if !clusterVersion.Lt(version.NewVersion(4, 22, 0)) {
