@@ -71,8 +71,6 @@ func masterMachine(name, vmSize, phase string) machinev1beta1.Machine {
 	return m
 }
 
-func strPtr(s string) *string { return &s }
-
 func cpmsJSON(state string) []byte {
 	obj := map[string]any{
 		"apiVersion": "machine.openshift.io/v1",

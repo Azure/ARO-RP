@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,7 +77,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
 				&operatorv1.Network{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster",
 					},
 					Spec: operatorv1.NetworkSpec{
@@ -100,7 +100,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
 				&operatorv1.Network{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster",
 					},
 					Spec: operatorv1.NetworkSpec{},
@@ -116,7 +116,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			},
 			objects: []client.Object{
 				&operatorv1.Network{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster",
 					},
 					Spec: operatorv1.NetworkSpec{
@@ -135,7 +135,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
 				&operatorv1.Network{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster",
 					},
 					Spec: operatorv1.NetworkSpec{
