@@ -230,7 +230,6 @@ somethingElse:
 }
 
 func TestReconcilePVC(t *testing.T) {
-	volumeMode := corev1.PersistentVolumeFilesystem
 	tests := []struct {
 		name           string
 		pvcs           []client.Object
@@ -297,12 +296,6 @@ func TestReconcilePVC(t *testing.T) {
 							"app": "random",
 						},
 						ResourceVersion: "1",
-					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						VolumeMode: &volumeMode,
-					},
-					Status: corev1.PersistentVolumeClaimStatus{
-						Phase: corev1.ClaimPending,
 					},
 				},
 			},
