@@ -134,7 +134,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	ocpclientset, err := client.New(restConfig, client.Options{})
+	ocpclientset, err := client.New(restConfig, client.Options{HTTPClient: httpClient})
 	if err != nil {
 		return nil, err
 	}
