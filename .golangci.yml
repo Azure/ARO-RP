@@ -208,9 +208,6 @@ linters:
       - linters:
           - staticcheck
         text: "SA1019: wait.PollImmediate is deprecated"
-      - linters:
-          - staticcheck
-        text: "SA1019: wait.ErrWaitTimeout is deprecated"
 issues:
   max-same-issues: 0
 formatters:

@@ -1605,11 +1605,11 @@ func (c *Cluster) checkResourceGroupDeleted(ctx context.Context, resourceGroupNa
 		return false, nil
 	}, timeoutCtx.Done())
 	if err != nil {
-		if err == wait.ErrWaitTimeout && lastErr != nil {
-			return fmt.Errorf("timed out checking for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
+		if wait.Interrupted(err) && lastErr != nil {
+			return fmt.Errorf("timed out checking for resource group %s to be deleted: %w, last error: %w", resourceGroupName, err, lastErr)
 		}
-		if err == wait.ErrWaitTimeout {
-			return fmt.Errorf("timed out checking for resource group %s to be deleted", resourceGroupName)
+		if wait.Interrupted(err) {
+			return fmt.Errorf("timed out checking for resource group %s to be deleted: %w", resourceGroupName, err)
 		}
 		return err
 	}
