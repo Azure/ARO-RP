@@ -20,7 +20,6 @@ import (
 
 	apiversion "github.com/Azure/ARO-RP/pkg/api/util/version"
 	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/test/util/clienthelper"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -42,7 +41,7 @@ func TestCopyFailWorkaround(t *testing.T) {
 		expectedIsRequired    bool
 		clusterFlags          map[string]string
 		clusterVersion        apiversion.Version
-		addHooks              func(*clienthelper.HookingClient)
+		addHooks              func(*testclienthelper.HookingClient)
 		objects               []client.Object
 		expectedMachineConfig *mcv1.MachineConfig
 		expectedErr           error
@@ -69,7 +68,7 @@ func TestCopyFailWorkaround(t *testing.T) {
 			clusterFlags:       copyFailEnabled,
 			expectedIsRequired: true,
 			expectedErr:        errFail,
-			addHooks: func(hc *clienthelper.HookingClient) {
+			addHooks: func(hc *testclienthelper.HookingClient) {
 				hc.WithPreCreateHook(func(obj client.Object) error {
 					return errFail
 				})
@@ -226,7 +225,7 @@ func TestCopyFailWorkaround(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 			clientBuilder := testclienthelper.NewAROFakeClientBuilder(tC.objects...)
 
-			cl := clienthelper.NewHookingClient(clientBuilder.Build())
+			cl := testclienthelper.NewHookingClient(clientBuilder.Build())
 			if tC.addHooks != nil {
 				tC.addHooks(cl)
 			}
