@@ -176,6 +176,13 @@ generate-kiota:
 	$(MAKE) imports
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
+# Not wired into make generate: requires gopls (heavy install), slow, developer-facing doc only.
+# gopls v0.19.0: last version supporting Go 1.25.x (v0.22.0+ requires Go 1.26).
+.PHONY: generate-cloud-errors
+generate-cloud-errors: ## Generate docs/clouderrors.md listing all CloudError call sites
+	@[ -x "$(GOBIN)/gopls" ] || GOBIN=$(GOBIN) go install golang.org/x/tools/gopls@v0.19.0
+	GOPLS=$(GOBIN)/gopls python3 hack/extract-cloud-errors.py > docs/clouderrors.md
+
 .PHONY: imports
 imports: lint-go-fix
 
