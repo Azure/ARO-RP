@@ -48,7 +48,7 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 			desc:        "test conditionfail for func - unknownFunc",
 			function:    timingOutCondition,
 			originalErr: "timed out waiting for the condition",
-			wantErr:     "timed out waiting for the condition",
+			wantErr:     "condition step failed: timingOutCondition: timed out waiting for the condition",
 		},
 		{
 			desc:     "test conditionfail for func - attachNSGs",
