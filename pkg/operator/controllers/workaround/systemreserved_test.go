@@ -15,7 +15,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"

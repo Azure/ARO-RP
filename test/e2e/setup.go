@@ -43,10 +43,10 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"

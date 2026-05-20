@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	mcofake "github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"

@@ -76,19 +76,13 @@ linters:
           alias: openapi_v2
         - pkg: github.com/openshift/console-operator/pkg/api
           alias: consoleapi
-        - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
-          alias: machinev1beta1
-        - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
-          alias: maoclient
-        - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake
-          alias: maofake
-        - pkg: github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
+        - pkg: github.com/openshift/api/machineconfiguration/v1
           alias: mcv1
-        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
+        - pkg: github.com/openshift/client-go/machineconfiguration/clientset/versioned
           alias: mcoclient
-        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake
+        - pkg: github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake
           alias: mcofake
-        - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1
+        - pkg: github.com/openshift/client-go/machineconfiguration/clientset/versioned/typed/machineconfiguration/v1
           alias: mcoclientv1
         - pkg: github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1
           alias: monitoringv1

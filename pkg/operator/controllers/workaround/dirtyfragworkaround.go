@@ -18,8 +18,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
