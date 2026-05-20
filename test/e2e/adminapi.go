@@ -9,14 +9,17 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	. "github.com/onsi/gomega"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 )
@@ -49,49 +52,11 @@ func _getAdminReqOpt(key string, opts []adminReqOpts) (interface{}, bool) {
 }
 
 func adminRequest(ctx context.Context, method, path string, params url.Values, strict bool, in, out interface{}, opts ...adminReqOpts) (*http.Response, error) {
-	if !env.IsLocalDevelopmentMode() {
-		return nil, errors.New("only development RP mode is supported")
-	}
-
-	if params == nil {
-		params = url.Values{}
-	}
-
-	params.Add("api-version", admin.APIVersion)
-
-	adminAPIBaseURI := "https://localhost:8443"
-	adminURL, err := url.Parse(adminAPIBaseURI + path)
-	if err != nil {
-		return nil, err
-	}
-	adminURL.RawQuery = params.Encode()
-
-	req, err := http.NewRequestWithContext(ctx, method, adminURL.String(), nil)
+	resp, err := adminRequestRaw(ctx, method, path, params, in)
 	if err != nil {
 		return nil, err
 	}
 
-	if in != nil {
-		buf := &bytes.Buffer{}
-		err := json.NewEncoder(buf).Encode(in)
-		if err != nil {
-			return nil, err
-		}
-		req.Body = io.NopCloser(buf)
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
 	defer func() {
 		_, _ = resp.Body.Read(nil)
 		_ = resp.Body.Close()
@@ -134,6 +99,87 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, s
 	}
 
 	return resp, nil
+}
+
+// adminRequestRaw calls the admin api running in a local RP instance. It does
+// not handle or transforms the http response. It is the callers responsibility
+// to close the response body
+func adminRequestRaw(ctx context.Context, method, path string, params url.Values, in any) (*http.Response, error) {
+	if !env.IsLocalDevelopmentMode() {
+		return nil, errors.New("only development RP mode is supported")
+	}
+
+	if params == nil {
+		params = url.Values{}
+	}
+
+	params.Add("api-version", admin.APIVersion)
+
+	adminAPIBaseURI := "https://localhost:8443"
+	adminURL, err := url.Parse(adminAPIBaseURI + path)
+	if err != nil {
+		return nil, err
+	}
+	adminURL.RawQuery = params.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, method, adminURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if in != nil {
+		buf := &bytes.Buffer{}
+		err := json.NewEncoder(buf).Encode(in)
+		if err != nil {
+			return nil, err
+		}
+		req.Body = io.NopCloser(buf)
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+	return client.Do(req)
+}
+
+func adminResizeControlplane(ctx context.Context, clusterResourceID string, targetVMSize string, deallocateVM bool) error {
+	params := url.Values{}
+	params.Add("deallocateVM", strconv.FormatBool(deallocateVM))
+	if targetVMSize != "" {
+		params.Add("vmSize", targetVMSize)
+	}
+
+	resp, err := adminRequestRaw(ctx, http.MethodPost, "/admin"+clusterResourceID+"/resizecontrolplane", params, nil)
+
+	defer func() {
+		_, _ = resp.Body.Read(nil)
+		_ = resp.Body.Close()
+	}()
+
+	if err != nil {
+		return fmt.Errorf("error calling resize cp admin endpoint: %w", err)
+	}
+
+	// all good, we don't expect a return value here
+	if resp.StatusCode < 400 {
+		return nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %w", err)
+	}
+
+	cloudErr := api.CloudError{}
+	if err = json.Unmarshal(body, &cloudErr); err != nil {
+		return fmt.Errorf("error parsing response as cloud error: %w, Response Body: %s", err, string(body))
+	}
+	return &cloudErr
 }
 
 // adminGetCluster returns admin representation of an ARO cluster

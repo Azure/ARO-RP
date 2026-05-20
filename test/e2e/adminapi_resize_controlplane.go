@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -130,28 +128,15 @@ var _ = Describe("[Admin API] Resize control plane", Serial, func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should reject an unsupported VM size", func(ctx context.Context) {
-		params := url.Values{
-			"vmSize":       []string{"Standard_Invalid_Fake"},
-			"deallocateVM": []string{"true"},
-		}
-
-		resp, err := adminRequest(ctx, http.MethodPost,
-			"/admin"+clusterResourceID+"/resizecontrolplane",
-			params, true, nil, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		err := adminResizeControlplane(ctx, clusterResourceID, "Standard_Invalid_Fake", true)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("The provided vmSize 'Standard_Invalid_Fake' is unsupported for master"))
 	})
 
 	It("should reject a request with missing vmSize", func(ctx context.Context) {
-		params := url.Values{
-			"deallocateVM": []string{"true"},
-		}
-
-		resp, err := adminRequest(ctx, http.MethodPost,
-			"/admin"+clusterResourceID+"/resizecontrolplane",
-			params, true, nil, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		err := adminResizeControlplane(ctx, clusterResourceID, "", false)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("The provided vmSize '' is unsupported for master"))
 	})
 
 	It("should not resize when size is already the same", func(ctx context.Context) {
@@ -161,16 +146,9 @@ var _ = Describe("[Admin API] Resize control plane", Serial, func() {
 
 		By(fmt.Sprintf("Resizing to the current machine size: %s", preResizeVMSize))
 
-		params := url.Values{
-			"deallocateVM": []string{"false"},
-			"vmSize":       []string{preResizeVMSize},
-		}
+		err := adminResizeControlplane(ctx, clusterResourceID, preResizeVMSize, false)
 
-		resp, err := adminRequest(ctx, http.MethodPost,
-			"/admin"+clusterResourceID+"/resizecontrolplane",
-			params, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		controlPlaneVms := getControlPlaneVMs(ctx)
 		Expect(controlPlaneVms).ToNot(BeEmpty())
@@ -207,19 +185,12 @@ var _ = Describe("[Admin API] Resize control plane", Serial, func() {
 		}
 
 		By(fmt.Sprintf("Trying to resize controlplane vms to %s", targetSku))
-		params := url.Values{
-			"deallocateVM": []string{"false"},
-			"vmSize":       []string{targetSku},
-		}
 
-		out := api.CloudError{}
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/resizecontrolplane", params, true, nil, &out)
+		err = adminResizeControlplane(ctx, clusterResourceID, targetSku, false)
 
-		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-		Expect(out.Message).To(Equal("Pre-flight validation failed."))
-		Expect(out.Details).To(HaveLen(1))
-		Expect(out.Details[0].Code).To(Equal("ResourceQuotaExceeded"))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("Pre-flight validation failed."))
+		Expect(err.Error()).To(ContainSubstring("ResourceQuotaExceeded"))
 	})
 
 	It("should do the resize when target size is different", Label(slow), FlakeAttempts(1), func(ctx context.Context) {
@@ -236,15 +207,10 @@ var _ = Describe("[Admin API] Resize control plane", Serial, func() {
 		}
 
 		By(fmt.Sprintf("Resizing from %s to %s", preResizeVMSize, targetSku))
-		params := url.Values{
-			"deallocateVM": []string{"false"},
-			"vmSize":       []string{targetSku},
-		}
 
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/resizecontrolplane", params, true, nil, nil)
+		err = adminResizeControlplane(ctx, clusterResourceID, targetSku, false)
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		By("Validating vm size after resize")
 		controlPlaneVms := getControlPlaneVMs(ctx)
