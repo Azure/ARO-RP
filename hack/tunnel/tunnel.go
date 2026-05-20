@@ -165,5 +165,7 @@ func main() {
 
 	flag.Parse()
 
-	log.Fatal(run(context.Background(), log, flags))
+	if err := run(context.Background(), log, flags); err != nil {
+		log.Fatal(err)
+	}
 }
