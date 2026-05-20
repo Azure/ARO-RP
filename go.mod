@@ -67,11 +67,10 @@ require (
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221109005544-7de84dff5081
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/openshift/api v0.0.0-20240509165319-a8a5b79cc248
-	github.com/openshift/client-go v0.0.0-20240405120947-c67c8325cdd8
+	github.com/openshift/client-go v0.0.0-20240422164335-6c851f4919dd
 	github.com/openshift/cloud-credential-operator v0.0.0-20240910012137-a0245d57d1e6
 	github.com/openshift/hive/apis v0.0.0-20260127213836-e33d70397d57
-	github.com/openshift/library-go v0.0.0-20230620084201-504ca4bd5a83
-	github.com/openshift/machine-config-operator v0.0.0-00010101000000-000000000000
+	github.com/openshift/library-go v0.0.0-20240424194921-cb8aac942b79
 	github.com/pires/go-proxyproto v0.8.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.50.0
@@ -175,7 +174,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/foxboron/go-tpm-keyfiles v0.0.0-20250903184740-5d135037bd4d // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
-	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250714165856-be8212f5270d // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -802,12 +800,10 @@ replace (
 // OpenShift pins
 replace (
 	github.com/Azure/azure-sdk-for-go => github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
-	github.com/google/gnostic-models => github.com/google/gnostic-models v0.6.8
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20251110182646-a010e8fb33bc
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20260113171308-0677a8879a46
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
 	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
-	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
-	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20230908201248-46b93e64dea6
+	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20260216092059-c6fca0a92ab5
 )
 
 // broken deps on 2.8.3
