@@ -103,9 +103,10 @@ func TestEmitPodConditions(t *testing.T) {
 		Build())
 
 	mon := &Monitor{
-		ocpclientset: ocpclientset,
-		m:            m,
-		queryLimit:   1,
+		ocpclientset:        ocpclientset,
+		m:                   m,
+		queryLimit:          1,
+		namespacesToMonitor: []string{"openshift-etcd"},
 	}
 
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
@@ -228,9 +229,10 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		Build())
 
 	mon := &Monitor{
-		ocpclientset: ocpclientset,
-		m:            m,
-		queryLimit:   1,
+		ocpclientset:        ocpclientset,
+		m:                   m,
+		queryLimit:          1,
+		namespacesToMonitor: []string{"openshift-apiserver"},
 	}
 
 	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
@@ -395,11 +397,12 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		Build())
 
 	mon := &Monitor{
-		ocpclientset: ocpclientset,
-		m:            m,
-		queryLimit:   1,
-		hourlyRun:    true,
-		log:          log,
+		ocpclientset:        ocpclientset,
+		m:                   m,
+		queryLimit:          1,
+		hourlyRun:           true,
+		log:                 log,
+		namespacesToMonitor: []string{"openshift-kube-apiserver"},
 	}
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(42), map[string]string{

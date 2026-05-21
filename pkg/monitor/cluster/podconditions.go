@@ -24,14 +24,8 @@ var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
 
 var restartCounterThreshold int32 = 10
 
-var podConditionNamespaces = []string{
-	"openshift-etcd",
-	"openshift-apiserver",
-	"openshift-kube-apiserver",
-}
-
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
-	for _, ns := range podConditionNamespaces {
+	for _, ns := range mon.namespacesToMonitor {
 		var cont string
 		ps := &corev1.PodList{}
 

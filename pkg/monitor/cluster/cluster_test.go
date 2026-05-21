@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restfake "k8s.io/client-go/rest/fake"
 
@@ -49,6 +50,7 @@ func TestMonitor(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		expectedErrors []error
+		hooks          func(*testclienthelper.HookingClient)
 		collectors     func(*Monitor) []collectorFunc
 		healthzCall    func(*http.Request) (*http.Response, error)
 		expectedGauges []fakemetrics.MetricsAssertion[int64]
@@ -88,6 +90,13 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
+						"collector": "fetchManagedNamespaces",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "testCollectorNoop",
 					},
 				},
@@ -96,6 +105,55 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "testCollectorNoopB",
+					},
+				},
+			},
+		},
+		{
+			name:        "namespace fetch failure",
+			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
+			hooks: func(hc *testclienthelper.HookingClient) {
+				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
+					_, ok := obj.(*corev1.NamespaceList)
+					if ok {
+						return errors.New("failure with ns")
+					}
+					return nil
+				})
+			},
+			expectedErrors: []error{
+				&failureToRunClusterCollector{collectorName: "fetchManagedNamespaces"},
+				errListNamespaces,
+			},
+			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "apiserver.healthz.code",
+					Value:      int64(1),
+					Dimensions: map[string]string{
+						"code": "200",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.error",
+					Value:      int64(1),
+					Dimensions: map[string]string{
+						"collector": "fetchManagedNamespaces",
+					},
+				},
+			},
+			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "emitAPIServerHealthzCode",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "prefetchClusterVersion",
 					},
 				},
 			},
@@ -141,6 +199,13 @@ func TestMonitor(t *testing.T) {
 						"collector": "prefetchClusterVersion",
 					},
 				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "fetchManagedNamespaces",
+					},
+				},
 			},
 		},
 		{
@@ -182,6 +247,13 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "fetchManagedNamespaces",
 					},
 				},
 				{
@@ -324,6 +396,13 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
+						"collector": "fetchManagedNamespaces",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
 						"collector": "cancelContextCollector",
 					},
 				},
@@ -332,6 +411,8 @@ func TestMonitor(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := []client.Object{
+				namespaceObject("openshift"),
+				namespaceObject("customer"),
 				&configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
@@ -364,6 +445,10 @@ func TestMonitor(t *testing.T) {
 				WithObjects(objects...).
 				Build())
 			ocpclientset := clienthelper.NewWithClient(log, client)
+
+			if tt.hooks != nil {
+				tt.hooks(client)
+			}
 
 			currTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 			now := func() time.Time {
