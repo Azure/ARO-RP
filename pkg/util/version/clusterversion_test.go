@@ -116,14 +116,13 @@ func TestIsClusterUpgrading(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*configv1.ClusterVersion)
+		nilCV   bool
 		want    bool
 		comment string
 	}{
 		{
-			name: "nil ClusterVersion returns false",
-			mocks: func(cv *configv1.ClusterVersion) {
-				// cv will be set to nil in the test
-			},
+			name:    "nil ClusterVersion returns false",
+			nilCV:   true,
 			want:    false,
 			comment: "Safety check for nil input",
 		},
@@ -265,7 +264,7 @@ func TestIsClusterUpgrading(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var cv *configv1.ClusterVersion
 
-			if tt.name != "nil ClusterVersion returns false" {
+			if !tt.nilCV {
 				cv = &configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "version",
