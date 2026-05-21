@@ -27,11 +27,25 @@ import (
 	fakemetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
+var errTestCollectorFailure = errors.New("failure inside")
+
+func testCollectorNoop(ctx context.Context) error    { return nil }
+func testCollectorNoopB(ctx context.Context) error   { return nil }
+func testCollectorFailing(ctx context.Context) error  { return errTestCollectorFailure }
+func testCollectorPanicking(ctx context.Context) error { panic(errTestCollectorFailure) }
+
+type testCancellingCollector struct {
+	cancel context.CancelFunc
+}
+
+func (c *testCancellingCollector) cancelContextCollector(ctx context.Context) error {
+	c.cancel()
+	return nil
+}
+
 func TestMonitor(t *testing.T) {
 	var _ctx context.Context
 	var _cancel context.CancelFunc
-
-	innerFailure := errors.New("failure inside")
 
 	for _, tt := range []struct {
 		name           string
@@ -46,10 +60,7 @@ func TestMonitor(t *testing.T) {
 			name:        "happy path",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
 			collectors: func(m *Monitor) []collectorFunc {
-				return []collectorFunc{
-					func(ctx context.Context) error { return nil },
-					func(ctx context.Context) error { return nil },
-				}
+				return []collectorFunc{testCollectorNoop, testCollectorNoopB}
 			},
 			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
@@ -86,14 +97,14 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "1",
+						"collector": "testCollectorNoop",
 					},
 				},
 				{
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "2",
+						"collector": "testCollectorNoopB",
 					},
 				},
 			},
@@ -151,13 +162,11 @@ func TestMonitor(t *testing.T) {
 			name:        "collector failure",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
 			collectors: func(m *Monitor) []collectorFunc {
-				return []collectorFunc{
-					func(ctx context.Context) error { return innerFailure },
-				}
+				return []collectorFunc{testCollectorFailing}
 			},
 			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "1"},
-				innerFailure,
+				&failureToRunClusterCollector{collectorName: "testCollectorFailing"},
+				errTestCollectorFailure,
 			},
 			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
@@ -171,7 +180,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.error",
 					Value:      int64(1),
 					Dimensions: map[string]string{
-						"collector": "1",
+						"collector": "testCollectorFailing",
 					},
 				},
 			},
@@ -203,14 +212,11 @@ func TestMonitor(t *testing.T) {
 			name:        "collector panic does not stop other collectors",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
 			collectors: func(m *Monitor) []collectorFunc {
-				return []collectorFunc{
-					func(ctx context.Context) error { panic(innerFailure) },
-					func(ctx context.Context) error { return nil },
-				}
+				return []collectorFunc{testCollectorPanicking, testCollectorNoop}
 			},
 			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "1"},
-				&collectorPanic{panicValue: innerFailure},
+				&failureToRunClusterCollector{collectorName: "testCollectorPanicking"},
+				&collectorPanic{panicValue: errTestCollectorFailure},
 			},
 			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
 				{
@@ -224,7 +230,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.error",
 					Value:      int64(1),
 					Dimensions: map[string]string{
-						"collector": "1",
+						"collector": "testCollectorPanicking",
 					},
 				},
 			},
@@ -254,7 +260,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "2",
+						"collector": "testCollectorNoop",
 					},
 				},
 			},
@@ -348,18 +354,11 @@ func TestMonitor(t *testing.T) {
 			name:        "timeout during collector means other collectors are skipped",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
 			collectors: func(m *Monitor) []collectorFunc {
-				return []collectorFunc{
-					func(ctx context.Context) error {
-						_cancel()
-						return nil
-					},
-					func(ctx context.Context) error {
-						return nil
-					},
-				}
+				cc := &testCancellingCollector{cancel: _cancel}
+				return []collectorFunc{cc.cancelContextCollector, testCollectorNoop}
 			},
 			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "2"},
+				&failureToRunClusterCollector{collectorName: "testCollectorNoop"},
 				context.Canceled,
 			},
 			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
@@ -374,7 +373,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.skipped",
 					Value:      int64(1),
 					Dimensions: map[string]string{
-						"collector": "2",
+						"collector": "testCollectorNoop",
 					},
 				},
 			},
@@ -404,7 +403,7 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "1",
+						"collector": "cancelContextCollector",
 					},
 				},
 			},
@@ -524,7 +523,10 @@ func TestMonitorAlreadyCancelled(t *testing.T) {
 		now:          now,
 	}
 
-	mon.collectors = []collectorFunc{func(ctx context.Context) error { return nil }}
+	mon.collectors = []collectorFunc{func(ctx context.Context) error {
+		t.Fatal("collector should not be called when context is already cancelled")
+		return nil
+	}}
 
 	// Cancel context before it hits the monitor
 	cancel()
