@@ -83,6 +83,14 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 			subnetID:    "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
 			wantNSGID:   "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-nsg",
 		},
+		{
+			name:      "worker arch v1 skip empty SubnetID",
+			infraID:   "test-1234",
+			wpStatus:  true,
+			wpEmpty:   true,
+			subnetID:  "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
+			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-node-nsg",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc.Properties.InfraID = tt.infraID
