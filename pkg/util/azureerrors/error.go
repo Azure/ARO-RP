@@ -172,6 +172,34 @@ func IsStatusConflictError(err error) bool {
 	return false
 }
 
+func IsStatusUnauthorizedError(err error) bool {
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		return detailedErr.StatusCode == http.StatusUnauthorized
+	}
+
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		return responseError.StatusCode == http.StatusUnauthorized
+	}
+
+	return false
+}
+
+func IsStatusForbiddenError(err error) bool {
+	var detailedErr autorest.DetailedError
+	if errors.As(err, &detailedErr) {
+		return detailedErr.StatusCode == http.StatusForbidden
+	}
+
+	var responseError *azcore.ResponseError
+	if errors.As(err, &responseError) {
+		return responseError.StatusCode == http.StatusForbidden
+	}
+
+	return false
+}
+
 // IsInvalidSecretError returns if errors is InvalidCredentials error
 // Example: (adal.tokenRefreshError) adal: Refresh request failed. Status Code = '401'.
 // Response body: {"error":"invalid_client","error_description":"AADSTS7000215:
