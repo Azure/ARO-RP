@@ -47,7 +47,7 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsStatusForbiddenError(err) || azureerrors.IsNotFoundError(err) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fmt.Sprintf(`.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["%s"]`, operatorName), err.Error())
 			} else {
-				return fmt.Errorf("error occured when retrieving platform workload identity '%s' details: %w", operatorName, err)
+				return fmt.Errorf("error occurred when retrieving platform workload identity '%s' details: %w", operatorName, err)
 			}
 		}
 

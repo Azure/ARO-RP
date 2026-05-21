@@ -127,7 +127,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
 					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, fmt.Errorf("some error occurred"))
 			},
-			wantErr: "error occured when retrieving platform workload identity 'foo' details: some error occurred",
+			wantErr: "error occurred when retrieving platform workload identity 'foo' details: some error occurred",
 		},
 		{
 			name: "error - unauthorized identity lookup becomes invalid platform workload identity",
