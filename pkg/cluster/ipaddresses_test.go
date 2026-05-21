@@ -422,6 +422,9 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 					},
 				}
 				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			mocks: func(publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_armnetwork.MockSubnetsClient) {
 				publicIPAddresses.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
