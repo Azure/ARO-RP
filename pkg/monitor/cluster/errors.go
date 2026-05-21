@@ -14,7 +14,7 @@ var (
 	errFetchClusterVersion              = errors.New("error fetching ClusterVersion")
 	errFetchAROOperatorMasterDeployment = errors.New("error fetching ARO Operator master deployment")
 	errListAROOperatorDeployments       = errors.New("error listing ARO Operator deployments")
-	errListNamespaces = errors.New("error listing cluster namespaces")
+	errListNamespaces                   = errors.New("error listing cluster namespaces")
 )
 
 var (
