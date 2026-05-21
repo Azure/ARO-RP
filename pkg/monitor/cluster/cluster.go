@@ -64,9 +64,6 @@ type Monitor struct {
 
 	ocpclientset clienthelper.Interface
 
-	// Namespaces that are OpenShift or ARO managed that we want to monitor
-	namespacesToMonitor []string
-
 	// OpenShift version of the cluster being monitored
 	clusterDesiredVersion version.Version
 	clusterActualVersion  version.Version
@@ -158,13 +155,12 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		rawClient:   rawClient,
 		now:         time.Now,
 
-		env:                 env,
-		tenantID:            tenantID,
-		m:                   m,
-		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
-		namespacesToMonitor: []string{},
-		queryLimit:          50,
-		parallelism:         MONITOR_GOROUTINES_PER_CLUSTER,
+		env:          env,
+		tenantID:     tenantID,
+		m:            m,
+		ocpclientset: clienthelper.NewWithClient(log, ocpclientset),
+		queryLimit:   50,
+		parallelism:  MONITOR_GOROUTINES_PER_CLUSTER,
 	}
 	mon.collectors = []collectorFunc{
 		mon.emitAroOperatorHeartbeat,
@@ -267,14 +263,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 	}
 
 	err = mon.timeCall(ctx, mon.prefetchClusterVersion)
-	if err != nil {
-		errs = append(errs, err)
-		return errors.Join(errs...)
-	}
-
-	// Determine the list of OpenShift (or ARO) managed namespaces that we will
-	// query for -- this needs to succeed
-	err = mon.timeCall(ctx, mon.fetchManagedNamespaces)
 	if err != nil {
 		errs = append(errs, err)
 		return errors.Join(errs...)
