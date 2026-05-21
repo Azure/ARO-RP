@@ -55,10 +55,9 @@ func ClusterVersionLessThan(ctx context.Context, configcli configclient.Interfac
 
 // IsClusterUpgrading returns true when the CVO has initiated an OCP version upgrade.
 // It checks status.history[0].state rather than the Progressing condition because
-// Progressing=True is also set during MCO node rollouts triggered by ARO's own
-// MachineConfig management, not just OCP upgrades. This prevents ARO from flushing
-// pending dnsmasq MachineConfig changes during master-only AdminUpdates.
-// See ARO-26990 for details.
+// Progressing=True is also set during node rollouts that are not real CVO-driven
+// OCP upgrades. Callers use this helper to gate reboot-causing reconciliation so
+// it only proceeds during actual cluster upgrades. See ARO-26990 for details.
 func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {
 	if cv == nil || len(cv.Status.History) == 0 {
 		return false
