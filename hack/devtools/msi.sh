@@ -2,8 +2,8 @@
 set -o nounset
 set -o pipefail
 
-# This script creates a mock cluster MSI object and gives it the federated credential
-# role assignment scoped to the network resource group.
+# This script creates a mock cluster MSI object and (unless SKIP_MIWI_ROLE_ASSIGNMENT=true)
+# gives it the federated credential role assignment scoped to the network resource group.
 
 if [[ -z "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
     echo "Error: AZURE_SUBSCRIPTION_ID is not set."
