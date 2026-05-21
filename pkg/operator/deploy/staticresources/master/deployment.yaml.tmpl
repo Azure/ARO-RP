@@ -37,12 +37,16 @@ spec:
         {{ if .UsesWorkloadIdentity }}
         - name: AZURE_FEDERATED_TOKEN_FILE
           value: "{{ .FederatedTokenFilePath }}"
+        - name: AZURE_TOKEN_CREDENTIALS
+          value: "WorkloadIdentityCredential"
         {{ else }}
         - name: AZURE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
               name: azure-cloud-credentials
               key: azure_client_secret
+        - name: AZURE_TOKEN_CREDENTIALS
+          value: "EnvironmentCredential"
         {{ end }}
         - name: AZURE_TENANT_ID
           valueFrom:

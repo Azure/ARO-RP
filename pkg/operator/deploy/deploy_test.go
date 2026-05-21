@@ -739,3 +739,59 @@ func TestTemplateManifests(t *testing.T) {
 		})
 	}
 }
+
+func TestTemplateManifestsAzureTokenCredentials(t *testing.T) {
+	for _, tt := range []struct {
+		name                      string
+		usesWorkloadIdentity      bool
+		wantAzureTokenCredentials string
+	}{
+		{
+			name:                      "service principal sets AZURE_TOKEN_CREDENTIALS to EnvironmentCredential",
+			usesWorkloadIdentity:      false,
+			wantAzureTokenCredentials: "EnvironmentCredential",
+		},
+		{
+			name:                      "workload identity sets AZURE_TOKEN_CREDENTIALS to WorkloadIdentityCredential",
+			usesWorkloadIdentity:      true,
+			wantAzureTokenCredentials: "WorkloadIdentityCredential",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			data := deploymentData{
+				Image:                "someImage",
+				Version:              "someVersion",
+				UsesWorkloadIdentity: tt.usesWorkloadIdentity,
+			}
+
+			actualBytes, err := templateManifests(data)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			found := false
+			for _, fileBytes := range actualBytes {
+				var deployment appsv1.Deployment
+				if err := yaml.Unmarshal(fileBytes, &deployment); err != nil {
+					continue
+				}
+				if deployment.Kind != "Deployment" || deployment.Name != "aro-operator-master" {
+					continue
+				}
+
+				for _, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+					if env.Name == "AZURE_TOKEN_CREDENTIALS" {
+						found = true
+						if env.Value != tt.wantAzureTokenCredentials {
+							t.Errorf("AZURE_TOKEN_CREDENTIALS = %q, want %q", env.Value, tt.wantAzureTokenCredentials)
+						}
+					}
+				}
+			}
+
+			if !found {
+				t.Error("AZURE_TOKEN_CREDENTIALS env var not found in master deployment")
+			}
+		})
+	}
+}

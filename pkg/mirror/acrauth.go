@@ -65,6 +65,11 @@ func (a *AcrAuth) getNew(ctx context.Context) (*types.DockerAuthConfig, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	// Re-check after acquiring write lock; another goroutine may have already refreshed.
+	if a.auth != nil && !a.now().After(a.rotateAt) {
+		return a.auth, nil
+	}
+
 	a.log.Info("Retrieving new ACR token")
 
 	getTokenOptions := azcorepolicy.TokenRequestOptions{
