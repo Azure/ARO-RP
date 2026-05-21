@@ -29,9 +29,9 @@ import (
 
 var errTestCollectorFailure = errors.New("failure inside")
 
-func testCollectorNoop(ctx context.Context) error    { return nil }
-func testCollectorNoopB(ctx context.Context) error   { return nil }
-func testCollectorFailing(ctx context.Context) error  { return errTestCollectorFailure }
+func testCollectorNoop(ctx context.Context) error      { return nil }
+func testCollectorNoopB(ctx context.Context) error     { return nil }
+func testCollectorFailing(ctx context.Context) error   { return errTestCollectorFailure }
 func testCollectorPanicking(ctx context.Context) error { panic(errTestCollectorFailure) }
 
 type testCancellingCollector struct {
