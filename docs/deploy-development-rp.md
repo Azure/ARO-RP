@@ -92,12 +92,7 @@ running off of your local laptop.
              1>/dev/null
         ```
 
-### Mock MSI setup required for MIWI installs
-
-1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and
-   self-signed certificate to mock a cluster MSI. Save the output values for
-   cluster MSI `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
-   Additionally, save the value for `Platform workload identity role sets`.
+### MIWI setup
 
 1. Copy, edit (if necessary) and source your environment file. The required
    environment variable configuration is documented immediately below:
@@ -112,21 +107,15 @@ running off of your local laptop.
       `eastus`).
     - `RP_MODE`: Set to `development` to use a development RP running at
       https://localhost:8443/.
+    - `CLUSTER_RESOURCEGROUP`: Set to the name you want to use for your local
+      dev cluster's network resource group.
 
-### MIWI setup
-
-1. Create a resource group for your cluster and managed identities
-
-1. Source the local dev script and run the command to set up the miwi env file
-   for you
-
-    ```bash
-    source ./hack/devtools/local_dev_env.sh
-    CLUSTER_RESOURCEGROUP=<your cluster resourcegroup> create_miwi_env_file
-    ```
-
-1. Ensure that the following environment variables were set in your env file,
-   and re-source it:
+1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and
+   self-signed certificate to mock a cluster MSI. This will also create
+   `$CLUSTER_RESOURCEGROUP` if it doesn't already exist, give the mock MSI the
+   Azure Red Hat OpenShift Federated Credential role at the scope of the resource
+   group, and append the following env vars to your env file (remember to re-source
+   the env file before trying to create a MIWI cluster!):
 
     - `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster
         MSI (see previous step).
@@ -142,16 +131,10 @@ running off of your local laptop.
 1. Connect to the VPN and populate the platform workload identity role set
    definitions to your CosmosDB instance
 
-    > [!NOTE]
-    > If installing a version other than 4.14 you will need to change your
-    > local `PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS` env var to point to your
-    > desired version.
-
     - `go run ./cmd/aro update-role-sets`
 
 1. Add a new installable OCP version to your local RP instance. This version
-   should be a `4.14.38+` or `4.15.35+` version and use one of the current
-   aro-installer images in our INT repo.
+   should use one of the current aro-installer images in our INT repo.
 
 ## Run the RP and create a cluster
 
@@ -261,7 +244,8 @@ running off of your local laptop.
     > [!NOTE]
     > If the identities are not in the same resource group as the cluster, you
     > can optionally use full resource IDs for each managed and cluster
-    > identity
+    > identity. Also, if the identities don't already exist, this command will
+    > create both the identities and any necessary role assignments for you.
 
     ```bash
     az aro create \
