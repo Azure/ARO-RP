@@ -177,7 +177,9 @@ create_miwi_env_file() {
         return 1
     fi
 
-    cluster_msi_role_assignment "${mockClientID}" || return 1
+	if [[ $SKIP_MIWI_ROLE_ASSIGNMENT != "true" ]]; then
+    	cluster_msi_role_assignment "${mockClientID}" || return 1
+	fi
 
     cat >> env <<EOF
 export MOCK_MSI_CLIENT_ID="$mockClientID"
