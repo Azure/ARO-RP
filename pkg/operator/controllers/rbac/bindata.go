@@ -1,9 +1,9 @@
 // Code generated for package rbac by go-bindata DO NOT EDIT. (@generated)
 // sources:
-// pkg/operator/controllers/rbac/staticresources/clusterrole-diagnostics.yaml
-// pkg/operator/controllers/rbac/staticresources/clusterrole.yaml
-// pkg/operator/controllers/rbac/staticresources/clusterrolebinding-diagnostics.yaml
-// pkg/operator/controllers/rbac/staticresources/clusterrolebinding.yaml
+// staticresources/clusterrole-diagnostics.yaml
+// staticresources/clusterrole.yaml
+// staticresources/clusterrolebinding-diagnostics.yaml
+// staticresources/clusterrolebinding.yaml
 package rbac
 
 import (
@@ -277,8 +277,7 @@ func RestoreAsset(dir, name string) error {
 	if err != nil {
 		return err
 	}
-
-	err = os.MkdirAll(_filePath(dir, filepath.Dir(name)), os.FileMode(0o755))
+	err = os.MkdirAll(_filePath(dir, filepath.Dir(name)), os.FileMode(0755))
 	if err != nil {
 		return err
 	}
