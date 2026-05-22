@@ -216,12 +216,14 @@ rules:
   - apiservers
   - authentications
   - builds
+  - clusterimagepolicies
   - clusteroperators
   - clusterversions
   - consoles
   - dnses
   - featuregates
   - imagecontentpolicies
+  - imagepolicies
   - images
   - infrastructures
   - ingresses
