@@ -466,6 +466,7 @@ func TestResizeControlPlane(t *testing.T) {
 				"Steps:",
 				"master-0:start",
 				"master-0:waitReady",
+				"master-0:waitEtcd",
 				"master-0:restoreSchedulability",
 			},
 		},

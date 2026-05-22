@@ -92,6 +92,9 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 			"master-0:drain",
 			"master-0:stop",
 			"master-0:resize failed",
+			"master-0:start",
+			"master-0:waitReady",
+			"master-0:waitEtcd",
 			"master-0:restoreSchedulability",
 		)
 	})

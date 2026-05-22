@@ -89,11 +89,18 @@ type resizeControlPlaneOperation struct {
 }
 
 // newResizeControlPlaneExecutionContext creates a context decoupled from the
-// HTTP request lifecycle. The resize operation must complete even if the client
-// disconnects or the ARM load balancer times out (typical: 4-10 min).
+// HTTP request lifecycle. The resize operation (~45 min for 3 nodes) must
+// complete even if the HTTP connection drops — the Geneva Actions client sets
+// Timeout = InfiniteTimeSpan, but intermediary load balancers between the ACIS
+// host and the RP VMSS can still close long-lived connections. ARM is not in
+// this path; Geneva Actions calls the admin API directly via client certificate.
 //
-// This endpoint is restricted to on-call SREs via Geneva Actions
-// (ClientPlatformServiceOperator claim).
+// Parallel invocation is unlikely — this is restricted to on-call SREs via
+// Geneva Actions (ClientPlatformServiceOperator claim) and requires manual
+// parameter entry. The real risk is not parallel calls but RP pod restart
+// (OOM, node eviction, rolling update) or network partition during the
+// operation, which would cancel the HTTP context and leave nodes mid-resize.
+// Context detachment ensures the resize runs to completion or rolls back.
 func newResizeControlPlaneExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(
 		context.WithoutCancel(parent),
@@ -320,12 +327,17 @@ func retryAzureOperation(ctx context.Context, operationDesc string, fn func() er
 func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *controlPlaneNodeProgress) error {
 	nodeName := state.snapshot.machineName
 	var rollbackErrs []error
+	// If resize didn't happen, there's nothing to restore.
 	vmSizeRestored := !state.vmResized
 	nodeReadyForSchedRestore := !state.vmStopped && !state.vmResized
 
 	if state.vmResized {
 		start := time.Now()
 		err := func() error {
+			// Rollback always deallocates (true) regardless of the forward path's
+			// deallocateVM flag. Cross-family resizes require deallocation; during
+			// rollback we take the most conservative Azure path to ensure restoring
+			// the original SKU succeeds reliably.
 			if err := retryAzureOperation(ctx, "stop VM for rollback", func() error {
 				return o.a.VMStopAndWait(ctx, nodeName, true)
 			}); err != nil {
@@ -375,8 +387,15 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 			if waitErr != nil {
 				rollbackErrs = append(rollbackErrs, waitErr)
 			} else {
-				state.vmStopped = false
-				nodeReadyForSchedRestore = true
+				start = time.Now()
+				etcdErr := waitForEtcdHealthy(ctx, o.log, o.k)
+				o.recordStep(nodeName, "waitEtcd", time.Since(start), etcdErr)
+				if etcdErr != nil {
+					rollbackErrs = append(rollbackErrs, etcdErr)
+				} else {
+					state.vmStopped = false
+					nodeReadyForSchedRestore = true
+				}
 			}
 		}
 	}
