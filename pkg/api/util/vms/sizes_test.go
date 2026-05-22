@@ -18,7 +18,7 @@ func TestMinMasterVMSizesAreSupported(t *testing.T) {
 func TestMinWorkerVMSizesAreSupported(t *testing.T) {
 	for size := range minWorkerVMSizes {
 		if _, ok := SupportedWorkerVMSizesForTesting[size]; !ok {
-			t.Errorf("minWorkerVMSizes entry %s is not in supportedWorkerVMSizesForInternalUser", size)
+			t.Errorf("minWorkerVMSizes entry %s is not in SupportedWorkerVMSizesForTesting", size)
 		}
 	}
 }
