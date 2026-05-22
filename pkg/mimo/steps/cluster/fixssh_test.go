@@ -15,6 +15,7 @@ import (
 	armnetwork_sdk "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -332,7 +333,7 @@ func TestFixSSH(t *testing.T) {
 							OutboundType:        api.OutboundTypeUserDefinedRouting,
 						},
 						MasterProfile: api.MasterProfile{
-							VMSize:   api.VMSizeStandardD16asV4,
+							VMSize:   vms.VMSizeStandardD16asV4,
 							SubnetID: "subnetID",
 						},
 						APIServerProfile: api.APIServerProfile{
