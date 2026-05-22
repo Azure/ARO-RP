@@ -54,7 +54,7 @@ func (a *copyfailworkaround) IsRequired(ctx context.Context, clusterVersion vers
 		return false, nil
 	}
 
-	if clusterVersion.Gt(version.NewVersion(4, 22, 0)) {
+	if !clusterVersion.Lt(version.NewVersion(4, 22, 0)) {
 		return false, nil
 	}
 

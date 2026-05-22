@@ -86,7 +86,7 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 		}
 	}
 
-	if clusterVersion.Gt(version.NewVersion(4, 22, 0)) {
+	if !clusterVersion.Lt(version.NewVersion(4, 22, 0)) {
 		return false, nil
 	}
 
