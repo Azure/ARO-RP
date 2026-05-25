@@ -82,11 +82,24 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		return nil
 	}
 
+	// Build case-insensitive map of original subnet IDs from cluster document
+	// to preserve customer-specified casing when writing back to Azure.
+	originalSubnetIDs := map[string]string{}
+	originalSubnetIDs[strings.ToLower(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)] = m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
+	for _, wp := range workerProfiles {
+		originalSubnetIDs[strings.ToLower(wp.SubnetID)] = wp.SubnetID
+	}
+
 	for _, subnet := range nsg.Properties.Subnets {
 		// Note: subnet only has value in the ID field,
 		// so we have to make another API request to get full subnet struct
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		r, err := arm.ParseResourceID(*subnet.ID)
+		subnetID := *subnet.ID
+		if original, ok := originalSubnetIDs[strings.ToLower(subnetID)]; ok {
+			subnetID = original
+		}
+		r, err := arm.ParseResourceID(subnetID)
 		if err != nil {
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,

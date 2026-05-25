@@ -293,6 +293,21 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 	subscription := "00000000-0000-0000-0000-000000000000"
 	resourceGroup := "test-rg"
 	nsgId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkSecurityGroups/test-nsg", subscription, resourceGroup)
+	masterSubnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
+	workerSubnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker-subnet", subscription, resourceGroup)
+
+	clusterDoc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				MasterProfile: api.MasterProfile{
+					SubnetID: masterSubnetID,
+				},
+				WorkerProfiles: []api.WorkerProfile{
+					{SubnetID: workerSubnetID},
+				},
+			},
+		},
+	}
 
 	tests := []struct {
 		name    string
@@ -340,14 +355,13 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 		{
 			name: "disconnects subnets",
 			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
-				subnetId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
 				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
 					SecurityGroup: armnetwork.SecurityGroup{
 						ID: pointerutils.ToPtr(nsgId),
 						Properties: &armnetwork.SecurityGroupPropertiesFormat{
 							Subnets: []*armnetwork.Subnet{
 								{
-									ID: pointerutils.ToPtr(subnetId),
+									ID: pointerutils.ToPtr(masterSubnetID),
 								},
 							},
 						},
@@ -356,7 +370,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
 				subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
 					Subnet: armnetwork.Subnet{
-						ID: pointerutils.ToPtr(subnetId),
+						ID: pointerutils.ToPtr(masterSubnetID),
 						Properties: &armnetwork.SubnetPropertiesFormat{
 							NetworkSecurityGroup: &armnetwork.SecurityGroup{
 								ID: pointerutils.ToPtr(nsgId),
@@ -365,7 +379,45 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 					},
 				}, nil).Times(1)
 				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", armnetwork.Subnet{
-					ID: pointerutils.ToPtr(subnetId),
+					ID: pointerutils.ToPtr(masterSubnetID),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: nil,
+					},
+				}, nil).Return(nil).Times(1)
+			},
+		},
+		{
+			name: "preserves original subnet ID casing when Azure returns uppercase",
+			mocks: func(securityGroups *mock_armnetwork.MockSecurityGroupsClient, subnets *mock_armnetwork.MockSubnetsClient) {
+				// Azure ARM returns subnet ID with different casing than original
+				uppercaseSubnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/TEST-RG/providers/Microsoft.Network/virtualNetworks/TEST-VNET/subnets/TEST-SUBNET", subscription)
+				securityGroup := armnetwork.SecurityGroupsClientGetResponse{
+					SecurityGroup: armnetwork.SecurityGroup{
+						ID: pointerutils.ToPtr(nsgId),
+						Properties: &armnetwork.SecurityGroupPropertiesFormat{
+							Subnets: []*armnetwork.Subnet{
+								{
+									ID: pointerutils.ToPtr(uppercaseSubnetID),
+								},
+							},
+						},
+					},
+				}
+				securityGroups.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(securityGroup, nil)
+				// Expect Get/CreateOrUpdateAndWait to use original casing (test-rg, test-vnet, test-subnet),
+				// NOT the Azure-returned uppercase (TEST-RG, TEST-VNET, TEST-SUBNET)
+				subnets.EXPECT().Get(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", nil).Return(armnetwork.SubnetsClientGetResponse{
+					Subnet: armnetwork.Subnet{
+						ID: pointerutils.ToPtr(uppercaseSubnetID),
+						Properties: &armnetwork.SubnetPropertiesFormat{
+							NetworkSecurityGroup: &armnetwork.SecurityGroup{
+								ID: pointerutils.ToPtr(nsgId),
+							},
+						},
+					},
+				}, nil).Times(1)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, "test-vnet", "test-subnet", armnetwork.Subnet{
+					ID: pointerutils.ToPtr(uppercaseSubnetID),
 					Properties: &armnetwork.SubnetPropertiesFormat{
 						NetworkSecurityGroup: nil,
 					},
@@ -386,6 +438,7 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 
 			m := manager{
 				log:               logrus.NewEntry(logrus.StandardLogger()),
+				doc:               clusterDoc,
 				armSecurityGroups: securityGroups,
 				armSubnets:        subnets,
 			}
