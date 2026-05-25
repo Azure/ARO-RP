@@ -40,6 +40,13 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 
 	hr.log.Infof("starting Holmes investigation %s in namespace %s", id, hiveNamespace)
 
+	// Acquire a short-lived Entra ID token for Azure OpenAI before creating
+	// any cluster resources, so a credential failure is surfaced early.
+	azureADToken, err := holmesConfig.AcquireToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire Azure AD token for investigation: %w", err)
+	}
+
 	// Ensure cleanup of the secret, ConfigMap, and pod on exit.
 	defer func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -72,13 +79,13 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 		},
 		Data: map[string][]byte{
 			"config":            kubeconfig,
-			"azure-api-key":     []byte(holmesConfig.AzureAPIKey),
+			"azure-ad-token":    []byte(azureADToken),
 			"azure-api-base":    []byte(holmesConfig.AzureAPIBase),
 			"azure-api-version": []byte(holmesConfig.AzureAPIVersion),
 		},
 	}
 
-	_, err := hr.kubernetescli.CoreV1().Secrets(hiveNamespace).Create(ctx, kubeconfigSecret, metav1.CreateOptions{})
+	_, err = hr.kubernetescli.CoreV1().Secrets(hiveNamespace).Create(ctx, kubeconfigSecret, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create investigation kubeconfig secret: %w", err)
 	}
@@ -144,7 +151,7 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 							ValueFrom: &corev1.EnvVarSource{
 								SecretKeyRef: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: kubeconfigSecretName},
-									Key:                  "azure-api-key",
+									Key:                  "azure-ad-token",
 								},
 							},
 						},

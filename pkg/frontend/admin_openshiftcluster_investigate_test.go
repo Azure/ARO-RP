@@ -18,6 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -31,14 +34,24 @@ const (
 	mockInvestigateTenantID = "00000000-0000-0000-0000-000000000002"
 )
 
-var testHolmesConfig = &holmes.HolmesConfig{
-	Image:                       "quay.io/test/holmesgpt:latest",
-	AzureAPIKey:                 "test-key",
-	AzureAPIBase:                "https://test.openai.azure.com",
-	AzureAPIVersion:             "2025-04-01-preview",
-	Model:                       "azure/gpt-4o",
-	DefaultTimeout:              600,
-	MaxConcurrentInvestigations: 20,
+// fakeTokenCredential implements azcore.TokenCredential for tests that don't
+// exercise AcquireToken (handler pre-condition tests).
+type fakeTokenCredential struct{}
+
+func (fakeTokenCredential) GetToken(_ context.Context, _ policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	return azcore.AccessToken{Token: "fake-token"}, nil
+}
+
+func newTestHolmesConfig() *holmes.HolmesConfig {
+	return holmes.NewHolmesConfigForTest(
+		"quay.io/test/holmesgpt:latest",
+		"https://test.openai.azure.com",
+		"2025-04-01-preview",
+		"azure/gpt-4o",
+		600,
+		20,
+		fakeTokenCredential{},
+	)
 }
 
 func investigateDatabaseFixture(dbFixture *testdatabase.Fixture) {
@@ -113,7 +126,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
-			holmesConfig:   testHolmesConfig,
+			holmesConfig:   newTestHolmesConfig(),
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "The request body could not be parsed",
 		},
@@ -123,7 +136,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
-			holmesConfig:   testHolmesConfig,
+			holmesConfig:   newTestHolmesConfig(),
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "The question parameter is required",
 		},
@@ -133,7 +146,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
-			holmesConfig:   testHolmesConfig,
+			holmesConfig:   newTestHolmesConfig(),
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "must not contain control characters",
 		},
@@ -143,7 +156,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
-			holmesConfig:   testHolmesConfig,
+			holmesConfig:   newTestHolmesConfig(),
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "The question must not exceed 1000 characters",
 		},
@@ -163,7 +176,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     strings.ToLower(testdatabase.GetResourcePath(mockInvestigateSubID, "nonexistent")),
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    true,
-			holmesConfig:   testHolmesConfig,
+			holmesConfig:   newTestHolmesConfig(),
 			wantStatusCode: http.StatusNotFound,
 			wantError:      "was not found",
 		},
@@ -173,7 +186,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixture,
 			hiveEnabled:    false,
-			holmesConfig:   testHolmesConfig,
+			holmesConfig:   newTestHolmesConfig(),
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      "hive is not enabled",
 		},
@@ -183,7 +196,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			resourceID:     resourceID,
 			fixture:        investigateDatabaseFixtureNoHiveNamespace,
 			hiveEnabled:    true,
-			holmesConfig:   testHolmesConfig,
+			holmesConfig:   newTestHolmesConfig(),
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      "cluster does not have a Hive namespace configured",
 		},
