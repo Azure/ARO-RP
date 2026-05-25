@@ -1314,7 +1314,12 @@ if [ -f \$NEW_CERT_FILE ]; then
   if [[ \$COMPONENT = \"mdsd\" ]]; then
     chown syslog:syslog \$NEW_CERT_FILE
   elif [[ \$COMPONENT = \"mdm\" ]]; then
-    sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
+    EXTRACTED_CERT=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" 2>/dev/null)\"
+    EXTRACTED_KEY=\"\$(openssl pkey -in \"\$NEW_CERT_FILE\" 2>/dev/null)\"
+    if [[ -z \"\$EXTRACTED_CERT\" || -z \"\$EXTRACTED_KEY\" ]]; then
+      echo \"Failed to extract cert and/or private key from downloaded MDM file\" && exit 1
+    fi
+    printf '%s\n%s\n' \"\$EXTRACTED_KEY\" \"\$EXTRACTED_CERT\" > \"\$NEW_CERT_FILE\"
   elif [[ \$COMPONENT = \"gateway-otel\" ]]; then
     # Split combined PEM into certificate and key files
     mkdir -p \"\$CURRENT_CERT_DIR\"
@@ -1356,7 +1361,7 @@ if [ -f \$NEW_CERT_FILE ]; then
 
   if [[ \$COMPONENT != \"gateway-otel\" ]]; then
     new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
-    current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+    current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial 2>/dev/null | awk -F= '{print \$2}')\"
     if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
       echo updating certificate for \$COMPONENT
       chmod 0600 \$NEW_CERT_FILE
