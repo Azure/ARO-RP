@@ -449,6 +449,10 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			if daemonset.Spec.Template.Spec.PriorityClassName != "system-cluster-critical" {
+				t.Errorf("expected PriorityClassName 'system-cluster-critical', got '%s'", daemonset.Spec.Template.Spec.PriorityClassName)
+			}
+
 			errs := tt.validateDaemonset(daemonset)
 			for _, err := range errs {
 				t.Error(err)

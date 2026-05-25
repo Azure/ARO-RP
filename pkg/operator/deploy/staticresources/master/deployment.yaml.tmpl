@@ -28,6 +28,13 @@ spec:
         - master
         image: "{{ .Image }}"
         name: aro-operator
+        resources:
+          requests:
+            cpu: 250m
+            memory: 500Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
         env:
         - name: AZURE_CLIENT_ID
           valueFrom:

@@ -28,6 +28,13 @@ spec:
         - worker
         image: "{{ .Image }}"
         name: aro-operator
+        resources:
+          requests:
+            cpu: 250m
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 250Mi
         {{ if .IsLocalDevelopment}}
         env:
         - name: "RP_MODE"

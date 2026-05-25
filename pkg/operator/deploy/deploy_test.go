@@ -14,6 +14,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -379,6 +380,37 @@ func TestOperatorVersion(t *testing.T) {
 				image := d.Spec.Template.Spec.Containers[0].Image
 				if image != tt.wantPullspec {
 					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
+				}
+
+				resources := d.Spec.Template.Spec.Containers[0].Resources
+				var wantCPUReq, wantMemReq, wantCPULim, wantMemLim resource.Quantity
+				switch d.Name {
+				case "aro-operator-master":
+					wantCPUReq = resource.MustParse("250m")
+					wantMemReq = resource.MustParse("500Mi")
+					wantCPULim = resource.MustParse("500m")
+					wantMemLim = resource.MustParse("1Gi")
+				case "aro-operator-worker":
+					wantCPUReq = resource.MustParse("250m")
+					wantMemReq = resource.MustParse("100Mi")
+					wantCPULim = resource.MustParse("500m")
+					wantMemLim = resource.MustParse("250Mi")
+				default:
+					t.Errorf("unexpected deployment name: %s", d.Name)
+					continue
+				}
+
+				if !resources.Requests.Cpu().Equal(wantCPUReq) {
+					t.Errorf("%s CPU request: got %s, want %s", d.Name, resources.Requests.Cpu(), wantCPUReq.String())
+				}
+				if !resources.Requests.Memory().Equal(wantMemReq) {
+					t.Errorf("%s memory request: got %s, want %s", d.Name, resources.Requests.Memory(), wantMemReq.String())
+				}
+				if !resources.Limits.Cpu().Equal(wantCPULim) {
+					t.Errorf("%s CPU limit: got %s, want %s", d.Name, resources.Limits.Cpu(), wantCPULim.String())
+				}
+				if !resources.Limits.Memory().Equal(wantMemLim) {
+					t.Errorf("%s memory limit: got %s, want %s", d.Name, resources.Limits.Memory(), wantMemLim.String())
 				}
 			}
 		})
