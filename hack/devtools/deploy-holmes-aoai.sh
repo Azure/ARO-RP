@@ -63,6 +63,22 @@ deploy_holmes_aoai_account() {
         echo "Azure OpenAI account ${HOLMES_AOAI_ACCOUNT_NAME} created."
     fi
 
+    # Ensure custom domain is set (required for Entra ID token auth).
+    # Accounts created before this change may lack a custom domain.
+    local current_domain
+    current_domain=$(az cognitiveservices account show \
+        --name "${HOLMES_AOAI_ACCOUNT_NAME}" \
+        --resource-group "${RESOURCEGROUP}" \
+        --query "properties.customSubDomainName" -o tsv)
+    if [[ -z "${current_domain}" || "${current_domain}" == "None" ]]; then
+        echo "Setting custom domain on ${HOLMES_AOAI_ACCOUNT_NAME}..."
+        az cognitiveservices account update \
+            --name "${HOLMES_AOAI_ACCOUNT_NAME}" \
+            --resource-group "${RESOURCEGROUP}" \
+            --custom-domain "${HOLMES_AOAI_ACCOUNT_NAME}" >/dev/null
+        echo "Custom domain set."
+    fi
+
     # Disable local (API key) auth — only Entra ID tokens are accepted.
     echo "Disabling local auth on ${HOLMES_AOAI_ACCOUNT_NAME}..."
     local aoai_id
@@ -151,12 +167,15 @@ update_secrets_env() {
     tmp_file=$(mktemp -p "$(dirname "${secrets_file}")")
 
     # Handle case where all lines might match the filter (use || true to avoid exit 1 with set -e)
-    # Also remove blank lines that precede Holmes section to prevent accumulation
-    grep -v -E '^export HOLMES_AZURE_API_(KEY|BASE|VERSION)=|^# Holmes Azure OpenAI|^[[:space:]]*$' \
+    grep -v -E '^export HOLMES_AZURE_API_(KEY|BASE|VERSION)=|^# Holmes Azure OpenAI' \
         "${secrets_file}" > "${tmp_file}" || true
+
+    # Remove trailing blank lines to prevent accumulation across re-runs
+    sed -i'' -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }' "${tmp_file}"
 
     # No API key — Entra ID tokens are acquired at runtime by the RP.
     cat >> "${tmp_file}" <<EOF
+
 # Holmes Azure OpenAI config (Entra ID auth — no API key needed)
 export HOLMES_AZURE_API_BASE=$(printf %q "${api_base}")
 export HOLMES_AZURE_API_VERSION=$(printf %q "${HOLMES_API_VERSION}")
