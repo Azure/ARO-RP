@@ -8,6 +8,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jongio/azidext/go/azidext"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -17,7 +21,7 @@ import (
 )
 
 type QuotaValidator interface {
-	ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
+	ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error
 }
 
 type quotaValidator struct{}
@@ -39,20 +43,13 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 // ValidateQuota checks usage quotas vs. resources required by cluster before cluster
 // creation
 // It is a method on struct so we can make use of interfaces.
-func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
-	fpAuthorizer, err := environment.FPAuthorizer(tenantID, nil, environment.Environment().ResourceManagerScope)
-	if err != nil {
-		return err
-	}
+func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error {
+	fpAuthorizer := azidext.NewTokenCredentialAdapter(fpCred, []string{environment.Environment().ResourceManagerScope})
 
-	credential, err := environment.FPNewClientCertificateCredential(tenantID, []string{})
-	if err != nil {
-		return err
-	}
 	options := environment.Environment().ArmClientOptions()
 
 	spComputeUsage := compute.NewUsageClient(azEnv, subscriptionID, fpAuthorizer)
-	spNetworkUsage, err := armnetwork.NewUsagesClient(subscriptionID, credential, options)
+	spNetworkUsage, err := armnetwork.NewUsagesClient(subscriptionID, fpCred, options)
 	if err != nil {
 		return err
 	}

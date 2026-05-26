@@ -13,11 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
-	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockFeaturesValidator is a mock of FeaturesValidator interface.
@@ -45,15 +44,15 @@ func (m *MockFeaturesValidator) EXPECT() *MockFeaturesValidatorMockRecorder {
 }
 
 // ValidateSubscriptionFeatures mocks base method.
-func (m *MockFeaturesValidator) ValidateSubscriptionFeatures(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
+func (m *MockFeaturesValidator) ValidateSubscriptionFeatures(ctx context.Context, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateSubscriptionFeatures", ctx, azEnv, environment, subscriptionID, tenantID, oc)
+	ret := m.ctrl.Call(m, "ValidateSubscriptionFeatures", ctx, environment, subscriptionID, fpCred, oc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateSubscriptionFeatures indicates an expected call of ValidateSubscriptionFeatures.
-func (mr *MockFeaturesValidatorMockRecorder) ValidateSubscriptionFeatures(ctx, azEnv, environment, subscriptionID, tenantID, oc any) *gomock.Call {
+func (mr *MockFeaturesValidatorMockRecorder) ValidateSubscriptionFeatures(ctx, environment, subscriptionID, fpCred, oc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateSubscriptionFeatures", reflect.TypeOf((*MockFeaturesValidator)(nil).ValidateSubscriptionFeatures), ctx, azEnv, environment, subscriptionID, tenantID, oc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateSubscriptionFeatures", reflect.TypeOf((*MockFeaturesValidator)(nil).ValidateSubscriptionFeatures), ctx, environment, subscriptionID, fpCred, oc)
 }

@@ -8,19 +8,20 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armfeatures"
 )
 
 type FeaturesValidator interface {
-	ValidateSubscriptionFeatures(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
+	ValidateSubscriptionFeatures(ctx context.Context, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error
 }
 
 type featuresValidator struct{}
 
-func (f featuresValidator) ValidateSubscriptionFeatures(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
+func (f featuresValidator) ValidateSubscriptionFeatures(ctx context.Context, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error {
 	var fieldPath string
 	if oc.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled {
 		fieldPath = "properties.masterProfile.encryptionAtHost"
@@ -29,12 +30,7 @@ func (f featuresValidator) ValidateSubscriptionFeatures(ctx context.Context, azE
 	}
 
 	if fieldPath != "" {
-		fpCred, err := environment.FPNewClientCertificateCredential(tenantID, nil)
-		if err != nil {
-			return err
-		}
-
-		featuresClient, err := armfeatures.NewFeaturesClient(subscriptionID, fpCred, azEnv.ArmClientOptions())
+		featuresClient, err := armfeatures.NewFeaturesClient(subscriptionID, fpCred, environment.Environment().ArmClientOptions())
 		if err != nil {
 			return err
 		}
