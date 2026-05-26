@@ -226,15 +226,6 @@ func ResourceGroupNotFound(err error) bool {
 	return false
 }
 
-func Is4xxError(err error) bool {
-	var responseError *azcore.ResponseError
-	if errors.As(err, &responseError) {
-		return responseError.StatusCode >= 400 && responseError.StatusCode < 500
-	}
-
-	return false
-}
-
 // IsVMSKUError checks if the error is a VM SKU availability error and returns
 // which profile (master/worker) is affected.
 // Azure Resource Manager error codes: https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-sku-not-available
