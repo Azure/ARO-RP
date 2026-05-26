@@ -5,7 +5,7 @@ package clienthelper
 
 import (
 	"errors"
-	"reflect"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -84,7 +84,15 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 }
 
 func copyForComparison(inObj any) client.Object {
-	ourObj := inObj.(runtime.Object).DeepCopyObject().(client.Object)
+	runtimeObj, ok := inObj.(runtime.Object)
+	if !ok {
+		panic(fmt.Sprintf("cannot convert %v to runtime.Object", inObj))
+	}
+
+	ourObj, ok := runtimeObj.DeepCopyObject().(client.Object)
+	if !ok {
+		panic(fmt.Sprintf("cannot convert %v to client.Object", runtimeObj))
+	}
 
 	// Don't test for the resourceversion
 	ourObj.SetResourceVersion("")
@@ -156,8 +164,8 @@ type beEqualKubernetesObjects struct {
 
 func (m *beEqualKubernetesObjects) Match(actual any) (success bool, err error) {
 	ourGot, ourWant := copyForComparison(actual), copyForComparison(m.Expected)
-
-	return reflect.DeepEqual(ourGot, ourWant), nil
+	diff := cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty())
+	return len(diff) == 0, nil
 }
 
 func (m *beEqualKubernetesObjects) FailureMessage(actual any) (message string) {
