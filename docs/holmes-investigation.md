@@ -8,7 +8,6 @@ The Holmes investigation API is an admin endpoint that runs [HolmesGPT](https://
 
 | Config | Env Var | Key Vault Secret (prod) | Default | Required |
 |--------|---------|-------------------------|---------|----------|
-| Azure OpenAI API key | `HOLMES_AZURE_API_KEY` | `holmes-azure-api-key` | — | Yes |
 | Azure OpenAI endpoint | `HOLMES_AZURE_API_BASE` | `holmes-azure-api-base` | — | Yes |
 | HolmesGPT container image | `HOLMES_IMAGE` | — | `version.HolmesImage(acrDomain)` | No |
 | Azure OpenAI API version | `HOLMES_AZURE_API_VERSION` | — | `2025-04-01-preview` | No |
@@ -16,15 +15,25 @@ The Holmes investigation API is an admin endpoint that runs [HolmesGPT](https://
 | Pod timeout (seconds) | `HOLMES_DEFAULT_TIMEOUT` | — | `600` | No |
 | Max concurrent investigations per RP | `HOLMES_MAX_CONCURRENT` | — | `20` | No |
 
+## Authentication
+
+Holmes uses **Entra ID token authentication** for Azure OpenAI (`disableLocalAuth=true` on the AOAI resource). No API keys are stored or used.
+
+At RP startup, the RP obtains its managed identity credential (prod) or dev service principal credential (dev). At investigation request time, `HolmesConfig.AcquireToken()` acquires a short-lived (~1 hour) token scoped to `https://cognitiveservices.azure.com/.default`. The token is injected into the investigation pod.
+
+**Requirements:**
+- The Azure OpenAI resource must have a **custom subdomain** endpoint (e.g., `https://<name>.openai.azure.com/`)
+- The RP identity must have the **Cognitive Services OpenAI User** role on the AOAI resource
+
 ## Config Loading
 
 Configuration is loaded once at RP startup in `NewFrontend` (`pkg/frontend/frontend.go`).
 
-**Development mode** (`RP_MODE=development`): All values are read from environment variables via `NewHolmesConfigFromEnv(acrDomain)`.
+**Development mode** (`RP_MODE=development`): The API base URL is read from the `HOLMES_AZURE_API_BASE` environment variable. The MSI credential is obtained via `NewMSITokenCredential()` (uses `AZURE_RP_CLIENT_ID`/`AZURE_RP_CLIENT_SECRET` in dev). This uses `NewHolmesConfigFromEnv(acrDomain, credential)`.
 
-**Production mode**: Sensitive values (API key, API base) are read from the service Key Vault (`{KEYVAULT_PREFIX}-svc`). Non-secret values (image, model, timeout, concurrency) use code defaults from `pkg/util/version/const.go` and `pkg/util/holmes/config.go`, with env var overrides. This uses `NewHolmesConfig(ctx, acrDomain, serviceKeyvault)`.
+**Production mode**: The API base URL is read from the service Key Vault (`{KEYVAULT_PREFIX}-svc`). The MSI credential is the RP's managed identity. Non-secret values (image, model, timeout, concurrency) use code defaults from `pkg/util/version/const.go` and `pkg/util/holmes/config.go`, with env var overrides. This uses `NewHolmesConfig(ctx, acrDomain, serviceKeyvault, credential)`.
 
-**Soft-load behavior**: If loading fails (e.g., Key Vault secrets not provisioned), the RP logs a warning and starts normally. Only the investigate endpoint returns an error ("Holmes investigation is not configured"). This allows the RP to operate without Holmes configured.
+**Soft-load behavior**: If loading fails (e.g., MSI credential unavailable or Key Vault secrets not provisioned), the RP logs a warning and starts normally. Only the investigate endpoint returns an error ("Holmes investigation is not configured"). This allows the RP to operate without Holmes configured.
 
 The loaded config is stored on the `frontend` struct as `holmesConfig *holmes.HolmesConfig` and reused for all investigation requests.
 
@@ -34,7 +43,7 @@ When an investigation request arrives, the RP creates three Kubernetes resources
 
 1. **Secret** (`holmes-kubeconfig-{id}`) — Contains:
    - `config`: Short-lived (1h) kubeconfig for `system:aro-diagnostics` identity
-   - `azure-api-key`: From `holmesConfig.AzureAPIKey`
+   - `azure-ad-token`: Short-lived Entra ID token acquired per-request via `HolmesConfig.AcquireToken()`
    - `azure-api-base`: From `holmesConfig.AzureAPIBase`
    - `azure-api-version`: From `holmesConfig.AzureAPIVersion`
 
@@ -74,14 +83,17 @@ All three resources are cleaned up after the investigation completes (or fails).
    ./hack/test-holmes-investigate.sh <cluster-name> "what is the cluster health status?"
    ```
 
-## Key Vault Provisioning (Staging/Production)
+## Provisioning (Staging/Production)
 
-Create the following secrets in the service Key Vault (`{KEYVAULT_PREFIX}-svc`):
+**Key Vault:** Create the following secret in the service Key Vault (`{KEYVAULT_PREFIX}-svc`):
 
 | Secret Name | Value |
 |-------------|-------|
-| `holmes-azure-api-key` | Azure OpenAI API key |
-| `holmes-azure-api-base` | Azure OpenAI endpoint URL (e.g., `https://<resource>.openai.azure.com`) |
+| `holmes-azure-api-base` | Azure OpenAI endpoint URL (must use custom subdomain, e.g., `https://<name>.openai.azure.com`) |
+
+**RBAC:** Assign the **Cognitive Services OpenAI User** role to the RP's managed identity on the Azure OpenAI resource.
+
+**Azure OpenAI resource:** Must have `disableLocalAuth=true` and a custom subdomain configured.
 
 Non-secret config uses code defaults defined in `pkg/util/version/const.go` (image) and `pkg/util/holmes/config.go` (model, timeout, concurrency). These can be overridden via environment variables.
 
