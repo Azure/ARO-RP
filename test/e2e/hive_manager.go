@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -38,7 +39,8 @@ var _ = Describe("Hive manager creates a namespace", func() {
 	})
 
 	It("Should be created successfully", func() {
-		const docID = "00000000-0000-0000-0000-000000000000"
+		// Use a unique ID per test run to avoid conflicts with previous runs
+		docID := fmt.Sprintf("e2e-test-%d-%d", GinkgoParallelProcess(), time.Now().UnixNano())
 		var err error
 		ns, err = clients.HiveClusterManager.CreateNamespace(context.Background(), docID)
 		Expect(err).NotTo(HaveOccurred())
