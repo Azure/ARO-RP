@@ -44,7 +44,7 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 
 		identityDetails, err := m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
 		if err != nil {
-			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsStatusForbiddenError(err) || azureerrors.IsNotFoundError(err) {
+			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsStatusForbiddenError(err) || azureerrors.IsNotFoundError(err) || azureerrors.IsRetryableError(err) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fmt.Sprintf(`.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["%s"]`, operatorName), err.Error())
 			} else {
 				return fmt.Errorf("error occurred when retrieving platform workload identity '%s' details: %w", operatorName, err)
