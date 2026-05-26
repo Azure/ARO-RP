@@ -81,6 +81,7 @@ services:
       dockerfile: Dockerfile.ci-rp
       args:
         - REGISTRY=${REGISTRY}
+        - BUILDER_REGISTRY=${BUILDER_REGISTRY}
         - ARO_VERSION=${VERSION}
       ulimits:
         nofile:
@@ -133,6 +134,7 @@ services:
       dockerfile: Dockerfile.ci-rp
       args:
         - REGISTRY=${REGISTRY}
+        - BUILDER_REGISTRY=${BUILDER_REGISTRY}
         - ARO_VERSION=${VERSION}
       ulimits:
         nofile:
