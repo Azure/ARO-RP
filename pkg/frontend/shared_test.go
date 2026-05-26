@@ -131,6 +131,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	_env.EXPECT().MISEAuthorizer().AnyTimes().Return(miseadapter.NewFakeAuthorizer(true, true))
 	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
+	_env.EXPECT().NewMSITokenCredential().AnyTimes().Return(nil, fmt.Errorf("MSI not available in test"))
 	for f, val := range features {
 		_env.EXPECT().FeatureIsSet(f).AnyTimes().Return(val)
 	}
