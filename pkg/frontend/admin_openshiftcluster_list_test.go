@@ -332,6 +332,35 @@ func TestAdminListOpenShiftClusterOverview(t *testing.T) {
 			},
 		},
 		{
+			name: "overview with unparseable resource ID",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(
+					&api.OpenShiftClusterDocument{
+						ID:  "doc-bad-id",
+						Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "badcluster")),
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID: "not-a-valid-arm-id",
+							Properties: api.OpenShiftClusterProperties{
+								ProvisioningState: api.ProvisioningStateSucceeded,
+								CreatedBy:         "someone@example.com",
+							},
+						},
+					},
+				)
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: &adminClusterOverviewList{
+				Clusters: []*adminClusterListEntry{
+					{
+						Key:               "doc-bad-id",
+						ResourceID:        "not-a-valid-arm-id",
+						CreatedBy:         "someone@example.com",
+						ProvisioningState: "Succeeded",
+					},
+				},
+			},
+		},
+		{
 			name:           "overview with database error returns 500",
 			dbError:        &cosmosdb.Error{StatusCode: 500, Code: "ERR500", Message: "cosmos unavailable"},
 			wantStatusCode: http.StatusInternalServerError,
