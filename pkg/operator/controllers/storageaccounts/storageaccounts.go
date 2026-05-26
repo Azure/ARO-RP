@@ -44,7 +44,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 
 		armSubnet, err := r.subnets.Get(ctx, resourceGroupName, vnetName, subnetName, nil)
 		if err != nil {
-			if azureerrors.IsNotFoundError(err) {
+			if azureerrors.IsStatusNotFoundError(err) {
 				r.log.Infof("Subnet %s not found, skipping", subnet.ResourceID)
 				continue
 			}

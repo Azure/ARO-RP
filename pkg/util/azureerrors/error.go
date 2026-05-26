@@ -144,7 +144,7 @@ func IsDeploymentActiveError(err error) bool {
 	return false
 }
 
-func IsNotFoundError(err error) bool {
+func IsStatusNotFoundError(err error) bool {
 	var detailedErr autorest.DetailedError
 	if errors.As(err, &detailedErr) {
 		return detailedErr.StatusCode == http.StatusNotFound

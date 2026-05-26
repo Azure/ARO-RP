@@ -63,7 +63,7 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return nil
 	}
 
-	if azureerrors.IsNotFoundError(err) {
+	if azureerrors.IsStatusNotFoundError(err) {
 		err = nil
 	}
 	if err != nil {
@@ -99,7 +99,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 
 	var isCreate bool
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, nil)
-	if azureerrors.IsNotFoundError(err) {
+	if azureerrors.IsStatusNotFoundError(err) {
 		isCreate = true
 	}
 
@@ -136,7 +136,7 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	}
 
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
-	if azureerrors.IsNotFoundError(err) {
+	if azureerrors.IsStatusNotFoundError(err) {
 		return nil
 	}
 	if err != nil {

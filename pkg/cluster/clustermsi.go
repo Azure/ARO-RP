@@ -49,7 +49,7 @@ func EnsureClusterMsiCertificateWithParams(ctx context.Context, clusterDocID str
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(clusterDocID)
 
 	existingMsiCertificate, err := kvStore.GetSecret(ctx, secretName, "", nil)
-	if err != nil && !azureerrors.IsNotFoundError(err) {
+	if err != nil && !azureerrors.IsStatusNotFoundError(err) {
 		return MsiCertificateRefreshResultUnchanged, err
 	}
 

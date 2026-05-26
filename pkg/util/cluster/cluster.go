@@ -936,7 +936,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err != nil {
-			if azureerrors.IsNotFoundError(err) {
+			if azureerrors.IsStatusNotFoundError(err) {
 				c.log.Infof("Cluster %s not found in resource group %s, assuming already deleted", clusterName, vnetResourceGroup)
 			} else {
 				c.log.Errorf("Failed to get cluster %s in resource group %s: %v", clusterName, vnetResourceGroup, err)
@@ -1042,7 +1042,7 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 		_, err := c.msiClient.Delete(ctx, resourceGroup, wi.OperatorName, nil)
 		if err != nil {
 			// If the identity was not found, we can assume that it wasn't created yet, or otherwise doesn't need to be deleted.
-			if azureerrors.IsNotFoundError(err) {
+			if azureerrors.IsStatusNotFoundError(err) {
 				c.log.Infof("workload identity %s not found, skipping deletion", wi.OperatorName)
 				continue
 			}
@@ -1500,7 +1500,7 @@ func (c *Cluster) deleteMiwiRoleAssignments(ctx context.Context, vnetResourceGro
 		resp, err := c.msiClient.Get(ctx, vnetResourceGroup, wi.OperatorName, nil)
 		if err != nil {
 			// If the identity was not found, we can assume that it wasn't created yet, or otherwise doesn't need to be deleted.
-			if azureerrors.IsNotFoundError(err) {
+			if azureerrors.IsStatusNotFoundError(err) {
 				c.log.Infof("workload identity %s not found, skipping role assignment deletion", wi.OperatorName)
 				continue
 			}

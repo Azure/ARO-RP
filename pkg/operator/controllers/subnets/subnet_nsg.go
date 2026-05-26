@@ -42,7 +42,7 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 
 	subnetObject, err := r.subnets.Get(ctx, subnetID.ResourceGroupName, subnetID.Parent.Name, subnetID.Name, nil)
 	if err != nil {
-		if azureerrors.IsNotFoundError(err) {
+		if azureerrors.IsStatusNotFoundError(err) {
 			r.log.Infof("Subnet %s not found, skipping", s.ResourceID)
 			return nil
 		}
