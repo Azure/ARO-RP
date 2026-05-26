@@ -37,6 +37,16 @@ var _ Workaround = &dirtyfragworkaround{}
 
 const ipsecModeDisabled = "Disabled"
 
+var dirtyfragFixedPatchVersions = map[string]version.Version{
+	"4.21": version.NewVersion(4, 21, 15),
+	"4.20": version.NewVersion(4, 20, 22),
+	"4.19": version.NewVersion(4, 19, 31),
+	"4.18": version.NewVersion(4, 18, 41),
+	"4.16": version.NewVersion(4, 16, 62),
+	"4.14": version.NewVersion(4, 14, 66),
+	"4.12": version.NewVersion(4, 12, 90),
+}
+
 var marshalDirtyfragIgnition = json.Marshal
 
 func NewDirtyfragWorkaround(log *logrus.Entry, client client.Client) *dirtyfragworkaround {
@@ -74,6 +84,15 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 				return false, nil
 			}
 		}
+	}
+
+	if !clusterVersion.Lt(version.NewVersion(4, 22, 0)) {
+		return false, nil
+	}
+
+	clusterMinorVersion := clusterVersion.MinorVersion()
+	if fixedPatchVersion, ok := dirtyfragFixedPatchVersions[clusterMinorVersion]; ok {
+		return clusterVersion.Lt(fixedPatchVersion), nil
 	}
 
 	return true, nil
