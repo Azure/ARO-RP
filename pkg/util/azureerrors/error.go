@@ -144,60 +144,34 @@ func IsDeploymentActiveError(err error) bool {
 	return false
 }
 
-func IsStatusNotFoundError(err error) bool {
+func isStatusCodeError(err error, statusCode int) bool {
 	var detailedErr autorest.DetailedError
 	if errors.As(err, &detailedErr) {
-		return detailedErr.StatusCode == http.StatusNotFound
+		return detailedErr.StatusCode == statusCode
 	}
 
 	var responseError *azcore.ResponseError
 	if errors.As(err, &responseError) {
-		return responseError.StatusCode == http.StatusNotFound
+		return responseError.StatusCode == statusCode
 	}
 
 	return false
+}
+
+func IsStatusNotFoundError(err error) bool {
+	return isStatusCodeError(err, http.StatusNotFound)
 }
 
 func IsStatusConflictError(err error) bool {
-	var detailedErr autorest.DetailedError
-	if errors.As(err, &detailedErr) {
-		return detailedErr.StatusCode == http.StatusConflict
-	}
-
-	var responseError *azcore.ResponseError
-	if errors.As(err, &responseError) {
-		return responseError.StatusCode == http.StatusConflict
-	}
-
-	return false
+	return isStatusCodeError(err, http.StatusConflict)
 }
 
 func IsStatusUnauthorizedError(err error) bool {
-	var detailedErr autorest.DetailedError
-	if errors.As(err, &detailedErr) {
-		return detailedErr.StatusCode == http.StatusUnauthorized
-	}
-
-	var responseError *azcore.ResponseError
-	if errors.As(err, &responseError) {
-		return responseError.StatusCode == http.StatusUnauthorized
-	}
-
-	return false
+	return isStatusCodeError(err, http.StatusUnauthorized)
 }
 
 func IsStatusForbiddenError(err error) bool {
-	var detailedErr autorest.DetailedError
-	if errors.As(err, &detailedErr) {
-		return detailedErr.StatusCode == http.StatusForbidden
-	}
-
-	var responseError *azcore.ResponseError
-	if errors.As(err, &responseError) {
-		return responseError.StatusCode == http.StatusForbidden
-	}
-
-	return false
+	return isStatusCodeError(err, http.StatusForbidden)
 }
 
 // IsInvalidSecretError returns if errors is InvalidCredentials error
@@ -403,20 +377,6 @@ func IsRetryableError(err error) bool {
 		return false
 	}
 
-	var responseError *azcore.ResponseError
-	if errors.As(err, &responseError) {
-		if responseError.StatusCode == http.StatusTooManyRequests {
-			return true
-		}
-	}
-
-	var detailedErr autorest.DetailedError
-	if errors.As(err, &detailedErr) {
-		if detailedErr.StatusCode == http.StatusTooManyRequests {
-			return true
-		}
-	}
-
 	// Check for RetryableError in error message (nested Azure errors)
-	return strings.Contains(err.Error(), "RetryableError")
+	return isStatusCodeError(err, http.StatusTooManyRequests) || strings.Contains(err.Error(), "RetryableError")
 }
