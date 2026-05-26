@@ -1,6 +1,144 @@
 #!/bin/bash
 # ARO service setup functions
 
+# Memory budget constants for dynamic per-container allocation.
+# See: https://issues.redhat.com/browse/ARO-27159
+#
+# At VMSS boot time, total VM memory is detected via /proc/meminfo.
+# After reserving OS_RESERVE_MIB for OS, systemd, and non-containerized
+# processes (mdsd, fluentbit, mise), the remainder is distributed to
+# containers by percentage weight. Each service has a floor (minimum)
+# and optional cap (maximum, 0 = uncapped) to provide safety guardrails.
+#
+# Weights are relative, not percentages — the budget is divided in
+# proportion to each weight's share of the sum.  Adding or removing a
+# service only requires setting its weight; existing weights need not
+# be rebalanced.
+# Gateway VMSS runs only the gateway container with its own weight.
+
+# OS/system overhead reserve in MiB (covers kernel, systemd, mdsd,
+# fluentbit, mise, and other non-containerized processes).
+declare -ir OS_RESERVE_MIB=1536
+
+# RP VMSS service weights (relative; auto-normalised against their sum).
+declare -ir WEIGHT_RP=28
+declare -ir WEIGHT_MONITOR=22
+declare -ir WEIGHT_MDM=14
+declare -ir WEIGHT_OTEL=12
+declare -ir WEIGHT_PORTAL=10
+declare -ir WEIGHT_MIMO_SCHEDULER=8
+declare -ir WEIGHT_MIMO_ACTUATOR=6
+
+# Gateway VMSS: gateway is the sole weighted container.
+declare -ir WEIGHT_GATEWAY=100
+
+# Per-service floor (minimum MiB) and cap (maximum MiB, 0 = no cap).
+#                        floor  cap
+declare -ir FLOOR_RP=2048;            declare -ir CAP_RP=0
+declare -ir FLOOR_MONITOR=2048;       declare -ir CAP_MONITOR=0
+declare -ir FLOOR_MDM=512;            declare -ir CAP_MDM=0
+declare -ir FLOOR_OTEL=512;           declare -ir CAP_OTEL=4096
+declare -ir FLOOR_PORTAL=512;         declare -ir CAP_PORTAL=4096
+declare -ir FLOOR_MIMO_SCHEDULER=256; declare -ir CAP_MIMO_SCHEDULER=4096
+declare -ir FLOOR_MIMO_ACTUATOR=256;  declare -ir CAP_MIMO_ACTUATOR=2048
+declare -ir FLOOR_GATEWAY=1024;       declare -ir CAP_GATEWAY=0
+
+# Computed memory limits (MiB), set by compute_memory_budget().
+declare -i MEM_RP=0
+declare -i MEM_MONITOR=0
+declare -i MEM_MDM=0
+declare -i MEM_OTEL=0
+declare -i MEM_PORTAL=0
+declare -i MEM_MIMO_SCHEDULER=0
+declare -i MEM_MIMO_ACTUATOR=0
+declare -i MEM_GATEWAY=0
+
+# clamp
+#
+# Clamps a value between a floor and an optional cap.
+# args:
+#   1) value - int
+#       * the computed allocation in MiB
+#   2) floor - int
+#       * minimum allowed value
+#   3) cap - int
+#       * maximum allowed value (0 = no cap)
+# returns:
+#   prints the clamped value
+clamp() {
+    local -i value=$1
+    local -i floor=$2
+    local -i cap=$3
+
+    if (( value < floor )); then
+        value=$floor
+    fi
+    if (( cap > 0 && value > cap )); then
+        value=$cap
+    fi
+    echo $value
+}
+
+# compute_memory_budget
+#
+# Detects total VM memory from /proc/meminfo, subtracts the OS reserve,
+# and computes per-container memory limits based on percentage weights
+# with floor/cap guardrails (Option C: Hybrid).
+#
+# For RP VMSS (role=rp): allocates budget across all RP services.
+# For Gateway VMSS (role=gateway): allocates budget to the gateway container.
+#
+# Sets global MEM_* variables consumed by configure_service_* functions.
+#
+# args:
+#   1) role - nameref, string
+#       * "rp" or "gateway"
+compute_memory_budget() {
+    local -n _role="$1"
+    log "starting"
+
+    local -i total_mem_kib
+    total_mem_kib=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+    local -i total_mem_mib=$(( total_mem_kib / 1024 ))
+    local -i budget_mib=$(( total_mem_mib - OS_RESERVE_MIB ))
+
+    if (( budget_mib < 0 )); then
+        log "WARNING: total memory ${total_mem_mib} MiB is less than OS reserve ${OS_RESERVE_MIB} MiB"
+        budget_mib=0
+    fi
+
+    log "total_mem=${total_mem_mib}MiB os_reserve=${OS_RESERVE_MIB}MiB budget=${budget_mib}MiB role=${_role}"
+
+    if [ "$_role" == "$role_gateway" ]; then
+        if (( WEIGHT_GATEWAY <= 0 )); then
+            abort "WEIGHT_GATEWAY must be > 0"
+        fi
+        local -i gw_sum=${WEIGHT_GATEWAY}
+        MEM_GATEWAY=$(clamp $(( budget_mib * WEIGHT_GATEWAY / gw_sum )) $FLOOR_GATEWAY $CAP_GATEWAY)
+        log "gateway=${MEM_GATEWAY}MiB (weight_sum=${gw_sum})"
+    elif [ "$_role" == "$role_rp" ]; then
+        local -i w
+        for w in $WEIGHT_RP $WEIGHT_MONITOR $WEIGHT_MDM $WEIGHT_OTEL \
+                 $WEIGHT_PORTAL $WEIGHT_MIMO_SCHEDULER $WEIGHT_MIMO_ACTUATOR; do
+            if (( w <= 0 )); then
+                abort "all service weights must be > 0 (got ${w})"
+            fi
+        done
+        local -i rp_sum=$(( WEIGHT_RP + WEIGHT_MONITOR + WEIGHT_MDM + WEIGHT_OTEL \
+            + WEIGHT_PORTAL + WEIGHT_MIMO_SCHEDULER + WEIGHT_MIMO_ACTUATOR ))
+
+        MEM_RP=$(clamp $(( budget_mib * WEIGHT_RP / rp_sum )) $FLOOR_RP $CAP_RP)
+        MEM_MONITOR=$(clamp $(( budget_mib * WEIGHT_MONITOR / rp_sum )) $FLOOR_MONITOR $CAP_MONITOR)
+        MEM_MDM=$(clamp $(( budget_mib * WEIGHT_MDM / rp_sum )) $FLOOR_MDM $CAP_MDM)
+        MEM_OTEL=$(clamp $(( budget_mib * WEIGHT_OTEL / rp_sum )) $FLOOR_OTEL $CAP_OTEL)
+        MEM_PORTAL=$(clamp $(( budget_mib * WEIGHT_PORTAL / rp_sum )) $FLOOR_PORTAL $CAP_PORTAL)
+        MEM_MIMO_SCHEDULER=$(clamp $(( budget_mib * WEIGHT_MIMO_SCHEDULER / rp_sum )) $FLOOR_MIMO_SCHEDULER $CAP_MIMO_SCHEDULER)
+        MEM_MIMO_ACTUATOR=$(clamp $(( budget_mib * WEIGHT_MIMO_ACTUATOR / rp_sum )) $FLOOR_MIMO_ACTUATOR $CAP_MIMO_ACTUATOR)
+
+        log "rp=${MEM_RP}MiB monitor=${MEM_MONITOR}MiB mdm=${MEM_MDM}MiB otel=${MEM_OTEL}MiB portal=${MEM_PORTAL}MiB mimo_sched=${MEM_MIMO_SCHEDULER}MiB mimo_act=${MEM_MIMO_ACTUATOR}MiB (weight_sum=${rp_sum})"
+    fi
+}
+
 # enable_services
 #
 # enables the systemd services that are passed in
@@ -48,6 +186,7 @@ configure_service_aro_gateway() {
 IPADDRESS='$ipaddress'
 ROLE='${role,,}'
 ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'
+MEM_LIMIT='$MEM_GATEWAY'
 ENVIRONMENT='$ENVIRONMENT'"
 
     write_file aro_gateway_conf_filename conf_file true
@@ -80,7 +219,7 @@ ExecStart=/usr/bin/podman run \
   -e MDM_NAMESPACE \
   -e ARO_LOG_LEVEL \
   -e ENVIRONMENT \
-  -m 2g \
+  -m ${MEM_LIMIT}m \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -p 80:8080 \
@@ -128,7 +267,8 @@ configure_service_aro_rp() {
 IPADDRESS='$ipaddress'
 ENVIRONMENT='$ENVIRONMENT'
 ROLE='${role,,}'
-ARO_LOG_LEVEL='$RPLOGLEVEL'"
+ARO_LOG_LEVEL='$RPLOGLEVEL'
+MEM_LIMIT='$MEM_RP'"
 
     write_file aro_rp_conf_filename conf_file true
     write_file aro_rp_conf_filename add_conf_file false
@@ -181,7 +321,7 @@ ExecStart=/usr/bin/podman run \
   -e MISE_ADDRESS \
   -e ARO_LOG_LEVEL \
   -e ENVIRONMENT \
-  -m 4g \
+  -m ${MEM_LIMIT}m \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -p 443:8443 \
@@ -243,7 +383,8 @@ IPADDRESS='$ipaddress'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
-ARO_LOG_LEVEL='$MONITORLOGLEVEL'"
+ARO_LOG_LEVEL='$MONITORLOGLEVEL'
+MEM_LIMIT='$MEM_MONITOR'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
@@ -287,7 +428,7 @@ ExecStart=/usr/bin/podman run \
   -e ARO_ADOPT_BY_HIVE \
   -e ARO_LOG_LEVEL \
   -e ENVIRONMENT \
-  -m 2.5g \
+  -m ${MEM_LIMIT}m \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   ${RPIMAGE} \
@@ -331,7 +472,8 @@ OTEL_AUDIT_QUEUE_SIZE='$OTELAUDITQUEUESIZE'
 RPIMAGE='$image'
 PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ARO_LOG_LEVEL='$PORTALLOGLEVEL'"
+ARO_LOG_LEVEL='$PORTALLOGLEVEL'
+MEM_LIMIT='$MEM_PORTAL'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 
@@ -368,7 +510,7 @@ ExecStart=/usr/bin/podman run \
   -e OTEL_AUDIT_QUEUE_SIZE \
   -e ARO_LOG_LEVEL \
   -e ENVIRONMENT \
-  -m 2g \
+  -m ${MEM_LIMIT}m \
   -p 444:8444 \
   -p 2222:2222 \
   -v /run/systemd/journal:/run/systemd/journal \
@@ -407,7 +549,8 @@ configure_service_aro_mimo_actuator() {
     # shellcheck disable=SC2034
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ARO_LOG_LEVEL='$MIMOACTUATORLOGLEVEL'"
+ARO_LOG_LEVEL='$MIMOACTUATORLOGLEVEL'
+MEM_LIMIT='$MEM_MIMO_ACTUATOR'"
 
     write_file aro_mimo_actuator_conf_filename conf_file true
     write_file aro_mimo_actuator_conf_filename add_conf_file false
@@ -458,7 +601,7 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -e MSI_RP_ENDPOINT \
   -e ARO_LOG_LEVEL \
-  -m 2g \
+  -m ${MEM_LIMIT}m \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -p 445:8445 \
@@ -499,7 +642,8 @@ configure_service_aro_mimo_scheduler() {
     # shellcheck disable=SC2034
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
-ARO_LOG_LEVEL='$MIMOSCHEDULERLOGLEVEL'"
+ARO_LOG_LEVEL='$MIMOSCHEDULERLOGLEVEL'
+MEM_LIMIT='$MEM_MIMO_SCHEDULER'"
 
     write_file aro_mimo_scheduler_conf_filename conf_file true
     write_file aro_mimo_scheduler_conf_filename add_conf_file false
@@ -547,7 +691,7 @@ ExecStart=/usr/bin/podman run \
   -e OIDC_STORAGE_ACCOUNT_NAME \
   -e MSI_RP_ENDPOINT \
   -e ARO_LOG_LEVEL \
-  -m 2g \
+  -m ${MEM_LIMIT}m \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -p 446:8446 \
@@ -727,6 +871,7 @@ configure_service_aro_otel_collector() {
 OTELIMAGE='$image'
 PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
+MEM_LIMIT='$MEM_OTEL'
 ENVIRONMENT='$ENVIRONMENT'"
 
     write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
@@ -801,7 +946,7 @@ ExecStart=/usr/bin/podman run \
   --rm \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
-  -m 2g \
+  -m ${MEM_LIMIT}m \
   -e ENVIRONMENT \
   -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
   ${OTELIMAGE}
@@ -1129,6 +1274,7 @@ MDM_NAMESPACE='OTEL'
 MDM_ACCOUNT='AzureRedHatOpenShiftRP'
 PODMAN_NETWORK='podman'
 ENVIRONMENT='$ENVIRONMENT'
+MEM_LIMIT='$MEM_MDM'
 IPADDRESS='$ipaddress'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
@@ -1157,7 +1303,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -e ENVIRONMENT \
-  -m 2g \
+  -m ${MEM_LIMIT}m \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
   ${MDMIMAGE} \
@@ -1200,6 +1346,8 @@ configure_vmss_aro_services() {
     local -n configs="$3"
     log "starting"
     verify_role "$1"
+
+    compute_memory_budget "$1"
 
     if [ "$r" == "$role_gateway" ]; then
         configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["static_ip_address"]}[gateway]"
