@@ -135,7 +135,7 @@ func expectControlPlaneVMGetCalls(a *mock_adminactions.MockAzureActions, resourc
 		}
 
 		a.EXPECT().
-			GetVirtualMachine(gomock.Any(), resourceGroupName, machineName, mgmtcompute.InstanceView).
+			GetVirtualMachine(gomock.Any(), resourceGroupName, machineName, mgmtcompute.InstanceViewTypes("")).
 			Return(azureVMWithSize(vmSize), nil)
 	}
 }
@@ -518,7 +518,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 				a.EXPECT().
-					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceViewTypes("")).
 					Return(mgmtcompute.VirtualMachine{}, fmt.Errorf("authorization denied"))
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
@@ -573,10 +573,10 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 						},
 					}, nil)
 				a.EXPECT().
-					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceViewTypes("")).
 					Return(azureVMWithSize("Standard_D8s_v3"), nil)
 				a.EXPECT().
-					GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceViewTypes("")).
 					Return(mgmtcompute.VirtualMachine{}, nil)
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
@@ -705,7 +705,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					Return(healthyKubeAPIServerJSON(), nil).
 					AnyTimes()
 				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver").
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
 					Return(healthyKubeAPIServerPodsJSON(), nil).
 					AnyTimes()
 				k.EXPECT().

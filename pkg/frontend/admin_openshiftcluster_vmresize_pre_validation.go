@@ -22,8 +22,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -532,7 +530,7 @@ func currentControlPlaneVMSizes(
 	sizes := make([]string, 0, len(machineNames))
 
 	for _, machineName := range machineNames {
-		vm, err := a.GetVirtualMachine(ctx, clusterRGName, machineName, mgmtcompute.InstanceView)
+		vm, err := a.GetVirtualMachine(ctx, clusterRGName, machineName, "")
 		if err != nil {
 			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
 				fmt.Sprintf("Failed to retrieve current control plane VM %q from Azure: %v", machineName, err))
