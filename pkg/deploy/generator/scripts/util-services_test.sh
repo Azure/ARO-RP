@@ -3,10 +3,8 @@
 #
 # Run:  bash util-services_test.sh
 #
-# Sources production code from a temp directory so that the conditional
-# source of util-common.sh / util-system.sh is skipped (they only load
-# when co-located, which mirrors actual VMSS deployment where scripts
-# are concatenated).
+# Overrides only read_total_mem_kib() so all allocation logic is tested
+# against the real production compute_memory_budget() function.
 
 set -euo pipefail
 
@@ -20,11 +18,23 @@ cp "${SCRIPT_DIR}/util-services.sh" "${WORK_DIR}/"
 cd "${WORK_DIR}"
 
 log() { :; }
+abort() { echo "ABORT: $*" >&2; return 1; }
 
 declare -r role_gateway="gateway"
 declare -r role_rp="rp"
 
 source "${WORK_DIR}/util-services.sh"
+
+# Override only the meminfo source — all other logic is the real
+# production code from util-services.sh.
+MOCK_MEMINFO_KIB=0
+read_total_mem_kib() {
+    echo "${MOCK_MEMINFO_KIB}"
+}
+
+mock_meminfo() {
+    MOCK_MEMINFO_KIB="$1"
+}
 
 assert_eq() {
     local -r label="$1"
@@ -41,55 +51,6 @@ assert_eq() {
 reset_mem_vars() {
     MEM_RP=0; MEM_MONITOR=0; MEM_MDM=0; MEM_OTEL=0
     MEM_PORTAL=0; MEM_MIMO_SCHEDULER=0; MEM_MIMO_ACTUATOR=0; MEM_GATEWAY=0
-}
-
-MOCK_MEMINFO=""
-
-mock_meminfo() {
-    local -ri kib="$1"
-    MOCK_MEMINFO="MemTotal:       ${kib} kB"
-}
-
-# Override compute_memory_budget to read from MOCK_MEMINFO instead of
-# /proc/meminfo, keeping all other logic identical.
-compute_memory_budget() {
-    local -n _role="$1"
-
-    local -i total_mem_kib
-    total_mem_kib=$(echo "${MOCK_MEMINFO}" | awk '/MemTotal/ {print $2}')
-    local -i total_mem_mib=$(( total_mem_kib / 1024 ))
-    local -i budget_mib=$(( total_mem_mib - OS_RESERVE_MIB ))
-
-    if (( budget_mib < 0 )); then
-        budget_mib=0
-    fi
-
-    if [ "$_role" == "$role_gateway" ]; then
-        if (( WEIGHT_GATEWAY <= 0 )); then
-            echo "ABORT: WEIGHT_GATEWAY must be > 0" >&2
-            return 1
-        fi
-        local -i gw_sum=${WEIGHT_GATEWAY}
-        MEM_GATEWAY=$(clamp $(( budget_mib * WEIGHT_GATEWAY / gw_sum )) $FLOOR_GATEWAY $CAP_GATEWAY)
-    elif [ "$_role" == "$role_rp" ]; then
-        local -i w
-        for w in $WEIGHT_RP $WEIGHT_MONITOR $WEIGHT_MDM $WEIGHT_OTEL \
-                 $WEIGHT_PORTAL $WEIGHT_MIMO_SCHEDULER $WEIGHT_MIMO_ACTUATOR; do
-            if (( w <= 0 )); then
-                echo "ABORT: all service weights must be > 0 (got ${w})" >&2
-                return 1
-            fi
-        done
-        local -i rp_sum=$(( WEIGHT_RP + WEIGHT_MONITOR + WEIGHT_MDM + WEIGHT_OTEL \
-            + WEIGHT_PORTAL + WEIGHT_MIMO_SCHEDULER + WEIGHT_MIMO_ACTUATOR ))
-        MEM_RP=$(clamp $(( budget_mib * WEIGHT_RP / rp_sum )) $FLOOR_RP $CAP_RP)
-        MEM_MONITOR=$(clamp $(( budget_mib * WEIGHT_MONITOR / rp_sum )) $FLOOR_MONITOR $CAP_MONITOR)
-        MEM_MDM=$(clamp $(( budget_mib * WEIGHT_MDM / rp_sum )) $FLOOR_MDM $CAP_MDM)
-        MEM_OTEL=$(clamp $(( budget_mib * WEIGHT_OTEL / rp_sum )) $FLOOR_OTEL $CAP_OTEL)
-        MEM_PORTAL=$(clamp $(( budget_mib * WEIGHT_PORTAL / rp_sum )) $FLOOR_PORTAL $CAP_PORTAL)
-        MEM_MIMO_SCHEDULER=$(clamp $(( budget_mib * WEIGHT_MIMO_SCHEDULER / rp_sum )) $FLOOR_MIMO_SCHEDULER $CAP_MIMO_SCHEDULER)
-        MEM_MIMO_ACTUATOR=$(clamp $(( budget_mib * WEIGHT_MIMO_ACTUATOR / rp_sum )) $FLOOR_MIMO_ACTUATOR $CAP_MIMO_ACTUATOR)
-    fi
 }
 
 # ── clamp() tests ──
@@ -121,9 +82,11 @@ assert_eq "WEIGHT_PORTAL > 0"     "$(( WEIGHT_PORTAL > 0 ? 1 : 0 ))" 1
 assert_eq "WEIGHT_MIMO_SCHED > 0" "$(( WEIGHT_MIMO_SCHEDULER > 0 ? 1 : 0 ))" 1
 assert_eq "WEIGHT_MIMO_ACT > 0"   "$(( WEIGHT_MIMO_ACTUATOR > 0 ? 1 : 0 ))" 1
 assert_eq "WEIGHT_GATEWAY > 0"    "$(( WEIGHT_GATEWAY > 0 ? 1 : 0 ))" 1
+assert_eq "WEIGHT_GW_MDM > 0"     "$(( WEIGHT_GATEWAY_MDM > 0 ? 1 : 0 ))" 1
 
 # ── D8s_v3 (32 GiB = 32768 MiB = 33554432 KiB) ──
 # budget = 32768 - 1536 = 31232 MiB
+# rp_sum = 28+22+14+12+10+8+6 = 100
 
 echo "=== D8s_v3 RP (32 GiB) ==="
 
@@ -174,6 +137,7 @@ assert_eq "D2s_v3 MIMO Sched"   "${MEM_MIMO_SCHEDULER}" 532
 assert_eq "D2s_v3 MIMO Act"     "${MEM_MIMO_ACTUATOR}"  399
 
 # ── Gateway D2s_v3 (8 GiB) ──
+# budget = 6656 MiB, gw_sum = 85+15 = 100
 
 echo "=== D2s_v3 Gateway (8 GiB) ==="
 
@@ -181,8 +145,21 @@ reset_mem_vars
 mock_meminfo 8388608
 compute_memory_budget role_gateway
 
-assert_eq "D2s_v3 Gateway"      "${MEM_GATEWAY}"        6656
+assert_eq "D2s_v3 Gateway"      "${MEM_GATEWAY}"        5657
+assert_eq "D2s_v3 GW MDM"       "${MEM_MDM}"            998
 assert_eq "Gateway no RP leak"  "${MEM_RP}"             0
+
+# ── Gateway D8s_v3 (32 GiB) ──
+# budget = 31232 MiB
+
+echo "=== D8s_v3 Gateway (32 GiB) ==="
+
+reset_mem_vars
+mock_meminfo 33554432
+compute_memory_budget role_gateway
+
+assert_eq "D8s_v3 Gateway"      "${MEM_GATEWAY}"        26547
+assert_eq "D8s_v3 GW MDM"       "${MEM_MDM}"            4684
 
 # ── Tiny VM (2 GiB) — all services hit floor ──
 # budget = 2048 - 1536 = 512 MiB
@@ -213,24 +190,46 @@ assert_eq "Sub-reserve RP"       "${MEM_RP}"             2048    # floor
 assert_eq "Sub-reserve Gateway"  "${MEM_GATEWAY}"        0       # not set
 
 # ── Zero-weight rejection ──
+# The weights are declared -ir (readonly) in util-services.sh, so we
+# cannot override them in-process. Instead, we create a modified copy
+# of util-services.sh with the target weight set to 0 and source it
+# in a subshell.
 
 echo "=== zero-weight rejection ==="
 
-# Temporarily override a weight to 0 and verify compute_memory_budget fails.
-# We save/restore using a subshell approach (run in a child process).
-if (WEIGHT_OTEL=0; mock_meminfo 33554432; compute_memory_budget role_rp) 2>/dev/null; then
-    echo "FAIL: zero RP weight accepted"
-    FAIL=$((FAIL + 1))
-else
-    PASS=$((PASS + 1))
-fi
+test_zero_weight() {
+    local -r var_name="$1"
+    local -r role_var="$2"
+    local -r label="$3"
 
-if (WEIGHT_GATEWAY=0; mock_meminfo 33554432; compute_memory_budget role_gateway) 2>/dev/null; then
-    echo "FAIL: zero gateway weight accepted"
-    FAIL=$((FAIL + 1))
-else
-    PASS=$((PASS + 1))
-fi
+    local modified="${WORK_DIR}/zero-weight-test.sh"
+    sed "s/declare -ir ${var_name}=[0-9]*/declare -ir ${var_name}=0/" \
+        "${WORK_DIR}/util-services.sh" > "${modified}"
+
+    # Run in a fresh bash process so readonly declarations from the
+    # parent don't mask the modified (zero) value.
+    if bash -c "
+        set -euo pipefail
+        log() { :; }
+        abort() { echo \"ABORT: \$*\" >&2; return 1; }
+        declare -r role_gateway='gateway'
+        declare -r role_rp='rp'
+        source '${modified}'
+        read_total_mem_kib() { echo 33554432; }
+        compute_memory_budget '${role_var}'
+    " 2>/dev/null; then
+        echo "FAIL: ${label}"
+        FAIL=$((FAIL + 1))
+    else
+        PASS=$((PASS + 1))
+    fi
+    rm -f "${modified}"
+}
+
+test_zero_weight "WEIGHT_OTEL" "role_rp" "zero OTEL weight accepted"
+test_zero_weight "WEIGHT_RP" "role_rp" "zero RP weight accepted"
+test_zero_weight "WEIGHT_GATEWAY" "role_gateway" "zero gateway weight accepted"
+test_zero_weight "WEIGHT_GATEWAY_MDM" "role_gateway" "zero gateway MDM weight accepted"
 
 # ── Summary ──
 

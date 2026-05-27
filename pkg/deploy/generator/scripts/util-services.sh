@@ -29,8 +29,10 @@ declare -ir WEIGHT_PORTAL=10
 declare -ir WEIGHT_MIMO_SCHEDULER=8
 declare -ir WEIGHT_MIMO_ACTUATOR=6
 
-# Gateway VMSS: gateway is the sole weighted container.
-declare -ir WEIGHT_GATEWAY=100
+# Gateway VMSS service weights (relative; auto-normalised against their sum).
+# MDM runs on both RP and Gateway VMSS and shares the gateway budget.
+declare -ir WEIGHT_GATEWAY=85
+declare -ir WEIGHT_GATEWAY_MDM=15
 
 # Per-service floor (minimum MiB) and cap (maximum MiB, 0 = no cap).
 #                        floor  cap
@@ -79,6 +81,14 @@ clamp() {
     echo $value
 }
 
+# read_total_mem_kib
+#
+# Reads total physical memory in KiB from /proc/meminfo.
+# Extracted as a separate function so tests can override the source.
+read_total_mem_kib() {
+    awk '/MemTotal/ {print $2}' /proc/meminfo
+}
+
 # compute_memory_budget
 #
 # Detects total VM memory from /proc/meminfo, subtracts the OS reserve,
@@ -86,7 +96,8 @@ clamp() {
 # with floor/cap guardrails (Option C: Hybrid).
 #
 # For RP VMSS (role=rp): allocates budget across all RP services.
-# For Gateway VMSS (role=gateway): allocates budget to the gateway container.
+# For Gateway VMSS (role=gateway): allocates budget to the gateway
+# and MDM containers.
 #
 # Sets global MEM_* variables consumed by configure_service_* functions.
 #
@@ -98,7 +109,7 @@ compute_memory_budget() {
     log "starting"
 
     local -i total_mem_kib
-    total_mem_kib=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+    total_mem_kib=$(read_total_mem_kib)
     local -i total_mem_mib=$(( total_mem_kib / 1024 ))
     local -i budget_mib=$(( total_mem_mib - OS_RESERVE_MIB ))
 
@@ -110,12 +121,16 @@ compute_memory_budget() {
     log "total_mem=${total_mem_mib}MiB os_reserve=${OS_RESERVE_MIB}MiB budget=${budget_mib}MiB role=${_role}"
 
     if [ "$_role" == "$role_gateway" ]; then
-        if (( WEIGHT_GATEWAY <= 0 )); then
-            abort "WEIGHT_GATEWAY must be > 0"
-        fi
-        local -i gw_sum=${WEIGHT_GATEWAY}
+        local -i w
+        for w in $WEIGHT_GATEWAY $WEIGHT_GATEWAY_MDM; do
+            if (( w <= 0 )); then
+                abort "all gateway weights must be > 0 (got ${w})"
+            fi
+        done
+        local -i gw_sum=$(( WEIGHT_GATEWAY + WEIGHT_GATEWAY_MDM ))
         MEM_GATEWAY=$(clamp $(( budget_mib * WEIGHT_GATEWAY / gw_sum )) $FLOOR_GATEWAY $CAP_GATEWAY)
-        log "gateway=${MEM_GATEWAY}MiB (weight_sum=${gw_sum})"
+        MEM_MDM=$(clamp $(( budget_mib * WEIGHT_GATEWAY_MDM / gw_sum )) $FLOOR_MDM $CAP_MDM)
+        log "gateway=${MEM_GATEWAY}MiB mdm=${MEM_MDM}MiB (weight_sum=${gw_sum})"
     elif [ "$_role" == "$role_rp" ]; then
         local -i w
         for w in $WEIGHT_RP $WEIGHT_MONITOR $WEIGHT_MDM $WEIGHT_OTEL \
@@ -864,10 +879,17 @@ configure_service_aro_otel_collector() {
     log "starting"
     log "Configuring aro-otel-collector service"
 
+    # GOMEMLIMIT is set to 90% of the container memory limit so the Go
+    # runtime GCs before hitting the cgroup hard limit.
+    local -i gomemlimit_mib=$(( MEM_OTEL * 9 / 10 ))
+    if (( gomemlimit_mib < 1 )); then
+        gomemlimit_mib=1
+    fi
+
     # shellcheck disable=SC2034
     local -r aro_otel_collector_service_conf_filename='/etc/sysconfig/aro-otel-collector'
     # shellcheck disable=SC2034
-    local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=1000MiB
+    local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=${gomemlimit_mib}MiB
 OTELIMAGE='$image'
 PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
