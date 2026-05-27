@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,6 +37,26 @@ var _ = Describe("[Admin API] ETCD key count action", func() {
 		)
 		Expect(nodes.Items).NotTo(BeEmpty(), "expected at least one master node")
 		vmName := nodes.Items[0].Name
+		podName := "etcd-" + vmName
+
+		By("verifying the etcd pod is ready before attempting to exec")
+		Eventually(func(g Gomega, ctx context.Context) {
+			pod := GetK8sObjectWithRetry(
+				ctx, clients.Kubernetes.CoreV1().Pods("openshift-etcd").Get, podName, metav1.GetOptions{},
+			)
+			g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning),
+				"pod %s phase: expected Running, got %s", podName, pod.Status.Phase)
+			// Verify pod is actually ready (not just Running)
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == corev1.PodReady {
+					g.Expect(cond.Status).To(Equal(corev1.ConditionTrue),
+						"pod %s Ready condition: expected True, got %s", podName, cond.Status)
+					return
+				}
+			}
+			g.Expect(false).To(BeTrue(), "pod %s has no Ready condition", podName)
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed(),
+			"etcd pod %s not ready within timeout", podName)
 
 		By("calling the etcdkeycount admin API with vmName=" + vmName)
 		params := url.Values{"vmName": []string{vmName}}
