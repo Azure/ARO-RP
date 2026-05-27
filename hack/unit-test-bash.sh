@@ -60,9 +60,11 @@ main() {
     jobs="$(detect_jobs)"
     report_dir="$(prepare_report_dir)"
 
+    local -a engine_args=()
     if [[ "${engine}" == "podman" ]]; then
         mount_arg="${repo_root}:/work:Z"
         report_mount="${report_dir}:/report:Z"
+        engine_args+=(--userns=keep-id)
     else
         mount_arg="${repo_root}:/work"
         report_mount="${report_dir}:/report"
@@ -80,6 +82,7 @@ main() {
 
     "${engine}" run --rm \
         "${platform_args[@]}" \
+        "${engine_args[@]}" \
         -v "${mount_arg}" \
         -v "${report_mount}" \
         -w /work \
