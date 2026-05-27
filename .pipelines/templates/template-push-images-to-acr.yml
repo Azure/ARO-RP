@@ -1,3 +1,13 @@
+# DEPRECATED: This template is no longer used and kept for historical reference only.
+#
+# Modern ACR authentication uses:
+# - template-acr-login.yml + template-acr-push.yml (for cross-tenant push/pull)
+# - Service connections (for read-only access)
+# - Azure CLI authentication (for E2E scenarios)
+#
+# See docs/acr-authentication.md for current implementation details.
+# Related: ARO-10651, ARO-9094
+
 parameters:
   rpImageACR: ""
   acrCredentialsJSON: ""
