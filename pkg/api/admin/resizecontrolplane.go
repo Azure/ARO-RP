@@ -18,8 +18,8 @@ type ResizeControlPlaneResponse struct {
 	VMSize       string                            `json:"vmSize,omitempty"`
 	DeallocateVM bool                              `json:"deallocateVM"`
 	DurationMS   int64                             `json:"durationMs"`
-	Summary      ResizeControlPlaneSummary         `json:"summary,omitempty"`
-	Preflight    ResizeControlPlanePreflight       `json:"preflight,omitempty"`
+	Summary      ResizeControlPlaneSummary         `json:"summary"`
+	Preflight    ResizeControlPlanePreflight       `json:"preflight"`
 	FailedPhase  string                            `json:"failedPhase,omitempty"`
 	FailedNode   string                            `json:"failedNode,omitempty"`
 	FailedStep   string                            `json:"failedStep,omitempty"`
