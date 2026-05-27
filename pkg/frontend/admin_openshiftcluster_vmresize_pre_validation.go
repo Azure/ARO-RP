@@ -105,12 +105,12 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	a adminactions.AzureActions,
 	desiredVMSize string,
 ) ([]byte, error) {
-	_, err := f.runPreResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
+	result, err := f.runPreResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize)
 	if err != nil {
 		return nil, err
 	}
 
-	return json.Marshal("All pre-flight checks passed")
+	return json.Marshal(result)
 }
 
 type resizePreflightResult struct {
