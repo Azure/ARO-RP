@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -264,10 +265,15 @@ func buildResizePreflightResult(checks map[string]adminapi.ResizeControlPlaneChe
 		}
 	}
 
+	unknown := make([]string, 0)
 	for name := range checks {
 		if !known[name] {
-			result.Checks = append(result.Checks, checks[name])
+			unknown = append(unknown, name)
 		}
+	}
+	slices.Sort(unknown)
+	for _, name := range unknown {
+		result.Checks = append(result.Checks, checks[name])
 	}
 
 	return result
