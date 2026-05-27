@@ -194,30 +194,40 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				},
 			},
 			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
-				masterSubnetWithServiceEndpoints := masterSubnet
-				masterSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.Storage"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
-					},
-					{
-						Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				masterSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: masterSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: masterSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.Storage"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+							{
+								Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
-				workerSubnetWithServiceEndpoints := workerSubnet
-				workerSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.Storage"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
-					},
-					{
-						Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				workerSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: workerSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: workerSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.Storage"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+							{
+								Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
 				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: masterSubnetWithServiceEndpoints}, nil)
@@ -237,20 +247,30 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				},
 			},
 			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
-				masterSubnetWithServiceEndpoints := masterSubnet
-				masterSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.Storage"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				masterSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: masterSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: masterSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.Storage"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
-				workerSubnetWithServiceEndpoints := workerSubnet
-				workerSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				workerSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: workerSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: workerSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
 				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: masterSubnetWithServiceEndpoints}, nil)
