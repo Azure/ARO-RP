@@ -114,8 +114,8 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 }
 
 type resizePreflightResult struct {
-	Checks     []adminapi.ResizeControlPlaneCheck
-	DurationMS int64
+	Checks     []adminapi.ResizeControlPlaneCheck `json:"checks,omitempty"`
+	DurationMS int64                              `json:"durationMs"`
 }
 
 func (f *frontend) runPreResizeControlPlaneVMsValidation(

@@ -911,6 +911,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				resizedNode := findResizeNode(resp.Nodes, "master-2")
 				if resizedNode == nil {
 					t.Fatalf("missing node report for master-2 in %+v", resp.Nodes)
+					return
 				}
 				if resizedNode.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
 					t.Fatalf("master-2 status = %q, want %q", resizedNode.Status, adminapi.ResizeControlPlaneOperationStatusSucceeded)
@@ -926,6 +927,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					node := findResizeNode(resp.Nodes, nodeName)
 					if node == nil {
 						t.Fatalf("missing node report for %s in %+v", nodeName, resp.Nodes)
+						return
 					}
 					if node.Status != adminapi.ResizeControlPlaneOperationStatusSkipped {
 						t.Fatalf("%s status = %q, want %q", nodeName, node.Status, adminapi.ResizeControlPlaneOperationStatusSkipped)
@@ -964,6 +966,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				resizedNode := findResizeNode(resp.Nodes, "master-2")
 				if resizedNode == nil {
 					t.Fatalf("missing node report for master-2 in %+v", resp.Nodes)
+					return
 				}
 				if !strings.Contains(string(b), `"steps"`) {
 					t.Fatal("raw response body does not include steps for verbose response")
@@ -975,6 +978,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				stopStep := findResizeStep(resizedNode.Steps, "stop-vm")
 				if stopStep == nil {
 					t.Fatalf("missing stop-vm step in %+v", resizedNode.Steps)
+					return
 				}
 				if !strings.Contains(stopStep.Message, "deallocate=false") {
 					t.Fatalf("stop-vm step message %q does not mention deallocate=false", stopStep.Message)
@@ -1121,6 +1125,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				stepDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNodeStep", "master-0/drain")
 				if stepDetail == nil {
 					t.Fatalf("missing ResizeNodeStep detail in %+v", cloudErr.Details)
+					return
 				}
 				if !strings.Contains(stepDetail.Message, "failed") {
 					t.Fatalf("step detail message %q does not include failure state", stepDetail.Message)
@@ -1129,6 +1134,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "master-0/drain")
 				if hintDetail == nil {
 					t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
+					return
 				}
 				if !strings.Contains(hintDetail.Message, "PodDisruptionBudgets") {
 					t.Fatalf("hint detail message %q does not mention drain investigation guidance", hintDetail.Message)
@@ -1188,6 +1194,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				checkDetail := findCloudErrorDetail(cloudErr.Details, "ResizeValidationCheck", "cluster-service-principal")
 				if checkDetail == nil {
 					t.Fatalf("missing service principal validation detail in %+v", cloudErr.Details)
+					return
 				}
 				if !strings.Contains(checkDetail.Message, "invalid") {
 					t.Fatalf("check detail message %q does not mention invalid service principal", checkDetail.Message)
@@ -1196,6 +1203,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "pre-flight-validation")
 				if hintDetail == nil {
 					t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
+					return
 				}
 				if !strings.Contains(hintDetail.Message, "Resolve the validation failures") {
 					t.Fatalf("hint detail message %q does not contain retry guidance", hintDetail.Message)
