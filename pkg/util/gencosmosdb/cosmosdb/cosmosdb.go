@@ -142,7 +142,7 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 		return resp, err
 	}
 
-	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
+	if out != nil {
 		return resp, d.Decode(&out)
 	}
 
