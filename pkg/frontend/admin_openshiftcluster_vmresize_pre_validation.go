@@ -239,26 +239,34 @@ func (f *frontend) runPreResizeControlPlaneVMsValidation(
 	return result, nil
 }
 
-func buildResizePreflightResult(checks map[string]adminapi.ResizeControlPlaneCheck, duration time.Duration) *resizePreflightResult {
-	order := []string{
-		"api-server-readyz",
-		"vm-size-and-quota",
-		"kube-apiserver-operator",
-		"kube-apiserver-pods",
-		"etcd-health",
-		"cluster-service-principal",
-		"control-plane-machine-set",
-	}
+var resizePreflightCheckOrder = []string{
+	"api-server-readyz",
+	"vm-size-and-quota",
+	"kube-apiserver-operator",
+	"kube-apiserver-pods",
+	"etcd-health",
+	"cluster-service-principal",
+	"control-plane-machine-set",
+}
 
+func buildResizePreflightResult(checks map[string]adminapi.ResizeControlPlaneCheck, duration time.Duration) *resizePreflightResult {
 	result := &resizePreflightResult{
 		Checks:     make([]adminapi.ResizeControlPlaneCheck, 0, len(checks)),
 		DurationMS: duration.Milliseconds(),
 	}
 
-	for _, name := range order {
+	known := make(map[string]bool, len(resizePreflightCheckOrder))
+	for _, name := range resizePreflightCheckOrder {
+		known[name] = true
 		check, ok := checks[name]
 		if ok {
 			result.Checks = append(result.Checks, check)
+		}
+	}
+
+	for name := range checks {
+		if !known[name] {
+			result.Checks = append(result.Checks, checks[name])
 		}
 	}
 

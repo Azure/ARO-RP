@@ -193,6 +193,65 @@ func findResizeStep(steps []adminapi.ResizeControlPlaneStep, name string) *admin
 	return nil
 }
 
+func validSKUResponse(skuName string) map[string]*armcompute.ResourceSKU {
+	return map[string]*armcompute.ResourceSKU{
+		skuName: {
+			Name:         pointerutils.ToPtr(skuName),
+			ResourceType: pointerutils.ToPtr("virtualMachines"),
+			Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+			LocationInfo: []*armcompute.ResourceSKULocationInfo{
+				{Location: pointerutils.ToPtr("eastus")},
+			},
+			Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+			Capabilities: []*armcompute.ResourceSKUCapabilities{},
+		},
+	}
+}
+
+func setupOneNodeResizeKubeMocks(k *mock_adminactions.MockKubeActions) {
+	allKubeChecksHealthyMock(k)
+
+	running := "Running"
+	k.EXPECT().
+		KubeList(gomock.Any(), "Machine", machineNamespace).
+		Return(masterMachineListJSON(
+			masterMachine("master-0", "Standard_D16s_v5", running),
+			masterMachine("master-1", "Standard_D16s_v5", running),
+			masterMachine("master-2", "Standard_D8s_v3", running),
+		), nil)
+
+	gomock.InOrder(
+		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+			Return(nodeJSON("master-2", true), nil),
+		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+			Return(nodeJSON("master-1", true), nil),
+		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+			Return(nodeJSON("master-0", true), nil),
+		k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
+		k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
+		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+			Return(nodeJSON("master-2", true), nil),
+		k.EXPECT().CordonNode(gomock.Any(), "master-2", false).Return(nil),
+		k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-2").
+			Return(machineJSON("master-2", "Standard_D8s_v3"), nil),
+		k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+			Return(nodeJSON("master-2", true), nil),
+		k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+	)
+}
+
+func setupOneNodeResizeAzureMocks(a *mock_adminactions.MockAzureActions) {
+	gomock.InOrder(
+		a.EXPECT().
+			VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
+			Return(validSKUResponse("Standard_D16s_v5"), nil),
+		a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", false).Return(nil),
+		a.EXPECT().VMResize(gomock.Any(), "master-2", "Standard_D16s_v5").Return(nil),
+		a.EXPECT().VMStartAndWait(gomock.Any(), "master-2").Return(nil),
+	)
+}
+
 func TestCheckCPMSNotActive(t *testing.T) {
 	ctx := context.Background()
 
@@ -732,30 +791,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				addSubscriptionDoc(f)
 			},
 			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(healthyKubeAPIServerJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(healthyKubeAPIServerPodsJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-					Return(healthyEtcdJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-					Return(validServicePrincipalJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-					AnyTimes()
+				allKubeChecksHealthyMock(k)
 
 				running := "Running"
 				k.EXPECT().
@@ -775,20 +811,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			azureMocks: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
 					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
-					Return(map[string]*armcompute.ResourceSKU{
-						"Standard_D8s_v3": {
-							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("eastus"),
-								},
-							},
-							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-							Capabilities: []*armcompute.ResourceSKUCapabilities{},
-						},
-					}, nil)
+					Return(validSKUResponse("Standard_D8s_v3"), nil)
 			},
 			wantStatusCode: http.StatusOK,
 			assertResponse: func(t *testing.T, b []byte) {
@@ -852,84 +875,8 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				addClusterDoc(f)
 				addSubscriptionDoc(f)
 			},
-			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(healthyKubeAPIServerJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(healthyKubeAPIServerPodsJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-					Return(healthyEtcdJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-					Return(validServicePrincipalJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-					AnyTimes()
-
-				running := "Running"
-				k.EXPECT().
-					KubeList(gomock.Any(), "Machine", machineNamespace).
-					Return(masterMachineListJSON(
-						masterMachine("master-0", "Standard_D16s_v5", running),
-						masterMachine("master-1", "Standard_D16s_v5", running),
-						masterMachine("master-2", "Standard_D8s_v3", running),
-					), nil)
-
-				gomock.InOrder(
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-						Return(nodeJSON("master-2", true), nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
-						Return(nodeJSON("master-1", true), nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
-					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-						Return(nodeJSON("master-2", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-2", false).Return(nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-2").
-						Return(machineJSON("master-2", "Standard_D8s_v3"), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-						Return(nodeJSON("master-2", true), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-				)
-			},
-			azureMocks: func(a *mock_adminactions.MockAzureActions) {
-				gomock.InOrder(
-					a.EXPECT().
-						VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
-						Return(map[string]*armcompute.ResourceSKU{
-							"Standard_D16s_v5": {
-								Name:         pointerutils.ToPtr("Standard_D16s_v5"),
-								ResourceType: pointerutils.ToPtr("virtualMachines"),
-								Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-								LocationInfo: []*armcompute.ResourceSKULocationInfo{
-									{
-										Location: pointerutils.ToPtr("eastus"),
-									},
-								},
-								Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-								Capabilities: []*armcompute.ResourceSKUCapabilities{},
-							},
-						}, nil),
-					a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", false).Return(nil),
-					a.EXPECT().VMResize(gomock.Any(), "master-2", "Standard_D16s_v5").Return(nil),
-					a.EXPECT().VMStartAndWait(gomock.Any(), "master-2").Return(nil),
-				)
-			},
+			kubeMocks:      setupOneNodeResizeKubeMocks,
+			azureMocks:     setupOneNodeResizeAzureMocks,
 			wantStatusCode: http.StatusOK,
 			assertResponse: func(t *testing.T, b []byte) {
 				resp := decodeResizeControlPlaneResponse(t, b)
@@ -996,84 +943,8 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				addClusterDoc(f)
 				addSubscriptionDoc(f)
 			},
-			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(healthyKubeAPIServerJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(healthyKubeAPIServerPodsJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-					Return(healthyEtcdJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-					Return(validServicePrincipalJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-					AnyTimes()
-
-				running := "Running"
-				k.EXPECT().
-					KubeList(gomock.Any(), "Machine", machineNamespace).
-					Return(masterMachineListJSON(
-						masterMachine("master-0", "Standard_D16s_v5", running),
-						masterMachine("master-1", "Standard_D16s_v5", running),
-						masterMachine("master-2", "Standard_D8s_v3", running),
-					), nil)
-
-				gomock.InOrder(
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-						Return(nodeJSON("master-2", true), nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
-						Return(nodeJSON("master-1", true), nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
-					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-						Return(nodeJSON("master-2", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-2", false).Return(nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-2").
-						Return(machineJSON("master-2", "Standard_D8s_v3"), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-						Return(nodeJSON("master-2", true), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-				)
-			},
-			azureMocks: func(a *mock_adminactions.MockAzureActions) {
-				gomock.InOrder(
-					a.EXPECT().
-						VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
-						Return(map[string]*armcompute.ResourceSKU{
-							"Standard_D16s_v5": {
-								Name:         pointerutils.ToPtr("Standard_D16s_v5"),
-								ResourceType: pointerutils.ToPtr("virtualMachines"),
-								Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-								LocationInfo: []*armcompute.ResourceSKULocationInfo{
-									{
-										Location: pointerutils.ToPtr("eastus"),
-									},
-								},
-								Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-								Capabilities: []*armcompute.ResourceSKUCapabilities{},
-							},
-						}, nil),
-					a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", false).Return(nil),
-					a.EXPECT().VMResize(gomock.Any(), "master-2", "Standard_D16s_v5").Return(nil),
-					a.EXPECT().VMStartAndWait(gomock.Any(), "master-2").Return(nil),
-				)
-			},
+			kubeMocks:      setupOneNodeResizeKubeMocks,
+			azureMocks:     setupOneNodeResizeAzureMocks,
 			wantStatusCode: http.StatusOK,
 			assertResponse: func(t *testing.T, b []byte) {
 				resp := decodeResizeControlPlaneResponse(t, b)
@@ -1199,6 +1070,138 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: verbose: The provided verbose value 'foo' is invalid. Allowed values are 'true' or 'false'.`,
 		},
+		{
+			name:         "failure details - drain fails during resize",
+			vmSize:       "Standard_D16s_v5",
+			deallocateVM: "true",
+			verbose:      "",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				allKubeChecksHealthyMock(k)
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).
+					Return(masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", "Running")), nil)
+				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(errors.New("could not drain node after 3 retries: drain error")),
+				)
+			},
+			azureMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
+					Return(validSKUResponse("Standard_D16s_v5"), nil)
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			assertResponse: func(t *testing.T, b []byte) {
+				cloudErr := decodeCloudErrorResponse(t, http.StatusInternalServerError, b)
+				if !strings.Contains(cloudErr.Message, `step "drain" for node "master-0"`) {
+					t.Fatalf("message %q does not include failing step and node", cloudErr.Message)
+				}
+				if cloudErr.Target != "master-0/drain" {
+					t.Fatalf("target = %q, want %q", cloudErr.Target, "master-0/drain")
+				}
+
+				requestDetail := findCloudErrorDetail(cloudErr.Details, "ResizeRequest", testdatabase.GetResourcePath(mockSubID, "resourceName"))
+				if requestDetail == nil {
+					t.Fatalf("missing ResizeRequest detail in %+v", cloudErr.Details)
+				}
+
+				phaseDetail := findCloudErrorDetail(cloudErr.Details, "ResizePhase", "pre-flight-validation")
+				if phaseDetail == nil {
+					t.Fatalf("missing ResizePhase detail in %+v", cloudErr.Details)
+				}
+				nodeDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNode", "master-0")
+				if nodeDetail == nil {
+					t.Fatalf("missing ResizeNode detail in %+v", cloudErr.Details)
+				}
+				stepDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNodeStep", "master-0/drain")
+				if stepDetail == nil {
+					t.Fatalf("missing ResizeNodeStep detail in %+v", cloudErr.Details)
+				}
+				if !strings.Contains(stepDetail.Message, "failed") {
+					t.Fatalf("step detail message %q does not include failure state", stepDetail.Message)
+				}
+
+				hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "master-0/drain")
+				if hintDetail == nil {
+					t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
+				}
+				if !strings.Contains(hintDetail.Message, "PodDisruptionBudgets") {
+					t.Fatalf("hint detail message %q does not mention drain investigation guidance", hintDetail.Message)
+				}
+			},
+		},
+		{
+			name:         "preflight failure - service principal invalid",
+			vmSize:       "Standard_D8s_v3",
+			deallocateVM: "true",
+			verbose:      "",
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().CheckAPIServerReadyz(gomock.Any()).Return(nil).AnyTimes()
+				k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(healthyKubeAPIServerJSON(), nil).AnyTimes()
+				k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
+					Return(healthyKubeAPIServerPodsJSON(), nil).AnyTimes()
+				k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					Return(healthyEtcdJSON(), nil).AnyTimes()
+				k.EXPECT().KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{
+						{
+							Type:    arov1alpha1.ServicePrincipalValid,
+							Status:  operatorv1.ConditionFalse,
+							Message: "secret expired",
+						},
+					}), nil).AnyTimes()
+				k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+					AnyTimes()
+			},
+			azureMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(validSKUResponse("Standard_D8s_v3"), nil)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			assertResponse: func(t *testing.T, b []byte) {
+				cloudErr := decodeCloudErrorResponse(t, http.StatusBadRequest, b)
+				if !strings.Contains(cloudErr.Message, `phase "pre-flight-validation"`) {
+					t.Fatalf("message %q does not include pre-flight phase", cloudErr.Message)
+				}
+				if cloudErr.Target != "pre-flight-validation" {
+					t.Fatalf("target = %q, want %q", cloudErr.Target, "pre-flight-validation")
+				}
+
+				phaseDetail := findCloudErrorDetail(cloudErr.Details, "ResizePhase", "pre-flight-validation")
+				if phaseDetail == nil {
+					t.Fatalf("missing pre-flight phase detail in %+v", cloudErr.Details)
+				}
+
+				checkDetail := findCloudErrorDetail(cloudErr.Details, "ResizeValidationCheck", "cluster-service-principal")
+				if checkDetail == nil {
+					t.Fatalf("missing service principal validation detail in %+v", cloudErr.Details)
+				}
+				if !strings.Contains(checkDetail.Message, "invalid") {
+					t.Fatalf("check detail message %q does not mention invalid service principal", checkDetail.Message)
+				}
+
+				hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "pre-flight-validation")
+				if hintDetail == nil {
+					t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
+				}
+				if !strings.Contains(hintDetail.Message, "Resolve the validation failures") {
+					t.Fatalf("hint detail message %q does not contain retry guidance", hintDetail.Message)
+				}
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
@@ -1259,290 +1262,5 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				t.Error(err)
 			}
 		})
-	}
-}
-
-func TestAdminResizeControlPlaneFailureDetails(t *testing.T) {
-	const (
-		mockSubID    = "00000000-0000-0000-0000-000000000000"
-		mockTenantID = "00000000-0000-0000-0000-000000000000"
-	)
-
-	ctx := context.Background()
-	ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
-	defer ti.done()
-
-	resourceID := testdatabase.GetResourcePath(mockSubID, "resourceName")
-
-	err := ti.buildFixtures(func(f *testdatabase.Fixture) {
-		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-			Key: strings.ToLower(resourceID),
-			OpenShiftCluster: &api.OpenShiftCluster{
-				ID:       resourceID,
-				Location: "eastus",
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						VMSize: api.VMSizeStandardD8sV3,
-					},
-					ClusterProfile: api.ClusterProfile{
-						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-					},
-				},
-			},
-		})
-		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-			ID: mockSubID,
-			Subscription: &api.Subscription{
-				State: api.SubscriptionStateRegistered,
-				Properties: &api.SubscriptionProperties{
-					TenantID: mockTenantID,
-				},
-			},
-		})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	k := mock_adminactions.NewMockKubeActions(ti.controller)
-	a := mock_adminactions.NewMockAzureActions(ti.controller)
-
-	k.EXPECT().CheckAPIServerReadyz(gomock.Any()).Return(nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-		Return(healthyKubeAPIServerJSON(), nil).AnyTimes()
-k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-		Return(healthyKubeAPIServerPodsJSON(), nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-		Return(healthyEtcdJSON(), nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-		Return(validServicePrincipalJSON(), nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-		AnyTimes()
-	k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).
-		Return(masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", "Running")), nil)
-	gomock.InOrder(
-		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
-		k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
-		k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(errors.New("could not drain node after 3 retries: drain error")),
-	)
-
-	a.EXPECT().
-		VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
-		Return(map[string]*armcompute.ResourceSKU{
-			"Standard_D16s_v5": {
-				Name:         pointerutils.ToPtr("Standard_D16s_v5"),
-				ResourceType: pointerutils.ToPtr("virtualMachines"),
-				Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-				LocationInfo: []*armcompute.ResourceSKULocationInfo{
-					{Location: pointerutils.ToPtr("eastus")},
-				},
-				Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-				Capabilities: []*armcompute.ResourceSKUCapabilities{},
-			},
-		}, nil)
-
-	f, err := NewFrontend(ctx,
-		ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup,
-		api.APIs, &noop.Noop{}, &noop.Noop{},
-		nil, nil, nil,
-		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
-			return k, nil
-		},
-		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
-			return a, nil
-		},
-		nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.validateResizeQuota = quotaCheckDisabled
-
-	go f.Run(ctx, nil, nil)
-
-	resp, b, err := ti.request(http.MethodPost,
-		fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D16s_v5&deallocateVM=true", resourceID),
-		nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if resp.StatusCode != http.StatusInternalServerError {
-		t.Fatalf("unexpected status code %d, wanted %d: %s", resp.StatusCode, http.StatusInternalServerError, string(b))
-	}
-
-	cloudErr := decodeCloudErrorResponse(t, resp.StatusCode, b)
-	if !strings.Contains(cloudErr.Message, `step "drain" for node "master-0"`) {
-		t.Fatalf("message %q does not include failing step and node", cloudErr.Message)
-	}
-	if cloudErr.Target != "master-0/drain" {
-		t.Fatalf("target = %q, want %q", cloudErr.Target, "master-0/drain")
-	}
-
-	requestDetail := findCloudErrorDetail(cloudErr.Details, "ResizeRequest", resourceID)
-	if requestDetail == nil {
-		t.Fatalf("missing ResizeRequest detail in %+v", cloudErr.Details)
-	}
-
-	phaseDetail := findCloudErrorDetail(cloudErr.Details, "ResizePhase", "pre-flight-validation")
-	if phaseDetail == nil {
-		t.Fatalf("missing ResizePhase detail in %+v", cloudErr.Details)
-	}
-	nodeDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNode", "master-0")
-	if nodeDetail == nil {
-		t.Fatalf("missing ResizeNode detail in %+v", cloudErr.Details)
-	}
-	stepDetail := findCloudErrorDetail(cloudErr.Details, "ResizeNodeStep", "master-0/drain")
-	if stepDetail == nil {
-		t.Fatalf("missing ResizeNodeStep detail in %+v", cloudErr.Details)
-	}
-	if !strings.Contains(stepDetail.Message, "failed") {
-		t.Fatalf("step detail message %q does not include failure state", stepDetail.Message)
-	}
-
-	hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "master-0/drain")
-	if hintDetail == nil {
-		t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
-	}
-	if !strings.Contains(hintDetail.Message, "PodDisruptionBudgets") {
-		t.Fatalf("hint detail message %q does not mention drain investigation guidance", hintDetail.Message)
-	}
-}
-
-func TestAdminResizeControlPlanePreflightFailureDetails(t *testing.T) {
-	const (
-		mockSubID    = "00000000-0000-0000-0000-000000000000"
-		mockTenantID = "00000000-0000-0000-0000-000000000000"
-	)
-
-	ctx := context.Background()
-	ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
-	defer ti.done()
-
-	resourceID := testdatabase.GetResourcePath(mockSubID, "resourceName")
-
-	err := ti.buildFixtures(func(f *testdatabase.Fixture) {
-		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-			Key: strings.ToLower(resourceID),
-			OpenShiftCluster: &api.OpenShiftCluster{
-				ID:       resourceID,
-				Location: "eastus",
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						VMSize: api.VMSizeStandardD8sV3,
-					},
-					ClusterProfile: api.ClusterProfile{
-						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-					},
-				},
-			},
-		})
-		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-			ID: mockSubID,
-			Subscription: &api.Subscription{
-				State: api.SubscriptionStateRegistered,
-				Properties: &api.SubscriptionProperties{
-					TenantID: mockTenantID,
-				},
-			},
-		})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	k := mock_adminactions.NewMockKubeActions(ti.controller)
-	a := mock_adminactions.NewMockAzureActions(ti.controller)
-
-	k.EXPECT().CheckAPIServerReadyz(gomock.Any()).Return(nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-		Return(healthyKubeAPIServerJSON(), nil).AnyTimes()
-k.EXPECT().KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-		Return(healthyKubeAPIServerPodsJSON(), nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-		Return(healthyEtcdJSON(), nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-		Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{
-			{
-				Type:    arov1alpha1.ServicePrincipalValid,
-				Status:  operatorv1.ConditionFalse,
-				Message: "secret expired",
-			},
-		}), nil).AnyTimes()
-	k.EXPECT().KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-		AnyTimes()
-
-	a.EXPECT().
-		VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
-		Return(map[string]*armcompute.ResourceSKU{
-			"Standard_D8s_v3": {
-				Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-				ResourceType: pointerutils.ToPtr("virtualMachines"),
-				Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-				LocationInfo: []*armcompute.ResourceSKULocationInfo{
-					{Location: pointerutils.ToPtr("eastus")},
-				},
-				Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-				Capabilities: []*armcompute.ResourceSKUCapabilities{},
-			},
-		}, nil)
-
-	f, err := NewFrontend(ctx,
-		ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup,
-		api.APIs, &noop.Noop{}, &noop.Noop{},
-		nil, nil, nil,
-		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
-			return k, nil
-		},
-		func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
-			return a, nil
-		},
-		nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.validateResizeQuota = quotaCheckDisabled
-
-	go f.Run(ctx, nil, nil)
-
-	resp, b, err := ti.request(http.MethodPost,
-		fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D8s_v3&deallocateVM=true", resourceID),
-		nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("unexpected status code %d, wanted %d: %s", resp.StatusCode, http.StatusBadRequest, string(b))
-	}
-
-	cloudErr := decodeCloudErrorResponse(t, resp.StatusCode, b)
-	if !strings.Contains(cloudErr.Message, `phase "pre-flight-validation"`) {
-		t.Fatalf("message %q does not include pre-flight phase", cloudErr.Message)
-	}
-	if cloudErr.Target != "pre-flight-validation" {
-		t.Fatalf("target = %q, want %q", cloudErr.Target, "pre-flight-validation")
-	}
-
-	phaseDetail := findCloudErrorDetail(cloudErr.Details, "ResizePhase", "pre-flight-validation")
-	if phaseDetail == nil {
-		t.Fatalf("missing pre-flight phase detail in %+v", cloudErr.Details)
-	}
-
-	checkDetail := findCloudErrorDetail(cloudErr.Details, "ResizeValidationCheck", "cluster-service-principal")
-	if checkDetail == nil {
-		t.Fatalf("missing service principal validation detail in %+v", cloudErr.Details)
-	}
-	if !strings.Contains(checkDetail.Message, "invalid") {
-		t.Fatalf("check detail message %q does not mention invalid service principal", checkDetail.Message)
-	}
-
-	hintDetail := findCloudErrorDetail(cloudErr.Details, "InvestigationHint", "pre-flight-validation")
-	if hintDetail == nil {
-		t.Fatalf("missing InvestigationHint detail in %+v", cloudErr.Details)
-	}
-	if !strings.Contains(hintDetail.Message, "Resolve the validation failures") {
-		t.Fatalf("hint detail message %q does not contain retry guidance", hintDetail.Message)
 	}
 }
