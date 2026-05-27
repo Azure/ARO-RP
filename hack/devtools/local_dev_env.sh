@@ -122,13 +122,6 @@ create_env_file() {
     fi
 }
 
-get_platform_workloadIdentity_role_sets() {
-    # Parse the JSON data using jq
-    platformWorkloadIdentityRoles=$(echo "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS}" | jq -c '.[].platformWorkloadIdentityRoles[]')
-
-    echo "${platformWorkloadIdentityRoles}"
-}
-
 assign_role_to_identity() {
     local objectId=$1
     local roleId=$2
@@ -152,63 +145,6 @@ assign_role_to_identity() {
         echo "INFO: Role already assigned to identity: ${objectId}"
         echo ""
     fi
-}
-
-create_platform_identity_and_assign_role() {
-    local operatorName="${1}"
-    local roleDefinitionId="${2}"
-    local identityName="aro-${operatorName}"
-    local identity
-
-    if ! identity=$(az identity show --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null); then
-        echo "INFO: Creating platform identity for operator: ${operatorName}"
-        if ! identity=$(az identity create --name "${identityName}" --resource-group "${CLUSTER_RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json); then
-            echo "ERROR: Failed to create platform identity for operator: ${operatorName}" >&2
-            return 1
-        fi
-    fi
-
-    # Extract the client ID, principal Id, resource ID and name from the result
-    clientID=$(jq -r .clientId <<<"${identity}")
-    principalId=$(jq -r .principalId <<<"${identity}")
-    resourceId=$(jq -r .id <<<"${identity}")
-    name=$(jq -r .name <<<"${identity}")
-
-    echo "Client ID: $clientID"
-    echo "Principal ID: $principalId"
-    echo "Resource ID: $resourceId"
-    echo "Name: $name"
-    echo ""
-
-    # Storage Operator don't require access to customer BYO virtual network
-    if [[ "${operatorName}" != "StorageOperator" ]]; then
-
-        assign_role_to_identity "${principalId}" "${roleDefinitionId}" || return 1
-    fi
-}
-
-setup_platform_identity() {
-    local platformWorkloadIdentityRoles
-
-    platformWorkloadIdentityRoles=$(get_platform_workloadIdentity_role_sets)
-
-    echo "INFO: Creating platform identities under RG ($CLUSTER_RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
-    echo ""
-
-    # Loop through each element under platformWorkloadIdentityRoles
-    while read -r role; do
-        operatorName=$(echo "$role" | jq -r '.operatorName')
-        roleDefinitionId=$(echo "$role" | jq -r '.roleDefinitionId' | awk -F'/' '{print $NF}')
-
-        create_platform_identity_and_assign_role "${operatorName}" "${roleDefinitionId}" || return 1
-
-    done <<< "$platformWorkloadIdentityRoles"
-
-    # Create the cluster identity
-    echo "INFO: Creating cluster identity under RG ($CLUSTER_RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
-    echo ""
-
-    create_platform_identity_and_assign_role "Cluster" "ef318e2a-8334-4a05-9e4a-295a196c6a6e" || return 1
 }
 
 cluster_msi_role_assignment() {
@@ -241,9 +177,8 @@ create_miwi_env_file() {
         return 1
     fi
 
-    if [[ $SKIP_MIWI_ROLE_ASSIGNMENT != "true" ]]; then
-      setup_platform_identity || return 1
-      cluster_msi_role_assignment "${mockClientID}" || return 1
+    if [[ "${SKIP_MIWI_ROLE_ASSIGNMENT:-}" != "true" ]]; then
+        cluster_msi_role_assignment "${mockClientID}" || return 1
     fi
 
     cat >> env <<EOF

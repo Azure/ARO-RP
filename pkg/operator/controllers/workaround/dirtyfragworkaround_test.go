@@ -39,11 +39,15 @@ func expectedMasterDirtyfragMachineConfig() *mcv1.MachineConfig {
 
 func TestDirtyfragWorkaround(t *testing.T) {
 	errFail := errors.New("failed client")
+	dirtyfragEnabled := map[string]string{
+		operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
+	}
 
 	testCases := []struct {
 		desc                  string
 		expectedIsRequired    bool
 		clusterFlags          map[string]string
+		clusterVersion        apiversion.Version
 		addHooks              func(*clienthelper.HookingClient)
 		objects               []client.Object
 		expectedMachineConfig *mcv1.MachineConfig
@@ -61,18 +65,16 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			},
 		},
 		{
-			desc: "enabled, network configuration not present",
-			clusterFlags: map[string]string{
-				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
-			},
+			desc:                  "enabled, network configuration not present",
+			clusterFlags:          dirtyfragEnabled,
+			clusterVersion:        apiversion.NewVersion(4, 21, 0),
 			expectedIsRequired:    true,
 			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
 		},
 		{
-			desc: "enabled, non-ipsec cluster",
-			clusterFlags: map[string]string{
-				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
-			},
+			desc:           "enabled, non-ipsec cluster",
+			clusterFlags:   dirtyfragEnabled,
+			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
 				// The necessary parameters for this ipsec config were introduced in
 				// OpenShift 4.15, and our vendored APIs are pinned to 4.12.
@@ -100,10 +102,9 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
 		},
 		{
-			desc: "enabled, ipsec mode not a string",
-			clusterFlags: map[string]string{
-				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
-			},
+			desc:           "enabled, ipsec mode not a string",
+			clusterFlags:   dirtyfragEnabled,
+			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
@@ -128,10 +129,9 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
 		},
 		{
-			desc: "enabled, ipsec cluster",
-			clusterFlags: map[string]string{
-				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
-			},
+			desc:           "enabled, ipsec cluster",
+			clusterFlags:   dirtyfragEnabled,
+			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
 				// The necessary parameters for this ipsec config were introduced in
 				// OpenShift 4.15, and our vendored APIs are pinned to 4.12.
@@ -159,10 +159,9 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			expectedMachineConfig: nil,
 		},
 		{
-			desc: "enabled, apply errors",
-			clusterFlags: map[string]string{
-				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
-			},
+			desc:               "enabled, apply errors",
+			clusterFlags:       dirtyfragEnabled,
+			clusterVersion:     apiversion.NewVersion(4, 21, 0),
 			expectedIsRequired: true,
 			expectedErr:        errFail,
 			addHooks: func(hc *clienthelper.HookingClient) {
@@ -170,6 +169,102 @@ func TestDirtyfragWorkaround(t *testing.T) {
 					return errFail
 				})
 			},
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.22.0 or greater",
+			clusterVersion: apiversion.NewVersion(4, 22, 0),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.21.15",
+			clusterVersion: apiversion.NewVersion(4, 21, 15),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:                  "enabled, does apply on clusterversion 4.21.14 or earlier 4.21.z",
+			clusterVersion:        apiversion.NewVersion(4, 21, 14),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.20.22",
+			clusterVersion: apiversion.NewVersion(4, 20, 22),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:                  "enabled, does apply on clusterversion 4.20.21 or earlier 4.20.z",
+			clusterVersion:        apiversion.NewVersion(4, 20, 21),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.19.31",
+			clusterVersion: apiversion.NewVersion(4, 19, 31),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:                  "enabled, does apply on clusterversion 4.19.30 or earlier 4.19.z",
+			clusterVersion:        apiversion.NewVersion(4, 19, 30),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.18.41",
+			clusterVersion: apiversion.NewVersion(4, 18, 41),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:                  "enabled, does apply on clusterversion 4.18.40 or earlier 4.18.z",
+			clusterVersion:        apiversion.NewVersion(4, 18, 40),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.16.62",
+			clusterVersion: apiversion.NewVersion(4, 16, 62),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:                  "enabled, does apply on clusterversion 4.16.61 or earlier 4.16.z",
+			clusterVersion:        apiversion.NewVersion(4, 16, 61),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.14.66",
+			clusterVersion: apiversion.NewVersion(4, 14, 66),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:                  "enabled, does apply on clusterversion 4.14.65 or earlier 4.14.z",
+			clusterVersion:        apiversion.NewVersion(4, 14, 65),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc:           "enabled, does not apply on clusterversion 4.12.90",
+			clusterVersion: apiversion.NewVersion(4, 12, 90),
+			clusterFlags:   dirtyfragEnabled,
+		},
+		{
+			desc:                  "enabled, does apply on clusterversion 4.12.89 or earlier 4.12.z",
+			clusterVersion:        apiversion.NewVersion(4, 12, 89),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc:                  "enabled, does apply on unlisted minor versions (4.11)",
+			clusterVersion:        apiversion.NewVersion(4, 11, 99),
+			clusterFlags:          dirtyfragEnabled,
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
 		},
 	}
 	for _, tC := range testCases {
@@ -195,8 +290,12 @@ func TestDirtyfragWorkaround(t *testing.T) {
 
 			workaround := NewDirtyfragWorkaround(log, cl)
 
-			clusterVersion, err := apiversion.ParseVersion("4.99.0")
-			r.NoError(err)
+			clusterVersion := tC.clusterVersion
+			if clusterVersion == nil {
+				var err error
+				clusterVersion, err = apiversion.ParseVersion("4.21.0")
+				r.NoError(err)
+			}
 
 			isRequired, err := workaround.IsRequired(t.Context(), clusterVersion, &v1alpha1.Cluster{Spec: v1alpha1.ClusterSpec{
 				OperatorFlags: v1alpha1.OperatorFlags(tC.clusterFlags),

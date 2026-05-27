@@ -205,12 +205,15 @@ func NewFrontend(ctx context.Context,
 		streamResponder: defaultResponder{},
 	}
 
-	// Load Holmes config: secrets from Key Vault in prod, env vars in dev.
-	var holmesErr error
-	if _env.IsLocalDevelopmentMode() {
-		f.holmesConfig, holmesErr = holmes.NewHolmesConfigFromEnv(_env.ACRDomain())
-	} else {
-		f.holmesConfig, holmesErr = holmes.NewHolmesConfig(ctx, _env.ACRDomain(), _env.ServiceKeyvault())
+	// Load Holmes config: API base from Key Vault in prod (env vars in dev),
+	// and the MSI credential for acquiring Entra ID tokens at request time.
+	msiTokenCredential, holmesErr := _env.NewMSITokenCredential()
+	if holmesErr == nil {
+		if _env.IsLocalDevelopmentMode() {
+			f.holmesConfig, holmesErr = holmes.NewHolmesConfigFromEnv(_env.ACRDomain(), msiTokenCredential)
+		} else {
+			f.holmesConfig, holmesErr = holmes.NewHolmesConfig(ctx, _env.ACRDomain(), _env.ServiceKeyvault(), msiTokenCredential)
+		}
 	}
 	if holmesErr != nil {
 		baseLog.WithError(holmesErr).Warning("Holmes config not available; investigations will be disabled")

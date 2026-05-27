@@ -879,7 +879,7 @@ def aro_identity_get_required(*,
                        "role assignment over the disk encryption set:")
         print_role_assignment_create_cmd(
             "$(az ad sp list --display-name 'Azure Red Hat OpenShift RP' --query '[0].id' -o tsv)",
-            FP_SERVICE_PRINCIPAL_ROLE,
+            ROLE_READER,
             disk_encryption_set,
         )
 
@@ -946,7 +946,13 @@ def aro_identity_create_required(*,
 
     if disk_encryption_set:
         progress.add(message="Creating first party service principal's role assignment over disk encryption set")
-        create_role_assignment(cmd.cli_ctx, firstparty_principal, defn, disk_encryption_set)
+        des_defn = resource_id(
+            subscription=get_subscription_id(cmd.cli_ctx),
+            namespace="Microsoft.Authorization",
+            type="roleDefinitions",
+            name=ROLE_READER,
+        )
+        create_role_assignment(cmd.cli_ctx, firstparty_principal, des_defn, disk_encryption_set)
 
     progress.end()
     return identities

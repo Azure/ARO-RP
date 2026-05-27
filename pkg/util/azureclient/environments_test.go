@@ -11,6 +11,17 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
+func TestDefaultAzureCredentialOptionsRequiresAzureTokenCredentials(t *testing.T) {
+	for _, env := range []*AROEnvironment{&PublicCloud, &USGovernmentCloud} {
+		t.Run(env.Name, func(t *testing.T) {
+			opts := env.DefaultAzureCredentialOptions()
+			if !opts.RequireAzureTokenCredentials {
+				t.Errorf("DefaultAzureCredentialOptions() for %s should set RequireAzureTokenCredentials to true", env.Name)
+			}
+		})
+	}
+}
+
 func TestEnvironmentFromName(t *testing.T) {
 	for _, tt := range []struct {
 		name    string

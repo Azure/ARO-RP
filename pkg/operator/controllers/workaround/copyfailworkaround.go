@@ -29,7 +29,7 @@ type copyfailworkaround struct {
 
 var _ Workaround = &copyfailworkaround{}
 
-var fixedPatchVersions = map[string]version.Version{
+var copyfailFixedPatchVersions = map[string]version.Version{
 	"4.21": version.NewVersion(4, 21, 14),
 	"4.20": version.NewVersion(4, 20, 21),
 	"4.19": version.NewVersion(4, 19, 30),
@@ -54,12 +54,12 @@ func (a *copyfailworkaround) IsRequired(ctx context.Context, clusterVersion vers
 		return false, nil
 	}
 
-	if clusterVersion.Gt(version.NewVersion(4, 22, 0)) {
+	if !clusterVersion.Lt(version.NewVersion(4, 22, 0)) {
 		return false, nil
 	}
 
 	clusterMinorVersion := clusterVersion.MinorVersion()
-	if fixedPatchVersion, ok := fixedPatchVersions[clusterMinorVersion]; ok {
+	if fixedPatchVersion, ok := copyfailFixedPatchVersions[clusterMinorVersion]; ok {
 		return clusterVersion.Lt(fixedPatchVersion), nil
 	}
 

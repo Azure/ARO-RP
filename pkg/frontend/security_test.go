@@ -82,6 +82,7 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
 	_env.EXPECT().FeatureIsSet(env.FeatureEnableMISE).AnyTimes().Return(false)
 	_env.EXPECT().FeatureIsSet(env.FeatureEnforceMISE).AnyTimes().Return(false)
+	_env.EXPECT().NewMSITokenCredential().AnyTimes().Return(nil, fmt.Errorf("MSI not available in test"))
 
 	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {

@@ -711,7 +711,7 @@ This creates:
 - Azure OpenAI account: `${RESOURCEGROUP}-holmes-aoai`
 - GPT model deployment: `gpt-5.2`
 
-The script writes `HOLMES_AZURE_API_KEY`, `HOLMES_AZURE_API_BASE`, and `HOLMES_AZURE_API_VERSION` to `secrets/env`.
+The script writes `HOLMES_AZURE_API_BASE` and `HOLMES_AZURE_API_VERSION` to `secrets/env`, assigns the `Cognitive Services OpenAI User` role to the RP service principal, and disables local (API key) auth on the Azure OpenAI resource. Authentication uses Entra ID tokens acquired at runtime by the RP.
 Non-secret config (`HOLMES_IMAGE`, `HOLMES_MODEL`, etc.) is in `env.example`.
 
 ### PR E2E Only - Add keyvault permissions to aro-v4-e2e-devops-spn

@@ -113,7 +113,7 @@ func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
 
 	message, exists := timeoutConditionErrors[funcName]
 	if !exists {
-		return originalErr
+		return fmt.Errorf("condition step failed: %s: %w", funcName, originalErr)
 	}
 	return api.NewCloudError(
 		http.StatusInternalServerError,

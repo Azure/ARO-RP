@@ -23,7 +23,6 @@ var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
 
 type Version interface {
 	Lt(Version) bool
-	Gt(Version) bool
 	Eq(Version) bool
 	String() string
 	MarshalJSON() ([]byte, error)
@@ -86,10 +85,6 @@ func (v *version) Lt(_w Version) bool {
 	}
 
 	return false
-}
-
-func (v *version) Gt(w Version) bool {
-	return !v.Lt(w)
 }
 
 func (v *version) Eq(w Version) bool {

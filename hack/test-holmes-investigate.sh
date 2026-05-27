@@ -24,10 +24,8 @@
 #   export ARO_ADOPT_BY_HIVE=true
 #   export ARO_PODMAN_SOCKET="unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')"
 #   export HOLMES_IMAGE="arointsvc.azurecr.io/holmesgpt:latest"  # optional, overrides default
-#   export HOLMES_AZURE_API_KEY="<your-azure-openai-key>"
-#   export HOLMES_AZURE_API_BASE="<your-azure-openai-endpoint>"
-#   export HOLMES_AZURE_API_VERSION="2025-04-01-preview"
-#   export HOLMES_MODEL="azure/gpt-5.2"
+#   # No API key needed — the RP acquires Entra ID tokens via its service principal.
+#   # Ensure deploy-holmes-aoai.sh has been run to assign the Cognitive Services OpenAI User role.
 #   make runlocal-rp
 
 set -euo pipefail
