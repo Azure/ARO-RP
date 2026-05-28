@@ -50,7 +50,7 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, _log *logru
 func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, log *logrus.Entry) error {
 	existingRoleSets, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	incomingRoleSets, err := getRoleSetsFromEnv()
