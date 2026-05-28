@@ -15,6 +15,8 @@ import (
 
 	gomock "go.uber.org/mock/gomock"
 
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+
 	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -45,15 +47,15 @@ func (m *MockQuotaValidator) EXPECT() *MockQuotaValidatorMockRecorder {
 }
 
 // ValidateQuota mocks base method.
-func (m *MockQuotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
+func (m *MockQuotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateQuota", ctx, azEnv, environment, subscriptionID, tenantID, oc)
+	ret := m.ctrl.Call(m, "ValidateQuota", ctx, azEnv, environment, subscriptionID, fpCred, oc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateQuota indicates an expected call of ValidateQuota.
-func (mr *MockQuotaValidatorMockRecorder) ValidateQuota(ctx, azEnv, environment, subscriptionID, tenantID, oc any) *gomock.Call {
+func (mr *MockQuotaValidatorMockRecorder) ValidateQuota(ctx, azEnv, environment, subscriptionID, fpCred, oc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateQuota", reflect.TypeOf((*MockQuotaValidator)(nil).ValidateQuota), ctx, azEnv, environment, subscriptionID, tenantID, oc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateQuota", reflect.TypeOf((*MockQuotaValidator)(nil).ValidateQuota), ctx, azEnv, environment, subscriptionID, fpCred, oc)
 }

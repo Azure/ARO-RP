@@ -450,12 +450,22 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 		return err
 	}
 
-	err = f.skuValidator.ValidateVMSku(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	fpCred, err := f.env.FPNewClientCertificateCredential(subscription.Subscription.Properties.TenantID, nil)
 	if err != nil {
 		return err
 	}
 
-	err = f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	err = f.skuValidator.ValidateVMSku(ctx, f.env, subscription.ID, fpCred, cluster)
+	if err != nil {
+		return err
+	}
+
+	err = f.featuresValidator.ValidateSubscriptionFeatures(ctx, f.env, subscription.ID, fpCred, cluster)
+	if err != nil {
+		return err
+	}
+
+	err = f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, fpCred, cluster)
 	if err != nil {
 		return err
 	}

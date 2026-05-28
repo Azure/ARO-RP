@@ -8,28 +8,23 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
 type SkuValidator interface {
-	ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
+	ValidateVMSku(ctx context.Context, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error
 }
 
 type skuValidator struct{}
 
-func (s skuValidator) ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
-	fpCredClusterTenant, err := environment.FPNewClientCertificateCredential(tenantID, nil)
-	if err != nil {
-		return err
-	}
-
-	armResourceSKUsClient, err := armcompute.NewResourceSKUsClient(subscriptionID, fpCredClusterTenant, environment.Environment().ArmClientOptions())
+func (s skuValidator) ValidateVMSku(ctx context.Context, environment env.Interface, subscriptionID string, fpCred azcore.TokenCredential, oc *api.OpenShiftCluster) error {
+	armResourceSKUsClient, err := armcompute.NewResourceSKUsClient(subscriptionID, fpCred, environment.Environment().ArmClientOptions())
 	if err != nil {
 		return err
 	}
