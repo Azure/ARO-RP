@@ -361,7 +361,7 @@ func resizeControlPlaneWithReport(
 	return nil
 }
 
-// resizeControlPlaneNode performs the full resize sequence for a single
+// resizeControlPlaneNodeWithReport performs the full resize sequence for a single
 // control plane node: cordon → drain → stop → resize → start → wait
 // ready → uncordon → update Machine metadata → update Node labels.
 func resizeControlPlaneNodeWithReport(
@@ -469,8 +469,8 @@ func resizeControlPlaneNodeWithReport(
 	return nil
 }
 
-// resizeControlPlane orchestrates the full control plane resize operation,
-// processing each master node sequentially in reverse name order.
+// resizeControlPlane is a test-only wrapper around resizeControlPlaneWithReport
+// that passes a nil report, used by TestResizeControlPlane unit tests.
 func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
 	return resizeControlPlaneWithReport(ctx, log, k, a, desiredVMSize, deallocateVM, nil)
 }
