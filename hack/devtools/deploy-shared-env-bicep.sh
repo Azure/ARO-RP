@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --skip-miwi)
-      SKIP_MIWI=false
+      SKIP_MIWI=true
       shift
       ;;
     --skip-post-deployment)
@@ -91,6 +91,7 @@ validate_prerequisites() {
         "AZURE_RP_CLIENT_ID"
         "KEYVAULT_PREFIX"
         "PARENT_DOMAIN_NAME"
+        "PARENT_DOMAIN_RESOURCEGROUP"
         "DATABASE_ACCOUNT_NAME"
         "DOMAIN_NAME"
         "PROXY_HOSTNAME"

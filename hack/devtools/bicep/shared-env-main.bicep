@@ -175,13 +175,10 @@ module miwiInfra '../../../pkg/deploy/assets/rp-development-miwi.json' = if (dep
 // Post-Deployment: Enable Static Website on OIDC Storage Account
 // ============================================================================
 
-// Note: Bicep cannot directly enable static website feature via deploymentScripts
+// Note: Bicep cannot directly enable static website feature via deploymentScripts.
 // This must be done via the wrapper script using:
 // az storage blob service-properties update --static-website true --account-name ${oidcStorageAccountName} --auth-mode login
-
-resource oidcStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (deployMiwi) {
-  name: oidcStorageAccountName
-}
+// The OIDC storage account is created by the rp-development-miwi.json template.
 
 // ============================================================================
 // Outputs
