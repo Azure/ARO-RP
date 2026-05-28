@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/textproto"
 	"strconv"
@@ -143,7 +144,11 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 	}
 
 	if out != nil {
-		return resp, d.Decode(&out)
+		mediaType, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if mediaType == "application/json" {
+			return resp, d.Decode(&out)
+		}
+		return nil, fmt.Errorf("expected application/json Content-Type, got %q", resp.Header.Get("Content-Type"))
 	}
 
 	return resp, nil
