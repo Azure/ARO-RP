@@ -49,7 +49,7 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 
 	// nic is already gone which typically happens on PLS / PE nics
 	// as they are deleted in a different step
-	if azureerrors.IsNotFoundError(err) {
+	if azureerrors.IsStatusNotFoundError(err) {
 		return nil
 	}
 	if err != nil {
@@ -382,7 +382,7 @@ func (m *manager) deleteClusterMsiCertificate(ctx context.Context) error {
 
 	secretName := dataplane.IdentifierForManagedIdentityCredentials(m.doc.ID)
 
-	if _, err := m.clusterMsiKeyVaultStore.DeleteSecret(ctx, secretName, nil); err != nil && !azureerrors.IsNotFoundError(err) {
+	if _, err := m.clusterMsiKeyVaultStore.DeleteSecret(ctx, secretName, nil); err != nil && !azureerrors.IsStatusNotFoundError(err) {
 		return err
 	}
 
@@ -425,7 +425,7 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 			&armmsi.FederatedIdentityCredentialsClientListOptions{},
 		)
 		if err != nil {
-			if azureerrors.IsNotFoundError(err) {
+			if azureerrors.IsStatusNotFoundError(err) {
 				m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
 			} else {
 				m.log.Errorf("failed to list federated identity credentials for %s: %v", identity.ResourceID, err.Error())
@@ -452,7 +452,7 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 					&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
 				)
 				if err != nil {
-					if azureerrors.IsNotFoundError(err) {
+					if azureerrors.IsStatusNotFoundError(err) {
 						m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
 					} else {
 						m.log.Errorf("failed to delete federated identity credentials for %s: %v", identity.ResourceID, err.Error())

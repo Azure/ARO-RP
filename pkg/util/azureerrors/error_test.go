@@ -346,6 +346,78 @@ func TestIsVMSKUError(t *testing.T) {
 	}
 }
 
+func TestIsStatusCodeError(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		err        error
+		statusCode int
+		want       bool
+	}{
+		{
+			name:       "nil error",
+			err:        nil,
+			statusCode: http.StatusNotFound,
+			want:       false,
+		},
+		{
+			name:       "unrelated error",
+			err:        errors.New("something happened"),
+			statusCode: http.StatusNotFound,
+			want:       false,
+		},
+		{
+			name: "autorest DetailedError matching status code",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusNotFound,
+			},
+			statusCode: http.StatusNotFound,
+			want:       true,
+		},
+		{
+			name: "autorest DetailedError non-matching status code",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusConflict,
+			},
+			statusCode: http.StatusNotFound,
+			want:       false,
+		},
+		{
+			name: "azcore ResponseError matching status code",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusNotFound,
+			},
+			statusCode: http.StatusNotFound,
+			want:       true,
+		},
+		{
+			name: "azcore ResponseError non-matching status code",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+			},
+			statusCode: http.StatusNotFound,
+			want:       false,
+		},
+		{
+			name: "autorest DetailedError wrapping azcore ResponseError uses outer status code",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusForbidden,
+				Original: &azcore.ResponseError{
+					StatusCode: http.StatusNotFound,
+				},
+			},
+			statusCode: http.StatusForbidden,
+			want:       true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isStatusCodeError(tt.err, tt.statusCode)
+			if got != tt.want {
+				t.Errorf("isStatusCodeError() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsStatusConflictError(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -373,6 +445,74 @@ func TestIsStatusConflictError(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := IsStatusConflictError(tt.err)
+			if got != tt.want {
+				t.Error(got)
+			}
+		})
+	}
+}
+
+func TestIsStatusUnauthorizedError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "Another error",
+			err:  errors.New("something happened"),
+		},
+		{
+			name: "autorest detailederror",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusUnauthorized,
+			},
+			want: true,
+		},
+		{
+			name: "azcore ResponseError",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusUnauthorized,
+			},
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsStatusUnauthorizedError(tt.err)
+			if got != tt.want {
+				t.Error(got)
+			}
+		})
+	}
+}
+
+func TestIsStatusForbiddenError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "Another error",
+			err:  errors.New("something happened"),
+		},
+		{
+			name: "autorest detailederror",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusForbidden,
+			},
+			want: true,
+		},
+		{
+			name: "azcore ResponseError",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusForbidden,
+			},
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsStatusForbiddenError(tt.err)
 			if got != tt.want {
 				t.Error(got)
 			}

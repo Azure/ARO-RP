@@ -209,7 +209,7 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarm
 func (m *manager) Delete(ctx context.Context, registryProfile *api.RegistryProfile) error {
 	err := m.tokens.DeleteAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, registryProfile.Username)
 	// Ignore not-founds on delete
-	if err != nil && azureerrors.IsNotFoundError(err) {
+	if err != nil && azureerrors.IsStatusNotFoundError(err) {
 		return nil
 	}
 	return err

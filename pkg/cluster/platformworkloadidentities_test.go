@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	azruntime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -37,6 +39,11 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 	identityBarResourceId := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ManagedIdentity/userAssignedIdentities/%s", subscriptionId, clusterRG, identityBarName)
 	identityBarClientId := "0ba40ba4-0ba4-0ba4-0ba4-0ba40ba40ba4"
 	identityBarObjectId := "1ba41ba4-1ba4-1ba4-1ba4-1ba41ba41ba4"
+	fooTarget := `.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["foo"]`
+	unauthorizedErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusUnauthorized})
+	forbiddenErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusForbidden})
+	notFoundErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusNotFound})
+	tooManyRequestsErr := azruntime.NewResponseError(&http.Response{StatusCode: http.StatusTooManyRequests})
 
 	validWIClusterDoc := &api.OpenShiftClusterDocument{
 		ID:  clusterId,
@@ -121,7 +128,99 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
 					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, fmt.Errorf("some error occurred"))
 			},
-			wantErr: "error occured when retrieving platform workload identity 'foo' details: some error occurred",
+			wantErr: "error occurred when retrieving platform workload identity 'foo' details: some error occurred",
+		},
+		{
+			name: "error - unauthorized identity lookup becomes invalid platform workload identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {
+									ResourceID: identityFooResourceId,
+								},
+							},
+						},
+					},
+				},
+			},
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, unauthorizedErr)
+			},
+			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, unauthorizedErr.Error()).Error(),
+		},
+		{
+			name: "error - forbidden identity lookup becomes invalid platform workload identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {
+									ResourceID: identityFooResourceId,
+								},
+							},
+						},
+					},
+				},
+			},
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, forbiddenErr)
+			},
+			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, forbiddenErr.Error()).Error(),
+		},
+		{
+			name: "error - not found identity lookup becomes invalid platform workload identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {
+									ResourceID: identityFooResourceId,
+								},
+							},
+						},
+					},
+				},
+			},
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, notFoundErr)
+			},
+			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, notFoundErr.Error()).Error(),
+		},
+		{
+			name: "error - too many requests identity lookup becomes invalid platform workload identity",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {
+									ResourceID: identityFooResourceId,
+								},
+							},
+						},
+					},
+				},
+			},
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, tooManyRequestsErr)
+			},
+			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, tooManyRequestsErr.Error()).Error(),
 		},
 		{
 			name: "success - all clientIDs and objectIDs updated in clusterdoc",
