@@ -625,7 +625,8 @@ func TestResizeControlPlane(t *testing.T) {
 			a := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(k, a)
 
-			err := resizeControlPlane(ctx, log, k, a, desiredSize, true)
+			report := &adminapi.ResizeControlPlaneResponse{}
+			err := resizeControlPlaneWithReport(ctx, log, k, a, desiredSize, true, report)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

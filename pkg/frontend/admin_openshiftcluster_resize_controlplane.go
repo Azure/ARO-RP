@@ -256,10 +256,8 @@ func resizeControlPlaneWithReport(
 	sortedNames := slices.SortedFunc(maps.Keys(machines), func(a, b string) int {
 		return cmp.Compare(b, a)
 	})
-	if report != nil {
-		report.Summary.TotalNodes = len(sortedNames)
-		report.Summary.ExecutionOrder = append(report.Summary.ExecutionOrder[:0], sortedNames...)
-	}
+	report.Summary.TotalNodes = len(sortedNames)
+	report.Summary.ExecutionOrder = append(report.Summary.ExecutionOrder[:0], sortedNames...)
 
 	err = runResizePhase(report, "verify-control-plane-health", func(phase *adminapi.ResizeControlPlanePhase) error {
 		// Guard the whole operation before touching any VM. Even when a machine
@@ -306,10 +304,8 @@ func resizeControlPlaneWithReport(
 			nodeResult.DurationMS = time.Since(nodeStart).Milliseconds()
 			nodeResult.Message = "Node already running target VM size; no resize required."
 			nodesSkipped++
-			if report != nil {
-				report.Nodes = append(report.Nodes, nodeResult)
-				report.Summary.NodesSkipped = nodesSkipped
-			}
+			report.Nodes = append(report.Nodes, nodeResult)
+			report.Summary.NodesSkipped = nodesSkipped
 			continue
 		}
 
@@ -320,9 +316,7 @@ func resizeControlPlaneWithReport(
 			nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusFailed
 			nodeResult.Message = resizeDiagnosticMessage(err)
 			applyResizeFailureToNode(&nodeResult, err)
-			if report != nil {
-				report.Nodes = append(report.Nodes, nodeResult)
-			}
+			report.Nodes = append(report.Nodes, nodeResult)
 			resizePhase.Status = adminapi.ResizeControlPlaneOperationStatusFailed
 			resizePhase.DurationMS = time.Since(phaseStart).Milliseconds()
 			resizePhase.Message = fmt.Sprintf(
@@ -331,9 +325,7 @@ func resizeControlPlaneWithReport(
 				nodesResized,
 				nodesSkipped,
 			)
-			if report != nil {
-				report.Phases = append(report.Phases, resizePhase)
-			}
+			report.Phases = append(report.Phases, resizePhase)
 			return fmt.Errorf("failed to resize node %s: %w", name, err)
 		}
 
@@ -341,10 +333,8 @@ func resizeControlPlaneWithReport(
 		nodeResult.Status = adminapi.ResizeControlPlaneOperationStatusSucceeded
 		nodeResult.Message = "Node resized successfully."
 		nodesResized++
-		if report != nil {
-			report.Nodes = append(report.Nodes, nodeResult)
-			report.Summary.NodesResized = nodesResized
-		}
+		report.Nodes = append(report.Nodes, nodeResult)
+		report.Summary.NodesResized = nodesResized
 	}
 
 	resizePhase.DurationMS = time.Since(phaseStart).Milliseconds()
@@ -354,9 +344,7 @@ func resizeControlPlaneWithReport(
 		nodesResized,
 		nodesSkipped,
 	)
-	if report != nil {
-		report.Phases = append(report.Phases, resizePhase)
-	}
+	report.Phases = append(report.Phases, resizePhase)
 
 	return nil
 }
@@ -467,12 +455,6 @@ func resizeControlPlaneNodeWithReport(
 	}
 
 	return nil
-}
-
-// resizeControlPlane is a test-only wrapper around resizeControlPlaneWithReport
-// that passes a nil report, used by TestResizeControlPlane unit tests.
-func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, desiredVMSize string, deallocateVM bool) error {
-	return resizeControlPlaneWithReport(ctx, log, k, a, desiredVMSize, deallocateVM, nil)
 }
 
 func cordonNode(ctx context.Context, k adminactions.KubeActions, nodeName string) error {
@@ -798,9 +780,7 @@ func runResizePhase(report *adminapi.ResizeControlPlaneResponse, name string, fn
 		}
 	}
 
-	if report != nil {
-		report.Phases = append(report.Phases, phase)
-	}
+	report.Phases = append(report.Phases, phase)
 
 	return err
 }
@@ -810,10 +790,7 @@ func buildResizeControlPlaneCloudError(report *adminapi.ResizeControlPlaneRespon
 		return nil
 	}
 
-	elapsedMS := int64(0)
-	if report != nil {
-		elapsedMS = report.DurationMS
-	}
+	elapsedMS := report.DurationMS
 
 	statusCode := http.StatusInternalServerError
 	errorCode := api.CloudErrorCodeInternalServerError
@@ -832,13 +809,12 @@ func buildResizeControlPlaneCloudError(report *adminapi.ResizeControlPlaneRespon
 	errors.As(err, &opErr)
 
 	target := resizeErrorTarget(opErr)
-	details := []api.CloudErrorBody{}
-	if report != nil {
-		details = append(details, api.CloudErrorBody{
+	details := []api.CloudErrorBody{
+		{
 			Code:    "ResizeRequest",
 			Target:  report.ResourceID,
 			Message: fmt.Sprintf("Requested VM size %s with deallocateVM=%t. Elapsed time before failure: %s.", report.VMSize, report.DeallocateVM, formatResizeDurationMS(elapsedMS)),
-		})
+		},
 	}
 
 	details = append(details, api.CloudErrorBody{
