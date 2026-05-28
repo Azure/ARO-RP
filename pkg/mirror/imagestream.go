@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/containers/image/v5/docker"
-	"github.com/containers/image/v5/pkg/blobinfocache/memory"
-	"github.com/containers/image/v5/types"
+	"go.podman.io/image/v5/docker"
+	"go.podman.io/image/v5/pkg/blobinfocache/memory"
+	"go.podman.io/image/v5/types"
 
 	imagev1 "github.com/openshift/api/image/v1"
 )
