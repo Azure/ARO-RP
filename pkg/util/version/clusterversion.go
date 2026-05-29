@@ -53,21 +53,16 @@ func ClusterVersionLessThan(ctx context.Context, configcli configclient.Interfac
 	return clusterVersion.Lt(checkVersion), clusterVersion, nil
 }
 
+// IsClusterUpgrading returns true when the CVO has initiated an OCP version upgrade.
+// It checks status.history[0].state rather than the Progressing condition because
+// Progressing=True is also set during node rollouts that are not real CVO-driven
+// OCP upgrades. Callers use this helper to gate reboot-causing reconciliation so
+// it only proceeds during actual cluster upgrades. See ARO-26990 for details.
 func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {
-	var isUpgrading bool
-	if c := findClusterOperatorStatusCondition(cv.Status.Conditions, configv1.OperatorProgressing); c != nil && c.Status == configv1.ConditionTrue {
-		isUpgrading = true
-	} else {
-		isUpgrading = false
+	if cv == nil || len(cv.Status.History) == 0 {
+		return false
 	}
-	return isUpgrading
-}
-
-func findClusterOperatorStatusCondition(conditions []configv1.ClusterOperatorStatusCondition, name configv1.ClusterStatusConditionType) *configv1.ClusterOperatorStatusCondition {
-	for i := range conditions {
-		if conditions[i].Type == name {
-			return &conditions[i]
-		}
-	}
-	return nil
+	// Return true only when the CVO has actually initiated an upgrade
+	// (a new non-Completed entry exists at history[0])
+	return cv.Status.History[0].State != configv1.CompletedUpdate
 }

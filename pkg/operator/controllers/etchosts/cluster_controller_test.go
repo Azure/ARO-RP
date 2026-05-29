@@ -138,6 +138,16 @@ var (
 		},
 		Spec: configv1.ClusterVersionSpec{},
 		Status: configv1.ClusterVersionStatus{
+			History: []configv1.UpdateHistory{
+				{
+					State:   configv1.PartialUpdate,
+					Version: "4.19.0",
+				},
+				{
+					State:   configv1.CompletedUpdate,
+					Version: "4.10.11",
+				},
+			},
 			Conditions: []configv1.ClusterOperatorStatusCondition{
 				{
 					Type:   configv1.OperatorProgressing,
