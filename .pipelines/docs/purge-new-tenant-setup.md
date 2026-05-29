@@ -45,7 +45,46 @@ az role assignment create \
   --scope /subscriptions/<NEW_TENANT_SUBSCRIPTION_ID>
 ```
 
-### 3. Create Client Secret Credentials JSON
+### 3. Grant Microsoft Graph API Permissions
+
+The purge pipeline cleans up orphaned service principals created during e2e tests. To enable this functionality, grant Microsoft Graph API permissions to the service principal:
+
+**Required permissions:**
+- `Application.Read.All` - Required to list applications and service principals
+- `Application.ReadWrite.All` - Required to delete orphaned applications and service principals
+
+**To grant permissions via Azure Portal:**
+
+1. Navigate to: **Azure Active Directory** > **App registrations**
+2. Find the app registration for `aro-new-tenant-purge-sp` (you may need to switch to "All applications" tab)
+3. Click on **API permissions** in the left sidebar
+4. Click **Add a permission** > **Microsoft Graph** > **Application permissions**
+5. Search for and add: `Application.ReadWrite.All`
+6. Click **Add permissions**
+7. Click **Grant admin consent for [Your Tenant]** (requires admin privileges)
+
+**To grant permissions via Azure CLI:**
+
+```bash
+# Get the service principal object ID
+SP_OBJECT_ID=$(az ad sp list --display-name "aro-new-tenant-purge-sp" --query '[0].id' -o tsv)
+
+# Get Microsoft Graph service principal ID (this is a well-known constant)
+GRAPH_SP_ID=$(az ad sp list --display-name "Microsoft Graph" --query '[0].id' -o tsv)
+
+# Application.ReadWrite.All app role ID (well-known constant)
+APP_ROLE_ID="1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9"
+
+# Grant the permission
+az rest --method POST \
+  --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SP_OBJECT_ID/appRoleAssignments" \
+  --headers "Content-Type=application/json" \
+  --body "{\"principalId\":\"$SP_OBJECT_ID\",\"resourceId\":\"$GRAPH_SP_ID\",\"appRoleId\":\"$APP_ROLE_ID\"}"
+```
+
+**Note:** Without these Graph API permissions, the pipeline will still clean up resource groups successfully, but it will not be able to remove orphaned service principals. The pipeline logs will show errors when attempting service principal cleanup if permissions are missing.
+
+### 4. Create Client Secret Credentials JSON
 
 Create a JSON file with the service principal credentials:
 
@@ -64,7 +103,7 @@ Base64 encode this JSON:
 cat credentials.json | base64 -w 0
 ```
 
-### 4. Store Credentials in Key Vault
+### 5. Store Credentials in Key Vault
 
 Store the base64-encoded credentials in Azure Key Vault:
 
@@ -75,7 +114,7 @@ az keyvault secret set \
   --value "<BASE64_ENCODED_CREDENTIALS>"
 ```
 
-### 5. Create Variable Group in Azure DevOps
+### 6. Create Variable Group in Azure DevOps
 
 1. Navigate to Azure DevOps → Pipelines → Library
 2. Click "+ Variable group"
@@ -88,13 +127,13 @@ az keyvault secret set \
 | `newTenantSubscriptionId` | `<SUBSCRIPTION_ID>` | No | Azure subscription ID for new tenant |
 | `newTenantPurgeCreatedTag` | `createdAt` | No | Tag name used to identify resource creation time |
 | `newTenantResourceGroupDeletePrefixes` | `aro-,test-,dev-` | No | Comma-separated prefixes of resource groups to consider for deletion |
-| `newTenantPurgeTTL` | `48h` | No | Time-to-live duration (e.g., 48h, 72h, 7d) |
+| `newTenantPurgeTTL` | `48h` | No | Time-to-live duration (e.g., 48h, 72h, 168h) |
 
 **Note:** For the `aro-new-tenant-purge-spn` variable:
 - Click "Add" → Select "Link secrets from an Azure key vault as variables"
 - Select your Key Vault and choose the `aro-new-tenant-purge-spn` secret
 
-### 6. Create Pipeline in Azure DevOps
+### 7. Create Pipeline in Azure DevOps
 
 1. Navigate to Azure DevOps → Pipelines → Pipelines
 2. Click "New pipeline"
@@ -105,7 +144,7 @@ az keyvault secret set \
 7. Click "Continue"
 8. Review the pipeline and click "Save"
 
-### 7. Link Variable Group to Pipeline
+### 8. Link Variable Group to Pipeline
 
 1. Edit the newly created pipeline
 2. Click on the three dots (•••) → "Triggers"
@@ -114,7 +153,7 @@ az keyvault secret set \
 5. Link the `aro-new-tenant-purge` variable group
 6. Save
 
-### 8. Configure Scheduled Trigger
+### 9. Configure Scheduled Trigger
 
 The pipeline is already configured with a cron schedule in the YAML file:
 - Runs daily at 2 AM UTC
@@ -123,7 +162,7 @@ The pipeline is already configured with a cron schedule in the YAML file:
 
 To modify the schedule, edit the `schedules` section in `purge-new-tenant.yml`.
 
-### 9. Set Pipeline Permissions
+### 10. Set Pipeline Permissions
 
 Ensure the pipeline has the necessary permissions:
 
@@ -242,7 +281,7 @@ The pipeline passes the following environment variables to the `hack/clean` tool
 
 To change the purge TTL:
 1. Edit the `newTenantPurgeTTL` variable in the `aro-new-tenant-purge` variable group
-2. Valid formats: `48h`, `72h`, `7d`, etc.
+2. Valid formats: `48h`, `72h`, `168h`, etc. Day format (`7d`) is NOT supported.
 
 ### Updating Resource Group Prefixes
 

@@ -17,7 +17,7 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 
 # Step 1: Check if clean binary exists
-if [ ! -f "./clean" ]; then
+if [ ! -f "$(dirname "$0")/clean" ]; then
     echo -e "${YELLOW}Building the clean tool...${NC}"
     cd "$(dirname "$0")/../.."
     go build -o ./hack/clean/clean ./hack/clean
@@ -58,7 +58,26 @@ if [ -z "$AZURE_CLIENT_ID" ]; then
     echo "    export AZURE_SUBSCRIPTION_ID=\"<subscription-id>\""
     echo ""
     echo "Option 2: Create a new test Service Principal"
-    echo "  Run: az ad sp create-for-rbac --name \"aro-purge-test-sp\" --role Reader --scopes /subscriptions/<SUBSCRIPTION_ID>"
+    echo "  For dry runs/listing only, run:"
+    echo "    az ad sp create-for-rbac --name \"aro-purge-test-sp\" --role Reader --scopes /subscriptions/<SUBSCRIPTION_ID>"
+    echo ""
+    echo "  For create/delete test operations, run:"
+    echo "    az ad sp create-for-rbac --name \"aro-purge-test-sp\" --role Contributor --scopes /subscriptions/<SUBSCRIPTION_ID>"
+    echo ""
+    echo "  Prefer scoping the role to a dedicated test resource group/subscription whenever possible."
+    echo ""
+    echo "  IMPORTANT: For service principal cleanup functionality, grant these Microsoft Graph API permissions:"
+    echo "    - Application.Read.All (to list applications/service principals)"
+    echo "    - Application.ReadWrite.All (to delete orphaned service principals)"
+    echo ""
+    echo "  To grant Graph API permissions to the service principal:"
+    echo "    1. Go to Azure Portal > Azure Active Directory > App registrations"
+    echo "    2. Find your app registration for 'aro-purge-test-sp'"
+    echo "    3. Go to 'API permissions' > 'Add a permission' > 'Microsoft Graph' > 'Application permissions'"
+    echo "    4. Add: Application.ReadWrite.All (or Application.Read.All for dry-run only)"
+    echo "    5. Click 'Grant admin consent'"
+    echo ""
+    echo "  Note: Without Graph permissions, resource group cleanup still works, but orphaned service principals won't be cleaned."
     echo ""
     echo -e "${RED}Please set the credentials and run this script again.${NC}"
     exit 1
@@ -110,11 +129,11 @@ if command -v az &> /dev/null; then
 
         # Show filtered resource groups
         echo ""
-        echo -e "${YELLOW}Resource groups matching prefixes ($AZURE_PURGE_RESOURCEGROUP_PREFIXES):${NC}"
+        echo -e "${YELLOW}Resource groups matching prefixes ($AZURE_PURGE_RESOURCEGROUP_PREFIXES) using created tag '$AZURE_PURGE_CREATED_TAG':${NC}"
         IFS=',' read -ra PREFIXES <<< "$AZURE_PURGE_RESOURCEGROUP_PREFIXES"
         for prefix in "${PREFIXES[@]}"; do
             az group list --subscription "$AZURE_SUBSCRIPTION_ID" \
-                --query "[?starts_with(name, '$prefix')].{Name:name, CreatedAt:tags.createdAt, Persist:tags.persist, Location:location}" \
+                --query "[?starts_with(name, '$prefix')].{Name:name, CreatedTag:tags.\"$AZURE_PURGE_CREATED_TAG\", Persist:tags.persist, Location:location}" \
                 -o table 2>/dev/null || true
         done
     else
@@ -296,8 +315,8 @@ echo "  # Run this script again"
 echo "  ./test-purge.sh"
 echo ""
 echo "To clean up test resource groups:"
-echo "  az group delete --name aro-test-old-rg --yes --no-wait"
-echo "  az group delete --name aro-test-recent-rg --yes --no-wait"
-echo "  az group delete --name aro-test-persist-rg --yes --no-wait"
-echo "  az group delete --name other-test-old-rg --yes --no-wait"
+echo "  az group delete --subscription \"$AZURE_SUBSCRIPTION_ID\" --name aro-test-old-rg --yes --no-wait"
+echo "  az group delete --subscription \"$AZURE_SUBSCRIPTION_ID\" --name aro-test-recent-rg --yes --no-wait"
+echo "  az group delete --subscription \"$AZURE_SUBSCRIPTION_ID\" --name aro-test-persist-rg --yes --no-wait"
+echo "  az group delete --subscription \"$AZURE_SUBSCRIPTION_ID\" --name other-test-old-rg --yes --no-wait"
 echo ""

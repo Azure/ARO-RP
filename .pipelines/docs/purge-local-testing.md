@@ -62,7 +62,7 @@ export AZURE_PURGE_RESOURCEGROUP_PREFIXES="aro-,test-,dev-"
 ### Step 3: Build the Tool
 
 ```bash
-cd /home/bragazzi/dev/aro10906/ARO-RP
+# From the repository root
 go build -o ./clean ./hack/clean
 ```
 
@@ -99,21 +99,34 @@ az role assignment create \
 ./clean -dryRun=false
 ```
 
-## Method 2: Using Azure CLI Credentials
+## Method 2: Use Azure CLI to Create Temporary Service Principal Credentials
 
-For quick testing without creating a service principal:
+For quick testing, you can use Azure CLI to create a temporary service principal
+and export the exact environment variables the clean tool requires:
 
 ```bash
 # Login with Azure CLI
 az login --tenant <TENANT_ID>
 az account set --subscription <SUBSCRIPTION_ID>
 
-# Get access token and extract credentials
-TOKEN_OUTPUT=$(az account get-access-token --output json)
-ACCOUNT_OUTPUT=$(az account show --output json)
+# Create a temporary service principal scoped to the target subscription
+SP_OUTPUT=$(az ad sp create-for-rbac \
+  --name "aro-purge-local-test" \
+  --role Contributor \
+  --scopes "/subscriptions/<SUBSCRIPTION_ID>" \
+  --output json)
 
-# Note: This method has limitations as the clean tool expects a service principal
-# For full testing, use Method 1 with a service principal
+# Export the credentials expected by the clean tool
+export AZURE_CLIENT_ID="$(echo "$SP_OUTPUT" | jq -r '.appId')"
+export AZURE_CLIENT_SECRET="$(echo "$SP_OUTPUT" | jq -r '.password')"
+export AZURE_TENANT_ID="$(echo "$SP_OUTPUT" | jq -r '.tenant')"
+export AZURE_SUBSCRIPTION_ID="<SUBSCRIPTION_ID>"
+
+# Verify required variables are set before running the tool
+env | grep '^AZURE_'
+
+# Optional cleanup when finished testing
+# az ad sp delete --id "$AZURE_CLIENT_ID"
 ```
 
 ## Method 3: Test Against a Sandbox Subscription
@@ -294,7 +307,7 @@ echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"
 | `AZURE_CLIENT_SECRET` | Yes | - | `secret123` | Service principal password |
 | `AZURE_TENANT_ID` | Yes | - | `d4e5f6...` | Azure AD tenant ID |
 | `AZURE_SUBSCRIPTION_ID` | Yes | - | `g7h8i9...` | Target subscription ID |
-| `AZURE_PURGE_TTL` | No | `48h` | `72h`, `7d` | Time-to-live duration |
+| `AZURE_PURGE_TTL` | No | `48h` | `72h`, `168h` | Time-to-live duration |
 | `AZURE_PURGE_CREATED_TAG` | No | `createdAt` | `creationTime` | Tag name for creation timestamp |
 | `AZURE_PURGE_RESOURCEGROUP_PREFIXES` | No | `` | `aro-,test-` | Comma-separated prefixes |
 
