@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
+	"go.podman.io/image/v5/types"
 
 	azcorepolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	sdkcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry"
