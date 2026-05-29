@@ -382,7 +382,7 @@ func TestOperatorVersion(t *testing.T) {
 					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
 				}
 
-				resources := d.Spec.Template.Spec.Containers[0].Resources
+				containerResources := d.Spec.Template.Spec.Containers[0].Resources
 				var wantCPUReq, wantMemReq, wantCPULim, wantMemLim resource.Quantity
 				switch d.Name {
 				case "aro-operator-master":
@@ -400,17 +400,25 @@ func TestOperatorVersion(t *testing.T) {
 					continue
 				}
 
-				if !resources.Requests.Cpu().Equal(wantCPUReq) {
-					t.Errorf("%s CPU request: got %s, want %s", d.Name, resources.Requests.Cpu(), wantCPUReq.String())
+				if containerResources.Requests == nil {
+					t.Errorf("%s: resource requests not set", d.Name)
+				} else {
+					if !containerResources.Requests.Cpu().Equal(wantCPUReq) {
+						t.Errorf("%s CPU request: got %s, want %s", d.Name, containerResources.Requests.Cpu(), wantCPUReq.String())
+					}
+					if !containerResources.Requests.Memory().Equal(wantMemReq) {
+						t.Errorf("%s memory request: got %s, want %s", d.Name, containerResources.Requests.Memory(), wantMemReq.String())
+					}
 				}
-				if !resources.Requests.Memory().Equal(wantMemReq) {
-					t.Errorf("%s memory request: got %s, want %s", d.Name, resources.Requests.Memory(), wantMemReq.String())
-				}
-				if !resources.Limits.Cpu().Equal(wantCPULim) {
-					t.Errorf("%s CPU limit: got %s, want %s", d.Name, resources.Limits.Cpu(), wantCPULim.String())
-				}
-				if !resources.Limits.Memory().Equal(wantMemLim) {
-					t.Errorf("%s memory limit: got %s, want %s", d.Name, resources.Limits.Memory(), wantMemLim.String())
+				if containerResources.Limits == nil {
+					t.Errorf("%s: resource limits not set", d.Name)
+				} else {
+					if !containerResources.Limits.Cpu().Equal(wantCPULim) {
+						t.Errorf("%s CPU limit: got %s, want %s", d.Name, containerResources.Limits.Cpu(), wantCPULim.String())
+					}
+					if !containerResources.Limits.Memory().Equal(wantMemLim) {
+						t.Errorf("%s memory limit: got %s, want %s", d.Name, containerResources.Limits.Memory(), wantMemLim.String())
+					}
 				}
 			}
 		})

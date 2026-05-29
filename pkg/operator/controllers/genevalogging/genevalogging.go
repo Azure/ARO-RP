@@ -88,7 +88,7 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      map[string]string{"app": "mdsd"},
-					Annotations: map[string]string{"scheduler.alpha.kubernetes.io/critical-pod": ""},
+					Annotations: map[string]string{},
 				},
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{
