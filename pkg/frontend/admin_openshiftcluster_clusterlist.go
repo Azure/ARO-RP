@@ -25,7 +25,7 @@ type adminClusterListEntry struct {
 	Name                    string `json:"name"`
 	Subscription            string `json:"subscription"`
 	ResourceGroup           string `json:"resourceGroup"`
-	ResourceId              string `json:"resourceId"`
+	ResourceID              string `json:"resourceId"`
 	ProvisioningState       string `json:"provisioningState"`
 	FailedProvisioningState string `json:"failedProvisioningState"`
 	Version                 string `json:"version"`
@@ -74,7 +74,7 @@ func (f *frontend) _getAdminOpenShiftClusterList(ctx context.Context, r *http.Re
 	}
 
 	sort.Slice(clusters, func(i, j int) bool {
-		return strings.ToLower(clusters[i].ResourceId) < strings.ToLower(clusters[j].ResourceId)
+		return strings.ToLower(clusters[i].ResourceID) < strings.ToLower(clusters[j].ResourceID)
 	})
 
 	return json.MarshalIndent(clusters, "", "    ")
@@ -132,7 +132,7 @@ func (af *adminClusterListFilter) matches(entry *adminClusterListEntry) bool {
 func newAdminClusterListEntry(doc *api.OpenShiftClusterDocument) *adminClusterListEntry {
 	entry := &adminClusterListEntry{
 		Key:                     doc.ID,
-		ResourceId:              doc.OpenShiftCluster.ID,
+		ResourceID:              doc.OpenShiftCluster.ID,
 		Version:                 doc.OpenShiftCluster.Properties.ClusterProfile.Version,
 		CreatedBy:               doc.OpenShiftCluster.Properties.CreatedBy,
 		ProvisionedBy:           doc.OpenShiftCluster.Properties.ProvisionedBy,

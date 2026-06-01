@@ -87,7 +87,7 @@ func TestGetAdminOpenShiftClusterList(t *testing.T) {
 			wantResponse: []*adminClusterListEntry{
 				{
 					Key:                     "doc1",
-					ResourceId:              testdatabase.GetResourcePath(mockSubID, "cluster1"),
+					ResourceID:              testdatabase.GetResourcePath(mockSubID, "cluster1"),
 					Name:                    "cluster1",
 					Subscription:            mockSubID,
 					ResourceGroup:           "resourceGroup",
@@ -101,7 +101,7 @@ func TestGetAdminOpenShiftClusterList(t *testing.T) {
 				},
 				{
 					Key:                     "doc2",
-					ResourceId:              testdatabase.GetResourcePath(otherMockSubID, "cluster2"),
+					ResourceID:              testdatabase.GetResourcePath(otherMockSubID, "cluster2"),
 					Name:                    "cluster2",
 					Subscription:            otherMockSubID,
 					ResourceGroup:           "resourceGroup",
@@ -154,7 +154,7 @@ func TestGetAdminOpenShiftClusterList(t *testing.T) {
 			wantResponse: []*adminClusterListEntry{
 				{
 					Key:               "doc-sparse",
-					ResourceId:        testdatabase.GetResourcePath(mockSubID, "sparse"),
+					ResourceID:        testdatabase.GetResourcePath(mockSubID, "sparse"),
 					Name:              "sparse",
 					Subscription:      mockSubID,
 					ResourceGroup:     "resourceGroup",
@@ -183,7 +183,7 @@ func TestGetAdminOpenShiftClusterList(t *testing.T) {
 			wantResponse: []*adminClusterListEntry{
 				{
 					Key:               "doc-bad-id",
-					ResourceId:        "not-a-valid-arm-id",
+					ResourceID:        "not-a-valid-arm-id",
 					CreatedBy:         "someone@example.com",
 					ProvisioningState: "Succeeded",
 				},
@@ -231,28 +231,28 @@ func TestGetAdminOpenShiftClusterList(t *testing.T) {
 			wantResponse: []*adminClusterListEntry{
 				{
 					Key:           "doc-3",
-					ResourceId:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-alpha/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-a", mockSubID),
+					ResourceID:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-alpha/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-a", mockSubID),
 					Name:          "cluster-a",
 					Subscription:  mockSubID,
 					ResourceGroup: "rg-alpha",
 				},
 				{
 					Key:           "doc-2",
-					ResourceId:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-alpha/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-z", mockSubID),
+					ResourceID:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-alpha/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-z", mockSubID),
 					Name:          "cluster-z",
 					Subscription:  mockSubID,
 					ResourceGroup: "rg-alpha",
 				},
 				{
 					Key:           "doc-1",
-					ResourceId:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-beta/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-b", mockSubID),
+					ResourceID:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-beta/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-b", mockSubID),
 					Name:          "cluster-b",
 					Subscription:  mockSubID,
 					ResourceGroup: "rg-beta",
 				},
 				{
 					Key:           "doc-4",
-					ResourceId:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-alpha/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-a", otherMockSubID),
+					ResourceID:    fmt.Sprintf("/subscriptions/%s/resourceGroups/rg-alpha/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster-a", otherMockSubID),
 					Name:          "cluster-a",
 					Subscription:  otherMockSubID,
 					ResourceGroup: "rg-alpha",
