@@ -6,12 +6,15 @@ set -e
 echo "Validating pipeline YAML files..."
 echo "=================================="
 
-PIPELINES=(
-    ".pipelines/ci.yml"
-    ".pipelines/deploy-dev-env.yml"
-    ".pipelines/clean-subscription.yml"
-    ".pipelines/rp-full-dev-setup.yml"
-)
+# Find all YAML files in .pipelines/ directory (not in subdirectories)
+shopt -s nullglob
+PIPELINES=(.pipelines/*.yml)
+shopt -u nullglob
+
+if [ ${#PIPELINES[@]} -eq 0 ]; then
+    echo "❌ No pipeline YAML files found in .pipelines/"
+    exit 1
+fi
 
 for pipeline in "${PIPELINES[@]}"; do
     if [ -f "$pipeline" ]; then

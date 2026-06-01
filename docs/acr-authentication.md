@@ -165,11 +165,11 @@ Two parallel jobs (CSP and MIWI):
 
 ### Deprecated Template
 
-`.pipelines/templates/template-push-images-to-acr.yml` - This template supports both:
-- Modern method: `az acr login` (when acrCredentialsJSON is empty)
-- Legacy method: Username/password login (when acrCredentialsJSON is provided)
+`.pipelines/templates/template-push-images-to-acr.yml` - This template has been stripped of credential-based authentication:
+- **Removed**: Username/password login via `acrCredentialsJSON` parameter (security risk)
+- **Retained**: Azure CLI authentication only (`az acr login`)
 
-**Status**: Not currently used in any active pipeline. Kept for reference but can be removed.
+**Status**: Not currently used in any active pipeline. The credential-based code path has been removed to prevent accidental re-use of stored ACR credentials. Use the modern templates (`template-acr-login.yml` + `template-acr-push.yml`) instead.
 
 ## Troubleshooting
 
@@ -205,7 +205,5 @@ The current implementation uses `AzureCLI@2` task because MSI does not support c
 
 ## SME
 
-- **Primary**: Brendan Bergen
-- **Related work**:
-  - Brian Ragazzi (current assignee of ARO-10651)
-  - Shubhada Sanjay Paithankar (current assignee of parent epic ARO-10296)
+- **Primary**: Loki team (Azure DevOps pipeline owners)
+- **Related work**: Owners/assignees of ARO-10651 and ARO-10296

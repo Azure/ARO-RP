@@ -374,4 +374,4 @@ grep -A 20 "^variables:" .pipelines/ci.yml
 - **Pipeline syntax**: See Azure DevOps YAML schema documentation
 - **ACR authentication**: See `docs/acr-authentication.md`
 - **ADO verification**: See `docs/ado-acr-credentials-verification.md`
-- **SME**: Brendan Bergen (Loki team)
+- **SME**: Loki team (Azure DevOps pipeline owners)
