@@ -6,8 +6,10 @@ package frontend
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"net/http"
 	"strings"
@@ -515,10 +517,14 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
 	if err != nil {
-		switch typedError := err.(type) {
-		case kerrors.APIStatus:
+		var apiStatusErr kerrors.APIStatus
+		var cloudErr *api.CloudError
+		var statusErr statusCodeError
+
+		switch {
+		case errors.As(err, &apiStatusErr):
 			// convert kerrors.APIStatus errors to api.CloudError
-			status := typedError.Status()
+			status := apiStatusErr.Status()
 
 			var target string
 			if status.Details != nil {
@@ -538,8 +544,14 @@ func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b 
 					Target:  target,
 				},
 			}
-		case *api.CloudError:
-		case statusCodeError:
+		case errors.As(err, &cloudErr):
+			if _, ok := err.(*api.CloudError); ok {
+				err = cloudErr
+				break
+			}
+			err = api.WrapCloudErrorWithMessage(err, cloudErr)
+		case errors.As(err, &statusErr):
+			err = statusErr
 		default:
 			// convert all other errors to CloudError so the actual error msg gets forwarded to the caller
 			err = &api.CloudError{
@@ -556,9 +568,7 @@ func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b 
 }
 
 func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
-	for k, v := range header {
-		w.Header()[k] = v
-	}
+	maps.Copy(w.Header(), header)
 
 	if err != nil {
 		switch err := err.(type) {
