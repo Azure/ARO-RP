@@ -73,7 +73,9 @@ func (f *frontend) _getAdminOpenShiftClusterList(ctx context.Context, r *http.Re
 		clusters = append(clusters, entry)
 	}
 
-	sort.Slice(clusters, func(i, j int) bool { return clusters[i].ResourceId < clusters[j].ResourceId })
+	sort.Slice(clusters, func(i, j int) bool {
+		return strings.ToLower(clusters[i].ResourceId) < strings.ToLower(clusters[j].ResourceId)
+	})
 
 	return json.MarshalIndent(clusters, "", "    ")
 }
