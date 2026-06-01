@@ -3,10 +3,6 @@
 
 set -e
 
-echo "Installing azure-devops extension for Azure CLI..."
-az extension add --name azure-devops --only-show-errors 2>/dev/null || echo "Extension already installed"
-
-echo ""
 echo "Validating pipeline YAML files..."
 echo "=================================="
 
@@ -26,7 +22,7 @@ for pipeline in "${PIPELINES[@]}"; do
             yamllint "$pipeline" || echo "  ⚠️  Linting warnings found"
         else
             # Basic YAML validation with Python
-            python3 -c "import yaml; yaml.safe_load(open('$pipeline'))" && echo "  ✅ Valid YAML syntax"
+            python3 -c "import yaml; yaml.safe_load(open('$pipeline'))" && echo "  ✅ Valid YAML syntax" || echo "  ❌ Invalid YAML syntax"
         fi
     else
         echo "  ❌ File not found: $pipeline"

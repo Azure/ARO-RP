@@ -7,10 +7,13 @@
 #
 # See docs/acr-authentication.md for current implementation details.
 # Related: ARO-10651, ARO-9094
+#
+# SECURITY NOTE: The credential-based authentication code path has been removed
+# to prevent accidental re-use of stored ACR credentials. Use the modern
+# templates referenced above instead.
 
 parameters:
   rpImageACR: ""
-  acrCredentialsJSON: ""
 steps:
   - script: |
       set -e
@@ -18,13 +21,8 @@ steps:
 
       export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
-      if [ -z ${{ parameters.acrCredentialsJSON }} ]; then
-        az acr login --name "$RP_IMAGE_ACR"
-      else
-        base64 -d >acr-credentials.json <<<${{ parameters.acrCredentialsJSON }}
-        az acr login --name "$RP_IMAGE_ACR" -u "$(jq -r .username < acr-credentials.json)" -p "$(jq -r .password < acr-credentials.json)"
-        rm -f acr-credentials.json
-      fi
+      # Only Azure CLI authentication is supported
+      az acr login --name "$RP_IMAGE_ACR"
 
       # azure checkouts commit, so removing master reference when publishing image
       export BRANCH=$(Build.SourceBranchName)

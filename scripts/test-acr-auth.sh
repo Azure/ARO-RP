@@ -1,6 +1,9 @@
 #!/bin/bash
 # Test ACR authentication locally using Azure CLI
 # Requires: Azure CLI, appropriate Azure credentials
+#
+# SECURITY NOTE: This script uses --expose-token for local testing only.
+# Do not share or log the access tokens in production environments.
 
 set -e
 
