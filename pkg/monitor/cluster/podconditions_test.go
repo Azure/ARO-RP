@@ -58,9 +58,26 @@ func TestEmitPodConditions(t *testing.T) {
 				},
 			},
 		},
-		&corev1.Pod{ // metrics not expected, non-target namespace
+		&corev1.Pod{ // metrics expected from second monitored namespace
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name",
+				Name:      "unhealthy-pod",
+				Namespace: "openshift-monitoring",
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+			Status: corev1.PodStatus{
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+		},
+		&corev1.Pod{ // no metrics expected, non-monitored namespace
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "unmonitored-unhealthy",
 				Namespace: "openshift",
 			},
 			Spec: corev1.PodSpec{
@@ -84,10 +101,6 @@ func TestEmitPodConditions(t *testing.T) {
 						Type:   corev1.ContainersReady,
 						Status: corev1.ConditionFalse,
 					},
-					{
-						Type:   corev1.PodReady,
-						Status: corev1.ConditionTrue,
-					},
 				},
 			},
 		},
@@ -106,7 +119,7 @@ func TestEmitPodConditions(t *testing.T) {
 		ocpclientset:        ocpclientset,
 		m:                   m,
 		queryLimit:          1,
-		namespacesToMonitor: []string{"openshift-etcd"},
+		namespacesToMonitor: []string{"openshift-etcd", "openshift-monitoring"},
 	}
 
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
@@ -133,6 +146,13 @@ func TestEmitPodConditions(t *testing.T) {
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
 		"namespace": "openshift-etcd",
+		"nodeName":  "fake-node-name",
+		"status":    "False",
+		"type":      "Ready",
+	})
+	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
+		"name":      "unhealthy-pod",
+		"namespace": "openshift-monitoring",
 		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "Ready",
@@ -169,9 +189,30 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 				NodeName: "fake-node-name",
 			},
 		},
-		&corev1.Pod{ // metrics not expected, non-target namespace
+		&corev1.Pod{ // metrics expected from second monitored namespace
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name",
+				Name:      "unhealthy-pod",
+				Namespace: "openshift-monitoring",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name: "containername",
+						State: corev1.ContainerState{
+							Waiting: &corev1.ContainerStateWaiting{
+								Reason: "CrashLoopBackOff",
+							},
+						},
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // no metrics expected, non-monitored namespace
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "unmonitored-unhealthy",
 				Namespace: "openshift",
 			},
 			Status: corev1.PodStatus{
@@ -232,7 +273,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		ocpclientset:        ocpclientset,
 		m:                   m,
 		queryLimit:          1,
-		namespacesToMonitor: []string{"openshift-apiserver"},
+		namespacesToMonitor: []string{"openshift-apiserver", "openshift-monitoring"},
 	}
 
 	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
@@ -250,6 +291,14 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		"containername":        "oom-killed-cntr",
 		"reason":               "CrashLoopBackOff",
 		"lastTerminationState": "OOMKilled",
+	})
+	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
+		"name":                 "unhealthy-pod",
+		"namespace":            "openshift-monitoring",
+		"nodeName":             "fake-node-name",
+		"containername":        "containername",
+		"reason":               "CrashLoopBackOff",
+		"lastTerminationState": "",
 	})
 
 	err := mon.emitPodConditions(ctx)
@@ -330,7 +379,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 				NodeName: "fake-node-name",
 			},
 		},
-		&corev1.Pod{ // #5 no metrics expected, non-target namespace
+		&corev1.Pod{ // #5 no metrics expected, non-monitored namespace
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "not-system-namespace",
 				Namespace: "default",
@@ -368,7 +417,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 				NodeName: "fake-node-name",
 			},
 		},
-		&corev1.Pod{ // #7 metrics not expected, non-target namespace
+		&corev1.Pod{ // #7 no metrics expected, non-monitored namespace with high restarts
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname1",
 				Namespace: "openshift",
@@ -378,6 +427,23 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 					{
 						Name:         "containername",
 						RestartCount: 42,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // #8 metrics expected from second monitored namespace
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "restarting-pod",
+				Namespace: "openshift-monitoring",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: 15,
 					},
 				},
 			},
@@ -402,7 +468,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		queryLimit:          1,
 		hourlyRun:           true,
 		log:                 log,
-		namespacesToMonitor: []string{"openshift-kube-apiserver"},
+		namespacesToMonitor: []string{"openshift-kube-apiserver", "openshift-monitoring"},
 	}
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(42), map[string]string{
@@ -423,6 +489,10 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		"name":      "multi-container-pod",
 		"namespace": "openshift-kube-apiserver",
 	})
+	m.EXPECT().EmitGauge("pod.restartcounter", int64(15), map[string]string{
+		"name":      "restarting-pod",
+		"namespace": "openshift-monitoring",
+	})
 
 	err := mon.emitPodConditions(ctx)
 	if err != nil {
@@ -430,7 +500,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	}
 
 	// Matches the number of emitted messages
-	assert.Len(t, hook.Entries, 3)
+	assert.Len(t, hook.Entries, 4)
 
 	// the order of the log entries does not seem to be stable, so testing one entry only
 	// and no test for specific values, except for the metric
