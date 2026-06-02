@@ -136,7 +136,8 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 
 	if resp.StatusCode != expectedStatusCode {
 		err := &Error{}
-		if resp.Header.Get("Content-Type") == "application/json" {
+		mediaType, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if mediaType == "application/json" {
 			d.Decode(&err)
 		}
 		err.StatusCode = resp.StatusCode
@@ -148,7 +149,7 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 		if mediaType == "application/json" {
 			return resp, d.Decode(&out)
 		}
-		return nil, fmt.Errorf("expected application/json Content-Type, got %q", resp.Header.Get("Content-Type"))
+		return nil, fmt.Errorf("%s %s: expected application/json Content-Type, got %q (status: %d)", method, path, resp.Header.Get("Content-Type"), resp.StatusCode)
 	}
 
 	return resp, nil
