@@ -30,11 +30,8 @@ spec:
         name: aro-operator
         resources:
           requests:
-            cpu: 250m
-            memory: 500Mi
-          limits:
-            cpu: 500m
-            memory: 1Gi
+            cpu: 10m
+            memory: 250Mi
         env:
         - name: AZURE_CLIENT_ID
           valueFrom:

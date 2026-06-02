@@ -383,18 +383,14 @@ func TestOperatorVersion(t *testing.T) {
 				}
 
 				containerResources := d.Spec.Template.Spec.Containers[0].Resources
-				var wantCPUReq, wantMemReq, wantCPULim, wantMemLim resource.Quantity
+				var wantCPUReq, wantMemReq resource.Quantity
 				switch d.Name {
 				case "aro-operator-master":
-					wantCPUReq = resource.MustParse("250m")
-					wantMemReq = resource.MustParse("500Mi")
-					wantCPULim = resource.MustParse("500m")
-					wantMemLim = resource.MustParse("1Gi")
+					wantCPUReq = resource.MustParse("10m")
+					wantMemReq = resource.MustParse("250Mi")
 				case "aro-operator-worker":
-					wantCPUReq = resource.MustParse("250m")
+					wantCPUReq = resource.MustParse("10m")
 					wantMemReq = resource.MustParse("100Mi")
-					wantCPULim = resource.MustParse("500m")
-					wantMemLim = resource.MustParse("250Mi")
 				default:
 					t.Errorf("unexpected deployment name: %s", d.Name)
 					continue
@@ -410,15 +406,8 @@ func TestOperatorVersion(t *testing.T) {
 						t.Errorf("%s memory request: got %s, want %s", d.Name, containerResources.Requests.Memory(), wantMemReq.String())
 					}
 				}
-				if containerResources.Limits == nil {
-					t.Errorf("%s: resource limits not set", d.Name)
-				} else {
-					if !containerResources.Limits.Cpu().Equal(wantCPULim) {
-						t.Errorf("%s CPU limit: got %s, want %s", d.Name, containerResources.Limits.Cpu(), wantCPULim.String())
-					}
-					if !containerResources.Limits.Memory().Equal(wantMemLim) {
-						t.Errorf("%s memory limit: got %s, want %s", d.Name, containerResources.Limits.Memory(), wantMemLim.String())
-					}
+				if containerResources.Limits != nil {
+					t.Errorf("%s: resource limits should not be set, got %v", d.Name, containerResources.Limits)
 				}
 			}
 		})
