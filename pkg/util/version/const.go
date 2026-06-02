@@ -49,7 +49,7 @@ var DefaultInstallStream = Stream{
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
 	// https://github.com/microsoft/azurelinux/releases
-	return acrDomain + "/fluentbit:4.2.2-cm20260102@sha256:1fff6f37417000c443cfd0812b5a5ac27af2480215b848335dfb48f68b8e1c7f"
+	return acrDomain + "/fluentbit:5.0.0-cm3.0.20250910@sha256:c37032f4eac335e955438451f00e0e8c6e3b33dce1b92dab01c00954dd38390c"
 }
 
 // MdmImage contains the location of the MDM container image
