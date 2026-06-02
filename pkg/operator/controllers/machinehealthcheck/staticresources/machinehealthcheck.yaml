@@ -20,5 +20,5 @@ spec:
   - type: "Ready"
     timeout: "15m"
     status: "Unknown"
-  maxUnhealthy: "1"
+  maxUnhealthy: "33%"
   nodeStartupTimeout: "25m"
