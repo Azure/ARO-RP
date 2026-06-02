@@ -377,6 +377,11 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, d
 			"properties.servicePrincipalProfile", "The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
 	}
 
+	if strings.Contains(strings.ToLower(backendErr.Error()), "nullorinvalidguidexcludeprincipalid") {
+		backendErr = api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError,
+			"", backendErr.Error())
+	}
+
 	var statusCode int
 	var cloudErr *api.CloudError
 	detailedErr := autorest.DetailedError{}
