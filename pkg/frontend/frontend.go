@@ -549,7 +549,16 @@ func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b 
 				err = cloudErr
 				break
 			}
-			err = api.WrapCloudErrorWithMessage(err, cloudErr)
+			// For wrapped CloudErrors, prefer forwarding the contextual message and
+			// normalize to a generic internal error shape.
+			err = &api.CloudError{
+				StatusCode: http.StatusInternalServerError,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInternalServerError,
+					Message: err.Error(),
+					Target:  "",
+				},
+			}
 		case errors.As(err, &statusErr):
 			err = statusErr
 		default:

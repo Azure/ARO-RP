@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -91,6 +92,30 @@ func TestAdminReply(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`400: RequestNotAllowed: thing: You can't do that.`),
+				},
+			},
+		},
+		{
+			name: "wrapped cloud error",
+			err: fmt.Errorf("outer failure with rollback context: %w", &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeRequestNotAllowed,
+					Message: "You can't do that.",
+					Target:  "thing",
+				},
+			}),
+			wantStatusCode: http.StatusInternalServerError,
+			wantBody: map[string]interface{}{
+				"error": map[string]interface{}{
+					"code":    api.CloudErrorCodeInternalServerError,
+					"message": "outer failure with rollback context: 400: RequestNotAllowed: thing: You can't do that.",
+				},
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`500: InternalServerError: : outer failure with rollback context: 400: RequestNotAllowed: thing: You can't do that.`),
 				},
 			},
 		},
