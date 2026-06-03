@@ -13,4 +13,8 @@ const (
 	MSI_CERT_RENEWAL_ID      api.MIMOTaskID = "7c3f8e2d-9a4b-4f1e-8c5d-2b6a9e7f3d1c"
 	MIGRATE_LB_ZONES_ID      api.MIMOTaskID = "c28a07c1-462f-42d2-8031-4b0222256596"
 	FIX_SSH_ID               api.MIMOTaskID = "888fc221-b059-49db-bd02-22ad86cccd6b"
+
+	// Operator Flag setting tasks
+	OPERATOR_FLAG_SET_GENEVA_OTEL api.MIMOTaskID = "eb0360af-4748-42a3-9788-dfffae58dff6"
+	OPERATOR_FLAG_SET_GENEVA_MDSD api.MIMOTaskID = "88365e95-f8ca-43fa-a9d4-ad32e6ece507"
 )
