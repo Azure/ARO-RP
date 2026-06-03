@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -48,8 +49,31 @@ func (f *frontend) postAdminResizeControlPlane(w http.ResponseWriter, r *http.Re
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
 	err := f._postAdminResizeControlPlane(log, ctx, r)
+	err = normalizeResizeControlPlaneErrorForAdminReply(err)
 
 	adminReply(log, w, nil, nil, err)
+}
+
+func normalizeResizeControlPlaneErrorForAdminReply(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var resizeErr *resizeControlPlaneError
+	var cloudErr *api.CloudError
+	if errors.As(err, &resizeErr) && errors.As(err, &cloudErr) {
+		return &api.CloudError{
+			StatusCode: cloudErr.StatusCode,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    cloudErr.Code,
+				Message: err.Error(),
+				Target:  cloudErr.Target,
+				Details: cloudErr.Details,
+			},
+		}
+	}
+
+	return err
 }
 
 func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.Context, r *http.Request) error {

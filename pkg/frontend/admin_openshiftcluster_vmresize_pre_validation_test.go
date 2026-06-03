@@ -17,14 +17,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	configv1 "github.com/openshift/api/config/v1"
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -37,33 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
-
-func controlPlaneNodeListJSON(nodes ...corev1.Node) []byte {
-	nodeList := &corev1.NodeList{Items: nodes}
-	b, _ := json.Marshal(nodeList)
-	return b
-}
-
-func controlPlaneNode(name, instanceType, betaInstanceType string) corev1.Node {
-	return corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"node-role.kubernetes.io/master": "",
-				nodeLabelInstanceType:            instanceType,
-				nodeLabelBetaInstanceType:        betaInstanceType,
-			},
-		},
-		Status: corev1.NodeStatus{
-			Conditions: []corev1.NodeCondition{{
-				Type:   corev1.NodeReady,
-				Status: corev1.ConditionTrue,
-			}},
-		},
-	}
-}
 
 func fakeClusterOperatorJSON(name string, conditions []configv1.ClusterOperatorStatusCondition) []byte {
 	co := configv1.ClusterOperator{
@@ -215,7 +187,6 @@ func virtualMachineValidationWithSizeAndZone(vmSize, zone string) mgmtcompute.Vi
 		Zones: &zones,
 	}
 }
-
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	running := "Running"
 	allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
@@ -400,7 +371,6 @@ func TestPreResizeControlPlaneVMsValidationRejectsHeterogeneousInventory(t *test
 		"All machines should have the same size",
 	)
 }
-
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 	t.Parallel()
 

@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"go.uber.org/mock/gomock"
@@ -22,6 +23,8 @@ import (
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
+
+const executionContextCreationTolerance = time.Second
 
 func virtualMachineWithSize(vmSize string) mgmtcompute.VirtualMachine {
 	return mgmtcompute.VirtualMachine{
@@ -296,6 +299,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 func TestNewResizeControlPlaneExecutionContext(t *testing.T) {
 	parent, cancelParent := context.WithCancel(context.Background())
+	start := time.Now()
 	ctx, cancel := newResizeControlPlaneExecutionContext(parent)
 	cancelParent()
 	defer cancel()
@@ -312,9 +316,9 @@ func TestNewResizeControlPlaneExecutionContext(t *testing.T) {
 	}
 
 	expected := time.Duration(api.ControlPlaneNodeCount) * resizeControlPlanePerNodeTimeout
-	remaining := time.Until(deadline)
-	if remaining < expected-time.Second || remaining > expected {
-		t.Fatalf("execution deadline remaining %s, want close to %s", remaining, expected)
+	actual := deadline.Sub(start)
+	if actual < expected || actual > expected+executionContextCreationTolerance {
+		t.Fatalf("execution deadline duration %s, want in [%s, %s]", actual, expected, expected+executionContextCreationTolerance)
 	}
 }
 
@@ -408,6 +412,31 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 	}
 }
 
+func TestRollbackAllFailsFastWhenEtcdUnhealthyBetweenNodes(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	k := mock_adminactions.NewMockKubeActions(ctrl)
+	a := mock_adminactions.NewMockAzureActions(ctrl)
+
+	op := &resizeControlPlaneOperation{
+		k: k,
+		a: a,
+		nodes: []*controlPlaneNodeProgress{
+			{snapshot: controlPlaneNodeSnapshot{machineName: "master-0"}},
+			{snapshot: controlPlaneNodeSnapshot{machineName: "master-1"}},
+		},
+	}
+
+	k.EXPECT().
+		KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+		Return(nil, errors.New("api server unavailable"))
+
+	err := op.rollbackAll(ctx)
+	assertErrorContainsAll(t, err, "etcd unhealthy before rollback of master-0", "api server unavailable")
+}
+
 func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	_, log := testlog.New()
@@ -421,7 +450,7 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 		},
 	}
 
-	adminReply(log, recorder, nil, nil, err)
+	adminReply(log, recorder, nil, nil, normalizeResizeControlPlaneErrorForAdminReply(err))
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("status code = %d, want %d", recorder.Code, http.StatusBadRequest)
@@ -470,7 +499,7 @@ func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {
 		},
 	}
 
-	adminReply(log, recorder, nil, nil, err)
+	adminReply(log, recorder, nil, nil, normalizeResizeControlPlaneErrorForAdminReply(err))
 
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("status code = %d, want %d", recorder.Code, http.StatusInternalServerError)
@@ -519,35 +548,39 @@ func TestRetryAzureOperation(t *testing.T) {
 	})
 
 	t.Run("succeeds on second attempt", func(t *testing.T) {
-		calls := 0
-		err := retryAzureOperation(context.Background(), "test op", func() error {
-			calls++
-			if calls == 1 {
-				return errors.New("transient")
+		synctest.Test(t, func(t *testing.T) {
+			calls := 0
+			err := retryAzureOperation(context.Background(), "test op", func() error {
+				calls++
+				if calls == 1 {
+					return errors.New("transient")
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
-			return nil
+			if calls != 2 {
+				t.Fatalf("expected 2 calls, got %d", calls)
+			}
 		})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if calls != 2 {
-			t.Fatalf("expected 2 calls, got %d", calls)
-		}
 	})
 
 	t.Run("fails after max attempts", func(t *testing.T) {
-		calls := 0
-		err := retryAzureOperation(context.Background(), "test op", func() error {
-			calls++
-			return errors.New("persistent")
+		synctest.Test(t, func(t *testing.T) {
+			calls := 0
+			err := retryAzureOperation(context.Background(), "test op", func() error {
+				calls++
+				return errors.New("persistent")
+			})
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if calls != azureOperationMaxAttempts {
+				t.Fatalf("expected %d calls, got %d", azureOperationMaxAttempts, calls)
+			}
+			assertErrorContainsAll(t, err, "could not complete test op", "persistent")
 		})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if calls != azureOperationMaxAttempts {
-			t.Fatalf("expected %d calls, got %d", azureOperationMaxAttempts, calls)
-		}
-		assertErrorContainsAll(t, err, "could not complete test op", "persistent")
 	})
 
 	t.Run("respects context cancellation", func(t *testing.T) {
@@ -559,5 +592,24 @@ func TestRetryAzureOperation(t *testing.T) {
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("expected context.Canceled, got %v", err)
 		}
+	})
+
+	t.Run("allows injected retry delay policy", func(t *testing.T) {
+		policy := retryAzureOperationPolicy{
+			maxAttempts: 2,
+			retryDelay:  0,
+		}
+		calls := 0
+		err := retryAzureOperationWithPolicy(context.Background(), "test op", policy, func() error {
+			calls++
+			return errors.New("persistent")
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if calls != policy.maxAttempts {
+			t.Fatalf("expected %d calls, got %d", policy.maxAttempts, calls)
+		}
+		assertErrorContainsAll(t, err, "could not complete test op", "persistent")
 	})
 }

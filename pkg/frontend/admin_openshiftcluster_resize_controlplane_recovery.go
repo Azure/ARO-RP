@@ -33,6 +33,18 @@ const (
 	etcdHealthPollInterval = 10 * time.Second
 )
 
+// retryAzureOperationPolicy defines the maximum number of attempts and the delay between attempts for retrying Azure operations.
+// Production keeps current behavior and tests can override delay.
+type retryAzureOperationPolicy struct {
+	maxAttempts int
+	retryDelay  time.Duration
+}
+
+var defaultRetryAzureOperationPolicy = retryAzureOperationPolicy{
+	maxAttempts: azureOperationMaxAttempts,
+	retryDelay:  azureOperationRetryDelay,
+}
+
 type resizeControlPlaneError struct {
 	baseErr     error
 	steps       []string
@@ -291,8 +303,12 @@ func waitForEtcdHealthy(ctx context.Context, log *logrus.Entry, k adminactions.K
 
 	return wait.PollImmediateUntilWithContext(ctx, etcdHealthPollInterval, func(ctx context.Context) (bool, error) {
 		if err := validateEtcdHealth(ctx, k); err != nil {
-			log.Infof("Waiting for etcd to become healthy: %v", err)
-			return false, nil
+			var cloudErr *api.CloudError
+			if errors.As(err, &cloudErr) && cloudErr.StatusCode == http.StatusConflict {
+				log.Infof("Waiting for etcd to become healthy: %v", err)
+				return false, nil
+			}
+			return false, err
 		}
 		return true, nil
 	})
@@ -306,22 +322,38 @@ func ensureControlPlaneAndEtcdHealthy(ctx context.Context, k adminactions.KubeAc
 }
 
 func retryAzureOperation(ctx context.Context, operationDesc string, fn func() error) error {
+	return retryAzureOperationWithPolicy(ctx, operationDesc, defaultRetryAzureOperationPolicy, fn)
+}
+
+func retryAzureOperationWithPolicy(
+	ctx context.Context,
+	operationDesc string,
+	policy retryAzureOperationPolicy,
+	fn func() error,
+) error {
+	if policy.maxAttempts <= 0 {
+		return fmt.Errorf("could not complete %s: invalid retry policy max attempts %d", operationDesc, policy.maxAttempts)
+	}
+
 	var lastErr error
-	for attempt := range azureOperationMaxAttempts {
+	for attempt := range policy.maxAttempts {
 		lastErr = fn()
 		if lastErr == nil {
 			return nil
 		}
-		if attempt == azureOperationMaxAttempts-1 {
+		if attempt == policy.maxAttempts-1 {
 			break
+		}
+		if policy.retryDelay <= 0 {
+			continue
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(azureOperationRetryDelay):
+		case <-time.After(policy.retryDelay):
 		}
 	}
-	return fmt.Errorf("could not complete %s after %d attempts: %w", operationDesc, azureOperationMaxAttempts, lastErr)
+	return fmt.Errorf("could not complete %s after %d attempts: %w", operationDesc, policy.maxAttempts, lastErr)
 }
 
 func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *controlPlaneNodeProgress) error {
@@ -441,12 +473,15 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 	return errors.Join(rollbackErrs...)
 }
 
+// rollbackAll processes nodes in reverse order and rechecks etcd between nodes.
+// If etcd is unhealthy mid-rollback, stop immediately so SRE can take a targeted recovery path.
 func (o *resizeControlPlaneOperation) rollbackAll(ctx context.Context) error {
 	var errs []error
-	for i := len(o.nodes) - 1; i >= 0; i-- {
+	for offset := range len(o.nodes) {
+		i := len(o.nodes) - 1 - offset
 		if i < len(o.nodes)-1 {
 			if err := validateEtcdHealth(ctx, o.k); err != nil {
-				o.log.Warnf("etcd not fully healthy before rollback of %s: %v", o.nodes[i].snapshot.machineName, err)
+				return errors.Join(errors.Join(errs...), fmt.Errorf("etcd unhealthy before rollback of %s: %w", o.nodes[i].snapshot.machineName, err))
 			}
 		}
 		if err := o.rollbackNode(ctx, o.nodes[i]); err != nil {
