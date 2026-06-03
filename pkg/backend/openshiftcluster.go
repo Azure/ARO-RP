@@ -316,6 +316,13 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		}
 	}
 
+	if backendErr != nil {
+		if strings.Contains(strings.ToLower(backendErr.Error()), "nullorinvalidguidexcludeprincipalid") {
+			backendErr = api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError,
+				"", backendErr.Error())
+		}
+	}
+
 	// If cluster is in the non-terminal state we are still in the same
 	// operational context and AsyncOperation should not be updated.
 	if provisioningState.IsTerminal() {
@@ -375,11 +382,6 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, d
 	if strings.Contains(strings.ToLower(backendErr.Error()), "one of the claims 'puid' or 'altsecid' or 'oid' should be present") {
 		backendErr = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalClaims,
 			"properties.servicePrincipalProfile", "The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
-	}
-
-	if strings.Contains(strings.ToLower(backendErr.Error()), "nullorinvalidguidexcludeprincipalid") {
-		backendErr = api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError,
-			"", backendErr.Error())
 	}
 
 	var statusCode int

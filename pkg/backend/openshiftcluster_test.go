@@ -826,31 +826,6 @@ func TestAsyncOperationResultLog(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:                     "Server Error NullOrInvalidGuidExcludePrincipalId",
-			initialProvisioningState: api.ProvisioningStateFailed,
-			backendErr: &api.CloudError{
-				StatusCode: http.StatusBadRequest,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeDeploymentFailed,
-					Message: "Deployment failed.",
-					Details: []api.CloudErrorBody{
-						{
-							Message: `{"code":"NullOrInvalidGuidExcludePrincipalId","message":"An ExcludePrincipal Id is null or is an invalid Guid."}`,
-						},
-					},
-				},
-			},
-			wantEntries: []testlog.ExpectedLogEntry{
-				{
-					"LOGKIND":         gomega.Equal("asyncqos"),
-					"operationType":   gomega.Equal("Failed"),
-					"resultType":      gomega.Equal(utillog.ServerErrorResultType),
-					"clusterIdentity": gomega.Equal(clusterIdentityServicePrincipalMetricName),
-					"errorDetails":    gomega.ContainSubstring("NullOrInvalidGuidExcludePrincipalId"),
-				},
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			h, log := testlog.New()
