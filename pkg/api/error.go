@@ -128,34 +128,6 @@ func NewCloudError(statusCode int, code, target, message string) *CloudError {
 	}
 }
 
-// WrapCloudErrorWithMessage preserves the CloudError shape (status/code/target/details)
-// while replacing the message with a wrapped outer error message.
-func WrapCloudErrorWithMessage(wrappedErr error, cloudErr *CloudError) *CloudError {
-	statusCode := http.StatusInternalServerError
-	code := CloudErrorCodeInternalServerError
-	target := ""
-	var details []CloudErrorBody
-
-	if cloudErr != nil {
-		statusCode = cloudErr.StatusCode
-		if cloudErr.CloudErrorBody != nil {
-			code = cloudErr.Code
-			target = cloudErr.Target
-			details = append([]CloudErrorBody(nil), cloudErr.Details...)
-		}
-	}
-
-	message := ""
-	if wrappedErr != nil {
-		message = wrappedErr.Error()
-	}
-
-	wrappedCloudErr := NewCloudError(statusCode, code, target, message)
-	wrappedCloudErr.Details = details
-
-	return wrappedCloudErr
-}
-
 // WriteError constructs and writes a CloudError to the given ResponseWriter
 func WriteError(w http.ResponseWriter, statusCode int, code, target, message string) {
 	WriteCloudError(w, NewCloudError(statusCode, code, target, message))
