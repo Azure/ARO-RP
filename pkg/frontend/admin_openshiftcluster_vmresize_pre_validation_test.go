@@ -17,12 +17,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -35,7 +37,33 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
+
+func controlPlaneNodeListJSON(nodes ...corev1.Node) []byte {
+	nodeList := &corev1.NodeList{Items: nodes}
+	b, _ := json.Marshal(nodeList)
+	return b
+}
+
+func controlPlaneNode(name, instanceType, betaInstanceType string) corev1.Node {
+	return corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				"node-role.kubernetes.io/master": "",
+				nodeLabelInstanceType:            instanceType,
+				nodeLabelBetaInstanceType:        betaInstanceType,
+			},
+		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{{
+				Type:   corev1.NodeReady,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}
+}
 
 func fakeClusterOperatorJSON(name string, conditions []configv1.ClusterOperatorStatusCondition) []byte {
 	co := configv1.ClusterOperator{
@@ -140,6 +168,54 @@ func expectControlPlaneVMGetCalls(a *mock_adminactions.MockAzureActions, resourc
 	}
 }
 
+func masterMachineWithZone(name, vmSize, zone string) machinev1beta1.Machine {
+	providerSpec := &machinev1beta1.AzureMachineProviderSpec{
+		Zone:   &zone,
+		VMSize: vmSize,
+	}
+	raw, _ := json.Marshal(providerSpec)
+	running := "Running"
+
+	return machinev1beta1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				machineLabelClusterAPIRole: machineRoleMaster,
+				machineLabelZone:           zone,
+				machineLabelInstanceType:   vmSize,
+			},
+		},
+		Spec: machinev1beta1.MachineSpec{
+			ProviderSpec: machinev1beta1.ProviderSpec{
+				Value: &kruntime.RawExtension{Raw: raw},
+			},
+		},
+		Status: machinev1beta1.MachineStatus{
+			Phase: &running,
+		},
+	}
+}
+
+func virtualMachineValidationWithSizeAndZone(vmSize, zone string) mgmtcompute.VirtualMachine {
+	statuses := []mgmtcompute.InstanceViewStatus{
+		{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+		{Code: pointerutils.ToPtr("PowerState/running")},
+	}
+	zones := []string{zone}
+
+	return mgmtcompute.VirtualMachine{
+		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+			HardwareProfile: &mgmtcompute.HardwareProfile{
+				VMSize: mgmtcompute.VirtualMachineSizeTypes(vmSize),
+			},
+			InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+				Statuses: &statuses,
+			},
+		},
+		Zones: &zones,
+	}
+}
+
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	running := "Running"
 	allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
@@ -178,6 +254,151 @@ func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeAction
 		KubeList(gomock.Any(), "Machine", machineNamespace).
 		Return(machineList, nil).
 		AnyTimes()
+}
+
+func healthyControlPlaneInventoryMock(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions, resourceGroupName string, vmSize string) {
+	if k != nil {
+		k.EXPECT().
+			KubeList(gomock.Any(), "Machine", machineNamespace).
+			Return(masterMachineListJSON(
+				masterMachineWithZone("master-0", vmSize, "1"),
+				masterMachineWithZone("master-1", vmSize, "2"),
+				masterMachineWithZone("master-2", vmSize, "3"),
+			), nil)
+		k.EXPECT().
+			KubeList(gomock.Any(), "Node", "").
+			Return(controlPlaneNodeListJSON(
+				controlPlaneNode("master-0", vmSize, vmSize),
+				controlPlaneNode("master-1", vmSize, vmSize),
+				controlPlaneNode("master-2", vmSize, vmSize),
+			), nil)
+	}
+
+	if a != nil {
+		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-0", mgmtcompute.InstanceView).
+			Return(virtualMachineValidationWithSizeAndZone(vmSize, "1"), nil)
+		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-1", mgmtcompute.InstanceView).
+			Return(virtualMachineValidationWithSizeAndZone(vmSize, "2"), nil)
+		a.EXPECT().GetVirtualMachine(gomock.Any(), resourceGroupName, "master-2", mgmtcompute.InstanceView).
+			Return(virtualMachineValidationWithSizeAndZone(vmSize, "3"), nil)
+	}
+}
+
+func TestValidateResizeControlPlaneInventory(t *testing.T) {
+	ctx := context.Background()
+	_, log := testlog.New()
+
+	t.Run("rejects heterogeneous control plane machine sizes", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		k := mock_adminactions.NewMockKubeActions(ctrl)
+		a := mock_adminactions.NewMockAzureActions(ctrl)
+
+		k.EXPECT().
+			KubeList(gomock.Any(), "Machine", machineNamespace).
+			Return(masterMachineListJSON(
+				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
+				masterMachineWithZone("master-1", "Standard_D16s_v5", "2"),
+				masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
+			), nil)
+
+		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
+		assertErrorContainsAll(t, err,
+			"Control plane machine inventory is inconsistent",
+			"All machines should have the same size",
+		)
+	})
+
+	t.Run("rejects inconsistent control plane node labels", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		k := mock_adminactions.NewMockKubeActions(ctrl)
+		a := mock_adminactions.NewMockAzureActions(ctrl)
+
+		k.EXPECT().
+			KubeList(gomock.Any(), "Machine", machineNamespace).
+			Return(masterMachineListJSON(
+				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
+				masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
+				masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
+			), nil)
+		k.EXPECT().
+			KubeList(gomock.Any(), "Node", "").
+			Return(controlPlaneNodeListJSON(
+				controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3"),
+				controlPlaneNode("master-1", "Standard_D16s_v5", "Standard_D16s_v5"),
+				controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3"),
+			), nil)
+
+		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
+		assertErrorContainsAll(t, err,
+			"Control plane machine and node inventory is inconsistent",
+			"machine master-1 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v5",
+		)
+	})
+}
+
+func TestPreResizeControlPlaneVMsValidationRejectsHeterogeneousInventory(t *testing.T) {
+	ctx := context.Background()
+	_, log := testlog.New()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	k := mock_adminactions.NewMockKubeActions(ctrl)
+	a := mock_adminactions.NewMockAzureActions(ctrl)
+	heterogeneousMachines := masterMachineListJSON(
+		masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
+		masterMachineWithZone("master-1", "Standard_D16s_v5", "2"),
+		masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
+	)
+	allKubeChecksHealthyMockWithMachineList(k, heterogeneousMachines)
+
+	f := &frontend{
+		validateResizeQuota: quotaCheckDisabled,
+	}
+
+	doc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Location: "eastus",
+			Properties: api.OpenShiftClusterProperties{
+				MasterProfile: api.MasterProfile{
+					VMSize: api.VMSizeStandardD8sV3,
+				},
+				ClusterProfile: api.ClusterProfile{
+					ResourceGroupID: "/subscriptions/000/resourceGroups/test-cluster",
+				},
+			},
+		},
+	}
+	subscriptionDoc := &api.SubscriptionDocument{}
+
+	a.EXPECT().
+		VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+		Return(map[string]*armcompute.ResourceSKU{
+			"Standard_D8s_v3": {
+				Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+				ResourceType: pointerutils.ToPtr("virtualMachines"),
+				Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+				LocationInfo: []*armcompute.ResourceSKULocationInfo{{Location: pointerutils.ToPtr("eastus")}},
+				Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+				Capabilities: []*armcompute.ResourceSKUCapabilities{},
+			},
+		}, nil)
+	expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+		"master-0": "Standard_D8s_v3",
+		"master-1": "Standard_D16s_v5",
+		"master-2": "Standard_D8s_v3",
+	})
+
+	_, err := f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, "Standard_D8s_v3", log)
+	assertErrorContainsAll(t, err,
+		"Pre-flight validation failed",
+		"controlPlaneInventory",
+		"All machines should have the same size",
+	)
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
@@ -253,8 +474,22 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					"master-1": "Standard_D8s_v3",
 					"master-2": "Standard_D8s_v3",
 				})
+				healthyControlPlaneInventoryMock(nil, a, "test-cluster", "Standard_D8s_v3")
 			},
-			kubeMocks:      allKubeChecksHealthyMock,
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+					masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
+					masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
+					masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
+				))
+				k.EXPECT().
+					KubeList(gomock.Any(), "Node", "").
+					Return(controlPlaneNodeListJSON(
+						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3"),
+						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3"),
+						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3"),
+					), nil)
+			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`"All pre-flight checks passed"` + "\n"),
 		},
