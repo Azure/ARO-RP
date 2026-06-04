@@ -604,6 +604,14 @@ func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
 			t.Fatalf("error message %q does not contain %q", message, expected)
 		}
 	}
+	for _, unexpected := range []string{
+		"400:",
+		"InvalidParameter: controlPlaneInventory:",
+	} {
+		if strings.Contains(message, unexpected) {
+			t.Fatalf("error message %q unexpectedly contains %q", message, unexpected)
+		}
+	}
 }
 
 func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {

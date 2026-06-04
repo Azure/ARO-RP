@@ -196,6 +196,28 @@ func preResizeControlPlaneValidationError(details []api.CloudErrorBody) *api.Clo
 	}
 }
 
+// validateResizeControlPlaneInventory reuses the live control-plane inventory
+// validation path so snapshot capture only needs to record rollback state.
+func validateResizeControlPlaneInventory(
+	ctx context.Context,
+	log *logrus.Entry,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	clusterResourceGroupID string,
+) error {
+	err := validateLiveControlPlaneInventory(log, ctx, k, a, clusterResourceGroupID)
+	if err != nil {
+		err = convertErrorLineEndings(err)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
+			"controlPlaneInventory",
+			err.Error(),
+		)
+	}
+
+	return nil
+}
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
 // delegates to checkResizeComputeQuota. Injected via f.validateResizeQuota so
 // tests can swap it with quotaCheckDisabled.

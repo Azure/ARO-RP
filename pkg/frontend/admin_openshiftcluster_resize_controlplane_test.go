@@ -680,9 +680,9 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				k.EXPECT().
 					KubeList(gomock.Any(), "Node", "").
 					Return(controlPlaneNodeListJSON(
-						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3"),
-						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3"),
-						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3"),
+						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
 					), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
 					Return(nodeJSON("master-2", true), nil).

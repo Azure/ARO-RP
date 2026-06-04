@@ -65,17 +65,19 @@ func normalizeResizeControlPlaneErrorForAdminReply(err error) error {
 		code := api.CloudErrorCodeInternalServerError
 		target := ""
 		details := []api.CloudErrorBody(nil)
+		message := err.Error()
 		if cloudErr.CloudErrorBody != nil {
 			code = cloudErr.Code
 			target = cloudErr.Target
 			details = cloudErr.Details
+			message = formatResizeControlPlaneAdminReplyMessage(cloudErr.Message, resizeErr)
 		}
 
 		return &api.CloudError{
 			StatusCode: cloudErr.StatusCode,
 			CloudErrorBody: &api.CloudErrorBody{
 				Code:    code,
-				Message: err.Error(),
+				Message: message,
 				Target:  target,
 				Details: details,
 			},
@@ -83,6 +85,22 @@ func normalizeResizeControlPlaneErrorForAdminReply(err error) error {
 	}
 
 	return err
+}
+
+func formatResizeControlPlaneAdminReplyMessage(baseMessage string, resizeErr *resizeControlPlaneError) string {
+	var b strings.Builder
+	b.WriteString(baseMessage)
+
+	if len(resizeErr.steps) > 0 {
+		b.WriteString(". Steps: ")
+		b.WriteString(strings.Join(resizeErr.steps, ", "))
+	}
+	if resizeErr.rollbackErr != nil {
+		b.WriteString(". Rollback errors: ")
+		b.WriteString(resizeErr.rollbackErr.Error())
+	}
+
+	return b.String()
 }
 
 func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.Context, r *http.Request) error {
