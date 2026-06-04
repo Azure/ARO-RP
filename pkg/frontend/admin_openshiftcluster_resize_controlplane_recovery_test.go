@@ -120,6 +120,43 @@ func TestRunStepPreservesOriginalActionErrors(t *testing.T) {
 	assertErrorContainsAll(t, err, "start: AADSTS700016 original Azure failure")
 }
 
+func TestWaitForEtcdHealthyBoundsHealthCheckByEtcdTimeout(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx := context.Background()
+		_, log := testlog.New()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		k := mock_adminactions.NewMockKubeActions(ctrl)
+
+		start := time.Now()
+		k.EXPECT().
+			KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+			DoAndReturn(func(ctx context.Context, resource, namespace, name string) ([]byte, error) {
+				deadline, ok := ctx.Deadline()
+				if !ok {
+					t.Fatal("expected waitForEtcdHealthy to bound each etcd health check with a deadline")
+				}
+
+				got := deadline.Sub(start)
+				if got < etcdHealthPollTimeout || got > etcdHealthPollTimeout+time.Second {
+					t.Fatalf("etcd health-check deadline = %s, want in [%s, %s]", got, etcdHealthPollTimeout, etcdHealthPollTimeout+time.Second)
+				}
+
+				<-ctx.Done()
+				return nil, ctx.Err()
+			}).
+			Times(1)
+
+		err := waitForEtcdHealthy(ctx, log, k)
+		assertErrorContainsAll(t, err,
+			"Failed to retrieve etcd ClusterOperator",
+			context.DeadlineExceeded.Error(),
+		)
+	})
+}
+
 func TestResizeControlPlaneRollback(t *testing.T) {
 	ctx := context.Background()
 	_, log := testlog.New()
