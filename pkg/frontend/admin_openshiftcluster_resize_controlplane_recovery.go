@@ -33,18 +33,6 @@ const (
 	etcdHealthPollInterval = 10 * time.Second
 )
 
-// retryAzureOperationPolicy defines the maximum number of attempts and the delay between attempts for retrying Azure operations.
-// Production keeps current behavior and tests can override delay.
-type retryAzureOperationPolicy struct {
-	maxAttempts int
-	retryDelay  time.Duration
-}
-
-var defaultRetryAzureOperationPolicy = retryAzureOperationPolicy{
-	maxAttempts: azureOperationMaxAttempts,
-	retryDelay:  azureOperationRetryDelay,
-}
-
 type resizeControlPlaneError struct {
 	baseErr     error
 	steps       []string
@@ -319,39 +307,24 @@ func ensureControlPlaneAndEtcdHealthy(ctx context.Context, k adminactions.KubeAc
 	return validateEtcdHealth(ctx, k)
 }
 
+// Keep Azure retries fixed here so tests verify the same retry semantics used in production.
 func retryAzureOperation(ctx context.Context, operationDesc string, fn func() error) error {
-	return retryAzureOperationWithPolicy(ctx, operationDesc, defaultRetryAzureOperationPolicy, fn)
-}
-
-func retryAzureOperationWithPolicy(
-	ctx context.Context,
-	operationDesc string,
-	policy retryAzureOperationPolicy,
-	fn func() error,
-) error {
-	if policy.maxAttempts <= 0 {
-		return fmt.Errorf("could not complete %s: invalid retry policy max attempts %d", operationDesc, policy.maxAttempts)
-	}
-
 	var lastErr error
-	for attempt := range policy.maxAttempts {
+	for attempt := range azureOperationMaxAttempts {
 		lastErr = fn()
 		if lastErr == nil {
 			return nil
 		}
-		if attempt == policy.maxAttempts-1 {
+		if attempt == azureOperationMaxAttempts-1 {
 			break
-		}
-		if policy.retryDelay <= 0 {
-			continue
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(policy.retryDelay):
+		case <-time.After(azureOperationRetryDelay):
 		}
 	}
-	return fmt.Errorf("could not complete %s after %d attempts: %w", operationDesc, policy.maxAttempts, lastErr)
+	return fmt.Errorf("could not complete %s after %d attempts: %w", operationDesc, azureOperationMaxAttempts, lastErr)
 }
 
 func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *controlPlaneNodeProgress) error {

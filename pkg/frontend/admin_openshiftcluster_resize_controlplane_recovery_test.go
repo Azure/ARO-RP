@@ -636,23 +636,4 @@ func TestRetryAzureOperation(t *testing.T) {
 			t.Fatalf("expected context.Canceled, got %v", err)
 		}
 	})
-
-	t.Run("allows injected retry delay policy", func(t *testing.T) {
-		policy := retryAzureOperationPolicy{
-			maxAttempts: 2,
-			retryDelay:  0,
-		}
-		calls := 0
-		err := retryAzureOperationWithPolicy(context.Background(), "test op", policy, func() error {
-			calls++
-			return errors.New("persistent")
-		})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if calls != policy.maxAttempts {
-			t.Fatalf("expected %d calls, got %d", policy.maxAttempts, calls)
-		}
-		assertErrorContainsAll(t, err, "could not complete test op", "persistent")
-	})
 }
