@@ -60,11 +60,10 @@ func (e *resizeControlPlaneError) Unwrap() error {
 }
 
 type controlPlaneNodeSnapshot struct {
-	machineName              string
-	originalVMSize           string
-	originalMachineSize      string
-	originalNodeInstanceType string
-	originallySchedulable    bool
+	machineName           string
+	originalVMSize        string
+	originalMachineSize   string
+	originallySchedulable bool
 }
 
 type controlPlaneNodeProgress struct {
@@ -133,24 +132,9 @@ func (o *resizeControlPlaneOperation) recordStep(node, step string, d time.Durat
 	}
 }
 
+// captureNodeSnapshot runs immediately before a node mutation, after pre-flight
+// inventory validation has already checked cross-resource consistency.
 func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, machineName string, machine machineValidationData) (controlPlaneNodeSnapshot, error) {
-	if machine.phase != "Running" {
-		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf("control plane machine %s is not Running (phase=%s)", machineName, machine.phase),
-		)
-	}
-	if machine.labelInstanceType == "" || machine.labelInstanceType != machine.size {
-		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf("control plane machine %s has mismatched Machine metadata: label instance-type %q, spec size %q", machineName, machine.labelInstanceType, machine.size),
-		)
-	}
-
 	vm, err := o.a.GetVirtualMachine(ctx, o.clusterResourceGroupName, machineName, mgmtcompute.InstanceView)
 	if err != nil {
 		return controlPlaneNodeSnapshot{}, fmt.Errorf("failed to capture Azure VM state for %s: %w", machineName, err)
@@ -160,14 +144,6 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 	}
 
 	actualVMSize := string(vm.HardwareProfile.VMSize)
-	if !strings.EqualFold(actualVMSize, machine.size) {
-		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf("actual Azure VM size %s does not match Machine spec size %s for %s", actualVMSize, machine.size, machineName),
-		)
-	}
 
 	rawNode, err := o.k.KubeGet(ctx, "Node", "", machineName)
 	if err != nil {
@@ -179,32 +155,11 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 		return controlPlaneNodeSnapshot{}, fmt.Errorf("failed to parse node state for %s: %w", machineName, err)
 	}
 
-	labels := node.GetLabels()
-	nodeInstanceType := labels[nodeLabelInstanceType]
-	betaInstanceType := labels[nodeLabelBetaInstanceType]
-	if nodeInstanceType != betaInstanceType {
-		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf("node %s has inconsistent instance type labels: %s=%q, %s=%q", machineName, nodeLabelInstanceType, nodeInstanceType, nodeLabelBetaInstanceType, betaInstanceType),
-		)
-	}
-	if !strings.EqualFold(nodeInstanceType, machine.size) {
-		return controlPlaneNodeSnapshot{}, api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"",
-			fmt.Sprintf("node %s instance type labels do not match Machine spec size %s", machineName, machine.size),
-		)
-	}
-
 	snapshot := controlPlaneNodeSnapshot{
-		machineName:              machineName,
-		originalVMSize:           actualVMSize,
-		originalMachineSize:      machine.size,
-		originalNodeInstanceType: nodeInstanceType,
-		originallySchedulable:    !node.Spec.Unschedulable,
+		machineName:           machineName,
+		originalVMSize:        actualVMSize,
+		originalMachineSize:   machine.size,
+		originallySchedulable: !node.Spec.Unschedulable,
 	}
 
 	o.log.WithFields(logrus.Fields{
@@ -416,7 +371,7 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 
 	if state.nodeLabelsUpdated && vmSizeRestored {
 		start := time.Now()
-		err := setNodeInstanceTypeLabels(ctx, o.k, nodeName, state.snapshot.originalNodeInstanceType)
+		err := setNodeInstanceTypeLabels(ctx, o.k, nodeName, state.snapshot.originalMachineSize)
 		o.recordStep(nodeName, "restoreNodeLabels", time.Since(start), err)
 		if err != nil {
 			rollbackErrs = append(rollbackErrs, err)

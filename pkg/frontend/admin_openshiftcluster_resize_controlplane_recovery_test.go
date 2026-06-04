@@ -36,6 +36,36 @@ func virtualMachineWithSize(vmSize string) mgmtcompute.VirtualMachine {
 	}
 }
 
+func nodeJSONWithLabels(name string, ready, unschedulable bool, nodeInstanceType, betaInstanceType string) []byte {
+	status := "False"
+	if ready {
+		status = "True"
+	}
+
+	obj := map[string]any{
+		"apiVersion": "v1",
+		"kind":       "Node",
+		"metadata": map[string]any{
+			"name": name,
+			"labels": map[string]any{
+				nodeLabelInstanceType:     nodeInstanceType,
+				nodeLabelBetaInstanceType: betaInstanceType,
+			},
+		},
+		"spec": map[string]any{
+			"unschedulable": unschedulable,
+		},
+		"status": map[string]any{
+			"conditions": []any{
+				map[string]any{"type": "Ready", "status": status},
+			},
+		},
+	}
+
+	b, _ := json.Marshal(obj)
+	return b
+}
+
 func assertErrorContainsAll(t *testing.T, err error, substrs ...string) {
 	t.Helper()
 
@@ -322,7 +352,7 @@ func TestNewResizeControlPlaneExecutionContext(t *testing.T) {
 	}
 }
 
-func TestRecordOriginalVMSizeUsesAzureActualVM(t *testing.T) {
+func TestCaptureNodeSnapshotUsesLiveStateForSnapshotOnly(t *testing.T) {
 	ctx := context.Background()
 	_, log := testlog.New()
 
@@ -353,14 +383,29 @@ func TestRecordOriginalVMSizeUsesAzureActualVM(t *testing.T) {
 	k = mock_adminactions.NewMockKubeActions(ctrl)
 	a = mock_adminactions.NewMockAzureActions(ctrl)
 	op = newResizeControlPlaneOperation(log, k, a, "Standard_D16s_v5", true, "test-cluster")
+	machine.phase = "Failed"
+	machine.labelInstanceType = "stale"
 
 	gomock.InOrder(
 		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
 			Return(virtualMachineWithSize("Standard_D4s_v3"), nil),
+		k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+			Return(nodeJSONWithLabels("master-0", true, false, "mismatched", "another-mismatch"), nil),
 	)
 
-	_, err = op.captureNodeSnapshot(ctx, "master-0", machine)
-	assertErrorContainsAll(t, err, "actual Azure VM size Standard_D4s_v3", "Machine spec size Standard_D8s_v3")
+	snapshot, err := op.captureNodeSnapshot(ctx, "master-0", machine)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if snapshot.originalVMSize != "Standard_D4s_v3" {
+		t.Fatalf("originalVMSize = %s, want Standard_D4s_v3", snapshot.originalVMSize)
+	}
+	if snapshot.originalMachineSize != "Standard_D8s_v3" {
+		t.Fatalf("originalMachineSize = %s, want Standard_D8s_v3", snapshot.originalMachineSize)
+	}
+	if !snapshot.originallySchedulable {
+		t.Fatal("expected snapshot to preserve schedulable node state")
+	}
 }
 
 func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
@@ -376,11 +421,10 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 	op := newResizeControlPlaneOperation(log, k, a, desiredSize, true, "test-cluster")
 	state := &controlPlaneNodeProgress{
 		snapshot: controlPlaneNodeSnapshot{
-			machineName:              "master-0",
-			originalVMSize:           "Standard_D8s_v3",
-			originalMachineSize:      "Standard_D8s_v3",
-			originalNodeInstanceType: "Standard_D8s_v3",
-			originallySchedulable:    true,
+			machineName:           "master-0",
+			originalVMSize:        "Standard_D8s_v3",
+			originalMachineSize:   "Standard_D8s_v3",
+			originallySchedulable: true,
 		},
 		vmResized:                  true,
 		machineUpdated:             true,
