@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -78,6 +79,45 @@ func assertErrorContainsAll(t *testing.T, err error, substrs ...string) {
 			t.Fatalf("error %q does not contain %q", err.Error(), substr)
 		}
 	}
+}
+
+func TestRunStepRecordsAndWrapsStepErrors(t *testing.T) {
+	ctx := context.Background()
+	_, log := testlog.New()
+
+	op := &resizeControlPlaneOperation{log: log}
+
+	err := op.runStep(ctx, "master-0", "resize", steps.Action(func(context.Context) error {
+		return errors.New("boom")
+	}))
+
+	assertErrorContainsAll(t, err, "resize: boom")
+	if len(op.steps) != 1 {
+		t.Fatalf("expected 1 recorded step, got %d", len(op.steps))
+	}
+	if !strings.Contains(op.steps[0], "master-0:resize failed") {
+		t.Fatalf("recorded step = %q, want resize failure entry", op.steps[0])
+	}
+}
+
+func TestRunStepPreservesOriginalActionErrors(t *testing.T) {
+	ctx := context.Background()
+	_, log := testlog.New()
+
+	op := &resizeControlPlaneOperation{log: log}
+
+	err := op.runStep(ctx, "master-0", "start", steps.Action(func(context.Context) error {
+		return errors.New("AADSTS700016 original Azure failure")
+	}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) {
+		t.Fatalf("runStep should not reclassify action errors into CloudError, got %#v", cloudErr)
+	}
+	assertErrorContainsAll(t, err, "start: AADSTS700016 original Azure failure")
 }
 
 func TestResizeControlPlaneRollback(t *testing.T) {

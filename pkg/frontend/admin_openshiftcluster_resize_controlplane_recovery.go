@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
 const (
@@ -86,12 +87,13 @@ type resizeControlPlaneOperation struct {
 	nodes                    []*controlPlaneNodeProgress
 }
 
-// newResizeControlPlaneExecutionContext creates a context decoupled from the
-// HTTP request lifecycle. The resize operation (~45 min for 3 nodes) must
-// complete even if the HTTP connection drops — the Geneva Actions client sets
-// Timeout = InfiniteTimeSpan, but intermediary load balancers between the ACIS
-// host and the RP VMSS can still close long-lived connections. ARM is not in
-// this path; Geneva Actions calls the admin API directly via client certificate.
+// newResizeControlPlaneExecutionContext stays local because only the admin
+// handler knows when resize work must outlive the incoming HTTP request.
+// The resize operation (~45 min for 3 nodes) must complete even if the HTTP
+// connection drops — the Geneva Actions client sets Timeout =
+// InfiniteTimeSpan, but intermediary load balancers between the ACIS host and
+// the RP VMSS can still close long-lived connections. ARM is not in this path;
+// Geneva Actions calls the admin API directly via client certificate.
 //
 // Parallel invocation is unlikely — this is restricted to on-call SREs via
 // Geneva Actions (ClientPlatformServiceOperator claim) and requires manual
@@ -124,6 +126,8 @@ func newResizeControlPlaneOperation(
 	}
 }
 
+// recordStep stays local because rollback and admin replies rely on these
+// operator-facing step names rather than pkg/util/steps' generic step labels.
 func (o *resizeControlPlaneOperation) recordStep(node, step string, d time.Duration, err error) {
 	if err != nil {
 		o.steps = append(o.steps, fmt.Sprintf("%s:%s failed (%s): %v", node, step, d.Truncate(time.Millisecond), err))
@@ -132,8 +136,31 @@ func (o *resizeControlPlaneOperation) recordStep(node, step string, d time.Durat
 	}
 }
 
-// captureNodeSnapshot runs immediately before a node mutation, after pre-flight
-// inventory validation has already checked cross-resource consistency.
+func (o *resizeControlPlaneOperation) runStep(ctx context.Context, nodeName, stepName string, step steps.Step) error {
+	start := time.Now()
+	_, err := steps.Run(ctx, o.log, 0, []steps.Step{step}, nil, "")
+	err = unwrapSyntheticStepRunnerError(err)
+	o.recordStep(nodeName, stepName, time.Since(start), err)
+	if err != nil {
+		return fmt.Errorf("%s: %w", stepName, err)
+	}
+	return nil
+}
+
+func unwrapSyntheticStepRunnerError(err error) error {
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) &&
+		cloudErr.Target == "encountered error" &&
+		(cloudErr.Code == api.CloudErrorCodeInvalidServicePrincipalCredentials ||
+			cloudErr.Code == api.CloudErrorCodeInternalServerError) {
+		return errors.New(cloudErr.Message)
+	}
+
+	return err
+}
+
+// captureNodeSnapshot stays local because rollback needs per-node state captured
+// exactly at mutation time, not just generic step execution.
 func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, machineName string, machine machineValidationData) (controlPlaneNodeSnapshot, error) {
 	vm, err := o.a.GetVirtualMachine(ctx, o.clusterResourceGroupName, machineName, mgmtcompute.InstanceView)
 	if err != nil {
@@ -174,66 +201,114 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *controlPlaneNodeProgress) error {
 	nodeName := state.snapshot.machineName
 
-	run := func(step string, fn func() error) error {
-		start := time.Now()
-		err := fn()
-		o.recordStep(nodeName, step, time.Since(start), err)
-		if err != nil {
-			return fmt.Errorf("%s: %w", step, err)
-		}
-		return nil
+	type resizeNodeStep struct {
+		name  string
+		step  steps.Step
+		after func()
 	}
+
+	stepEntries := make([]resizeNodeStep, 0, 9)
+	if state.snapshot.originallySchedulable {
+		stepEntries = append(stepEntries, resizeNodeStep{
+			name: "cordon",
+			step: steps.Action(func(ctx context.Context) error {
+				return cordonNode(ctx, o.k, nodeName)
+			}),
+			after: func() {
+				state.schedulabilityNeedsRestore = true
+			},
+		})
+	}
+
+	stepEntries = append(stepEntries,
+		resizeNodeStep{
+			name: "drain",
+			step: steps.Action(func(ctx context.Context) error {
+				return o.k.DrainNodeWithRetries(ctx, nodeName)
+			}),
+		},
+		resizeNodeStep{
+			name: "stop",
+			step: steps.Action(func(ctx context.Context) error {
+				return o.a.VMStopAndWait(ctx, nodeName, o.deallocateVM)
+			}),
+			after: func() {
+				state.vmStopped = true
+			},
+		},
+		resizeNodeStep{
+			name: "resize",
+			step: steps.Action(func(ctx context.Context) error {
+				return o.a.VMResize(ctx, nodeName, o.desiredVMSize)
+			}),
+			after: func() {
+				state.vmResized = true
+			},
+		},
+		resizeNodeStep{
+			name: "start",
+			step: steps.Action(func(ctx context.Context) error {
+				return o.a.VMStartAndWait(ctx, nodeName)
+			}),
+		},
+		resizeNodeStep{
+			name: "waitReady",
+			step: steps.Action(func(ctx context.Context) error {
+				return waitForNodeReady(ctx, o.log, o.k, nodeName)
+			}),
+			after: func() {
+				state.vmStopped = false
+			},
+		},
+		resizeNodeStep{
+			name: "waitEtcd",
+			step: steps.Action(func(ctx context.Context) error {
+				return waitForEtcdHealthy(ctx, o.log, o.k)
+			}),
+		},
+	)
 
 	if state.snapshot.originallySchedulable {
-		if err := run("cordon", func() error { return cordonNode(ctx, o.k, nodeName) }); err != nil {
+		stepEntries = append(stepEntries, resizeNodeStep{
+			name: "uncordon",
+			step: steps.Action(func(ctx context.Context) error {
+				return uncordonNode(ctx, o.k, nodeName)
+			}),
+			after: func() {
+				state.schedulabilityNeedsRestore = false
+			},
+		})
+	}
+
+	stepEntries = append(stepEntries,
+		resizeNodeStep{
+			name: "updateMachine",
+			step: steps.Action(func(ctx context.Context) error {
+				return updateMachineVMSize(ctx, o.k, nodeName, o.desiredVMSize)
+			}),
+			after: func() {
+				state.machineUpdated = true
+			},
+		},
+		resizeNodeStep{
+			name: "updateNodeLabels",
+			step: steps.Action(func(ctx context.Context) error {
+				return setNodeInstanceTypeLabels(ctx, o.k, nodeName, o.desiredVMSize)
+			}),
+			after: func() {
+				state.nodeLabelsUpdated = true
+			},
+		},
+	)
+
+	for _, step := range stepEntries {
+		if err := o.runStep(ctx, nodeName, step.name, step.step); err != nil {
 			return err
 		}
-		state.schedulabilityNeedsRestore = true
-	}
-
-	if err := run("drain", func() error { return o.k.DrainNodeWithRetries(ctx, nodeName) }); err != nil {
-		return err
-	}
-
-	if err := run("stop", func() error { return o.a.VMStopAndWait(ctx, nodeName, o.deallocateVM) }); err != nil {
-		return err
-	}
-	state.vmStopped = true
-
-	if err := run("resize", func() error { return o.a.VMResize(ctx, nodeName, o.desiredVMSize) }); err != nil {
-		return err
-	}
-	state.vmResized = true
-
-	if err := run("start", func() error { return o.a.VMStartAndWait(ctx, nodeName) }); err != nil {
-		return err
-	}
-
-	if err := run("waitReady", func() error { return waitForNodeReady(ctx, o.log, o.k, nodeName) }); err != nil {
-		return err
-	}
-	state.vmStopped = false
-
-	if err := run("waitEtcd", func() error { return waitForEtcdHealthy(ctx, o.log, o.k) }); err != nil {
-		return err
-	}
-
-	if state.snapshot.originallySchedulable {
-		if err := run("uncordon", func() error { return uncordonNode(ctx, o.k, nodeName) }); err != nil {
-			return err
+		if step.after != nil {
+			step.after()
 		}
-		state.schedulabilityNeedsRestore = false
 	}
-
-	if err := run("updateMachine", func() error { return updateMachineVMSize(ctx, o.k, nodeName, o.desiredVMSize) }); err != nil {
-		return err
-	}
-	state.machineUpdated = true
-
-	if err := run("updateNodeLabels", func() error { return setNodeInstanceTypeLabels(ctx, o.k, nodeName, o.desiredVMSize) }); err != nil {
-		return err
-	}
-	state.nodeLabelsUpdated = true
 
 	return nil
 }
@@ -262,7 +337,8 @@ func ensureControlPlaneAndEtcdHealthy(ctx context.Context, k adminactions.KubeAc
 	return validateEtcdHealth(ctx, k)
 }
 
-// Keep Azure retries fixed here so tests verify the same retry semantics used in production.
+// Keep Azure retries local so resize and rollback keep the same semantics the
+// recovery tests assert without pushing policy into pkg/util/steps.
 func retryAzureOperation(ctx context.Context, operationDesc string, fn func() error) error {
 	var lastErr error
 	for attempt := range azureOperationMaxAttempts {
@@ -282,6 +358,8 @@ func retryAzureOperation(ctx context.Context, operationDesc string, fn func() er
 	return fmt.Errorf("could not complete %s after %d attempts: %w", operationDesc, azureOperationMaxAttempts, lastErr)
 }
 
+// rollbackNode stays local because it replays stateful compensation based on
+// partial progress flags that pkg/util/steps does not model.
 func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *controlPlaneNodeProgress) error {
 	nodeName := state.snapshot.machineName
 	var rollbackErrs []error
@@ -399,8 +477,8 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 	return errors.Join(rollbackErrs...)
 }
 
-// rollbackAll processes nodes in reverse order and rechecks etcd between nodes.
-// If etcd is unhealthy mid-rollback, stop immediately so SRE can take a targeted recovery path.
+// rollbackAll stays local because it coordinates reverse-order compensation
+// across nodes, including the etcd gate between rollback attempts.
 func (o *resizeControlPlaneOperation) rollbackAll(ctx context.Context) error {
 	var errs []error
 	for offset := range len(o.nodes) {
