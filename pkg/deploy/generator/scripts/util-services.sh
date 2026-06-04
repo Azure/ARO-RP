@@ -164,7 +164,6 @@ ExecStart=/usr/bin/podman run \
   --ip ${IPADDRESS} \
   -p 443:8443 \
   -p 8443:8443 \
-  -p 8444:8444 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
@@ -335,8 +334,9 @@ ExecStart=/usr/bin/podman run \
   -e ARO_LOG_LEVEL \
   -m 2g \
   -p 444:8444 \
+  -p 8444:8444 \
   -p 2222:2222 \
-  -p 2223:2223 \
+  -p 2223:2222 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   -v /var/run/mdsd/asa:/var/run/mdsd/asa:z \
