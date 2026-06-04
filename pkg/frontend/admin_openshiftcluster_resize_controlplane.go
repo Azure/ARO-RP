@@ -375,8 +375,12 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 	return k.KubeCreateOrUpdate(ctx, &obj)
 }
 
-// Keep both node instance-type labels aligned because resize validation fails closed when they diverge.
+// Resize and rollback both update the stable and beta node labels together because validation rejects divergence.
 func setNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
+	if vmSize == "" {
+		return fmt.Errorf("node instance type labels require a non-empty VM size")
+	}
+
 	return retryKubeObjectUpdate(ctx, "Node", func() error {
 		return doSetNodeInstanceTypeLabels(ctx, k, nodeName, vmSize)
 	})
@@ -404,6 +408,7 @@ func retryKubeObjectUpdate(ctx context.Context, objectType string, updateFn func
 	return fmt.Errorf("could not update %s object after %d attempts: %w", objectType, kubeObjectUpdateMaxAttempts, lastErr)
 }
 
+// Callers pass a validated VM size, so this helper only needs to mirror that value onto both node labels.
 func doSetNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
 	rawNode, err := k.KubeGet(ctx, "Node", "", nodeName)
 	if err != nil {
@@ -419,16 +424,8 @@ func doSetNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	if vmSize == "" {
-		delete(labels, nodeLabelInstanceType)
-	} else {
-		labels[nodeLabelInstanceType] = vmSize
-	}
-	if vmSize == "" {
-		delete(labels, nodeLabelBetaInstanceType)
-	} else {
-		labels[nodeLabelBetaInstanceType] = vmSize
-	}
+	labels[nodeLabelInstanceType] = vmSize
+	labels[nodeLabelBetaInstanceType] = vmSize
 	node.SetLabels(labels)
 
 	objMap, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(&node)

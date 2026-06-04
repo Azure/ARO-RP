@@ -496,6 +496,16 @@ func TestSetNodeInstanceTypeLabels(t *testing.T) {
 	ctx := context.Background()
 	wantVMSize := "Standard_D16s_v5"
 
+	t.Run("rejects empty vmSize", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		k := mock_adminactions.NewMockKubeActions(ctrl)
+
+		err := setNodeInstanceTypeLabels(ctx, k, "master-0", "")
+		utilerror.AssertErrorMessage(t, err, "node instance type labels require a non-empty VM size")
+	})
+
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*testing.T, *mock_adminactions.MockKubeActions)
