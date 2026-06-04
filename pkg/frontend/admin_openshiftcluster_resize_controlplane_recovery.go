@@ -72,12 +72,11 @@ func (e *resizeControlPlaneError) Unwrap() error {
 }
 
 type controlPlaneNodeSnapshot struct {
-	machineName                  string
-	originalVMSize               string
-	originalMachineSize          string
-	originalNodeInstanceType     string
-	originalNodeBetaInstanceType string
-	originallySchedulable        bool
+	machineName              string
+	originalVMSize           string
+	originalMachineSize      string
+	originalNodeInstanceType string
+	originallySchedulable    bool
 }
 
 type controlPlaneNodeProgress struct {
@@ -213,12 +212,11 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 	}
 
 	snapshot := controlPlaneNodeSnapshot{
-		machineName:                  machineName,
-		originalVMSize:               actualVMSize,
-		originalMachineSize:          machine.size,
-		originalNodeInstanceType:     nodeInstanceType,
-		originalNodeBetaInstanceType: betaInstanceType,
-		originallySchedulable:        !node.Spec.Unschedulable,
+		machineName:              machineName,
+		originalVMSize:           actualVMSize,
+		originalMachineSize:      machine.size,
+		originalNodeInstanceType: nodeInstanceType,
+		originallySchedulable:    !node.Spec.Unschedulable,
 	}
 
 	o.log.WithFields(logrus.Fields{
@@ -289,7 +287,7 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 	}
 	state.machineUpdated = true
 
-	if err := run("updateNodeLabels", func() error { return updateNodeInstanceTypeLabels(ctx, o.k, nodeName, o.desiredVMSize) }); err != nil {
+	if err := run("updateNodeLabels", func() error { return setNodeInstanceTypeLabels(ctx, o.k, nodeName, o.desiredVMSize) }); err != nil {
 		return err
 	}
 	state.nodeLabelsUpdated = true
@@ -445,7 +443,7 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 
 	if state.nodeLabelsUpdated && vmSizeRestored {
 		start := time.Now()
-		err := restoreNodeInstanceTypeLabels(ctx, o.k, nodeName, state.snapshot.originalNodeInstanceType, state.snapshot.originalNodeBetaInstanceType)
+		err := setNodeInstanceTypeLabels(ctx, o.k, nodeName, state.snapshot.originalNodeInstanceType)
 		o.recordStep(nodeName, "restoreNodeLabels", time.Since(start), err)
 		if err != nil {
 			rollbackErrs = append(rollbackErrs, err)

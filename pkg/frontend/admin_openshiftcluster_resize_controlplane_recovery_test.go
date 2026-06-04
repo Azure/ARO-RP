@@ -376,12 +376,11 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 	op := newResizeControlPlaneOperation(log, k, a, desiredSize, true, "test-cluster")
 	state := &controlPlaneNodeProgress{
 		snapshot: controlPlaneNodeSnapshot{
-			machineName:                  "master-0",
-			originalVMSize:               "Standard_D8s_v3",
-			originalMachineSize:          "Standard_D8s_v3",
-			originalNodeInstanceType:     "Standard_D8s_v3",
-			originalNodeBetaInstanceType: "Standard_D8s_v3",
-			originallySchedulable:        true,
+			machineName:              "master-0",
+			originalVMSize:           "Standard_D8s_v3",
+			originalMachineSize:      "Standard_D8s_v3",
+			originalNodeInstanceType: "Standard_D8s_v3",
+			originallySchedulable:    true,
 		},
 		vmResized:                  true,
 		machineUpdated:             true,

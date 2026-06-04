@@ -375,17 +375,10 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 	return k.KubeCreateOrUpdate(ctx, &obj)
 }
 
-func updateNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
-	return setNodeInstanceTypeLabels(ctx, k, nodeName, vmSize, vmSize)
-}
-
-func restoreNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, nodeInstanceType, betaInstanceType string) error {
-	return setNodeInstanceTypeLabels(ctx, k, nodeName, nodeInstanceType, betaInstanceType)
-}
-
-func setNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, nodeInstanceType, betaInstanceType string) error {
+// Keep both node instance-type labels aligned because resize validation fails closed when they diverge.
+func setNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
 	return retryKubeObjectUpdate(ctx, "Node", func() error {
-		return doSetNodeInstanceTypeLabels(ctx, k, nodeName, nodeInstanceType, betaInstanceType)
+		return doSetNodeInstanceTypeLabels(ctx, k, nodeName, vmSize)
 	})
 }
 
@@ -411,7 +404,7 @@ func retryKubeObjectUpdate(ctx context.Context, objectType string, updateFn func
 	return fmt.Errorf("could not update %s object after %d attempts: %w", objectType, kubeObjectUpdateMaxAttempts, lastErr)
 }
 
-func doSetNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, nodeInstanceType, betaInstanceType string) error {
+func doSetNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions, nodeName, vmSize string) error {
 	rawNode, err := k.KubeGet(ctx, "Node", "", nodeName)
 	if err != nil {
 		return err
@@ -426,15 +419,15 @@ func doSetNodeInstanceTypeLabels(ctx context.Context, k adminactions.KubeActions
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	if nodeInstanceType == "" {
+	if vmSize == "" {
 		delete(labels, nodeLabelInstanceType)
 	} else {
-		labels[nodeLabelInstanceType] = nodeInstanceType
+		labels[nodeLabelInstanceType] = vmSize
 	}
-	if betaInstanceType == "" {
+	if vmSize == "" {
 		delete(labels, nodeLabelBetaInstanceType)
 	} else {
-		labels[nodeLabelBetaInstanceType] = betaInstanceType
+		labels[nodeLabelBetaInstanceType] = vmSize
 	}
 	node.SetLabels(labels)
 

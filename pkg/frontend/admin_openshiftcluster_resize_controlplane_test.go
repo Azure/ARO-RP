@@ -492,32 +492,101 @@ func TestUpdateMachineVMSize(t *testing.T) {
 	}
 }
 
-func TestUpdateNodeInstanceTypeLabels(t *testing.T) {
+func TestSetNodeInstanceTypeLabels(t *testing.T) {
 	ctx := context.Background()
+	wantVMSize := "Standard_D16s_v5"
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mock_adminactions.MockKubeActions)
+		mocks   func(*testing.T, *mock_adminactions.MockKubeActions)
 		wantErr string
 	}{
 		{
 			name: "success",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
+			mocks: func(t *testing.T, k *mock_adminactions.MockKubeActions) {
+				t.Helper()
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 					Return(nodeJSON("master-0", true), nil)
-				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil)
+				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, obj any) error {
+						t.Helper()
+
+						unstructuredObj, ok := obj.(*unstructured.Unstructured)
+						if !ok {
+							t.Fatalf("unexpected object type %T", obj)
+						}
+
+						labels, found, err := unstructured.NestedStringMap(unstructuredObj.Object, "metadata", "labels")
+						if err != nil {
+							t.Fatalf("unexpected nested labels error: %v", err)
+						}
+						if !found {
+							t.Fatal("expected metadata.labels to be present")
+						}
+						if labels[nodeLabelInstanceType] != wantVMSize {
+							t.Fatalf("expected %s label to be %q, got %q", nodeLabelInstanceType, wantVMSize, labels[nodeLabelInstanceType])
+						}
+						if labels[nodeLabelBetaInstanceType] != wantVMSize {
+							t.Fatalf("expected %s label to be %q, got %q", nodeLabelBetaInstanceType, wantVMSize, labels[nodeLabelBetaInstanceType])
+						}
+
+						return nil
+					})
 			},
 		},
 		{
 			name: "retries on failure",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
+			mocks: func(t *testing.T, k *mock_adminactions.MockKubeActions) {
+				t.Helper()
 				gomock.InOrder(
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(errors.New("conflict")),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).
+						DoAndReturn(func(_ context.Context, obj any) error {
+							t.Helper()
+
+							unstructuredObj, ok := obj.(*unstructured.Unstructured)
+							if !ok {
+								t.Fatalf("unexpected object type %T", obj)
+							}
+
+							labels, found, err := unstructured.NestedStringMap(unstructuredObj.Object, "metadata", "labels")
+							if err != nil {
+								t.Fatalf("unexpected nested labels error: %v", err)
+							}
+							if !found {
+								t.Fatal("expected metadata.labels to be present")
+							}
+							if labels[nodeLabelInstanceType] != wantVMSize || labels[nodeLabelBetaInstanceType] != wantVMSize {
+								t.Fatalf("expected both instance type labels to be %q, got %q and %q", wantVMSize, labels[nodeLabelInstanceType], labels[nodeLabelBetaInstanceType])
+							}
+
+							return errors.New("conflict")
+						}),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).
+						DoAndReturn(func(_ context.Context, obj any) error {
+							t.Helper()
+
+							unstructuredObj, ok := obj.(*unstructured.Unstructured)
+							if !ok {
+								t.Fatalf("unexpected object type %T", obj)
+							}
+
+							labels, found, err := unstructured.NestedStringMap(unstructuredObj.Object, "metadata", "labels")
+							if err != nil {
+								t.Fatalf("unexpected nested labels error: %v", err)
+							}
+							if !found {
+								t.Fatal("expected metadata.labels to be present")
+							}
+							if labels[nodeLabelInstanceType] != wantVMSize || labels[nodeLabelBetaInstanceType] != wantVMSize {
+								t.Fatalf("expected both instance type labels to be %q, got %q and %q", wantVMSize, labels[nodeLabelInstanceType], labels[nodeLabelBetaInstanceType])
+							}
+
+							return nil
+						}),
 				)
 			},
 		},
@@ -527,9 +596,9 @@ func TestUpdateNodeInstanceTypeLabels(t *testing.T) {
 			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
-			tt.mocks(k)
+			tt.mocks(t, k)
 
-			err := updateNodeInstanceTypeLabels(ctx, k, "master-0", "Standard_D16s_v5")
+			err := setNodeInstanceTypeLabels(ctx, k, "master-0", wantVMSize)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
