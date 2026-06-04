@@ -357,6 +357,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 	if g.production {
 		t.Resources = append(t.Resources,
 			g.rpSecurityGroupForPortalSourceAddressPrefixes(),
+			g.rpSecurityGroupForPortalSourceAddressPrefixesTagged(),
 		)
 	}
 
