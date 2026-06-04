@@ -48,6 +48,19 @@ func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resourc
 	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
 }
 
+func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixesTagged() *arm.Resource {
+	return g.securityRules("rp-nsg/portal_in_tagged", &armnetwork.SecurityRulePropertiesFormat{
+		Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+		SourcePortRange:          pointerutils.ToPtr("*"),
+		DestinationPortRange:     pointerutils.ToPtr("8444"),
+		SourceAddressPrefixes:    []*string{},
+		DestinationAddressPrefix: pointerutils.ToPtr("*"),
+		Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+		Priority:                 pointerutils.ToPtr(int32(143)),
+		Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
+}
+
 func (g *generator) rpSecurityGroup() *arm.Resource {
 	rules := []*armnetwork.SecurityRule{
 		{
