@@ -208,6 +208,23 @@
                 "sourcePortRange": "*"
             },
             "type": "Microsoft.Network/networkSecurityGroups/securityRules"
+        },
+        {
+            "apiVersion": "2020-08-01",
+            "condition": "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]",
+            "location": "[resourceGroup().location]",
+            "name": "rp-nsg/portal_in_tagged",
+            "properties": {
+                "access": "Allow",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "8444",
+                "direction": "Inbound",
+                "priority": 143,
+                "protocol": "Tcp",
+                "sourceAddressPrefixes": "[parameters('rpNsgPortalSourceAddressPrefixes')]",
+                "sourcePortRange": "*"
+            },
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules"
         }
     ]
 }
