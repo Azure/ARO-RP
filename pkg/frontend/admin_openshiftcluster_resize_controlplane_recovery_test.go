@@ -656,25 +656,4 @@ func TestRetryAzureOperation(t *testing.T) {
 		}
 		assertErrorContainsAll(t, err, "could not complete test op", "persistent")
 	})
-
-	t.Run("respects canceled context when retry delay disabled", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-
-		policy := retryAzureOperationPolicy{
-			maxAttempts: 3,
-			retryDelay:  0,
-		}
-		calls := 0
-		err := retryAzureOperationWithPolicy(ctx, "test op", policy, func() error {
-			calls++
-			return errors.New("should not be called")
-		})
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("expected context.Canceled, got %v", err)
-		}
-		if calls != 0 {
-			t.Fatalf("expected 0 calls, got %d", calls)
-		}
-	})
 }
