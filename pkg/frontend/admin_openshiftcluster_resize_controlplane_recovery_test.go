@@ -532,6 +532,50 @@ func TestAdminReplyFallsBackTo500WhenNoCloudError(t *testing.T) {
 	}
 }
 
+func TestAdminReplyPreservesWrappedCloudErrorWithoutBody(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	_, log := testlog.New()
+
+	err := &resizeControlPlaneError{
+		baseErr: &api.CloudError{StatusCode: http.StatusBadGateway},
+		steps: []string{
+			"master-0:stop (10ms)",
+			"master-0:resize failed (10ms): Azure resize error",
+		},
+	}
+
+	adminReply(log, recorder, nil, nil, normalizeResizeControlPlaneErrorForAdminReply(err))
+
+	if recorder.Code != http.StatusBadGateway {
+		t.Fatalf("status code = %d, want %d", recorder.Code, http.StatusBadGateway)
+	}
+
+	var body map[string]map[string]any
+	if decodeErr := json.Unmarshal(recorder.Body.Bytes(), &body); decodeErr != nil {
+		t.Fatalf("failed to decode response body: %v", decodeErr)
+	}
+
+	errorBody := body["error"]
+	if errorBody["code"] != api.CloudErrorCodeInternalServerError {
+		t.Fatalf("error code = %v, want %s", errorBody["code"], api.CloudErrorCodeInternalServerError)
+	}
+
+	message, ok := errorBody["message"].(string)
+	if !ok {
+		t.Fatalf("error message has unexpected type %T", errorBody["message"])
+	}
+	for _, expected := range []string{
+		"502",
+		"Steps:",
+		"master-0:stop",
+		"master-0:resize failed",
+	} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("error message %q does not contain %q", message, expected)
+		}
+	}
+}
+
 func TestRetryAzureOperation(t *testing.T) {
 	t.Run("succeeds on first attempt", func(t *testing.T) {
 		calls := 0
@@ -611,5 +655,26 @@ func TestRetryAzureOperation(t *testing.T) {
 			t.Fatalf("expected %d calls, got %d", policy.maxAttempts, calls)
 		}
 		assertErrorContainsAll(t, err, "could not complete test op", "persistent")
+	})
+
+	t.Run("respects canceled context when retry delay disabled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		policy := retryAzureOperationPolicy{
+			maxAttempts: 3,
+			retryDelay:  0,
+		}
+		calls := 0
+		err := retryAzureOperationWithPolicy(ctx, "test op", policy, func() error {
+			calls++
+			return errors.New("should not be called")
+		})
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context.Canceled, got %v", err)
+		}
+		if calls != 0 {
+			t.Fatalf("expected 0 calls, got %d", calls)
+		}
 	})
 }

@@ -62,13 +62,22 @@ func normalizeResizeControlPlaneErrorForAdminReply(err error) error {
 	var resizeErr *resizeControlPlaneError
 	var cloudErr *api.CloudError
 	if errors.As(err, &resizeErr) && errors.As(err, &cloudErr) {
+		code := api.CloudErrorCodeInternalServerError
+		target := ""
+		details := []api.CloudErrorBody(nil)
+		if cloudErr.CloudErrorBody != nil {
+			code = cloudErr.Code
+			target = cloudErr.Target
+			details = cloudErr.Details
+		}
+
 		return &api.CloudError{
 			StatusCode: cloudErr.StatusCode,
 			CloudErrorBody: &api.CloudErrorBody{
-				Code:    cloudErr.Code,
+				Code:    code,
 				Message: err.Error(),
-				Target:  cloudErr.Target,
-				Details: cloudErr.Details,
+				Target:  target,
+				Details: details,
 			},
 		}
 	}

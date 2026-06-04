@@ -337,6 +337,12 @@ func retryAzureOperationWithPolicy(
 
 	var lastErr error
 	for attempt := range policy.maxAttempts {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		lastErr = fn()
 		if lastErr == nil {
 			return nil
