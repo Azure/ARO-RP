@@ -276,6 +276,12 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"''')\n'",
 	)
 
+	parts = append(parts,
+		"'GATEWAYUSERASSIGNEDIDENTITYRESOURCEID=$(base64 -d <<<'''",
+		"base64(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-gateway-', resourceGroup().location)))",
+		"''')\n'",
+	)
+
 	// VMSS extensions only support one custom script
 	// Because of this, the util-*.sh scripts are prefixed to the bootstrapping script
 	// main is called at the end of the bootstrapping script, so appending them will not work

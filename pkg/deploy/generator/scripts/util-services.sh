@@ -924,9 +924,6 @@ configure_service_cluster_mdsd() {
     mkdir -p /var/run/mdsd/cluster
     mkdir -p /var/etw
 
-    # Get mdsd certificate SAN
-    local -r mdsd_certificate_san="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')"
-
     # shellcheck disable=SC2034
     local -r cluster_mdsd_conf_filename='/etc/sysconfig/cluster-mdsd'
     # shellcheck disable=SC2034
@@ -934,8 +931,8 @@ configure_service_cluster_mdsd() {
 MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 MONITORING_GCS_ACCOUNT='$cluster_mdsd_account'
 MONITORING_GCS_REGION='$LOCATION'
-MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
-MONITORING_GCS_AUTH_ID='$mdsd_certificate_san'
+MONITORING_GCS_AUTH_ID_TYPE=AuthMSIToken
+MONITORING_GCS_AUTH_ID=mi_res_id#\${GATEWAYUSERASSIGNEDIDENTITYRESOURCEID}
 MONITORING_GCS_NAMESPACE='$cluster_mdsd_namespace'
 MONITORING_CONFIG_VERSION='$cluster_mdsd_config_version'
 MONITORING_USE_GENEVA_CONFIG_SERVICE=true
@@ -983,8 +980,8 @@ ExecStart=/usr/bin/podman run \
   -e MONITORING_ROLE_INSTANCE \
   -e MONITORING_ENVIRONMENT \
   -e ENABLE_GIG_BRIDGE_MODE \
+  -e GATEWAYUSERASSIGNEDIDENTITYRESOURCEID \
   -v /var/run/mdsd/cluster:/var/run/mdsd/cluster:z \
-  -v /var/lib/waagent/Microsoft.Azure.KeyVault.Store:/certs:ro \
   -v /var/etw:/var/etw:z \
   ${MDSDIMAGE} \
   -r /var/run/mdsd/cluster
