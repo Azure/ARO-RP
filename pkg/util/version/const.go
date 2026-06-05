@@ -22,7 +22,7 @@ const (
 
 	DevGatewayGenevaLoggingConfigVersion = "4.3"
 
-	MUOImageTag = "v0.1.1297-ge922e64"
+	MUOImageTag = "v0.1.1409-g35338f3"
 )
 
 // OCP versions - declared as major, minor, z
