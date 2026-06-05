@@ -56,12 +56,18 @@ main() {
     local -r rpimage="$RPIMAGE"
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
+    # shellcheck disable=SC2034
+    local -r otel_collector_image="$GATEWAYOTELCOLLECTORIMAGE"
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_image="$CLUSTERMDSDIMAGE"
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034
     local -rA aro_images=(
         ["mdm"]="mdmimage"
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
+        ["otelcollector"]="otel_collector_image"
+        ["clustermdsd"]="cluster_mdsd_image"
     )
 
     pull_container_images aro_images
@@ -74,6 +80,9 @@ main() {
         "443/tcp"
         # JIT ssh
         "22/tcp"
+        # OTel collector
+        "4317/tcp"
+        "13133/tcp"
     )
 
     firewalld_configure enable_ports
@@ -143,6 +152,8 @@ ENVIRONMENT='$ENVIRONMENT'"
         "mdm"
         "chronyd"
         "fluentbit"
+        "aro-otel-collector"
+        "cluster-mdsd"
         "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"
         "firewalld"
