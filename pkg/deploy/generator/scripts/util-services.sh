@@ -912,14 +912,11 @@ WantedBy=multi-user.target'
 #       * cluster MDSD namespace
 #   4) cluster_mdsd_config_version - nameref, string
 #       * cluster MDSD config version
-#   5) ipaddress - nameref, string
-#       * static ip of podman network to be attached
 configure_service_cluster_mdsd() {
     local -n image="$1"
     local -n cluster_mdsd_account="$2"
     local -n cluster_mdsd_namespace="$3"
     local -n cluster_mdsd_config_version="$4"
-    local -n ipaddress="$5"
     log "starting"
     log "Configuring cluster-mdsd service (GIG Bridge Mode)"
 
@@ -934,8 +931,6 @@ configure_service_cluster_mdsd() {
     local -r cluster_mdsd_conf_filename='/etc/sysconfig/cluster-mdsd'
     # shellcheck disable=SC2034
     local -r cluster_mdsd_conf_file="MDSDIMAGE='$image'
-PODMAN_NETWORK='podman'
-IPADDRESS='$ipaddress'
 MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 MONITORING_GCS_ACCOUNT='$cluster_mdsd_account'
 MONITORING_GCS_REGION='$LOCATION'
@@ -971,8 +966,7 @@ ExecStart=/usr/bin/podman run \
   --hostname %H \
   --name %N \
   --rm \
-  --network=${PODMAN_NETWORK} \
-  --ip ${IPADDRESS} \
+  --network=host \
   --cpu-shares 512 \
   --cpus 0.5 \
   -m 1g \
@@ -1395,12 +1389,11 @@ configure_vmss_aro_services() {
         configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["static_ip_address"]}[gateway]"
         configure_service_gateway_otel_collector "${images["otelcollector"]}" \
             "${configs["gateway_otel_collector"]}" \
-            "${configs["static_ip_address"]}[gateway_otel_collector]"
+            "${configs["static_ip_address"]}[otelcollector]"
         configure_service_cluster_mdsd "${images["clustermdsd"]}" \
             "${configs["cluster_mdsd_account"]}" \
             "${configs["cluster_mdsd_namespace"]}" \
-            "${configs["cluster_mdsd_config_version"]}" \
-            "${configs["static_ip_address"]}[cluster_mdsd]"
+            "${configs["cluster_mdsd_config_version"]}"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
         configure_service_aro_rp "${images["rp"]}" \

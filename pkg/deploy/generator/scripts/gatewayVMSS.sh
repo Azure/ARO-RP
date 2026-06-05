@@ -198,8 +198,7 @@ service:
     # use default podman network with range 10.88.0.0/16
     local -rA static_ip_addresses=(
         ["gateway"]="10.88.0.2"
-        ["gateway_otel_collector"]="10.88.0.3"
-        ["cluster_mdsd"]="10.88.0.4"
+        ["otelcollector"]="10.88.0.9"
         ["mdm"]="10.88.0.8"
     )
 
