@@ -60,6 +60,7 @@ type Configuration struct {
 	DisableCosmosDBFirewall           *bool                  `json:"disableCosmosDBFirewall,omitempty"`
 	ExtraCosmosDBIPs                  []string               `json:"extraCosmosDBIPs,omitempty"`
 	FluentbitImage                    *string                `json:"fluentbitImage,omitempty" value:"required"`
+	GatewayOtelCollectorImage         *string                `json:"gatewayOtelCollectorImage,omitempty" value:"required"`
 	FPClientID                        *string                `json:"fpClientId,omitempty" value:"required"`
 	FPTenantID                        *string                `json:"fpTenantId,omitempty" value:"required"`
 	FPServerCertCommonName            *string                `json:"fpServerCertCommonName,omitempty"`
