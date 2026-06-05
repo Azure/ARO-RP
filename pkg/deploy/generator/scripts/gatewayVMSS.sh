@@ -125,6 +125,13 @@ ENVIRONMENT='$ENVIRONMENT'"
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
 
     # shellcheck disable=SC2034
+    local -r cluster_mdsd_account="$CLUSTERMDSDACCOUNT"
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_namespace="$CLUSTERMDSDNAMESPACE"
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_config_version="$CLUSTERMDSDCONFIGVERSION"
+
+    # shellcheck disable=SC2034
     local -r gateway_otel_collector_conf="extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -181,6 +188,9 @@ service:
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
         ["gateway_otel_collector"]="gateway_otel_collector_conf"
+        ["cluster_mdsd_account"]="cluster_mdsd_account"
+        ["cluster_mdsd_namespace"]="cluster_mdsd_namespace"
+        ["cluster_mdsd_config_version"]="cluster_mdsd_config_version"
         ["static_ip_address"]="static_ip_addresses"
     )
 
@@ -189,6 +199,7 @@ service:
     local -rA static_ip_addresses=(
         ["gateway"]="10.88.0.2"
         ["gateway_otel_collector"]="10.88.0.3"
+        ["cluster_mdsd"]="10.88.0.4"
         ["mdm"]="10.88.0.8"
     )
 

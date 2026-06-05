@@ -901,6 +901,110 @@ WantedBy=multi-user.target'
     write_file gateway_otel_collector_service_filename gateway_otel_collector_service_file true
 }
 
+# configure_service_cluster_mdsd
+#
+# args:
+#   1) image - nameref, string
+#       * MDSD distroless container image
+#   2) cluster_mdsd_account - nameref, string
+#       * cluster MDSD account
+#   3) cluster_mdsd_namespace - nameref, string
+#       * cluster MDSD namespace
+#   4) cluster_mdsd_config_version - nameref, string
+#       * cluster MDSD config version
+#   5) ipaddress - nameref, string
+#       * static ip of podman network to be attached
+configure_service_cluster_mdsd() {
+    local -n image="$1"
+    local -n cluster_mdsd_account="$2"
+    local -n cluster_mdsd_namespace="$3"
+    local -n cluster_mdsd_config_version="$4"
+    local -n ipaddress="$5"
+    log "starting"
+    log "Configuring cluster-mdsd service (GIG Bridge Mode)"
+
+    # Create role prefix directory for MDSD
+    mkdir -p /var/run/mdsd/cluster
+    mkdir -p /var/etw
+
+    # Get mdsd certificate SAN
+    local -r mdsd_certificate_san="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')"
+
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_conf_filename='/etc/sysconfig/cluster-mdsd'
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_conf_file="MDSDIMAGE='$image'
+PODMAN_NETWORK='podman'
+IPADDRESS='$ipaddress'
+MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
+MONITORING_GCS_ACCOUNT='$cluster_mdsd_account'
+MONITORING_GCS_REGION='$LOCATION'
+MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
+MONITORING_GCS_AUTH_ID='$mdsd_certificate_san'
+MONITORING_GCS_NAMESPACE='$cluster_mdsd_namespace'
+MONITORING_CONFIG_VERSION='$cluster_mdsd_config_version'
+MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+MONITORING_TENANT='$LOCATION'
+MONITORING_ROLE=cluster
+MONITORING_ROLE_INSTANCE=\"\$(hostname)\"
+MONITORING_ENVIRONMENT='$ENVIRONMENT'
+ENABLE_GIG_BRIDGE_MODE=1"
+
+    write_file cluster_mdsd_conf_filename cluster_mdsd_conf_file true
+
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_service_filename='/etc/systemd/system/cluster-mdsd.service'
+
+    # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
+    # below variable is in single quotes
+    # as it is to be expanded at systemd start time (by systemd, not this script)
+    local -r cluster_mdsd_service_file='[Unit]
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+EnvironmentFile=/etc/sysconfig/cluster-mdsd
+ExecStartPre=-/usr/bin/podman rm -f %N
+ExecStart=/usr/bin/podman run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
+  --cpu-shares 512 \
+  --cpus 0.5 \
+  -m 1g \
+  -e MONITORING_GCS_ENVIRONMENT \
+  -e MONITORING_GCS_ACCOUNT \
+  -e MONITORING_GCS_REGION \
+  -e MONITORING_GCS_AUTH_ID_TYPE \
+  -e MONITORING_GCS_AUTH_ID \
+  -e MONITORING_GCS_NAMESPACE \
+  -e MONITORING_CONFIG_VERSION \
+  -e MONITORING_USE_GENEVA_CONFIG_SERVICE \
+  -e MONITORING_TENANT \
+  -e MONITORING_ROLE \
+  -e MONITORING_ROLE_INSTANCE \
+  -e MONITORING_ENVIRONMENT \
+  -e ENABLE_GIG_BRIDGE_MODE \
+  -v /var/run/mdsd/cluster:/var/run/mdsd/cluster:z \
+  -v /var/lib/waagent/Microsoft.Azure.KeyVault.Store:/certs:ro \
+  -v /var/etw:/var/etw:z \
+  ${MDSDIMAGE} \
+  -r /var/run/mdsd/cluster
+ExecStop=/usr/bin/podman stop %N
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target'
+
+    write_file cluster_mdsd_service_filename cluster_mdsd_service_file true
+}
+
 # configure_service_mdsd
 #
 # args:
@@ -1292,6 +1396,11 @@ configure_vmss_aro_services() {
         configure_service_gateway_otel_collector "${images["otelcollector"]}" \
             "${configs["gateway_otel_collector"]}" \
             "${configs["static_ip_address"]}[gateway_otel_collector]"
+        configure_service_cluster_mdsd "${images["clustermdsd"]}" \
+            "${configs["cluster_mdsd_account"]}" \
+            "${configs["cluster_mdsd_namespace"]}" \
+            "${configs["cluster_mdsd_config_version"]}" \
+            "${configs["static_ip_address"]}[cluster_mdsd]"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
         configure_service_aro_rp "${images["rp"]}" \
