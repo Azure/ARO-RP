@@ -223,6 +223,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"azureCloudName",
 		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
+		"clusterMDSDAccount",
+		"clusterMDSDConfigVersion",
+		"clusterMDSDNamespace",
 		"databaseAccountName",
 		"environment",
 		"fluentbitImage",
@@ -230,6 +233,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"gatewayFeatures",
 		"gatewayLogLevel",
 		"gatewayMdsdConfigVersion",
+		"gatewayOtelCollectorImage",
 		"keyvaultDNSSuffix",
 		"keyvaultPrefix",
 		"mdmFrontendUrl",
@@ -248,6 +252,10 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 
 	parts = append(parts,
 		"'MDMIMAGE=''"+version.MdmImage("")+"''\n'",
+	)
+
+	parts = append(parts,
+		"'CLUSTERMDSDIMAGE=''"+version.MdsdImage("")+"''\n'",
 	)
 
 	parts = append(parts,
