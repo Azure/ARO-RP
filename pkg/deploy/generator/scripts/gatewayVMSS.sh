@@ -218,6 +218,7 @@ service:
         "cluster-mdsd"
         "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"
+        "download-gateway-otel-credentials.timer"
         "firewalld"
     )
 

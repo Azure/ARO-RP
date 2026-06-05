@@ -832,7 +832,7 @@ configure_service_gateway_otel_collector() {
     log "Configuring gateway-otel-collector service"
 
     # Create config directory and write config file
-    mkdir -p /etc/otel-collector
+    mkdir -p /etc/otel-collector/tls
     mkdir -p /var/log/otel-collector
 
     # shellcheck disable=SC2034
@@ -1138,7 +1138,12 @@ configure_timers_mdm_mdsd() {
     local keyvault_suffix secret_prefix
     get_keyvault_suffix role keyvault_suffix secret_prefix
 
-    for var in "mdsd" "mdm"; do
+    local -a components=("mdsd" "mdm")
+    if [ "$role" == "$role_gateway" ]; then
+        components+=("gateway-otel")
+    fi
+
+    for var in "${components[@]}"; do
         # shellcheck disable=SC2034
         local download_creds_service_filename="/etc/systemd/system/download-$var-credentials.service"
         # shellcheck disable=SC2034
@@ -1207,6 +1212,10 @@ if [[ \$COMPONENT = \"mdm\" ]]; then
   CURRENT_CERT_FILE=\"/etc/mdm.pem\"
 elif [[ \$COMPONENT = \"mdsd\" ]]; then
   CURRENT_CERT_FILE=\"/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem\"
+elif [[ \$COMPONENT = \"gateway-otel\" ]]; then
+  CURRENT_CERT_DIR=\"/etc/otel-collector/tls\"
+  CURRENT_CERT_FILE=\"\$CURRENT_CERT_DIR/tls-cert.pem\"
+  CURRENT_KEY_FILE=\"\$CURRENT_CERT_DIR/tls-key.pem\"
 else
   echo Invalid usage && exit 1
 fi
@@ -1226,16 +1235,51 @@ done
 if [ -f \$NEW_CERT_FILE ]; then
   if [[ \$COMPONENT = \"mdsd\" ]]; then
     chown syslog:syslog \$NEW_CERT_FILE
-  else
+  elif [[ \$COMPONENT = \"mdm\" ]]; then
     sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
+  elif [[ \$COMPONENT = \"gateway-otel\" ]]; then
+    # Split combined PEM into certificate and key files
+    mkdir -p \"\$CURRENT_CERT_DIR\"
+    NEW_CERT_TEMP=\"\$TEMP_DIR/tls-cert.pem\"
+    NEW_KEY_TEMP=\"\$TEMP_DIR/tls-key.pem\"
+    
+    # Extract certificate
+    sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' \"\$NEW_CERT_FILE\" > \"\$NEW_CERT_TEMP\"
+    # Extract private key
+    sed -n '/BEGIN.*PRIVATE KEY/,/END.*PRIVATE KEY/p' \"\$NEW_CERT_FILE\" > \"\$NEW_KEY_TEMP\"
+    
+    if [ -s \"\$NEW_CERT_TEMP\" ] && [ -s \"\$NEW_KEY_TEMP\" ]; then
+      chmod 0600 \"\$NEW_CERT_TEMP\" \"\$NEW_KEY_TEMP\"
+      
+      # Check if certificate changed
+      if [ -f \"\$CURRENT_CERT_FILE\" ]; then
+        new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_TEMP\" -noout -serial | awk -F= '{print \$2}')\"
+        current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+        if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
+          echo updating certificate for \$COMPONENT
+          mv \"\$NEW_CERT_TEMP\" \"\$CURRENT_CERT_FILE\"
+          mv \"\$NEW_KEY_TEMP\" \"\$CURRENT_KEY_FILE\"
+        fi
+      else
+        # First time setup
+        echo installing certificate for \$COMPONENT
+        mv \"\$NEW_CERT_TEMP\" \"\$CURRENT_CERT_FILE\"
+        mv \"\$NEW_KEY_TEMP\" \"\$CURRENT_KEY_FILE\"
+      fi
+    else
+      echo \"Failed to extract certificate or key for \$COMPONENT\" && exit 1
+    fi
+    exit 0
   fi
 
-  new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
-  current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
-  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
-    echo updating certificate for \$COMPONENT
-    chmod 0600 \$NEW_CERT_FILE
-    mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+  if [[ \$COMPONENT != \"gateway-otel\" ]]; then
+    new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+    current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+    if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
+      echo updating certificate for \$COMPONENT
+      chmod 0600 \$NEW_CERT_FILE
+      mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+    fi
   fi
 else
   echo Failed to refresh certificate for \$COMPONENT && exit 1
@@ -1248,9 +1292,13 @@ fi"
     $download_creds_script_filename mdsd &
     wait "$!"
 
-
     $download_creds_script_filename mdm &
     wait "$!"
+
+    if [ "$role" == "$role_gateway" ]; then
+        $download_creds_script_filename gateway-otel &
+        wait "$!"
+    fi
 
     # shellcheck disable=SC2034
     local -r watch_mdm_creds_service_filename="/etc/systemd/system/watch-mdm-credentials.service"
@@ -1280,6 +1328,38 @@ WantedBy=multi-user.target'
 
     local -r watch_mdm_creds='watch-mdm-credentials.path'
     systemctl enable --now "$watch_mdm_creds" || abort "failed to enable and start $watch_mdm_creds"
+
+    if [ "$role" == "$role_gateway" ]; then
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_service_filename="/etc/systemd/system/watch-gateway-otel-credentials.service"
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_service_file="[Unit]
+Description=Watch for changes in gateway-otel TLS certificate and restarts the gateway-otel-collector service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart gateway-otel-collector.service
+
+[Install]
+WantedBy=multi-user.target"
+
+        write_file watch_gateway_otel_creds_service_filename watch_gateway_otel_creds_service_file true
+
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_path_filename='/usr/lib/systemd/system/watch-gateway-otel-credentials.path'
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_path_file='[Path]
+PathModified=/etc/otel-collector/tls/tls-cert.pem
+PathModified=/etc/otel-collector/tls/tls-key.pem
+
+[Install]
+WantedBy=multi-user.target'
+
+        write_file watch_gateway_otel_creds_path_filename watch_gateway_otel_creds_path_file true
+
+        local -r watch_gateway_otel_creds='watch-gateway-otel-credentials.path'
+        systemctl enable --now "$watch_gateway_otel_creds" || abort "failed to enable and start $watch_gateway_otel_creds"
+    fi
 }
 
 # configure_service_mdm
