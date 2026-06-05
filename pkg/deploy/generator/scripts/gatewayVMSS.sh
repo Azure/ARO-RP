@@ -124,12 +124,63 @@ ENVIRONMENT='$ENVIRONMENT'"
     # shellcheck disable=SC2034
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
 
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf="extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  gatewayauth:
+    tls:
+      cert_file: /etc/otel-collector/tls/tls-cert.pem
+      key_file: /etc/otel-collector/tls/tls-key.pem
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        middlewares:
+          - id: gatewayauth
+        auth:
+          authenticator: gatewayauth
+
+exporters:
+  otlp/cluster-mdsd:
+    endpoint: localhost:2020
+    tls:
+      insecure: true
+
+processors:
+  attributes/cluster:
+    actions:
+      - key: resourceid
+        from_context: \"auth.clusterResourceID\"
+        action: upsert
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+service:
+  extensions:
+    - health_check
+    - gatewayauth
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/cluster, batch]
+      exporters: [otlp/cluster-mdsd]"
+
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034
     local -rA aro_configs=(
         ["gateway_config"]="aro_gateway_conf_file"
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
+        ["gateway_otel_collector"]="gateway_otel_collector_conf"
         ["static_ip_address"]="static_ip_addresses"
     )
 
@@ -137,6 +188,7 @@ ENVIRONMENT='$ENVIRONMENT'"
     # use default podman network with range 10.88.0.0/16
     local -rA static_ip_addresses=(
         ["gateway"]="10.88.0.2"
+        ["gateway_otel_collector"]="10.88.0.3"
         ["mdm"]="10.88.0.8"
     )
 
@@ -152,7 +204,7 @@ ENVIRONMENT='$ENVIRONMENT'"
         "mdm"
         "chronyd"
         "fluentbit"
-        "aro-otel-collector"
+        "gateway-otel-collector"
         "cluster-mdsd"
         "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"

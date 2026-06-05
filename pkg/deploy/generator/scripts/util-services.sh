@@ -815,6 +815,92 @@ WantedBy=multi-user.target'
     write_file aro_otel_collector_service_filename aro_otel_collector_service_file true
 }
 
+# configure_service_gateway_otel_collector
+#
+# args:
+#   1) image - nameref, string
+#       * OTel Collector container image
+#   2) otel_config - nameref, string
+#       * OTel Collector configuration YAML
+#   3) ipaddress - nameref, string
+#       * static ip of podman network to be attached
+configure_service_gateway_otel_collector() {
+    local -n image="$1"
+    local -n otel_config="$2"
+    local -n ipaddress="$3"
+    log "starting"
+    log "Configuring gateway-otel-collector service"
+
+    # Create config directory and write config file
+    mkdir -p /etc/otel-collector
+    mkdir -p /var/log/otel-collector
+
+    # shellcheck disable=SC2034
+    local -r otel_config_filename='/etc/otel-collector/config.yaml'
+    write_file otel_config_filename otel_config true
+
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf_filename='/etc/sysconfig/gateway-otel-collector'
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf_file="OTELIMAGE='$image'
+PODMAN_NETWORK='podman'
+IPADDRESS='$ipaddress'
+DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+DATABASE_NAME='ARO'
+ENVIRONMENT='$ENVIRONMENT'
+LOCATION='$LOCATION'
+RESOURCEGROUP='$RESOURCEGROUPNAME'"
+
+    write_file gateway_otel_collector_conf_filename gateway_otel_collector_conf_file true
+
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_service_filename='/etc/systemd/system/gateway-otel-collector.service'
+
+    # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
+    # below variable is in single quotes
+    # as it is to be expanded at systemd start time (by systemd, not this script)
+    local -r gateway_otel_collector_service_file='[Unit]
+After=cluster-mdsd.service
+Wants=cluster-mdsd.service
+StartLimitIntervalSec=0
+
+[Service]
+EnvironmentFile=/etc/sysconfig/gateway-otel-collector
+ExecStartPre=-/usr/bin/podman rm -f %N
+ExecStart=/usr/bin/podman run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
+  --cpu-shares 512 \
+  --cpus 0.5 \
+  -m 1g \
+  -p 4317:4317 \
+  -p 13133:13133 \
+  -e DATABASE_ACCOUNT_NAME \
+  -e DATABASE_NAME \
+  -e ENVIRONMENT \
+  -e LOCATION \
+  -e RESOURCEGROUP \
+  -v /etc/otel-collector:/etc/otel-collector:ro,z \
+  -v /var/log/otel-collector:/var/log:z \
+  -v /run/systemd/journal:/run/systemd/journal:ro \
+  -v /var/etw:/var/etw:z \
+  ${OTELIMAGE} \
+  --config=/etc/otel-collector/config.yaml
+ExecStop=/usr/bin/podman stop %N
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target'
+
+    write_file gateway_otel_collector_service_filename gateway_otel_collector_service_file true
+}
+
 # configure_service_mdsd
 #
 # args:
@@ -1203,6 +1289,9 @@ configure_vmss_aro_services() {
 
     if [ "$r" == "$role_gateway" ]; then
         configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["static_ip_address"]}[gateway]"
+        configure_service_gateway_otel_collector "${images["otelcollector"]}" \
+            "${configs["gateway_otel_collector"]}" \
+            "${configs["static_ip_address"]}[gateway_otel_collector]"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
         configure_service_aro_rp "${images["rp"]}" \
