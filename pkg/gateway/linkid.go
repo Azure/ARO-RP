@@ -13,6 +13,11 @@ import (
 	"github.com/pires/go-proxyproto"
 )
 
+var (
+	ErrNilProxyHeader = errors.New("nil ProxyHeader")
+	ErrLinkIDNotFound = errors.New("link id not found")
+)
+
 const (
 	pp2TypeAzure                         proxyproto.PP2Type = 0xEE
 	pp2SubtypeAzurePrivateEndpointLinkID byte               = 1
@@ -26,7 +31,7 @@ const (
 // additional hostnames in the gateway record. It returns the cluster ID and
 // deny/allow decision.
 func (g *gateway) isAllowed(conn *proxyproto.Conn, host string) (string, bool, error) {
-	linkID, err := linkID(conn)
+	linkID, err := LinkID(conn)
 	if err != nil {
 		return "", false, err
 	}
@@ -64,13 +69,13 @@ func (g *gateway) gatewayVerification(host, linkID string) (string, bool, error)
 		nil
 }
 
-// linkID retrieves the private endpoint link ID from the haproxy binary
+// LinkID retrieves the private endpoint link ID from the haproxy binary
 // protocol header injected on the front of the TCP stream by PLS.  See
 // https://docs.microsoft.com/en-us/azure/private-link/private-link-service-overview#getting-connection-information-using-tcp-proxy-v2
-func linkID(conn *proxyproto.Conn) (string, error) {
+func LinkID(conn *proxyproto.Conn) (string, error) {
 	h := conn.ProxyHeader()
 	if h == nil {
-		return "", errors.New("nil ProxyHeader")
+		return "", ErrNilProxyHeader
 	}
 
 	tlvs, err := h.TLVs()
@@ -88,5 +93,5 @@ func linkID(conn *proxyproto.Conn) (string, error) {
 		return strconv.FormatUint(uint64(binary.LittleEndian.Uint32(tlv.Value[1:])), 10), nil
 	}
 
-	return "", errors.New("link id not found")
+	return "", ErrLinkIDNotFound
 }

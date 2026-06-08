@@ -1,0 +1,38 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  gatewayauth:
+    tls:
+      cert_file: secrets/localhost.pem
+      key_file: secrets/localhost.pem
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        middlewares:
+          - id: gatewayauth
+        auth:
+          authenticator: gatewayauth
+
+exporters:
+  debug:
+    verbosity: detailed
+
+processors:
+  attributes/clusterid:
+    actions:
+      - key: resourceid
+        from_context: "auth.clusterResourceID"
+        action: upsert
+
+service:
+  extensions:
+    - health_check
+    - gatewayauth
+  pipelines:
+    logs:
+      receivers: [otlp]
+      exporters: [debug]
+      processors: ["attributes/clusterid"]

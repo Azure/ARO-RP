@@ -1,0 +1,28 @@
+dist:
+    description: ARO-RP Telemetry Exporter
+    name: telemetryexporter
+    output_path: ./telemetry/exporter/build/collector
+    # For FIPS OpenSSL
+    cgo_enabled: true
+    debug_compilation: true
+
+exporters:
+    - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.153.0
+    - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.153.0
+
+receivers:
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.153.0
+
+processors:
+    - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.153.0
+    - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/probabilisticsamplerprocessor v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.153.0
+
+extensions:
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.153.0

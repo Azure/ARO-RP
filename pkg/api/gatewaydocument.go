@@ -15,6 +15,20 @@ func (c *GatewayDocuments) String() string {
 	return encodeJSON(c)
 }
 
+func (c *GatewayDocuments) GetCount() int {
+	if c == nil {
+		return 0
+	}
+	return c.Count
+}
+
+func (c *GatewayDocuments) Docs() []*GatewayDocument {
+	if c == nil {
+		return []*GatewayDocument{}
+	}
+	return c.GatewayDocuments
+}
+
 // GatewayDocument represents a gateway document.
 // pkg/database/cosmosdb requires its definition.
 type GatewayDocument struct {

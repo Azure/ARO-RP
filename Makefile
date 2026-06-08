@@ -1,9 +1,5 @@
 SHELL = /bin/bash
 
-# Source local env file if present (gitignored)
--include .env
-export
-
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
@@ -60,16 +56,18 @@ else ifeq ($(RP_IMAGE_ACR),arosvc)
 	BUILDER_REGISTRY = arosvc.azurecr.io
 else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY ?= registry.access.redhat.com
-	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
+	BUILDER_REGISTRY ?= quay.io
 else
 	REGISTRY = $(RP_IMAGE_ACR)
-	BUILDER_REGISTRY = quay.io/openshift-release-dev
+	BUILDER_REGISTRY = quay.io
 endif
 
 # prod images
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 HOLMESGPT_IMAGE ?= ${REGISTRY}/holmesgpt:$(HOLMESGPT_VERSION)
+TELEMETRY_COLLECTOR_IMAGE ?= ${REGISTRY}/telemetry-collector:$(VERSION)
+TELEMETRY_EXPORTER_IMAGE ?= ${REGISTRY}/telemetry-exporter:$(VERSION)
 
 
 help:  ## Show help message
@@ -194,6 +192,14 @@ init-contrib:
 .PHONY: image-aro-multistage
 image-aro-multistage:
 	docker build --platform=$(PLATFORM) --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+
+.PHONY: image-telemetrycollector
+image-telemetrycollector:
+	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg VERSION="${VERSION}" -f Dockerfile.telemetrycollector -t $(TELEMETRY_COLLECTOR_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+
+.PHONY: image-telemetryexporter
+image-telemetryexporter:
+	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg VERSION="${VERSION}" -f Dockerfile.telemetryexporter -t $(TELEMETRY_EXPORTER_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-autorest
 image-autorest:
@@ -464,6 +470,35 @@ go-verify: go-tidy # Run go mod verify - verify dependencies have expected conte
 .PHONY: xmlcov
 xmlcov: $(GOCOV) $(GOCOV_XML)
 	$(GOCOV) convert cover.out | $(GOCOV_XML) > coverage.xml
+
+# Needs mdatagen installed from
+# https://github.com/open-telemetry/opentelemetry-collector/, you probably don't
+# need to run this
+.PHONY: generate-otel
+generate-otel:
+	cd pkg/otel/gatewayauth && mdatagen metadata.yaml
+
+.PHONY: build-telemetrycollector
+build-telemetrycollector: $(BINGO) $(OTELCOLLECTORBUILDER)
+	mkdir -p telemetry/collector/build
+	env dist.version=$(VERSION) $(OTELCOLLECTORBUILDER) --config telemetry/collector/manifest.yaml
+
+.PHONY: validate-fips-telemetrycollector
+validate-fips-telemetrycollector: $(BINGO)
+	$(BINGO) get -l fips-detect
+	$(BINGO) get -l gojq
+	hack/fips/validate-fips.sh ./telemetry/collector/build/collector/telemetrycollector
+
+.PHONY: build-telemetryexporter
+build-telemetryexporter: $(BINGO) $(OTELCOLLECTORBUILDER)
+	mkdir -p telemetry/exporter/build
+	env dist.version=$(VERSION) $(OTELCOLLECTORBUILDER) --config telemetry/exporter/manifest.yaml
+
+.PHONY: validate-fips-telemetryexporter
+validate-fips-telemetryexporter: $(BINGO)
+	$(BINGO) get -l fips-detect
+	$(BINGO) get -l gojq
+	hack/fips/validate-fips.sh ./telemetry/exporter/build/collector/telemetryexporter
 
 .PHONY: install-tools
 install-tools: $(BINGO)

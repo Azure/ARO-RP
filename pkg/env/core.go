@@ -39,6 +39,7 @@ const (
 	SERVICE_MIMO_SCHEDULER      ServiceName = "MIMO_SCHEDULER"
 	SERVICE_MIMO_ACTUATOR       ServiceName = "MIMO_ACTUATOR"
 	SERVICE_E2E                 ServiceName = "E2E"
+	SERVICE_LOG_COLLECTOR       ServiceName = "LOG_COLLECTOR"
 )
 
 // Core collects basic configuration information which is expected to be
