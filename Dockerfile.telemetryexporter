@@ -1,0 +1,31 @@
+# Uses a multi-stage container build to build the custom OpenTelemetry Collector for the in-cluster telemetry exporter.
+#
+ARG REGISTRY
+ARG BUILDER_REGISTRY
+ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
+ARG BUILDER_TAG=rhel-9-golang-1.25-openshift-4.21
+ARG REPOSITORY=ubi9/ubi-minimal
+ARG TAG=latest
+ARG VERSION
+FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
+
+ENV GO_COMPLIANCE_INFO=0
+USER root
+ENV GOPATH=/root/go
+ENV PATH=$PATH:${GOPATH}/bin/
+RUN mkdir -p /app
+WORKDIR /app
+
+COPY . /app
+
+RUN make build-telemetryexporter VERSION=${VERSION} && make validate-fips-telemetryexporter
+
+FROM ${REGISTRY}/${REPOSITORY}:${TAG}
+USER root
+RUN microdnf install -y systemd && \
+    microdnf clean all && \
+    rm -rf /var/cache/dnf /var/cache/yum
+COPY --from=builder /app/telemetry/exporter/build/collector/telemetryexporter /usr/local/bin/
+ENTRYPOINT ["telemetryexporter"]
+USER 1000
+ENV HOME=/tmp

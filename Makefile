@@ -56,16 +56,18 @@ else ifeq ($(RP_IMAGE_ACR),arosvc)
 	BUILDER_REGISTRY = arosvc.azurecr.io
 else ifeq ($(RP_IMAGE_ACR),)
 	REGISTRY ?= registry.access.redhat.com
-	BUILDER_REGISTRY ?= quay.io/openshift-release-dev
+	BUILDER_REGISTRY ?= quay.io
 else
 	REGISTRY = $(RP_IMAGE_ACR)
-	BUILDER_REGISTRY = quay.io/openshift-release-dev
+	BUILDER_REGISTRY = quay.io
 endif
 
 # prod images
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 HOLMESGPT_IMAGE ?= ${REGISTRY}/holmesgpt:$(HOLMESGPT_VERSION)
+TELEMETRY_COLLECTOR_IMAGE ?= ${REGISTRY}/telemetry-collector:$(VERSION)
+TELEMETRY_EXPORTER_IMAGE ?= ${REGISTRY}/telemetry-exporter:$(VERSION)
 
 
 help:  ## Show help message
@@ -190,6 +192,14 @@ init-contrib:
 .PHONY: image-aro-multistage
 image-aro-multistage:
 	docker build --platform=$(PLATFORM) --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+
+.PHONY: image-telemetrycollector
+image-telemetrycollector:
+	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg VERSION="${VERSION}" -f Dockerfile.telemetrycollector -t $(TELEMETRY_COLLECTOR_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
+
+.PHONY: image-telemetryexporter
+image-telemetryexporter:
+	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg VERSION="${VERSION}" -f Dockerfile.telemetryexporter -t $(TELEMETRY_EXPORTER_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
 .PHONY: image-autorest
 image-autorest:
