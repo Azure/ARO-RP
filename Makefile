@@ -1,9 +1,5 @@
 SHELL = /bin/bash
 
-# Source local env file if present (gitignored)
--include .env
-export
-
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
@@ -464,6 +460,35 @@ go-verify: go-tidy # Run go mod verify - verify dependencies have expected conte
 .PHONY: xmlcov
 xmlcov: $(GOCOV) $(GOCOV_XML)
 	$(GOCOV) convert cover.out | $(GOCOV_XML) > coverage.xml
+
+# Needs mdatagen installed from
+# https://github.com/open-telemetry/opentelemetry-collector/, you probably don't
+# need to run this
+.PHONY: generate-otel
+generate-otel:
+	cd pkg/otel/gatewayauth && mdatagen metadata.yaml
+
+.PHONY: build-telemetrycollector
+build-telemetrycollector: $(BINGO) $(OTELCOLLECTORBUILDER)
+	mkdir -p telemetry/collector/build
+	env dist.version=$(VERSION) $(OTELCOLLECTORBUILDER) --config telemetry/collector/manifest.yaml
+
+.PHONY: validate-fips-telemetrycollector
+validate-fips-telemetrycollector: $(BINGO)
+	$(BINGO) get -l fips-detect
+	$(BINGO) get -l gojq
+	hack/fips/validate-fips.sh ./telemetry/collector/build/collector/telemetrycollector
+
+.PHONY: build-telemetryexporter
+build-telemetryexporter: $(BINGO) $(OTELCOLLECTORBUILDER)
+	mkdir -p telemetry/exporter/build
+	env dist.version=$(VERSION) $(OTELCOLLECTORBUILDER) --config telemetry/exporter/manifest.yaml
+
+.PHONY: validate-fips-telemetryexporter
+validate-fips-telemetryexporter: $(BINGO)
+	$(BINGO) get -l fips-detect
+	$(BINGO) get -l gojq
+	hack/fips/validate-fips.sh ./telemetry/exporter/build/collector/telemetryexporter
 
 .PHONY: install-tools
 install-tools: $(BINGO)

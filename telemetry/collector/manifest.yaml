@@ -1,0 +1,58 @@
+dist:
+    description: ARO-RP Telemetry Collector
+    name: telemetrycollector
+    output_path: ./telemetry/collector/build/collector
+    # For FIPS OpenSSL
+    cgo_enabled: true
+    debug_compilation: true
+
+exporters:
+    - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.153.0
+    - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.153.0
+
+receivers:
+    - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.153.0
+
+processors:
+    - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.153.0
+    - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.153.0
+
+extensions:
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.153.0
+    - gomod: "github.com/Azure/ARO-RP v0.0.0"
+      import: "github.com/Azure/ARO-RP/pkg/otel/gatewayauth"
+      name: "gatewayauth"
+      path: "./"
+
+# [abrown] TODO: this is a copy of the pins in the root go.mod, there is
+# probably a better way of doing this :)
+replaces:
+    - github.com/Azure/ARO-RP/pkg/api => ../../../../pkg/api
+    - k8s.io/api => k8s.io/api v0.25.16
+    - k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.16
+    - k8s.io/apimachinery => k8s.io/apimachinery v0.25.16
+    - k8s.io/apiserver => k8s.io/apiserver v0.25.16
+    - k8s.io/client-go => k8s.io/client-go v0.25.16
+    - k8s.io/cloud-provider => k8s.io/cloud-provider v0.25.16 // required for k8s.io/kubernetes
+    - k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.25.16 // required for k8s.io/kubernetes
+    - k8s.io/code-generator => k8s.io/code-generator v0.25.16
+    - k8s.io/component-base => k8s.io/component-base v0.25.16
+    - k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.25.16 // required for k8s.io/kubernetes
+    - k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.25.16
+    - k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.25.16
+    - k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f
+    - k8s.io/kube-proxy => k8s.io/kube-proxy v0.25.16
+    - k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.25.16
+    - k8s.io/kubectl => k8s.io/kubectl v0.25.16
+    - k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
+    - sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
+    - sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
+    - sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
+    - sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
+    - github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
+    - github.com/openshift/api => github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
+    - github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
+    - github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
+    - github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
+    - github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20230908201248-46b93e64dea6
