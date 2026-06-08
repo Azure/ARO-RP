@@ -42,7 +42,7 @@ func (f *zapWrapper) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-// Return a *logrus.Entry which forwards logs to zap. Don't set the level at the logrus level, only
+// Return a *logrus.Entry which forwards logs to zap. Don't set the level at the logrus level
 func NewLogrusToZapLogger(tgt *zap.Logger) *logrus.Entry {
 	logger := logrus.New()
 	logger.AddHook(&zapWrapper{

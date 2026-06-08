@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/extension/extensiontest"
 )
 
 func TestStartReturnsErrorWhenAlreadyStarted(t *testing.T) {
@@ -32,6 +34,7 @@ func TestShutdownClearsRuntimeState(t *testing.T) {
 		ctx:    ctx,
 		cancel: cancel,
 		auth:   &authManager{},
+		params: extensiontest.NewNopSettings(component.MustNewType("gatewayauth")),
 	}
 
 	err := e.Shutdown(context.Background())

@@ -111,9 +111,9 @@ func (m *authManager) startChangefeed(ctx context.Context, db database.Gateway) 
 	)
 }
 
-// Unused as we are a client
+// Unused as we are not a client
 func (e *authManager) ClientHandshake(context.Context, string, net.Conn) (net.Conn, credentials.AuthInfo, error) {
-	panic("not a client auth")
+	return nil, nil, errors.New("not a client auth")
 }
 
 // ServerHandshake does the authentication handshake for servers. It returns
@@ -161,7 +161,11 @@ func (e *authManager) ServerHandshake(c net.Conn) (net.Conn, credentials.AuthInf
 	// that's useful to us. If the negotiated TLS version/etc becomes relevant
 	// we can add those values to the GatewayAuthInfo.
 	tlsConn, _, err := e.tls.ServerHandshake(conn)
-	return tlsConn, authInfo, err
+	if err != nil {
+		conn.Close()
+		return nil, nil, err
+	}
+	return tlsConn, authInfo, nil
 }
 
 // Info provides the ProtocolInfo of this TransportCredentials.

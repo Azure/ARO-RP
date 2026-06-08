@@ -6,7 +6,6 @@ package gatewayauth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -82,7 +81,7 @@ func (e *gatewayAuthenticationExtension) Start(_ctx context.Context, _ component
 		return err
 	}
 
-	fmt.Printf("extension %q started\n", e.id)
+	e.params.Logger.Info("extension started", zap.String("id", e.id.String()))
 	return nil
 }
 
@@ -149,7 +148,7 @@ func (e *gatewayAuthenticationExtension) Shutdown(_ context.Context) error {
 	e._env = nil
 	e.serverAuthLog = nil
 
-	fmt.Printf("extension %q stopped\n", e.id)
+	e.params.Logger.Info("extension stopped", zap.String("id", e.id.String()))
 	return nil
 }
 

@@ -30,7 +30,7 @@ func (e *gatewayAuthenticationExtension) Authenticate(ctx context.Context, sourc
 	gatewayAuthInfo, ok := p.AuthInfo.(gatewayAuthInfo)
 	if !ok {
 		e.serverAuthLog.Error(ErrNotNegotiatedByUs)
-		return nil, ErrNotNegotiatedByUs
+		return ctx, ErrNotNegotiatedByUs
 	}
 
 	cl := client.FromContext(ctx)
