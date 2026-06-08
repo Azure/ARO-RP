@@ -105,7 +105,7 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 	}
 
 	// Run all pre-flight validations (API server health, etcd health, SP, VM SKU, quota).
-	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize)
+	_, err = f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, vmSize, log)
 	if err != nil {
 		return err
 	}

@@ -673,7 +673,8 @@ func TestAdminResizeControlPlane(t *testing.T) {
 						masterMachine("master-0", "Standard_D8s_v3", running),
 						masterMachine("master-1", "Standard_D8s_v3", running),
 						masterMachine("master-2", "Standard_D8s_v3", running),
-					), nil)
+					), nil).
+					AnyTimes()
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
 					Return(nodeJSON("master-2", true), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
@@ -698,6 +699,11 @@ func TestAdminResizeControlPlane(t *testing.T) {
 							Capabilities: []*armcompute.ResourceSKUCapabilities{},
 						},
 					}, nil)
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
 			},
 			wantStatusCode: http.StatusOK,
 		},

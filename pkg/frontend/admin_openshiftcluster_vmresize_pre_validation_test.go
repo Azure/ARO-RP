@@ -117,7 +117,39 @@ func healthyKubeAPIServerPodsJSON() []byte {
 	)
 }
 
+func azureVMWithSize(vmSize string) mgmtcompute.VirtualMachine {
+	return mgmtcompute.VirtualMachine{
+		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+			HardwareProfile: &mgmtcompute.HardwareProfile{
+				VMSize: mgmtcompute.VirtualMachineSizeTypes(vmSize),
+			},
+		},
+	}
+}
+
+func expectControlPlaneVMGetCalls(a *mock_adminactions.MockAzureActions, resourceGroupName string, vmSizes map[string]string) {
+	for _, machineName := range []string{"master-0", "master-1", "master-2"} {
+		vmSize, ok := vmSizes[machineName]
+		if !ok {
+			continue
+		}
+
+		a.EXPECT().
+			GetVirtualMachine(gomock.Any(), resourceGroupName, machineName, mgmtcompute.InstanceViewTypes("")).
+			Return(azureVMWithSize(vmSize), nil)
+	}
+}
+
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
+	running := "Running"
+	allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+		masterMachine("master-0", "Standard_D8s_v3", running),
+		masterMachine("master-1", "Standard_D8s_v3", running),
+		masterMachine("master-2", "Standard_D8s_v3", running),
+	))
+}
+
+func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeActions, machineList []byte) {
 	k.EXPECT().
 		CheckAPIServerReadyz(gomock.Any()).
 		Return(nil).
@@ -142,9 +174,15 @@ func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 		KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", "openshift-machine-api", "cluster").
 		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
 		AnyTimes()
+	k.EXPECT().
+		KubeList(gomock.Any(), "Machine", machineNamespace).
+		Return(machineList, nil).
+		AnyTimes()
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
+	t.Parallel()
+
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
@@ -159,6 +197,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
+		notContains    []string
 	}
 
 	for _, tt := range []*test{
@@ -209,6 +248,11 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 							Capabilities: []*armcompute.ResourceSKUCapabilities{},
 						},
 					}, nil)
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusOK,
@@ -427,6 +471,271 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
 		},
 		{
+			name:       "GetVirtualMachine returns error",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D8s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+				a.EXPECT().
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceViewTypes("")).
+					Return(mgmtcompute.VirtualMachine{}, fmt.Errorf("authorization denied"))
+			},
+			kubeMocks:      allKubeChecksHealthyMock,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
+		},
+		{
+			name:       "control plane VM missing HardwareProfile",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D8s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+				a.EXPECT().
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceViewTypes("")).
+					Return(azureVMWithSize("Standard_D8s_v3"), nil)
+				a.EXPECT().
+					GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceViewTypes("")).
+					Return(mgmtcompute.VirtualMachine{}, nil)
+			},
+			kubeMocks:      allKubeChecksHealthyMock,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
+		},
+		{
+			name:       "control plane machine inventory incomplete",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D8s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				running := "Running"
+				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+					masterMachine("master-0", "Standard_D8s_v3", running),
+					masterMachine("master-1", "Standard_D8s_v3", running),
+				))
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
+		},
+		{
+			name:       "panic recovery is sanitized",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			vmSize:     "Standard_D8s_v3",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								VMSize: api.VMSizeStandardD8sV3,
+							},
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				running := "Running"
+				k.EXPECT().
+					CheckAPIServerReadyz(gomock.Any()).
+					Return(nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
+					Return(healthyKubeAPIServerJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
+					Return(healthyKubeAPIServerPodsJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+					DoAndReturn(func(context.Context, string, string, string) ([]byte, error) {
+						panic("simulated panic")
+					}).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
+					Return(validServicePrincipalJSON(), nil).
+					AnyTimes()
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", "openshift-machine-api", "cluster").
+					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
+					AnyTimes()
+				k.EXPECT().
+					KubeList(gomock.Any(), "Machine", machineNamespace).
+					Return(masterMachineListJSON(
+						masterMachine("master-0", "Standard_D8s_v3", running),
+						masterMachine("master-1", "Standard_D8s_v3", running),
+						masterMachine("master-2", "Standard_D8s_v3", running),
+					), nil).
+					AnyTimes()
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: etcd: Recovered panic during etcd pre-flight validation. Check RP logs for details.`,
+			notContains:    []string{"runtime/debug.Stack", "goroutine", "simulated panic"},
+		},
+		{
 			name:       "API server unreachable",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			vmSize:     "Standard_D8s_v3",
@@ -466,7 +775,10 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			wantError:      `500: InternalServerError: kube-apiserver: API server is reporting a non-ready status: connection refused`,
 		},
 	} {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
 			defer ti.done()
 
@@ -511,28 +823,39 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+
+			for _, needle := range tt.notContains {
+				if strings.Contains(string(b), needle) {
+					t.Errorf("response unexpectedly contained %q", needle)
+				}
+			}
 		})
 	}
 }
 
 func TestCheckResizeComputeQuota(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	type test struct {
-		name          string
-		currentVMSize string
-		vmSize        string
-		mocks         func(*mock_compute.MockUsageClient)
-		wantErr       string
+		name           string
+		currentVMSizes []string
+		vmSize         string
+		mocks          func(*mock_compute.MockUsageClient)
+		wantErr        string
 	}
+
+	// Helper to create a slice of 3 identical sizes (all masters same size).
+	threeMasters := func(size string) []string { return []string{size, size, size} }
 
 	for _, tt := range []*test{
 		{
 			// D8s_v3 (8 cores) → D16s_v3 (16 cores), same family.
 			// Delta per node = 8, total = 8 × 3 = 24.  76 in use, limit 100 → 24 remaining = exact fit.
-			name:          "same family upsize - enough quota for delta across all masters",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_D16s_v3",
+			name:           "same family upsize - enough quota for delta across all masters",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_D16s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -557,9 +880,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 		{
 			// D8s_v3 (8 cores) → D16s_v3 (16 cores), same family.
 			// Delta per node = 8, total = 8 × 3 = 24.  77 in use, limit 100 → 23 remaining < 24.
-			name:          "same family upsize - not enough quota for all masters",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_D16s_v3",
+			name:           "same family upsize - not enough quota for all masters",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_D16s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -583,24 +906,24 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardDSv3Family exceeded. Maximum allowed: 100, Current in use: 77, Additional requested: 24.",
 		},
 		{
-			name:          "same family downsize - no quota check needed",
-			currentVMSize: "Standard_D16s_v3",
-			vmSize:        "Standard_D8s_v3",
-			mocks:         func(cuc *mock_compute.MockUsageClient) {},
+			name:           "same family downsize - no quota check needed",
+			currentVMSizes: threeMasters("Standard_D16s_v3"),
+			vmSize:         "Standard_D8s_v3",
+			mocks:          func(cuc *mock_compute.MockUsageClient) {},
 		},
 		{
-			name:          "same family same size - no quota check needed",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_D8s_v3",
-			mocks:         func(cuc *mock_compute.MockUsageClient) {},
+			name:           "same family same size - no quota check needed",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_D8s_v3",
+			mocks:          func(cuc *mock_compute.MockUsageClient) {},
 		},
 		{
 			// D8s_v3 → E8s_v3, cross family.  Full new cores: 8 × 3 = 24.
 			// Family: 76 in use, limit 100 → 24 remaining = exact fit.
 			// Regional cores delta = (8 - 8) × 3 = 0, no check needed.
-			name:          "cross family - full new cores checked for all masters",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_E8s_v3",
+			name:           "cross family - full new cores checked for all masters",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_E8s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -625,9 +948,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 		{
 			// D8s_v3 → E8s_v3, cross family.  Full new cores: 8 × 3 = 24.
 			// 77 in use, limit 100 → 23 remaining < 24.
-			name:          "cross family - not enough quota for all masters",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_E8s_v3",
+			name:           "cross family - not enough quota for all masters",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_E8s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -654,9 +977,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			// D8s_v3 (8 cores) → E16s_v3 (16 cores), cross family upsize.
 			// Family quota: plenty of room (50 in use, limit 200).
 			// Regional cores delta = (16 - 8) × 3 = 24.  177 in use, limit 200 → 23 remaining < 24.
-			name:          "cross family - regional cores quota exceeded",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_E16s_v3",
+			name:           "cross family - regional cores quota exceeded",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_E16s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -683,9 +1006,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			// D8s_v3 → E4s_v3, cross family downsize.
 			// Family: full new cores = 4 × 3 = 12.
 			// Regional cores delta = (4 - 8) × 3 = -12 → clamped to 0, no regional check.
-			name:          "cross family downsize - regional cores not checked",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_E4s_v3",
+			name:           "cross family downsize - regional cores not checked",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_E4s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -708,9 +1031,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			},
 		},
 		{
-			name:          "family not in usage list - no quota limit",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_D16s_v3",
+			name:           "family not in usage list - no quota limit",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_D16s_v3",
 			mocks: func(cuc *mock_compute.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "eastus").
@@ -726,21 +1049,124 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			},
 		},
 		{
-			name:          "unsupported new VM size",
-			currentVMSize: "Standard_D8s_v3",
-			vmSize:        "Standard_Nonexistent_v99",
-			mocks:         func(cuc *mock_compute.MockUsageClient) {},
-			wantErr:       "400: InvalidParameter: vmSize: The provided VM SKU 'Standard_Nonexistent_v99' is not supported.",
+			name:           "unsupported new VM size",
+			currentVMSizes: threeMasters("Standard_D8s_v3"),
+			vmSize:         "Standard_Nonexistent_v99",
+			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+			wantErr:        "400: InvalidParameter: vmSize: The provided VM SKU 'Standard_Nonexistent_v99' is not supported.",
+		},
+		{
+			// Mixed sizes: partial resize scenario.
+			// master-0: D16s_v3 (already resized), master-1: D8s_v3, master-2: D8s_v3.
+			// Target: D16s_v3. Only 2 VMs need resizing, delta = 8 × 2 = 16.
+			name:           "mixed sizes - partial resize only needs quota for remaining VMs",
+			currentVMSizes: []string{"Standard_D16s_v3", "Standard_D8s_v3", "Standard_D8s_v3"},
+			vmSize:         "Standard_D16s_v3",
+			mocks: func(cuc *mock_compute.MockUsageClient) {
+				cuc.EXPECT().
+					List(ctx, "eastus").
+					Return([]mgmtcompute.Usage{
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("standardDSv3Family"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(84)),
+							Limit:        pointerutils.ToPtr(int64(100)),
+						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(84)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
+					}, nil)
+			},
+		},
+		{
+			// Mixed sizes: partial resize, not enough quota.
+			// master-0: D16s_v3, master-1: D8s_v3, master-2: D8s_v3.
+			// Target: D16s_v3. Need 8 × 2 = 16. 85 in use, limit 100 → 15 remaining < 16.
+			name:           "mixed sizes - partial resize not enough quota",
+			currentVMSizes: []string{"Standard_D16s_v3", "Standard_D8s_v3", "Standard_D8s_v3"},
+			vmSize:         "Standard_D16s_v3",
+			mocks: func(cuc *mock_compute.MockUsageClient) {
+				cuc.EXPECT().
+					List(ctx, "eastus").
+					Return([]mgmtcompute.Usage{
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("standardDSv3Family"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(85)),
+							Limit:        pointerutils.ToPtr(int64(100)),
+						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(85)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
+					}, nil)
+			},
+			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardDSv3Family exceeded. Maximum allowed: 100, Current in use: 85, Additional requested: 16.",
+		},
+		{
+			// All VMs already at desired size — no quota check needed (idempotent).
+			name:           "all VMs already at desired size - no quota check needed",
+			currentVMSizes: threeMasters("Standard_D16s_v3"),
+			vmSize:         "Standard_D16s_v3",
+			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+		},
+		{
+			// Cross-family accumulation: 2 VMs in DSv3, 1 VM in ESv3, resize to D16s_v3.
+			// D8s_v3 (x2): same family, delta = 8 each = 16 for DSv3.
+			// E8s_v3 (x1): cross family, full 16 cores for DSv3.
+			// Total DSv3 = 16 + 16 = 32.  69 in use, limit 100 → 31 remaining < 32.
+			name:           "cross-family accumulation - same and cross family contribute to same target",
+			currentVMSizes: []string{"Standard_D8s_v3", "Standard_D8s_v3", "Standard_E8s_v3"},
+			vmSize:         "Standard_D16s_v3",
+			mocks: func(cuc *mock_compute.MockUsageClient) {
+				cuc.EXPECT().
+					List(ctx, "eastus").
+					Return([]mgmtcompute.Usage{
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("standardDSv3Family"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(69)),
+							Limit:        pointerutils.ToPtr(int64(100)),
+						},
+						{
+							Name: &mgmtcompute.UsageName{
+								Value: pointerutils.ToPtr("cores"),
+							},
+							CurrentValue: pointerutils.ToPtr(int32(50)),
+							Limit:        pointerutils.ToPtr(int64(200)),
+						},
+					}, nil)
+			},
+			wantErr: "400: ResourceQuotaExceeded: vmSize: Resource quota of standardDSv3Family exceeded. Maximum allowed: 100, Current in use: 69, Additional requested: 32.",
+		},
+		{
+			name:           "unresolvable current VM size",
+			currentVMSizes: []string{"Standard_D8s_v3", "Standard_Unknown_v99", "Standard_D8s_v3"},
+			vmSize:         "Standard_D16s_v3",
+			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+			wantErr:        "500: InternalServerError: currentVMSize: The current VM SKU 'Standard_Unknown_v99' could not be resolved.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
 			computeUsageClient := mock_compute.NewMockUsageClient(controller)
 			tt.mocks(computeUsageClient)
 
-			err := checkResizeComputeQuota(ctx, computeUsageClient, "eastus", tt.currentVMSize, tt.vmSize)
+			err := checkResizeComputeQuota(ctx, computeUsageClient, "eastus", tt.currentVMSizes, tt.vmSize)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
