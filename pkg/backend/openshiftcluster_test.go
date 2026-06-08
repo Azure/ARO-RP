@@ -577,6 +577,130 @@ func TestBackendTry(t *testing.T) {
 			},
 		},
 		{
+			name: "StateCreating failure with NullOrInvalidGuidExcludePrincipalId plain error is rewrapped as 500",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+				})
+			},
+			checker: func(c *testdatabase.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key:      strings.ToLower(resourceID),
+					Dequeues: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
+						},
+					},
+				})
+			},
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+				manager.EXPECT().Install(gomock.Any()).Return(fmt.Errorf("NullOrInvalidGuidExcludePrincipalId in deny assignment"))
+			},
+		},
+		{
+			name: "StateCreating failure with NullOrInvalidGuidExcludePrincipalId CloudError 400 is reclassified as 500",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+				})
+			},
+			checker: func(c *testdatabase.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key:      strings.ToLower(resourceID),
+					Dequeues: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
+						},
+					},
+				})
+			},
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+				manager.EXPECT().Install(gomock.Any()).Return(api.NewCloudError(
+					http.StatusBadRequest, api.CloudErrorCodeDeploymentFailed, "",
+					"NullOrInvalidGuidExcludePrincipalId in deny assignment ExcludePrincipals"))
+			},
+		},
+		{
 			name: "StateDeleting success deletes the document",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{

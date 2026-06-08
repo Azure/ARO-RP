@@ -316,8 +316,13 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		}
 	}
 
-	if backendErr != nil {
-		if strings.Contains(strings.ToLower(backendErr.Error()), "nullorinvalidguidexcludeprincipalid") {
+	if backendErr != nil && strings.Contains(strings.ToLower(backendErr.Error()), "nullorinvalidguidexcludeprincipalid") {
+		if cloudErr, ok := backendErr.(*api.CloudError); ok {
+			cloudErr.StatusCode = http.StatusInternalServerError
+			if cloudErr.CloudErrorBody != nil {
+				cloudErr.CloudErrorBody.Code = api.CloudErrorCodeInternalServerError
+			}
+		} else {
 			backendErr = api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError,
 				"", backendErr.Error())
 		}
