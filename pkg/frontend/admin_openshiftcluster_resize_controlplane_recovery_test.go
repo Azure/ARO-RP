@@ -558,6 +558,8 @@ func TestRollbackAllFailsFastWhenEtcdUnhealthyBetweenNodes(t *testing.T) {
 }
 
 func TestAdminReplyPreservesWrappedCloudError(t *testing.T) {
+	t.Parallel()
+
 	recorder := httptest.NewRecorder()
 	_, log := testlog.New()
 

@@ -182,6 +182,11 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 		return nil, preResizeControlPlaneValidationError(details)
 	}
 
+	collect(validateResizeControlPlaneInventory(ctx, log, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
+	if len(details) > 0 {
+		return nil, preResizeControlPlaneValidationError(details)
+	}
+
 	return json.Marshal("All pre-flight checks passed")
 }
 
@@ -218,6 +223,7 @@ func validateResizeControlPlaneInventory(
 
 	return nil
 }
+
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
 // delegates to checkResizeComputeQuota. Injected via f.validateResizeQuota so
 // tests can swap it with quotaCheckDisabled.

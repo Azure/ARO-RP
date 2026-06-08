@@ -331,7 +331,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 
 		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
 		assertErrorContainsAll(t, err,
-			"Control plane machine inventory is inconsistent",
+			"control plane machine inventory is inconsistent",
 			"All machines should have the same size",
 		)
 	})
@@ -357,10 +357,16 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 				controlPlaneNode("master-1", "Standard_D16s_v5", "Standard_D16s_v5", true, false),
 				controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
 			), nil)
+		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+			Return(inventoryValidationVM("Standard_D8s_v3", "1"), nil)
+		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
+			Return(inventoryValidationVM("Standard_D8s_v3", "2"), nil)
+		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-2", mgmtcompute.InstanceView).
+			Return(inventoryValidationVM("Standard_D8s_v3", "3"), nil)
 
 		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
 		assertErrorContainsAll(t, err,
-			"Control plane machine and node inventory is inconsistent",
+			"control plane machine and node inventory is inconsistent",
 			"machine master-1 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v5",
 		)
 	})
@@ -426,6 +432,7 @@ func TestPreResizeControlPlaneVMsValidationRejectsHeterogeneousInventory(t *test
 		"All machines should have the same size",
 	)
 }
+
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 	t.Parallel()
 
@@ -1094,6 +1101,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 }
 
 func TestValidateResizeControlPlaneInventoryNormalizesJoinedErrorLineEndings(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
