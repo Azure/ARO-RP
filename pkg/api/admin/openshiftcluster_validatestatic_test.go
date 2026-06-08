@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 )
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
@@ -466,13 +467,13 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
 						MasterProfile: MasterProfile{
-							VMSize: VMSizeStandardD8sV3,
+							VMSize: vms.VMSizeStandardD8sV3,
 						},
 					},
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = VMSizeStandardD4sV3
+				oc.Properties.MasterProfile.VMSize = vms.VMSizeStandardD4sV3
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.vmSize: Changing property 'properties.masterProfile.vmSize' is not allowed.",
 		},
@@ -484,13 +485,13 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 						WorkerProfiles: []WorkerProfile{
 							{
 								Name:   "worker",
-								VMSize: VMSizeStandardD2sV3,
+								VMSize: vms.VMSizeStandardD2sV3,
 							},
 						},
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD4sV3 },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = vms.VMSizeStandardD4sV3 },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
@@ -788,7 +789,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			(&openShiftClusterConverter{}).ToInternal(tt.oc(), current)
 
 			v := &openShiftClusterStaticValidator{}
-			err := v.Static(oc, current, "", "", true, api.ArchitectureVersionV2, "")
+			err := v.Static(oc, current, false, "", "", api.ArchitectureVersionV2, "")
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Error(err)
@@ -808,6 +809,45 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 
 				validate.CloudError(t, err)
+			}
+		})
+	}
+}
+
+func TestOpenShiftClusterStaticValidateIsCIParity(t *testing.T) {
+	tests := []struct {
+		name    string
+		current *api.OpenShiftCluster
+		oc      *OpenShiftCluster
+		isCI    bool
+		wantErr string
+	}{
+		{
+			name:    "valid update in ci",
+			current: &api.OpenShiftCluster{},
+			oc:      (&openShiftClusterConverter{}).ToExternal(&api.OpenShiftCluster{}).(*OpenShiftCluster),
+			isCI:    true,
+		},
+		{
+			name:    "admin create disallowed in ci",
+			current: nil,
+			oc:      &OpenShiftCluster{},
+			isCI:    true,
+			wantErr: "400: RequestNotAllowed: : Admin API does not allow cluster creation.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := (&openShiftClusterStaticValidator{}).Static(tt.oc, tt.current, tt.isCI, "", "", api.ArchitectureVersionV2, "")
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || err.Error() != tt.wantErr {
+				t.Fatalf("got err %v, want %q", err, tt.wantErr)
 			}
 		})
 	}

@@ -39,7 +39,6 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceName) (Inte
 	for _, feature := range []Feature{
 		FeatureDisableDenyAssignments,
 		FeatureDisableSignedCertificates,
-		FeatureRequireD2sWorkers,
 		FeatureDisableReadinessDelay,
 		FeatureRequireOIDCStorageWebEndpoint,
 		FeatureUseMockMsiRp,

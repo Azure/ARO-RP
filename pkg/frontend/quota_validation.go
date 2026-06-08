@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/vms"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -26,7 +27,7 @@ type QuotaValidator interface {
 
 type quotaValidator struct{}
 
-func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
+func addRequiredResources(requiredResources map[string]int, vmSize vms.VMSize, count int) error {
 	vm, ok := validate.VMSizeFromName(vmSize)
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", fmt.Sprintf("The provided VM SKU %s is not supported.", vmSize))
@@ -35,7 +36,7 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 	requiredResources["virtualMachines"] += count
 	requiredResources["PremiumDiskCount"] += count
 
-	requiredResources[vm.Family] += vm.CoreCount * count
+	requiredResources[vm.Family.String()] += vm.CoreCount * count
 	requiredResources["cores"] += vm.CoreCount * count
 	return nil
 }
