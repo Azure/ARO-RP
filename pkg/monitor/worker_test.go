@@ -6,12 +6,18 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
+	"k8s.io/client-go/rest"
+
 	"github.com/Azure/ARO-RP/pkg/api"
+	pkgenv "github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -59,6 +65,45 @@ func (m *slowMonitor) MonitorName() string {
 	return "slowMonitor"
 }
 
+type closeableMonitor struct {
+	monitorFn  func(context.Context) error
+	closeOnce  sync.Once
+	closedChan chan struct{}
+	doneChan   chan struct{}
+}
+
+func newCloseableMonitor(monitorFn func(context.Context) error) *closeableMonitor {
+	return &closeableMonitor{
+		monitorFn:  monitorFn,
+		closedChan: make(chan struct{}),
+		doneChan:   make(chan struct{}),
+	}
+}
+
+func (m *closeableMonitor) Monitor(ctx context.Context) error {
+	defer close(m.doneChan)
+	return m.monitorFn(ctx)
+}
+
+func (m *closeableMonitor) MonitorName() string {
+	return "closeableMonitor"
+}
+
+func (m *closeableMonitor) Close() {
+	m.closeOnce.Do(func() {
+		close(m.closedChan)
+	})
+}
+
+func channelClosed(ch <-chan struct{}) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+		return false
+	}
+}
+
 // TestExecuteReturnsWhenNoReceiver verifies that the execute goroutine does not
 // leak when nobody reads from the done channel (the timeout path in workOne).
 // With an unbuffered channel this test would hang forever.
@@ -84,6 +129,92 @@ func TestExecuteReturnsWhenNoReceiver(t *testing.T) {
 			return false
 		}
 	}, 2*time.Second, 10*time.Millisecond, "execute goroutine leaked: blocked sending on done channel")
+}
+
+func TestCloseMonitorsClosesOnlyCloseableMonitors(t *testing.T) {
+	first := newCloseableMonitor(func(context.Context) error { return nil })
+	second := &monitoring.NoOpMonitor{}
+	third := newCloseableMonitor(func(context.Context) error { return nil })
+
+	closeMonitors([]monitoring.Monitor{first, second, third})
+
+	assert.True(t, channelClosed(first.closedChan))
+	assert.True(t, channelClosed(third.closedChan))
+}
+
+func TestWorkOneWaitsForMonitorCompletionWithinGracePeriod(t *testing.T) {
+	env := SetupTestEnvironment(t)
+	defer env.Cleanup()
+
+	oldGracePeriod := monitorCleanupGracePeriod
+	monitorCleanupGracePeriod = 50 * time.Millisecond
+	t.Cleanup(func() {
+		monitorCleanupGracePeriod = oldGracePeriod
+	})
+
+	clusterMon := newCloseableMonitor(func(ctx context.Context) error {
+		<-ctx.Done()
+		time.Sleep(10 * time.Millisecond)
+		return ctx.Err()
+	})
+
+	mon := env.CreateTestMonitor("workone-graceful")
+	mon.clusterMonitorBuilder = func(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, _ pkgenv.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error) {
+		return clusterMon, nil
+	}
+
+	subDoc := newFakeSubscription()
+	clusterDoc := newFakeCluster(subDoc.ResourceID)
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	mon.workOne(ctx, env.TestLogger, clusterDoc, subDoc.ResourceID, subDoc.Subscription.Properties.TenantID, false, ticker)
+
+	assert.True(t, channelClosed(clusterMon.doneChan), "monitor should finish before workOne returns")
+	assert.True(t, channelClosed(clusterMon.closedChan), "closeable monitor should be closed when workOne returns")
+}
+
+func TestWorkOneForcedCleanupAfterGracePeriod(t *testing.T) {
+	env := SetupTestEnvironment(t)
+	defer env.Cleanup()
+
+	oldGracePeriod := monitorCleanupGracePeriod
+	monitorCleanupGracePeriod = 20 * time.Millisecond
+	t.Cleanup(func() {
+		monitorCleanupGracePeriod = oldGracePeriod
+	})
+
+	clusterMon := newCloseableMonitor(func(context.Context) error {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	})
+
+	mon := env.CreateTestMonitor("workone-forced-cleanup")
+	mon.clusterMonitorBuilder = func(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, _ pkgenv.Interface, tenantID string, m metrics.Emitter, hourlyRun bool) (monitoring.Monitor, error) {
+		return clusterMon, nil
+	}
+
+	subDoc := newFakeSubscription()
+	clusterDoc := newFakeCluster(subDoc.ResourceID)
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	start := time.Now()
+	mon.workOne(ctx, env.TestLogger, clusterDoc, subDoc.ResourceID, subDoc.Subscription.Properties.TenantID, false, ticker)
+	elapsed := time.Since(start)
+
+	assert.True(t, channelClosed(clusterMon.closedChan), "closeable monitor should be closed on forced cleanup")
+	assert.False(t, channelClosed(clusterMon.doneChan), "monitor should still be running when grace period expires")
+	assert.Less(t, elapsed, 100*time.Millisecond, "workOne should return before the stubborn monitor finishes")
+	assert.Eventually(t, func() bool {
+		return channelClosed(clusterMon.doneChan)
+	}, time.Second, 10*time.Millisecond, "stubborn monitor should eventually finish to avoid leaking the test goroutine")
 }
 
 func TestChangefeedOperations(t *testing.T) {

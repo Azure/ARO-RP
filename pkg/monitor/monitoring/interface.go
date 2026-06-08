@@ -23,3 +23,9 @@ func (no *NoOpMonitor) Monitor(context.Context) error {
 func (no *NoOpMonitor) MonitorName() string {
 	return "noop"
 }
+
+// Closeable is implemented by monitors that need explicit cleanup after a
+// monitoring cycle completes.
+type Closeable interface {
+	Close()
+}
