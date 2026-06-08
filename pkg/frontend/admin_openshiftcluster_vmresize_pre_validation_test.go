@@ -732,7 +732,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					AnyTimes()
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Recovered panic during etcd pre-flight validation. Check RP logs for details.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: etcd: Recovered panic during etcd pre-flight validation. Check RP logs for details.`,
 			notContains:    []string{"runtime/debug.Stack", "goroutine", "simulated panic"},
 		},
 		{

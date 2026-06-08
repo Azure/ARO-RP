@@ -141,10 +141,11 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	}
 
 	// safeGo wraps a validation function with panic recovery. The
-	// dynamicRESTMapper in controller-runtime v0.11.2 can nil-pointer panic
-	// when the API server is unreachable (lazy init leaves staticMapper nil).
-	// Since these run in child goroutines, the HTTP Panic middleware cannot
-	// catch them — an unrecovered panic here would crash the entire RP process.
+	// dynamicRESTMapper in controller-runtime v0.11.2 (pinned via replace
+	// directive in go.mod) can nil-pointer panic when the API server is
+	// unreachable (lazy init leaves staticMapper nil). Since these run in
+	// child goroutines, the HTTP Panic middleware cannot catch them — an
+	// unrecovered panic here would crash the entire RP process.
 	safeGo := func(checkName string, fn func() error) func() {
 		return func() {
 			defer func() {
@@ -153,7 +154,7 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 					collect(api.NewCloudError(
 						http.StatusInternalServerError,
 						api.CloudErrorCodeInternalServerError,
-						"",
+						checkName,
 						fmt.Sprintf("Recovered panic during %s pre-flight validation. Check RP logs for details.", checkName),
 					))
 				}
@@ -164,16 +165,16 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 
 	var wg sync.WaitGroup
 
-	wg.Go(safeGo("VM SKU/quota", func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, k, a) }))
-	wg.Go(safeGo("API server", func() error {
+	wg.Go(safeGo("vmSKUQuota", func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, k, a) }))
+	wg.Go(safeGo("kube-apiserver", func() error {
 		if err := validateAPIServerHealth(ctx, k); err != nil {
 			return err
 		}
 		return validateAPIServerPods(ctx, k)
 	}))
 	wg.Go(safeGo("etcd", func() error { return validateEtcdHealth(ctx, k) }))
-	wg.Go(safeGo("service principal", func() error { return validateClusterSP(ctx, k) }))
-	wg.Go(safeGo("control plane machine set", func() error { return checkCPMSNotActive(ctx, k) }))
+	wg.Go(safeGo("servicePrincipal", func() error { return validateClusterSP(ctx, k) }))
+	wg.Go(safeGo("controlPlaneMachineSet", func() error { return checkCPMSNotActive(ctx, k) }))
 
 	wg.Wait()
 
