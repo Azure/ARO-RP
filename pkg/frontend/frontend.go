@@ -440,6 +440,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		r.Route("/providers/{resourceProviderNamespace}", func(r chi.Router) {
 			r.Get("/{resourceType}", f.getAdminOpenShiftClusters)
 		})
+
+		r.Get("/clusters", f.getAdminOpenShiftClusterList)
 	})
 
 	r.Put("/subscriptions/{subscriptionId}", f.putSubscription)
