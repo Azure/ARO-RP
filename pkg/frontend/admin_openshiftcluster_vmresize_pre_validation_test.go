@@ -26,6 +26,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	adminapi "github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -159,6 +160,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
+		assertResponse func(*testing.T, []byte)
 	}
 
 	for _, tt := range []*test{
@@ -212,7 +214,21 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`"All pre-flight checks passed"` + "\n"),
+			assertResponse: func(t *testing.T, b []byte) {
+				t.Helper()
+				var result resizePreflightResult
+				if err := json.Unmarshal(b, &result); err != nil {
+					t.Fatalf("failed to decode preflight result: %v\nbody: %s", err, string(b))
+				}
+				if len(result.Checks) != len(resizePreflightCheckOrder) {
+					t.Fatalf("len(checks) = %d, want %d", len(result.Checks), len(resizePreflightCheckOrder))
+				}
+				for _, check := range result.Checks {
+					if check.Status != adminapi.ResizeControlPlaneOperationStatusSucceeded {
+						t.Fatalf("check %q status = %q, want Succeeded", check.Name, check.Status)
+					}
+				}
+			},
 		},
 		{
 			name:       "missing vmSize parameter",
@@ -505,6 +521,14 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			resp, b, err := ti.request(http.MethodGet, url, nil, nil)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if tt.assertResponse != nil {
+				if resp.StatusCode != tt.wantStatusCode {
+					t.Fatalf("unexpected status code %d, wanted %d: %s", resp.StatusCode, tt.wantStatusCode, string(b))
+				}
+				tt.assertResponse(t, b)
+				return
 			}
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
