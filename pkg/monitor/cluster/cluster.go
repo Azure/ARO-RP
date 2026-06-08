@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"errors"
+	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -61,6 +63,9 @@ type Monitor struct {
 	rawClient   rest.Interface
 	tenantID    string
 	now         func() time.Time
+
+	httpClient *http.Client
+	closeOnce  sync.Once
 
 	ocpclientset clienthelper.Interface
 
@@ -158,9 +163,12 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		rawClient:   rawClient,
 		now:         time.Now,
 
-		env:                 env,
-		tenantID:            tenantID,
-		m:                   m,
+		env:      env,
+		tenantID: tenantID,
+		m:        m,
+
+		httpClient: httpClient,
+
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
@@ -347,4 +355,12 @@ func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
 
 func (m *Monitor) MonitorName() string {
 	return "cluster"
+}
+
+func (mon *Monitor) Close() {
+	if mon.httpClient != nil {
+		mon.closeOnce.Do(func() {
+			mon.httpClient.CloseIdleConnections()
+		})
+	}
 }

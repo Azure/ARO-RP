@@ -28,6 +28,32 @@ import (
 	fakemetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
 
+type fakeCloseIdleTransport struct {
+	closed int
+}
+
+func (t *fakeCloseIdleTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return nil, nil
+}
+
+func (t *fakeCloseIdleTransport) CloseIdleConnections() {
+	t.closed++
+}
+
+func TestMonitorCloseClosesIdleConnectionsOnce(t *testing.T) {
+	transport := &fakeCloseIdleTransport{}
+	mon := &Monitor{
+		httpClient: &http.Client{Transport: transport},
+	}
+
+	mon.Close()
+	mon.Close()
+
+	if transport.closed != 1 {
+		t.Fatalf("expected CloseIdleConnections to be called once, got %d", transport.closed)
+	}
+}
+
 func TestMonitor(t *testing.T) {
 	var _ctx context.Context
 	var _cancel context.CancelFunc
