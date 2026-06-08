@@ -238,7 +238,7 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 
 		currentSizeStruct, ok := validate.VMSizeFromName(api.VMSize(currentVMSize))
 		if !ok {
-			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "currentVMSize",
 				fmt.Sprintf("The current VM SKU '%s' could not be resolved.", currentVMSize))
 		}
 

@@ -1154,7 +1154,7 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			currentVMSizes: []string{"Standard_D8s_v3", "Standard_Unknown_v99", "Standard_D8s_v3"},
 			vmSize:         "Standard_D16s_v3",
 			mocks:          func(cuc *mock_compute.MockUsageClient) {},
-			wantErr:        "500: InternalServerError: : The current VM SKU 'Standard_Unknown_v99' could not be resolved.",
+			wantErr:        "500: InternalServerError: currentVMSize: The current VM SKU 'Standard_Unknown_v99' could not be resolved.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
