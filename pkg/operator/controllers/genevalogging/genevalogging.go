@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -16,8 +15,6 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	projectv1 "github.com/openshift/api/project/v1"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -69,270 +66,7 @@ func (r *Reconciler) namespaceLabels(ctx context.Context) (map[string]string, er
 	return map[string]string{}, nil
 }
 
-func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet, error) {
-	resourceID, err := azure.ParseResourceID(cluster.Spec.ResourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	fluentbitPullspec := cluster.Spec.OperatorFlags.GetWithDefault(controllerFluentbitPullSpec, "")
-	if fluentbitPullspec == "" {
-		fluentbitPullspec = version.FluentbitImage(cluster.Spec.ACRDomain)
-	}
-	mdsdPullspec := cluster.Spec.OperatorFlags.GetWithDefault(controllerMDSDPullSpec, "")
-	if mdsdPullspec == "" {
-		mdsdPullspec = version.MdsdImage(cluster.Spec.ACRDomain)
-	}
-
-	return &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mdsd",
-			Namespace: kubeNamespace,
-		},
-		Spec: appsv1.DaemonSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "mdsd"},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "mdsd"},
-				},
-				Spec: corev1.PodSpec{
-					PriorityClassName: "system-node-critical",
-					Volumes: []corev1.Volume{
-						{
-							Name: "log",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/var/log",
-								},
-							},
-						},
-						{
-							Name: "fluent",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/var/lib/fluent",
-								},
-							},
-						},
-						{
-							Name: "fluent-config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "fluent-config",
-									},
-								},
-							},
-						},
-						{
-							Name: "machine-id",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/machine-id",
-								},
-							},
-						},
-						{
-							Name: "certificates",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: certificatesSecretName,
-								},
-							},
-						},
-					},
-					ServiceAccountName:       "geneva",
-					DeprecatedServiceAccount: "geneva",
-					Tolerations: []corev1.Toleration{
-						{
-							Effect:   corev1.TaintEffectNoExecute,
-							Operator: corev1.TolerationOpExists,
-						},
-						{
-							Effect:   corev1.TaintEffectNoSchedule,
-							Operator: corev1.TolerationOpExists,
-						},
-					},
-					Containers: []corev1.Container{
-						{
-							Name:  "fluentbit",
-							Image: fluentbitPullspec,
-							Command: []string{
-								"/opt/td-agent-bit/bin/td-agent-bit",
-							},
-							Args: []string{
-								"-c",
-								"/etc/td-agent-bit/fluent.conf",
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "ENVIRONMENT",
-									Value: cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", ""),
-								},
-							},
-							// Match prior node-level logging footprint by combining historical
-							// MDSD and Fluent Bit resources: requests 10m+5m CPU, 250Mi+35Mi memory;
-							// limits 200m+200m CPU, 1000Mi+300Mi memory.
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("200m"),
-									corev1.ResourceMemory: resource.MustParse("300Mi"),
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("5m"),
-									corev1.ResourceMemory: resource.MustParse("35Mi"),
-								},
-							},
-							SecurityContext: &corev1.SecurityContext{
-								Privileged: pointerutils.ToPtr(true),
-								RunAsUser:  pointerutils.ToPtr(int64(0)),
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "fluent-config",
-									ReadOnly:  true,
-									MountPath: "/etc/td-agent-bit",
-								},
-								{
-									Name:      "machine-id",
-									ReadOnly:  true,
-									MountPath: "/etc/machine-id",
-								},
-								{
-									Name:      "log",
-									ReadOnly:  true,
-									MountPath: "/var/log",
-								},
-								{
-									Name:      "fluent",
-									MountPath: "/var/lib/fluent",
-								},
-							},
-						},
-						{
-							Name:  "mdsd",
-							Image: mdsdPullspec,
-							Command: []string{
-								"/usr/sbin/mdsd",
-							},
-							Args: []string{
-								"-A",
-								"-D",
-								"-f",
-								"24224",
-								"-r",
-								"/var/run/mdsd/default",
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "MONITORING_GCS_ENVIRONMENT",
-									Value: cluster.Spec.GenevaLogging.MonitoringGCSEnvironment,
-								},
-								{
-									Name:  "MONITORING_GCS_ACCOUNT",
-									Value: cluster.Spec.GenevaLogging.MonitoringGCSAccount,
-								},
-								{
-									Name:  "MONITORING_GCS_REGION",
-									Value: cluster.Spec.Location,
-								},
-								{
-									Name:  "MONITORING_GCS_CERT_CERTFILE",
-									Value: "/etc/mdsd.d/secret/" + GenevaCertName,
-								},
-								{
-									Name:  "MONITORING_GCS_CERT_KEYFILE",
-									Value: "/etc/mdsd.d/secret/" + GenevaKeyName,
-								},
-								{
-									Name:  "MONITORING_GCS_NAMESPACE",
-									Value: cluster.Spec.GenevaLogging.MonitoringGCSNamespace,
-								},
-								{
-									Name:  "MONITORING_CONFIG_VERSION",
-									Value: cluster.Spec.GenevaLogging.ConfigVersion,
-								},
-								{
-									Name:  "MONITORING_USE_GENEVA_CONFIG_SERVICE",
-									Value: "true",
-								},
-								{
-									Name:  "MONITORING_ENVIRONMENT",
-									Value: cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", ""),
-								},
-								{
-									Name:  "MONITORING_TENANT",
-									Value: cluster.Spec.Location,
-								},
-								{
-									Name:  "MONITORING_ROLE",
-									Value: "cluster",
-								},
-								{
-									Name: "MONITORING_ROLE_INSTANCE",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											APIVersion: "v1",
-											FieldPath:  "spec.nodeName",
-										},
-									},
-								},
-								{
-									Name:  "MDSD_BACKPRESSURE_MONITOR_MEMORY_THRESHOLD_IN_MB",
-									Value: "800",
-								},
-								{ // https://stackoverflow.microsoft.com/questions/249827/251179#251179
-									Name:  "MDSD_MSGPACK_ARRAY_SIZE_ITEMS",
-									Value: "12048",
-								},
-								{
-									Name:  "RESOURCE_ID",
-									Value: strings.ToLower(cluster.Spec.ResourceID),
-								},
-								{
-									Name:  "SUBSCRIPTION_ID",
-									Value: strings.ToLower(resourceID.SubscriptionID),
-								},
-								{
-									Name:  "RESOURCE_GROUP",
-									Value: strings.ToLower(resourceID.ResourceGroup),
-								},
-								{
-									Name:  "RESOURCE_NAME",
-									Value: strings.ToLower(resourceID.ResourceName),
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("400m"),
-									corev1.ResourceMemory: resource.MustParse("1300Mi"),
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("15m"),
-									corev1.ResourceMemory: resource.MustParse("285Mi"),
-								},
-							},
-							SecurityContext: &corev1.SecurityContext{
-								Privileged: pointerutils.ToPtr(true),
-								RunAsUser:  pointerutils.ToPtr(int64(0)),
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "certificates",
-									MountPath: "/etc/mdsd.d/secret",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}, nil
-}
-
-func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster, mode loggingMode, gcscert, gcskey []byte) ([]kruntime.Object, error) {
+func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster) ([]kruntime.Object, error) {
 	scc, err := r.securityContextConstraints(ctx, "privileged-genevalogging", kubeServiceAccount)
 	if err != nil {
 		return nil, err
@@ -360,80 +94,46 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		scc,
 	}
 
-	switch mode {
-	case loggingModeMDSD:
-		daemonset, err := r.daemonset(cluster)
-		if err != nil {
-			return nil, err
-		}
+	profiles, err := getOTelProfiles(cluster.Spec.OperatorFlags)
+	if err != nil {
+		return nil, err
+	}
 
-		resources = append(resources,
-			&corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      certificatesSecretName,
-					Namespace: kubeNamespace,
-				},
-				Data: map[string][]byte{
-					GenevaCertName: gcscert,
-					GenevaKeyName:  gcskey,
+	gatewayTarget, err := telemetryGatewayTarget(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	daemonsets, err := r.otelDaemonSets(cluster, gatewayTarget.endpoint, gatewayTarget.hostAliases)
+	if err != nil {
+		return nil, err
+	}
+
+	resources = append(resources,
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      otelConfigMapName,
+				Namespace: kubeNamespace,
+			},
+			Data: map[string]string{
+				// config.yaml remains for compatibility with existing tooling/tests.
+				"config.yaml":       selectOTelConfig(profiles.master),
+				otelMasterConfigKey: selectOTelConfig(profiles.master),
+				otelWorkerConfigKey: selectOTelConfig(profiles.worker),
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      otelGatewayCACMName,
+				Namespace: kubeNamespace,
+				Labels: map[string]string{
+					"config.openshift.io/inject-trusted-cabundle": "true",
 				},
 			},
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fluent-config",
-					Namespace: kubeNamespace,
-				},
-				Data: map[string]string{
-					"fluent.conf":  fluentConf,
-					"parsers.conf": parsersConf,
-				},
-			},
-			daemonset,
-		)
-	case loggingModeOTel:
-		profiles, err := getOTelProfiles(cluster.Spec.OperatorFlags)
-		if err != nil {
-			return nil, err
-		}
-
-		gatewayTarget, err := telemetryGatewayTarget(cluster)
-		if err != nil {
-			return nil, err
-		}
-
-		daemonsets, err := r.otelDaemonSets(cluster, gatewayTarget.endpoint, gatewayTarget.hostAliases)
-		if err != nil {
-			return nil, err
-		}
-
-		resources = append(resources,
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      otelConfigMapName,
-					Namespace: kubeNamespace,
-				},
-				Data: map[string]string{
-					// config.yaml remains for compatibility with existing tooling/tests.
-					"config.yaml":       selectOTelConfig(profiles.master),
-					otelMasterConfigKey: selectOTelConfig(profiles.master),
-					otelWorkerConfigKey: selectOTelConfig(profiles.worker),
-				},
-			},
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      otelGatewayCACMName,
-					Namespace: kubeNamespace,
-					Labels: map[string]string{
-						"config.openshift.io/inject-trusted-cabundle": "true",
-					},
-				},
-			},
-		)
-		for _, ds := range daemonsets {
-			resources = append(resources, ds)
-		}
-	default:
-		return nil, fmt.Errorf("unsupported geneva logging mode %q", mode)
+		},
+	)
+	for _, ds := range daemonsets {
+		resources = append(resources, ds)
 	}
 
 	return resources, nil
@@ -454,7 +154,7 @@ type telemetryGatewayTargetSpec struct {
 
 func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTargetSpec, error) {
 	if cluster.Spec.GatewayPrivateEndpointIP == "" {
-		return telemetryGatewayTargetSpec{}, fmt.Errorf("geneva logging mode %q requires cluster spec field %q", pkgoperator.GenevaLoggingModeOTel, "gatewayPrivateEndpointIP")
+		return telemetryGatewayTargetSpec{}, fmt.Errorf("geneva logging requires cluster spec field %q", "gatewayPrivateEndpointIP")
 	}
 	gatewayPrivateEndpointIP := net.ParseIP(cluster.Spec.GatewayPrivateEndpointIP)
 	if gatewayPrivateEndpointIP == nil {

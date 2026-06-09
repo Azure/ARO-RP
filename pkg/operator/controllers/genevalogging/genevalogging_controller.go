@@ -21,7 +21,7 @@ import (
 
 	securityv1 "github.com/openshift/api/security/v1"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
+	operator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
@@ -31,10 +31,6 @@ import (
 const (
 	ControllerName = "GenevaLogging"
 
-	// full pullspec of fluentbit image
-	controllerFluentbitPullSpec = "aro.genevalogging.fluentbit.pullSpec"
-	// full pullspec of mdsd image
-	controllerMDSDPullSpec = "aro.genevalogging.mdsd.pullSpec"
 	// full pullspec of otel collector image
 	controllerOTelPullSpec = "aro.genevalogging.otel.pullSpec"
 )
@@ -58,33 +54,11 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 }
 
 func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.Cluster) error {
-	mode, err := getLoggingMode(instance.Spec.OperatorFlags)
-	if err != nil {
+	if err := r.cleanupStaleResources(ctx); err != nil {
 		return err
 	}
 
-	if err := r.cleanupStaleResources(ctx, mode); err != nil {
-		return err
-	}
-
-	var gcscert []byte
-	var gcskey []byte
-	if mode == loggingModeMDSD {
-		operatorSecret := &corev1.Secret{}
-		operatorSecretName := types.NamespacedName{
-			Namespace: operator.Namespace,
-			Name:      operator.SecretName,
-		}
-		err = r.Client.Get(ctx, operatorSecretName, operatorSecret)
-		if err != nil {
-			return err
-		}
-
-		gcscert = operatorSecret.Data[GenevaCertName]
-		gcskey = operatorSecret.Data[GenevaKeyName]
-	}
-
-	resources, err := r.resources(ctx, instance, mode, gcscert, gcskey)
+	resources, err := r.resources(ctx, instance)
 	if err != nil {
 		return err
 	}
@@ -106,10 +80,8 @@ func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.
 
 	// OTel daemonsets should never be manually "scaled down" via pod template
 	// node selectors. Reconciliation owns this field and clears any drift.
-	if mode == loggingModeOTel {
-		if err := r.clearOTelDaemonSetNodeSelectors(ctx); err != nil {
-			return err
-		}
+	if err := r.clearOTelDaemonSetNodeSelectors(ctx); err != nil {
+		return err
 	}
 
 	return nil
@@ -139,30 +111,18 @@ func (r *Reconciler) clearOTelDaemonSetNodeSelectors(ctx context.Context) error 
 	return nil
 }
 
-func (r *Reconciler) cleanupStaleResources(ctx context.Context, activeMode loggingMode) error {
+func (r *Reconciler) cleanupStaleResources(ctx context.Context) error {
 	type staleResource struct {
 		groupKind string
 		namespace string
 		name      string
 	}
 
-	var stale []staleResource
-	switch activeMode {
-	case loggingModeOTel:
-		stale = []staleResource{
-			{"DaemonSet.apps", kubeNamespace, "mdsd"},
-			{"ConfigMap", kubeNamespace, "fluent-config"},
-			{"Secret", kubeNamespace, certificatesSecretName},
-			{"ConfigMap", kubeNamespace, legacyGatewayCACMName},
-		}
-	case loggingModeMDSD:
-		stale = []staleResource{
-			{"DaemonSet.apps", kubeNamespace, "otel-collector-master"},
-			{"DaemonSet.apps", kubeNamespace, "otel-collector-worker"},
-			{"ConfigMap", kubeNamespace, otelConfigMapName},
-			{"ConfigMap", kubeNamespace, otelGatewayCACMName},
-			{"ConfigMap", kubeNamespace, legacyGatewayCACMName},
-		}
+	stale := []staleResource{
+		{"DaemonSet.apps", kubeNamespace, "mdsd"},
+		{"ConfigMap", kubeNamespace, "fluent-config"},
+		{"Secret", kubeNamespace, "certificates"},
+		{"ConfigMap", kubeNamespace, legacyGatewayCACMName},
 	}
 
 	for _, res := range stale {

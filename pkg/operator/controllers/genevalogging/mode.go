@@ -10,13 +10,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
-type loggingMode string
-
-const (
-	loggingModeMDSD loggingMode = operator.GenevaLoggingModeMDSD
-	loggingModeOTel loggingMode = operator.GenevaLoggingModeOTel
-)
-
 type otelProfile string
 
 const (
@@ -37,16 +30,6 @@ const (
 	legacyOTelProfileReduced    = "reduced-noise"
 	legacyOTelProfileHighSignal = "high-signal"
 )
-
-func getLoggingMode(flags arov1alpha1.OperatorFlags) (loggingMode, error) {
-	mode := loggingMode(flags.GetWithDefault(operator.GenevaLoggingMode, operator.GenevaLoggingModeOTel))
-	switch mode {
-	case loggingModeMDSD, loggingModeOTel:
-		return mode, nil
-	default:
-		return "", fmt.Errorf("unsupported geneva logging mode %q: expected %q or %q", mode, operator.GenevaLoggingModeMDSD, operator.GenevaLoggingModeOTel)
-	}
-}
 
 type otelProfiles struct {
 	master otelProfile

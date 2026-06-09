@@ -14,9 +14,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	utilcert "github.com/Azure/ARO-RP/pkg/util/cert"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/pem"
@@ -33,19 +31,6 @@ const (
 	ingressName                     = "default"
 	etcdNamespace                   = "openshift-etcd"
 )
-
-// emitMDSDCertificateExpiry emits days until expiration for the Geneva logging (MDSD) certificate.
-func (mon *Monitor) emitMDSDCertificateExpiry(ctx context.Context) error {
-	// skip if the cluster is in "Deleting" status.
-	if mon.oc.Properties.ProvisioningState == api.ProvisioningStateDeleting {
-		return nil
-	}
-
-	if err := mon.processCertificate(ctx, operator.Namespace, operator.SecretName, genevalogging.GenevaCertName, nil); err != nil {
-		return err
-	}
-	return nil
-}
 
 // emitIngressAndAPIServerCertificateExpiry emits days until expiration for Ingress and API Server certificates.
 func (mon *Monitor) emitIngressAndAPIServerCertificateExpiry(ctx context.Context) error {

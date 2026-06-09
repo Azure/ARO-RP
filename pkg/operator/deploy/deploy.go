@@ -43,11 +43,9 @@ import (
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
-	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -240,24 +238,11 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		results = append(results, operatorIdentitySecret)
 	}
 
-	key, cert := o.env.ClusterGenevaLoggingSecret()
-	gcsKeyBytes, err := utilpem.Encode(key)
-	if err != nil {
-		return nil, err
-	}
-
-	gcsCertBytes, err := utilpem.Encode(cert)
-	if err != nil {
-		return nil, err
-	}
-
 	ps, err := pullsecret.Build(o.oc, "")
 	if err != nil {
 		return nil, err
 	}
 
-	// create a secret here for genevalogging, later we will copy it to
-	// the genevalogging namespace.
 	return append(results,
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -265,9 +250,7 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 				Namespace: pkgoperator.Namespace,
 			},
 			Data: map[string][]byte{
-				genevalogging.GenevaCertName: gcsCertBytes,
-				genevalogging.GenevaKeyName:  gcsKeyBytes,
-				corev1.DockerConfigJsonKey:   []byte(ps),
+				corev1.DockerConfigJsonKey: []byte(ps),
 			},
 		},
 	), nil
@@ -342,13 +325,7 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 			ArchitectureVersion:    int(o.oc.Properties.ArchitectureVersion),
 			VnetID:                 vnetID,
 			StorageSuffix:          o.oc.Properties.StorageSuffix,
-			GenevaLogging: arov1alpha1.GenevaLoggingSpec{
-				ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
-				MonitoringGCSAccount:     o.env.ClusterGenevaLoggingAccount(),
-				MonitoringGCSEnvironment: o.env.ClusterGenevaLoggingEnvironment(),
-				MonitoringGCSNamespace:   o.env.ClusterGenevaLoggingNamespace(),
-			},
-			ServiceSubnets: serviceSubnets,
+			ServiceSubnets:         serviceSubnets,
 			InternetChecker: arov1alpha1.InternetCheckerSpec{
 				URLs: []string{
 					fmt.Sprintf("https://%s/", o.env.ACRDomain()),
