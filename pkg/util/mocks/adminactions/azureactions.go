@@ -14,12 +14,11 @@ import (
 	io "io"
 	reflect "reflect"
 
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
-
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAzureActions is a mock of AzureActions interface.
@@ -44,6 +43,37 @@ func NewMockAzureActions(ctrl *gomock.Controller) *MockAzureActions {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
+}
+
+// CRGSetupForResize mocks base method.
+func (m *MockAzureActions) CRGSetupForResize(ctx context.Context, vmNames []string, targetSKU string) (string, string, []string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CRGSetupForResize", ctx, vmNames, targetSKU)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].([]string)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// CRGSetupForResize indicates an expected call of CRGSetupForResize.
+func (mr *MockAzureActionsMockRecorder) CRGSetupForResize(ctx, vmNames, targetSKU any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGSetupForResize", reflect.TypeOf((*MockAzureActions)(nil).CRGSetupForResize), ctx, vmNames, targetSKU)
+}
+
+// CRGTeardown mocks base method.
+func (m *MockAzureActions) CRGTeardown(ctx context.Context, targetSKU string, zones, vmNames []string, crgName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CRGTeardown", ctx, targetSKU, zones, vmNames, crgName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CRGTeardown indicates an expected call of CRGTeardown.
+func (mr *MockAzureActionsMockRecorder) CRGTeardown(ctx, targetSKU, zones, vmNames, crgName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CRGTeardown", reflect.TypeOf((*MockAzureActions)(nil).CRGTeardown), ctx, targetSKU, zones, vmNames, crgName)
 }
 
 // GetEffectiveRouteTable mocks base method.
@@ -189,6 +219,20 @@ func (m *MockAzureActions) VMResize(ctx context.Context, vmName, vmSize string) 
 func (mr *MockAzureActionsMockRecorder) VMResize(ctx, vmName, vmSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResize", reflect.TypeOf((*MockAzureActions)(nil).VMResize), ctx, vmName, vmSize)
+}
+
+// VMResizeWithCRG mocks base method.
+func (m *MockAzureActions) VMResizeWithCRG(ctx context.Context, vmName, crgID, targetVMSize string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMResizeWithCRG", ctx, vmName, crgID, targetVMSize)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMResizeWithCRG indicates an expected call of VMResizeWithCRG.
+func (mr *MockAzureActionsMockRecorder) VMResizeWithCRG(ctx, vmName, crgID, targetVMSize any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResizeWithCRG", reflect.TypeOf((*MockAzureActions)(nil).VMResizeWithCRG), ctx, vmName, crgID, targetVMSize)
 }
 
 // VMSerialConsole mocks base method.
