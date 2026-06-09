@@ -89,3 +89,55 @@ func TestEmitDaemonsetStatuses(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestEmitDaemonsetStatusesOTelCannotStart(t *testing.T) {
+	ctx := context.Background()
+
+	objects := []client.Object{
+		namespaceObject("openshift"),
+		&appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "otel-collector-master",
+				Namespace: "openshift",
+			},
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 2,
+				NumberAvailable:        0,
+			},
+		},
+	}
+
+	controller := gomock.NewController(t)
+	m := mock_metrics.NewMockEmitter(controller)
+
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
+	mon := &Monitor{
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dims := map[string]string{
+		"desiredNumberScheduled": strconv.Itoa(2),
+		"name":                   "otel-collector-master",
+		"namespace":              "openshift",
+		"numberAvailable":        strconv.Itoa(0),
+	}
+	m.EXPECT().EmitGauge("daemonset.statuses", int64(1), dims)
+	m.EXPECT().EmitGauge("genevalogging.otel.cannotstart", int64(1), dims)
+
+	err = mon.emitDaemonsetStatuses(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
