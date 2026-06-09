@@ -163,8 +163,6 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 		steps.Action(m.configureIngressCertificate),
 
 		steps.Action(m.initializeOperatorDeployer),
-
-		steps.Action(m.renewMDSDCertificate), // Dependent on initializeOperatorDeployer.
 	}
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
@@ -284,7 +282,6 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.correctCertificateIssuer),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.reconcileLoadBalancerProfile),
 		steps.Action(m.reconcileSoftwareDefinedNetwork),

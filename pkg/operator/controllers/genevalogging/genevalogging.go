@@ -99,16 +99,6 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
-	gatewayTarget, err := telemetryGatewayTarget(cluster)
-	if err != nil {
-		return nil, err
-	}
-
-	daemonsets, err := r.otelDaemonSets(cluster, gatewayTarget.endpoint, gatewayTarget.hostAliases)
-	if err != nil {
-		return nil, err
-	}
-
 	resources = append(resources,
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -132,6 +122,22 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 			},
 		},
 	)
+
+	gatewayTarget, targetReady, err := telemetryGatewayTarget(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	// During early install, the gateway endpoint may not be populated yet.
+	// Create CA/config resources now and defer daemonset creation until ready.
+	if !targetReady {
+		return resources, nil
+	}
+
+	daemonsets, err := r.otelDaemonSets(cluster, gatewayTarget.endpoint, gatewayTarget.hostAliases)
+	if err != nil {
+		return nil, err
+	}
 	for _, ds := range daemonsets {
 		resources = append(resources, ds)
 	}
@@ -152,19 +158,19 @@ type telemetryGatewayTargetSpec struct {
 	hostAliases []corev1.HostAlias
 }
 
-func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTargetSpec, error) {
+func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTargetSpec, bool, error) {
 	if cluster.Spec.GatewayPrivateEndpointIP == "" {
-		return telemetryGatewayTargetSpec{}, fmt.Errorf("geneva logging requires cluster spec field %q", "gatewayPrivateEndpointIP")
+		return telemetryGatewayTargetSpec{}, false, nil
 	}
 	gatewayPrivateEndpointIP := net.ParseIP(cluster.Spec.GatewayPrivateEndpointIP)
 	if gatewayPrivateEndpointIP == nil {
-		return telemetryGatewayTargetSpec{}, fmt.Errorf("invalid cluster spec field %q: %q is not a valid IP address", "gatewayPrivateEndpointIP", cluster.Spec.GatewayPrivateEndpointIP)
+		return telemetryGatewayTargetSpec{}, false, fmt.Errorf("invalid cluster spec field %q: %q is not a valid IP address", "gatewayPrivateEndpointIP", cluster.Spec.GatewayPrivateEndpointIP)
 	}
 
 	if cluster.Spec.GatewayTelemetryDomain == "" {
 		return telemetryGatewayTargetSpec{
 			endpoint: net.JoinHostPort(gatewayPrivateEndpointIP.String(), "4317"),
-		}, nil
+		}, true, nil
 	}
 
 	gatewayHostname := cluster.Spec.GatewayTelemetryDomain
@@ -176,7 +182,7 @@ func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTarge
 				Hostnames: []string{gatewayHostname},
 			},
 		},
-	}, nil
+	}, true, nil
 }
 
 func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoint string, hostAliases []corev1.HostAlias) ([]*appsv1.DaemonSet, error) {

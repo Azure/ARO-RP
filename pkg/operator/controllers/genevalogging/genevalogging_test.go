@@ -181,15 +181,73 @@ func TestOTelDaemonSets(t *testing.T) {
 }
 
 func TestTelemetryGatewayTarget(t *testing.T) {
-	target, err := telemetryGatewayTarget(&arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{GatewayPrivateEndpointIP: "10.0.0.8", GatewayTelemetryDomain: "telemetry.eastus.aro.azure.com"}})
+	target, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{GatewayPrivateEndpointIP: "10.0.0.8", GatewayTelemetryDomain: "telemetry.eastus.aro.azure.com"}})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !ready {
+		t.Fatal("expected telemetry target to be ready")
 	}
 	if target.endpoint != "telemetry.eastus.aro.azure.com:4317" {
 		t.Fatalf("got endpoint %q", target.endpoint)
 	}
 	if len(target.hostAliases) != 1 || target.hostAliases[0].IP != "10.0.0.8" {
 		t.Fatalf("unexpected host aliases: %#v", target.hostAliases)
+	}
+}
+
+func TestTelemetryGatewayTargetNotReadyWithoutEndpointIP(t *testing.T) {
+	_, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ready {
+		t.Fatal("expected telemetry target to be not ready when gateway endpoint IP is missing")
+	}
+}
+
+func TestGenevaLoggingResourcesCreateCABundleBeforeGatewayTargetReady(t *testing.T) {
+	instance := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+			},
+		},
+	}
+	cv := clusterVersion("4.11.0")
+
+	r := &Reconciler{
+		AROController: base.AROController{
+			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+		},
+	}
+
+	out, err := r.resources(context.Background(), instance)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var daemonsetCount int
+	var foundGatewayCA bool
+	for _, obj := range out {
+		switch typed := obj.(type) {
+		case *corev1.ConfigMap:
+			if typed.Name == otelGatewayCACMName {
+				foundGatewayCA = true
+			}
+		case *appsv1.DaemonSet:
+			daemonsetCount++
+		}
+	}
+
+	if !foundGatewayCA {
+		t.Fatal("missing gateway CA configmap when gateway endpoint is not yet available")
+	}
+	if daemonsetCount != 0 {
+		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
 	}
 }
 
