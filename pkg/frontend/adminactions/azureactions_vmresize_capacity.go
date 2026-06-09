@@ -154,6 +154,11 @@ func (a *azureActions) crgDelete(ctx context.Context, clusterRG, location, targe
 			errs = append(errs, fmt.Errorf("VM %s has no properties", vmName))
 			continue
 		}
+		if vm.Properties.CapacityReservation == nil || vm.Properties.CapacityReservation.CapacityReservationGroup == nil || vm.Properties.CapacityReservation.CapacityReservationGroup.ID == nil {
+			a.log.Infof("VM %s has no capacity reservation group association; skipping disassociation", vmName)
+			stepCancel()
+			continue
+		}
 		vm.Properties.CapacityReservation = &armcompute.CapacityReservationProfile{
 			CapacityReservationGroup: &armcompute.SubResource{
 				ID: azcore.NullValue[*string](),
