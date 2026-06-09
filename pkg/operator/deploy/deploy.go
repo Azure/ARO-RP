@@ -375,12 +375,22 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 	}
 
 	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+		gatewayDomains := append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+		cluster.Spec.GatewayDomains = gatewayDomains
+		cluster.Spec.GatewayTelemetryDomain = gatewayTelemetryDomain(cluster.Spec.Location, o.env.Environment().AppSuffix)
 	} else {
 		// covers the case of an admin-disable, we need to update dnsmasq on each node
 		cluster.Spec.GatewayDomains = make([]string, 0)
+		cluster.Spec.GatewayTelemetryDomain = ""
 	}
 	return cluster, nil
+}
+
+func gatewayTelemetryDomain(location string, appSuffix string) string {
+	if location == "" || appSuffix == "" {
+		return ""
+	}
+	return fmt.Sprintf("telemetry.%s.%s", location, appSuffix)
 }
 
 func (o *operator) SyncClusterObject(ctx context.Context) error {

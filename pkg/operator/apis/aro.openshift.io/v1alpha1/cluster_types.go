@@ -113,6 +113,7 @@ type ClusterSpec struct {
 	APIIntIP                 string              `json:"apiIntIP,omitempty"`
 	IngressIP                string              `json:"ingressIP,omitempty"`
 	GatewayDomains           []string            `json:"gatewayDomains,omitempty"`
+	GatewayTelemetryDomain   string              `json:"gatewayTelemetryDomain,omitempty"`
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
 	ServiceSubnets           []string            `json:"serviceSubnets,omitempty"`
