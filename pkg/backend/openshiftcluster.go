@@ -316,6 +316,18 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		}
 	}
 
+	if backendErr != nil && strings.Contains(strings.ToLower(backendErr.Error()), "nullorinvalidguidexcludeprincipalid") {
+		if cloudErr, ok := backendErr.(*api.CloudError); ok {
+			cloudErr.StatusCode = http.StatusInternalServerError
+			if cloudErr.CloudErrorBody != nil {
+				cloudErr.Code = api.CloudErrorCodeInternalServerError
+			}
+		} else {
+			backendErr = api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError,
+				"", backendErr.Error())
+		}
+	}
+
 	// If cluster is in the non-terminal state we are still in the same
 	// operational context and AsyncOperation should not be updated.
 	if provisioningState.IsTerminal() {
