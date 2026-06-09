@@ -194,7 +194,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName, false)
 		assertErrorContainsAll(t, err,
 			"failed to resize node master-0: resize: Azure resize error",
 			"Steps:",
@@ -271,7 +271,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName, false)
 		assertErrorContainsAll(t, err,
 			"failed to resize node master-1: drain: could not drain node after 3 retries: drain error",
 			"master-1:restoreSchedulability",
@@ -331,7 +331,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName, false)
 		assertErrorContainsAll(t, err,
 			"Control plane node master-2 is not Ready",
 			"master-2:restoreVMSize",
@@ -394,7 +394,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 		k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 			Return(healthyEtcdJSON(), nil).AnyTimes()
-		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+		err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName, false)
 		assertErrorContainsAll(t, err,
 			"failed to capture Azure VM state for master-1",
 			"master-2:restoreVMSize",
