@@ -119,7 +119,7 @@ func TestUpdateReturnsErrorWhenCosmosDBReturnsNilNil(t *testing.T) {
 	}
 
 	// Verify the error message contains descriptive text
-	expectedMsg := fmt.Sprintf("OpenShiftClusters Replace returned nil document with nil error for key %q", doc.Key)
+	expectedMsg := fmt.Sprintf("OpenShiftClusters Replace returned nil document with nil error for key %q and partition key %q", doc.Key, doc.PartitionKey)
 	if cosmosErr.Message != expectedMsg {
 		t.Errorf("expected error message %q, got %q", expectedMsg, cosmosErr.Message)
 	}

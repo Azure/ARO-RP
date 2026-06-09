@@ -95,7 +95,7 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 
 	key := doc.Key
 	partitionKey := doc.PartitionKey
-	doc, err = c.c.Create(ctx, doc.PartitionKey, doc, nil)
+	doc, err = c.c.Create(ctx, partitionKey, doc, nil)
 
 	if doc == nil && err == nil {
 		return nil, &cosmosdb.Error{
@@ -227,7 +227,7 @@ func (c *openShiftClusters) update(ctx context.Context, doc *api.OpenShiftCluste
 	if updatedDoc == nil && err == nil {
 		return nil, &cosmosdb.Error{
 			StatusCode: http.StatusInternalServerError,
-			Message:    fmt.Sprintf("OpenShiftClusters Replace returned nil document with nil error for key %q", doc.Key),
+			Message:    fmt.Sprintf("OpenShiftClusters Replace returned nil document with nil error for key %q and partition key %q", doc.Key, doc.PartitionKey),
 		}
 	}
 
