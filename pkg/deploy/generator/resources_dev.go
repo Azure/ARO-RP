@@ -327,8 +327,8 @@ func (g *generator) devVPN() *arm.Resource {
 				},
 				VPNType: pointerutils.ToPtr(armnetwork.VPNTypeRouteBased),
 				SKU: &armnetwork.VirtualNetworkGatewaySKU{
-				Name: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUNameVPNGw1AZ),
-				Tier: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUTierVPNGw1AZ),
+					Name: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUNameVPNGw1AZ),
+					Tier: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUTierVPNGw1AZ),
 				},
 				VPNClientConfiguration: &armnetwork.VPNClientConfiguration{
 					VPNClientAddressPool: &armnetwork.AddressSpace{
