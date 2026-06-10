@@ -20,11 +20,7 @@ const (
 	GenevaLoggingOTelProfileMaxLogs     = "max-logs"
 	GenevaLoggingOTelProfileReducedLogs = "reduced-logs"
 	GenevaLoggingOTelProfileMinimalLogs = "minimal-logs"
-	// Backward-compatible aliases for older profile names.
-	GenevaLoggingOTelProfileFull       = GenevaLoggingOTelProfileMaxLogs
-	GenevaLoggingOTelProfileReduced    = GenevaLoggingOTelProfileReducedLogs
-	GenevaLoggingOTelProfileHighSignal = GenevaLoggingOTelProfileMinimalLogs
-	ImageConfigEnabled                 = "aro.imageconfig.enabled"
+	ImageConfigEnabled                  = "aro.imageconfig.enabled"
 	IngressEnabled                     = "aro.ingress.enabled"
 	MachineEnabled                     = "aro.machine.enabled"
 	MachineSetEnabled                  = "aro.machineset.enabled"

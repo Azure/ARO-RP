@@ -13,16 +13,9 @@ import (
 type otelProfile string
 
 const (
-	otelProfileMaxLogs otelProfile = operator.GenevaLoggingOTelProfileMaxLogs
-	otelProfileReducedLogs  otelProfile = operator.GenevaLoggingOTelProfileReducedLogs
-	otelProfileMinimalLogs  otelProfile = operator.GenevaLoggingOTelProfileMinimalLogs
-)
-
-const (
-	legacyOTelProfileHighLogLevel = "high-loglevel"
-	legacyOTelProfileFull         = "full"
-	legacyOTelProfileReduced      = "reduced-noise"
-	legacyOTelProfileHighSignal   = "high-signal"
+	otelProfileMaxLogs     otelProfile = operator.GenevaLoggingOTelProfileMaxLogs
+	otelProfileReducedLogs otelProfile = operator.GenevaLoggingOTelProfileReducedLogs
+	otelProfileMinimalLogs otelProfile = operator.GenevaLoggingOTelProfileMinimalLogs
 )
 
 type otelProfiles struct {
@@ -32,11 +25,11 @@ type otelProfiles struct {
 
 func parseOTelProfile(profile string) (otelProfile, error) {
 	switch profile {
-	case operator.GenevaLoggingOTelProfileMaxLogs, legacyOTelProfileHighLogLevel, legacyOTelProfileFull:
+	case operator.GenevaLoggingOTelProfileMaxLogs:
 		return otelProfileMaxLogs, nil
-	case operator.GenevaLoggingOTelProfileReducedLogs, legacyOTelProfileReduced:
+	case operator.GenevaLoggingOTelProfileReducedLogs:
 		return otelProfileReducedLogs, nil
-	case operator.GenevaLoggingOTelProfileMinimalLogs, legacyOTelProfileHighSignal:
+	case operator.GenevaLoggingOTelProfileMinimalLogs:
 		return otelProfileMinimalLogs, nil
 	default:
 		return "", fmt.Errorf(
