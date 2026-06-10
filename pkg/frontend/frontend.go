@@ -446,7 +446,16 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 	r.Put("/subscriptions/{subscriptionId}", f.putSubscription)
 
-	r.With(f.apiVersionMiddleware.ValidateAPIVersion).Get("/providers/{resourceProviderNamespace}/operations", f.getOperations)
+	// Do not validate the API version on the operations endpoint. ARM will only route
+	// registered API versions to this service, but that may be an ARO-HCP version that
+	// this service does not recognize.
+	//
+	// The operations endpoint response must be identical across all API versions within
+	// this provider namespace regardless of which service the API version is meant for.
+	// To accomplish this, ARM uses a FanOut routing type for this endpoint. The request
+	// is "fanned out" to an ARO Classic and an ARO-HCP endpoint. Each service responds
+	// with its own set of operations, and ARM aggregates them for us.
+	r.Get("/providers/{resourceProviderNamespace}/operations", f.getOperations)
 }
 
 func notFound(w http.ResponseWriter, r *http.Request) {

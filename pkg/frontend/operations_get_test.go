@@ -44,10 +44,10 @@ func TestGetOperations(t *testing.T) {
 			wantResponse:   allOperations,
 		},
 		{
-			name:           "api does not exist",
-			apiVersion:     "invalid",
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidResourceType: : The resource type '' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
+			name:           "unrecognized API version still returns operations",
+			apiVersion:     "2025-12-23-preview", // this is an ARO-HCP version
+			wantStatusCode: http.StatusOK,
+			wantResponse:   allOperations,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

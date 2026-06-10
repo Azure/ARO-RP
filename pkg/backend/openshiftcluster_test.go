@@ -840,3 +840,128 @@ func TestAsyncOperationResultLog(t *testing.T) {
 		})
 	}
 }
+
+func TestNullOrInvalidGuidExcludePrincipalIdReclassification(t *testing.T) {
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	asyncOperationID := "test-async-operation-id"
+
+	for _, tt := range []struct {
+		name             string
+		backendErr       error
+		wantAsyncErrCode string
+	}{
+		{
+			name:             "plain error containing NullOrInvalidGuidExcludePrincipalId is reclassified as ServerError",
+			backendErr:       fmt.Errorf("NullOrInvalidGuidExcludePrincipalId in deny assignment"),
+			wantAsyncErrCode: api.CloudErrorCodeInternalServerError,
+		},
+		{
+			name: "CloudError 400 containing NullOrInvalidGuidExcludePrincipalId is reclassified from UserError to ServerError",
+			backendErr: api.NewCloudError(
+				http.StatusBadRequest, api.CloudErrorCodeDeploymentFailed, "",
+				"NullOrInvalidGuidExcludePrincipalId in deny assignment ExcludePrincipals"),
+			wantAsyncErrCode: api.CloudErrorCodeInternalServerError,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			log := logrus.NewEntry(logrus.StandardLogger())
+			tlc := testliveconfig.NewTestLiveConfig(false, false)
+
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			manager := mock_cluster.NewMockInterface(controller)
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
+			_env.EXPECT().SubscriptionID().AnyTimes().Return(mockSubID)
+
+			manager.EXPECT().Install(gomock.Any()).Return(tt.backendErr)
+
+			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
+			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()
+			dbAsyncOperations, _ := testdatabase.NewFakeAsyncOperations()
+			uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)
+			dbOpenShiftVersions, _ := testdatabase.NewFakeOpenShiftVersions(uuidGen)
+			dbPlatformWorkloadIdentityRoleSets, _ := testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuidGen)
+
+			f := testdatabase.NewFixture().
+				WithOpenShiftClusters(dbOpenShiftClusters).
+				WithSubscriptions(dbSubscriptions).
+				WithAsyncOperations(dbAsyncOperations)
+			f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+				Key:              strings.ToLower(resourceID),
+				AsyncOperationID: asyncOperationID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:       resourceID,
+					Name:     "resourceName",
+					Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+					Location: "location",
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateCreating,
+						NetworkProfile: api.NetworkProfile{
+							PodCIDR:          "10.128.0.0/14",
+							ServiceCIDR:      "172.30.0.0/16",
+							PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+							OutboundType:     api.OutboundTypeLoadbalancer,
+							LoadBalancerProfile: &api.LoadBalancerProfile{
+								ManagedOutboundIPs: &api.ManagedOutboundIPs{
+									Count: 0,
+								},
+							},
+						},
+					},
+				},
+			})
+			f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+				ID: mockSubID,
+			})
+			f.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+				ID: asyncOperationID,
+				AsyncOperation: &api.AsyncOperation{
+					InitialProvisioningState: api.ProvisioningStateCreating,
+					ProvisioningState:        api.ProvisioningStateCreating,
+				},
+			})
+			err := f.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, database.PlatformWorkloadIdentityRoleSets, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error) {
+				return manager, nil
+			}
+
+			b, err := newBackend(log, _env, dbAsyncOperations, nil, nil, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, nil, &noop.Noop{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			b.ocb = &openShiftClusterBackend{
+				backend:    b,
+				newManager: createManager,
+			}
+
+			worked, err := b.ocb.try(ctx, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !worked {
+				t.Fatal("didnt do work")
+			}
+
+			b.waitForWorkerCompletion()
+
+			asyncDoc, err := dbAsyncOperations.Get(ctx, asyncOperationID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if asyncDoc.AsyncOperation.Error == nil {
+				t.Fatal("expected async operation to have an error")
+			}
+			if asyncDoc.AsyncOperation.Error.Code != tt.wantAsyncErrCode {
+				t.Errorf("async operation error code = %q, want %q", asyncDoc.AsyncOperation.Error.Code, tt.wantAsyncErrCode)
+			}
+		})
+	}
+}
