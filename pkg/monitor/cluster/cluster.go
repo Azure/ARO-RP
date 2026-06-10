@@ -357,6 +357,7 @@ func (m *Monitor) MonitorName() string {
 	return "cluster"
 }
 
+// Close releases idle HTTP connections owned by this monitor instance.
 func (mon *Monitor) Close() {
 	mon.closeOnce.Do(func() {
 		if mon.httpClient != nil {
@@ -366,6 +367,8 @@ func (mon *Monitor) Close() {
 	})
 }
 
+// The generated fake ARO client returns a typed-nil *rest.RESTClient, so this
+// helper must guard both the type assertion and the resulting value.
 func closeAroClientIdleConnections(arocli aroclient.Interface) {
 	if arocli == nil || arocli.AroV1alpha1() == nil {
 		return

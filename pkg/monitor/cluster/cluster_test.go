@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,9 +81,13 @@ func TestMonitorCloseIgnoresFakeAroClientset(t *testing.T) {
 		arocli: arofake.NewSimpleClientset(),
 	}
 
-	assert.NotPanics(t, func() {
-		mon.Close()
-	})
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected fake ARO client cleanup to be a no-op, got panic: %v", r)
+		}
+	}()
+
+	mon.Close()
 }
 
 func TestMonitor(t *testing.T) {
