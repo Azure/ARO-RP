@@ -75,6 +75,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 		},
 		Configuration: &Configuration{
 			ACRResourceID:                pointerutils.ToPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + azureUniquePrefix + "-global/providers/Microsoft.ContainerRegistry/registries/" + azureUniquePrefix + "aro"),
+			ACRReplicaDisabled:           pointerutils.ToPtr(true),
 			AdminAPICABundle:             pointerutils.ToPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			AdminAPIClientCertCommonName: &clientCert.Subject.CommonName,
 			ARMAPICABundle:               pointerutils.ToPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
@@ -92,11 +93,12 @@ func DevConfig(_env env.Core) (*Config, error) {
 				PortalProvisionedThroughput:   400,
 				GatewayProvisionedThroughput:  400,
 			},
-			DisableCosmosDBFirewall: pointerutils.ToPtr(true),
-			FluentbitImage:          pointerutils.ToPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
-			FPClientID:              pointerutils.ToPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
-			FPServicePrincipalID:    pointerutils.ToPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
-			FPTenantID:              pointerutils.ToPtr(os.Getenv("AZURE_TENANT_ID")),
+			DisableCosmosDBFirewall:   pointerutils.ToPtr(true),
+			FluentbitImage:            pointerutils.ToPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
+			GatewayOtelCollectorImage: pointerutils.ToPtr(""),
+			FPClientID:                pointerutils.ToPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
+			FPServicePrincipalID:      pointerutils.ToPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
+			FPTenantID:                pointerutils.ToPtr(os.Getenv("AZURE_TENANT_ID")),
 			GatewayDomains: []string{
 				"eastus-shared.ppe.warm.ingest.monitor.core.windows.net",
 				"gcs.ppe.monitoring.core.windows.net",
@@ -111,6 +113,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"test1.diagnostics.monitoring.core.windows.net",
 			},
 			GatewayMDSDConfigVersion:    pointerutils.ToPtr(version.DevGatewayGenevaLoggingConfigVersion),
+			GatewayVMSize:               pointerutils.ToPtr("Standard_D2s_v3"),
 			GatewayVMSSCapacity:         pointerutils.ToPtr(1),
 			GlobalResourceGroupLocation: pointerutils.ToPtr(_env.Location()),
 			GlobalResourceGroupName:     pointerutils.ToPtr(azureUniquePrefix + "-global"),
@@ -159,6 +162,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			TokenContributorRoleID:            pointerutils.ToPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
 			TokenContributorRoleName:          pointerutils.ToPtr("ARO v4 ContainerRegistry Token Contributor"),
 			VMSize:                            pointerutils.ToPtr("Standard_D2s_v3"),
+			Environment:                       pointerutils.ToPtr("development"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			InstallViaHive:           pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),

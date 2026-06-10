@@ -125,7 +125,7 @@ ENVIRONMENT='$ENVIRONMENT'"
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
 
     # shellcheck disable=SC2034
-    local -r cluster_mdsd_conf_file="MDSDIMAGE='\${RPIMAGE%%/*}/${CLUSTERMDSDIMAGE#*/}'
+    local -r cluster_mdsd_conf_file="MDSDIMAGE='$cluster_mdsd_image'
 MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 MONITORING_GCS_ACCOUNT='$CLUSTERMDSDACCOUNT'
 MONITORING_GCS_REGION='$LOCATION'
