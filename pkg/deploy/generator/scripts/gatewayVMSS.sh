@@ -59,7 +59,7 @@ main() {
     # shellcheck disable=SC2034
     local -r otel_collector_image="$GATEWAYOTELCOLLECTORIMAGE"
     # shellcheck disable=SC2034
-    local -r cluster_mdsd_image="$CLUSTERMDSDIMAGE"
+    local -r cluster_mdsd_image="${RPIMAGE%%/*}/${CLUSTERMDSDIMAGE#*/}"
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034
     local -rA aro_images=(
