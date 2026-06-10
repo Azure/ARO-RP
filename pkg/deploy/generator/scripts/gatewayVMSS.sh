@@ -125,11 +125,20 @@ ENVIRONMENT='$ENVIRONMENT'"
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
 
     # shellcheck disable=SC2034
-    local -r cluster_mdsd_account="$CLUSTERMDSDACCOUNT"
-    # shellcheck disable=SC2034
-    local -r cluster_mdsd_namespace="$CLUSTERMDSDNAMESPACE"
-    # shellcheck disable=SC2034
-    local -r cluster_mdsd_config_version="$CLUSTERMDSDCONFIGVERSION"
+    local -r cluster_mdsd_conf_file="MDSDIMAGE='\${RPIMAGE%%/*}/${CLUSTERMDSDIMAGE#*/}'
+MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
+MONITORING_GCS_ACCOUNT='$CLUSTERMDSDACCOUNT'
+MONITORING_GCS_REGION='$LOCATION'
+MONITORING_GCS_AUTH_ID_TYPE=AuthMSIToken
+MONITORING_GCS_AUTH_ID=mi_res_id#\${GATEWAYUSERASSIGNEDIDENTITYRESOURCEID}
+MONITORING_GCS_NAMESPACE='$CLUSTERMDSDNAMESPACE'
+MONITORING_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
+MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+MONITORING_TENANT='$LOCATION'
+MONITORING_ROLE=cluster
+MONITORING_ROLE_INSTANCE=\"\$(hostname)\"
+MONITORING_ENVIRONMENT='$ENVIRONMENT'
+ENABLE_GIG_BRIDGE_MODE=1"
 
     # shellcheck disable=SC2034
     local -r gateway_otel_collector_conf="extensions:
@@ -188,9 +197,7 @@ service:
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
         ["gateway_otel_collector"]="gateway_otel_collector_conf"
-        ["cluster_mdsd_account"]="cluster_mdsd_account"
-        ["cluster_mdsd_namespace"]="cluster_mdsd_namespace"
-        ["cluster_mdsd_config_version"]="cluster_mdsd_config_version"
+        ["cluster_mdsd"]="cluster_mdsd_conf_file"
         ["static_ip_address"]="static_ip_addresses"
     )
 

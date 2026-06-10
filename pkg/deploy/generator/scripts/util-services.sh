@@ -906,17 +906,11 @@ WantedBy=multi-user.target'
 # args:
 #   1) image - nameref, string
 #       * MDSD distroless container image
-#   2) cluster_mdsd_account - nameref, string
-#       * cluster MDSD account
-#   3) cluster_mdsd_namespace - nameref, string
-#       * cluster MDSD namespace
-#   4) cluster_mdsd_config_version - nameref, string
-#       * cluster MDSD config version
+#   2) conf_file - nameref, string
+#       * cluster MDSD configuration file content
 configure_service_cluster_mdsd() {
     local -n image="$1"
-    local -n cluster_mdsd_account="$2"
-    local -n cluster_mdsd_namespace="$3"
-    local -n cluster_mdsd_config_version="$4"
+    local -n conf_file="$2"
     log "starting"
     log "Configuring cluster-mdsd service (GIG Bridge Mode)"
 
@@ -926,23 +920,8 @@ configure_service_cluster_mdsd() {
 
     # shellcheck disable=SC2034
     local -r cluster_mdsd_conf_filename='/etc/sysconfig/cluster-mdsd'
-    # shellcheck disable=SC2034
-    local -r cluster_mdsd_conf_file="MDSDIMAGE='$image'
-MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
-MONITORING_GCS_ACCOUNT='$cluster_mdsd_account'
-MONITORING_GCS_REGION='$LOCATION'
-MONITORING_GCS_AUTH_ID_TYPE=AuthMSIToken
-MONITORING_GCS_AUTH_ID=mi_res_id#\${GATEWAYUSERASSIGNEDIDENTITYRESOURCEID}
-MONITORING_GCS_NAMESPACE='$cluster_mdsd_namespace'
-MONITORING_CONFIG_VERSION='$cluster_mdsd_config_version'
-MONITORING_USE_GENEVA_CONFIG_SERVICE=true
-MONITORING_TENANT='$LOCATION'
-MONITORING_ROLE=cluster
-MONITORING_ROLE_INSTANCE=\"\$(hostname)\"
-MONITORING_ENVIRONMENT='$ENVIRONMENT'
-ENABLE_GIG_BRIDGE_MODE=1"
 
-    write_file cluster_mdsd_conf_filename cluster_mdsd_conf_file true
+    write_file cluster_mdsd_conf_filename conf_file true
 
     # shellcheck disable=SC2034
     local -r cluster_mdsd_service_filename='/etc/systemd/system/cluster-mdsd.service'
@@ -1468,9 +1447,7 @@ configure_vmss_aro_services() {
             "${configs["gateway_otel_collector"]}" \
             "${configs["static_ip_address"]}[otelcollector]"
         configure_service_cluster_mdsd "${images["clustermdsd"]}" \
-            "${configs["cluster_mdsd_account"]}" \
-            "${configs["cluster_mdsd_namespace"]}" \
-            "${configs["cluster_mdsd_config_version"]}"
+            "${configs["cluster_mdsd"]}"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
         configure_service_aro_rp "${images["rp"]}" \
