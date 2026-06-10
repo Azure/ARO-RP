@@ -55,6 +55,7 @@ type Configuration struct {
 	ClusterMDSDConfigVersion          *string                `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
 	ClusterMDSDNamespace              *string                `json:"clusterMdsdNamespace,omitempty" value:"required"`
 	ClusterParentDomainName           *string                `json:"clusterParentDomainName,omitempty" value:"required"`
+	OtelClusterMDSDConfigVersion      *string                `json:"otelClusterMdsdConfigVersion,omitempty" value:"required"`
 	DatabaseAccountName               *string                `json:"databaseAccountName,omitempty" value:"required"`
 	CosmosDB                          *CosmosDBConfiguration `json:"cosmosDB,omitempty"`
 	DisableCosmosDBFirewall           *bool                  `json:"disableCosmosDBFirewall,omitempty"`

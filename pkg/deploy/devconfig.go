@@ -85,6 +85,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ClusterMDSDAccount:           pointerutils.ToPtr(version.DevClusterGenevaLoggingAccount),
 			ClusterMDSDConfigVersion:     pointerutils.ToPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterMDSDNamespace:         pointerutils.ToPtr(version.DevClusterGenevaLoggingNamespace),
+			OtelClusterMDSDConfigVersion: pointerutils.ToPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterParentDomainName:      pointerutils.ToPtr(azureUniquePrefix + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
 			CosmosDB: &CosmosDBConfiguration{
 				StandardProvisionedThroughput: 1000,

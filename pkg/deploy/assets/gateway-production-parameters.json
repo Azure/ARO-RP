@@ -17,9 +17,6 @@
         "clusterMdsdAccount": {
             "value": ""
         },
-        "clusterMdsdConfigVersion": {
-            "value": ""
-        },
         "clusterMdsdNamespace": {
             "value": ""
         },
@@ -81,6 +78,9 @@
                 "japanwest",
                 "uaecentral"
             ]
+        },
+        "otelClusterMdsdConfigVersion": {
+            "value": ""
         },
         "rpImage": {
             "value": ""
