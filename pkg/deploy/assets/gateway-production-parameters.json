@@ -14,13 +14,13 @@
         "azureSecPackVSATenantId": {
             "value": ""
         },
-        "clusterMDSDAccount": {
+        "clusterMdsdAccount": {
             "value": ""
         },
-        "clusterMDSDConfigVersion": {
+        "clusterMdsdConfigVersion": {
             "value": ""
         },
-        "clusterMDSDNamespace": {
+        "clusterMdsdNamespace": {
             "value": ""
         },
         "databaseAccountName": {
