@@ -24,8 +24,11 @@ func (no *NoOpMonitor) MonitorName() string {
 	return "noop"
 }
 
-// Closeable is implemented by monitors that need explicit cleanup after a
-// monitoring cycle completes.
+// Closeable is implemented by monitors that hold resources requiring explicit
+// cleanup.
+// Close may be called during forced cleanup before Monitor has returned, so
+// implementations must make it safe to call concurrently with Monitor and more
+// than once.
 type Closeable interface {
 	Close()
 }
