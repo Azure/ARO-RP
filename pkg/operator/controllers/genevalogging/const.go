@@ -25,9 +25,3 @@ var otelConfigReducedLogs string
 //go:embed staticfiles/otel-config-high-signal.yaml
 var otelConfigMinimalLogs string
 
-// Backward-compatible aliases for existing tests and references.
-var (
-	otelConfigFull         = otelConfigHighLogLevel
-	otelConfigReducedNoise = otelConfigReducedLogs
-	otelConfigHighSignal   = otelConfigMinimalLogs
-)
