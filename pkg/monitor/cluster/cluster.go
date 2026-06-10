@@ -358,9 +358,23 @@ func (m *Monitor) MonitorName() string {
 }
 
 func (mon *Monitor) Close() {
-	if mon.httpClient != nil {
-		mon.closeOnce.Do(func() {
+	mon.closeOnce.Do(func() {
+		if mon.httpClient != nil {
 			mon.httpClient.CloseIdleConnections()
-		})
+		}
+		closeAroClientIdleConnections(mon.arocli)
+	})
+}
+
+func closeAroClientIdleConnections(arocli aroclient.Interface) {
+	if arocli == nil || arocli.AroV1alpha1() == nil {
+		return
 	}
+
+	restClient, ok := arocli.AroV1alpha1().RESTClient().(*rest.RESTClient)
+	if !ok || restClient == nil || restClient.Client == nil {
+		return
+	}
+
+	restClient.Client.CloseIdleConnections()
 }
