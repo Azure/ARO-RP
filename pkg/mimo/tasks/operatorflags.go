@@ -23,7 +23,7 @@ func UpdateOperatorFlags(t mimo.TaskContext, doc *api.MaintenanceManifestDocumen
 	return run(t, s)
 }
 
-// Set the Operator flag for Geneva Logging mode to use the OTel-based forwarder
+// Set the Operator flag for Geneva Logging mode to use the OTel-based exporter
 // and update this in the cluster.
 func SetOperatorFlagGenevaLoggingUseOTel(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
 	s := []steps.Step{
