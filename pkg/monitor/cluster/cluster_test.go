@@ -10,9 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	restfake "k8s.io/client-go/rest/fake"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,6 +23,9 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
@@ -42,8 +48,23 @@ func (t *fakeCloseIdleTransport) CloseIdleConnections() {
 
 func TestMonitorCloseClosesIdleConnectionsOnce(t *testing.T) {
 	transport := &fakeCloseIdleTransport{}
+	aroTransport := &fakeCloseIdleTransport{}
+	gv := arov1alpha1.SchemeGroupVersion
+	aroRESTClient, err := rest.RESTClientForConfigAndClient(&rest.Config{
+		Host:    "https://example.com",
+		APIPath: "/apis",
+		ContentConfig: rest.ContentConfig{
+			GroupVersion:         &gv,
+			NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
+		},
+	}, &http.Client{Transport: aroTransport})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	mon := &Monitor{
 		httpClient: &http.Client{Transport: transport},
+		arocli:     aroclient.New(aroRESTClient),
 	}
 
 	mon.Close()
@@ -52,6 +73,19 @@ func TestMonitorCloseClosesIdleConnectionsOnce(t *testing.T) {
 	if transport.closed != 1 {
 		t.Fatalf("expected CloseIdleConnections to be called once, got %d", transport.closed)
 	}
+	if aroTransport.closed != 1 {
+		t.Fatalf("expected ARO client CloseIdleConnections to be called once, got %d", aroTransport.closed)
+	}
+}
+
+func TestMonitorCloseIgnoresFakeAroClientset(t *testing.T) {
+	mon := &Monitor{
+		arocli: arofake.NewSimpleClientset(),
+	}
+
+	assert.NotPanics(t, func() {
+		mon.Close()
+	})
 }
 
 func TestMonitor(t *testing.T) {
