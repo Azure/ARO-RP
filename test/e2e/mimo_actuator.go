@@ -118,4 +118,61 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		Expect(ok).To(BeTrue())
 		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
 	})
+
+	It("Should set Geneva logging OTel profiles via MIMO maintenance manifests", func(ctx context.Context) {
+		for _, tt := range []struct {
+			name    string
+			taskID  admin.MIMOTaskID
+			profile string
+		}{
+			{
+				name:    "max logs",
+				taskID:  admin.MIMOTaskID(mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MAX_LOGS),
+				profile: operator.GenevaLoggingOTelProfileMaxLogs,
+			},
+			{
+				name:    "reduced logs",
+				taskID:  admin.MIMOTaskID(mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_REDUCED_LOGS),
+				profile: operator.GenevaLoggingOTelProfileReducedLogs,
+			},
+			{
+				name:    "minimal logs",
+				taskID:  admin.MIMOTaskID(mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MINIMAL_LOGS),
+				profile: operator.GenevaLoggingOTelProfileMinimalLogs,
+			},
+		} {
+			By("creating a profile task maintenance manifest for " + tt.name)
+			out := &admin.MaintenanceManifest{}
+			resp, err := adminRequest(ctx,
+				http.MethodPut, "/admin"+clusterResourceID+"/maintenancemanifests",
+				url.Values{}, true, &admin.MaintenanceManifest{
+					MaintenanceTaskID: tt.taskID,
+				}, &out, logOnError(log)...)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+			manifestID := out.ID
+			By("waiting for the maintenance manifest to complete for " + tt.name)
+			Eventually(func(g Gomega, ctx context.Context) {
+				fetchedManifest := &admin.MaintenanceManifest{}
+				resp, err = adminRequest(ctx,
+					http.MethodGet, "/admin"+clusterResourceID+"/maintenancemanifests/"+manifestID,
+					url.Values{}, true, nil, &fetchedManifest)
+
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				g.Expect(fetchedManifest.State).To(Equal(admin.MaintenanceManifestStateCompleted))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			By("checking expected operator flags for " + tt.name)
+			Eventually(func(g Gomega) {
+				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingEnabled]).To(Equal(operator.FlagTrue))
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingOTelProfile]).To(Equal(tt.profile))
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingOTelMasterProfile]).To(Equal(tt.profile))
+				g.Expect(co.Spec.OperatorFlags[operator.GenevaLoggingOTelWorkerProfile]).To(Equal(tt.profile))
+			}).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+		}
+	})
 })
