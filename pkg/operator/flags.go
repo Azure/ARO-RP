@@ -4,16 +4,26 @@ package operator
 // Licensed under the Apache License 2.0.
 
 const (
-	AlertWebhookEnabled                = "aro.alertwebhook.enabled"
-	AzureSubnetsEnabled                = "aro.azuresubnets.enabled"
-	AzureSubnetsNsgManaged             = "aro.azuresubnets.nsg.managed"
-	AzureSubnetsServiceEndpointManaged = "aro.azuresubnets.serviceendpoint.managed"
-	BannerEnabled                      = "aro.banner.enabled"
-	CheckerEnabled                     = "aro.checker.enabled"
-	CPMSEnabled                        = "aro.cpms.enabled"
-	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
-	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
-	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
+	AlertWebhookEnabled                  = "aro.alertwebhook.enabled"
+	AzureSubnetsEnabled                  = "aro.azuresubnets.enabled"
+	AzureSubnetsNsgManaged               = "aro.azuresubnets.nsg.managed"
+	AzureSubnetsServiceEndpointManaged   = "aro.azuresubnets.serviceendpoint.managed"
+	BannerEnabled                        = "aro.banner.enabled"
+	CheckerEnabled                       = "aro.checker.enabled"
+	CPMSEnabled                          = "aro.cpms.enabled"
+	DnsmasqEnabled                       = "aro.dnsmasq.enabled"
+	RestartDnsmasqEnabled                = "aro.restartdnsmasq.enabled"
+	GenevaLoggingEnabled                 = "aro.genevalogging.enabled"
+	GenevaLoggingOTelProfile             = "aro.genevalogging.otel.profile"
+	GenevaLoggingOTelMasterProfile       = "aro.genevalogging.otel.master.profile"
+	GenevaLoggingOTelWorkerProfile       = "aro.genevalogging.otel.worker.profile"
+	GenevaLoggingOTelProfileHighLogLevel = "high-loglevel"
+	GenevaLoggingOTelProfileReducedLogs  = "reduced-logs"
+	GenevaLoggingOTelProfileMinimalLogs  = "minimal-logs"
+	// Backward-compatible aliases for older profile names.
+	GenevaLoggingOTelProfileFull       = GenevaLoggingOTelProfileHighLogLevel
+	GenevaLoggingOTelProfileReduced    = GenevaLoggingOTelProfileReducedLogs
+	GenevaLoggingOTelProfileHighSignal = GenevaLoggingOTelProfileMinimalLogs
 	ImageConfigEnabled                 = "aro.imageconfig.enabled"
 	IngressEnabled                     = "aro.ingress.enabled"
 	MachineEnabled                     = "aro.machine.enabled"
@@ -80,6 +90,7 @@ func DefaultOperatorFlags() map[string]string {
 		DnsmasqEnabled:                     FlagTrue,
 		RestartDnsmasqEnabled:              FlagFalse,
 		GenevaLoggingEnabled:               FlagTrue,
+		GenevaLoggingOTelProfile:           GenevaLoggingOTelProfileMinimalLogs,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,
 		MachineEnabled:                     FlagTrue,

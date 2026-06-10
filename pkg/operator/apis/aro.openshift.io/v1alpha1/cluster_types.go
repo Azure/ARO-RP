@@ -57,16 +57,7 @@ func ClusterChecksTypes() []string {
 	}
 }
 
-type GenevaLoggingSpec struct {
-	// +kubebuilder:validation:Pattern:=`[0-9]+.[0-9]+`
-	ConfigVersion string `json:"configVersion,omitempty"`
-	// +kubebuilder:validation:Enum=AROClusterLogsINT;AROClusterLogsPROD;AROClusterLogs
-	MonitoringGCSAccount string `json:"monitoringGCSAccount,omitempty"`
-	// +kubebuilder:validation:Enum=DiagnosticsProd;Test;CaFairfax
-	MonitoringGCSEnvironment string `json:"monitoringGCSEnvironment,omitempty"`
-	// +kubebuilder:validation:Enum=AROClusterLogsINT;AROClusterLogsPROD;AROClusterLogs
-	MonitoringGCSNamespace string `json:"monitoringGCSNamespace,omitempty"`
-}
+type GenevaLoggingSpec struct{}
 
 type InternetCheckerSpec struct {
 	URLs []string `json:"urls,omitempty"`
@@ -113,6 +104,7 @@ type ClusterSpec struct {
 	APIIntIP                 string              `json:"apiIntIP,omitempty"`
 	IngressIP                string              `json:"ingressIP,omitempty"`
 	GatewayDomains           []string            `json:"gatewayDomains,omitempty"`
+	GatewayTelemetryDomain   string              `json:"gatewayTelemetryDomain,omitempty"`
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
 	ServiceSubnets           []string            `json:"serviceSubnets,omitempty"`

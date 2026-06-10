@@ -101,10 +101,6 @@ func (m *manager) ensureUpgradeAnnotation(ctx context.Context) error {
 	return m.aroOperatorDeployer.EnsureUpgradeAnnotation(ctx)
 }
 
-func (m *manager) renewMDSDCertificate(ctx context.Context) error {
-	return RenewMDSDCertificate(ctx, m.log, m.env, m.ch)
-}
-
 func (m *manager) restartAROOperatorMaster(ctx context.Context) error {
 	return m.aroOperatorDeployer.Restart(ctx, []string{"aro-operator-master"})
 }

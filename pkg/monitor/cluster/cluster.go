@@ -196,7 +196,6 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitSummary,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitMaintenanceState,
-		mon.emitMDSDCertificateExpiry,
 		mon.emitIngressAndAPIServerCertificateExpiry,
 		mon.emitEtcdCertificateExpiry,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable

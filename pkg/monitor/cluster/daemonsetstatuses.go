@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 
@@ -36,6 +37,15 @@ func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 					"namespace":              ds.Namespace,
 					"numberAvailable":        strconv.Itoa(int(ds.Status.NumberAvailable)),
 				})
+
+				if strings.HasPrefix(ds.Name, "otel-collector-") && ds.Status.DesiredNumberScheduled > 0 && ds.Status.NumberAvailable == 0 {
+					mon.emitGauge("genevalogging.otel.cannotstart", 1, map[string]string{
+						"desiredNumberScheduled": strconv.Itoa(int(ds.Status.DesiredNumberScheduled)),
+						"name":                   ds.Name,
+						"namespace":              ds.Namespace,
+						"numberAvailable":        strconv.Itoa(int(ds.Status.NumberAvailable)),
+					})
+				}
 			}
 
 			cont = l.Continue
