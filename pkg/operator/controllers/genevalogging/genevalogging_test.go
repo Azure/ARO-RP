@@ -56,19 +56,19 @@ func TestGetOTelProfiles(t *testing.T) {
 	}
 
 	profiles, err = getOTelProfiles(arov1alpha1.OperatorFlags{
-		operator.GenevaLoggingOTelMasterProfile: operator.GenevaLoggingOTelProfileHighLogLevel,
+		operator.GenevaLoggingOTelMasterProfile: operator.GenevaLoggingOTelProfileMaxLogs,
 		operator.GenevaLoggingOTelWorkerProfile: operator.GenevaLoggingOTelProfileReducedLogs,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if profiles.master != otelProfileHighLogLevel || profiles.worker != otelProfileReducedLogs {
+	if profiles.master != otelProfileMaxLogs || profiles.worker != otelProfileReducedLogs {
 		t.Fatalf("unexpected override profiles: %#v", profiles)
 	}
 }
 
 func TestSelectOTelConfig(t *testing.T) {
-	full := selectOTelConfig(otelProfileHighLogLevel)
+	full := selectOTelConfig(otelProfileMaxLogs)
 	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, batch]") {
 		t.Fatal("full config missing expected processor chain")
 	}

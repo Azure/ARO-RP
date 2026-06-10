@@ -10,8 +10,8 @@ import (
 )
 
 var otelConfigProfileTemplate = template.Must(template.New("otel-config-profile").Parse(
-	`{{- if eq .Profile "` + string(otelProfileHighLogLevel) + `" -}}
-{{- .HighLogLevel -}}
+	`{{- if eq .Profile "` + string(otelProfileMaxLogs) + `" -}}
+{{- .MaxLogs -}}
 {{- else if eq .Profile "` + string(otelProfileMinimalLogs) + `" -}}
 {{- .MinimalLogs -}}
 {{- else -}}
@@ -62,12 +62,12 @@ func renderOTelConfig(profile otelProfile) (string, error) {
 	var profileRendered bytes.Buffer
 	err := otelConfigProfileTemplate.Execute(&profileRendered, struct {
 		Profile      otelProfile
-		HighLogLevel string
-		ReducedLogs  string
-		MinimalLogs  string
+		MaxLogs     string
+		ReducedLogs string
+		MinimalLogs string
 	}{
-		Profile:      profile,
-		HighLogLevel: otelConfigHighLogLevel,
+		Profile:     profile,
+		MaxLogs:     otelConfigMaxLogs,
 		ReducedLogs:  otelConfigReducedLogs,
 		MinimalLogs:  otelConfigMinimalLogs,
 	})

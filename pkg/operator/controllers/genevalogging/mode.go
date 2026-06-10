@@ -13,15 +13,16 @@ import (
 type otelProfile string
 
 const (
-	otelProfileHighLogLevel otelProfile = operator.GenevaLoggingOTelProfileHighLogLevel
+	otelProfileMaxLogs otelProfile = operator.GenevaLoggingOTelProfileMaxLogs
 	otelProfileReducedLogs  otelProfile = operator.GenevaLoggingOTelProfileReducedLogs
 	otelProfileMinimalLogs  otelProfile = operator.GenevaLoggingOTelProfileMinimalLogs
 )
 
 const (
-	legacyOTelProfileFull       = "full"
-	legacyOTelProfileReduced    = "reduced-noise"
-	legacyOTelProfileHighSignal = "high-signal"
+	legacyOTelProfileHighLogLevel = "high-loglevel"
+	legacyOTelProfileFull         = "full"
+	legacyOTelProfileReduced      = "reduced-noise"
+	legacyOTelProfileHighSignal   = "high-signal"
 )
 
 type otelProfiles struct {
@@ -31,8 +32,8 @@ type otelProfiles struct {
 
 func parseOTelProfile(profile string) (otelProfile, error) {
 	switch profile {
-	case operator.GenevaLoggingOTelProfileHighLogLevel, legacyOTelProfileFull:
-		return otelProfileHighLogLevel, nil
+	case operator.GenevaLoggingOTelProfileMaxLogs, legacyOTelProfileHighLogLevel, legacyOTelProfileFull:
+		return otelProfileMaxLogs, nil
 	case operator.GenevaLoggingOTelProfileReducedLogs, legacyOTelProfileReduced:
 		return otelProfileReducedLogs, nil
 	case operator.GenevaLoggingOTelProfileMinimalLogs, legacyOTelProfileHighSignal:
@@ -41,7 +42,7 @@ func parseOTelProfile(profile string) (otelProfile, error) {
 		return "", fmt.Errorf(
 			"unsupported geneva otel profile %q: expected %q, %q, or %q",
 			profile,
-			operator.GenevaLoggingOTelProfileHighLogLevel,
+			operator.GenevaLoggingOTelProfileMaxLogs,
 			operator.GenevaLoggingOTelProfileReducedLogs,
 			operator.GenevaLoggingOTelProfileMinimalLogs,
 		)

@@ -17,11 +17,11 @@ const (
 	GenevaLoggingOTelProfile             = "aro.genevalogging.otel.profile"
 	GenevaLoggingOTelMasterProfile       = "aro.genevalogging.otel.master.profile"
 	GenevaLoggingOTelWorkerProfile       = "aro.genevalogging.otel.worker.profile"
-	GenevaLoggingOTelProfileHighLogLevel = "high-loglevel"
-	GenevaLoggingOTelProfileReducedLogs  = "reduced-logs"
-	GenevaLoggingOTelProfileMinimalLogs  = "minimal-logs"
+	GenevaLoggingOTelProfileMaxLogs     = "max-logs"
+	GenevaLoggingOTelProfileReducedLogs = "reduced-logs"
+	GenevaLoggingOTelProfileMinimalLogs = "minimal-logs"
 	// Backward-compatible aliases for older profile names.
-	GenevaLoggingOTelProfileFull       = GenevaLoggingOTelProfileHighLogLevel
+	GenevaLoggingOTelProfileFull       = GenevaLoggingOTelProfileMaxLogs
 	GenevaLoggingOTelProfileReduced    = GenevaLoggingOTelProfileReducedLogs
 	GenevaLoggingOTelProfileHighSignal = GenevaLoggingOTelProfileMinimalLogs
 	ImageConfigEnabled                 = "aro.imageconfig.enabled"
