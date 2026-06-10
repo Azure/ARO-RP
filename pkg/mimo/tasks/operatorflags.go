@@ -23,13 +23,13 @@ func UpdateOperatorFlags(t mimo.TaskContext, doc *api.MaintenanceManifestDocumen
 	return run(t, s)
 }
 
-// Set the Operator flag for Geneva Logging mode to use the OTel-based exporter
+// Set the Operator flags for Geneva Logging to use the OTel-based exporter
 // and update this in the cluster.
 func SetOperatorFlagGenevaLoggingUseOTel(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
 	s := []steps.Step{
 		steps.Action(cluster.EnsureAPIServerIsUp),
 		steps.Action(func(ctx context.Context) error {
-			return cluster.SetOperatorFlagInClusterDoc(ctx, operator.GenevaLoggingMode, operator.GenevaLoggingModeOTel)
+			return setGenevaLoggingOTelProfileInClusterDoc(ctx, operator.GenevaLoggingOTelProfileMinimalLogs)
 		}),
 		steps.Action(cluster.UpdateClusterOperatorFlags),
 	}
@@ -37,16 +37,57 @@ func SetOperatorFlagGenevaLoggingUseOTel(t mimo.TaskContext, doc *api.Maintenanc
 	return run(t, s)
 }
 
-// Set the Operator flag for Geneva Logging mode to use the fluentbit and
-// MDSD-based forwarder and update this in the cluster.
-func SetOperatorFlagGenevaLoggingUseMDSD(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
+// Set Geneva Logging to OTel with max-logs profile for global, master, and worker.
+func SetOperatorFlagGenevaLoggingOTelProfileMaxLogs(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
 	s := []steps.Step{
 		steps.Action(cluster.EnsureAPIServerIsUp),
 		steps.Action(func(ctx context.Context) error {
-			return cluster.SetOperatorFlagInClusterDoc(ctx, operator.GenevaLoggingMode, operator.GenevaLoggingModeMDSD)
+			return setGenevaLoggingOTelProfileInClusterDoc(ctx, operator.GenevaLoggingOTelProfileMaxLogs)
 		}),
 		steps.Action(cluster.UpdateClusterOperatorFlags),
 	}
 
 	return run(t, s)
+}
+
+// Set Geneva Logging to OTel with reduced-logs profile for global, master, and worker.
+func SetOperatorFlagGenevaLoggingOTelProfileReducedLogs(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
+	s := []steps.Step{
+		steps.Action(cluster.EnsureAPIServerIsUp),
+		steps.Action(func(ctx context.Context) error {
+			return setGenevaLoggingOTelProfileInClusterDoc(ctx, operator.GenevaLoggingOTelProfileReducedLogs)
+		}),
+		steps.Action(cluster.UpdateClusterOperatorFlags),
+	}
+
+	return run(t, s)
+}
+
+// Set Geneva Logging to OTel with minimal-logs profile for global, master, and worker.
+func SetOperatorFlagGenevaLoggingOTelProfileMinimalLogs(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
+	s := []steps.Step{
+		steps.Action(cluster.EnsureAPIServerIsUp),
+		steps.Action(func(ctx context.Context) error {
+			return setGenevaLoggingOTelProfileInClusterDoc(ctx, operator.GenevaLoggingOTelProfileMinimalLogs)
+		}),
+		steps.Action(cluster.UpdateClusterOperatorFlags),
+	}
+
+	return run(t, s)
+}
+
+func setGenevaLoggingOTelProfileInClusterDoc(ctx context.Context, profile string) error {
+	if err := cluster.SetOperatorFlagInClusterDoc(ctx, operator.GenevaLoggingEnabled, operator.FlagTrue); err != nil {
+		return err
+	}
+
+	if err := cluster.SetOperatorFlagInClusterDoc(ctx, operator.GenevaLoggingOTelProfile, profile); err != nil {
+		return err
+	}
+
+	if err := cluster.SetOperatorFlagInClusterDoc(ctx, operator.GenevaLoggingOTelMasterProfile, profile); err != nil {
+		return err
+	}
+
+	return cluster.SetOperatorFlagInClusterDoc(ctx, operator.GenevaLoggingOTelWorkerProfile, profile)
 }

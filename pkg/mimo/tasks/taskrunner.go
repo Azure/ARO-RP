@@ -27,8 +27,10 @@ var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 	mimo.FIX_SSH_ID:               FixSSH,
 
 	// Operator flag tasks
-	mimo.OPERATOR_FLAG_SET_GENEVA_OTEL: SetOperatorFlagGenevaLoggingUseOTel,
-	mimo.OPERATOR_FLAG_SET_GENEVA_MDSD: SetOperatorFlagGenevaLoggingUseMDSD,
+	mimo.OPERATOR_FLAG_SET_GENEVA_OTEL:                      SetOperatorFlagGenevaLoggingUseOTel,
+	mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MAX_LOGS:     SetOperatorFlagGenevaLoggingOTelProfileMaxLogs,
+	mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_REDUCED_LOGS: SetOperatorFlagGenevaLoggingOTelProfileReducedLogs,
+	mimo.OPERATOR_FLAG_SET_GENEVA_OTEL_PROFILE_MINIMAL_LOGS: SetOperatorFlagGenevaLoggingOTelProfileMinimalLogs,
 }
 
 func run(t utilmimo.TaskContext, s []steps.Step) error {
