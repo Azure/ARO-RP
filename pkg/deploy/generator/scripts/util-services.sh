@@ -1195,15 +1195,19 @@ elif [[ \$COMPONENT = \"gateway-otel\" ]]; then
 else
   echo Invalid usage && exit 1
 fi
-
-SECRET_NAME=\"$secret_prefix-\${COMPONENT}\"
+if [[ \$COMPONENT = \"gateway-otel\" ]]; then
+  KEYVAULT_URI=\"https://$KEYVAULTPREFIX-otl.$KEYVAULTDNSSUFFIX/secrets/gateway-otel-tls\"
+else 
+  SECRET_NAME=\"$secret_prefix-\${COMPONENT}\"
+  KEYVAULT_URI=\"https://$KEYVAULTPREFIX-$keyvault_suffix.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\"
+fi
 NEW_CERT_FILE=\"\$TEMP_DIR/\$COMPONENT.pem\"
 for attempt in {1..5}; do
   az keyvault \
     secret \
     download \
     --file \"\$NEW_CERT_FILE\" \
-    --id \"https://$KEYVAULTPREFIX-$keyvault_suffix.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\" \
+    --id \"\$KEYVAULT_URI\" \
     && break
   if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
 done
