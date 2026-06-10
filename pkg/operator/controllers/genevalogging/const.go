@@ -19,9 +19,8 @@ const (
 //go:embed staticfiles/otel-config-max-logs.yaml
 var otelConfigMaxLogs string
 
-//go:embed staticfiles/otel-config-reduced-noise.yaml
+//go:embed staticfiles/otel-config-reduced-logs.yaml
 var otelConfigReducedLogs string
 
-//go:embed staticfiles/otel-config-high-signal.yaml
+//go:embed staticfiles/otel-config-minimal-logs.yaml
 var otelConfigMinimalLogs string
-
