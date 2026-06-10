@@ -18,13 +18,6 @@ const (
 	otelProfileMinimalLogs  otelProfile = operator.GenevaLoggingOTelProfileMinimalLogs
 )
 
-// Backward-compatible aliases for existing tests and references.
-const (
-	otelProfileFull       otelProfile = otelProfileHighLogLevel
-	otelProfileReduced    otelProfile = otelProfileReducedLogs
-	otelProfileHighSignal otelProfile = otelProfileMinimalLogs
-)
-
 const (
 	legacyOTelProfileFull       = "full"
 	legacyOTelProfileReduced    = "reduced-noise"
@@ -76,12 +69,3 @@ func getOTelProfiles(flags arov1alpha1.OperatorFlags) (otelProfiles, error) {
 	}, nil
 }
 
-// getOTelProfile preserves legacy single-profile behavior by returning the
-// global/default profile selection.
-func getOTelProfile(flags arov1alpha1.OperatorFlags) (otelProfile, error) {
-	profiles, err := getOTelProfiles(flags)
-	if err != nil {
-		return "", err
-	}
-	return profiles.master, nil
-}
