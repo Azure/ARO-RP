@@ -94,11 +94,11 @@ func TestEmitDaemonsetStatusesOTelCannotStart(t *testing.T) {
 	ctx := context.Background()
 
 	objects := []client.Object{
-		namespaceObject("openshift"),
+		namespaceObject("openshift-azure-logging"),
 		&appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "otel-collector-master",
-				Namespace: "openshift",
+				Namespace: "openshift-azure-logging",
 			},
 			Status: appsv1.DaemonSetStatus{
 				DesiredNumberScheduled: 2,
@@ -130,7 +130,7 @@ func TestEmitDaemonsetStatusesOTelCannotStart(t *testing.T) {
 	dims := map[string]string{
 		"desiredNumberScheduled": strconv.Itoa(2),
 		"name":                   "otel-collector-master",
-		"namespace":              "openshift",
+		"namespace":              "openshift-azure-logging",
 		"numberAvailable":        strconv.Itoa(0),
 	}
 	m.EXPECT().EmitGauge("daemonset.statuses", int64(1), dims)

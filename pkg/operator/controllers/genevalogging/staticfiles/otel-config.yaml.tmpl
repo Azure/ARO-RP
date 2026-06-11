@@ -12,19 +12,24 @@ receivers:
         is_first_entry: body matches "^[^\\s]"
   file_log/containers:
     include:
-      - /var/log/containers/*_openshift-azure-*_*.log
-      - /var/log/containers/*_openshift-apiserver_*.log
-      - /var/log/containers/*_openshift-authentication_*.log
-      - /var/log/containers/*_openshift-etcd_*.log
-      - /var/log/containers/*_openshift-kube-apiserver_*.log
-      - /var/log/containers/*_openshift-kube-controller-manager_*.log
-      - /var/log/containers/*_openshift-kube-scheduler_*.log
-      - /var/log/containers/*_openshift-dns_*.log
-      - /var/log/containers/*_openshift-ingress_*.log
-      - /var/log/containers/*_openshift-ovn-kubernetes_*.log
-      - /var/log/containers/*_openshift-network-operator_*.log
-      - /var/log/containers/*_openshift-machine-config-operator_*.log
-      - /var/log/containers/*_openshift-machine-api_*.log
+      - /var/log/containers/*_default_*.log
+      - /var/log/containers/*_kube-*_*.log
+      - /var/log/containers/*_openshift_*.log
+      - /var/log/containers/*_openshift-*_*.log
+    # Match legacy fluentbit namespace filtering behavior by keeping only
+    # default/kube*/openshift* namespaces and excluding known high-volume
+    # openshift namespaces that were intentionally omitted before.
+    exclude:
+      - /var/log/containers/*_openshift-logging_*.log
+      - /var/log/containers/*_openshift-keda_*.log
+      - /var/log/containers/*_openshift-gitops_*.log
+      - /var/log/containers/*_openshift-user-workload-monitoring_*.log
+      - /var/log/containers/*_openshift-adp_*.log
+      - /var/log/containers/*_openshift-distributed-tracing_*.log
+      - /var/log/containers/*_openshift-cnv_*.log
+      - /var/log/containers/*_openshift-serverless_*.log
+      - /var/log/containers/*_openshift-pipelines_*.log
+      - /var/log/containers/*_openshift-nfd_*.log
     start_at: beginning
     storage: file_storage
     include_file_path: true
@@ -35,6 +40,7 @@ receivers:
         from: attributes["log.file.path_resolved"]
         to: attributes["log.file.path"]
         if: 'attributes["log.file.path_resolved"] != nil'
+      # Parse container runtime format and recombine CRI partial ("P"/"F") multiline logs.
       - type: container
       - id: klog_parse
         type: regex_parser
@@ -80,16 +86,29 @@ processors:
     check_interval: 1s
     limit_mib: 1000
     spike_limit_mib: 150
+{{- if eq .Profile "minimal-logs" }}
   filter/keep-only-high-signal:
     error_mode: ignore
     logs:
       log_record:
         - 'not ((IsString(body) and (IsMatch(body, "level=(error|warn|warning)") or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body, "Update error .*: ClusterOperatorDegraded"))) or (IsMap(body) and ((IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$")) or (IsString(body["message"]) and (IsMatch(body["message"], "level=(error|warn|warning)") or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body["message"], "Update error .*: ClusterOperatorDegraded"))))))'
+{{- else if eq .Profile "reduced-logs" }}
+  filter/drop-olm-noise:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsString(body) and IsMatch(body, "addrConn\\.createTransport failed to connect|connect: connection refused")'
+        - IsString(body) and IsMatch(body, "install strategy successful")
+        - IsString(body) and IsMatch(body, "resolving sources|checking if subscriptions need update")
+        - IsString(body) and IsMatch(body, "evaluating current pod|matching label selector, 1 have the correct images and matching hash")
+        - IsString(body) and IsMatch(body, "No subscriptions were found in namespace")
+{{- end }}
   transform/log-parity:
     error_mode: ignore
     log_statements:
       - context: log
         statements:
+          # Match Fluent Bit journald key pruning behavior.
           - delete_matching_keys(log.attributes, "^_")
           - delete_matching_keys(log.attributes, "^JOB_")
           - delete_matching_keys(log.attributes, "^NM_")
@@ -104,6 +123,7 @@ processors:
           - delete_key(log.attributes, "CPU_USAGE_NSEC")
           - delete_key(log.attributes, "BOOT_ID")
           - delete_key(log.attributes, "PENDING")
+          # Match Fluent Bit audit nesting lift behavior.
           - set(log.body["user_username"], log.body["user"]["username"]) where IsMap(log.body) and IsMap(log.body["user"]) and log.body["user"]["username"] != nil
           - set(log.body["user_uid"], log.body["user"]["uid"]) where IsMap(log.body) and IsMap(log.body["user"]) and log.body["user"]["uid"] != nil
           - set(log.body["user_groups"], log.body["user"]["groups"]) where IsMap(log.body) and IsMap(log.body["user"]) and log.body["user"]["groups"] != nil
@@ -129,6 +149,7 @@ processors:
           - set(log.attributes["POD"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
           - set(log.attributes["NAMESPACE"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
           - set(log.attributes["NODE"], "${env:MONITORING_ROLE_INSTANCE}")
+          # Preserve original nested objects so unmapped keys are retained.
   batch: {}
 
 extensions:
@@ -138,7 +159,7 @@ extensions:
     directory: /var/lib/otelcol/file_storage
 
 exporters:
-  otlp_grpc/gateway:
+  {{ .GatewayExporterID }}:
     endpoint: ${env:GENEVA_GATEWAY_ENDPOINT}
     compression: gzip
     retry_on_failure:
@@ -151,5 +172,11 @@ service:
   pipelines:
     logs:
       receivers: [journald, file_log/containers, file_log/audit]
+{{- if eq .Profile "minimal-logs" }}
       processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, batch]
-      exporters: [otlp_grpc/gateway]
+{{- else if eq .Profile "reduced-logs" }}
+      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, batch]
+{{- else }}
+      processors: [memory_limiter, transform/log-parity, batch]
+{{- end }}
+      exporters: [{{ .GatewayExporterID }}]
