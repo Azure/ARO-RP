@@ -128,23 +128,20 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 	}
 
 	var daemonsetNames []string
-	var foundConfig, foundGatewayCA bool
+	var foundConfig bool
 	for _, obj := range out {
 		switch typed := obj.(type) {
 		case *corev1.ConfigMap:
 			if typed.Name == otelConfigMapName {
 				foundConfig = true
 			}
-			if typed.Name == otelGatewayCACMName {
-				foundGatewayCA = true
-			}
 		case *appsv1.DaemonSet:
 			daemonsetNames = append(daemonsetNames, typed.Name)
 		}
 	}
 
-	if !foundConfig || !foundGatewayCA {
-		t.Fatalf("missing expected OTel configmaps: config=%t gatewayCA=%t", foundConfig, foundGatewayCA)
+	if !foundConfig {
+		t.Fatal("missing expected OTel configmap")
 	}
 	if !reflect.DeepEqual(daemonsetNames, []string{"otel-collector-master", "otel-collector-worker"}) {
 		t.Fatalf("unexpected daemonsets: %v", daemonsetNames)
@@ -206,7 +203,7 @@ func TestTelemetryGatewayTargetNotReadyWithoutEndpointIP(t *testing.T) {
 	}
 }
 
-func TestGenevaLoggingResourcesCreateCABundleBeforeGatewayTargetReady(t *testing.T) {
+func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T) {
 	instance := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 		Spec: arov1alpha1.ClusterSpec{
@@ -231,20 +228,20 @@ func TestGenevaLoggingResourcesCreateCABundleBeforeGatewayTargetReady(t *testing
 	}
 
 	var daemonsetCount int
-	var foundGatewayCA bool
+	var foundConfig bool
 	for _, obj := range out {
 		switch typed := obj.(type) {
 		case *corev1.ConfigMap:
-			if typed.Name == otelGatewayCACMName {
-				foundGatewayCA = true
+			if typed.Name == otelConfigMapName {
+				foundConfig = true
 			}
 		case *appsv1.DaemonSet:
 			daemonsetCount++
 		}
 	}
 
-	if !foundGatewayCA {
-		t.Fatal("missing gateway CA configmap when gateway endpoint is not yet available")
+	if !foundConfig {
+		t.Fatal("missing OTel configmap when gateway endpoint is not yet available")
 	}
 	if daemonsetCount != 0 {
 		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
