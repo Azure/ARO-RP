@@ -21,7 +21,7 @@ import (
 
 	securityv1 "github.com/openshift/api/security/v1"
 
-	operator "github.com/Azure/ARO-RP/pkg/operator"
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
@@ -142,7 +142,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.GenevaLoggingEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

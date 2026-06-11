@@ -62,4 +62,3 @@ func getOTelProfiles(flags arov1alpha1.OperatorFlags) (otelProfiles, error) {
 		worker: workerProfile,
 	}, nil
 }
-
