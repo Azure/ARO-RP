@@ -30,6 +30,10 @@ receivers:
       - /var/log/containers/*_openshift-serverless_*.log
       - /var/log/containers/*_openshift-pipelines_*.log
       - /var/log/containers/*_openshift-nfd_*.log
+{{- if eq .Profile "minimal-logs" }}
+      - /var/log/containers/*_openshift-cluster-csi-drivers_*.log
+      - /var/log/containers/*_openshift-monitoring_*.log
+{{- end }}
     start_at: beginning
     storage: file_storage
     include_file_path: true
