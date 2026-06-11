@@ -839,6 +839,9 @@ configure_service_gateway_otel_collector() {
     local -r otel_config_filename='/etc/otel-collector/config.yaml'
     write_file otel_config_filename otel_config true
 
+    chown -R 1000:1000 /etc/otel-collector
+    chown -R 1000:1000 /var/log/otel-collector
+
     # shellcheck disable=SC2034
     local -r gateway_otel_collector_conf_filename='/etc/sysconfig/gateway-otel-collector'
     # shellcheck disable=SC2034
@@ -1239,12 +1242,16 @@ if [ -f \$NEW_CERT_FILE ]; then
           echo updating certificate for \$COMPONENT
           mv \"\$NEW_CERT_TEMP\" \"\$CURRENT_CERT_FILE\"
           mv \"\$NEW_KEY_TEMP\" \"\$CURRENT_KEY_FILE\"
+          # Set ownership to match container user (UID 1000)
+          chown 1000:1000 \"\$CURRENT_CERT_FILE\" \"\$CURRENT_KEY_FILE\"
         fi
       else
         # First time setup
         echo installing certificate for \$COMPONENT
         mv \"\$NEW_CERT_TEMP\" \"\$CURRENT_CERT_FILE\"
         mv \"\$NEW_KEY_TEMP\" \"\$CURRENT_KEY_FILE\"
+        # Set ownership to match container user (UID 1000)
+        chown 1000:1000 \"\$CURRENT_CERT_FILE\" \"\$CURRENT_KEY_FILE\"
       fi
     else
       echo \"Failed to extract certificate or key for \$COMPONENT\" && exit 1
