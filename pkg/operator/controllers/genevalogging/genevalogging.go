@@ -148,7 +148,11 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 func selectOTelConfig(profile otelProfile) string {
 	cfg, err := renderOTelConfig(profile)
 	if err != nil {
-		return otelConfigReducedLogs
+		cfg, reducedErr := renderOTelConfig(otelProfileReducedLogs)
+		if reducedErr != nil {
+			return ""
+		}
+		return cfg
 	}
 	return cfg
 }

@@ -16,11 +16,5 @@ const (
 	otelGatewayCAKey      = "ca-bundle.crt"
 )
 
-//go:embed staticfiles/otel-config-max-logs.yaml
-var otelConfigMaxLogs string
-
-//go:embed staticfiles/otel-config-reduced-logs.yaml
-var otelConfigReducedLogs string
-
-//go:embed staticfiles/otel-config-minimal-logs.yaml
-var otelConfigMinimalLogs string
+//go:embed staticfiles/otel-config.yaml.tmpl
+var otelConfigTemplate string
