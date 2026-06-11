@@ -56,12 +56,18 @@ main() {
     local -r rpimage="$RPIMAGE"
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
+    # shellcheck disable=SC2034
+    local -r otel_collector_image="$GATEWAYOTELCOLLECTORIMAGE"
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_image="${RPIMAGE%%/*}/${CLUSTERMDSDIMAGE#*/}"
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034
     local -rA aro_images=(
         ["mdm"]="mdmimage"
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
+        ["otelcollector"]="otel_collector_image"
+        ["clustermdsd"]="cluster_mdsd_image"
     )
 
     pull_container_images aro_images
@@ -74,6 +80,9 @@ main() {
         "443/tcp"
         # JIT ssh
         "22/tcp"
+        # OTel collector
+        "4317/tcp"
+        "13133/tcp"
     )
 
     firewalld_configure enable_ports
@@ -115,12 +124,80 @@ ENVIRONMENT='$ENVIRONMENT'"
     # shellcheck disable=SC2034
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
 
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_conf_file="MDSDIMAGE='$cluster_mdsd_image'
+MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
+MONITORING_GCS_ACCOUNT='$CLUSTERMDSDACCOUNT'
+MONITORING_GCS_REGION='$LOCATION'
+MONITORING_GCS_AUTH_ID_TYPE=AuthMSIToken
+MONITORING_GCS_AUTH_ID=mi_res_id#\${GATEWAYUSERASSIGNEDIDENTITYRESOURCEID}
+MONITORING_GCS_NAMESPACE='$CLUSTERMDSDNAMESPACE'
+MONITORING_CONFIG_VERSION='$OTELCLUSTERMDSDCONFIGVERSION'
+MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+MONITORING_TENANT='$LOCATION'
+MONITORING_ROLE=cluster
+MONITORING_ROLE_INSTANCE=\"\$(hostname)\"
+MONITORING_ENVIRONMENT='$ENVIRONMENT'
+ENABLE_GIG_BRIDGE_MODE=1"
+
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf="extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  gatewayauth:
+    tls:
+      cert_file: /etc/otel-collector/tls/tls-cert.pem
+      key_file: /etc/otel-collector/tls/tls-key.pem
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        middlewares:
+          - id: gatewayauth
+        auth:
+          authenticator: gatewayauth
+
+exporters:
+  otlp/cluster-mdsd:
+    endpoint: localhost:2020
+    tls:
+      insecure: true
+
+processors:
+  attributes/cluster:
+    actions:
+      - key: resourceid
+        from_context: \"auth.clusterResourceID\"
+        action: upsert
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+service:
+  extensions:
+    - health_check
+    - gatewayauth
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/cluster, batch]
+      exporters: [otlp/cluster-mdsd]"
+
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034
     local -rA aro_configs=(
         ["gateway_config"]="aro_gateway_conf_file"
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
+        ["gateway_otel_collector"]="gateway_otel_collector_conf"
+        ["cluster_mdsd"]="cluster_mdsd_conf_file"
         ["static_ip_address"]="static_ip_addresses"
     )
 
@@ -128,6 +205,7 @@ ENVIRONMENT='$ENVIRONMENT'"
     # use default podman network with range 10.88.0.0/16
     local -rA static_ip_addresses=(
         ["gateway"]="10.88.0.2"
+        ["otelcollector"]="10.88.0.9"
         ["mdm"]="10.88.0.8"
     )
 
@@ -143,8 +221,11 @@ ENVIRONMENT='$ENVIRONMENT'"
         "mdm"
         "chronyd"
         "fluentbit"
+        "gateway-otel-collector"
+        "cluster-mdsd"
         "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"
+        "download-gateway-otel-credentials.timer"
         "firewalld"
     )
 

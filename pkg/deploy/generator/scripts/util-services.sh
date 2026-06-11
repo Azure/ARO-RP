@@ -815,6 +815,166 @@ WantedBy=multi-user.target'
     write_file aro_otel_collector_service_filename aro_otel_collector_service_file true
 }
 
+# configure_service_gateway_otel_collector
+#
+# args:
+#   1) image - nameref, string
+#       * OTel Collector container image
+#   2) otel_config - nameref, string
+#       * OTel Collector configuration YAML
+#   3) ipaddress - nameref, string
+#       * static ip of podman network to be attached
+configure_service_gateway_otel_collector() {
+    local -n image="$1"
+    local -n otel_config="$2"
+    local -n ipaddress="$3"
+    log "starting"
+    log "Configuring gateway-otel-collector service"
+
+    # Create config directory and write config file
+    mkdir -p /etc/otel-collector/tls
+    mkdir -p /var/log/otel-collector
+
+    # shellcheck disable=SC2034
+    local -r otel_config_filename='/etc/otel-collector/config.yaml'
+    write_file otel_config_filename otel_config true
+
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf_filename='/etc/sysconfig/gateway-otel-collector'
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf_file="OTELIMAGE='$image'
+PODMAN_NETWORK='podman'
+IPADDRESS='$ipaddress'
+DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+DATABASE_NAME='ARO'
+ENVIRONMENT='$ENVIRONMENT'
+LOCATION='$LOCATION'
+RESOURCEGROUP='$RESOURCEGROUPNAME'"
+
+    write_file gateway_otel_collector_conf_filename gateway_otel_collector_conf_file true
+
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_service_filename='/etc/systemd/system/gateway-otel-collector.service'
+
+    # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
+    # below variable is in single quotes
+    # as it is to be expanded at systemd start time (by systemd, not this script)
+    local -r gateway_otel_collector_service_file='[Unit]
+After=cluster-mdsd.service
+Wants=cluster-mdsd.service
+StartLimitIntervalSec=0
+
+[Service]
+EnvironmentFile=/etc/sysconfig/gateway-otel-collector
+ExecStartPre=-/usr/bin/podman rm -f %N
+ExecStart=/usr/bin/podman run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --network=${PODMAN_NETWORK} \
+  --ip ${IPADDRESS} \
+  --cpu-shares 512 \
+  --cpus 0.5 \
+  -m 1g \
+  -p 4317:4317 \
+  -p 13133:13133 \
+  -e DATABASE_ACCOUNT_NAME \
+  -e DATABASE_NAME \
+  -e ENVIRONMENT \
+  -e LOCATION \
+  -e RESOURCEGROUP \
+  -v /etc/otel-collector:/etc/otel-collector:ro,z \
+  -v /var/log/otel-collector:/var/log:z \
+  -v /run/systemd/journal:/run/systemd/journal:ro \
+  -v /var/etw:/var/etw:z \
+  ${OTELIMAGE} \
+  --config=/etc/otel-collector/config.yaml
+ExecStop=/usr/bin/podman stop %N
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target'
+
+    write_file gateway_otel_collector_service_filename gateway_otel_collector_service_file true
+}
+
+# configure_service_cluster_mdsd
+#
+# args:
+#   1) image - nameref, string
+#       * MDSD distroless container image
+#   2) conf_file - nameref, string
+#       * cluster MDSD configuration file content
+configure_service_cluster_mdsd() {
+    local -n image="$1"
+    local -n conf_file="$2"
+    log "starting"
+    log "Configuring cluster-mdsd service (GIG Bridge Mode)"
+
+    # Create role prefix directory for MDSD
+    mkdir -p /var/run/mdsd/cluster
+    mkdir -p /var/etw
+
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_conf_filename='/etc/sysconfig/cluster-mdsd'
+
+    write_file cluster_mdsd_conf_filename conf_file true
+
+    # shellcheck disable=SC2034
+    local -r cluster_mdsd_service_filename='/etc/systemd/system/cluster-mdsd.service'
+
+    # shellcheck disable=SC2034
+    # shellcheck disable=SC2016
+    # below variable is in single quotes
+    # as it is to be expanded at systemd start time (by systemd, not this script)
+    local -r cluster_mdsd_service_file='[Unit]
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+EnvironmentFile=/etc/sysconfig/cluster-mdsd
+ExecStartPre=-/usr/bin/podman rm -f %N
+ExecStart=/usr/bin/podman run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --network=host \
+  --cpu-shares 512 \
+  --cpus 0.5 \
+  -m 1g \
+  -e MONITORING_GCS_ENVIRONMENT \
+  -e MONITORING_GCS_ACCOUNT \
+  -e MONITORING_GCS_REGION \
+  -e MONITORING_GCS_AUTH_ID_TYPE \
+  -e MONITORING_GCS_AUTH_ID \
+  -e MONITORING_GCS_NAMESPACE \
+  -e MONITORING_CONFIG_VERSION \
+  -e MONITORING_USE_GENEVA_CONFIG_SERVICE \
+  -e MONITORING_TENANT \
+  -e MONITORING_ROLE \
+  -e MONITORING_ROLE_INSTANCE \
+  -e MONITORING_ENVIRONMENT \
+  -e ENABLE_GIG_BRIDGE_MODE \
+  -e GATEWAYUSERASSIGNEDIDENTITYRESOURCEID \
+  -v /var/run/mdsd/cluster:/var/run/mdsd/cluster:z \
+  -v /var/etw:/var/etw:z \
+  ${MDSDIMAGE} \
+  -r /var/run/mdsd/cluster
+ExecStop=/usr/bin/podman stop %N
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target'
+
+    write_file cluster_mdsd_service_filename cluster_mdsd_service_file true
+}
+
 # configure_service_mdsd
 #
 # args:
@@ -954,7 +1114,12 @@ configure_timers_mdm_mdsd() {
     local keyvault_suffix secret_prefix
     get_keyvault_suffix role keyvault_suffix secret_prefix
 
-    for var in "mdsd" "mdm"; do
+    local -a components=("mdsd" "mdm")
+    if [ "$role" == "$role_gateway" ]; then
+        components+=("gateway-otel")
+    fi
+
+    for var in "${components[@]}"; do
         # shellcheck disable=SC2034
         local download_creds_service_filename="/etc/systemd/system/download-$var-credentials.service"
         # shellcheck disable=SC2034
@@ -1023,18 +1188,26 @@ if [[ \$COMPONENT = \"mdm\" ]]; then
   CURRENT_CERT_FILE=\"/etc/mdm.pem\"
 elif [[ \$COMPONENT = \"mdsd\" ]]; then
   CURRENT_CERT_FILE=\"/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem\"
+elif [[ \$COMPONENT = \"gateway-otel\" ]]; then
+  CURRENT_CERT_DIR=\"/etc/otel-collector/tls\"
+  CURRENT_CERT_FILE=\"\$CURRENT_CERT_DIR/tls-cert.pem\"
+  CURRENT_KEY_FILE=\"\$CURRENT_CERT_DIR/tls-key.pem\"
 else
   echo Invalid usage && exit 1
 fi
-
-SECRET_NAME=\"$secret_prefix-\${COMPONENT}\"
+if [[ \$COMPONENT = \"gateway-otel\" ]]; then
+  KEYVAULT_URI=\"https://$KEYVAULTPREFIX-otl.$KEYVAULTDNSSUFFIX/secrets/gateway-otel-tls\"
+else 
+  SECRET_NAME=\"$secret_prefix-\${COMPONENT}\"
+  KEYVAULT_URI=\"https://$KEYVAULTPREFIX-$keyvault_suffix.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\"
+fi
 NEW_CERT_FILE=\"\$TEMP_DIR/\$COMPONENT.pem\"
 for attempt in {1..5}; do
   az keyvault \
     secret \
     download \
     --file \"\$NEW_CERT_FILE\" \
-    --id \"https://$KEYVAULTPREFIX-$keyvault_suffix.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\" \
+    --id \"\$KEYVAULT_URI\" \
     && break
   if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
 done
@@ -1042,16 +1215,51 @@ done
 if [ -f \$NEW_CERT_FILE ]; then
   if [[ \$COMPONENT = \"mdsd\" ]]; then
     chown syslog:syslog \$NEW_CERT_FILE
-  else
+  elif [[ \$COMPONENT = \"mdm\" ]]; then
     sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
+  elif [[ \$COMPONENT = \"gateway-otel\" ]]; then
+    # Split combined PEM into certificate and key files
+    mkdir -p \"\$CURRENT_CERT_DIR\"
+    NEW_CERT_TEMP=\"\$TEMP_DIR/tls-cert.pem\"
+    NEW_KEY_TEMP=\"\$TEMP_DIR/tls-key.pem\"
+    
+    # Extract certificate
+    sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' \"\$NEW_CERT_FILE\" > \"\$NEW_CERT_TEMP\"
+    # Extract private key
+    sed -n '/BEGIN.*PRIVATE KEY/,/END.*PRIVATE KEY/p' \"\$NEW_CERT_FILE\" > \"\$NEW_KEY_TEMP\"
+    
+    if [ -s \"\$NEW_CERT_TEMP\" ] && [ -s \"\$NEW_KEY_TEMP\" ]; then
+      chmod 0600 \"\$NEW_CERT_TEMP\" \"\$NEW_KEY_TEMP\"
+      
+      # Check if certificate changed
+      if [ -f \"\$CURRENT_CERT_FILE\" ]; then
+        new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_TEMP\" -noout -serial | awk -F= '{print \$2}')\"
+        current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+        if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
+          echo updating certificate for \$COMPONENT
+          mv \"\$NEW_CERT_TEMP\" \"\$CURRENT_CERT_FILE\"
+          mv \"\$NEW_KEY_TEMP\" \"\$CURRENT_KEY_FILE\"
+        fi
+      else
+        # First time setup
+        echo installing certificate for \$COMPONENT
+        mv \"\$NEW_CERT_TEMP\" \"\$CURRENT_CERT_FILE\"
+        mv \"\$NEW_KEY_TEMP\" \"\$CURRENT_KEY_FILE\"
+      fi
+    else
+      echo \"Failed to extract certificate or key for \$COMPONENT\" && exit 1
+    fi
+    exit 0
   fi
 
-  new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
-  current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
-  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
-    echo updating certificate for \$COMPONENT
-    chmod 0600 \$NEW_CERT_FILE
-    mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+  if [[ \$COMPONENT != \"gateway-otel\" ]]; then
+    new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+    current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+    if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
+      echo updating certificate for \$COMPONENT
+      chmod 0600 \$NEW_CERT_FILE
+      mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+    fi
   fi
 else
   echo Failed to refresh certificate for \$COMPONENT && exit 1
@@ -1064,9 +1272,13 @@ fi"
     $download_creds_script_filename mdsd &
     wait "$!"
 
-
     $download_creds_script_filename mdm &
     wait "$!"
+
+    if [ "$role" == "$role_gateway" ]; then
+        $download_creds_script_filename gateway-otel &
+        wait "$!"
+    fi
 
     # shellcheck disable=SC2034
     local -r watch_mdm_creds_service_filename="/etc/systemd/system/watch-mdm-credentials.service"
@@ -1096,6 +1308,38 @@ WantedBy=multi-user.target'
 
     local -r watch_mdm_creds='watch-mdm-credentials.path'
     systemctl enable --now "$watch_mdm_creds" || abort "failed to enable and start $watch_mdm_creds"
+
+    if [ "$role" == "$role_gateway" ]; then
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_service_filename="/etc/systemd/system/watch-gateway-otel-credentials.service"
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_service_file="[Unit]
+Description=Watch for changes in gateway-otel TLS certificate and restarts the gateway-otel-collector service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart gateway-otel-collector.service
+
+[Install]
+WantedBy=multi-user.target"
+
+        write_file watch_gateway_otel_creds_service_filename watch_gateway_otel_creds_service_file true
+
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_path_filename='/usr/lib/systemd/system/watch-gateway-otel-credentials.path'
+        # shellcheck disable=SC2034
+        local -r watch_gateway_otel_creds_path_file='[Path]
+PathModified=/etc/otel-collector/tls/tls-cert.pem
+PathModified=/etc/otel-collector/tls/tls-key.pem
+
+[Install]
+WantedBy=multi-user.target'
+
+        write_file watch_gateway_otel_creds_path_filename watch_gateway_otel_creds_path_file true
+
+        local -r watch_gateway_otel_creds='watch-gateway-otel-credentials.path'
+        systemctl enable --now "$watch_gateway_otel_creds" || abort "failed to enable and start $watch_gateway_otel_creds"
+    fi
 }
 
 # configure_service_mdm
@@ -1203,6 +1447,11 @@ configure_vmss_aro_services() {
 
     if [ "$r" == "$role_gateway" ]; then
         configure_service_aro_gateway "${images["rp"]}" "$1" "${configs["gateway_config"]}" "${configs["static_ip_address"]}[gateway]"
+        configure_service_gateway_otel_collector "${images["otelcollector"]}" \
+            "${configs["gateway_otel_collector"]}" \
+            "${configs["static_ip_address"]}[otelcollector]"
+        configure_service_cluster_mdsd "${images["clustermdsd"]}" \
+            "${configs["cluster_mdsd"]}"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
         configure_service_aro_rp "${images["rp"]}" \

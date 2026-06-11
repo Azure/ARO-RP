@@ -55,11 +55,13 @@ type Configuration struct {
 	ClusterMDSDConfigVersion          *string                `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
 	ClusterMDSDNamespace              *string                `json:"clusterMdsdNamespace,omitempty" value:"required"`
 	ClusterParentDomainName           *string                `json:"clusterParentDomainName,omitempty" value:"required"`
+	OtelClusterMDSDConfigVersion      *string                `json:"otelClusterMdsdConfigVersion,omitempty" value:"required"`
 	DatabaseAccountName               *string                `json:"databaseAccountName,omitempty" value:"required"`
 	CosmosDB                          *CosmosDBConfiguration `json:"cosmosDB,omitempty"`
 	DisableCosmosDBFirewall           *bool                  `json:"disableCosmosDBFirewall,omitempty"`
 	ExtraCosmosDBIPs                  []string               `json:"extraCosmosDBIPs,omitempty"`
 	FluentbitImage                    *string                `json:"fluentbitImage,omitempty" value:"required"`
+	GatewayOtelCollectorImage         *string                `json:"gatewayOtelCollectorImage,omitempty" value:"required"`
 	FPClientID                        *string                `json:"fpClientId,omitempty" value:"required"`
 	FPTenantID                        *string                `json:"fpTenantId,omitempty" value:"required"`
 	FPServerCertCommonName            *string                `json:"fpServerCertCommonName,omitempty"`

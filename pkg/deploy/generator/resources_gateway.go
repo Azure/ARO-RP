@@ -131,6 +131,24 @@ func (g *generator) gatewayLB() *arm.Resource {
 						},
 						Name: pointerutils.ToPtr("gateway-lbrule-http"),
 					},
+					{
+						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
+							},
+							BackendAddressPool: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
+							},
+							Probe: &armnetwork.SubResource{
+								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe-otel')]"),
+							},
+							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							FrontendPort:     pointerutils.ToPtr(int32(4317)),
+							BackendPort:      pointerutils.ToPtr(int32(4317)),
+						},
+						Name: pointerutils.ToPtr("gateway-lbrule-otel"),
+					},
 				},
 				Probes: []*armnetwork.Probe{
 					{
@@ -141,6 +159,15 @@ func (g *generator) gatewayLB() *arm.Resource {
 							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
 						},
 						Name: pointerutils.ToPtr("gateway-probe"),
+					},
+					{
+						Properties: &armnetwork.ProbePropertiesFormat{
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTP),
+							Port:           pointerutils.ToPtr(int32(13133)),
+							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							RequestPath:    pointerutils.ToPtr("/"),
+						},
+						Name: pointerutils.ToPtr("gateway-probe-otel"),
 					},
 				},
 			},
@@ -196,13 +223,17 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"azureCloudName",
 		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
+		"clusterMdsdAccount",
+		"clusterMdsdNamespace",
 		"databaseAccountName",
+		"otelClusterMdsdConfigVersion",
 		"environment",
 		"fluentbitImage",
 		"gatewayDomains",
 		"gatewayFeatures",
 		"gatewayLogLevel",
 		"gatewayMdsdConfigVersion",
+		"gatewayOtelCollectorImage",
 		"keyvaultDNSSuffix",
 		"keyvaultPrefix",
 		"mdmFrontendUrl",
@@ -224,6 +255,10 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 	)
 
 	parts = append(parts,
+		"'CLUSTERMDSDIMAGE=''"+version.MdsdImage("")+"''\n'",
+	)
+
+	parts = append(parts,
 		"'LOCATION=$(base64 -d <<<'''",
 		"base64(resourceGroup().location)",
 		"''')\n'",
@@ -238,6 +273,12 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 	parts = append(parts,
 		"'RESOURCEGROUPNAME=$(base64 -d <<<'''",
 		"base64(resourceGroup().name)",
+		"''')\n'",
+	)
+
+	parts = append(parts,
+		"'GATEWAYUSERASSIGNEDIDENTITYRESOURCEID=$(base64 -d <<<'''",
+		"base64(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-gateway-', resourceGroup().location)))",
 		"''')\n'",
 	)
 
