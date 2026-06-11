@@ -112,15 +112,6 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 				otelWorkerConfigKey: selectOTelConfig(profiles.worker),
 			},
 		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      otelGatewayCACMName,
-				Namespace: kubeNamespace,
-				Labels: map[string]string{
-					"config.openshift.io/inject-trusted-cabundle": "true",
-				},
-			},
-		},
 	)
 
 	gatewayTarget, targetReady, err := telemetryGatewayTarget(cluster)
@@ -129,7 +120,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 	}
 
 	// During early install, the gateway endpoint may not be populated yet.
-	// Create CA/config resources now and defer daemonset creation until ready.
+	// Create config resources now and defer daemonset creation until ready.
 	if !targetReady {
 		return resources, nil
 	}
@@ -259,29 +250,6 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 									},
 								},
 							},
-							{
-								Name: "gateway-ca-otel-export",
-								VolumeSource: corev1.VolumeSource{
-									Projected: &corev1.ProjectedVolumeSource{
-										Sources: []corev1.VolumeProjection{
-											{
-												ConfigMap: &corev1.ConfigMapProjection{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: otelGatewayCACMName,
-													},
-													Items: []corev1.KeyToPath{
-														{
-															Key:  otelGatewayCAKey,
-															Path: "ca.crt",
-														},
-													},
-													Optional: pointerutils.ToPtr(true),
-												},
-											},
-										},
-									},
-								},
-							},
 						},
 						Containers: []corev1.Container{
 							{
@@ -364,11 +332,6 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 										Name:      "otel-config",
 										ReadOnly:  true,
 										MountPath: "/etc/otel",
-									},
-									{
-										Name:      "gateway-ca-otel-export",
-										ReadOnly:  true,
-										MountPath: "/var/run/secrets/gateway",
 									},
 									{
 										Name:      "otel-file-storage",

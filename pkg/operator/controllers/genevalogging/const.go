@@ -11,9 +11,7 @@ const (
 	otelConfigMapName     = "otel-config"
 	otelMasterConfigKey   = "master-config.yaml"
 	otelWorkerConfigKey   = "worker-config.yaml"
-	otelGatewayCACMName   = "gateway-ca-otel-export"
 	legacyGatewayCACMName = "gateway-ca"
-	otelGatewayCAKey      = "ca-bundle.crt"
 )
 
 //go:embed staticfiles/otel-config.yaml.tmpl
