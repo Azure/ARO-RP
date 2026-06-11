@@ -12,10 +12,26 @@ receivers:
         is_first_entry: body matches "^[^\\s]"
   file_log/containers:
     include:
+{{- if eq .Profile "minimal-logs" }}
+      - /var/log/containers/*_openshift-azure-*_*.log
+      - /var/log/containers/*_openshift-apiserver_*.log
+      - /var/log/containers/*_openshift-authentication_*.log
+      - /var/log/containers/*_openshift-etcd_*.log
+      - /var/log/containers/*_openshift-kube-apiserver_*.log
+      - /var/log/containers/*_openshift-kube-controller-manager_*.log
+      - /var/log/containers/*_openshift-kube-scheduler_*.log
+      - /var/log/containers/*_openshift-dns_*.log
+      - /var/log/containers/*_openshift-ingress_*.log
+      - /var/log/containers/*_openshift-ovn-kubernetes_*.log
+      - /var/log/containers/*_openshift-network-operator_*.log
+      - /var/log/containers/*_openshift-machine-config-operator_*.log
+      - /var/log/containers/*_openshift-machine-api_*.log
+{{- else }}
       - /var/log/containers/*_default_*.log
       - /var/log/containers/*_kube-*_*.log
       - /var/log/containers/*_openshift_*.log
       - /var/log/containers/*_openshift-*_*.log
+{{- end }}
     # Match legacy fluentbit namespace filtering behavior by keeping only
     # default/kube*/openshift* namespaces and excluding known high-volume
     # openshift namespaces that were intentionally omitted before.
@@ -30,10 +46,6 @@ receivers:
       - /var/log/containers/*_openshift-serverless_*.log
       - /var/log/containers/*_openshift-pipelines_*.log
       - /var/log/containers/*_openshift-nfd_*.log
-{{- if eq .Profile "minimal-logs" }}
-      - /var/log/containers/*_openshift-cluster-csi-drivers_*.log
-      - /var/log/containers/*_openshift-monitoring_*.log
-{{- end }}
     start_at: beginning
     storage: file_storage
     include_file_path: true
