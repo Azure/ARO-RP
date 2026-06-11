@@ -1,0 +1,41 @@
+{
+  "title": "Lists a mapping of OpenShift versions to identity requirements, which include operatorName, roleDefinitionName, roleDefinitionId, and serviceAccounts.",
+  "operationId": "PlatformWorkloadIdentityRoleSets_List",
+  "parameters": {
+    "api-version": "2025-07-25",
+    "subscriptionId": "614D7761-D8F3-4DCB-9E03-833873BF661C",
+    "location": "rrojl"
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "value": [
+          {
+            "properties": {
+              "openShiftVersion": "gzzznfvxukb",
+              "platformWorkloadIdentityRoles": [
+                {
+                  "operatorName": "wltwjduibzlnsmzguktcsff",
+                  "roleDefinitionName": "cfjyzrtyfejlkwoiohuewn",
+                  "roleDefinitionId": "vgtcirclbqehscknxrxnsspamvu"
+                }
+              ]
+            },
+            "id": "rupcqbivmzvbfnnplvfmwbpvpsi",
+            "name": "pffffekrrctppvx",
+            "type": "pytejzzmaiu",
+            "systemData": {
+              "createdBy": "dhpwmkpugfmrdugjv",
+              "createdByType": "User",
+              "createdAt": "2026-04-22T18:54:45.162Z",
+              "lastModifiedBy": "zmhywxfxsinboncqcttemghznc",
+              "lastModifiedByType": "User",
+              "lastModifiedAt": "2026-04-22T18:54:45.163Z"
+            }
+          }
+        ],
+        "nextLink": "https://microsoft.com/a"
+      }
+    }
+  }
+}

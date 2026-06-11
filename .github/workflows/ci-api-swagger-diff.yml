@@ -1,0 +1,39 @@
+name: ci-api-swagger-diff
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api-swagger-diff-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 20.12.0
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Generate from TypeSpec
+        run: hack/api/swagger-from-typespec.sh
+
+      - name: Verify no diffs in api or swagger
+        run: hack/ci-utils/isClean.sh
