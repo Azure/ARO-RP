@@ -18,6 +18,7 @@ check_env_set(){
 check_env_set SHARED_MIWI_CLUSTER_LOCATION
 check_env_set SHARED_MIWI_CLUSTER_NAME
 check_env_set SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME
+check_env_set SHARED_MIWI_CLUSTER_VERSION
 
 
 if [ "$#" -ne 1 ]; then
@@ -281,7 +282,7 @@ elif [[ $1 == create ]]; then
     --vnet aro-vnet \
     --master-subnet master \
     --worker-subnet worker \
-    --version 4.15.35 \
+    --version $SHARED_MIWI_CLUSTER_VERSION \
     --enable-managed-identity \
     --assign-cluster-identity aro-cluster \
     --assign-platform-workload-identity file-csi-driver file-csi-driver \
