@@ -918,7 +918,7 @@ configure_service_cluster_mdsd() {
     log "Configuring cluster-mdsd service (GIG Bridge Mode)"
 
     # Create role prefix directory for MDSD
-    mkdir -p /var/run/mdsd/cluster
+    mkdir -p /var/run/cluster-mdsd
     mkdir -p /var/etw
 
     # shellcheck disable=SC2034
@@ -963,10 +963,10 @@ ExecStart=/usr/bin/podman run \
   -e MONITORING_ENVIRONMENT \
   -e ENABLE_GIG_BRIDGE_MODE \
   -e GATEWAYUSERASSIGNEDIDENTITYRESOURCEID \
-  -v /var/run/mdsd/cluster:/var/run/mdsd/cluster:z \
+  -v /var/run/cluster-mdsd:/var/run/cluster-mdsd:z \
   -v /var/etw:/var/etw:z \
   ${MDSDIMAGE} \
-  -r /var/run/mdsd/cluster
+  -r /var/run/cluster-mdsd
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=10
