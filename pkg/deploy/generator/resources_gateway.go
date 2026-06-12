@@ -162,10 +162,9 @@ func (g *generator) gatewayLB() *arm.Resource {
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
-							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTP),
+							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
 							Port:           pointerutils.ToPtr(int32(13133)),
 							NumberOfProbes: pointerutils.ToPtr(int32(2)),
-							RequestPath:    pointerutils.ToPtr("/"),
 						},
 						Name: pointerutils.ToPtr("gateway-probe-otel"),
 					},
