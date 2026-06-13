@@ -161,7 +161,7 @@ receivers:
 
 exporters:
   otlp/cluster-mdsd:
-    endpoint: localhost:2020
+    endpoint: host.containers.internal:2020
     tls:
       insecure: true
 
