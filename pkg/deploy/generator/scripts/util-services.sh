@@ -833,7 +833,7 @@ configure_service_azuremonitor_coreagent() {
 
     write_file tenant_conf_filename conf_file true
 
-    chmod 644 /etc/amatenants/AROClusterLogs
+    chmod 0644 "$tenant_conf_filename"
 }
 
 # configure_service_gateway_otel_collector
