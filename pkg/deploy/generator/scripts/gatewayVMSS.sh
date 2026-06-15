@@ -138,6 +138,7 @@ MONITORING_TENANT='$LOCATION'
 MONITORING_ROLE=cluster
 MONITORING_ROLE_INSTANCE=$(hostname)
 MONITORING_ENVIRONMENT='$ENVIRONMENT'
+MDSD_OTLP_ENDPOINT=0.0.0.0:2020
 ENABLE_GIG_BRIDGE_MODE=1"
 
     # shellcheck disable=SC2034
@@ -161,7 +162,7 @@ receivers:
 
 exporters:
   otlp/cluster-mdsd:
-    endpoint: cluster-mdsd:2020
+    endpoint: host.containers.internal:2020
     tls:
       insecure: true
 
