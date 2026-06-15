@@ -58,8 +58,6 @@ main() {
     local -r fluentbit_image="$FLUENTBITIMAGE"
     # shellcheck disable=SC2034
     local -r otel_collector_image="$GATEWAYOTELCOLLECTORIMAGE"
-    # shellcheck disable=SC2034
-    local -r cluster_mdsd_image="${RPIMAGE%%/*}/${CLUSTERMDSDIMAGE#*/}"
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034
     local -rA aro_images=(
@@ -67,7 +65,6 @@ main() {
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
         ["otelcollector"]="otel_collector_image"
-        ["clustermdsd"]="cluster_mdsd_image"
     )
 
     pull_container_images aro_images
@@ -125,20 +122,32 @@ ENVIRONMENT='$ENVIRONMENT'"
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
 
     # shellcheck disable=SC2034
-    local -r cluster_mdsd_conf_file="MDSDIMAGE='$cluster_mdsd_image'
-MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
-MONITORING_GCS_ACCOUNT='$CLUSTERMDSDACCOUNT'
-MONITORING_GCS_REGION='$LOCATION'
-MONITORING_GCS_AUTH_ID_TYPE=AuthMSIToken
-MONITORING_GCS_AUTH_ID=mi_res_id#${GATEWAYUSERASSIGNEDIDENTITYRESOURCEID}
-MONITORING_GCS_NAMESPACE='$CLUSTERMDSDNAMESPACE'
-MONITORING_CONFIG_VERSION='$OTELCLUSTERMDSDCONFIGVERSION'
-MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+    local -r azuremonitor_tenant_conf_file="### Geneva Linux Agent tenant settings file
+
+TENANT_NAME=AROClusterLogs
+MDSD_VAR=/var/opt/microsoft/azuremonitoragent
+MDSD_CONFIG_DIR=/etc/opt/microsoft/azuremonitoragent/\${TENANT_NAME}
+MDSD_RUN_DIR=/var/run/azuremonitoragent/\${TENANT_NAME}
+MDSD_ROLE_PREFIX=\${MDSD_RUN_DIR}/default
+MDSD_LOG=\${MDSD_VAR}/log/\${TENANT_NAME}
+MDSD_SPOOL_DIRECTORY=\${MDSD_VAR}/spool/\${TENANT_NAME}
+
+MDSD_OPTIONS=\"-A -c /etc/opt/microsoft/azuremonitoragent/mdsd.xml -C -R -r \${MDSD_ROLE_PREFIX} -S \${MDSD_SPOOL_DIRECTORY}/eh -e \${MDSD_LOG}/\${TENANT_NAME}.err -w \${MDSD_LOG}/\${TENANT_NAME}.warn -o \${MDSD_LOG}/\${TENANT_NAME}.info -q \${MDSD_LOG}/\${TENANT_NAME}.qos\"
+
 MONITORING_TENANT='$LOCATION'
 MONITORING_ROLE=cluster
-MONITORING_ROLE_INSTANCE=$(hostname)
+MONITORING_ROLE_INSTANCE=\$(hostname)
+
+MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
+MONITORING_GCS_ACCOUNT='$CLUSTERMDSDACCOUNT'
+MONITORING_GCS_NAMESPACE='$CLUSTERMDSDNAMESPACE'
+MONITORING_GCS_REGION='$LOCATION'
+MONITORING_CONFIG_VERSION='$OTELCLUSTERMDSDCONFIGVERSION'
+MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+MONITORING_GCS_AUTH_ID_TYPE=AuthMSIToken
+MONITORING_GCS_AUTH_ID=mi_res_id#${GATEWAYUSERASSIGNEDIDENTITYRESOURCEID}
 MONITORING_ENVIRONMENT='$ENVIRONMENT'
-MDSD_OTLP_ENDPOINT=0.0.0.0:2020
+
 ENABLE_GIG_BRIDGE_MODE=1"
 
     # shellcheck disable=SC2034
@@ -198,7 +207,7 @@ service:
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
         ["gateway_otel_collector"]="gateway_otel_collector_conf"
-        ["cluster_mdsd"]="cluster_mdsd_conf_file"
+        ["azuremonitor_tenant"]="azuremonitor_tenant_conf_file"
         ["static_ip_address"]="static_ip_addresses"
     )
 
@@ -223,7 +232,6 @@ service:
         "chronyd"
         "fluentbit"
         "gateway-otel-collector"
-        "cluster-mdsd"
         "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"
         "download-gateway-otel-credentials.timer"
