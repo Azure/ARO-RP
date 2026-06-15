@@ -59,16 +59,18 @@ type azureActions struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	networkInterfaces            armnetwork.InterfacesClient
-	diskEncryptionSets           compute.DiskEncryptionSetsClient
-	loadBalancers                armnetwork.LoadBalancersClient
-	resources                    features.ResourcesClient
-	resourceSkus                 armcompute.ResourceSKUsClient
-	routeTables                  armnetwork.RouteTablesClient
-	securityGroups               armnetwork.SecurityGroupsClient
-	storageAccounts              storage.AccountsClient
-	virtualMachines              compute.VirtualMachinesClient
-	virtualNetworks              armnetwork.VirtualNetworksClient
+	networkInterfaces  armnetwork.InterfacesClient
+	diskEncryptionSets compute.DiskEncryptionSetsClient
+	loadBalancers      armnetwork.LoadBalancersClient
+	resources          features.ResourcesClient
+	resourceSkus       armcompute.ResourceSKUsClient
+	routeTables        armnetwork.RouteTablesClient
+	securityGroups     armnetwork.SecurityGroupsClient
+	storageAccounts    storage.AccountsClient
+	// virtualMachines is the legacy autorest compute client used by existing VM operations.
+	virtualMachines compute.VirtualMachinesClient
+	virtualNetworks armnetwork.VirtualNetworksClient
+	// armVirtualMachines is the ARM (azure-sdk-for-go) compute client used for CRG-aware VM resize operations.
 	armVirtualMachines           armcompute.VirtualMachinesClient
 	armCapacityReservationGroups armcompute.CapacityReservationGroupsClient
 	armCapacityReservations      armcompute.CapacityReservationsClient
