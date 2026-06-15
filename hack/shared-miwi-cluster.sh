@@ -298,7 +298,7 @@ elif [[ $1 == create ]]; then
     CLUSTER_RESOURCE_GROUP_ID=$(az aro show \
       --name $SHARED_MIWI_CLUSTER_NAME \
       --resource-group $SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME \
-      | jq -r .clusterProfile.resourceGroupId)
+      --query clusterProfile.resourceGroupId -o tsv)
 
     echo "Adding tag to cluster..."
     # This tag stops the managed RG being cleaned up
