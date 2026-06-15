@@ -34,6 +34,11 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"fluentbitImage",
 		"gatewayDomains",
 		"gatewayFeatures",
+		"gatewayKustoClusterUri",
+		"gatewayKustoDbName",
+		"gatewayKustoIngestionType",
+		"gatewayKustoLogsTableName",
+		"gatewayKustoManagedIdentityClientId",
 		"gatewayLogLevel",
 		"gatewayMdsdConfigVersion",
 		"gatewayOtelCollectorImage",
@@ -60,7 +65,12 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
 		case "gatewayDomains",
-			"gatewayFeatures":
+			"gatewayFeatures",
+			"gatewayKustoClusterUri",
+			"gatewayKustoDbName",
+			"gatewayKustoIngestionType",
+			"gatewayKustoLogsTableName",
+			"gatewayKustoManagedIdentityClientId":
 			p.DefaultValue = ""
 		case "gatewayVmSize":
 			p.DefaultValue = "Standard_D4s_v3"

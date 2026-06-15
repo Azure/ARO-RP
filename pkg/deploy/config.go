@@ -68,6 +68,11 @@ type Configuration struct {
 	FPServicePrincipalID              *string                `json:"fpServicePrincipalId,omitempty" value:"required"`
 	GatewayDomains                    []string               `json:"gatewayDomains,omitempty"`
 	GatewayFeatures                   []string               `json:"gatewayFeatures,omitempty"`
+	GatewayKustoClusterURI            *string                `json:"gatewayKustoClusterUri,omitempty"`
+	GatewayKustoDBName                *string                `json:"gatewayKustoDbName,omitempty"`
+	GatewayKustoIngestionType         *string                `json:"gatewayKustoIngestionType,omitempty"`
+	GatewayKustoLogsTableName         *string                `json:"gatewayKustoLogsTableName,omitempty"`
+	GatewayKustoManagedIdentityClientID *string              `json:"gatewayKustoManagedIdentityClientId,omitempty"`
 	GatewayMDSDConfigVersion          *string                `json:"gatewayMdsdConfigVersion,omitempty" value:"required"`
 	GatewayVMSize                     *string                `json:"gatewayVmSize,omitempty"`
 	GatewayVMSSCapacity               *int                   `json:"gatewayVmssCapacity,omitempty"`

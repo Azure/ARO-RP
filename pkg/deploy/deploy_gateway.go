@@ -37,9 +37,10 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	templateParameters := template["parameters"].(map[string]interface{})
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(templateParameters)
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
@@ -51,6 +52,11 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	}
 	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
 		Value: gwMSI.PrincipalID.String(),
+	}
+	if _, ok := templateParameters["gatewayKustoManagedIdentityClientId"]; ok && gwMSI.ClientID != nil {
+		parameters.Parameters["gatewayKustoManagedIdentityClientId"] = &arm.ParametersParameter{
+			Value: *gwMSI.ClientID,
+		}
 	}
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,

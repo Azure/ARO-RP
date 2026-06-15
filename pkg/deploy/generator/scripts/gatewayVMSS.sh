@@ -141,7 +141,18 @@ MONITORING_ENVIRONMENT='$ENVIRONMENT'
 ENABLE_GIG_BRIDGE_MODE=1"
 
     # shellcheck disable=SC2034
-    local -r gateway_otel_collector_conf="extensions:
+    local -r gateway_kusto_cluster_uri="${GATEWAYKUSTOCLUSTERURI:-}"
+    # shellcheck disable=SC2034
+    local -r gateway_kusto_db_name="${GATEWAYKUSTODBNAME:-oteldb}"
+    # shellcheck disable=SC2034
+    local -r gateway_kusto_ingestion_type="${GATEWAYKUSTOINGESTIONTYPE:-queued}"
+    # shellcheck disable=SC2034
+    local -r gateway_kusto_logs_table_name="${GATEWAYKUSTOLOGSTABLENAME:-OTELLogs}"
+    # shellcheck disable=SC2034
+    local -r gateway_kusto_managed_identity_client_id="${GATEWAYKUSTOMANAGEDIDENTITYCLIENTID:-system}"
+
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf_prefix="extensions:
   health_check:
     endpoint: 0.0.0.0:13133
   gatewayauth:
@@ -159,12 +170,10 @@ receivers:
         auth:
           authenticator: gatewayauth
 
-exporters:
-  otlp/cluster-mdsd:
-    endpoint: localhost:2020
-    tls:
-      insecure: true
+exporters:"
 
+    # shellcheck disable=SC2034
+    local -r gateway_otel_collector_conf_suffix="
 processors:
   attributes/cluster:
     actions:
@@ -187,8 +196,38 @@ service:
   pipelines:
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, attributes/cluster, batch]
+      processors: [memory_limiter, attributes/cluster, batch]"
+
+    # shellcheck disable=SC2034
+    local gateway_otel_collector_conf
+    if [[ -n "$gateway_kusto_cluster_uri" ]]; then
+        gateway_otel_collector_conf="${gateway_otel_collector_conf_prefix}
+  azuredataexplorer:
+    cluster_uri: '$gateway_kusto_cluster_uri'
+    managed_identity_id: '$gateway_kusto_managed_identity_client_id'
+    db_name: '$gateway_kusto_db_name'
+    logs_table_name: '$gateway_kusto_logs_table_name'
+    ingestion_type: '$gateway_kusto_ingestion_type'
+    sending_queue:
+      enabled: true
+      num_consumers: 2
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 10m
+${gateway_otel_collector_conf_suffix}
+      exporters: [azuredataexplorer]"
+    else
+        gateway_otel_collector_conf="${gateway_otel_collector_conf_prefix}
+  otlp/cluster-mdsd:
+    endpoint: localhost:2020
+    tls:
+      insecure: true
+${gateway_otel_collector_conf_suffix}
       exporters: [otlp/cluster-mdsd]"
+    fi
 
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034
