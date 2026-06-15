@@ -877,6 +877,7 @@ ExecStart=/usr/bin/podman run \
   --rm \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
+  --add-host=cluster-mdsd:host-gateway \
   --cpu-shares 512 \
   --cpus 0.5 \
   -m 1g \
@@ -966,7 +967,7 @@ ExecStart=/usr/bin/podman run \
   -v /var/run/cluster-mdsd:/var/run/cluster-mdsd:z \
   -v /var/etw:/var/etw:z \
   ${MDSDIMAGE} \
-  -r /var/run/cluster-mdsd
+  /usr/sbin/mdsd -A -D -p 2020 -f 29231 -r /var/run/cluster-mdsd/default
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=10
