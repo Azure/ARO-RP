@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/dereference/index.ts"],
+  "sourcesContent": ["export { dereference } from './dereference'\n"],
+  "mappings": "AAAA,SAAS,mBAAmB;",
+  "names": []
+}

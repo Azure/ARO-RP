@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/unprocessed/external-documentation-object.ts"],
+  "sourcesContent": ["import { ExternalDocumentationObjectSchema as OriginalExternalDocumentationObjectSchema } from '../processed/external-documentation-object'\n\n/**\n * External Documentation Object\n *\n * Allows referencing an external resource for extended documentation.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#external-documentation-object\n */\nexport const ExternalDocumentationObjectSchema = OriginalExternalDocumentationObjectSchema\n"],
+  "mappings": "AAAA,SAAS,qCAAqC,iDAAiD;AASxF,MAAM,oCAAoC;",
+  "names": []
+}

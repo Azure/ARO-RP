@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/transform/utils/addInfoObject.ts"],
+  "sourcesContent": ["import type { AnyObject } from '@/types/index'\n\nexport const DEFAULT_TITLE = 'API'\nconst DEFAULT_VERSION = '1.0'\n\nexport const addInfoObject = (definition: AnyObject) => ({\n  ...definition,\n  info: {\n    ...definition.info,\n    title: definition.info?.title ?? DEFAULT_TITLE,\n    version: definition.info?.version ?? DEFAULT_VERSION,\n  },\n})\n"],
+  "mappings": "AAEO,MAAM,gBAAgB;AAC7B,MAAM,kBAAkB;AAEjB,MAAM,gBAAgB,CAAC,gBAA2B;AAAA,EACvD,GAAG;AAAA,EACH,MAAM;AAAA,IACJ,GAAG,WAAW;AAAA,IACd,OAAO,WAAW,MAAM,SAAS;AAAA,IACjC,SAAS,WAAW,MAAM,WAAW;AAAA,EACvC;AACF;",
+  "names": []
+}

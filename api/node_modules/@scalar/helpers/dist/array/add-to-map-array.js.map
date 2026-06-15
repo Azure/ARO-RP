@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/array/add-to-map-array.ts"],
+  "sourcesContent": ["/**\n * A little helper to add a value to a map array where the type is Map<string, any[]>\n */\nexport const addToMapArray = (map: Map<string, unknown[]>, key: string, value: unknown) => {\n  const prev = map.get(key) ?? []\n  prev.push(value)\n  map.set(key, prev)\n}\n"],
+  "mappings": "AAGO,MAAM,gBAAgB,CAAC,KAA6B,KAAa,UAAmB;AACzF,QAAM,OAAO,IAAI,IAAI,GAAG,KAAK,CAAC;AAC9B,OAAK,KAAK,KAAK;AACf,MAAI,IAAI,KAAK,IAAI;AACnB;",
+  "names": []
+}

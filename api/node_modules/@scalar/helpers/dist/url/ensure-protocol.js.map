@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/url/ensure-protocol.ts"],
+  "sourcesContent": ["import { REGEX } from '@/regex/regex-helpers'\n\n/** Ensure URL has a protocol prefix */\nexport function ensureProtocol(url: string): string {\n  if (REGEX.PROTOCOL.test(url)) {\n    return url\n  }\n\n  // Default to http if no protocol is specified\n  return `http://${url.replace(/^\\//, '')}`\n}\n"],
+  "mappings": "AAAA,SAAS,aAAa;AAGf,SAAS,eAAe,KAAqB;AAClD,MAAI,MAAM,SAAS,KAAK,GAAG,GAAG;AAC5B,WAAO;AAAA,EACT;AAGA,SAAO,UAAU,IAAI,QAAQ,OAAO,EAAE,CAAC;AACzC;",
+  "names": []
+}

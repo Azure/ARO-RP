@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/unprocessed/reference-object.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * Reference Object\n *\n * A simple object to allow referencing other components in the OpenAPI Description, internally and externally.\n *\n * The $ref string value contains a URI RFC3986, which identifies the value being referenced.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#reference-object\n */\nexport const ReferenceObjectSchema = z.object({\n  /**\n   * REQUIRED. The reference identifier. This MUST be in the form of a URI.\n   */\n  $ref: z.string(),\n  /**\n   * A short summary which by default SHOULD override that of the referenced component. If the referenced object-type\n   * does not allow a summary field, then this field has no effect.\n   */\n  summary: z.string().optional(),\n  /**\n   * A description which by default SHOULD override that of the referenced component. CommonMark syntax MAY be used for\n   * rich text representation. If the referenced object-type does not allow a description field, then this field has no\n   * effect.\n   */\n  description: z.string().optional(),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AAWX,MAAM,wBAAwB,EAAE,OAAO;AAAA;AAAA;AAAA;AAAA,EAI5C,MAAM,EAAE,OAAO;AAAA;AAAA;AAAA;AAAA;AAAA,EAKf,SAAS,EAAE,OAAO,EAAE,SAAS;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,EAM7B,aAAa,EAAE,OAAO,EAAE,SAAS;AACnC,CAAC;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/helpers/is-json-object.ts"],
+  "sourcesContent": ["import { isObject } from '@scalar/helpers/object/is-object'\n\n/**\n * Determines if a string represents a valid JSON object (i.e., a plain object, not an array, primitive, or null).\n * The function first checks if the string appears to start with an opening curly brace (ignoring leading whitespace),\n * which is a quick heuristic to rule out arrays, primitives, and most invalid JSON. If this check passes,\n * it attempts to parse the string with JSON.parse. The result is then checked to ensure it is a plain object\n * (not an array, null, or primitive) using the isObject utility.\n *\n * @param value - The string to evaluate\n * @returns true if the string is valid JSON and parses to a plain object, false otherwise\n *\n * @example\n * isJsonObject('{\"foo\": \"bar\"}') // true\n * isJsonObject('[1,2,3]') // false\n * isJsonObject('not json') // false\n * isJsonObject('42') // false\n */\nexport function isJsonObject(value: string) {\n  // Quickly rule out anything that doesn't start with an object brace\n  if (!/^\\s*(\\{)/.test(value.slice(0, 500))) {\n    return false\n  }\n\n  try {\n    const val = JSON.parse(value)\n    return isObject(val)\n  } catch {\n    return false\n  }\n}\n"],
+  "mappings": "AAAA,SAAS,gBAAgB;AAkBlB,SAAS,aAAa,OAAe;AAE1C,MAAI,CAAC,WAAW,KAAK,MAAM,MAAM,GAAG,GAAG,CAAC,GAAG;AACzC,WAAO;AAAA,EACT;AAEA,MAAI;AACF,UAAM,MAAM,KAAK,MAAM,KAAK;AAC5B,WAAO,SAAS,GAAG;AAAA,EACrB,QAAQ;AACN,WAAO;AAAA,EACT;AACF;",
+  "names": []
+}

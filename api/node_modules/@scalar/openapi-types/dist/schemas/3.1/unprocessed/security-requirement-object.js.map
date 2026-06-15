@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/unprocessed/security-requirement-object.ts"],
+  "sourcesContent": ["import { SecurityRequirementObjectSchema as OriginalSecurityRequirementObjectSchema } from '../processed/security-requirement-object'\n\n/**\n * Security Requirement Object\n *\n * Lists the required security schemes to execute this operation. The name used for each property MUST correspond to a\n * security scheme declared in the Security Schemes under the Components Object.\n *\n * A Security Requirement Object MAY refer to multiple security schemes in which case all schemes MUST be satisfied for\n * a request to be authorized. This enables support for scenarios where multiple query parameters or HTTP headers are\n * required to convey security information.\n *\n * When the security field is defined on the OpenAPI Object or Operation Object and contains multiple Security\n * Requirement Objects, only one of the entries in the list needs to be satisfied to authorize the request. This\n * enables support for scenarios where the API allows multiple, independent security schemes.\n *\n * An empty Security Requirement Object ({}) indicates anonymous access is supported.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#security-requirement-object\n */\nexport const SecurityRequirementObjectSchema = OriginalSecurityRequirementObjectSchema\n"],
+  "mappings": "AAAA,SAAS,mCAAmC,+CAA+C;AAoBpF,MAAM,kCAAkC;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/array/is-defined.ts"],
+  "sourcesContent": ["/**\n * Type safe alternative to array.filter(Boolean)\n *\n * @example\n *\n * ```ts\n * const dataArray = [1, null, 2, undefined, 3].filter(isDefined)\n * ```\n *\n * @see https://jaketrent.com/post/typescript-type-safe-filter-boolean/\n */\nexport const isDefined = <T>(value: T | null | undefined): value is NonNullable<T> =>\n  value !== null && value !== undefined\n"],
+  "mappings": "AAWO,MAAM,YAAY,CAAI,UAC3B,UAAU,QAAQ,UAAU;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/processed/license-object.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * License Object\n *\n * License information for the exposed API.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#license-object\n */\nexport const LicenseObjectSchema = z.object({\n  /** REQUIRED. The license name used for the API. */\n  name: z.string().optional().nullable().catch(null),\n  /** An SPDX license expression for the API. The identifier field is mutually exclusive of the url field. */\n  identifier: z.string().optional().catch(undefined),\n  /**\n   * A URI for the license used for the API. This MUST be in the form of a URI. The url field is mutually exclusive of the identifier field.\n   */\n  url: z.string().url().optional().catch(undefined),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AASX,MAAM,sBAAsB,EAAE,OAAO;AAAA;AAAA,EAE1C,MAAM,EAAE,OAAO,EAAE,SAAS,EAAE,SAAS,EAAE,MAAM,IAAI;AAAA;AAAA,EAEjD,YAAY,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA;AAAA;AAAA;AAAA,EAIjD,KAAK,EAAE,OAAO,EAAE,IAAI,EAAE,SAAS,EAAE,MAAM,MAAS;AAClD,CAAC;",
+  "names": []
+}

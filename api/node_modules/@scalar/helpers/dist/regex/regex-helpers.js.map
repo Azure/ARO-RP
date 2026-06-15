@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/regex/regex-helpers.ts"],
+  "sourcesContent": ["/**\n * Collection of regular expressions used throughout the application.\n * These patterns handle URL parsing, variable detection, and reference path extraction.\n */\nexport const REGEX = {\n  /** Checks for a valid scheme */\n  PROTOCOL: /^(?:https?|ftp|file|mailto|tel|data|wss?)*:\\/\\//,\n  /** Finds multiple slashes after the scheme to replace with a single slash */\n  MULTIPLE_SLASHES: /(?<!:)\\/{2,}/g,\n  /** Finds all variables wrapped in {{double}} */\n  VARIABLES: /{{((?:[^{}]|{[^{}]*})*)}}/g,\n  /** Finds all variables wrapped in {single} */\n  PATH: /(?:{)([^{}]+)}(?!})/g,\n  /** Finds the name of the schema from the ref path */\n  REF_NAME: /\\/([^\\/]+)$/,\n  /** Finds template variables in multiple formats: {{var}}, {var}, or :var */\n  TEMPLATE_VARIABLE: /{{\\s*([^}\\s]+?)\\s*}}|{\\s*([^}\\s]+?)\\s*}|:\\b[\\w.]+\\b/g,\n} as const\n"],
+  "mappings": "AAIO,MAAM,QAAQ;AAAA;AAAA,EAEnB,UAAU;AAAA;AAAA,EAEV,kBAAkB;AAAA;AAAA,EAElB,WAAW;AAAA;AAAA,EAEX,MAAM;AAAA;AAAA,EAEN,UAAU;AAAA;AAAA,EAEV,mBAAmB;AACrB;",
+  "names": []
+}

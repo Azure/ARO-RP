@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/url/is-valid-url.ts"],
+  "sourcesContent": ["/**\n * Checks if a given string is a valid URL.\n *\n * @param {string} url - The string to be validated as a URL.\n * @returns {boolean} Returns true if the string is a valid URL, false otherwise.\n *\n * @example\n * isValidUrl('https://www.example.com'); // returns true\n * isValidUrl('not a url'); // returns false\n */\nexport function isValidUrl(url: string) {\n  try {\n    return Boolean(new URL(url))\n  } catch {\n    return false\n  }\n}\n"],
+  "mappings": "AAUO,SAAS,WAAW,KAAa;AACtC,MAAI;AACF,WAAO,QAAQ,IAAI,IAAI,GAAG,CAAC;AAAA,EAC7B,QAAQ;AACN,WAAO;AAAA,EACT;AACF;",
+  "names": []
+}

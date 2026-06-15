@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/utils/load/index.ts"],
+  "sourcesContent": ["export { load } from './load'\n"],
+  "mappings": "AAAA,SAAS,YAAY;",
+  "names": []
+}

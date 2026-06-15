@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/string/camel-to-title.ts"],
+  "sourcesContent": ["/**\n * Converts a camelCase string to Title Words with spaces\n *\n * @param camelStr - MUST be in camelCase or this might not work\n */\nexport const camelToTitleWords = (camelStr = '') =>\n  camelStr\n    .replace(/([A-Z]{2,})/g, ' $1') // Add space before consecutive capitals\n    .replace(/([A-Z])(?=[a-z])/g, ' $1') // Add space before single capital followed by lowercase\n    .replace(/^./, (str) => str.toUpperCase()) // Capitalize first letter\n    .trim()\n"],
+  "mappings": "AAKO,MAAM,oBAAoB,CAAC,WAAW,OAC3C,SACG,QAAQ,gBAAgB,KAAK,EAC7B,QAAQ,qBAAqB,KAAK,EAClC,QAAQ,MAAM,CAAC,QAAQ,IAAI,YAAY,CAAC,EACxC,KAAK;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/betterAjvErrors/validation-errors/pattern.js"],
+  "sourcesContent": ["import BaseValidationError from './base'\n\nexport default class PatternValidationError extends BaseValidationError {\n  constructor(...args) {\n    super(...args)\n    this.name = 'PatternValidationError'\n    this.options.isIdentifierLocation = true\n  }\n\n  getError() {\n    const { params, propertyName } = this.options\n\n    return {\n      message: `Property \"${propertyName}\" must match pattern ${params.pattern}`,\n      path: this.instancePath,\n    }\n  }\n}\n"],
+  "mappings": "AAAA,OAAO,yBAAyB;AAEhC,MAAO,+BAA6C,oBAAoB;AAAA,EACtE,eAAe,MAAM;AACnB,UAAM,GAAG,IAAI;AACb,SAAK,OAAO;AACZ,SAAK,QAAQ,uBAAuB;AAAA,EACtC;AAAA,EAEA,WAAW;AACT,UAAM,EAAE,QAAQ,aAAa,IAAI,KAAK;AAEtC,WAAO;AAAA,MACL,SAAS,aAAa,YAAY,wBAAwB,OAAO,OAAO;AAAA,MACxE,MAAM,KAAK;AAAA,IACb;AAAA,EACF;AACF;",
+  "names": []
+}

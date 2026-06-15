@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/utils/openapi/openapi.test-d.ts"],
+  "sourcesContent": ["import { describe, expectTypeOf, it } from 'vitest'\n\nimport type { Filesystem } from '../../types/index'\nimport { openapi } from './openapi'\n\ndescribe('openapi', () => {\n  it('returns the correct type for load()', async () => {\n    const result = await openapi().load({}).get()\n\n    expectTypeOf(result.filesystem).toMatchTypeOf<Filesystem>()\n\n    // @ts-expect-error `valid` should be undefined\n    expectTypeOf(result.valid).toMatchTypeOf<boolean>()\n  })\n\n  it('returns the correct type for validate()', async () => {\n    const result = await openapi().load({}).validate().get()\n\n    expectTypeOf(result.valid).toMatchTypeOf<boolean>()\n  })\n})\n"],
+  "mappings": "AAAA,SAAS,UAAU,cAAc,UAAU;AAG3C,SAAS,eAAe;AAExB,SAAS,WAAW,MAAM;AACxB,KAAG,uCAAuC,YAAY;AACpD,UAAM,SAAS,MAAM,QAAQ,EAAE,KAAK,CAAC,CAAC,EAAE,IAAI;AAE5C,iBAAa,OAAO,UAAU,EAAE,cAA0B;AAG1D,iBAAa,OAAO,KAAK,EAAE,cAAuB;AAAA,EACpD,CAAC;AAED,KAAG,2CAA2C,YAAY;AACxD,UAAM,SAAS,MAAM,QAAQ,EAAE,KAAK,CAAC,CAAC,EAAE,SAAS,EAAE,IAAI;AAEvD,iBAAa,OAAO,KAAK,EAAE,cAAuB;AAAA,EACpD,CAAC;AACH,CAAC;",
+  "names": []
+}

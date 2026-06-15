@@ -1,0 +1,373 @@
+# @scalar/json-magic
+
+## 0.11.7
+
+### Patch Changes
+
+- [#8314](https://github.com/scalar/scalar/pull/8314): chore: limit concurrent operations while migrating workspaces
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.18**
+  - [#8314](https://github.com/scalar/scalar/pull/8314): chore: limit concurrent operations while migrating workspaces
+
+## 0.11.6
+
+### Patch Changes
+
+- [#8310](https://github.com/scalar/scalar/pull/8310): fix: properly parse json pointers
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.17**
+  - [#8310](https://github.com/scalar/scalar/pull/8310): refactor: move helpers to the helpers package to share primitive helpers
+
+## 0.11.5
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.16**
+  - [#8248](https://github.com/scalar/scalar/pull/8248): fix: local storage migration script
+
+## 0.11.4
+
+### Patch Changes
+
+- [#8212](https://github.com/scalar/scalar/pull/8212): chore: version bump
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.15**
+  - [#8212](https://github.com/scalar/scalar/pull/8212): chore: version bump
+
+## 0.11.3
+
+### Patch Changes
+
+- [#8207](https://github.com/scalar/scalar/pull/8207): chore: version bump
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.14**
+  - [#8207](https://github.com/scalar/scalar/pull/8207): chore: version bump
+
+## 0.11.2
+
+### Patch Changes
+
+- [#8151](https://github.com/scalar/scalar/pull/8151): fix: resolve external references on windows
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.13**
+  - [#7826](https://github.com/scalar/scalar/pull/7826): feat: added migrator for v1 local storage to v2 indexdb
+
+## 0.11.1
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.12**
+  - [#8178](https://github.com/scalar/scalar/pull/8178): chore: package bump due to ci failure
+
+## 0.11.0
+
+### Minor Changes
+
+- [#8095](https://github.com/scalar/scalar/pull/8095): feat: support loading files into the store
+- [#8096](https://github.com/scalar/scalar/pull/8096): feat: store relative urls/paths against base under the url mappings
+
+## 0.10.0
+
+### Minor Changes
+
+- [#8052](https://github.com/scalar/scalar/pull/8052): feat: allow custom LoaderPlugin plugins in dereference
+
+## 0.9.6
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.11**
+  - [#8016](https://github.com/scalar/scalar/pull/8016): feat: move history and auth into their own store
+
+## 0.9.5
+
+### Patch Changes
+
+- [#7963](https://github.com/scalar/scalar/pull/7963): feat: unify is-object helpers
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.10**
+  - [#7963](https://github.com/scalar/scalar/pull/7963): feat: unify is-object helpers
+
+## 0.9.4
+
+### Patch Changes
+
+- [#7922](https://github.com/scalar/scalar/pull/7922): fix: resolve $ref entries inside arrays (e.g. oneOf, allOf) in prefixInternalRefRecursive
+
+## 0.9.3
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.9**
+  - [#7894](https://github.com/scalar/scalar/pull/7894): fix: the import and export of redirect to proxy
+
+## 0.9.2
+
+### Patch Changes
+
+- [#7763](https://github.com/scalar/scalar/pull/7763): fix: correctly execute onAfterNodeProcess for ref nodes
+
+## 0.9.1
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.8**
+  - [#7751](https://github.com/scalar/scalar/pull/7751): fix: auth persistence
+
+## 0.9.0
+
+### Minor Changes
+
+- [#7701](https://github.com/scalar/scalar/pull/7701): Made bundle external document extensions configurable
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.7**
+  - [#7720](https://github.com/scalar/scalar/pull/7720): feat: escape XML in json2xml
+
+## 0.8.10
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.6**
+  - [#7661](https://github.com/scalar/scalar/pull/7661): fix: all issues for client modal v2 preparation
+
+## 0.8.9
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.5**
+  - [#7605](https://github.com/scalar/scalar/pull/7605): fix: all issues for client modal v2 preparation
+
+## 0.8.8
+
+### Patch Changes
+
+- [#7581](https://github.com/scalar/scalar/pull/7581): fix: npm publish job
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.4**
+  - [#7581](https://github.com/scalar/scalar/pull/7581): fix: npm publish job
+  - [#7567](https://github.com/scalar/scalar/pull/7567): feat: add code samples to client v2
+
+## 0.8.7
+
+### Patch Changes
+
+#### Updated Dependencies
+
+- **@scalar/helpers@0.2.3**
+  - [#7575](https://github.com/scalar/scalar/pull/7575): feat: add support for object examples + hide body when empty
+
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [[`f7c24e4`](https://github.com/scalar/scalar/commit/f7c24e4995580649dbc3cb87007a683f5dd91f7c)]:
+  - @scalar/helpers@0.2.2
+
+## 0.8.5
+
+### Patch Changes
+
+- [#7506](https://github.com/scalar/scalar/pull/7506) [`72cd82f`](https://github.com/scalar/scalar/commit/72cd82fb8df63a9e5d0db1202978aebfefd0457a) Thanks [@marcalexiei](https://github.com/marcalexiei)! - fix: use caret version for `yaml`
+
+- Updated dependencies [[`21aa62e`](https://github.com/scalar/scalar/commit/21aa62e2ebdd262cb5aa53658c3b659736660722)]:
+  - @scalar/helpers@0.2.1
+
+## 0.8.4
+
+### Patch Changes
+
+- Updated dependencies [[`9ec8adf`](https://github.com/scalar/scalar/commit/9ec8adfea017333dee5bc3949104232f7dc57f4a)]:
+  - @scalar/helpers@0.2.0
+
+## 0.8.3
+
+### Patch Changes
+
+- [#7417](https://github.com/scalar/scalar/pull/7417) [`e04879c`](https://github.com/scalar/scalar/commit/e04879c65602dfb65393876754f5344751b8953d) Thanks [@marcalexiei](https://github.com/marcalexiei)! - fix(json-margic): remove `helpers/generate-hash` invalid entrypoint
+
+- [#7387](https://github.com/scalar/scalar/pull/7387) [`bfd814a`](https://github.com/scalar/scalar/commit/bfd814a4219660face190041cc4845182b56ab03) Thanks [@geoffgscott](https://github.com/geoffgscott)! - hotfix: patch exports from build tooling bug
+
+- [#7422](https://github.com/scalar/scalar/pull/7422) [`af54a80`](https://github.com/scalar/scalar/commit/af54a80349269a4269a68f6a372f837177a3537c) Thanks [@inyourtime](https://github.com/inyourtime)! - build(json-magic): prevent src folder from being published
+
+- Updated dependencies [[`bfd814a`](https://github.com/scalar/scalar/commit/bfd814a4219660face190041cc4845182b56ab03), [`86f028d`](https://github.com/scalar/scalar/commit/86f028deb0b456f923edd261f5f4b0fa9b616b7d)]:
+  - @scalar/helpers@0.1.3
+
+## 0.8.2
+
+### Patch Changes
+
+- [#7392](https://github.com/scalar/scalar/pull/7392) [`d86f1d6`](https://github.com/scalar/scalar/commit/d86f1d6911ecbca70b011a2a0efb6d6e0eca59bb) Thanks [@amritk](https://github.com/amritk)! - fix: move away from wasm hashing algo
+
+- Updated dependencies [[`d86f1d6`](https://github.com/scalar/scalar/commit/d86f1d6911ecbca70b011a2a0efb6d6e0eca59bb), [`cded2d6`](https://github.com/scalar/scalar/commit/cded2d6c087418c3c44731d344d0827a87b78b74)]:
+  - @scalar/helpers@0.1.2
+
+## 0.8.1
+
+### Patch Changes
+
+- Updated dependencies [[`9c9dbba`](https://github.com/scalar/scalar/commit/9c9dbbaa940667303f0ace59469fd78c2a741937), [`4bec1ba`](https://github.com/scalar/scalar/commit/4bec1ba332e919c4ee32dcfbfb07bd8ee42c4d74)]:
+  - @scalar/helpers@0.1.1
+
+## 0.8.0
+
+### Minor Changes
+
+- [#7235](https://github.com/scalar/scalar/pull/7235) [`c1ecd0c`](https://github.com/scalar/scalar/commit/c1ecd0c6096f3fbe2e3d8ad3794ea718bb6bce66) Thanks [@marcalexiei](https://github.com/marcalexiei)! - feat(json-magic): use `@scalar/helpers/node/path` polyfill
+
+### Patch Changes
+
+- [#7266](https://github.com/scalar/scalar/pull/7266) [`fddf294`](https://github.com/scalar/scalar/commit/fddf294b00dd8c9eb5c713c338f2ec6e3f62523d) Thanks [@amritk](https://github.com/amritk)! - fix: remove useage of crypto.subtle in all contexts
+
+- Updated dependencies [[`fddf294`](https://github.com/scalar/scalar/commit/fddf294b00dd8c9eb5c713c338f2ec6e3f62523d), [`c1ecd0c`](https://github.com/scalar/scalar/commit/c1ecd0c6096f3fbe2e3d8ad3794ea718bb6bce66)]:
+  - @scalar/helpers@0.1.0
+
+## 0.7.0
+
+### Minor Changes
+
+- [#7185](https://github.com/scalar/scalar/pull/7185) [`6ca835e`](https://github.com/scalar/scalar/commit/6ca835e5afd3e8c603e073e7c83f2cdd961a0f69) Thanks [@DemonHa](https://github.com/DemonHa)! - feat: add support for watch mode
+
+### Patch Changes
+
+- [#7213](https://github.com/scalar/scalar/pull/7213) [`43bc5e8`](https://github.com/scalar/scalar/commit/43bc5e8b90dc0edf7176d0ddfc64bf3212494458) Thanks [@DemonHa](https://github.com/DemonHa)! - fix: proxy performance issue because of multiple proxies
+
+- Updated dependencies [[`6ec8c29`](https://github.com/scalar/scalar/commit/6ec8c299d912111b029e8058979d00968b70691a)]:
+  - @scalar/helpers@0.0.13
+
+## 0.6.1
+
+### Patch Changes
+
+- 2089748: chore: add logs when fetching unsupported formats
+- 8a7fb2a: fix: schema properties starting with an underscore are hidden
+- Updated dependencies [3f6d0b9]
+  - @scalar/helpers@0.0.12
+
+## 0.6.0
+
+### Minor Changes
+
+- 4951456: feat: merge yaml aliases for in-mem representation
+
+## 0.5.2
+
+### Patch Changes
+
+- 6462733: fix: comment out flaky test for now
+
+## 0.5.1
+
+### Patch Changes
+
+- 41d8600: feat: add local ref bundling to bundler
+
+## 0.5.0
+
+### Minor Changes
+
+- fe46413: feat: support for $id and $anchor
+
+### Patch Changes
+
+- dcf50ef: refactor: move escapeJsonPointer to @scalar/json-magic
+
+## 0.4.3
+
+### Patch Changes
+
+- Updated dependencies [bff46e5]
+  - @scalar/helpers@0.0.11
+
+## 0.4.2
+
+### Patch Changes
+
+- 3bd1209: fix: do not throw when we set on an invalid ref
+- 1943b99: chore: emit warning when trying to set an invalid ref
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [821717b]
+  - @scalar/helpers@0.0.10
+
+## 0.4.0
+
+### Minor Changes
+
+- 99894bc: feat: correctly validate the schemas
+
+### Patch Changes
+
+- 06a46f0: fix: add proxy cache to fix reactivity issues
+- 63283aa: fix: use hidden properties during validation
+- Updated dependencies [98c55d0]
+- Updated dependencies [0e747c7]
+  - @scalar/helpers@0.0.9
+
+## 0.3.1
+
+### Patch Changes
+
+- 88385b1: fix: external ref linking when starting with a /
+
+## 0.3.0
+
+### Minor Changes
+
+- b93e1fe: feat(workspace-store): support relative external references
+- c4bf497: fix(workspace-store): correctly propagate documents from one state to the other
+- d8adbed: feat(workspace-store): resolve multi level refs
+- 0c80ef0: feat(json-magic): change the way we resolve refs
+
+### Patch Changes
+
+- 0fcd446: feat(workspace-store): performance improvements
+- Updated dependencies [66b18fc]
+  - @scalar/helpers@0.0.8
+
+## 0.2.0
+
+### Minor Changes
+
+- 0afc40c: feat(json-magic): introduce type-safe apply function with tracked target type in diff results
+- 128af48: feat(workspace-store, json-magic): support `externalValue` fields on example object
+
+## 0.1.0
+
+### Minor Changes
+
+- 952bde2: feat(json-magic): move json tooling to the new package

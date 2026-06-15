@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/string/create-hash.ts"],
+  "sourcesContent": ["/**\n * Simple 32 bit non-secure hash from a string input\n *\n * @deprecated Please use generateHash from ./generate-hash.ts instead\n *\n * @see https://stackoverflow.com/a/7616484/1624255\n */\nexport const createHash = (input?: string): number => {\n  let chr = 0\n  let hash = 0\n  let i = 0\n\n  if (!input?.length) {\n    return hash\n  }\n\n  for (i = 0; i < input.length; i++) {\n    chr = input.charCodeAt(i)\n    hash = (hash << 5) - hash + chr\n    hash |= 0 // Convert to 32bit integer\n  }\n  return hash\n}\n"],
+  "mappings": "AAOO,MAAM,aAAa,CAAC,UAA2B;AACpD,MAAI,MAAM;AACV,MAAI,OAAO;AACX,MAAI,IAAI;AAER,MAAI,CAAC,OAAO,QAAQ;AAClB,WAAO;AAAA,EACT;AAEA,OAAK,IAAI,GAAG,IAAI,MAAM,QAAQ,KAAK;AACjC,UAAM,MAAM,WAAW,CAAC;AACxB,YAAQ,QAAQ,KAAK,OAAO;AAC5B,YAAQ;AAAA,EACV;AACA,SAAO;AACT;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/is-filesystem.ts"],
+  "sourcesContent": ["import type { Filesystem } from '@/types'\n\n/**\n * Check if the value is a filesystem\n */\nexport function isFilesystem(value: any): value is Filesystem {\n  return (\n    typeof value !== 'undefined' &&\n    Array.isArray(value) &&\n    value.length > 0 &&\n    value.some((file) => file.isEntrypoint === true)\n  )\n}\n"],
+  "mappings": "AAKO,SAAS,aAAa,OAAiC;AAC5D,SACE,OAAO,UAAU,eACjB,MAAM,QAAQ,KAAK,KACnB,MAAM,SAAS,KACf,MAAM,KAAK,CAAC,SAAS,KAAK,iBAAiB,IAAI;AAEnD;",
+  "names": []
+}

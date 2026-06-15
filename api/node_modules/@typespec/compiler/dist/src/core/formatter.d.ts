@@ -1,0 +1,45 @@
+import type { Options } from "prettier";
+import type { Node } from "./types.js";
+/**
+ * Print the given TypeSpec AST node with the TypeSpec formatter.
+ * @param node TypeSpec AST node to print.
+ * @returns Printed TypeSpec.
+ */
+export declare function printTypeSpecNode(node: Node): Promise<string>;
+export type Formatter = "typespec" | "tspconfig";
+/**
+ * Get the formatter name for the given filename
+ * @param filename The filename to check
+ */
+export declare function getFormatterFromFilename(filename: string): Formatter | undefined;
+/**
+ * Format the code with the given formatter
+ * @param code The code to format
+ * @param formatter The formatter to use
+ * @param prettierConfig Optional config for prettier
+ * @returns The formatted code
+ * @throws PrettierParserError if the code is not valid
+ */
+export declare function format(code: string, formatter: Formatter, prettierConfig?: Options): Promise<string>;
+/**
+ * Check the given code is correctly formatted with the given formatter
+ * @param code The code to check the format of
+ * @param formatter The formatter to use
+ * @param prettierConfig Optional config for prettier
+ * @returns true if the code is formatted correctly
+ * @throws PrettierParserError if the code is not valid
+ */
+export declare function checkFormat(code: string, formatter: Formatter, prettierConfig?: Options): Promise<boolean>;
+/**
+ * Format TypeSpec code
+ * @param code Code to format
+ * @param prettierConfig Optional config for prettier.
+ * @returns Formatted code
+ */
+export declare function formatTypeSpec(code: string, prettierConfig?: Options): Promise<string>;
+/**
+ * Check the given is correctly formatted.
+ * @returns true if code is formatted correctly.
+ */
+export declare function checkFormatTypeSpec(code: string, prettierConfig?: Options): Promise<boolean>;
+//# sourceMappingURL=formatter.d.ts.map

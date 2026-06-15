@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/utils/betterAjvErrors/index.ts"],
+  "sourcesContent": ["import prettify from './helpers'\n\ntype BetterAjvErrorsOptions = {\n  indent?: number\n  json?: string\n}\n\n// TODO: Check if this is the correct type\ntype AjvError = {\n  keyword: string\n  dataPath: string\n  schemaPath: string\n  params: any\n  message: string\n  schema: any\n  parentSchema: any\n  data: any\n}\n\nexport function betterAjvErrors(schema: any, data: any, errors: AjvError[], options: BetterAjvErrorsOptions = {}) {\n  const { indent = null, json = null } = options\n\n  const jsonRaw = json || JSON.stringify(data, null, indent)\n\n  const customErrorToStructure = (error) => error.getError()\n  const customErrors = prettify(errors, {\n    data,\n    schema,\n    jsonRaw,\n  })\n\n  return customErrors.map(customErrorToStructure)\n}\n"],
+  "mappings": "AAAA,OAAO,cAAc;AAmBd,SAAS,gBAAgB,QAAa,MAAW,QAAoB,UAAkC,CAAC,GAAG;AAChH,QAAM,EAAE,SAAS,MAAM,OAAO,KAAK,IAAI;AAEvC,QAAM,UAAU,QAAQ,KAAK,UAAU,MAAM,MAAM,MAAM;AAEzD,QAAM,yBAAyB,CAAC,UAAU,MAAM,SAAS;AACzD,QAAM,eAAe,SAAS,QAAQ;AAAA,IACpC;AAAA,IACA;AAAA,IACA;AAAA,EACF,CAAC;AAED,SAAO,aAAa,IAAI,sBAAsB;AAChD;",
+  "names": []
+}

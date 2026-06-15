@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/helpers/normalize.ts"],
+  "sourcesContent": ["import { parse } from 'yaml'\n\n/**\n * Normalize a string (YAML, JSON, object) to a JavaScript datatype.\n */\nexport function normalize(content: any) {\n  if (content === null) {\n    return undefined\n  }\n\n  if (typeof content === 'string') {\n    if (content.trim() === '') {\n      return undefined\n    }\n\n    try {\n      return JSON.parse(content)\n    } catch (_error) {\n      // Does it look like YAML?\n      const hasColon = /^[^:]+:/.test(content)\n      const isJson = content.slice(0, 50).trimStart().startsWith('{')\n\n      if (!hasColon || isJson) {\n        return undefined\n      }\n\n      return parse(content, {\n        maxAliasCount: 10000,\n        merge: true,\n      })\n    }\n  }\n\n  return content\n}\n"],
+  "mappings": "AAAA,SAAS,aAAa;AAKf,SAAS,UAAU,SAAc;AACtC,MAAI,YAAY,MAAM;AACpB,WAAO;AAAA,EACT;AAEA,MAAI,OAAO,YAAY,UAAU;AAC/B,QAAI,QAAQ,KAAK,MAAM,IAAI;AACzB,aAAO;AAAA,IACT;AAEA,QAAI;AACF,aAAO,KAAK,MAAM,OAAO;AAAA,IAC3B,SAAS,QAAQ;AAEf,YAAM,WAAW,UAAU,KAAK,OAAO;AACvC,YAAM,SAAS,QAAQ,MAAM,GAAG,EAAE,EAAE,UAAU,EAAE,WAAW,GAAG;AAE9D,UAAI,CAAC,YAAY,QAAQ;AACvB,eAAO;AAAA,MACT;AAEA,aAAO,MAAM,SAAS;AAAA,QACpB,eAAe;AAAA,QACf,OAAO;AAAA,MACT,CAAC;AAAA,IACH;AAAA,EACF;AAEA,SAAO;AACT;",
+  "names": []
+}

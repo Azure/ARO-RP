@@ -1,0 +1,1 @@
+{"version":3,"file":"TypeSpec.Prototypes.d.ts","sourceRoot":"","sources":["../../generated-defs/TypeSpec.Prototypes.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,gBAAgB,EAAE,2BAA2B,EAAE,IAAI,EAAE,MAAM,iBAAiB,CAAC;AAE3F,MAAM,MAAM,eAAe,GAAG,CAC5B,OAAO,EAAE,gBAAgB,EACzB,MAAM,EAAE,IAAI,KACT,2BAA2B,GAAG,IAAI,CAAC;AAExC,MAAM,MAAM,4BAA4B,GAAG;IACzC,MAAM,EAAE,eAAe,CAAC;CACzB,CAAC"}

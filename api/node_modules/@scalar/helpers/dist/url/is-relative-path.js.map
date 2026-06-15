@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/url/is-relative-path.ts"],
+  "sourcesContent": ["import { REGEX } from '@/regex/regex-helpers'\n\n/**\n * Check if the URL is relative or if it's a domain without protocol\n **/\nexport const isRelativePath = (url: string) => {\n  // Allow http:// https:// and other protocols such as file://\n  if (REGEX.PROTOCOL.test(url)) {\n    return false\n  }\n\n  // Check if it looks like a domain (contains dots and no spaces)\n  // This catches cases like \"galaxy.scalar.com/planets\"\n  if (/^[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+(\\/|$)/.test(url)) {\n    return false\n  }\n\n  return true\n}\n"],
+  "mappings": "AAAA,SAAS,aAAa;AAKf,MAAM,iBAAiB,CAAC,QAAgB;AAE7C,MAAI,MAAM,SAAS,KAAK,GAAG,GAAG;AAC5B,WAAO;AAAA,EACT;AAIA,MAAI,uCAAuC,KAAK,GAAG,GAAG;AACpD,WAAO;AAAA,EACT;AAEA,SAAO;AACT;",
+  "names": []
+}

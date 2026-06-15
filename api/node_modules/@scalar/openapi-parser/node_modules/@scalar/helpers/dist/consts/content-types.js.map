@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/consts/content-types.ts"],
+  "sourcesContent": ["/**\n * Content types that we automatically add in the client\n */\nexport const CONTENT_TYPES = {\n  'multipart/form-data': 'Multipart Form',\n  'application/x-www-form-urlencoded': 'Form URL Encoded',\n  'application/octet-stream': 'Binary File',\n  'application/json': 'JSON',\n  'application/xml': 'XML',\n  'application/yaml': 'YAML',\n  'application/edn': 'EDN',\n  'other': 'Other',\n  'none': 'None',\n} as const\n"],
+  "mappings": "AAGO,MAAM,gBAAgB;AAAA,EAC3B,uBAAuB;AAAA,EACvB,qCAAqC;AAAA,EACrC,4BAA4B;AAAA,EAC5B,oBAAoB;AAAA,EACpB,mBAAmB;AAAA,EACnB,oBAAoB;AAAA,EACpB,mBAAmB;AAAA,EACnB,SAAS;AAAA,EACT,QAAQ;AACV;",
+  "names": []
+}

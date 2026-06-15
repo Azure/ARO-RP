@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/betterAjvErrors/validation-errors/unevaluated-prop.js"],
+  "sourcesContent": ["import BaseValidationError from './base'\n\nexport default class UnevaluatedPropValidationError extends BaseValidationError {\n  constructor(...args) {\n    super(...args)\n    this.name = 'UnevaluatedPropValidationError'\n    this.options.isIdentifierLocation = true\n  }\n\n  getError() {\n    const { params } = this.options\n\n    return {\n      message: `Property ${params.unevaluatedProperty} is not expected to be here`,\n      path: this.instancePath,\n    }\n  }\n}\n"],
+  "mappings": "AAAA,OAAO,yBAAyB;AAEhC,MAAO,uCAAqD,oBAAoB;AAAA,EAC9E,eAAe,MAAM;AACnB,UAAM,GAAG,IAAI;AACb,SAAK,OAAO;AACZ,SAAK,QAAQ,uBAAuB;AAAA,EACtC;AAAA,EAEA,WAAW;AACT,UAAM,EAAE,OAAO,IAAI,KAAK;AAExB,WAAO;AAAA,MACL,SAAS,YAAY,OAAO,mBAAmB;AAAA,MAC/C,MAAM,KAAK;AAAA,IACb;AAAA,EACF;AACF;",
+  "names": []
+}

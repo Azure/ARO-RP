@@ -1,0 +1,31 @@
+import { DiagnosticCollector } from "./diagnostics.js";
+import type { Program } from "./program.js";
+import { Diagnostic, DiagnosticMessages, LinterDefinition, LinterResolvedDefinition, LinterRule, LinterRuleContext, LinterRuleSet } from "./types.js";
+type LinterLibraryInstance = {
+    linter: LinterResolvedDefinition;
+};
+export interface Linter {
+    extendRuleSet(ruleSet: LinterRuleSet): Promise<readonly Diagnostic[]>;
+    registerLinterLibrary(name: string, lib?: LinterLibraryInstance): void;
+    lint(): Promise<LinterResult>;
+}
+export interface LinterStats {
+    runtime: {
+        total: number;
+        rules: Record<string, number>;
+    };
+}
+export interface LinterResult {
+    readonly diagnostics: readonly Diagnostic[];
+    readonly stats: LinterStats;
+}
+/**
+ * Resolve the linter definition
+ */
+export declare function resolveLinterDefinition(libName: string, linter: LinterDefinition): LinterResolvedDefinition;
+export declare function createLinter(program: Program, loadLibrary: (name: string) => Promise<LinterLibraryInstance | undefined>): Linter;
+export declare function createLinterRuleContext<N extends string, DM extends DiagnosticMessages>(program: Program, rule: LinterRule<N, DM>, diagnosticCollector: DiagnosticCollector): LinterRuleContext<DM>;
+export declare const builtInLinterLibraryName = "@typespec/compiler";
+export declare function createBuiltInLinterLibrary(): LinterLibraryInstance;
+export {};
+//# sourceMappingURL=linter.d.ts.map

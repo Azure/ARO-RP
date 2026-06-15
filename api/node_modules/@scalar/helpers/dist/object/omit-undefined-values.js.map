@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/object/omit-undefined-values.ts"],
+  "sourcesContent": ["/**\n * Removes undefined values from an object.\n *\n * Can be used as a transform function for any Zod schema.\n */\nexport const omitUndefinedValues = <T extends object>(data: T): T => {\n  // Handle arrays specially\n  if (Array.isArray(data)) {\n    return data.map((item) =>\n      typeof item === 'object' && item !== null ? omitUndefinedValues(item) : item,\n    ) as unknown as T\n  }\n\n  return Object.fromEntries(\n    Object.entries(data)\n      .filter(([_, value]) => value !== undefined)\n      .map(([key, value]) => {\n        if (typeof value === 'object' && value !== null) {\n          return [key, omitUndefinedValues(value)]\n        }\n        return [key, value]\n      }),\n  ) as T\n}\n"],
+  "mappings": "AAKO,MAAM,sBAAsB,CAAmB,SAAe;AAEnE,MAAI,MAAM,QAAQ,IAAI,GAAG;AACvB,WAAO,KAAK;AAAA,MAAI,CAAC,SACf,OAAO,SAAS,YAAY,SAAS,OAAO,oBAAoB,IAAI,IAAI;AAAA,IAC1E;AAAA,EACF;AAEA,SAAO,OAAO;AAAA,IACZ,OAAO,QAAQ,IAAI,EAChB,OAAO,CAAC,CAAC,GAAG,KAAK,MAAM,UAAU,MAAS,EAC1C,IAAI,CAAC,CAAC,KAAK,KAAK,MAAM;AACrB,UAAI,OAAO,UAAU,YAAY,UAAU,MAAM;AAC/C,eAAO,CAAC,KAAK,oBAAoB,KAAK,CAAC;AAAA,MACzC;AACA,aAAO,CAAC,KAAK,KAAK;AAAA,IACpB,CAAC;AAAA,EACL;AACF;",
+  "names": []
+}

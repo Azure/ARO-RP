@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/plugins/fetch-urls/index.ts"],
+  "sourcesContent": ["export { fetchUrls, fetchUrlsDefaultConfiguration } from './fetch-urls'\n"],
+  "mappings": "AAAA,SAAS,WAAW,qCAAqC;",
+  "names": []
+}

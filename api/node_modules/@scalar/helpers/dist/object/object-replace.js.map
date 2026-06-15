@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/object/object-replace.ts"],
+  "sourcesContent": ["// TODO: This is a copy of org/packages/helpers/src/objects/merge.ts\n\n/**\n * Overwrite a target object a new replacement object handling removed keys\n */\nexport const objectReplace = <A extends object, B extends object>(target: A, replacement: B) => {\n  // Clear any keys that have been removed in the replacement\n  Object.keys(target).forEach((key) => {\n    if (!Object.hasOwn(replacement, key)) {\n      delete target[key as keyof A]\n    }\n  })\n\n  Object.assign(target, replacement)\n\n  return target as unknown as B\n}\n"],
+  "mappings": "AAKO,MAAM,gBAAgB,CAAqC,QAAW,gBAAmB;AAE9F,SAAO,KAAK,MAAM,EAAE,QAAQ,CAAC,QAAQ;AACnC,QAAI,CAAC,OAAO,OAAO,aAAa,GAAG,GAAG;AACpC,aAAO,OAAO,GAAc;AAAA,IAC9B;AAAA,EACF,CAAC;AAED,SAAO,OAAO,QAAQ,WAAW;AAEjC,SAAO;AACT;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/transform/utils/rejectSwaggerDocuments.ts"],
+  "sourcesContent": ["import type { AnyObject } from '@/types/index'\n\nexport const rejectSwaggerDocuments = (defintion: AnyObject) => {\n  if ('swagger' in defintion) {\n    throw new Error('Swagger 2.0 documents are not supported. Please upgrade to OpenAPI 3.x.')\n  }\n\n  return defintion\n}\n"],
+  "mappings": "AAEO,MAAM,yBAAyB,CAAC,cAAyB;AAC9D,MAAI,aAAa,WAAW;AAC1B,UAAM,IAAI,MAAM,yEAAyE;AAAA,EAC3F;AAEA,SAAO;AACT;",
+  "names": []
+}

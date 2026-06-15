@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/betterAjvErrors/validation-errors/default.js"],
+  "sourcesContent": ["import BaseValidationError from './base'\n\nexport default class DefaultValidationError extends BaseValidationError {\n  constructor(...args) {\n    super(...args)\n    this.name = 'DefaultValidationError'\n    this.options.isSkipEndLocation = true\n  }\n\n  getError() {\n    const { keyword, message } = this.options\n\n    return {\n      message: `${keyword} ${message}`,\n      path: this.instancePath,\n    }\n  }\n}\n"],
+  "mappings": "AAAA,OAAO,yBAAyB;AAEhC,MAAO,+BAA6C,oBAAoB;AAAA,EACtE,eAAe,MAAM;AACnB,UAAM,GAAG,IAAI;AACb,SAAK,OAAO;AACZ,SAAK,QAAQ,oBAAoB;AAAA,EACnC;AAAA,EAEA,WAAW;AACT,UAAM,EAAE,SAAS,QAAQ,IAAI,KAAK;AAElC,WAAO;AAAA,MACL,SAAS,GAAG,OAAO,IAAI,OAAO;AAAA,MAC9B,MAAM,KAAK;AAAA,IACb;AAAA,EACF;AACF;",
+  "names": []
+}

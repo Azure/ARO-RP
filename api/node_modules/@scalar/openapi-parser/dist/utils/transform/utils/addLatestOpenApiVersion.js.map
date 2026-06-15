@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/transform/utils/addLatestOpenApiVersion.ts"],
+  "sourcesContent": ["import type { AnyObject } from '@/types/index'\n\nexport const DEFAULT_OPENAPI_VERSION = '3.1.1'\n\nexport const addLatestOpenApiVersion = (definition: AnyObject) => ({\n  openapi: definition.openapi ?? DEFAULT_OPENAPI_VERSION,\n  ...definition,\n})\n"],
+  "mappings": "AAEO,MAAM,0BAA0B;AAEhC,MAAM,0BAA0B,CAAC,gBAA2B;AAAA,EACjE,SAAS,WAAW,WAAW;AAAA,EAC/B,GAAG;AACL;",
+  "names": []
+}

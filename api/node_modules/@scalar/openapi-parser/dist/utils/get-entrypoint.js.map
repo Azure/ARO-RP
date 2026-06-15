@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/get-entrypoint.ts"],
+  "sourcesContent": ["import type { Filesystem, FilesystemEntry } from '@/types/index'\n\n/**\n * Return just the entrypoint of the filesystem.\n */\nexport function getEntrypoint(filesystem?: Filesystem): FilesystemEntry | undefined {\n  return filesystem?.find((file) => file.isEntrypoint)\n}\n"],
+  "mappings": "AAKO,SAAS,cAAc,YAAsD;AAClF,SAAO,YAAY,KAAK,CAAC,SAAS,KAAK,YAAY;AACrD;",
+  "names": []
+}

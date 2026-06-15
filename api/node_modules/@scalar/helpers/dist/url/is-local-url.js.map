@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/url/is-local-url.ts"],
+  "sourcesContent": ["/** Obviously local hostnames */\nconst LOCAL_HOSTNAMES = ['localhost', '127.0.0.1', '[::1]', '0.0.0.0']\n\n/** Reserved TLDs that are guaranteed to never be assigned */\nconst RESERVED_TLDS = ['test', 'example', 'invalid', 'localhost']\n\n/**\n * Detect requests to localhost or reserved TLDs\n */\nexport function isLocalUrl(url: string) {\n  try {\n    const { hostname } = new URL(url)\n\n    // Check if hostname is in the local hostnames list\n    if (LOCAL_HOSTNAMES.includes(hostname)) {\n      return true\n    }\n\n    // Check if hostname ends with a reserved TLD\n    const tld = hostname.split('.').pop()\n    if (tld && RESERVED_TLDS.includes(tld)) {\n      return true\n    }\n\n    return false\n  } catch {\n    // If it's not a valid URL, we can't use the proxy anyway,\n    // but it also covers cases like relative URLs (e.g. `openapi.json`).\n    return true\n  }\n}\n"],
+  "mappings": "AACA,MAAM,kBAAkB,CAAC,aAAa,aAAa,SAAS,SAAS;AAGrE,MAAM,gBAAgB,CAAC,QAAQ,WAAW,WAAW,WAAW;AAKzD,SAAS,WAAW,KAAa;AACtC,MAAI;AACF,UAAM,EAAE,SAAS,IAAI,IAAI,IAAI,GAAG;AAGhC,QAAI,gBAAgB,SAAS,QAAQ,GAAG;AACtC,aAAO;AAAA,IACT;AAGA,UAAM,MAAM,SAAS,MAAM,GAAG,EAAE,IAAI;AACpC,QAAI,OAAO,cAAc,SAAS,GAAG,GAAG;AACtC,aAAO;AAAA,IACT;AAEA,WAAO;AAAA,EACT,QAAQ;AAGN,WAAO;AAAA,EACT;AACF;",
+  "names": []
+}

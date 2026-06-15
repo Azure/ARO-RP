@@ -1,0 +1,1 @@
+{"version":3,"file":"raw-text-cache.d.ts","sourceRoot":"","sources":["../../../../src/core/helpers/raw-text-cache.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,IAAI,EAAkC,MAAM,aAAa,CAAC;AAInE,wBAAgB,YAAY,CAAC,IAAI,EAAE,IAAI,EAAE,OAAO,EAAE,MAAM,GAAG,IAAI,CAE9D;AAED,wBAAgB,gBAAgB,CAAC,IAAI,EAAE,IAAI,GAAG,MAAM,GAAG,SAAS,CAE/D;AAED,wBAAgB,mBAAmB,CAAC,IAAI,EAAE,IAAI,GAAG,MAAM,CAkBtD"}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/object/object-keys.ts"],
+  "sourcesContent": ["/**\n * Type safe version of Object.keys\n * Can probably remove this whenever typescript adds it\n */\nexport const objectKeys = <T extends object>(obj: T): (keyof T)[] => Object.keys(obj) as (keyof T)[]\n"],
+  "mappings": "AAIO,MAAM,aAAa,CAAmB,QAAwB,OAAO,KAAK,GAAG;",
+  "names": []
+}

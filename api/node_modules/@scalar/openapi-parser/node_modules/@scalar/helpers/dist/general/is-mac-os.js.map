@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/general/is-mac-os.ts"],
+  "sourcesContent": ["/**\n * Checks whether the user is on macOS\n * Uses the modern navigator.userAgentData API with a fallback to navigator.userAgent\n */\nexport const isMacOS = () => {\n  if (typeof navigator === 'undefined') {\n    return false\n  }\n\n  // Modern approach using navigator.userAgentData\n  // @ts-expect-error - userAgentData is new, we can remove this when its stable\n  if (navigator.userAgentData?.platform) {\n    // @ts-expect-error - userAgentData is new, we can remove this when its stable\n    return navigator.userAgentData.platform.toLowerCase().includes('mac')\n  }\n\n  // Fallback to userAgent\n  return /Mac/.test(navigator.userAgent)\n}\n"],
+  "mappings": "AAIO,MAAM,UAAU,MAAM;AAC3B,MAAI,OAAO,cAAc,aAAa;AACpC,WAAO;AAAA,EACT;AAIA,MAAI,UAAU,eAAe,UAAU;AAErC,WAAO,UAAU,cAAc,SAAS,YAAY,EAAE,SAAS,KAAK;AAAA,EACtE;AAGA,SAAO,MAAM,KAAK,UAAU,SAAS;AACvC;",
+  "names": []
+}

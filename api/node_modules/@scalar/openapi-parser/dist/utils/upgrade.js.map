@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/upgrade.ts"],
+  "sourcesContent": ["import type { OpenAPIV3_1 } from '@scalar/openapi-types'\nimport { upgrade as originalUpgrade } from '@scalar/openapi-upgrader'\nimport type { UnknownObject } from '@scalar/types/utils'\n\nimport type { AnyObject, Filesystem, UpgradeResult } from '@/types/index'\n\nimport { getEntrypoint } from './get-entrypoint'\nimport { isFilesystem } from './is-filesystem'\nimport { normalize } from './normalize'\n\n/**\n * Upgrade specification to OpenAPI 3.1.0\n */\nexport function upgrade(value: string | AnyObject | Filesystem): UpgradeResult<OpenAPIV3_1.Document> {\n  if (!value) {\n    return {\n      specification: null,\n      version: '3.1',\n    }\n  }\n\n  // TODO: Run upgrade over the whole filesystem\n  const document = originalUpgrade(\n    isFilesystem(value) ? getEntrypoint(value).specification : (normalize(value) as UnknownObject),\n    '3.1',\n  )\n\n  return {\n    specification: document,\n    // TODO: Make dynamic\n    version: '3.1',\n  } as UpgradeResult<OpenAPIV3_1.Document>\n}\n"],
+  "mappings": "AACA,SAAS,WAAW,uBAAuB;AAK3C,SAAS,qBAAqB;AAC9B,SAAS,oBAAoB;AAC7B,SAAS,iBAAiB;AAKnB,SAAS,QAAQ,OAA6E;AACnG,MAAI,CAAC,OAAO;AACV,WAAO;AAAA,MACL,eAAe;AAAA,MACf,SAAS;AAAA,IACX;AAAA,EACF;AAGA,QAAM,WAAW;AAAA,IACf,aAAa,KAAK,IAAI,cAAc,KAAK,EAAE,gBAAiB,UAAU,KAAK;AAAA,IAC3E;AAAA,EACF;AAEA,SAAO;AAAA,IACL,eAAe;AAAA;AAAA,IAEf,SAAS;AAAA,EACX;AACF;",
+  "names": []
+}

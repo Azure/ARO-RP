@@ -1,0 +1,1 @@
+{"version":3,"file":"make-filesystem.d.ts","sourceRoot":"","sources":["../../src/utils/make-filesystem.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,UAAU,EAAE,eAAe,EAAE,MAAM,eAAe,CAAA;AAK3E,wBAAgB,cAAc,CAC5B,KAAK,EAAE,MAAM,GAAG,SAAS,GAAG,UAAU,EACtC,UAAU,GAAE,OAAO,CAAC,eAAe,CAAM,GACxC,UAAU,CAoBZ"}

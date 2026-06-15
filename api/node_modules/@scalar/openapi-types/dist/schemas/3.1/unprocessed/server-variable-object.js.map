@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/unprocessed/server-variable-object.ts"],
+  "sourcesContent": ["import { ServerVariableObjectSchema as OriginalServerVariableObjectSchema } from '../processed/server-variable-object'\n\n/**\n * Server Variable Object\n *\n * An object representing a Server Variable for server URL template substitution.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#server-variable-object\n */\nexport const ServerVariableObjectSchema = OriginalServerVariableObjectSchema\n"],
+  "mappings": "AAAA,SAAS,8BAA8B,0CAA0C;AAS1E,MAAM,6BAA6B;",
+  "names": []
+}

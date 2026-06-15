@@ -1,0 +1,94 @@
+# @scalar/openapi-upgrader
+
+## 0.1.11
+
+### Patch Changes
+
+- [#8326](https://github.com/scalar/scalar/pull/8326): feat: keep named request examples when upgrading from Swagger 2.0
+
+#### Updated Dependencies
+
+- **@scalar/openapi-types@0.5.4**
+  - [#8275](https://github.com/scalar/scalar/pull/8275): fix(openapi-types): make the `$ref` property in the `ReferenceObject` type required
+
+## 0.1.10
+
+### Patch Changes
+
+- [#8272](https://github.com/scalar/scalar/pull/8272): feat: migrate swagger 2.0 response examples
+
+## 0.1.9
+
+### Patch Changes
+
+- [#8251](https://github.com/scalar/scalar/pull/8251): feat: migrate swagger 2.0 defaults for parameter
+
+## 0.1.8
+
+### Patch Changes
+
+- [#7842](https://github.com/scalar/scalar/pull/7842): feat: migrate swagger 2.0 responses
+
+## 0.1.7
+
+### Patch Changes
+
+- [#7739](https://github.com/scalar/scalar/pull/7739): fix: upgrade form to multipart/form
+- [#7694](https://github.com/scalar/scalar/pull/7694): feat: migrate x-example and x-examples
+
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`72cd82f`](https://github.com/scalar/scalar/commit/72cd82fb8df63a9e5d0db1202978aebfefd0457a)]:
+  - @scalar/openapi-types@0.5.3
+
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`a164d76`](https://github.com/scalar/scalar/commit/a164d76f21437b3a35210d62a996b6c9d483e5a4)]:
+  - @scalar/openapi-types@0.5.2
+
+## 0.1.4
+
+### Patch Changes
+
+- [#7215](https://github.com/scalar/scalar/pull/7215) [`11a6e64`](https://github.com/scalar/scalar/commit/11a6e6405d4f30f001a16d6afda4d2b759c0ed09) Thanks [@luke-hagar-sp](https://github.com/luke-hagar-sp)! - fix: don't upgrade "example" if it's just a key
+
+- [#7092](https://github.com/scalar/scalar/pull/7092) [`134ff5f`](https://github.com/scalar/scalar/commit/134ff5f32aa6842696bf146c7e0817b1662905eb) Thanks [@baywet](https://github.com/baywet)! - feat - upgrader - adds support for migrating XML nodes to 3.2.0
+
+- Updated dependencies [[`2239843`](https://github.com/scalar/scalar/commit/2239843150ed16d1ca35b0b1f8e90cd3e35be7ce)]:
+  - @scalar/openapi-types@0.5.1
+
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [f69e7cc]
+  - @scalar/openapi-types@0.5.0
+
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [15c4240]
+  - @scalar/openapi-types@0.4.1
+
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [008a0f3]
+  - @scalar/openapi-types@0.4.0
+
+## 0.1.0
+
+### Minor Changes
+
+- 6221e4a: hello world :)
+- 02085ef: feat: add OpenAPI 3.1 > 3.2 upgrader (not enabled by default)
+
+### Patch Changes
+
+- 2d612e4: fix: consumed media types are not deleted for non-existing body parameter and referenced parameter is added empty schema object

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/configuration/index.ts"],
+  "sourcesContent": ["import Swagger20 from '@/schemas/v2.0/schema'\nimport OpenApi30 from '@/schemas/v3.0/schema'\nimport OpenApi31 from '@/schemas/v3.1/schema'\nimport OpenApi32 from '@/schemas/v3.2/schema'\n\n/**\n * A list of the supported OpenAPI specifications\n */\nexport const OpenApiSpecifications = {\n  '2.0': Swagger20,\n  '3.0': OpenApi30,\n  '3.1': OpenApi31,\n  '3.2': OpenApi32,\n}\n\nexport type OpenApiVersion = keyof typeof OpenApiSpecifications\n\nexport const OpenApiVersions = Object.keys(OpenApiSpecifications) as OpenApiVersion[]\n\n/**\n * List of error messages used in the Validator\n */\nexport const ERRORS = {\n  EMPTY_OR_INVALID: \"Can't find JSON, YAML or filename in data.\",\n  OPENAPI_VERSION_NOT_SUPPORTED:\n    \"Can't find supported Swagger/OpenAPI version in the provided document, version must be a string.\",\n  INVALID_REFERENCE: \"Can't resolve reference: %s\",\n  EXTERNAL_REFERENCE_NOT_FOUND: \"Can't resolve external reference: %s\",\n  SELF_REFERENCE: \"Can't resolve reference to itself: %s\",\n  FILE_DOES_NOT_EXIST: 'File does not exist: %s',\n  NO_CONTENT: 'No content found',\n} as const\n"],
+  "mappings": "AAAA,OAAO,eAAe;AACtB,OAAO,eAAe;AACtB,OAAO,eAAe;AACtB,OAAO,eAAe;AAKf,MAAM,wBAAwB;AAAA,EACnC,OAAO;AAAA,EACP,OAAO;AAAA,EACP,OAAO;AAAA,EACP,OAAO;AACT;AAIO,MAAM,kBAAkB,OAAO,KAAK,qBAAqB;AAKzD,MAAM,SAAS;AAAA,EACpB,kBAAkB;AAAA,EAClB,+BACE;AAAA,EACF,mBAAmB;AAAA,EACnB,8BAA8B;AAAA,EAC9B,gBAAgB;AAAA,EAChB,qBAAqB;AAAA,EACrB,YAAY;AACd;",
+  "names": []
+}

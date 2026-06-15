@@ -1,0 +1,41 @@
+import { ok } from "assert";
+/**
+ * Takes source code with a cursor position indicated by the given marker
+ * ("┆" by default), and returns the source without the marker along with
+ * the cursor position.
+ */
+export function extractCursor(sourceWithCursor, marker = "┆") {
+    const pos = sourceWithCursor.indexOf(marker);
+    ok(pos >= 0, "marker not found");
+    const source = sourceWithCursor.replace(marker, "");
+    return { source, pos };
+}
+/**
+ * Takes source code with a cursor position indicated by the given marker
+ * ("┆" by default), and returns the source without the marker along with
+ * the cursor position.
+ */
+export function extractCursors(sourceWithCursor, marker = "┆") {
+    const positions = [];
+    let pos = sourceWithCursor.indexOf(marker);
+    while (pos >= 0) {
+        positions.push(pos);
+        pos = sourceWithCursor.indexOf(marker, pos + 1);
+    }
+    for (let i = 0; i < positions.length; i++) {
+        positions[i] -= i * marker.length;
+    }
+    ok(positions.length > 0, "marker not found");
+    return { source: sourceWithCursor.replaceAll(marker, ""), pos: positions };
+}
+/**
+ * Takes source code with start and end positions indicated by given marker
+ * ("~~~" by default) and returns the source without the markers along with
+ * the start and end positions.
+ */
+export function extractSquiggles(sourceWithSquiggles, marker = "~~~") {
+    const { source: sourceWithoutFistSquiggle, pos } = extractCursor(sourceWithSquiggles, marker);
+    const { source, pos: end } = extractCursor(sourceWithoutFistSquiggle, marker);
+    return { source, pos, end };
+}
+//# sourceMappingURL=source-utils.js.map

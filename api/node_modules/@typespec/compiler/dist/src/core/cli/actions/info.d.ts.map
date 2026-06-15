@@ -1,0 +1,1 @@
+{"version":3,"file":"info.d.ts","sourceRoot":"","sources":["../../../../../src/core/cli/actions/info.ts"],"names":[],"mappings":"AAIA,OAAO,EAAE,YAAY,EAAE,UAAU,EAAE,MAAM,gBAAgB,CAAC;AAG1D,MAAM,WAAW,WAAW;IAC1B,OAAO,CAAC,EAAE,MAAM,CAAC;CAClB;AAED;;GAEG;AACH,wBAAsB,eAAe,CACnC,IAAI,EAAE,YAAY,EAClB,IAAI,EAAE,WAAW,GAChB,OAAO,CAAC,SAAS,UAAU,EAAE,CAAC,CAgBhC"}

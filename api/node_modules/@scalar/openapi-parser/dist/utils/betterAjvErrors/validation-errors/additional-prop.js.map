@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/betterAjvErrors/validation-errors/additional-prop.js"],
+  "sourcesContent": ["import BaseValidationError from './base'\n\nexport default class AdditionalPropValidationError extends BaseValidationError {\n  constructor(...args) {\n    super(...args)\n    this.name = 'AdditionalPropValidationError'\n    this.options.isIdentifierLocation = true\n  }\n\n  getError() {\n    const { params } = this.options\n\n    return {\n      message: `Property ${params.additionalProperty} is not expected to be here`,\n      path: this.instancePath,\n    }\n  }\n}\n"],
+  "mappings": "AAAA,OAAO,yBAAyB;AAEhC,MAAO,sCAAoD,oBAAoB;AAAA,EAC7E,eAAe,MAAM;AACnB,UAAM,GAAG,IAAI;AACb,SAAK,OAAO;AACZ,SAAK,QAAQ,uBAAuB;AAAA,EACtC;AAAA,EAEA,WAAW;AACT,UAAM,EAAE,OAAO,IAAI,KAAK;AAExB,WAAO;AAAA,MACL,SAAS,YAAY,OAAO,kBAAkB;AAAA,MAC9C,MAAM,KAAK;AAAA,IACb;AAAA,EACF;AACF;",
+  "names": []
+}

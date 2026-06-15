@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/utils/openapi/openapi.ts"],
+  "sourcesContent": ["import type { AnyApiDefinitionFormat, OpenApiOptions, Queue } from '@/types/index'\nimport type { LoadOptions } from '@/utils/load/load'\nimport { loadCommand } from './commands/loadCommand'\n\n/**\n * Creates a fluent OpenAPI pipeline\n *\n * @deprecated We are about to drop the pipeline syntax. Use the individual utilities instead.\n */\nexport function openapi(globalOptions?: OpenApiOptions) {\n  // Create a new queue\n  const queue = {\n    input: null,\n    options: globalOptions,\n    tasks: [],\n  } as Queue<[]>\n\n  return {\n    load: (input: AnyApiDefinitionFormat, options?: LoadOptions) => loadCommand(queue, input, options),\n  }\n}\n"],
+  "mappings": "AAEA,SAAS,mBAAmB;AAOrB,SAAS,QAAQ,eAAgC;AAEtD,QAAM,QAAQ;AAAA,IACZ,OAAO;AAAA,IACP,SAAS;AAAA,IACT,OAAO,CAAC;AAAA,EACV;AAEA,SAAO;AAAA,IACL,MAAM,CAAC,OAA+B,YAA0B,YAAY,OAAO,OAAO,OAAO;AAAA,EACnG;AACF;",
+  "names": []
+}

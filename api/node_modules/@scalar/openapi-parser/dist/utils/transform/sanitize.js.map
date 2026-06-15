@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/utils/transform/sanitize.ts"],
+  "sourcesContent": ["import type { OpenAPI } from '@scalar/openapi-types'\n\nimport type { AnyObject } from '@/types/index'\n\nimport { addInfoObject } from './utils/addInfoObject'\nimport { addLatestOpenApiVersion } from './utils/addLatestOpenApiVersion'\nimport { addMissingTags } from './utils/addMissingTags'\nimport { normalizeSecuritySchemes } from './utils/normalizeSecuritySchemes'\nimport { rejectSwaggerDocuments } from './utils/rejectSwaggerDocuments'\n\n// biome-ignore lint/performance/noBarrelFile: re-exports utilities\nexport { DEFAULT_TITLE } from './utils/addInfoObject'\nexport { DEFAULT_OPENAPI_VERSION } from './utils/addLatestOpenApiVersion'\n\n/**\n * Make an OpenAPI document a valid and clean OpenAPI document\n *\n * @deprecated We're about to drop this from the package.\n */\nexport function sanitize(definition: AnyObject): OpenAPI.Document {\n  const transformers = [\n    rejectSwaggerDocuments,\n    addLatestOpenApiVersion,\n    addInfoObject,\n    addMissingTags,\n    normalizeSecuritySchemes,\n  ]\n\n  return transformers.reduce((doc, transformer) => transformer(doc), definition)\n}\n"],
+  "mappings": "AAIA,SAAS,qBAAqB;AAC9B,SAAS,+BAA+B;AACxC,SAAS,sBAAsB;AAC/B,SAAS,gCAAgC;AACzC,SAAS,8BAA8B;AAGvC,SAAS,qBAAqB;AAC9B,SAAS,+BAA+B;AAOjC,SAAS,SAAS,YAAyC;AAChE,QAAM,eAAe;AAAA,IACnB;AAAA,IACA;AAAA,IACA;AAAA,IACA;AAAA,IACA;AAAA,EACF;AAEA,SAAO,aAAa,OAAO,CAAC,KAAK,gBAAgB,YAAY,GAAG,GAAG,UAAU;AAC/E;",
+  "names": []
+}

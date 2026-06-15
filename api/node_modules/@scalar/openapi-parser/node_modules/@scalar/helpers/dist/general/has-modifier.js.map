@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/general/has-modifier.ts"],
+  "sourcesContent": ["import { isMacOS } from './is-mac-os'\n\n/**\n * Checks for the modifier key\n *\n * Which is meta on macOs and ctrl on linux/windows\n */\nexport const hasModifier = (keydown: KeyboardEvent) => {\n  const modifier = isMacOS() ? 'metaKey' : 'ctrlKey'\n  return keydown[modifier]\n}\n"],
+  "mappings": "AAAA,SAAS,eAAe;AAOjB,MAAM,cAAc,CAAC,YAA2B;AACrD,QAAM,WAAW,QAAQ,IAAI,YAAY;AACzC,SAAO,QAAQ,QAAQ;AACzB;",
+  "names": []
+}

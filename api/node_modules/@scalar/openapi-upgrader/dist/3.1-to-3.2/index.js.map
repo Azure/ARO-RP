@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/3.1-to-3.2/index.ts"],
+  "sourcesContent": ["export { upgradeFromThreeOneToThreeTwo } from './upgrade-from-three-one-to-three-two'\n"],
+  "mappings": "AAAA,SAAS,qCAAqC;",
+  "names": []
+}

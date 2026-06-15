@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/schemas/extensions/x-display-name.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * An OpenAPI extension to overwrite tag names with a display-friendly version\n *\n * @example\n * ```yaml\n * x-displayName: planets\n * ```\n */\nexport const XDisplayNameSchema = z.object({\n  'x-displayName': z.string().optional().catch(undefined),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AAUX,MAAM,qBAAqB,EAAE,OAAO;AAAA,EACzC,iBAAiB,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AACxD,CAAC;",
+  "names": []
+}

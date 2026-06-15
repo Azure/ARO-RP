@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/validate.ts"],
+  "sourcesContent": ["import type { OpenAPI } from '@scalar/openapi-types'\n\nimport { Validator } from '@/lib/Validator/Validator'\nimport type { AnyObject, Filesystem, ThrowOnErrorOption, ValidateResult } from '@/types/index'\n\nimport { makeFilesystem } from './make-filesystem'\n\nexport type ValidateOptions = ThrowOnErrorOption\n\n/**\n * Validates an OpenAPI document\n */\nexport function validate(value: string | AnyObject | Filesystem, options?: ValidateOptions): Promise<ValidateResult> {\n  try {\n    const filesystem = makeFilesystem(value)\n\n    const validator = new Validator()\n    const result = validator.validate(filesystem, options)\n\n    /**\n     * Currently contains no asynchronous logic, but returns a Promise\n     * to preserve API compatibility and allow async logic in the future.\n     */\n    return Promise.resolve({\n      ...result,\n      specification: validator.specification as OpenAPI.Document,\n      version: validator.version,\n    })\n  } catch (err) {\n    return Promise.reject(err)\n  }\n}\n"],
+  "mappings": "AAEA,SAAS,iBAAiB;AAG1B,SAAS,sBAAsB;AAOxB,SAAS,SAAS,OAAwC,SAAoD;AACnH,MAAI;AACF,UAAM,aAAa,eAAe,KAAK;AAEvC,UAAM,YAAY,IAAI,UAAU;AAChC,UAAM,SAAS,UAAU,SAAS,YAAY,OAAO;AAMrD,WAAO,QAAQ,QAAQ;AAAA,MACrB,GAAG;AAAA,MACH,eAAe,UAAU;AAAA,MACzB,SAAS,UAAU;AAAA,IACrB,CAAC;AAAA,EACH,SAAS,KAAK;AACZ,WAAO,QAAQ,OAAO,GAAG;AAAA,EAC3B;AACF;",
+  "names": []
+}

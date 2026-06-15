@@ -1,0 +1,1 @@
+{"version":3,"file":"can-method-have-body.d.ts","sourceRoot":"","sources":["../../src/http/can-method-have-body.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,UAAU,EAAE,MAAM,gBAAgB,CAAA;AAEhD,yCAAyC;AACzC,QAAA,MAAM,YAAY,oCAAqE,CAAA;AACvF,KAAK,UAAU,GAAG,CAAC,OAAO,YAAY,CAAC,CAAC,MAAM,CAAC,CAAA;AAE/C,0DAA0D;AAC1D,eAAO,MAAM,iBAAiB,GAAI,QAAQ,UAAU,KAAG,MAAM,IAAI,UACN,CAAA"}

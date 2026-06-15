@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/diff/index.ts"],
+  "sourcesContent": ["import { apply } from '@/diff/apply'\nimport { type Difference, diff } from '@/diff/diff'\nimport { merge } from '@/diff/merge'\n\nexport { diff, apply, merge, type Difference }\n"],
+  "mappings": "AAAA,SAAS,aAAa;AACtB,SAA0B,YAAY;AACtC,SAAS,aAAa;",
+  "names": []
+}

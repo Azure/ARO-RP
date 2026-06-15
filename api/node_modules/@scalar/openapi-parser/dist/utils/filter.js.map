@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/filter.ts"],
+  "sourcesContent": ["import type { AnyApiDefinitionFormat, AnyObject, FilterResult } from '@/types/index'\nimport { getEntrypoint } from './get-entrypoint'\nimport { makeFilesystem } from './make-filesystem'\nimport { traverse } from './traverse'\n\nexport type FilterCallback = (schema: AnyObject) => boolean\n\n/**\n * Filter the specification based on the callback\n */\nexport function filter(specification: AnyApiDefinitionFormat, callback: FilterCallback): FilterResult {\n  const filesystem = makeFilesystem(specification)\n\n  return {\n    specification: traverse(getEntrypoint(filesystem).specification, (schema) => {\n      return callback(schema) ? schema : undefined\n    }),\n  }\n}\n"],
+  "mappings": "AACA,SAAS,qBAAqB;AAC9B,SAAS,sBAAsB;AAC/B,SAAS,gBAAgB;AAOlB,SAAS,OAAO,eAAuC,UAAwC;AACpG,QAAM,aAAa,eAAe,aAAa;AAE/C,SAAO;AAAA,IACL,eAAe,SAAS,cAAc,UAAU,EAAE,eAAe,CAAC,WAAW;AAC3E,aAAO,SAAS,MAAM,IAAI,SAAS;AAAA,IACrC,CAAC;AAAA,EACH;AACF;",
+  "names": []
+}

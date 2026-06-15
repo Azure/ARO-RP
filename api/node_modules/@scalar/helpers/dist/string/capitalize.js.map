@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/string/capitalize.ts"],
+  "sourcesContent": ["/**\n * Capitalize first letter\n * You should normally do this in css, only use this if you have to\n */\nexport const capitalize = (str = '') => (str[0]?.toUpperCase() ?? '') + str.slice(1)\n"],
+  "mappings": "AAIO,MAAM,aAAa,CAAC,MAAM,QAAQ,IAAI,CAAC,GAAG,YAAY,KAAK,MAAM,IAAI,MAAM,CAAC;",
+  "names": []
+}

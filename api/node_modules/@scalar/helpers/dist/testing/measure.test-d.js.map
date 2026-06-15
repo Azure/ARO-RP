@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/testing/measure.test-d.ts"],
+  "sourcesContent": ["import { describe, vi } from 'vitest'\n\nimport { measureAsync, measureSync } from './measure'\n\nconst asyncFunction = vi.fn<() => Promise<number>>()\n\ndescribe('measureAsync types', async () => {\n  // works with async methods\n  await measureAsync('test', asyncFunction)\n\n  // @ts-expect-error should error because `fn` doesn't return a Promise\n  await measureAsync('test', () => 1)\n})\n\ndescribe('measureSync types', () => {\n  // works with sync methods\n  measureSync('test', () => 1)\n\n  // @ts-expect-error should error because `fn` doesn't return a Promise\n  measureSync('test', asyncFunction)\n})\n"],
+  "mappings": "AAAA,SAAS,UAAU,UAAU;AAE7B,SAAS,cAAc,mBAAmB;AAE1C,MAAM,gBAAgB,GAAG,GAA0B;AAEnD,SAAS,sBAAsB,YAAY;AAEzC,QAAM,aAAa,QAAQ,aAAa;AAGxC,QAAM,aAAa,QAAQ,MAAM,CAAC;AACpC,CAAC;AAED,SAAS,qBAAqB,MAAM;AAElC,cAAY,QAAQ,MAAM,CAAC;AAG3B,cAAY,QAAQ,aAAa;AACnC,CAAC;",
+  "names": []
+}

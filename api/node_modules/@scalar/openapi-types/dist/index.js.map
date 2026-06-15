@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/index.ts"],
+  "sourcesContent": ["export * from './openapi-types'\n"],
+  "mappings": "AAAA,cAAc;",
+  "names": []
+}

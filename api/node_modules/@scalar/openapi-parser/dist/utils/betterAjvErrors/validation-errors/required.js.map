@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/betterAjvErrors/validation-errors/required.js"],
+  "sourcesContent": ["import BaseValidationError from './base'\n\nexport default class RequiredValidationError extends BaseValidationError {\n  constructor(...args) {\n    super(...args)\n    this.name = 'RequiredValidationError'\n  }\n\n  getError() {\n    const { message } = this.options\n\n    return {\n      message: `${message}`,\n      path: this.instancePath,\n    }\n  }\n}\n"],
+  "mappings": "AAAA,OAAO,yBAAyB;AAEhC,MAAO,gCAA8C,oBAAoB;AAAA,EACvE,eAAe,MAAM;AACnB,UAAM,GAAG,IAAI;AACb,SAAK,OAAO;AAAA,EACd;AAAA,EAEA,WAAW;AACT,UAAM,EAAE,QAAQ,IAAI,KAAK;AAEzB,WAAO;AAAA,MACL,SAAS,GAAG,OAAO;AAAA,MACnB,MAAM,KAAK;AAAA,IACb;AAAA,EACF;AACF;",
+  "names": []
+}

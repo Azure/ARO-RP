@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/http/can-method-have-body.ts"],
+  "sourcesContent": ["import type { HttpMethod } from './http-methods'\n\n/** HTTP Methods which can have a body */\nconst BODY_METHODS = ['post', 'put', 'patch', 'delete'] as const satisfies HttpMethod[]\ntype BodyMethod = (typeof BODY_METHODS)[number]\n\n/** Makes a check to see if this method CAN have a body */\nexport const canMethodHaveBody = (method: HttpMethod): method is BodyMethod =>\n  BODY_METHODS.includes(method.toLowerCase() as BodyMethod)\n"],
+  "mappings": "AAGA,MAAM,eAAe,CAAC,QAAQ,OAAO,SAAS,QAAQ;AAI/C,MAAM,oBAAoB,CAAC,WAChC,aAAa,SAAS,OAAO,YAAY,CAAe;",
+  "names": []
+}

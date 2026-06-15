@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/helpers/is-yaml.ts"],
+  "sourcesContent": ["/**\n * Checks if a string appears to be YAML content.\n * This function uses a simple heuristic: it looks for a line that starts with an optional dash,\n * followed by a key (alphanumeric or dash), a colon, and a value, and then at least one more line.\n * This is not a full YAML parser, but works for basic detection.\n *\n * @param value - The string to check\n * @returns true if the string looks like YAML, false otherwise\n *\n * @example\n * isYaml('openapi: 3.0.0\\ninfo:\\n  title: Example') // true\n * isYaml('{\"openapi\": \"3.0.0\", \"info\": {\"title\": \"Example\"}}') // false\n * isYaml('- name: value\\n- name: value2') // true\n * isYaml('type: object') // false (only one line)\n */\nexport function isYaml(value: string): boolean {\n  return /^\\s*(?:-\\s*)?[\\w\\-]+\\s*:\\s*.+\\n.*/.test(value)\n}\n"],
+  "mappings": "AAeO,SAAS,OAAO,OAAwB;AAC7C,SAAO,oCAAoC,KAAK,KAAK;AACvD;",
+  "names": []
+}
