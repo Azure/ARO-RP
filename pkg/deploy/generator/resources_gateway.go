@@ -302,7 +302,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 				Tier:     pointerutils.ToPtr("Standard"),
 				Capacity: pointerutils.ToPtr(int64(1339)),
 			},
-			Tags: map[string]*string{},
+			Tags: map[string]*string{
+				"AMA_Tenant_AROClusterLogs": pointerutils.ToPtr("/etc/amatenants/AROClusterLogs"),
+			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#arm-templates
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
@@ -418,7 +420,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 									TypeHandlerVersion:      pointerutils.ToPtr("1.0"),
 									Type:                    pointerutils.ToPtr("AzureMonitorLinuxAgent"),
 									Settings: map[string]interface{}{
-										"GCS_AUTO_CONFIG": true,
+										"genevaConfiguration": map[string]interface{}{
+											"enable": true,
+										},
 									},
 								},
 							},

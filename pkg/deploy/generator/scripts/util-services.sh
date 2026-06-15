@@ -815,6 +815,27 @@ WantedBy=multi-user.target'
     write_file aro_otel_collector_service_filename aro_otel_collector_service_file true
 }
 
+# configure_service_azuremonitor_coreagent
+#
+# args:
+#   1) conf_file - nameref, string
+#       * AMA tenant configuration file content
+configure_service_azuremonitor_coreagent() {
+    local -n conf_file="$1"
+    log "starting"
+    log "Configuring Azure Monitor CoreAgent tenant"
+
+    # Create tenant config directory
+    mkdir -p /etc/amatenants
+
+    # shellcheck disable=SC2034
+    local -r tenant_conf_filename='/etc/amatenants/AROClusterLogs'
+
+    write_file tenant_conf_filename conf_file true
+
+    chmod 644 /etc/amatenants/AROClusterLogs
+}
+
 # configure_service_gateway_otel_collector
 #
 # args:
@@ -864,8 +885,8 @@ RESOURCEGROUP='$RESOURCEGROUPNAME'"
     # below variable is in single quotes
     # as it is to be expanded at systemd start time (by systemd, not this script)
     local -r gateway_otel_collector_service_file='[Unit]
-After=cluster-mdsd.service
-Wants=cluster-mdsd.service
+After=network-online.target
+Wants=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
@@ -902,76 +923,6 @@ StartLimitInterval=0
 WantedBy=multi-user.target'
 
     write_file gateway_otel_collector_service_filename gateway_otel_collector_service_file true
-}
-
-# configure_service_cluster_mdsd
-#
-# args:
-#   1) image - nameref, string
-#       * MDSD distroless container image
-#   2) conf_file - nameref, string
-#       * cluster MDSD configuration file content
-configure_service_cluster_mdsd() {
-    local -n image="$1"
-    local -n conf_file="$2"
-    log "starting"
-    log "Configuring cluster-mdsd service (GIG Bridge Mode)"
-
-    # shellcheck disable=SC2034
-    local -r cluster_mdsd_conf_filename='/etc/sysconfig/cluster-mdsd'
-
-    write_file cluster_mdsd_conf_filename conf_file true
-
-    # shellcheck disable=SC2034
-    local -r cluster_mdsd_service_filename='/etc/systemd/system/cluster-mdsd.service'
-
-    # shellcheck disable=SC2034
-    # shellcheck disable=SC2016
-    # below variable is in single quotes
-    # as it is to be expanded at systemd start time (by systemd, not this script)
-    local -r cluster_mdsd_service_file='[Unit]
-After=network-online.target
-Wants=network-online.target
-StartLimitIntervalSec=0
-
-[Service]
-EnvironmentFile=/etc/sysconfig/cluster-mdsd
-ExecStartPre=-/usr/bin/podman rm -f %N
-ExecStart=/usr/bin/podman run \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --network=host \
-  --cpu-shares 512 \
-  --cpus 0.5 \
-  -m 1g \
-  -e MONITORING_GCS_ENVIRONMENT \
-  -e MONITORING_GCS_ACCOUNT \
-  -e MONITORING_GCS_REGION \
-  -e MONITORING_GCS_AUTH_ID_TYPE \
-  -e MONITORING_GCS_AUTH_ID \
-  -e MONITORING_GCS_NAMESPACE \
-  -e MONITORING_CONFIG_VERSION \
-  -e MONITORING_USE_GENEVA_CONFIG_SERVICE \
-  -e MONITORING_TENANT \
-  -e MONITORING_ROLE \
-  -e MONITORING_ROLE_INSTANCE \
-  -e MONITORING_ENVIRONMENT \
-  -e ENABLE_GIG_BRIDGE_MODE \
-  -e MDSD_OTLP_ENDPOINT \
-  -e GATEWAYUSERASSIGNEDIDENTITYRESOURCEID \
-  --tmpfs /var/run/cluster-mdsd:rw \
-  ${MDSDIMAGE} \
-  /usr/sbin/mdsd -A -D -a -p 2020 -f 29231 -r /var/run/cluster-mdsd/default
-ExecStop=/usr/bin/podman stop %N
-Restart=always
-RestartSec=10
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target'
-
-    write_file cluster_mdsd_service_filename cluster_mdsd_service_file true
 }
 
 # configure_service_mdsd
@@ -1453,8 +1404,7 @@ configure_vmss_aro_services() {
         configure_service_gateway_otel_collector "${images["otelcollector"]}" \
             "${configs["gateway_otel_collector"]}" \
             "${configs["static_ip_address"]}[otelcollector]"
-        configure_service_cluster_mdsd "${images["clustermdsd"]}" \
-            "${configs["cluster_mdsd"]}"
+        configure_service_azuremonitor_coreagent "${configs["azuremonitor_tenant"]}"
         configure_certs_gateway
     elif [ "$r" == "$role_rp" ]; then
         configure_service_aro_rp "${images["rp"]}" \
