@@ -79,6 +79,19 @@ func masterVMWithInstanceView(name, zone, sku, powerState string) armcomputev7.V
 	return vm
 }
 
+// masterVMAssociatedToCRG returns a VM that already has a capacity reservation group
+// association, so crgDelete's disassociation step (which only acts on associated VMs)
+// runs against it.
+func masterVMAssociatedToCRG(name, zone, sku, crgID string) armcomputev7.VirtualMachine {
+	vm := masterVM(name, zone, sku)
+	vm.Properties.CapacityReservation = &armcomputev7.CapacityReservationProfile{
+		CapacityReservationGroup: &armcomputev7.SubResource{
+			ID: pointerutils.ToPtr(crgID),
+		},
+	}
+	return vm
+}
+
 // --- crgCreate tests ---
 
 func TestCRGCreate_HappyPath(t *testing.T) {
@@ -193,7 +206,7 @@ func TestCRGDelete_CorrectOrder(t *testing.T) {
 
 	a, mockVMs, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
 
-	vm := masterVM("master-0", "1", "Standard_D16s_v3")
+	vm := masterVMAssociatedToCRG("master-0", "1", "Standard_D16s_v3", "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/"+testCRGName)
 	gomock.InOrder(
 		// Step 1: zero capacity FIRST (before disassociation).
 		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", testCRGName, "cr-target-z1", gomock.Any()).Return(nil),
@@ -238,7 +251,7 @@ func TestCRGDelete_ContinuesOnPartialFailure(t *testing.T) {
 	// Zero capacity happens first (succeeds).
 	mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", testCRGName, "cr-target-z1", gomock.Any()).Return(nil)
 	// GET + PUT for disassociation: GET succeeds, PUT fails — cleanup still continues.
-	mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(masterVM("master-0", "1", "Standard_D16s_v3"), nil)
+	mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(masterVMAssociatedToCRG("master-0", "1", "Standard_D16s_v3", "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/"+testCRGName), nil)
 	mockVMs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", "master-0", gomock.Any()).Return(errors.New("put failed"))
 	mockCRs.EXPECT().DeleteAndWait(gomock.Any(), "cluster-rg", testCRGName, "cr-target-z1").Return(nil)
 	mockCRGs.EXPECT().Delete(gomock.Any(), "cluster-rg", testCRGName).Return(nil)
