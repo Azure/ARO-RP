@@ -877,7 +877,6 @@ ExecStart=/usr/bin/podman run \
   --rm \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
-  --add-host=cluster-mdsd:host-gateway \
   --cpu-shares 512 \
   --cpus 0.5 \
   -m 1g \
@@ -917,10 +916,6 @@ configure_service_cluster_mdsd() {
     local -n conf_file="$2"
     log "starting"
     log "Configuring cluster-mdsd service (GIG Bridge Mode)"
-
-    # Create role prefix directory for MDSD
-    mkdir -p /var/run/cluster-mdsd
-    mkdir -p /var/etw
 
     # shellcheck disable=SC2034
     local -r cluster_mdsd_conf_filename='/etc/sysconfig/cluster-mdsd'
@@ -963,11 +958,11 @@ ExecStart=/usr/bin/podman run \
   -e MONITORING_ROLE_INSTANCE \
   -e MONITORING_ENVIRONMENT \
   -e ENABLE_GIG_BRIDGE_MODE \
+  -e MDSD_OTLP_ENDPOINT \
   -e GATEWAYUSERASSIGNEDIDENTITYRESOURCEID \
-  -v /var/run/cluster-mdsd:/var/run/cluster-mdsd:z \
-  -v /var/etw:/var/etw:z \
+  --tmpfs /var/run/cluster-mdsd:rw \
   ${MDSDIMAGE} \
-  /usr/sbin/mdsd -A -D -p 2020 -f 29231 -r /var/run/cluster-mdsd/default
+  /usr/sbin/mdsd -A -D -a -p 2020 -f 29231 -r /var/run/cluster-mdsd/default
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=10
