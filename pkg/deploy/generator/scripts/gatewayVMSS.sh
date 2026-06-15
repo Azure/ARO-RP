@@ -10,6 +10,10 @@ main() {
     local -ri retry_wait_time=30
     # shellcheck disable=SC2068
     local -ri pkg_retry_count=60
+    local use_kusto=false
+    if [[ -n "${GATEWAYKUSTOCLUSTERURI:-}" ]]; then
+      use_kusto=true
+    fi
 
     create_required_dirs
     configure_sshd
@@ -26,10 +30,8 @@ main() {
                     retry_wait_time \
                     "$pkg_retry_count"
 
-    # shellcheck disable=SC2034
-    local -ra install_pkgs=(
+    local -a install_pkgs=(
         azure-cli
-        azure-mdsd
         podman
         podman-docker
         openssl-perl
@@ -41,6 +43,9 @@ main() {
         grubby
         dracut-fips
     )
+      if [[ "$use_kusto" != true ]]; then
+        install_pkgs+=(azure-mdsd)
+      fi
 
     dnf_install_pkgs install_pkgs \
                      retry_wait_time \
@@ -61,14 +66,15 @@ main() {
     # shellcheck disable=SC2034
     local -r cluster_mdsd_image="${RPIMAGE%%/*}/${CLUSTERMDSDIMAGE#*/}"
     # values are references to variables, they should not be dereferenced here
-    # shellcheck disable=SC2034
-    local -rA aro_images=(
+    local -A aro_images=(
         ["mdm"]="mdmimage"
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
         ["otelcollector"]="otel_collector_image"
-        ["clustermdsd"]="cluster_mdsd_image"
     )
+    if [[ "$use_kusto" != true ]]; then
+      aro_images["clustermdsd"]="cluster_mdsd_image"
+    fi
 
     pull_container_images aro_images
 
@@ -230,15 +236,16 @@ ${gateway_otel_collector_conf_suffix}
     fi
 
     # values are references to variables, they should not be dereferenced here
-    # shellcheck disable=SC2034
-    local -rA aro_configs=(
+    local -A aro_configs=(
         ["gateway_config"]="aro_gateway_conf_file"
         ["fluentbit"]="fluentbit_conf_file"
-        ["mdsd"]="mdsd_config_version"
         ["gateway_otel_collector"]="gateway_otel_collector_conf"
-        ["cluster_mdsd"]="cluster_mdsd_conf_file"
         ["static_ip_address"]="static_ip_addresses"
     )
+    if [[ "$use_kusto" != true ]]; then
+      aro_configs["mdsd"]="mdsd_config_version"
+      aro_configs["cluster_mdsd"]="cluster_mdsd_conf_file"
+    fi
 
     # shellcheck disable=SC2034
     # use default podman network with range 10.88.0.0/16
@@ -252,21 +259,20 @@ ${gateway_otel_collector_conf_suffix}
                                 aro_images \
                                 aro_configs
 
-    # shellcheck disable=SC2034
-    local -ra gateway_services=(
+    local -a gateway_services=(
         "aro-gateway"
         "azsecd"
-        "mdsd"
         "mdm"
         "chronyd"
         "fluentbit"
         "gateway-otel-collector"
-        "cluster-mdsd"
-        "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"
         "download-gateway-otel-credentials.timer"
         "firewalld"
     )
+    if [[ "$use_kusto" != true ]]; then
+      gateway_services+=("mdsd" "cluster-mdsd" "download-mdsd-credentials.timer")
+    fi
 
     enable_services gateway_services
 
