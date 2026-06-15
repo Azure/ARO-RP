@@ -210,8 +210,7 @@
                         "properties": {
                             "numberOfProbes": 2,
                             "port": 13133,
-                            "protocol": "Http",
-                            "requestPath": "/"
+                            "protocol": "Tcp"
                         }
                     }
                 ]
