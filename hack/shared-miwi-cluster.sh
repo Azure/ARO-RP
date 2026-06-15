@@ -29,7 +29,7 @@ elif [[ $1 == create ]]; then
     az group create \
     --name $SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME \
     --location $SHARED_MIWI_CLUSTER_LOCATION \
-    --tags persist:true  # This tag stops the RG being cleaned up
+    --tags persist=true  # This tag stops the RG being cleaned up
 
     az network vnet create \
     --resource-group $SHARED_MIWI_CLUSTER_RESOURCE_GROUP_NAME \
