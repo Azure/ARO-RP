@@ -35,6 +35,21 @@
         "gatewayFeatures": {
             "value": ""
         },
+        "gatewayKustoClusterUri": {
+            "value": ""
+        },
+        "gatewayKustoDbName": {
+            "value": ""
+        },
+        "gatewayKustoIngestionType": {
+            "value": ""
+        },
+        "gatewayKustoLogsTableName": {
+            "value": ""
+        },
+        "gatewayKustoManagedIdentityClientId": {
+            "value": ""
+        },
         "gatewayLogLevel": {
             "value": "info"
         },
