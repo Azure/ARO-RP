@@ -313,8 +313,12 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	case <-allJobsDone:
 		return
 	case <-monitorCtx.Done():
-		log.Infof("The monitoring process for cluster %s has timed out.", doc.OpenShiftCluster.ID)
-		mon.m.EmitGauge("monitor.main.timedout", int64(1), dims)
+		if errors.Is(monitorCtx.Err(), context.DeadlineExceeded) {
+			log.Infof("The monitoring process for cluster %s has timed out.", doc.OpenShiftCluster.ID)
+			mon.m.EmitGauge("monitor.main.timedout", int64(1), dims)
+		} else {
+			log.Infof("The monitoring process for cluster %s was canceled.", doc.OpenShiftCluster.ID)
+		}
 	}
 
 	gracePeriod := time.NewTimer(monitorCleanupGracePeriod)
