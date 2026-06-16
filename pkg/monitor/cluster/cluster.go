@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"errors"
+	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -61,6 +63,9 @@ type Monitor struct {
 	rawClient   rest.Interface
 	tenantID    string
 	now         func() time.Time
+
+	httpClient *http.Client
+	closeOnce  sync.Once
 
 	ocpclientset clienthelper.Interface
 
@@ -158,9 +163,12 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		rawClient:   rawClient,
 		now:         time.Now,
 
-		env:                 env,
-		tenantID:            tenantID,
-		m:                   m,
+		env:      env,
+		tenantID: tenantID,
+		m:        m,
+
+		httpClient: httpClient,
+
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
 		namespacesToMonitor: []string{},
 		queryLimit:          50,
@@ -347,4 +355,29 @@ func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
 
 func (m *Monitor) MonitorName() string {
 	return "cluster"
+}
+
+// Close releases idle HTTP connections owned by this monitor instance.
+func (mon *Monitor) Close() {
+	mon.closeOnce.Do(func() {
+		if mon.httpClient != nil {
+			mon.httpClient.CloseIdleConnections()
+		}
+		closeAroClientIdleConnections(mon.arocli)
+	})
+}
+
+// The generated fake ARO client returns a typed-nil *rest.RESTClient, so this
+// helper must guard both the type assertion and the resulting value.
+func closeAroClientIdleConnections(arocli aroclient.Interface) {
+	if arocli == nil || arocli.AroV1alpha1() == nil {
+		return
+	}
+
+	restClient, ok := arocli.AroV1alpha1().RESTClient().(*rest.RESTClient)
+	if !ok || restClient == nil || restClient.Client == nil {
+		return
+	}
+
+	restClient.Client.CloseIdleConnections()
 }

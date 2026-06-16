@@ -38,6 +38,10 @@ var subscriptionStateLogFrequency = 30 * time.Minute
 // changefeedBatchSize is how many items in the changefeed to fetch in each page
 const changefeedBatchSize = 50
 
+// monitorCleanupGracePeriod bounds how long workOne waits for monitor
+// goroutines to finish after the monitoring context has been canceled.
+var monitorCleanupGracePeriod = 10 * time.Second
+
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
 	dbMonitors, err := mon.dbGroup.Monitors()
@@ -254,7 +258,7 @@ out:
 
 // workOne checks the API server health of a cluster
 func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, subID string, tenantID string, hourlyRun bool, nsgMonTicker *time.Ticker) {
-	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
+	monitorCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
 	restConfig, err := restconfig.RestConfig(mon.dialer, doc.OpenShiftCluster)
@@ -294,18 +298,44 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	monitors = append(monitors, c, nsgMon)
+	defer func() {
+		closeMonitors(monitors)
+	}()
+
 	allJobsDone := make(chan bool, 1)
 	onPanic := func(m monitoring.Monitor) {
 		// emit a failed worker metric on panic
 		mon.m.EmitGauge("monitor."+m.MonitorName()+".failedworker", 1, dims)
 	}
-	go execute(ctx, log, allJobsDone, monitors, onPanic)
+	go execute(monitorCtx, log, allJobsDone, monitors, onPanic)
 
 	select {
 	case <-allJobsDone:
-	case <-ctx.Done():
-		log.Infof("The monitoring process for cluster %s has timed out.", doc.OpenShiftCluster.ID)
-		mon.m.EmitGauge("monitor.main.timedout", int64(1), dims)
+		return
+	case <-monitorCtx.Done():
+		if errors.Is(monitorCtx.Err(), context.DeadlineExceeded) {
+			log.Infof("The monitoring process for cluster %s has timed out.", doc.OpenShiftCluster.ID)
+			mon.m.EmitGauge("monitor.main.timedout", int64(1), dims)
+		} else {
+			log.Infof("The monitoring process for cluster %s was canceled.", doc.OpenShiftCluster.ID)
+		}
+	}
+
+	gracePeriod := time.NewTimer(monitorCleanupGracePeriod)
+	defer gracePeriod.Stop()
+
+	select {
+	case <-allJobsDone:
+	case <-gracePeriod.C:
+		mon.m.EmitGauge("monitor.main.forcedcleanup", int64(1), dims)
+	}
+}
+
+func closeMonitors(monitors []monitoring.Monitor) {
+	for _, monitor := range monitors {
+		if closeable, ok := monitor.(monitoring.Closeable); ok {
+			closeable.Close()
+		}
 	}
 }
 
