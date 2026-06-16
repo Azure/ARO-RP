@@ -30,6 +30,48 @@ func convertErrorLineEndings(err error) error {
 	return fmt.Errorf("%s", errMsg)
 }
 
+// validateLiveControlPlaneInventory validates the current Machine, Azure VM, and
+// Node inventory for the control plane before or after resize operations.
+func validateLiveControlPlaneInventory(
+	log *logrus.Entry,
+	ctx context.Context,
+	kubeActions adminactions.KubeActions,
+	azureActions adminactions.AzureActions,
+	clusterResourceGroupID string,
+) error {
+	machines, err := getClusterMachines(ctx, kubeActions)
+	if err != nil {
+		return err
+	}
+
+	ocMachines, err := validateClusterMachines(log, machines)
+	if err != nil {
+		return fmt.Errorf("control plane machine inventory is inconsistent: %w", err)
+	}
+
+	azureVMs, err := getAzureVMs(log, ctx, azureActions, clusterResourceGroupID, ocMachines)
+	if err != nil {
+		return err
+	}
+
+	err = validateClusterMachinesAndVMs(log, ocMachines, azureVMs)
+	if err != nil {
+		return fmt.Errorf("control plane machine and Azure VM inventory is inconsistent: %w", err)
+	}
+
+	ocNodes, err := validateClusterNodes(log, ctx, kubeActions)
+	if err != nil {
+		return err
+	}
+
+	err = validateClusterMachinesAndNodes(log, ocMachines, ocNodes)
+	if err != nil {
+		return fmt.Errorf("control plane machine and node inventory is inconsistent: %w", err)
+	}
+
+	return nil
+}
+
 func (f *frontend) getControlPlaneStatusCheckAfterResize(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
@@ -71,30 +113,6 @@ func (f *frontend) getControlPlaneStatusCheckAfterResize(w http.ResponseWriter, 
 }
 
 func (f *frontend) _getControlPlaneStatusCheckAfterResize(log *logrus.Entry, ctx context.Context, kubeActions adminactions.KubeActions, azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument) error {
-	machines, err := getClusterMachines(ctx, kubeActions)
-	if err != nil {
-		return convertErrorLineEndings(err)
-	}
-
-	ocMachines, err := validateClusterMachines(log, machines)
-	if err != nil {
-		return convertErrorLineEndings(err)
-	}
-	azureVMs, err := getAzureVMs(log, ctx, azureActions, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, ocMachines)
-	if err != nil {
-		return convertErrorLineEndings(err)
-	}
-
-	err = validateClusterMachinesAndVMs(log, ocMachines, azureVMs)
-	if err != nil {
-		return convertErrorLineEndings(err)
-	}
-
-	ocNodes, err := validateClusterNodes(log, ctx, kubeActions)
-	if err != nil {
-		return convertErrorLineEndings(err)
-	}
-
-	err = validateClusterMachinesAndNodes(log, ocMachines, ocNodes)
+	err := validateLiveControlPlaneInventory(log, ctx, kubeActions, azureActions, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 	return convertErrorLineEndings(err)
 }
