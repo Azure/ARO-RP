@@ -4,6 +4,8 @@ package azureclient
 // Licensed under the Apache License 2.0.
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -11,12 +13,21 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func TestDefaultAzureCredentialOptionsRequiresAzureTokenCredentials(t *testing.T) {
+func TestNewTokenCredentialRequiresAzureTokenCredentials(t *testing.T) {
+	// NewTokenCredential sets RequireAzureTokenCredentials, so NewDefaultAzureCredential
+	// errors when AZURE_TOKEN_CREDENTIALS is unset.
+	if v, ok := os.LookupEnv("AZURE_TOKEN_CREDENTIALS"); ok {
+		os.Unsetenv("AZURE_TOKEN_CREDENTIALS")
+		defer os.Setenv("AZURE_TOKEN_CREDENTIALS", v)
+	}
+
 	for _, env := range []*AROEnvironment{&PublicCloud, &USGovernmentCloud} {
 		t.Run(env.Name, func(t *testing.T) {
-			opts := env.DefaultAzureCredentialOptions()
-			if !opts.RequireAzureTokenCredentials {
-				t.Errorf("DefaultAzureCredentialOptions() for %s should set RequireAzureTokenCredentials to true", env.Name)
+			_, err := env.NewTokenCredential()
+			if err == nil {
+				t.Errorf("NewTokenCredential() for %s should fail when AZURE_TOKEN_CREDENTIALS is unset, indicating RequireAzureTokenCredentials is set", env.Name)
+			} else if !strings.Contains(err.Error(), "AZURE_TOKEN_CREDENTIALS") {
+				t.Errorf("NewTokenCredential() for %s returned unexpected error: %v", env.Name, err)
 			}
 		})
 	}
