@@ -36,6 +36,8 @@ const (
 	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
 )
 
+var renderOTelConfigFn = renderOTelConfig
+
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc := &securityv1.SecurityContextConstraints{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: "privileged"}, scc)
@@ -99,6 +101,23 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
+	renderProfileConfig := func(nodeRole string, profile otelProfile) (string, error) {
+		cfg, err := selectOTelConfig(profile)
+		if err != nil {
+			return "", fmt.Errorf("rendering %s otel config: %w", nodeRole, err)
+		}
+		return cfg, nil
+	}
+
+	masterConfig, err := renderProfileConfig("master", profiles.master)
+	if err != nil {
+		return nil, err
+	}
+	workerConfig, err := renderProfileConfig("worker", profiles.worker)
+	if err != nil {
+		return nil, err
+	}
+
 	resources = append(resources,
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -107,9 +126,9 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 			},
 			Data: map[string]string{
 				// config.yaml remains for compatibility with existing tooling/tests.
-				"config.yaml":       selectOTelConfig(profiles.master),
-				otelMasterConfigKey: selectOTelConfig(profiles.master),
-				otelWorkerConfigKey: selectOTelConfig(profiles.worker),
+				"config.yaml":       masterConfig,
+				otelMasterConfigKey: masterConfig,
+				otelWorkerConfigKey: workerConfig,
 			},
 		},
 	)
@@ -136,16 +155,18 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 	return resources, nil
 }
 
-func selectOTelConfig(profile otelProfile) string {
-	cfg, err := renderOTelConfig(profile)
+// selectOTelConfig renders the requested profile and falls back to minimal logs if needed.
+// If both renders fail, return an error so reconciliation fails fast instead of writing an empty config.
+func selectOTelConfig(profile otelProfile) (string, error) {
+	cfg, err := renderOTelConfigFn(profile)
 	if err != nil {
-		cfg, reducedErr := renderOTelConfig(otelProfileReducedLogs)
-		if reducedErr != nil {
-			return ""
+		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs)
+		if minimalErr != nil {
+			return "", fmt.Errorf("failed to render otel config for profile %q (%v) and fallback profile %q (%v)", profile, err, otelProfileMinimalLogs, minimalErr)
 		}
-		return cfg
+		return cfg, nil
 	}
-	return cfg
+	return cfg, nil
 }
 
 type telemetryGatewayTargetSpec struct {
