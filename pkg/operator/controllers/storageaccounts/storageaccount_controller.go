@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -104,7 +103,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	tokenCredential, err := azidentity.NewDefaultAzureCredential(azEnv.DefaultAzureCredentialOptions())
+	tokenCredential, err := azEnv.NewTokenCredential()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
