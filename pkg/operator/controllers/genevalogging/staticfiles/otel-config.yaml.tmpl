@@ -166,6 +166,21 @@ processors:
           - set(log.attributes["NAMESPACE"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
           - set(log.attributes["NODE"], "${env:MONITORING_ROLE_INSTANCE}")
           # Preserve original nested objects so unmapped keys are retained.
+  attributes/common:
+    actions:
+      - key: Environment
+        value: ${env:ENVIRONMENT}
+        action: upsert
+{{- range .Sources }}
+  attributes/source-{{ .Name }}:
+    actions:
+      - key: source_name
+        value: {{ .Name }}
+        action: upsert
+      - key: EventName
+        value: {{ .EventName }}
+        action: upsert
+{{- end }}
   batch: {}
 
 extensions:
@@ -186,13 +201,15 @@ exporters:
 service:
   extensions: [health_check, file_storage]
   pipelines:
-    logs:
-      receivers: [journald, file_log/containers, file_log/audit]
-{{- if eq .Profile "minimal-logs" }}
-      processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, batch]
-{{- else if eq .Profile "reduced-logs" }}
-      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, batch]
+{{- range .Sources }}
+    logs/{{ .Name }}:
+      receivers: [{{ .Receiver }}]
+{{- if eq $.Profile "minimal-logs" }}
+      processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else if eq $.Profile "reduced-logs" }}
+      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
-      processors: [memory_limiter, transform/log-parity, batch]
+      processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- end }}
-      exporters: [{{ .GatewayExporterID }}]
+      exporters: [{{ $.GatewayExporterID }}]
+{{- end }}

@@ -206,6 +206,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	if otelPullspec == "" {
 		otelPullspec = version.OTelImage(cluster.Spec.ACRDomain)
 	}
+	environment := cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", "")
 
 	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey string) *appsv1.DaemonSet {
 		return &appsv1.DaemonSet{
@@ -281,6 +282,10 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 									{
 										Name:  "GENEVA_GATEWAY_ENDPOINT",
 										Value: gatewayEndpoint,
+									},
+									{
+										Name:  "ENVIRONMENT",
+										Value: environment,
 									},
 									{
 										Name: "MONITORING_ROLE_INSTANCE",

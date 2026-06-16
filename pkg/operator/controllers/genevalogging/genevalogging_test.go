@@ -73,8 +73,17 @@ func TestSelectOTelConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, batch]") {
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
 		t.Fatal("full config missing expected processor chain")
+	}
+	if !strings.Contains(full, "logs/journald:") || !strings.Contains(full, "logs/containers:") || !strings.Contains(full, "logs/audit:") {
+		t.Fatal("full config missing expected per-source pipelines")
+	}
+	if !strings.Contains(full, "key: EventName") {
+		t.Fatal("full config missing EventName source mapping")
+	}
+	if !strings.Contains(full, "key: Environment") {
+		t.Fatal("full config missing Environment mapping")
 	}
 
 	reduced, err := selectOTelConfig(otelProfileReducedLogs)
@@ -205,6 +214,9 @@ func TestOTelDaemonSets(t *testing.T) {
 		Spec: arov1alpha1.ClusterSpec{
 			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
 			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				"aro.environment": "Test",
+			},
 		},
 	}, "10.0.0.8:4317", nil)
 	if err != nil {
@@ -224,6 +236,16 @@ func TestOTelDaemonSets(t *testing.T) {
 		}
 		if ds.Spec.Template.Spec.PriorityClassName == "" {
 			t.Fatalf("missing priority class for %s", ds.Name)
+		}
+		foundEnvironment := false
+		for _, env := range collector.Env {
+			if env.Name == "ENVIRONMENT" && env.Value == "Test" {
+				foundEnvironment = true
+				break
+			}
+		}
+		if !foundEnvironment {
+			t.Fatalf("missing ENVIRONMENT var for %s", ds.Name)
 		}
 	}
 }
