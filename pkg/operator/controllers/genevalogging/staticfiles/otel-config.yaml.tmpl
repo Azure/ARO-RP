@@ -46,7 +46,7 @@ receivers:
       - /var/log/containers/*_openshift-serverless_*.log
       - /var/log/containers/*_openshift-pipelines_*.log
       - /var/log/containers/*_openshift-nfd_*.log
-    start_at: beginning
+    start_at: end
     storage: file_storage
     include_file_path: true
     include_file_path_resolved: true
