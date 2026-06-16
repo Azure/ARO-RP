@@ -5,6 +5,7 @@ package genevalogging
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -68,19 +69,69 @@ func TestGetOTelProfiles(t *testing.T) {
 }
 
 func TestSelectOTelConfig(t *testing.T) {
-	full := selectOTelConfig(otelProfileMaxLogs)
+	full, err := selectOTelConfig(otelProfileMaxLogs)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, batch]") {
 		t.Fatal("full config missing expected processor chain")
 	}
 
-	reduced := selectOTelConfig(otelProfileReducedLogs)
+	reduced, err := selectOTelConfig(otelProfileReducedLogs)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(reduced, "filter/drop-olm-noise:") {
 		t.Fatal("reduced config missing noise filter")
 	}
 
-	highSignal := selectOTelConfig(otelProfileMinimalLogs)
+	highSignal, err := selectOTelConfig(otelProfileMinimalLogs)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(highSignal, "filter/keep-only-high-signal:") {
 		t.Fatal("high-signal config missing keep-only-high-signal filter")
+	}
+}
+
+func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	renderOTelConfigFn = func(otelProfile) (string, error) {
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	_, err := selectOTelConfig(otelProfileMaxLogs)
+	if err == nil {
+		t.Fatal("expected selectOTelConfig to return an error")
+	}
+}
+
+func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	var calledProfiles []otelProfile
+	renderOTelConfigFn = func(profile otelProfile) (string, error) {
+		calledProfiles = append(calledProfiles, profile)
+		if profile == otelProfileMinimalLogs {
+			return "minimal-config", nil
+		}
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	cfg, err := selectOTelConfig(otelProfileMaxLogs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg != "minimal-config" {
+		t.Fatalf("expected minimal fallback config, got %q", cfg)
+	}
+	if !reflect.DeepEqual(calledProfiles, []otelProfile{otelProfileMaxLogs, otelProfileMinimalLogs}) {
+		t.Fatalf("unexpected render order: %#v", calledProfiles)
 	}
 }
 
@@ -245,6 +296,39 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 	}
 	if daemonsetCount != 0 {
 		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
+	}
+}
+
+func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	renderOTelConfigFn = func(otelProfile) (string, error) {
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	instance := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+			},
+		},
+	}
+	cv := clusterVersion("4.11.0")
+
+	r := &Reconciler{
+		AROController: base.AROController{
+			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+		},
+	}
+
+	_, err := r.resources(context.Background(), instance)
+	if err == nil {
+		t.Fatal("expected resources to return an error when OTel config rendering fails")
 	}
 }
 
