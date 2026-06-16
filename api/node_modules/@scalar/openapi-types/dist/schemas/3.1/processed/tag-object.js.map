@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/processed/tag-object.ts"],
+  "sourcesContent": ["import { z } from 'zod'\nimport { ExternalDocumentationObjectSchema } from './external-documentation-object'\n\n/**\n * Tag Object\n *\n * Adds metadata to a single tag that is used by the Operation Object. It is not mandatory to have a Tag Object per tag\n * defined in the Operation Object instances.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#tag-object\n */\nexport const TagObjectSchema = z.object({\n  /** REQUIRED. The name of the tag. */\n  'name': z.string(),\n  /** A description for the tag. CommonMark syntax MAY be used for rich text representation. */\n  'description': z.string().optional().catch(undefined),\n  /** Additional external documentation for this tag. */\n  'externalDocs': ExternalDocumentationObjectSchema.optional(),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AAClB,SAAS,yCAAyC;AAU3C,MAAM,kBAAkB,EAAE,OAAO;AAAA;AAAA,EAEtC,QAAQ,EAAE,OAAO;AAAA;AAAA,EAEjB,eAAe,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA;AAAA,EAEpD,gBAAgB,kCAAkC,SAAS;AAC7D,CAAC;",
+  "names": []
+}

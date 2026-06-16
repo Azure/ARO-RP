@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/object/prevent-pollution.ts"],
+  "sourcesContent": ["/**\n * Set of dangerous keys that can be used for prototype pollution attacks.\n * These keys should never be used as property names in dynamic object operations.\n */\nconst PROTOTYPE_POLLUTION_KEYS = new Set(['__proto__', 'prototype', 'constructor'])\n\n/**\n * Validates that a key is safe to use and does not pose a prototype pollution risk.\n * Throws an error if a dangerous key is detected.\n *\n * @param key - The key to validate\n * @param context - Optional context string to help identify where the validation failed\n * @throws {Error} If the key matches a known prototype pollution vector\n *\n * @example\n * ```ts\n * preventPollution('__proto__') // throws Error\n * preventPollution('safeName') // passes\n * preventPollution('constructor', 'operation update') // throws Error with context\n * ```\n */\nexport const preventPollution = (key: string, context?: string): void => {\n  if (PROTOTYPE_POLLUTION_KEYS.has(key)) {\n    const errorMessage = context\n      ? `Prototype pollution key detected: \"${key}\" in ${context}`\n      : `Prototype pollution key detected: \"${key}\"`\n\n    throw new Error(errorMessage)\n  }\n}\n"],
+  "mappings": "AAIA,MAAM,2BAA2B,oBAAI,IAAI,CAAC,aAAa,aAAa,aAAa,CAAC;AAiB3E,MAAM,mBAAmB,CAAC,KAAa,YAA2B;AACvE,MAAI,yBAAyB,IAAI,GAAG,GAAG;AACrC,UAAM,eAAe,UACjB,sCAAsC,GAAG,QAAQ,OAAO,KACxD,sCAAsC,GAAG;AAE7C,UAAM,IAAI,MAAM,YAAY;AAAA,EAC9B;AACF;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/string/truncate.ts"],
+  "sourcesContent": ["/**\n * Truncates a string to a specified length and adds an ellipsis if it's longer in JS\n *\n * @param str - The string to truncate\n * @param maxLength - The maximum length before truncation (default: 18)\n * @returns The truncated string with ellipsis if needed\n *\n * @example\n * truncate('Very long name that needs truncation') // 'Very long name th\u2026'\n * truncate('Short') // 'Short'\n */\nexport const truncate = (str: string, maxLength = 18): string => {\n  if (str.length <= maxLength) {\n    return str\n  }\n  return str.slice(0, maxLength) + '\u2026'\n}\n"],
+  "mappings": "AAWO,MAAM,WAAW,CAAC,KAAa,YAAY,OAAe;AAC/D,MAAI,IAAI,UAAU,WAAW;AAC3B,WAAO;AAAA,EACT;AACA,SAAO,IAAI,MAAM,GAAG,SAAS,IAAI;AACnC;",
+  "names": []
+}

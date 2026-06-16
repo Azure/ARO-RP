@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/string/iterate-title.ts"],
+  "sourcesContent": ["/**\n * Check for duplicate titles, and iterate title\n */\nexport const iterateTitle = (title: string, checkDuplicates: (title: string) => boolean, separator = ' #'): string => {\n  // If the title is not a duplicate return\n  if (!checkDuplicates(title)) {\n    return title\n  }\n\n  const split = title.split(separator)\n  const newTitle =\n    split.length > 1\n      ? `${split.slice(0, -1).join()}${separator}${Number(split.at(-1)) + 1}`\n      : `${split.join()}${separator}2`\n\n  return iterateTitle(newTitle, checkDuplicates, separator)\n}\n"],
+  "mappings": "AAGO,MAAM,eAAe,CAAC,OAAe,iBAA6C,YAAY,SAAiB;AAEpH,MAAI,CAAC,gBAAgB,KAAK,GAAG;AAC3B,WAAO;AAAA,EACT;AAEA,QAAM,QAAQ,MAAM,MAAM,SAAS;AACnC,QAAM,WACJ,MAAM,SAAS,IACX,GAAG,MAAM,MAAM,GAAG,EAAE,EAAE,KAAK,CAAC,GAAG,SAAS,GAAG,OAAO,MAAM,GAAG,EAAE,CAAC,IAAI,CAAC,KACnE,GAAG,MAAM,KAAK,CAAC,GAAG,SAAS;AAEjC,SAAO,aAAa,UAAU,iBAAiB,SAAS;AAC1D;",
+  "names": []
+}

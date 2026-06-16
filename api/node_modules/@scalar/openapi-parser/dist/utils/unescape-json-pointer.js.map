@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/unescape-json-pointer.ts"],
+  "sourcesContent": ["/**\n * Unescape JSON pointer\n *\n * Examples:\n * /foo~1bar~0baz -> /foo/bar~baz\n */\nexport function unescapeJsonPointer(uri: string) {\n  return decodeURI(uri.replace(/~1/g, '/').replace(/~0/g, '~'))\n}\n"],
+  "mappings": "AAMO,SAAS,oBAAoB,KAAa;AAC/C,SAAO,UAAU,IAAI,QAAQ,OAAO,GAAG,EAAE,QAAQ,OAAO,GAAG,CAAC;AAC9D;",
+  "names": []
+}

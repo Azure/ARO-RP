@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/regex/find-variables.ts"],
+  "sourcesContent": ["import { REGEX } from './regex-helpers'\n\n/**\n * Find all strings wrapped in {} or {{}} in value.\n *\n * @param value - The string to find variables in\n * @param includePath - Whether to include path variables {single}\n * @param includeEnv - Whether to include environment variables {{double}}\n */\nexport const findVariables = (\n  value: string,\n  { includePath = true, includeEnv = true }: { includePath?: boolean; includeEnv?: boolean } = {},\n): string[] =>\n  [includePath && REGEX.PATH, includeEnv && REGEX.VARIABLES].flatMap((regex) =>\n    regex\n      ? [...value.matchAll(regex)]\n          .map((match) => match[1]?.trim())\n          .filter((variable): variable is string => variable !== undefined)\n      : [],\n  )\n"],
+  "mappings": "AAAA,SAAS,aAAa;AASf,MAAM,gBAAgB,CAC3B,OACA,EAAE,cAAc,MAAM,aAAa,KAAK,IAAqD,CAAC,MAE9F,CAAC,eAAe,MAAM,MAAM,cAAc,MAAM,SAAS,EAAE;AAAA,EAAQ,CAAC,UAClE,QACI,CAAC,GAAG,MAAM,SAAS,KAAK,CAAC,EACtB,IAAI,CAAC,UAAU,MAAM,CAAC,GAAG,KAAK,CAAC,EAC/B,OAAO,CAAC,aAAiC,aAAa,MAAS,IAClE,CAAC;AACP;",
+  "names": []
+}

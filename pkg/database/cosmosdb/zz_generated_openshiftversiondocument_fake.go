@@ -13,33 +13,31 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type (
-	fakeOpenShiftVersionDocumentTriggerHandler func(context.Context, *pkg.OpenShiftVersionDocument) error
-	fakeOpenShiftVersionDocumentQueryHandler   func(OpenShiftVersionDocumentClient, *Query, *Options) OpenShiftVersionDocumentRawIterator
-)
+type fakeOpenShiftVersionDocumentTriggerHandler func(context.Context, *pkg.OpenShiftVersionDocument) error
+type fakeOpenShiftVersionDocumentQueryHandler func(OpenShiftVersionDocumentClient, *Query, *Options) OpenShiftVersionDocumentRawIterator
 
 var _ OpenShiftVersionDocumentClient = &FakeOpenShiftVersionDocumentClient{}
 
 // NewFakeOpenShiftVersionDocumentClient returns a FakeOpenShiftVersionDocumentClient
 func NewFakeOpenShiftVersionDocumentClient(h *codec.JsonHandle) *FakeOpenShiftVersionDocumentClient {
 	return &FakeOpenShiftVersionDocumentClient{
-		jsonHandle:                h,
-		openShiftVersionDocuments: make(map[string]*pkg.OpenShiftVersionDocument),
-		triggerHandlers:           make(map[string]fakeOpenShiftVersionDocumentTriggerHandler),
-		queryHandlers:             make(map[string]fakeOpenShiftVersionDocumentQueryHandler),
+		jsonHandle:      h,
+		openShiftVersionDocuments:       make(map[string]*pkg.OpenShiftVersionDocument),
+		triggerHandlers: make(map[string]fakeOpenShiftVersionDocumentTriggerHandler),
+		queryHandlers:   make(map[string]fakeOpenShiftVersionDocumentQueryHandler),
 	}
 }
 
 // FakeOpenShiftVersionDocumentClient is a FakeOpenShiftVersionDocumentClient
 type FakeOpenShiftVersionDocumentClient struct {
-	lock                      sync.RWMutex
-	jsonHandle                *codec.JsonHandle
-	openShiftVersionDocuments map[string]*pkg.OpenShiftVersionDocument
-	triggerHandlers           map[string]fakeOpenShiftVersionDocumentTriggerHandler
-	queryHandlers             map[string]fakeOpenShiftVersionDocumentQueryHandler
-	sorter                    func([]*pkg.OpenShiftVersionDocument)
-	etag                      int
-	changeFeedIterators       []*fakeOpenShiftVersionDocumentIterator
+	lock                sync.RWMutex
+	jsonHandle          *codec.JsonHandle
+	openShiftVersionDocuments           map[string]*pkg.OpenShiftVersionDocument
+	triggerHandlers     map[string]fakeOpenShiftVersionDocumentTriggerHandler
+	queryHandlers       map[string]fakeOpenShiftVersionDocumentQueryHandler
+	sorter              func([]*pkg.OpenShiftVersionDocument)
+	etag                int
+	changeFeedIterators []*fakeOpenShiftVersionDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.OpenShiftVersionDocument, *pkg.OpenShiftVersionDocument) bool
@@ -324,9 +322,9 @@ func NewFakeOpenShiftVersionDocumentIterator(openShiftVersionDocuments []*pkg.Op
 }
 
 type fakeOpenShiftVersionDocumentIterator struct {
-	openShiftVersionDocuments []*pkg.OpenShiftVersionDocument
-	continuation              int
-	done                      bool
+	openShiftVersionDocuments    []*pkg.OpenShiftVersionDocument
+	continuation int
+	done         bool
 }
 
 func (i *fakeOpenShiftVersionDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -355,7 +353,7 @@ func (i *fakeOpenShiftVersionDocumentIterator) Next(ctx context.Context, maxItem
 
 	return &pkg.OpenShiftVersionDocuments{
 		OpenShiftVersionDocuments: openShiftVersionDocuments,
-		Count:                     len(openShiftVersionDocuments),
+		Count:     len(openShiftVersionDocuments),
 	}, nil
 }
 

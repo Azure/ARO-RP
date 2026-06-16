@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/testing/sleep.ts"],
+  "sourcesContent": ["/**\n * Little helper for sleeping for x milliseconds\n * an async await friendly setTimeout\n */\nexport const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))\n"],
+  "mappings": "AAIO,MAAM,QAAQ,CAAC,OAAe,IAAI,QAAQ,CAAC,MAAM,WAAW,GAAG,EAAE,CAAC;",
+  "names": []
+}

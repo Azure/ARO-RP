@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/get-segments-from-path.ts"],
+  "sourcesContent": ["import { unescapeJsonPointer } from './unescape-json-pointer'\n\n/**\n * Translate `/paths/~1test` to `['paths', '/test']`\n */\nexport function getSegmentsFromPath(path: string) {\n  return (\n    // /paths/~1test\n    path\n      // ['', 'paths', '~1test']\n      .split('/')\n      // ['paths', '~test']\n      .slice(1)\n      // ['paths', '/test']\n      .map(unescapeJsonPointer)\n  )\n}\n"],
+  "mappings": "AAAA,SAAS,2BAA2B;AAK7B,SAAS,oBAAoB,MAAc;AAChD;AAAA;AAAA,IAEE,KAEG,MAAM,GAAG,EAET,MAAM,CAAC,EAEP,IAAI,mBAAmB;AAAA;AAE9B;",
+  "names": []
+}

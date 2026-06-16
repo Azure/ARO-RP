@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	armfeatures "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockFeaturesClient is a mock of FeaturesClient interface.

@@ -1,0 +1,9 @@
+parser: "@typescript-eslint/parser"
+extends:
+  - "../../../.eslintrc.yaml"
+rules:
+  unicorn/filename-case: 
+    - warn
+    - cases:
+       kebabCase: true
+       camelCase: true

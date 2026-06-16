@@ -1,0 +1,1 @@
+{"version":3,"file":"fourslash.d.ts","sourceRoot":"","sources":["../../../src/testing/fourslash.ts"],"names":[],"mappings":"AAAA;;GAEG;AACH,MAAM,WAAW,gBAAgB;IAC/B,kBAAkB;IAClB,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAC;IACtB,6BAA6B;IAC7B,QAAQ,CAAC,GAAG,EAAE,MAAM,CAAC;CACtB;AAED;;;;GAIG;AACH,wBAAgB,cAAc,CAAC,IAAI,EAAE,MAAM,GAAG,gBAAgB,EAAE,CAU/D"}

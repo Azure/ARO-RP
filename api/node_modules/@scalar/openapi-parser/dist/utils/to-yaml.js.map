@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/to-yaml.ts"],
+  "sourcesContent": ["import { stringify } from 'yaml'\n\nimport type { AnyObject } from '@/types/index'\n\nexport const toYaml = (value: AnyObject) => stringify(value)\n"],
+  "mappings": "AAAA,SAAS,iBAAiB;AAInB,MAAM,SAAS,CAAC,UAAqB,UAAU,KAAK;",
+  "names": []
+}

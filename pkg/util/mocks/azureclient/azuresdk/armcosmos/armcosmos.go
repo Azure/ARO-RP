@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	armcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDatabaseAccountsClient is a mock of DatabaseAccountsClient interface.

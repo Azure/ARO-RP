@@ -1,0 +1,35 @@
+{
+  "name": "@azure-tools/uri",
+  "entries": [
+    {
+      "version": "3.1.1",
+      "tag": "@azure-tools/uri_v3.1.1",
+      "date": "Fri, 19 Mar 2021 22:11:11 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "**Fix** Issues with url.URL and local paths"
+          },
+          {
+            "comment": "**Added** simplifyUri will strip extra / in paths. If there 2 consecutive /, replaces with a single one."
+          }
+        ]
+      }
+    },
+    {
+      "version": "3.1.0",
+      "tag": "@azure-tools/uri_v3.1.0",
+      "date": "Fri, 19 Mar 2021 16:38:33 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "**Renamed** all function to be camelCase and deprecate PascalCase ones"
+          },
+          {
+            "comment": "**Update** remove the use of deprecated node apis(`url parse` and `url resolve`)"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/bundle/plugins/node.ts"],
+  "sourcesContent": ["// biome-ignore lint/performance/noBarrelFile: entrypoint\nexport { fetchUrls } from './fetch-urls'\nexport { parseJson } from './parse-json'\nexport { parseYaml } from './parse-yaml'\nexport { readFiles } from './read-files'\n"],
+  "mappings": "AACA,SAAS,iBAAiB;AAC1B,SAAS,iBAAiB;AAC1B,SAAS,iBAAiB;AAC1B,SAAS,iBAAiB;",
+  "names": []
+}

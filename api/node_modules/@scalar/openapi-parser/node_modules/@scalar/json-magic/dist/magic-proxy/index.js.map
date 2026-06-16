@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/magic-proxy/index.ts"],
+  "sourcesContent": ["export { createMagicProxy, getRaw } from './proxy'\n"],
+  "mappings": "AAAA,SAAS,kBAAkB,cAAc;",
+  "names": []
+}

@@ -13,13 +13,11 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
-	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
-
 	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockQuotaValidator is a mock of QuotaValidator interface.

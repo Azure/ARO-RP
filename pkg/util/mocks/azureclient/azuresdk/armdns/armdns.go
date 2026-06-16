@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	armdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRecordSetsClient is a mock of RecordSetsClient interface.

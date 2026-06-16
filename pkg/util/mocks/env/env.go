@@ -17,15 +17,6 @@ import (
 	reflect "reflect"
 	time "time"
 
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
-
-	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	autorest "github.com/Azure/go-autorest/autorest"
-	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
-
 	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -34,6 +25,13 @@ import (
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	miseadapter "github.com/Azure/ARO-RP/pkg/util/miseadapter"
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	autorest "github.com/Azure/go-autorest/autorest"
+	dataplane "github.com/Azure/msi-dataplane/pkg/dataplane"
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockInterface is a mock of Interface interface.

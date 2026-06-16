@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/bundle/plugins/parse-json/index.ts"],
+  "sourcesContent": ["import type { LoaderPlugin } from '@/bundle'\nimport { isJsonObject } from '@/helpers/is-json-object'\n\n/**\n * Creates a plugin that parses JSON strings into JavaScript objects.\n * @returns A plugin object with validate and exec functions\n * @example\n * ```ts\n * const jsonPlugin = parseJson()\n * const result = jsonPlugin.exec('{\"name\": \"John\", \"age\": 30}')\n * // result = { name: 'John', age: 30 }\n * ```\n */\nexport function parseJson(): LoaderPlugin {\n  return {\n    type: 'loader',\n    validate: isJsonObject,\n    exec: (value) => {\n      try {\n        return Promise.resolve({\n          ok: true,\n          data: JSON.parse(value),\n          raw: value,\n        })\n      } catch {\n        return Promise.resolve({\n          ok: false,\n        })\n      }\n    },\n  }\n}\n"],
+  "mappings": "AACA,SAAS,oBAAoB;AAYtB,SAAS,YAA0B;AACxC,SAAO;AAAA,IACL,MAAM;AAAA,IACN,UAAU;AAAA,IACV,MAAM,CAAC,UAAU;AACf,UAAI;AACF,eAAO,QAAQ,QAAQ;AAAA,UACrB,IAAI;AAAA,UACJ,MAAM,KAAK,MAAM,KAAK;AAAA,UACtB,KAAK;AAAA,QACP,CAAC;AAAA,MACH,QAAQ;AACN,eAAO,QAAQ,QAAQ;AAAA,UACrB,IAAI;AAAA,QACN,CAAC;AAAA,MACH;AAAA,IACF;AAAA,EACF;AACF;",
+  "names": []
+}

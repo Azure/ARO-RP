@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/plugins/read-files/index.ts"],
+  "sourcesContent": ["export { readFiles } from './read-files'\n"],
+  "mappings": "AAAA,SAAS,iBAAiB;",
+  "names": []
+}

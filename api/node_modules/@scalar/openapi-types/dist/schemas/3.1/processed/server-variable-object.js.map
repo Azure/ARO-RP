@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/processed/server-variable-object.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * Server Variable Object\n *\n * An object representing a Server Variable for server URL template substitution.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#server-variable-object\n */\nexport const ServerVariableObjectSchema = z.object({\n  /**\n   * An enumeration of string values to be used if the substitution options are from a limited set. The array MUST NOT be empty.\n   */\n  enum: z.array(z.string()).optional(),\n  /**\n   * REQUIRED. The default value to use for substitution, which SHALL be sent if an alternate value is not supplied.\n   * Note this behavior is different than the Schema Object's treatment of default values, because in those cases\n   * parameter values are optional. If the enum is defined, the value MUST exist in the enum's values.\n   */\n  default: z.string().optional(),\n  /**\n   * An optional description for the server variable. CommonMark syntax MAY be used for rich text representation.\n   */\n  description: z.string().optional(),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AASX,MAAM,6BAA6B,EAAE,OAAO;AAAA;AAAA;AAAA;AAAA,EAIjD,MAAM,EAAE,MAAM,EAAE,OAAO,CAAC,EAAE,SAAS;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,EAMnC,SAAS,EAAE,OAAO,EAAE,SAAS;AAAA;AAAA;AAAA;AAAA,EAI7B,aAAa,EAAE,OAAO,EAAE,SAAS;AACnC,CAAC;",
+  "names": []
+}

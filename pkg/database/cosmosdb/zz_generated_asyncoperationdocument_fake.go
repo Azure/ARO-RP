@@ -13,33 +13,31 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type (
-	fakeAsyncOperationDocumentTriggerHandler func(context.Context, *pkg.AsyncOperationDocument) error
-	fakeAsyncOperationDocumentQueryHandler   func(AsyncOperationDocumentClient, *Query, *Options) AsyncOperationDocumentRawIterator
-)
+type fakeAsyncOperationDocumentTriggerHandler func(context.Context, *pkg.AsyncOperationDocument) error
+type fakeAsyncOperationDocumentQueryHandler func(AsyncOperationDocumentClient, *Query, *Options) AsyncOperationDocumentRawIterator
 
 var _ AsyncOperationDocumentClient = &FakeAsyncOperationDocumentClient{}
 
 // NewFakeAsyncOperationDocumentClient returns a FakeAsyncOperationDocumentClient
 func NewFakeAsyncOperationDocumentClient(h *codec.JsonHandle) *FakeAsyncOperationDocumentClient {
 	return &FakeAsyncOperationDocumentClient{
-		jsonHandle:              h,
-		asyncOperationDocuments: make(map[string]*pkg.AsyncOperationDocument),
-		triggerHandlers:         make(map[string]fakeAsyncOperationDocumentTriggerHandler),
-		queryHandlers:           make(map[string]fakeAsyncOperationDocumentQueryHandler),
+		jsonHandle:      h,
+		asyncOperationDocuments:       make(map[string]*pkg.AsyncOperationDocument),
+		triggerHandlers: make(map[string]fakeAsyncOperationDocumentTriggerHandler),
+		queryHandlers:   make(map[string]fakeAsyncOperationDocumentQueryHandler),
 	}
 }
 
 // FakeAsyncOperationDocumentClient is a FakeAsyncOperationDocumentClient
 type FakeAsyncOperationDocumentClient struct {
-	lock                    sync.RWMutex
-	jsonHandle              *codec.JsonHandle
-	asyncOperationDocuments map[string]*pkg.AsyncOperationDocument
-	triggerHandlers         map[string]fakeAsyncOperationDocumentTriggerHandler
-	queryHandlers           map[string]fakeAsyncOperationDocumentQueryHandler
-	sorter                  func([]*pkg.AsyncOperationDocument)
-	etag                    int
-	changeFeedIterators     []*fakeAsyncOperationDocumentIterator
+	lock                sync.RWMutex
+	jsonHandle          *codec.JsonHandle
+	asyncOperationDocuments           map[string]*pkg.AsyncOperationDocument
+	triggerHandlers     map[string]fakeAsyncOperationDocumentTriggerHandler
+	queryHandlers       map[string]fakeAsyncOperationDocumentQueryHandler
+	sorter              func([]*pkg.AsyncOperationDocument)
+	etag                int
+	changeFeedIterators []*fakeAsyncOperationDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.AsyncOperationDocument, *pkg.AsyncOperationDocument) bool
@@ -324,9 +322,9 @@ func NewFakeAsyncOperationDocumentIterator(asyncOperationDocuments []*pkg.AsyncO
 }
 
 type fakeAsyncOperationDocumentIterator struct {
-	asyncOperationDocuments []*pkg.AsyncOperationDocument
-	continuation            int
-	done                    bool
+	asyncOperationDocuments    []*pkg.AsyncOperationDocument
+	continuation int
+	done         bool
 }
 
 func (i *fakeAsyncOperationDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -355,7 +353,7 @@ func (i *fakeAsyncOperationDocumentIterator) Next(ctx context.Context, maxItemCo
 
 	return &pkg.AsyncOperationDocuments{
 		AsyncOperationDocuments: asyncOperationDocuments,
-		Count:                   len(asyncOperationDocuments),
+		Count:     len(asyncOperationDocuments),
 	}, nil
 }
 

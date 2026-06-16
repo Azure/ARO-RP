@@ -13,20 +13,18 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type (
-	fakeMonitorDocumentTriggerHandler func(context.Context, *pkg.MonitorDocument) error
-	fakeMonitorDocumentQueryHandler   func(MonitorDocumentClient, *Query, *Options) MonitorDocumentRawIterator
-)
+type fakeMonitorDocumentTriggerHandler func(context.Context, *pkg.MonitorDocument) error
+type fakeMonitorDocumentQueryHandler func(MonitorDocumentClient, *Query, *Options) MonitorDocumentRawIterator
 
 var _ MonitorDocumentClient = &FakeMonitorDocumentClient{}
 
 // NewFakeMonitorDocumentClient returns a FakeMonitorDocumentClient
 func NewFakeMonitorDocumentClient(h *codec.JsonHandle) *FakeMonitorDocumentClient {
 	return &FakeMonitorDocumentClient{
-		jsonHandle:       h,
-		monitorDocuments: make(map[string]*pkg.MonitorDocument),
-		triggerHandlers:  make(map[string]fakeMonitorDocumentTriggerHandler),
-		queryHandlers:    make(map[string]fakeMonitorDocumentQueryHandler),
+		jsonHandle:      h,
+		monitorDocuments:       make(map[string]*pkg.MonitorDocument),
+		triggerHandlers: make(map[string]fakeMonitorDocumentTriggerHandler),
+		queryHandlers:   make(map[string]fakeMonitorDocumentQueryHandler),
 	}
 }
 
@@ -34,7 +32,7 @@ func NewFakeMonitorDocumentClient(h *codec.JsonHandle) *FakeMonitorDocumentClien
 type FakeMonitorDocumentClient struct {
 	lock                sync.RWMutex
 	jsonHandle          *codec.JsonHandle
-	monitorDocuments    map[string]*pkg.MonitorDocument
+	monitorDocuments           map[string]*pkg.MonitorDocument
 	triggerHandlers     map[string]fakeMonitorDocumentTriggerHandler
 	queryHandlers       map[string]fakeMonitorDocumentQueryHandler
 	sorter              func([]*pkg.MonitorDocument)
@@ -324,9 +322,9 @@ func NewFakeMonitorDocumentIterator(monitorDocuments []*pkg.MonitorDocument, con
 }
 
 type fakeMonitorDocumentIterator struct {
-	monitorDocuments []*pkg.MonitorDocument
-	continuation     int
-	done             bool
+	monitorDocuments    []*pkg.MonitorDocument
+	continuation int
+	done         bool
 }
 
 func (i *fakeMonitorDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -355,7 +353,7 @@ func (i *fakeMonitorDocumentIterator) Next(ctx context.Context, maxItemCount int
 
 	return &pkg.MonitorDocuments{
 		MonitorDocuments: monitorDocuments,
-		Count:            len(monitorDocuments),
+		Count:     len(monitorDocuments),
 	}, nil
 }
 

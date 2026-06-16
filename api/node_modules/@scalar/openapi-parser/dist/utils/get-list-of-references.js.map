@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/get-list-of-references.ts"],
+  "sourcesContent": ["import type { AnyObject } from '@/types/index'\nimport { traverse } from './traverse'\n\n/**\n * Walks through the specification and returns all references as an array.\n *\n * Warning: Doesn't return internal references.\n */\nexport function getListOfReferences(specification: AnyObject) {\n  const references: string[] = []\n\n  // Make sure we're dealing with an object\n  if (!specification || typeof specification !== 'object') {\n    return references\n  }\n\n  // Traverse the specification and collect all references\n  traverse(specification, (value: any) => {\n    if (value.$ref && typeof value.$ref === 'string' && !value.$ref.startsWith('#')) {\n      references.push(value.$ref.split('#')[0])\n    }\n\n    return value\n  })\n\n  // Remove duplicates\n  return [...new Set(references)]\n}\n"],
+  "mappings": "AACA,SAAS,gBAAgB;AAOlB,SAAS,oBAAoB,eAA0B;AAC5D,QAAM,aAAuB,CAAC;AAG9B,MAAI,CAAC,iBAAiB,OAAO,kBAAkB,UAAU;AACvD,WAAO;AAAA,EACT;AAGA,WAAS,eAAe,CAAC,UAAe;AACtC,QAAI,MAAM,QAAQ,OAAO,MAAM,SAAS,YAAY,CAAC,MAAM,KAAK,WAAW,GAAG,GAAG;AAC/E,iBAAW,KAAK,MAAM,KAAK,MAAM,GAAG,EAAE,CAAC,CAAC;AAAA,IAC1C;AAEA,WAAO;AAAA,EACT,CAAC;AAGD,SAAO,CAAC,GAAG,IAAI,IAAI,UAAU,CAAC;AAChC;",
+  "names": []
+}

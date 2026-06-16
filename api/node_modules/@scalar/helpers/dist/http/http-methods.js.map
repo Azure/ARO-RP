@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/http/http-methods.ts"],
+  "sourcesContent": ["/** All OpenAPI HTTP methods */\nexport const HTTP_METHODS = ['delete', 'get', 'head', 'options', 'patch', 'post', 'put', 'trace'] as const\n\n/** All http methods we support */\nexport type HttpMethod = (typeof HTTP_METHODS)[number]\n\n/** Set of all http methods we support */\nexport const httpMethods = Object.freeze(new Set(HTTP_METHODS))\n"],
+  "mappings": "AACO,MAAM,eAAe,CAAC,UAAU,OAAO,QAAQ,WAAW,SAAS,QAAQ,OAAO,OAAO;AAMzF,MAAM,cAAc,OAAO,OAAO,IAAI,IAAI,YAAY,CAAC;",
+  "names": []
+}

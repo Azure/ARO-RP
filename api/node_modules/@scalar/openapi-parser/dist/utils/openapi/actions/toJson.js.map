@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/openapi/actions/toJson.ts"],
+  "sourcesContent": ["import { getEntrypoint } from '@/utils/get-entrypoint'\nimport type { Queue, Task } from '@/types/index'\nimport { toJson as toJsonUtility } from '@/utils/to-json'\nimport { workThroughQueue } from '../utils/workThroughQueue'\n\n/**\n * Run the chained tasks and return the results\n */\nexport async function toJson<T extends Task[]>(queue: Queue<T>): Promise<string | undefined> {\n  const { filesystem } = await workThroughQueue(queue)\n\n  return toJsonUtility(getEntrypoint(filesystem).specification)\n}\n"],
+  "mappings": "AAAA,SAAS,qBAAqB;AAE9B,SAAS,UAAU,qBAAqB;AACxC,SAAS,wBAAwB;AAKjC,eAAsB,OAAyB,OAA8C;AAC3F,QAAM,EAAE,WAAW,IAAI,MAAM,iBAAiB,KAAK;AAEnD,SAAO,cAAc,cAAc,UAAU,EAAE,aAAa;AAC9D;",
+  "names": []
+}

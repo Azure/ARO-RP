@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/bundle/plugins/parse-yaml/index.ts"],
+  "sourcesContent": ["import YAML from 'yaml'\n\nimport type { LoaderPlugin } from '@/bundle'\nimport { isYaml } from '@/helpers/is-yaml'\n\n/**\n * Creates a plugin that parses YAML strings into JavaScript objects.\n * @returns A plugin object with validate and exec functions\n * @example\n * ```ts\n * const yamlPlugin = parseYaml()\n * const result = yamlPlugin.exec('name: John\\nage: 30')\n * // result = { name: 'John', age: 30 }\n * ```\n */\nexport function parseYaml(): LoaderPlugin {\n  return {\n    type: 'loader',\n    validate: isYaml,\n    exec: (value) => {\n      try {\n        return Promise.resolve({\n          ok: true,\n          data: YAML.parse(value, { merge: true, maxAliasCount: 10000 }),\n          raw: value,\n        })\n      } catch {\n        return Promise.resolve({\n          ok: false,\n        })\n      }\n    },\n  }\n}\n"],
+  "mappings": "AAAA,OAAO,UAAU;AAGjB,SAAS,cAAc;AAYhB,SAAS,YAA0B;AACxC,SAAO;AAAA,IACL,MAAM;AAAA,IACN,UAAU;AAAA,IACV,MAAM,CAAC,UAAU;AACf,UAAI;AACF,eAAO,QAAQ,QAAQ;AAAA,UACrB,IAAI;AAAA,UACJ,MAAM,KAAK,MAAM,OAAO,EAAE,OAAO,MAAM,eAAe,IAAM,CAAC;AAAA,UAC7D,KAAK;AAAA,QACP,CAAC;AAAA,MACH,QAAQ;AACN,eAAO,QAAQ,QAAQ;AAAA,UACrB,IAAI;AAAA,QACN,CAAC;AAAA,MACH;AAAA,IACF;AAAA,EACF;AACF;",
+  "names": []
+}

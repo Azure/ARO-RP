@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/processed/contact-object.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * Contact Object\n *\n * Contact information for the exposed API.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#contact-object\n */\nexport const ContactObjectSchema = z.object({\n  /** The identifying name of the contact person/organization. */\n  name: z.string().optional(),\n  /** The URL pointing to the contact information. This MUST be in the form of a URL. */\n  url: z.string().url().optional().catch(undefined),\n  /** The email address of the contact person/organization. This MUST be in the form of an email address. */\n  email: z.string().optional().catch(undefined),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AASX,MAAM,sBAAsB,EAAE,OAAO;AAAA;AAAA,EAE1C,MAAM,EAAE,OAAO,EAAE,SAAS;AAAA;AAAA,EAE1B,KAAK,EAAE,OAAO,EAAE,IAAI,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA;AAAA,EAEhD,OAAO,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAC9C,CAAC;",
+  "names": []
+}

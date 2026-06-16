@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/bundle/index.ts"],
+  "sourcesContent": ["export type { LifecyclePlugin, LoaderPlugin, Plugin, ResolveResult } from './bundle'\nexport { bundle, resolveAndCopyReferences } from './bundle'\n"],
+  "mappings": "AACA,SAAS,QAAQ,gCAAgC;",
+  "names": []
+}

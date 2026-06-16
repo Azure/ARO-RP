@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/http/is-http-method.ts"],
+  "sourcesContent": ["import { httpMethods, type HttpMethod } from './http-methods'\n\n/** Type guard which takes in a string and returns true if it is in fact an HTTPMethod */\nexport const isHttpMethod = (method?: string | undefined): method is HttpMethod =>\n  method && typeof method === 'string' ? httpMethods.has(method.toLowerCase() as HttpMethod) : false\n"],
+  "mappings": "AAAA,SAAS,mBAAoC;AAGtC,MAAM,eAAe,CAAC,WAC3B,UAAU,OAAO,WAAW,WAAW,YAAY,IAAI,OAAO,YAAY,CAAe,IAAI;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/is-yaml.ts"],
+  "sourcesContent": ["import { parse } from 'yaml'\n\nexport function isYaml(value: string) {\n  // Line breaks\n  if (!value.includes('\\n')) {\n    return false\n  }\n\n  try {\n    parse(value, {\n      maxAliasCount: 10000,\n    })\n\n    return true\n  } catch (_error) {\n    return false\n  }\n}\n"],
+  "mappings": "AAAA,SAAS,aAAa;AAEf,SAAS,OAAO,OAAe;AAEpC,MAAI,CAAC,MAAM,SAAS,IAAI,GAAG;AACzB,WAAO;AAAA,EACT;AAEA,MAAI;AACF,UAAM,OAAO;AAAA,MACX,eAAe;AAAA,IACjB,CAAC;AAED,WAAO;AAAA,EACT,SAAS,QAAQ;AACf,WAAO;AAAA,EACT;AACF;",
+  "names": []
+}

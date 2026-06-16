@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/helpers/is-http-url.ts"],
+  "sourcesContent": ["/**\n * Checks if a string is a remote URL (starts with http:// or https://)\n * @param value - The URL string to check\n * @returns true if the string is a remote URL, false otherwise\n * @example\n * ```ts\n * isHttpUrl('https://example.com/schema.json') // true\n * isHttpUrl('http://api.example.com/schemas/user.json') // true\n * isHttpUrl('#/components/schemas/User') // false\n * isHttpUrl('./local-schema.json') // false\n * ```\n */\nexport function isHttpUrl(value: string) {\n  try {\n    const url = new URL(value)\n    return url.protocol === 'http:' || url.protocol === 'https:'\n  } catch {\n    return false\n  }\n}\n"],
+  "mappings": "AAYO,SAAS,UAAU,OAAe;AACvC,MAAI;AACF,UAAM,MAAM,IAAI,IAAI,KAAK;AACzB,WAAO,IAAI,aAAa,WAAW,IAAI,aAAa;AAAA,EACtD,QAAQ;AACN,WAAO;AAAA,EACT;AACF;",
+  "names": []
+}

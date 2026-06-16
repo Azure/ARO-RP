@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/unprocessed/license-object.ts"],
+  "sourcesContent": ["import { LicenseObjectSchema as OriginalLicenseObjectSchema } from '../processed/license-object'\n\n/**\n * License Object\n *\n * License information for the exposed API.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#license-object\n */\nexport const LicenseObjectSchema = OriginalLicenseObjectSchema\n"],
+  "mappings": "AAAA,SAAS,uBAAuB,mCAAmC;AAS5D,MAAM,sBAAsB;",
+  "names": []
+}

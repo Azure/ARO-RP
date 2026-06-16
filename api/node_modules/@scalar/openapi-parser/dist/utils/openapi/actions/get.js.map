@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/openapi/actions/get.ts"],
+  "sourcesContent": ["import type { CommandChain, Queue, Task } from '@/types/index'\nimport { workThroughQueue } from '../utils/workThroughQueue'\n\n/**\n * Run the chained tasks and return the results\n */\nexport async function get<T extends Task[]>(queue: Queue<T>): Promise<CommandChain<T>> {\n  return {\n    filesystem: [],\n    ...(await workThroughQueue(queue)),\n  }\n}\n"],
+  "mappings": "AACA,SAAS,wBAAwB;AAKjC,eAAsB,IAAsB,OAA2C;AACrF,SAAO;AAAA,IACL,YAAY,CAAC;AAAA,IACb,GAAI,MAAM,iBAAiB,KAAK;AAAA,EAClC;AACF;",
+  "names": []
+}

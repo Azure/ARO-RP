@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/utils/join/index.ts"],
+  "sourcesContent": ["export { join } from './join'\n"],
+  "mappings": "AAAA,SAAS,YAAY;",
+  "names": []
+}

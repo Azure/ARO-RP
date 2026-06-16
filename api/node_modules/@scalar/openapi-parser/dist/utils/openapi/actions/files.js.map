@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/openapi/actions/files.ts"],
+  "sourcesContent": ["import type { Filesystem, Queue, Task } from '@/types/index'\nimport { workThroughQueue } from '../utils/workThroughQueue'\n\n/**\n * Run the chained tasks and return just the filesystem\n */\nexport async function files<T extends Task[]>(queue: Queue<T>): Promise<Filesystem> {\n  const { filesystem } = await workThroughQueue(queue)\n\n  return filesystem\n}\n"],
+  "mappings": "AACA,SAAS,wBAAwB;AAKjC,eAAsB,MAAwB,OAAsC;AAClF,QAAM,EAAE,WAAW,IAAI,MAAM,iBAAiB,KAAK;AAEnD,SAAO;AACT;",
+  "names": []
+}

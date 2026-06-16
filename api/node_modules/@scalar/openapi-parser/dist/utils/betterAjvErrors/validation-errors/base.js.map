@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/betterAjvErrors/validation-errors/base.js"],
+  "sourcesContent": ["// import { codeFrameColumns } from '@babel/code-frame';\n// import chalk from 'chalk';\n// import { getMetaFromPath } from '@/json/index'\n\nexport default class BaseValidationError {\n  constructor(options = { isIdentifierLocation: false }, { data, schema, jsonAst, jsonRaw }) {\n    this.options = options\n    this.data = data\n    this.schema = schema\n    this.jsonAst = jsonAst\n    this.jsonRaw = jsonRaw\n  }\n\n  /**\n   * @return {string}\n   */\n  get instancePath() {\n    return typeof this.options.instancePath !== 'undefined' ? this.options.instancePath : this.options.dataPath\n  }\n\n  getError() {\n    throw new Error(`Implement the 'getError' method inside ${this.constructor.name}!`)\n  }\n}\n"],
+  "mappings": "AAIA,MAAO,oBAAkC;AAAA,EACvC,YAAY,UAAU,EAAE,sBAAsB,MAAM,GAAG,EAAE,MAAM,QAAQ,SAAS,QAAQ,GAAG;AACzF,SAAK,UAAU;AACf,SAAK,OAAO;AACZ,SAAK,SAAS;AACd,SAAK,UAAU;AACf,SAAK,UAAU;AAAA,EACjB;AAAA;AAAA;AAAA;AAAA,EAKA,IAAI,eAAe;AACjB,WAAO,OAAO,KAAK,QAAQ,iBAAiB,cAAc,KAAK,QAAQ,eAAe,KAAK,QAAQ;AAAA,EACrG;AAAA,EAEA,WAAW;AACT,UAAM,IAAI,MAAM,0CAA0C,KAAK,YAAY,IAAI,GAAG;AAAA,EACpF;AACF;",
+  "names": []
+}

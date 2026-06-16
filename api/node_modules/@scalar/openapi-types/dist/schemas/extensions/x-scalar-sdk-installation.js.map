@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/schemas/extensions/x-scalar-sdk-installation.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\nexport const XScalarSdkInstallationSchema = z.object({\n  'x-scalar-sdk-installation': z\n    .object({\n      lang: z.string(),\n      source: z.string().optional().catch(undefined),\n      description: z.string().optional().catch(undefined),\n    })\n    .array()\n    .optional()\n    .catch(undefined),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,+BAA+B,EAAE,OAAO;AAAA,EACnD,6BAA6B,EAC1B,OAAO;AAAA,IACN,MAAM,EAAE,OAAO;AAAA,IACf,QAAQ,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA,IAC7C,aAAa,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA,EACpD,CAAC,EACA,MAAM,EACN,SAAS,EACT,MAAM,MAAS;AACpB,CAAC;",
+  "names": []
+}

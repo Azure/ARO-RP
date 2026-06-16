@@ -1,0 +1,144 @@
+{
+  "ErrorDefinitions": [
+    {
+      "code": "MISSING_REQUIRED_PARAMETER",
+      "friendlyName": "Request is missing required parameter",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#missing_required_parameter"
+    },
+    {
+      "code": "INVALID_RESPONSE_CODE",
+      "friendlyName": "Response status code not defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#invalid_response_code"
+    },
+    {
+      "code": "INVALID_RESPONSE_BODY",
+      "friendlyName": "Response body not defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#invalid_response_body"
+    },
+    {
+      "code": "OBJECT_ADDITIONAL_PROPERTIES",
+      "friendlyName": "Body contains properties not defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#object_additional_properties"
+    },
+    {
+      "code": "INVALID_TYPE",
+      "friendlyName": "Body's property type doesn't match swagger's type",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#INVALID_TYPE"
+    },
+    {
+      "code": "ENUM_CASE_MISMATCH",
+      "friendlyName": "Body's enum value case doesn’t match case defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#ENUM_CASE_MISMATCH"
+    },
+    {
+      "code": "ENUM_MISMATCH",
+      "friendlyName": "Body's enum value doesn't match any value defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#ENUM_MISMATCH"
+    },
+    {
+      "code": "READONLY_PROPERTY_NOT_ALLOWED_IN_REQUEST",
+      "friendlyName": "Request body contains read-only property",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#READONLY_PROPERTY_NOT_ALLOWED_IN_REQUEST"
+    },
+    {
+      "code": "OBJECT_MISSING_REQUIRED_PROPERTY",
+      "friendlyName": "Request body missing required property",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#OBJECT_MISSING_REQUIRED_PROPERTY"
+    },
+    {
+      "code": "SECRET_PROPERTY",
+      "friendlyName": "Response body contains secret property",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#SECRET_PROPERTY"
+    },
+    {
+      "code": "WRITEONLY_PROPERTY_NOT_ALLOWED_IN_RESPONSE",
+      "friendlyName": "Response body contains write-only property",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#WRITEONLY_PROPERTY_NOT_ALLOWED_IN_RESPONSE"
+    },
+    {
+      "code": "LRO_RESPONSE_CODE",
+      "friendlyName": "Response status code doesn't match swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#LRO_RESPONSE_CODE"
+    },
+    {
+      "code": "LRO_RESPONSE_HEADER",
+      "friendlyName": "Response missing azure-AsyncOperation header",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#LRO_RESPONSE_HEADER"
+    },
+    {
+      "code": "MISSING_RESOURCE_ID",
+      "friendlyName": "Response body missing resource ID",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#MISSING_RESOURCE_ID"
+    },
+    {
+      "code": "INVALID_RESPONSE_HEADER",
+      "friendlyName": "Response missing required header",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#INVALID_RESPONSE_HEADER"
+    },
+    {
+      "code": "INVALID_CONTENT_TYPE",
+      "friendlyName": "Request/Response has invalid content type",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#INVALID_CONTENT_TYPE"
+    },
+    {
+      "code": "PATTERN",
+      "friendlyName": "String doesn't match pattern defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#PATTERN"
+    },
+    {
+      "code": "MAX_LENGTH",
+      "friendlyName": "String length greater than maximum length defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#MAX_LENGTH"
+    },
+    {
+      "code": "MIN_LENGTH",
+      "friendlyName": "String length less than than minimum length defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#MIN_LENGTH"
+    },
+    {
+      "code": "MAXIMUM_EXCLUSIVE",
+      "friendlyName": "Value greater than maximum value defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#MAXIMUM_EXCLUSIVE"
+    },
+    {
+      "code": "MAXIMUM",
+      "friendlyName": "Value greater than maximum value defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#MAXIMUM"
+    },
+    {
+      "code": "MINIMUM_EXCLUSIVE",
+      "friendlyName": "Value less than to minimum value defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#MINIMUM_EXCLUSIVE"
+    },
+    {
+      "code": "MINIMUM",
+      "friendlyName": "Value less than to minimum value defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#MINIMUM"
+    },
+    {
+      "code": "ARRAY_UNIQUE",
+      "friendlyName": "Body's array items are not unique",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#ARRAY_UNIQUE"
+    },
+    {
+      "code": "ARRAY_LENGTH_LONG",
+      "friendlyName": "Body's array is too long",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#ARRAY_LENGTH_LONG"
+    },
+    {
+      "code": "ARRAY_LENGTH_SHORT",
+      "friendlyName": "Body's array is too short",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#ARRAY_LENGTH_SHORT"
+    },
+    {
+      "code": "INVALID_FORMAT",
+      "friendlyName": "Body's property value doesn't match type defined in swagger",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#INVALID_FORMAT"
+    },
+    {
+      "code": "DISCRIMINATOR_VALUE_NOT_FOUND",
+      "friendlyName": "Body missing discriminator property",
+      "link": "https://github.com/Azure/azure-rest-api-specs/blob/main/documentation/Semantic-and-Model-Violations-Reference.md#discriminator_value_not_found"
+    }
+  ]
+}

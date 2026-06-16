@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	msi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockUserAssignedIdentitiesClient is a mock of UserAssignedIdentitiesClient interface.

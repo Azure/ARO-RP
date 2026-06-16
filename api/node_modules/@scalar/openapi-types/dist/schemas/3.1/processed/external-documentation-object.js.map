@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/processed/external-documentation-object.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * External Documentation Object\n *\n * Allows referencing an external resource for extended documentation.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#external-documentation-object\n */\nexport const ExternalDocumentationObjectSchema = z.object({\n  /** A description of the target documentation. CommonMark syntax MAY be used for rich text representation. */\n  description: z.string().optional(),\n  /** REQUIRED. The URL for the target documentation. This MUST be in the form of a URL. */\n  url: z.string(),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AASX,MAAM,oCAAoC,EAAE,OAAO;AAAA;AAAA,EAExD,aAAa,EAAE,OAAO,EAAE,SAAS;AAAA;AAAA,EAEjC,KAAK,EAAE,OAAO;AAChB,CAAC;",
+  "names": []
+}

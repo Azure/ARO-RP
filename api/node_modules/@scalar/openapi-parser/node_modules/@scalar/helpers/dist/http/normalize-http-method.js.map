@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/http/normalize-http-method.ts"],
+  "sourcesContent": ["import type { HttpMethod } from './http-methods'\nimport { isHttpMethod } from './is-http-method'\n\nconst DEFAULT_REQUEST_METHOD = 'get' as const\n\n/**\n * Get a normalized request method (e.g. get, post, etc.)\n * Lowercases the method and returns the default if it is not a valid method so you will always have a valid method\n */\nexport const normalizeHttpMethod = (method?: string): HttpMethod => {\n  // Make sure it's a string\n  if (typeof method !== 'string') {\n    console.warn(`Request method is not a string. Using ${DEFAULT_REQUEST_METHOD} as the default.`)\n\n    return DEFAULT_REQUEST_METHOD\n  }\n\n  // Normalize the string\n  const normalizedMethod = method.trim().toLowerCase()\n\n  if (!isHttpMethod(normalizedMethod)) {\n    console.warn(\n      `${method || 'Request method'} is not a valid request method. Using ${DEFAULT_REQUEST_METHOD} as the default.`,\n    )\n\n    return DEFAULT_REQUEST_METHOD\n  }\n\n  return normalizedMethod\n}\n"],
+  "mappings": "AACA,SAAS,oBAAoB;AAE7B,MAAM,yBAAyB;AAMxB,MAAM,sBAAsB,CAAC,WAAgC;AAElE,MAAI,OAAO,WAAW,UAAU;AAC9B,YAAQ,KAAK,yCAAyC,sBAAsB,kBAAkB;AAE9F,WAAO;AAAA,EACT;AAGA,QAAM,mBAAmB,OAAO,KAAK,EAAE,YAAY;AAEnD,MAAI,CAAC,aAAa,gBAAgB,GAAG;AACnC,YAAQ;AAAA,MACN,GAAG,UAAU,gBAAgB,yCAAyC,sBAAsB;AAAA,IAC9F;AAEA,WAAO;AAAA,EACT;AAEA,SAAO;AACT;",
+  "names": []
+}

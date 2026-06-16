@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/make-filesystem.ts"],
+  "sourcesContent": ["import type { AnyObject, Filesystem, FilesystemEntry } from '@/types/index'\nimport { getListOfReferences } from './get-list-of-references'\nimport { isFilesystem } from './is-filesystem'\nimport { normalize } from './normalize'\n\nexport function makeFilesystem(\n  value: string | AnyObject | Filesystem,\n  overwrites: Partial<FilesystemEntry> = {},\n): Filesystem {\n  // Keep as is\n  if (isFilesystem(value)) {\n    return value as Filesystem\n  }\n\n  // Make an object\n  const specification = normalize(value)\n\n  // Create fake filesystem\n  return [\n    {\n      isEntrypoint: true,\n      specification,\n      filename: null,\n      dir: './',\n      references: getListOfReferences(specification),\n      ...overwrites,\n    },\n  ]\n}\n"],
+  "mappings": "AACA,SAAS,2BAA2B;AACpC,SAAS,oBAAoB;AAC7B,SAAS,iBAAiB;AAEnB,SAAS,eACd,OACA,aAAuC,CAAC,GAC5B;AAEZ,MAAI,aAAa,KAAK,GAAG;AACvB,WAAO;AAAA,EACT;AAGA,QAAM,gBAAgB,UAAU,KAAK;AAGrC,SAAO;AAAA,IACL;AAAA,MACE,cAAc;AAAA,MACd;AAAA,MACA,UAAU;AAAA,MACV,KAAK;AAAA,MACL,YAAY,oBAAoB,aAAa;AAAA,MAC7C,GAAG;AAAA,IACL;AAAA,EACF;AACF;",
+  "names": []
+}

@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	armmonitor "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockMetricsClient is a mock of MetricsClient interface.

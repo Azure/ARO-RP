@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/schemas/extensions/x-internal.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\nexport const XInternalSchema = z.object({\n  'x-internal': z.boolean().optional().catch(undefined),\n})\n"],
+  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,kBAAkB,EAAE,OAAO;AAAA,EACtC,cAAc,EAAE,QAAQ,EAAE,SAAS,EAAE,MAAM,MAAS;AACtD,CAAC;",
+  "names": []
+}

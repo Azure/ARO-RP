@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/is-json.ts"],
+  "sourcesContent": ["export function isJson(value: string) {\n  try {\n    JSON.parse(value)\n\n    return true\n  } catch {\n    return false\n  }\n}\n"],
+  "mappings": "AAAO,SAAS,OAAO,OAAe;AACpC,MAAI;AACF,SAAK,MAAM,KAAK;AAEhB,WAAO;AAAA,EACT,QAAQ;AACN,WAAO;AAAA,EACT;AACF;",
+  "names": []
+}

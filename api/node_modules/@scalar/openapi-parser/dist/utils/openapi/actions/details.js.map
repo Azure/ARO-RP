@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/openapi/actions/details.ts"],
+  "sourcesContent": ["import { getEntrypoint } from '@/utils/get-entrypoint'\nimport type { Queue, Task } from '@/types/index'\nimport { details as detailsUtility } from '@/utils/details'\nimport { workThroughQueue } from '../utils/workThroughQueue'\n\n/**\n * Run the chained tasks and return just some basic information about the OpenAPI document\n */\nexport async function details<T extends Task[]>(queue: Queue<T>): Promise<ReturnType<typeof detailsUtility>> {\n  const { filesystem } = await workThroughQueue(queue)\n\n  return detailsUtility(getEntrypoint(filesystem).specification)\n}\n"],
+  "mappings": "AAAA,SAAS,qBAAqB;AAE9B,SAAS,WAAW,sBAAsB;AAC1C,SAAS,wBAAwB;AAKjC,eAAsB,QAA0B,OAA6D;AAC3G,QAAM,EAAE,WAAW,IAAI,MAAM,iBAAiB,KAAK;AAEnD,SAAO,eAAe,cAAc,UAAU,EAAE,aAAa;AAC/D;",
+  "names": []
+}

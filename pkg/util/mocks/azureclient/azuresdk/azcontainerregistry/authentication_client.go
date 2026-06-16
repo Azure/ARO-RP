@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	azcontainerregistry "github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAuthenticationClient is a mock of AuthenticationClient interface.

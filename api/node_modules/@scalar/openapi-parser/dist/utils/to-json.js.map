@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/utils/to-json.ts"],
+  "sourcesContent": ["import type { AnyObject } from '@/types/index'\n\nexport const toJson = (value: AnyObject) => JSON.stringify(value, null, 2)\n"],
+  "mappings": "AAEO,MAAM,SAAS,CAAC,UAAqB,KAAK,UAAU,OAAO,MAAM,CAAC;",
+  "names": []
+}

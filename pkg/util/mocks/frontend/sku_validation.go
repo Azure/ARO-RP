@@ -13,12 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
-	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
-
 	api "github.com/Azure/ARO-RP/pkg/api"
 	env "github.com/Azure/ARO-RP/pkg/env"
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockSkuValidator is a mock of SkuValidator interface.

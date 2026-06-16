@@ -14,9 +14,8 @@ import (
 	iter "iter"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockResourceSKUsClient is a mock of ResourceSKUsClient interface.

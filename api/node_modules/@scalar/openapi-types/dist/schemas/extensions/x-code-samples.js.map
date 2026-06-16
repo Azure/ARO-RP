@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../src/schemas/extensions/x-code-samples.ts"],
+  "sourcesContent": ["import { z } from 'zod'\n\nexport const XCodeSampleSchema = z.object({\n  lang: z.string().optional().catch(undefined),\n  label: z.string().optional().catch(undefined),\n  source: z.string(),\n})\n\nexport const XCodeSamplesSchema = z.object({\n  'x-codeSamples': XCodeSampleSchema.array().optional().catch(undefined),\n  'x-code-samples': XCodeSampleSchema.array().optional().catch(undefined),\n  'x-custom-examples': XCodeSampleSchema.array().optional().catch(undefined),\n})\n\nexport type XCodeSample = z.infer<typeof XCodeSampleSchema>\n"],
+  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,oBAAoB,EAAE,OAAO;AAAA,EACxC,MAAM,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA,EAC3C,OAAO,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA,EAC5C,QAAQ,EAAE,OAAO;AACnB,CAAC;AAEM,MAAM,qBAAqB,EAAE,OAAO;AAAA,EACzC,iBAAiB,kBAAkB,MAAM,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA,EACrE,kBAAkB,kBAAkB,MAAM,EAAE,SAAS,EAAE,MAAM,MAAS;AAAA,EACtE,qBAAqB,kBAAkB,MAAM,EAAE,SAAS,EAAE,MAAM,MAAS;AAC3E,CAAC;",
+  "names": []
+}

@@ -14,16 +14,13 @@ import (
 	io "io"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
-	v10 "k8s.io/api/core/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-
-	v1 "github.com/openshift/hive/apis/hive/v1"
-	v1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
-
 	api "github.com/Azure/ARO-RP/pkg/api"
 	holmes "github.com/Azure/ARO-RP/pkg/util/holmes"
+	v1 "github.com/openshift/hive/apis/hive/v1"
+	v1alpha1 "github.com/openshift/hive/apis/hiveinternal/v1alpha1"
+	gomock "go.uber.org/mock/gomock"
+	v10 "k8s.io/api/core/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // MockClusterManager is a mock of ClusterManager interface.

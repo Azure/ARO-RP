@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/object/is-object.ts"],
+  "sourcesContent": ["/**\n * Returns true if the provided value is a record object\n * (i.e. not null, not an array, and has an actual object as the prototype).\n *\n * Differs from the previous isObject in that it returns false for Date,\n * RegExp, Error, Map, Set, WeakMap, WeakSet, Promise, and other non-plain objects.\n *\n * Examples:\n *   isObject({})                  // true\n *   isObject({ a: 1 })            // true\n *   isObject([])                  // false (Array)\n *   isObject(null)                // false\n *   isObject(123)                 // false\n *   isObject('string')            // false\n *   isObject(new Error('test'))   // false\n *   isObject(new Date())          // false\n *   isObject(Object.create(null)) // true\n */\nexport const isObject = (value: unknown): value is Record<string, unknown> => {\n  if (value === null || typeof value !== 'object') {\n    return false\n  }\n\n  const proto = Object.getPrototypeOf(value)\n  return proto === Object.prototype || proto === null\n}\n"],
+  "mappings": "AAkBO,MAAM,WAAW,CAAC,UAAqD;AAC5E,MAAI,UAAU,QAAQ,OAAO,UAAU,UAAU;AAC/C,WAAO;AAAA,EACT;AAEA,QAAM,QAAQ,OAAO,eAAe,KAAK;AACzC,SAAO,UAAU,OAAO,aAAa,UAAU;AACjD;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/utils/openapi/utils/queueTask.ts"],
+  "sourcesContent": ["import type { Queue, Task } from '@/types/index'\n\n/**\n * Add a new task to the existing queue\n */\nexport function queueTask<T extends Task[]>(queue: Queue, task: Task) {\n  return {\n    ...queue,\n    tasks: [...queue.tasks, task],\n  } as Queue<T>\n}\n"],
+  "mappings": "AAKO,SAAS,UAA4B,OAAc,MAAY;AACpE,SAAO;AAAA,IACL,GAAG;AAAA,IACH,OAAO,CAAC,GAAG,MAAM,OAAO,IAAI;AAAA,EAC9B;AACF;",
+  "names": []
+}

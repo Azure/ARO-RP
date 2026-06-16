@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../src/schemas/3.1/unprocessed/info-object.ts"],
+  "sourcesContent": ["import { InfoObjectSchema as OriginalInfoObjectSchema } from '../processed/info-object'\n\n/**\n * Info Object\n *\n * The object provides metadata about the API. The metadata MAY be used by the clients if needed,\n * and MAY be presented in editing or documentation generation tools for convenience.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#info-object\n */\nexport const InfoObjectSchema = OriginalInfoObjectSchema\n"],
+  "mappings": "AAAA,SAAS,oBAAoB,gCAAgC;AAUtD,MAAM,mBAAmB;",
+  "names": []
+}

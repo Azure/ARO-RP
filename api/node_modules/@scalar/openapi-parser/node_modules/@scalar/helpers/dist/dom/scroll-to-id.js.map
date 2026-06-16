@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/dom/scroll-to-id.ts"],
+  "sourcesContent": ["/**\n * Tiny wrapper around the scrollIntoView API\n *\n * Also focuses the element if the focus flag is true\n */\nexport const scrollToId = (id: string, focus?: boolean): void => {\n  const scrollToElement = (element: HTMLElement) => {\n    element.scrollIntoView()\n    if (focus) {\n      element.focus()\n    }\n  }\n\n  // Try to find the element immediately\n  const element = document.getElementById(id)\n  if (element) {\n    scrollToElement(element)\n    return\n  }\n\n  /** Try to find the element for up to 1 second\n   * allowing it to render for instance in markdown heading usage\n   */\n  const stopTime = Date.now() + 1000\n\n  const tryScroll = (): void => {\n    const element = document.getElementById(id)\n    if (element) {\n      scrollToElement(element)\n      return\n    }\n\n    if (Date.now() < stopTime) {\n      requestAnimationFrame(tryScroll)\n    }\n  }\n\n  // Start the retry process if the element doesn't exist yet\n  requestAnimationFrame(tryScroll)\n}\n"],
+  "mappings": "AAKO,MAAM,aAAa,CAAC,IAAY,UAA0B;AAC/D,QAAM,kBAAkB,CAACA,aAAyB;AAChD,IAAAA,SAAQ,eAAe;AACvB,QAAI,OAAO;AACT,MAAAA,SAAQ,MAAM;AAAA,IAChB;AAAA,EACF;AAGA,QAAM,UAAU,SAAS,eAAe,EAAE;AAC1C,MAAI,SAAS;AACX,oBAAgB,OAAO;AACvB;AAAA,EACF;AAKA,QAAM,WAAW,KAAK,IAAI,IAAI;AAE9B,QAAM,YAAY,MAAY;AAC5B,UAAMA,WAAU,SAAS,eAAe,EAAE;AAC1C,QAAIA,UAAS;AACX,sBAAgBA,QAAO;AACvB;AAAA,IACF;AAEA,QAAI,KAAK,IAAI,IAAI,UAAU;AACzB,4BAAsB,SAAS;AAAA,IACjC;AAAA,EACF;AAGA,wBAAsB,SAAS;AACjC;",
+  "names": ["element"]
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/testing/console-spies.ts"],
+  "sourcesContent": ["import { vi } from 'vitest'\n\n/** Spy on console.warn */\nexport const consoleWarnSpy = vi.spyOn(console, 'warn')\nexport let isConsoleWarnEnabled = false\n\n/** Spy on console.error */\nexport const consoleErrorSpy = vi.spyOn(console, 'error')\nexport let isConsoleErrorEnabled = false\n\n/** Reset the spies */\nexport const resetConsoleSpies = () => {\n  consoleWarnSpy.mockClear()\n  consoleErrorSpy.mockClear()\n}\n\n/** Helper to re-enable console warn checks */\nexport const enableConsoleWarn = () => (isConsoleWarnEnabled = true)\n\n/** Helper to disable console warn checks */\nexport const disableConsoleWarn = () => (isConsoleWarnEnabled = false)\n\n/** Helper to enable console error checks */\nexport const enableConsoleError = () => (isConsoleErrorEnabled = true)\n\n/** Helper to disable console error checks */\nexport const disableConsoleError = () => (isConsoleErrorEnabled = false)\n"],
+  "mappings": "AAAA,SAAS,UAAU;AAGZ,MAAM,iBAAiB,GAAG,MAAM,SAAS,MAAM;AAC/C,IAAI,uBAAuB;AAG3B,MAAM,kBAAkB,GAAG,MAAM,SAAS,OAAO;AACjD,IAAI,wBAAwB;AAG5B,MAAM,oBAAoB,MAAM;AACrC,iBAAe,UAAU;AACzB,kBAAgB,UAAU;AAC5B;AAGO,MAAM,oBAAoB,MAAO,uBAAuB;AAGxD,MAAM,qBAAqB,MAAO,uBAAuB;AAGzD,MAAM,qBAAqB,MAAO,wBAAwB;AAG1D,MAAM,sBAAsB,MAAO,wBAAwB;",
+  "names": []
+}

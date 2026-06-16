@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	authorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRoleAssignmentsClient is a mock of RoleAssignmentsClient interface.
