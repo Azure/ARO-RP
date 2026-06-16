@@ -512,22 +512,22 @@ func TestValidateClusterMachines(t *testing.T) {
 			wantErr: "master-0 has a mismatch",
 		},
 		{
-			name: "failure - machines have different sizes",
+			name:      "success - machines have different sizes (heterogeneous, e.g. partial resize)",
+			wantCount: 3,
 			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D16s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 			},
-			wantErr: "has size",
 		},
 		{
-			name: "failure - multiple machines with different sizes",
+			name:      "success - all machines with different sizes (heterogeneous)",
+			wantCount: 3,
 			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D16s_v3", phase: "Running", labelInstanceType: "Standard_D16s_v3"},
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D32s_v3", phase: "Running", labelInstanceType: "Standard_D32s_v3"},
 			},
-			wantErr: "has size",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -756,7 +756,7 @@ func TestGetAzureVMs(t *testing.T) {
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{}, fmt.Errorf("VM not found"))
 			},
-			wantErr: "VM not found",
+			wantErr: "500: InternalServerError: : failed to get Azure VM master-0: VM not found",
 		},
 		{
 			name:     "failure - VM with no zones",

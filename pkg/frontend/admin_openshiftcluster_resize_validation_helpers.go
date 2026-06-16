@@ -104,7 +104,6 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 
 	var validationErrs []error
 	filteredMachines := make(map[string]machineValidationData)
-	foundMachineSize := ""
 
 	for name, machine := range machines {
 		if machine.phase != "Running" {
@@ -136,18 +135,15 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 			continue
 		}
 
-		if foundMachineSize == "" {
-			foundMachineSize = machine.size // we'll keep the machine size of the first machine to compare it with the rest
-		}
-
-		if machine.size != foundMachineSize {
-			err := fmt.Errorf("machine %s has size %s, however previous machines had %s. All machines should have the same size", name, machine.size, foundMachineSize)
-			log.Info(err)
-			validationErrs = append(validationErrs, err)
-			continue
-		}
-
 		filteredMachines[name] = machine
+	}
+
+	sizes := make(map[string][]string)
+	for name, m := range filteredMachines {
+		sizes[m.size] = append(sizes[m.size], name)
+	}
+	if len(sizes) > 1 {
+		log.Warnf("heterogeneous control plane VM sizes (may indicate a partial resize): %v", sizes)
 	}
 
 	if err := errors.Join(validationErrs...); err != nil {
@@ -172,7 +168,8 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 
 		vm, err := azureAction.GetVirtualMachine(ctx, clusterRGName, machineName, mgmtcompute.InstanceView)
 		if err != nil {
-			return nil, err
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+				fmt.Sprintf("failed to get Azure VM %s: %v", machineName, err))
 		}
 
 		if vm.InstanceView != nil && vm.InstanceView.Statuses != nil {

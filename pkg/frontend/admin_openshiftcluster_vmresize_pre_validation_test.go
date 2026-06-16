@@ -314,7 +314,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 	ctx := context.Background()
 	_, log := testlog.New()
 
-	t.Run("rejects heterogeneous control plane machine sizes", func(t *testing.T) {
+	t.Run("propagates Azure SDK error from GetVirtualMachine as 500", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -325,15 +325,42 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 			KubeList(gomock.Any(), "Machine", machineNamespace).
 			Return(masterMachineListJSON(
 				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
-				masterMachineWithZone("master-1", "Standard_D16s_v5", "2"),
+				masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
 				masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
 			), nil)
+		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", gomock.Any(), mgmtcompute.InstanceView).
+			Return(mgmtcompute.VirtualMachine{}, fmt.Errorf("azure auth timeout")).
+			AnyTimes()
 
 		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
-		assertErrorContainsAll(t, err,
-			"control plane machine inventory is inconsistent",
-			"All machines should have the same size",
-		)
+		var ce *api.CloudError
+		if !errors.As(err, &ce) {
+			t.Fatalf("expected *api.CloudError, got %T: %v", err, err)
+		}
+		if ce.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status 500, got %d", ce.StatusCode)
+		}
+	})
+
+	t.Run("propagates Kube API error from getClusterMachines as 500", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		k := mock_adminactions.NewMockKubeActions(ctrl)
+		a := mock_adminactions.NewMockAzureActions(ctrl)
+
+		k.EXPECT().
+			KubeList(gomock.Any(), "Machine", machineNamespace).
+			Return(nil, fmt.Errorf("connection refused"))
+
+		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
+		var ce *api.CloudError
+		if !errors.As(err, &ce) {
+			t.Fatalf("expected *api.CloudError, got %T: %v", err, err)
+		}
+		if ce.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status 500, got %d", ce.StatusCode)
+		}
 	})
 
 	t.Run("rejects inconsistent control plane node labels", func(t *testing.T) {
@@ -370,67 +397,6 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 			"machine master-1 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v5",
 		)
 	})
-}
-
-func TestPreResizeControlPlaneVMsValidationRejectsHeterogeneousInventory(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	k := mock_adminactions.NewMockKubeActions(ctrl)
-	a := mock_adminactions.NewMockAzureActions(ctrl)
-	heterogeneousMachines := masterMachineListJSON(
-		masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
-		masterMachineWithZone("master-1", "Standard_D16s_v5", "2"),
-		masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
-	)
-	allKubeChecksHealthyMockWithMachineList(k, heterogeneousMachines)
-
-	f := &frontend{
-		validateResizeQuota: quotaCheckDisabled,
-	}
-
-	doc := &api.OpenShiftClusterDocument{
-		OpenShiftCluster: &api.OpenShiftCluster{
-			Location: "eastus",
-			Properties: api.OpenShiftClusterProperties{
-				MasterProfile: api.MasterProfile{
-					VMSize: api.VMSizeStandardD8sV3,
-				},
-				ClusterProfile: api.ClusterProfile{
-					ResourceGroupID: "/subscriptions/000/resourceGroups/test-cluster",
-				},
-			},
-		},
-	}
-	subscriptionDoc := &api.SubscriptionDocument{}
-
-	a.EXPECT().
-		VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
-		Return(map[string]*armcompute.ResourceSKU{
-			"Standard_D8s_v3": {
-				Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-				ResourceType: pointerutils.ToPtr("virtualMachines"),
-				Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-				LocationInfo: []*armcompute.ResourceSKULocationInfo{{Location: pointerutils.ToPtr("eastus")}},
-				Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-				Capabilities: []*armcompute.ResourceSKUCapabilities{},
-			},
-		}, nil)
-	expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
-		"master-0": "Standard_D8s_v3",
-		"master-1": "Standard_D16s_v5",
-		"master-2": "Standard_D8s_v3",
-	})
-
-	_, err := f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, "Standard_D8s_v3", log)
-	assertErrorContainsAll(t, err,
-		"Pre-flight validation failed",
-		"controlPlaneInventory",
-		"All machines should have the same size",
-	)
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
