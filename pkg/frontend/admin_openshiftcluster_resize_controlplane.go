@@ -396,6 +396,7 @@ func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactio
 
 	return nil
 }
+
 func cordonNode(ctx context.Context, k adminactions.KubeActions, nodeName string) error {
 	return k.CordonNode(ctx, nodeName, true)
 }

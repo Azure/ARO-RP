@@ -57,12 +57,13 @@ func newTestAzureActions(t *testing.T, ctrl *gomock.Controller) (
 
 // masterVM builds a minimal master VirtualMachine for tests.
 func masterVM(name, zone, sku string) armcomputev7.VirtualMachine {
+	vmSize := armcomputev7.VirtualMachineSizeTypes(sku)
 	return armcomputev7.VirtualMachine{
 		Name:  pointerutils.ToPtr(name),
 		Zones: []*string{pointerutils.ToPtr(zone)},
 		Properties: &armcomputev7.VirtualMachineProperties{
 			HardwareProfile: &armcomputev7.HardwareProfile{
-				VMSize: (*armcomputev7.VirtualMachineSizeTypes)(pointerutils.ToPtr(sku)),
+				VMSize: &vmSize,
 			},
 		},
 	}

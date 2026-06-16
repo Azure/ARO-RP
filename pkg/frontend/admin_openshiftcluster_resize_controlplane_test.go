@@ -30,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -45,8 +44,12 @@ func masterMachineListJSON(machines ...machinev1beta1.Machine) []byte {
 }
 
 func masterMachine(name, vmSize, phase string) machinev1beta1.Machine {
+	return masterMachineInZone(name, vmSize, phase, "1")
+}
+
+func masterMachineInZone(name, vmSize, phase, zone string) machinev1beta1.Machine {
 	providerSpec := &machinev1beta1.AzureMachineProviderSpec{
-		Zone:   strPtr("1"),
+		Zone:   strPtr(zone),
 		VMSize: vmSize,
 	}
 	raw, _ := json.Marshal(providerSpec)
@@ -56,7 +59,7 @@ func masterMachine(name, vmSize, phase string) machinev1beta1.Machine {
 			Name: name,
 			Labels: map[string]string{
 				machineLabelClusterAPIRole: machineRoleMaster,
-				machineLabelZone:           "1",
+				machineLabelZone:           zone,
 				machineLabelInstanceType:   vmSize,
 			},
 		},
@@ -856,6 +859,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 		resourceID             string
 		vmSize                 string
 		useCapacityReservation bool
+		requestURL             string // if set, overrides the auto-built URL
 		fixture                func(f *testdatabase.Fixture)
 		kubeMocks              func(*mock_adminactions.MockKubeActions)
 		azureMocks             func(*mock_adminactions.MockAzureActions)
@@ -965,6 +969,32 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			wantError:      `400: InvalidParameter: : The provided vmSize 'Standard_Invalid_Size' is unsupported for master.`,
 		},
 		{
+			name:       "invalid deallocateVM value",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			requestURL: fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D8s_v3&deallocateVM=notabool", testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
+			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: deallocateVM: The provided deallocateVM value 'notabool' is invalid. Allowed values are 'true' or 'false'.`,
+		},
+		{
+			name:       "invalid useCapacityReservation value",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			requestURL: fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D8s_v3&useCapacityReservation=notabool", testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
+			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: useCapacityReservation: useCapacityReservation must be 'true' or 'false'`,
+		},
+		{
 			name:       "cluster not found",
 			vmSize:     "Standard_D8s_v3",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -998,39 +1028,20 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				addSubscriptionDoc(f)
 			},
 			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(healthyKubeAPIServerJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(healthyKubeAPIServerPodsJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-					Return(healthyEtcdJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-					Return(validServicePrincipalJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-					AnyTimes()
-
 				running := "Running"
+				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+					masterMachineInZone("master-0", "Standard_D8s_v3", running, "1"),
+					masterMachineInZone("master-1", "Standard_D8s_v3", running, "2"),
+					masterMachineInZone("master-2", "Standard_D8s_v3", running, "3"),
+				))
 				k.EXPECT().
-					KubeList(gomock.Any(), "Machine", machineNamespace).
-					Return(masterMachineListJSON(
-						masterMachine("master-0", "Standard_D8s_v3", running),
-						masterMachine("master-1", "Standard_D8s_v3", running),
-						masterMachine("master-2", "Standard_D8s_v3", running),
-					), nil)
+					KubeList(gomock.Any(), "Node", "").
+					Return(controlPlaneNodeListJSON(
+						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+					), nil).
+					AnyTimes()
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil)
@@ -1052,6 +1063,14 @@ func TestAdminResizeControlPlane(t *testing.T) {
 							Capabilities: []*armcompute.ResourceSKUCapabilities{},
 						},
 					}, nil)
+				// currentControlPlaneVMSizes calls GetVirtualMachine for each node during validation.
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
+				// validateLiveControlPlaneInventory calls GetVirtualMachine with InstanceView.
+				healthyControlPlaneInventoryMock(nil, a, "test-cluster", "Standard_D8s_v3")
 				// CRG setup returns an error so the test remains unit-level (no VM resize calls).
 				a.EXPECT().
 					CRGSetupForResize(gomock.Any(), []string{"master-2", "master-1", "master-0"}, "Standard_D16s_v5").
@@ -1095,7 +1114,10 @@ func TestAdminResizeControlPlane(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			requestURL := fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=%s&useCapacityReservation=%v", tt.resourceID, tt.vmSize, tt.useCapacityReservation)
+			requestURL := tt.requestURL
+			if requestURL == "" {
+				requestURL = fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=%s&useCapacityReservation=%v", tt.resourceID, tt.vmSize, tt.useCapacityReservation)
+			}
 			resp, b, err := ti.request(http.MethodPost, requestURL, nil, nil)
 			if err != nil {
 				t.Fatal(err)
