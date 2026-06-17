@@ -125,7 +125,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	arocli, err := aroclient.NewForConfig(restConfig)
+	arocli, err := aroclient.NewForConfigAndClient(restConfig, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -363,21 +363,5 @@ func (mon *Monitor) Close() {
 		if mon.httpClient != nil {
 			mon.httpClient.CloseIdleConnections()
 		}
-		closeAroClientIdleConnections(mon.arocli)
 	})
-}
-
-// The generated fake ARO client returns a typed-nil *rest.RESTClient, so this
-// helper must guard both the type assertion and the resulting value.
-func closeAroClientIdleConnections(arocli aroclient.Interface) {
-	if arocli == nil || arocli.AroV1alpha1() == nil {
-		return
-	}
-
-	restClient, ok := arocli.AroV1alpha1().RESTClient().(*rest.RESTClient)
-	if !ok || restClient == nil || restClient.Client == nil {
-		return
-	}
-
-	restClient.Client.CloseIdleConnections()
 }
