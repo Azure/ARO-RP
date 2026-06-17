@@ -164,9 +164,13 @@ processors:
           - set(log.attributes["CONTAINER"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
           - set(log.attributes["POD"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
           - set(log.attributes["NAMESPACE"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
+          - set(log.attributes["container"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
+          - set(log.attributes["pod"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
+          - set(log.attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
+          - set(log.attributes["node"], "${env:MONITORING_ROLE_INSTANCE}")
           - set(log.attributes["RoleInstance"], "${env:MONITORING_ROLE_INSTANCE}")
-          - set(log.attributes["MESSAGE"], log.body) where IsString(log.body)
-          - set(log.attributes["MESSAGE"], log.body["message"]) where IsMap(log.body) and IsString(log.body["message"])
+          - set(log.attributes["MESSAGE"], log.body)
+          - set(log.attributes["raw_json_body"], log.body)
           # Preserve original nested objects so unmapped keys are retained.
   attributes/common:
     actions:
