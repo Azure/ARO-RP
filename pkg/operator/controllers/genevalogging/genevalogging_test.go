@@ -85,17 +85,26 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "key: ENVIRONMENT") {
 		t.Fatal("full config missing ENVIRONMENT mapping")
 	}
-	if strings.Contains(full, "set(log.attributes[\"NODE\"],") {
-		t.Fatal("full config should not include NODE mapping")
+	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
+		t.Fatal("full config missing node mapping")
 	}
 	if !strings.Contains(full, "set(log.attributes[\"RoleInstance\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
 		t.Fatal("full config missing RoleInstance mapping")
 	}
-	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body) where IsString(log.body)") {
-		t.Fatal("full config missing MESSAGE mapping for string body")
+	if !strings.Contains(full, "set(log.attributes[\"namespace\"], resource.attributes[\"k8s.namespace.name\"]) where resource.attributes[\"k8s.namespace.name\"] != nil") {
+		t.Fatal("full config missing lowercase namespace mapping")
 	}
-	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body[\"message\"]) where IsMap(log.body) and IsString(log.body[\"message\"])") {
-		t.Fatal("full config missing MESSAGE mapping for structured body")
+	if !strings.Contains(full, "set(log.attributes[\"pod\"], resource.attributes[\"k8s.pod.name\"]) where resource.attributes[\"k8s.pod.name\"] != nil") {
+		t.Fatal("full config missing lowercase pod mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"container\"], resource.attributes[\"k8s.container.name\"]) where resource.attributes[\"k8s.container.name\"] != nil") {
+		t.Fatal("full config missing lowercase container mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body)") {
+		t.Fatal("full config missing raw MESSAGE mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
+		t.Fatal("full config missing raw_json_body mapping")
 	}
 
 	reduced, err := selectOTelConfig(otelProfileReducedLogs, false)
