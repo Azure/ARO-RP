@@ -69,24 +69,36 @@ func TestGetOTelProfiles(t *testing.T) {
 }
 
 func TestSelectOTelConfig(t *testing.T) {
-	full, err := selectOTelConfig(otelProfileMaxLogs)
+	full, err := selectOTelConfig(otelProfileMaxLogs, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
 		t.Fatal("full config missing expected processor chain")
 	}
 	if !strings.Contains(full, "logs/journald:") || !strings.Contains(full, "logs/containers:") || !strings.Contains(full, "logs/audit:") {
 		t.Fatal("full config missing expected per-source pipelines")
 	}
-	if !strings.Contains(full, "key: EventName") {
-		t.Fatal("full config missing EventName source mapping")
+	if strings.Contains(full, "key: EventName") || strings.Contains(full, "key: source_name") {
+		t.Fatal("full config should not include source fields when disabled")
 	}
-	if !strings.Contains(full, "key: Environment") {
-		t.Fatal("full config missing Environment mapping")
+	if !strings.Contains(full, "key: ENVIRONMENT") {
+		t.Fatal("full config missing ENVIRONMENT mapping")
+	}
+	if strings.Contains(full, "set(log.attributes[\"NODE\"],") {
+		t.Fatal("full config should not include NODE mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"RoleInstance\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
+		t.Fatal("full config missing RoleInstance mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body) where IsString(log.body)") {
+		t.Fatal("full config missing MESSAGE mapping for string body")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body[\"message\"]) where IsMap(log.body) and IsString(log.body[\"message\"])") {
+		t.Fatal("full config missing MESSAGE mapping for structured body")
 	}
 
-	reduced, err := selectOTelConfig(otelProfileReducedLogs)
+	reduced, err := selectOTelConfig(otelProfileReducedLogs, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +106,7 @@ func TestSelectOTelConfig(t *testing.T) {
 		t.Fatal("reduced config missing noise filter")
 	}
 
-	highSignal, err := selectOTelConfig(otelProfileMinimalLogs)
+	highSignal, err := selectOTelConfig(otelProfileMinimalLogs, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,16 +115,29 @@ func TestSelectOTelConfig(t *testing.T) {
 	}
 }
 
+func TestSelectOTelConfigIncludesSourceFieldsWhenEnabled(t *testing.T) {
+	full, err := selectOTelConfig(otelProfileMaxLogs, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(full, "key: EventName") || !strings.Contains(full, "key: source_name") {
+		t.Fatal("full config missing source fields when enabled")
+	}
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
+		t.Fatal("full config missing source processor when enabled")
+	}
+}
+
 func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
 	originalRender := renderOTelConfigFn
-	renderOTelConfigFn = func(otelProfile) (string, error) {
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
 		return "", errors.New("render failure")
 	}
 	defer func() {
 		renderOTelConfigFn = originalRender
 	}()
 
-	_, err := selectOTelConfig(otelProfileMaxLogs)
+	_, err := selectOTelConfig(otelProfileMaxLogs, false)
 	if err == nil {
 		t.Fatal("expected selectOTelConfig to return an error")
 	}
@@ -121,7 +146,7 @@ func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
 func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 	originalRender := renderOTelConfigFn
 	var calledProfiles []otelProfile
-	renderOTelConfigFn = func(profile otelProfile) (string, error) {
+	renderOTelConfigFn = func(profile otelProfile, _ bool) (string, error) {
 		calledProfiles = append(calledProfiles, profile)
 		if profile == otelProfileMinimalLogs {
 			return "minimal-config", nil
@@ -132,7 +157,7 @@ func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 		renderOTelConfigFn = originalRender
 	}()
 
-	cfg, err := selectOTelConfig(otelProfileMaxLogs)
+	cfg, err := selectOTelConfig(otelProfileMaxLogs, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +243,7 @@ func TestOTelDaemonSets(t *testing.T) {
 				"aro.environment": "Test",
 			},
 		},
-	}, "10.0.0.8:4317", nil)
+	}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,6 +261,13 @@ func TestOTelDaemonSets(t *testing.T) {
 		}
 		if ds.Spec.Template.Spec.PriorityClassName == "" {
 			t.Fatalf("missing priority class for %s", ds.Name)
+		}
+		wantHash := "worker-hash"
+		if ds.Name == "otel-collector-master" {
+			wantHash = "master-hash"
+		}
+		if gotHash := ds.Spec.Template.Annotations["aro.openshift.io/otel-config-sha256"]; gotHash != wantHash {
+			t.Fatalf("unexpected config hash annotation for %s: got %q want %q", ds.Name, gotHash, wantHash)
 		}
 		foundEnvironment := false
 		for _, env := range collector.Env {
@@ -323,7 +355,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 
 func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.T) {
 	originalRender := renderOTelConfigFn
-	renderOTelConfigFn = func(otelProfile) (string, error) {
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
 		return "", errors.New("render failure")
 	}
 	defer func() {

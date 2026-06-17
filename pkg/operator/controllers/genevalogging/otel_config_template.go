@@ -17,14 +17,16 @@ type otelLogSource struct {
 	EventName string
 }
 
-func renderOTelConfig(profile otelProfile) (string, error) {
+func renderOTelConfig(profile otelProfile, emitSourceFields bool) (string, error) {
 	var rendered bytes.Buffer
 	err := otelConfigParsedTemplate.Execute(&rendered, struct {
 		Profile           otelProfile
+		EmitSourceFields  bool
 		GatewayExporterID string
 		Sources           []otelLogSource
 	}{
 		Profile:           profile,
+		EmitSourceFields:  emitSourceFields,
 		GatewayExporterID: "otlp_grpc/gateway",
 		Sources: []otelLogSource{
 			{

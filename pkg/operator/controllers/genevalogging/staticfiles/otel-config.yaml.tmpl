@@ -164,13 +164,18 @@ processors:
           - set(log.attributes["CONTAINER"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
           - set(log.attributes["POD"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
           - set(log.attributes["NAMESPACE"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
-          - set(log.attributes["NODE"], "${env:MONITORING_ROLE_INSTANCE}")
+          - set(log.attributes["RoleInstance"], "${env:MONITORING_ROLE_INSTANCE}")
+          - set(log.attributes["MESSAGE"], log.body) where IsString(log.body)
+          - set(log.attributes["MESSAGE"], log.body["message"]) where IsMap(log.body) and IsString(log.body["message"])
           # Preserve original nested objects so unmapped keys are retained.
   attributes/common:
     actions:
-      - key: Environment
+      - key: ENVIRONMENT
         value: ${env:ENVIRONMENT}
         action: upsert
+      - key: Environment
+        action: delete
+{{- if .EmitSourceFields }}
 {{- range .Sources }}
   attributes/source-{{ .Name }}:
     actions:
@@ -180,6 +185,7 @@ processors:
       - key: EventName
         value: {{ .EventName }}
         action: upsert
+{{- end }}
 {{- end }}
   batch: {}
 
@@ -205,11 +211,23 @@ service:
     logs/{{ .Name }}:
       receivers: [{{ .Receiver }}]
 {{- if eq $.Profile "minimal-logs" }}
+{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, batch]
+{{- end }}
 {{- else if eq $.Profile "reduced-logs" }}
+{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
+      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else }}
+{{- if $.EmitSourceFields }}
       processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
+{{- end }}
 {{- end }}
       exporters: [{{ $.GatewayExporterID }}]
 {{- end }}
