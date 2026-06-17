@@ -106,6 +106,9 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
 		t.Fatal("full config missing raw_json_body mapping")
 	}
+	if !strings.Contains(full, "id: logrus_parse") {
+		t.Fatal("full config missing logrus parser for container logs")
+	}
 
 	reduced, err := selectOTelConfig(otelProfileReducedLogs, false)
 	if err != nil {
@@ -114,6 +117,9 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(reduced, "filter/drop-olm-noise:") {
 		t.Fatal("reduced config missing noise filter")
 	}
+	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("reduced config missing unfiltered audit pipeline")
+	}
 
 	highSignal, err := selectOTelConfig(otelProfileMinimalLogs, false)
 	if err != nil {
@@ -121,6 +127,12 @@ func TestSelectOTelConfig(t *testing.T) {
 	}
 	if !strings.Contains(highSignal, "filter/keep-only-high-signal:") {
 		t.Fatal("high-signal config missing keep-only-high-signal filter")
+	}
+	if !strings.Contains(highSignal, "filter/keep-audit-write-verbs:") {
+		t.Fatal("high-signal config missing audit write-verb filter")
+	}
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("high-signal config missing expected audit processor chain")
 	}
 }
 

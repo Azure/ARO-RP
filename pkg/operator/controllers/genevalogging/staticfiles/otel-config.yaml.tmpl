@@ -72,6 +72,21 @@ receivers:
             info: I
             debug: D
         on_error: send_quiet
+      - id: logrus_parse
+        type: regex_parser
+        parse_from: body
+        parse_to: body
+        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?:(?: [^= ]+=[^ ]+)*)?(?: file="(?<src_file>[^":]+):(?<src_line>\d+)")?.*$'
+        severity:
+          parse_from: body.severity
+          mapping:
+            warn: warn
+            warning: warn
+            error: error
+            fatal: fatal
+            info: info
+            debug: debug
+        on_error: send_quiet
       - id: klog_value_parse
         type: key_value_parser
         if: 'type(body) == "map"'
@@ -108,6 +123,11 @@ processors:
     logs:
       log_record:
         - 'not ((IsString(body) and (IsMatch(body, "level=(error|warn|warning)") or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body, "Update error .*: ClusterOperatorDegraded"))) or (IsMap(body) and ((IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$")) or (IsString(body["message"]) and (IsMatch(body["message"], "level=(error|warn|warning)") or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body["message"], "Update error .*: ClusterOperatorDegraded"))))))'
+  filter/keep-audit-write-verbs:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'not (IsMap(body) and IsString(body["verb"]) and IsMatch(body["verb"], "^(create|update|delete|patch)$"))'
 {{- else if eq .Profile "reduced-logs" }}
   filter/drop-olm-noise:
     error_mode: ignore
@@ -214,6 +234,21 @@ service:
 {{- range .Sources }}
     logs/{{ .Name }}:
       receivers: [{{ .Receiver }}]
+{{- if eq .Name "audit" }}
+{{- if eq $.Profile "minimal-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- end }}
+{{- else }}
 {{- if eq $.Profile "minimal-logs" }}
 {{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
@@ -231,6 +266,7 @@ service:
       processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
       processors: [memory_limiter, transform/log-parity, attributes/common, batch]
+{{- end }}
 {{- end }}
 {{- end }}
       exporters: [{{ $.GatewayExporterID }}]
