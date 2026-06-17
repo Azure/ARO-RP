@@ -580,9 +580,16 @@ func currentControlPlaneVMSizes(
 	}
 
 	if len(machines) != api.ControlPlaneNodeCount {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Expected %d control plane machines but found %d. Resize cannot proceed until all control plane machines are present.",
-				api.ControlPlaneNodeCount, len(machines)))
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"controlPlaneMachines",
+			fmt.Sprintf(
+				"Expected %d control plane machines but found %d. Resize cannot proceed until all control plane machines are present.",
+				api.ControlPlaneNodeCount,
+				len(machines),
+			),
+		)
 	}
 
 	clusterRGName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -592,13 +599,21 @@ func currentControlPlaneVMSizes(
 	for _, machineName := range machineNames {
 		vm, err := a.GetVirtualMachine(ctx, clusterRGName, machineName, "")
 		if err != nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-				fmt.Sprintf("Failed to retrieve current control plane VM %q from Azure: %v", machineName, err))
+			return nil, api.NewCloudError(
+				http.StatusInternalServerError,
+				api.CloudErrorCodeInternalServerError,
+				fmt.Sprintf("controlPlaneVM/%s", machineName),
+				fmt.Sprintf("Failed to retrieve current control plane VM %q from Azure: %v", machineName, err),
+			)
 		}
 
 		if vm.VirtualMachineProperties == nil || vm.HardwareProfile == nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-				fmt.Sprintf("Control plane VM %q has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.", machineName))
+			return nil, api.NewCloudError(
+				http.StatusInternalServerError,
+				api.CloudErrorCodeInternalServerError,
+				fmt.Sprintf("controlPlaneVM/%s", machineName),
+				fmt.Sprintf("Control plane VM %q has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.", machineName),
+			)
 		}
 
 		sizes = append(sizes, string(vm.HardwareProfile.VMSize))

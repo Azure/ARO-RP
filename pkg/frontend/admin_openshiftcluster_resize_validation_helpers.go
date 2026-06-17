@@ -60,13 +60,23 @@ func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeAction
 
 	rawMachines, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"controlPlaneMachines",
+			err.Error(),
+		)
 	}
 
 	machineList := &machinev1beta1.MachineList{}
 	err = codec.NewDecoderBytes(rawMachines, &codec.JsonHandle{}).Decode(machineList)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode machines, %s", err.Error()))
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"controlPlaneMachines",
+			fmt.Sprintf("failed to decode machines, %s", err.Error()),
+		)
 	}
 
 	for _, machine := range machineList.Items {
@@ -74,7 +84,12 @@ func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeAction
 			providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
 			err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &providerSpec)
 			if err != nil {
-				return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode provider spec, %s", err.Error()))
+				return nil, api.NewCloudError(
+					http.StatusInternalServerError,
+					api.CloudErrorCodeInternalServerError,
+					"controlPlaneMachines",
+					fmt.Sprintf("failed to decode provider spec, %s", err.Error()),
+				)
 			}
 
 			phase := ""
@@ -168,8 +183,12 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 
 		vm, err := azureAction.GetVirtualMachine(ctx, clusterRGName, machineName, mgmtcompute.InstanceView)
 		if err != nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-				fmt.Sprintf("failed to get Azure VM %s: %v", machineName, err))
+			return nil, api.NewCloudError(
+				http.StatusInternalServerError,
+				api.CloudErrorCodeInternalServerError,
+				fmt.Sprintf("controlPlaneVM/%s", machineName),
+				fmt.Sprintf("failed to get Azure VM %s: %v", machineName, err),
+			)
 		}
 
 		if vm.InstanceView != nil && vm.InstanceView.Statuses != nil {
@@ -316,13 +335,23 @@ func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions ad
 	var validationErrs []error
 	rawNodes, err := kubeActions.KubeList(ctx, "Node", "")
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"controlPlaneNodes",
+			err.Error(),
+		)
 	}
 
 	nodeList := &corev1.NodeList{}
 	err = codec.NewDecoderBytes(rawNodes, &codec.JsonHandle{}).Decode(nodeList)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", fmt.Sprintf("failed to decode nodes, %s", err.Error()))
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"controlPlaneNodes",
+			fmt.Sprintf("failed to decode nodes, %s", err.Error()),
+		)
 	}
 
 	controlPlaneNodesFound := make(map[string]nodeValidationData)
