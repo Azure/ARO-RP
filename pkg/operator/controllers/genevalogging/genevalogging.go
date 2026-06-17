@@ -5,6 +5,8 @@ package genevalogging
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 
@@ -101,8 +103,10 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
+	emitSourceFields := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelEmitSourceFields)
+
 	renderProfileConfig := func(nodeRole string, profile otelProfile) (string, error) {
-		cfg, err := selectOTelConfig(profile)
+		cfg, err := selectOTelConfig(profile, emitSourceFields)
 		if err != nil {
 			return "", fmt.Errorf("rendering %s otel config: %w", nodeRole, err)
 		}
@@ -144,7 +148,13 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return resources, nil
 	}
 
-	daemonsets, err := r.otelDaemonSets(cluster, gatewayTarget.endpoint, gatewayTarget.hostAliases)
+	daemonsets, err := r.otelDaemonSets(
+		cluster,
+		gatewayTarget.endpoint,
+		gatewayTarget.hostAliases,
+		otelConfigSHA256(masterConfig),
+		otelConfigSHA256(workerConfig),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -155,12 +165,17 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 	return resources, nil
 }
 
+func otelConfigSHA256(config string) string {
+	sum := sha256.Sum256([]byte(config))
+	return hex.EncodeToString(sum[:])
+}
+
 // selectOTelConfig renders the requested profile and falls back to minimal logs if needed.
 // If both renders fail, return an error so reconciliation fails fast instead of writing an empty config.
-func selectOTelConfig(profile otelProfile) (string, error) {
-	cfg, err := renderOTelConfigFn(profile)
+func selectOTelConfig(profile otelProfile, emitSourceFields bool) (string, error) {
+	cfg, err := renderOTelConfigFn(profile, emitSourceFields)
 	if err != nil {
-		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs)
+		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs, emitSourceFields)
 		if minimalErr != nil {
 			return "", fmt.Errorf("failed to render otel config for profile %q (%v) and fallback profile %q (%v)", profile, err, otelProfileMinimalLogs, minimalErr)
 		}
@@ -201,14 +216,14 @@ func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTarge
 	}, true, nil
 }
 
-func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoint string, hostAliases []corev1.HostAlias) ([]*appsv1.DaemonSet, error) {
+func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoint string, hostAliases []corev1.HostAlias, masterConfigHash, workerConfigHash string) ([]*appsv1.DaemonSet, error) {
 	otelPullspec := cluster.Spec.OperatorFlags.GetWithDefault(controllerOTelPullSpec, "")
 	if otelPullspec == "" {
 		otelPullspec = version.OTelImage(cluster.Spec.ACRDomain)
 	}
 	environment := cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", "")
 
-	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey string) *appsv1.DaemonSet {
+	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey, configHash string) *appsv1.DaemonSet {
 		return &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -220,7 +235,8 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{"app": name},
+						Labels:      map[string]string{"app": name},
+						Annotations: map[string]string{"aro.openshift.io/otel-config-sha256": configHash},
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName:            "system-cluster-critical",
@@ -403,7 +419,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	}
 
 	return []*appsv1.DaemonSet{
-		newDaemonSet("otel-collector-master", "300m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey),
-		newDaemonSet("otel-collector-worker", "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey),
+		newDaemonSet("otel-collector-master", "300m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
+		newDaemonSet("otel-collector-worker", "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
 	}, nil
 }
