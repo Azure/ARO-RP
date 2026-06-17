@@ -141,6 +141,21 @@ deploy: ## Deploy RP resources on Azure
 dev-config.yaml: ## Generate dev-config.yaml file
 	go run ./hack/gendevconfig >dev-config.yaml
 
+.PHONY: clean-instance
+clean-instance: ## Delete a secondary RP instance (requires AZURE_INSTANCE and LOCATION)
+ifndef AZURE_INSTANCE
+	$(error AZURE_INSTANCE is not set. Usage: AZURE_INSTANCE=2 make clean-instance)
+endif
+ifndef LOCATION
+	$(error LOCATION is not set. Usage: AZURE_INSTANCE=2 LOCATION=eastus make clean-instance)
+endif
+	$(eval AZURE_PREFIX := $(or $(AZURE_PREFIX),$(USER)))
+	@echo "Deleting secondary RP instance $(AZURE_INSTANCE) in $(LOCATION)..."
+	az group delete -g $(AZURE_PREFIX)-aro-$(LOCATION)-$(AZURE_INSTANCE) --yes --no-wait || true
+	az group delete -g $(AZURE_PREFIX)-gwy-$(LOCATION)-$(AZURE_INSTANCE) --yes --no-wait || true
+	@echo "Resource group deletion initiated. Groups will be removed in the background."
+	@echo "Optional: clean up DNS records manually if needed."
+
 .PHONY: discoverycache
 discoverycache: ## Fix out-of-date discovery cache
 	$(MAKE) admin.kubeconfig

@@ -25,8 +25,13 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 		return err
 	}
 
+	instanceSuffix := ""
+	if d.config.Configuration.InstanceID != nil && *d.config.Configuration.InstanceID != "" {
+		instanceSuffix = "-" + *d.config.Configuration.InstanceID
+	}
+
 	d.log.Infof("uploading RP version")
-	blobName := fmt.Sprintf("rpversion/%s", d.config.Location)
+	blobName := fmt.Sprintf("rpversion/%s%s", d.config.Location, instanceSuffix)
 	_, err = d.blobsClient.UploadBuffer(ctx, "$web", blobName, []byte(d.version), nil)
 	if err != nil {
 		d.log.Errorf("failure to upload version information: %v", err)

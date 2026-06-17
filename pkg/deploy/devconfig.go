@@ -45,12 +45,18 @@ func DevConfig(_env env.Core) (*Config, error) {
 		azureUniquePrefix = os.Getenv("USER")
 	}
 
-	keyvaultPrefix := azureUniquePrefix + "-aro-" + _env.Location()
+	instanceID := os.Getenv("AZURE_INSTANCE")
+	instanceSuffix := ""
+	if instanceID != "" {
+		instanceSuffix = "-" + instanceID
+	}
+
+	keyvaultPrefix := azureUniquePrefix + "-aro-" + _env.Location() + instanceSuffix
 	if len(keyvaultPrefix) > 20 {
 		keyvaultPrefix = keyvaultPrefix[:20]
 	}
 
-	oidcStorageAccountName := azureUniquePrefix + _env.Location()
+	oidcStorageAccountName := azureUniquePrefix + _env.Location() + instanceID
 	if len(oidcStorageAccountName) >= 21 {
 		oidcStorageAccountName = oidcStorageAccountName[:21]
 	}
@@ -61,11 +67,11 @@ func DevConfig(_env env.Core) (*Config, error) {
 			{
 				Location:                 _env.Location(),
 				SubscriptionID:           _env.SubscriptionID(),
-				GatewayResourceGroupName: azureUniquePrefix + "-gwy-" + _env.Location(),
-				RPResourceGroupName:      azureUniquePrefix + "-aro-" + _env.Location(),
+				GatewayResourceGroupName: azureUniquePrefix + "-gwy-" + _env.Location() + instanceSuffix,
+				RPResourceGroupName:      azureUniquePrefix + "-aro-" + _env.Location() + instanceSuffix,
 				Configuration: &Configuration{
 					AzureCloudName:         &_env.Environment().ActualCloudName,
-					DatabaseAccountName:    pointerutils.ToPtr(azureUniquePrefix + "-aro-" + _env.Location()),
+					DatabaseAccountName:    pointerutils.ToPtr(azureUniquePrefix + "-aro-" + _env.Location() + instanceSuffix),
 					KeyvaultDNSSuffix:      &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:         &keyvaultPrefix,
 					OIDCStorageAccountName: pointerutils.ToPtr(oidcStorageAccountName),
@@ -163,6 +169,8 @@ func DevConfig(_env env.Core) (*Config, error) {
 			InstallViaHive:           pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
 			DefaultInstallerPullspec: pointerutils.ToPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
 			AdoptByHive:              pointerutils.ToPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
+
+			InstanceID: pointerutils.ToPtr(instanceID),
 		},
 	}, nil
 }

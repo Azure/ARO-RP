@@ -130,12 +130,15 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
-	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
-	if err != nil {
-		return err
+	instanceSuffix := ""
+	if d.config.Configuration.InstanceID != nil && *d.config.Configuration.InstanceID != "" {
+		instanceSuffix = "-" + *d.config.Configuration.InstanceID
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+	rpRecordName := "rp" + instanceSuffix + "." + d.config.Location
+	portalRecordName := d.config.Location + instanceSuffix + ".admin"
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, rpRecordName, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: pointerutils.ToPtr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
@@ -149,7 +152,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, portalRecordName, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: pointerutils.ToPtr(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
@@ -163,6 +166,13 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
+	// Secondary instances skip cluster DNS zone NS delegation since they
+	// have their own regional DNS zone in their own RG
+	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
+	if err != nil {
+		return err
+	}
+
 	nsRecords := make([]mgmtdns.NsRecord, 0, len(*zone.NameServers))
 	for i := range *zone.NameServers {
 		nsRecords = append(nsRecords, mgmtdns.NsRecord{
@@ -170,7 +180,8 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		})
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
+	nsRecordName := d.config.Location + instanceSuffix
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, nsRecordName, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL:       pointerutils.ToPtr(int64(3600)),
 			NsRecords: &nsRecords,

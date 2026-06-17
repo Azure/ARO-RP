@@ -42,27 +42,35 @@ const (
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
 func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
-	// deploy global rbac
-	err := d.deployRPGlobalSubscription(ctx)
-	if err != nil {
-		return err
+	isSecondaryInstance := d.config.Configuration.InstanceID != nil && *d.config.Configuration.InstanceID != ""
+
+	if !isSecondaryInstance {
+		// deploy global rbac
+		err := d.deployRPGlobalSubscription(ctx)
+		if err != nil {
+			return err
+		}
+
+		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.SubscriptionResourceGroupName, *d.config.Configuration.SubscriptionResourceGroupLocation)
+		_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+			Location: d.config.Configuration.SubscriptionResourceGroupLocation,
+		})
+		if err != nil {
+			return err
+		}
+
+		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalResourceGroupLocation)
+		_, err = d.globalgroups.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
+			Location: d.config.Configuration.GlobalResourceGroupLocation,
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		d.log.Infof("secondary instance %s: skipping global resource deployment", *d.config.Configuration.InstanceID)
 	}
 
-	d.log.Infof("deploying rg %s in %s", *d.config.Configuration.SubscriptionResourceGroupName, *d.config.Configuration.SubscriptionResourceGroupLocation)
-	_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
-		Location: d.config.Configuration.SubscriptionResourceGroupLocation,
-	})
-	if err != nil {
-		return err
-	}
-
-	d.log.Infof("deploying rg %s in %s", *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalResourceGroupLocation)
-	_, err = d.globalgroups.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
-		Location: d.config.Configuration.GlobalResourceGroupLocation,
-	})
-	if err != nil {
-		return err
-	}
+	var err error
 
 	d.log.Infof("deploying rg %s in %s", d.config.RPResourceGroupName, d.config.Location)
 	_, err = d.groups.CreateOrUpdate(ctx, d.config.RPResourceGroupName, mgmtfeatures.ResourceGroup{
@@ -80,10 +88,12 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
-	// deploy action groups
-	err = d.deployRPSubscription(ctx)
-	if err != nil {
-		return err
+	if !isSecondaryInstance {
+		// deploy action groups
+		err = d.deployRPSubscription(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// deploy managed identity
@@ -108,35 +118,37 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
-	var globalDevopsMsiPrincipalId string
+	if !isSecondaryInstance {
+		var globalDevopsMsiPrincipalId string
 
-	if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
-		globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+		if d.config.Configuration.GlobalDevopsManagedIdentity != nil {
+			globalDevopsMSI, err := d.globaluserassignedidentities.Get(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalDevopsManagedIdentity)
+			if err != nil {
+				return err
+			}
+
+			globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
+		}
+
+		// deploy ACR RBAC, RP version storage account
+		err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMsiPrincipalId)
 		if err != nil {
 			return err
 		}
 
-		globalDevopsMsiPrincipalId = globalDevopsMSI.PrincipalID.String()
-	}
-
-	// deploy ACR RBAC, RP version storage account
-	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String(), globalDevopsMsiPrincipalId)
-	if err != nil {
-		return err
-	}
-
-	// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
-	// we can't use conditions to define ACR replication object deployment.
-	// Also, an ACR replica cannot be defined in the home registry location.
-	acrLocation := *d.config.Configuration.GlobalResourceGroupLocation
-	if d.config.Configuration.ACRLocationOverride != nil && *d.config.Configuration.ACRLocationOverride != "" {
-		acrLocation = *d.config.Configuration.ACRLocationOverride
-	}
-	if !strings.EqualFold(d.config.Location, acrLocation) &&
-		(d.config.Configuration.ACRReplicaDisabled == nil || !*d.config.Configuration.ACRReplicaDisabled) {
-		err = d.deployRPGlobalACRReplication(ctx)
-		if err != nil {
-			return err
+		// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
+		// we can't use conditions to define ACR replication object deployment.
+		// Also, an ACR replica cannot be defined in the home registry location.
+		acrLocation := *d.config.Configuration.GlobalResourceGroupLocation
+		if d.config.Configuration.ACRLocationOverride != nil && *d.config.Configuration.ACRLocationOverride != "" {
+			acrLocation = *d.config.Configuration.ACRLocationOverride
+		}
+		if !strings.EqualFold(d.config.Location, acrLocation) &&
+			(d.config.Configuration.ACRReplicaDisabled == nil || !*d.config.Configuration.ACRReplicaDisabled) {
+			err = d.deployRPGlobalACRReplication(ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

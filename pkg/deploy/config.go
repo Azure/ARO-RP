@@ -114,6 +114,11 @@ type Configuration struct {
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
 	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
+
+	// InstanceID identifies a secondary RP instance in the same region.
+	// When set, the deploy skips global resource deployment and uses
+	// instance-suffixed resource groups, DNS records, and version blobs.
+	InstanceID *string `json:"instanceId,omitempty"`
 }
 
 // Note: if this configuration block is provided, all throughputs must be present and valid
