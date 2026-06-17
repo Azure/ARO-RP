@@ -9,6 +9,7 @@ dist:
 exporters:
     - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.153.0
     - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.153.0
+    - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/azuredataexplorerexporter v0.153.0
 
 receivers:
     - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.153.0
