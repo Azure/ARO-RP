@@ -340,6 +340,9 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 		if ce.StatusCode != http.StatusInternalServerError {
 			t.Errorf("expected status 500, got %d", ce.StatusCode)
 		}
+		if !strings.HasPrefix(ce.Target, "controlPlaneVM/master-") {
+			t.Errorf("expected target to include controlPlaneVM/master-*, got %q", ce.Target)
+		}
 	})
 
 	t.Run("propagates Kube API error from getClusterMachines as 500", func(t *testing.T) {
@@ -397,6 +400,27 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 			"machine master-1 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v5",
 		)
 	})
+}
+
+func TestClassifyInventoryErrorPreservesCloudErrorTarget(t *testing.T) {
+	t.Parallel()
+
+	original := api.NewCloudError(
+		http.StatusInternalServerError,
+		api.CloudErrorCodeInternalServerError,
+		"controlPlaneVM/master-0",
+		"failed to get Azure VM master-0: VM not found",
+	)
+
+	classified := classifyInventoryError(original)
+	var ce *api.CloudError
+	if !errors.As(classified, &ce) {
+		t.Fatalf("expected *api.CloudError, got %T: %v", classified, classified)
+	}
+
+	if ce.Target != "controlPlaneVM/master-0" {
+		t.Fatalf("expected target controlPlaneVM/master-0, got %q", ce.Target)
+	}
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
@@ -756,7 +780,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneVM/master-0: Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
 		},
 		{
 			name:       "control plane VM missing HardwareProfile",
@@ -814,7 +838,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneVM/master-1: Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
 		},
 		{
 			name:       "control plane machine inventory incomplete",
@@ -872,7 +896,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 				))
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneMachines: Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
 		},
 		{
 			name:       "panic recovery is sanitized",

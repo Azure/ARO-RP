@@ -756,7 +756,7 @@ func TestGetAzureVMs(t *testing.T) {
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{}, fmt.Errorf("VM not found"))
 			},
-			wantErr: "500: InternalServerError: : failed to get Azure VM master-0: VM not found",
+			wantErr: "500: InternalServerError: controlPlaneVM/master-0: failed to get Azure VM master-0: VM not found",
 		},
 		{
 			name:     "failure - VM with no zones",
