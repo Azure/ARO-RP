@@ -6,16 +6,16 @@ package genevalogging
 import (
 	"fmt"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
 type otelProfile string
 
 const (
-	otelProfileMaxLogs     otelProfile = operator.GenevaLoggingOTelProfileMaxLogs
-	otelProfileReducedLogs otelProfile = operator.GenevaLoggingOTelProfileReducedLogs
-	otelProfileMinimalLogs otelProfile = operator.GenevaLoggingOTelProfileMinimalLogs
+	otelProfileMaxLogs     otelProfile = pkgoperator.GenevaLoggingOTelProfileMaxLogs
+	otelProfileReducedLogs otelProfile = pkgoperator.GenevaLoggingOTelProfileReducedLogs
+	otelProfileMinimalLogs otelProfile = pkgoperator.GenevaLoggingOTelProfileMinimalLogs
 )
 
 type otelProfiles struct {
@@ -25,27 +25,27 @@ type otelProfiles struct {
 
 func parseOTelProfile(profile string) (otelProfile, error) {
 	switch profile {
-	case operator.GenevaLoggingOTelProfileMaxLogs:
+	case pkgoperator.GenevaLoggingOTelProfileMaxLogs:
 		return otelProfileMaxLogs, nil
-	case operator.GenevaLoggingOTelProfileReducedLogs:
+	case pkgoperator.GenevaLoggingOTelProfileReducedLogs:
 		return otelProfileReducedLogs, nil
-	case operator.GenevaLoggingOTelProfileMinimalLogs:
+	case pkgoperator.GenevaLoggingOTelProfileMinimalLogs:
 		return otelProfileMinimalLogs, nil
 	default:
 		return "", fmt.Errorf(
 			"unsupported geneva otel profile %q: expected %q, %q, or %q",
 			profile,
-			operator.GenevaLoggingOTelProfileMaxLogs,
-			operator.GenevaLoggingOTelProfileReducedLogs,
-			operator.GenevaLoggingOTelProfileMinimalLogs,
+			pkgoperator.GenevaLoggingOTelProfileMaxLogs,
+			pkgoperator.GenevaLoggingOTelProfileReducedLogs,
+			pkgoperator.GenevaLoggingOTelProfileMinimalLogs,
 		)
 	}
 }
 
 func getOTelProfiles(flags arov1alpha1.OperatorFlags) (otelProfiles, error) {
-	globalProfileValue := flags.GetWithDefault(operator.GenevaLoggingOTelProfile, operator.GenevaLoggingOTelProfileMinimalLogs)
-	masterProfileValue := flags.GetWithDefault(operator.GenevaLoggingOTelMasterProfile, globalProfileValue)
-	workerProfileValue := flags.GetWithDefault(operator.GenevaLoggingOTelWorkerProfile, globalProfileValue)
+	globalProfileValue := flags.GetWithDefault(pkgoperator.GenevaLoggingOTelProfile, pkgoperator.GenevaLoggingOTelProfileMinimalLogs)
+	masterProfileValue := flags.GetWithDefault(pkgoperator.GenevaLoggingOTelMasterProfile, globalProfileValue)
+	workerProfileValue := flags.GetWithDefault(pkgoperator.GenevaLoggingOTelWorkerProfile, globalProfileValue)
 
 	masterProfile, err := parseOTelProfile(masterProfileValue)
 	if err != nil {
