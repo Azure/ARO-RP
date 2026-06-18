@@ -233,6 +233,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"gatewayLogLevel",
 		"gatewayMdsdConfigVersion",
 		"gatewayOtelCollectorImage",
+		"gatewayOtelKustoIngestionEndpoint",
 		"keyvaultDNSSuffix",
 		"keyvaultPrefix",
 		"mdmFrontendUrl",
@@ -278,6 +279,12 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 	parts = append(parts,
 		"'GATEWAYUSERASSIGNEDIDENTITYRESOURCEID=$(base64 -d <<<'''",
 		"base64(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-gateway-', resourceGroup().location)))",
+		"''')\n'",
+	)
+
+	parts = append(parts,
+		"'GATEWAYCLIENTID=$(base64 -d <<<'''",
+		"base64(parameters('gatewayClientId'))",
 		"''')\n'",
 	)
 

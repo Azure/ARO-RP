@@ -186,6 +186,30 @@ exporters:
       queue_size: 128
       num_consumers: 2
 
+  # Kusto exporter for containerLogs table
+  azuredataexplorer/containers:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"containerLogs\"
+    ingestion_type: \"managed\"
+
+  # Kusto exporter for journald table
+  azuredataexplorer/journald:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"journald\"
+    ingestion_type: \"managed\"
+
+  # Kusto exporter for audit table
+  azuredataexplorer/audit:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"audit\"
+    ingestion_type: \"managed\"
+
 processors:
   attributes/cluster:
     actions:
@@ -218,15 +242,53 @@ processors:
     send_batch_size: 4096
     send_batch_max_size: 8192
 
+connectors:
+  # Route logs to appropriate Kusto pipelines based on source_name attribute
+  routing/kusto:
+    default_pipelines: []
+    table:
+      - context: log
+        condition: attributes[\"source_name\"] == \"containers\"
+        pipelines: [logs/kusto-containers]
+      - context: log
+        condition: attributes[\"source_name\"] == \"journald\"
+        pipelines: [logs/kusto-journald]
+      - context: log
+        condition: attributes[\"source_name\"] == \"audit\"
+        pipelines: [logs/kusto-audit]
+
 service:
   extensions:
     - health_check
     - gatewayauth
   pipelines:
-    logs:
+    # Primary pipeline: ship to MDSD (existing)
+    logs/mdsd:
       receivers: [otlp]
       processors: [memory_limiter, attributes/cluster, batch]
-      exporters: [otlp/cluster-mdsd]"
+      exporters: [otlp/cluster-mdsd]
+
+    # Secondary pipelines: route from OTLP to connector
+    logs/kusto-router:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/cluster]
+      exporters: [routing/kusto]
+
+    # Destination pipelines from connector to Kusto
+    logs/kusto-containers:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/containers]
+
+    logs/kusto-journald:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/journald]
+
+    logs/kusto-audit:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/audit]"
 
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034

@@ -52,6 +52,9 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
 		Value: gwMSI.PrincipalID.String(),
 	}
+	parameters.Parameters["gatewayClientId"] = &arm.ParametersParameter{
+		Value: gwMSI.ClientID.String(),
+	}
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
 	}
