@@ -123,6 +123,19 @@ processors:
     logs:
       log_record:
         - 'not ((IsString(body) and (IsMatch(body, "level=(error|warn|warning)") or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body, "Update error .*: ClusterOperatorDegraded"))) or (IsMap(body) and ((IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$")) or (IsString(body["message"]) and (IsMatch(body["message"], "level=(error|warn|warning)") or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body["message"], "Update error .*: ClusterOperatorDegraded"))))))'
+  filter/drop-journald-noise:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body) and IsMatch(body, "flow_mods")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body) and IsMatch(body, "kex_exchange_identification|Connection reset by")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body) and IsMatch(body, "new Veth device|new Open vSwitch Port device|carrier: link connected")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body) and IsMatch(body, "entered promiscuous mode|left promiscuous mode")'
+  filter/keep-journald-high-signal:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'not ((IsString(attributes["PRIORITY"]) and (attributes["PRIORITY"] == "0" or attributes["PRIORITY"] == "1" or attributes["PRIORITY"] == "2" or attributes["PRIORITY"] == "3" or attributes["PRIORITY"] == "4")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kubenswrapper" and IsString(body) and IsMatch(body, "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr=")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "crio" and IsString(body) and IsMatch(body, "level=(error|warn|warning|fatal)|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berror\\b")))'
   filter/keep-audit-write-verbs:
     error_mode: ignore
     logs:
@@ -138,6 +151,14 @@ processors:
         - IsString(body) and IsMatch(body, "resolving sources|checking if subscriptions need update")
         - IsString(body) and IsMatch(body, "evaluating current pod|matching label selector, 1 have the correct images and matching hash")
         - IsString(body) and IsMatch(body, "No subscriptions were found in namespace")
+  filter/drop-journald-noise:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body) and IsMatch(body, "flow_mods")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body) and IsMatch(body, "kex_exchange_identification|Connection reset by")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body) and IsMatch(body, "new Veth device|new Open vSwitch Port device|carrier: link connected")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body) and IsMatch(body, "entered promiscuous mode|left promiscuous mode")'
 {{- end }}
   transform/log-parity:
     error_mode: ignore
@@ -234,7 +255,27 @@ service:
 {{- range .Sources }}
     logs/{{ .Name }}:
       receivers: [{{ .Receiver }}]
-{{- if eq .Name "audit" }}
+{{- if eq .Name "journald" }}
+{{- if eq $.Profile "minimal-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else if eq $.Profile "reduced-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- end }}
+{{- else if eq .Name "audit" }}
 {{- if eq $.Profile "minimal-logs" }}
 {{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]

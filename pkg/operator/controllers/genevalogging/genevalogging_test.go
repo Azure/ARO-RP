@@ -117,6 +117,12 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(reduced, "filter/drop-olm-noise:") {
 		t.Fatal("reduced config missing noise filter")
 	}
+	if !strings.Contains(reduced, "filter/drop-journald-noise:") {
+		t.Fatal("reduced config missing journald noise filter")
+	}
+	if !strings.Contains(reduced, "processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("reduced config missing expected journald processor chain")
+	}
 	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
 		t.Fatal("reduced config missing unfiltered audit pipeline")
 	}
@@ -127,6 +133,15 @@ func TestSelectOTelConfig(t *testing.T) {
 	}
 	if !strings.Contains(highSignal, "filter/keep-only-high-signal:") {
 		t.Fatal("high-signal config missing keep-only-high-signal filter")
+	}
+	if !strings.Contains(highSignal, "filter/drop-journald-noise:") {
+		t.Fatal("high-signal config missing journald noise filter")
+	}
+	if !strings.Contains(highSignal, "filter/keep-journald-high-signal:") {
+		t.Fatal("high-signal config missing journald high-signal filter")
+	}
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("high-signal config missing expected journald processor chain")
 	}
 	if !strings.Contains(highSignal, "filter/keep-audit-write-verbs:") {
 		t.Fatal("high-signal config missing audit write-verb filter")
