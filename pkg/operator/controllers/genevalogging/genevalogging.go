@@ -366,9 +366,11 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
-										Name:      "log",
+									},
+									{
+										Name:      "machine-id",
 										ReadOnly:  true,
-										MountPath: "/var/log",
+										MountPath: "/etc/machine-id",
 									},
 									{
 										Name:      "otel-config",
