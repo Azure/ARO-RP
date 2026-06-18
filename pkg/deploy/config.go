@@ -62,6 +62,7 @@ type Configuration struct {
 	ExtraCosmosDBIPs                  []string               `json:"extraCosmosDBIPs,omitempty"`
 	FluentbitImage                    *string                `json:"fluentbitImage,omitempty" value:"required"`
 	GatewayOtelCollectorImage         *string                `json:"gatewayOtelCollectorImage,omitempty" value:"required"`
+	GatewayOtelKustoIngestionEndpoint *string                `json:"gatewayOtelKustoIngestionEndpoint,omitempty"`
 	FPClientID                        *string                `json:"fpClientId,omitempty" value:"required"`
 	FPTenantID                        *string                `json:"fpTenantId,omitempty" value:"required"`
 	FPServerCertCommonName            *string                `json:"fpServerCertCommonName,omitempty"`
