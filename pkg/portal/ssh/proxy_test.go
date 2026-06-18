@@ -71,13 +71,16 @@ func fakeClient(c net.Conn, serverKey *rsa.PublicKey, user string, password stri
 }
 
 // fakeServer returns a test listener for an SSH server which validates the
-// client key, reads ping request(s) and writes pong replies
-func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
+// client key, reads ping request(s) and writes pong replies.
+// It also returns the SSH host public key that the server presents during the
+// handshake so callers can pre-seed it into cluster documents to simulate the
+// post-TOFU state and exercise the strict host-key verification path.
+func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, cryptossh.PublicKey, error) {
 	l := listener.NewListener()
 
 	clientPublicKey, err := cryptossh.NewPublicKey(clientKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	config := &cryptossh.ServerConfig{
@@ -100,12 +103,12 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 
 	key, _, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	signer, err := cryptossh.NewSignerFromSigner(key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	config.AddHostKey(signer)
@@ -144,7 +147,7 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 		}
 	}()
 
-	return l, nil
+	return l, signer.PublicKey(), nil
 }
 
 func TestProxy(t *testing.T) {
@@ -167,12 +170,26 @@ func TestProxy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	l, err := fakeServer(&clusterKey.PublicKey)
+	// wrongKey is used to seed a stored host key that differs from the server's
+	// actual key, to exercise the strict-verification rejection path.
+	wrongKey, _, err := utiltls.GenerateKeyAndCertificate("wrong", nil, nil, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongHostPubKey, err := cryptossh.NewPublicKey(&wrongKey.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l, serverHostPubKey, err := fakeServer(&clusterKey.PublicKey)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer l.Close()
 
+	// goodOpenShiftClusterDocument pre-seeds the stored SSH host public key for
+	// master-1 so the TOFU callback performs strict verification (simulating a
+	// cluster that has already had at least one portal SSH session).
 	goodOpenShiftClusterDocument := func() *api.OpenShiftClusterDocument {
 		return &api.OpenShiftClusterDocument{
 			ID:  resourceID,
@@ -183,6 +200,9 @@ func TestProxy(t *testing.T) {
 						APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
 					},
 					SSHKey: api.SecureBytes(x509.MarshalPKCS1PrivateKey(clusterKey)),
+					SSHHostPublicKeys: map[string]api.SecureBytes{
+						"1": serverHostPubKey.Marshal(),
+					},
 				},
 			},
 		}
@@ -234,6 +254,86 @@ func TestProxy(t *testing.T) {
 				portalDocument.Portal.SSH.Authenticated = true
 				checker.AddPortalDocuments(portalDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+			},
+			mocks: func(dialer *mock_proxy.MockDialer) {
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
+			},
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("authentication succeeded"),
+					"remote_addr": gomega.Not(gomega.BeEmpty()),
+					"username":    gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("connected"),
+					"hostname":        gomega.Equal("master-1"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("disconnected"),
+					"duration":        gomega.BeNumerically(">", 0),
+					"hostname":        gomega.Equal("master-1"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+			},
+			ciphers: goodCiphers,
+		},
+		{
+			// TOFU path: no host key pre-seeded; the proxy should capture the
+			// presented key and persist it to the cluster document.
+			name:     "good, TOFU first connection stores host key",
+			username: username,
+			password: password,
+			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := goodPortalDocument(tt.password)
+				fixture.AddPortalDocuments(portalDocument)
+
+				// Cluster document has no SSHHostPublicKeys — first connection.
+				openShiftClusterDocument := &api.OpenShiftClusterDocument{
+					ID:  resourceID,
+					Key: resourceID,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							NetworkProfile: api.NetworkProfile{
+								APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
+							},
+							SSHKey: api.SecureBytes(x509.MarshalPKCS1PrivateKey(clusterKey)),
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+
+				portalDocument = goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.Authenticated = true
+				checker.AddPortalDocuments(portalDocument)
+
+				// After TOFU the cluster document should have the host key stored.
+				checker.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					ID:  resourceID,
+					Key: resourceID,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							NetworkProfile: api.NetworkProfile{
+								APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
+							},
+							SSHKey: api.SecureBytes(x509.MarshalPKCS1PrivateKey(clusterKey)),
+							SSHHostPublicKeys: map[string]api.SecureBytes{
+								"1": serverHostPubKey.Marshal(),
+							},
+						},
+					},
+				})
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {
 				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
@@ -465,6 +565,57 @@ func TestProxy(t *testing.T) {
 		// 		HostKeyAlgorithms: []string{cryptossh.KeyAlgoRSASHA512},
 		// 	},
 		// },
+		{
+			// Strict-verification path: the stored host key differs from what the
+			// server presents.  The connection must be rejected (not silently passed).
+			name:     "stored host key mismatch rejects connection",
+			username: username,
+			password: password,
+			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := goodPortalDocument(tt.password)
+				fixture.AddPortalDocuments(portalDocument)
+
+				// Seed a different key — the server will present serverHostPubKey
+				// but we store wrongHostPubKey, so verification must fail.
+				openShiftClusterDocument := &api.OpenShiftClusterDocument{
+					ID:  resourceID,
+					Key: resourceID,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							NetworkProfile: api.NetworkProfile{
+								APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
+							},
+							SSHKey: api.SecureBytes(x509.MarshalPKCS1PrivateKey(clusterKey)),
+							SSHHostPublicKeys: map[string]api.SecureBytes{
+								"1": wrongHostPubKey.Marshal(),
+							},
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+
+				portalDocument = goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.Authenticated = true
+				checker.AddPortalDocuments(portalDocument)
+				// The cluster document must remain unchanged (no key persisted).
+				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+			},
+			mocks: func(dialer *mock_proxy.MockDialer) {
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
+			},
+			// The client sees EOF because the proxy drops the downstream connection
+			// after the host key mismatch on the portal→cluster leg.
+			wantErrPrefix: "EOF",
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("authentication succeeded"),
+					"remote_addr": gomega.Not(gomega.BeEmpty()),
+					"username":    gomega.Equal(username),
+				},
+			},
+			ciphers: goodCiphers,
+		},
 		{
 			name:     "bad hostkey",
 			username: username,
