@@ -530,18 +530,19 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(_env.SubscriptionID(), tokenCredential, &arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: _env.Environment().Cloud,
-		},
-	})
+	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(_env.SubscriptionID(), tokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
+	subscriptionUUID, err := gofrsuuid.FromString(_env.SubscriptionID())
+	if err != nil {
+		return nil, fmt.Errorf("error parsing subscription ID as UUID: %w", err)
+	}
+
 	roleSetsClient := mgmtredhatopenshift20250725.NewPlatformWorkloadIdentityRoleSetsClientWithBaseURI(
 		_env.Environment().ResourceManagerEndpoint,
-		gofrsuuid.FromStringOrNil(_env.SubscriptionID()),
+		subscriptionUUID,
 	)
 	roleSetsClient.Authorizer = authorizer
 

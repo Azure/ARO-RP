@@ -108,16 +108,16 @@ var _ = Describe("Update clusters", func() {
 
 		By("looking up the operator's role definition from platform workload identity role sets")
 		clusterVersion := *oc.ClusterProfile.Version
-		clusterMinorVersion := clusterVersion[:strings.LastIndex(clusterVersion, ".")]
+		lastDot := strings.LastIndex(clusterVersion, ".")
+		Expect(lastDot).To(BeNumerically(">", 0), "cluster version %q is not in x.y.z format", clusterVersion)
+		clusterMinorVersion := clusterVersion[:lastDot]
 
 		var operatorRoleDefinitionID string
-		roleSetsPage, err := clients.PlatformWorkloadIdentityRoleSets.List(ctx, *oc.Location)
+		roleSetsIter, err := clients.PlatformWorkloadIdentityRoleSets.ListComplete(ctx, *oc.Location)
 		Expect(err).NotTo(HaveOccurred())
-		for _, roleSet := range roleSetsPage.Values() {
-			if roleSet.PlatformWorkloadIdentityRoleSetProperties == nil {
-				continue
-			}
-			if *roleSet.OpenShiftVersion == clusterMinorVersion {
+		for roleSetsIter.NotDone() {
+			roleSet := roleSetsIter.Value()
+			if roleSet.PlatformWorkloadIdentityRoleSetProperties != nil && *roleSet.OpenShiftVersion == clusterMinorVersion {
 				for _, role := range *roleSet.PlatformWorkloadIdentityRoles {
 					if *role.OperatorName == operatorName {
 						operatorRoleDefinitionID = *role.RoleDefinitionID
@@ -126,6 +126,8 @@ var _ = Describe("Update clusters", func() {
 				}
 				break
 			}
+			err = roleSetsIter.NextWithContext(ctx)
+			Expect(err).NotTo(HaveOccurred())
 		}
 		Expect(operatorRoleDefinitionID).NotTo(BeEmpty(), "could not find role definition for operator %s", operatorName)
 
@@ -140,7 +142,9 @@ var _ = Describe("Update clusters", func() {
 
 		By("deriving the VNet scope from the master subnet")
 		masterSubnetID := *oc.MasterProfile.SubnetID
-		vnetScope := masterSubnetID[:strings.LastIndex(masterSubnetID, "/subnets/")]
+		subnetsIdx := strings.LastIndex(masterSubnetID, "/subnets/")
+		Expect(subnetsIdx).To(BeNumerically(">", 0), "master subnet ID %q does not contain /subnets/ segment", masterSubnetID)
+		vnetScope := masterSubnetID[:subnetsIdx]
 
 		By("creating a replacement managed identity")
 		msiResp, err := clients.UserAssignedIdentities.CreateOrUpdate(ctx, vnetResourceGroup, replacementIdentityName, armmsi.Identity{
