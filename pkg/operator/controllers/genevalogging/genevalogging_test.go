@@ -26,6 +26,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
