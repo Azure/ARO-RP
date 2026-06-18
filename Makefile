@@ -252,7 +252,7 @@ publish-image-telemetrycollector: image-telemetrycollector
 
 .PHONY: print-image-digest-telemetrycollector
 print-image-digest-telemetrycollector:
-	@digest=$$(docker inspect --format='{{range .RepoDigests}}{{println .}}{{end}}' $(TELEMETRY_COLLECTOR_IMAGE) | grep -m1 '@sha256:' || true); \
+	@digest=$$(docker inspect --format='{{range .RepoDigests}}{{println .}}{{end}}' $(TELEMETRY_COLLECTOR_IMAGE) | grep -m1 '@sha256:' | sed 's/.*@//' || true); \
 	if [ -z "$$digest" ]; then \
 		echo "error: no repo digest found for $(TELEMETRY_COLLECTOR_IMAGE). Build/push first with 'make publish-image-telemetrycollector'."; \
 		exit 1; \
