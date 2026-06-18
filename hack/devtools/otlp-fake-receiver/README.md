@@ -28,3 +28,17 @@ Each line is JSON with:
 - `LISTEN_ADDR` (default `:4318`)
 - `RECEIVED_LOGS_PATH` (default `/tmp/otlp-fake-receiver/received-logs.ndjson`)
 - `DUMP_PAYLOADS` (`true` to print raw payload bytes to logs)
+
+## Step-2 bridge (gateway)
+
+For gateway architecture testing where environments are split, use:
+
+- `hack/devtools/otlp-fake-kusto-bridge`
+
+Flow:
+
+1. Collect OTLP requests with this fake receiver.
+2. Manually move `received-logs.ndjson` to gateway.
+3. Import it into the bridge fake.
+4. The bridge can forward directly to Kusto from gateway when `KUSTO_INGEST_URL` is set.
+5. If forwarding is disabled, use generated `kusto-ready-logs.ndjson` for manual gateway-side ingestion.
