@@ -59,7 +59,7 @@ main() {
     # shellcheck disable=SC2034
     local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
 
-    # shellcheck disable=SC2153 disable=SC2034
+    # shellcheck disable=SC2153,SC2034
     local -r otelimage="${RPIMAGE%%/*}/${OTELIMAGE#*/}"
 
     # shellcheck disable=SC2034
