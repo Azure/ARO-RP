@@ -5,8 +5,10 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,13 +16,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 var _ = Describe("Update clusters", func() {
@@ -76,6 +82,115 @@ var _ = Describe("Update clusters", func() {
 		newRevision, err := strconv.Atoi(deployment.Annotations["deployment.kubernetes.io/revision"])
 		Expect(err).NotTo(HaveOccurred())
 		Expect(newRevision).To(Equal(oldRevision + 1))
+	})
+
+	It("should successfully replace platform workload identity with stable API version", func(ctx context.Context) {
+		if !isMiwi {
+			Skip("This test is only relevant for workload identity clusters")
+		}
+
+		federatedCredentialRoleDefinitionID := "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole
+
+		By("getting the current cluster to read existing platform workload identities")
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(oc.PlatformWorkloadIdentityProfile).NotTo(BeNil())
+		Expect(oc.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities).NotTo(BeEmpty())
+
+		By("picking an operator identity to replace")
+		var operatorName string
+		for name := range oc.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			operatorName = name
+			break
+		}
+		replacementIdentityName := operatorName + "-e2e-replace"
+		By(fmt.Sprintf("targeting operator %q for identity replacement", operatorName))
+
+		By("looking up the operator's role definition from platform workload identity role sets")
+		clusterVersion := *oc.ClusterProfile.Version
+		clusterMinorVersion := clusterVersion[:strings.LastIndex(clusterVersion, ".")]
+
+		var operatorRoleDefinitionID string
+		roleSetsPage, err := clients.PlatformWorkloadIdentityRoleSets.List(ctx, *oc.Location)
+		Expect(err).NotTo(HaveOccurred())
+		for _, roleSet := range roleSetsPage.Values() {
+			if roleSet.PlatformWorkloadIdentityRoleSetProperties == nil {
+				continue
+			}
+			if *roleSet.OpenShiftVersion == clusterMinorVersion {
+				for _, role := range *roleSet.PlatformWorkloadIdentityRoles {
+					if *role.OperatorName == operatorName {
+						operatorRoleDefinitionID = *role.RoleDefinitionID
+						break
+					}
+				}
+				break
+			}
+		}
+		Expect(operatorRoleDefinitionID).NotTo(BeEmpty(), "could not find role definition for operator %s", operatorName)
+
+		By("reading the cluster identity principal ID for federated credential role assignment")
+		Expect(oc.Identity).NotTo(BeNil())
+		var clusterIdentityPrincipalID string
+		for _, identity := range oc.Identity.UserAssignedIdentities {
+			clusterIdentityPrincipalID = identity.PrincipalID.String()
+			break
+		}
+		Expect(clusterIdentityPrincipalID).NotTo(BeEmpty())
+
+		By("deriving the VNet scope from the master subnet")
+		masterSubnetID := *oc.MasterProfile.SubnetID
+		vnetScope := masterSubnetID[:strings.LastIndex(masterSubnetID, "/subnets/")]
+
+		By("creating a replacement managed identity")
+		msiResp, err := clients.UserAssignedIdentities.CreateOrUpdate(ctx, vnetResourceGroup, replacementIdentityName, armmsi.Identity{
+			Location: oc.Location,
+		}, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(msiResp.ID).NotTo(BeNil())
+		Expect(msiResp.Properties).NotTo(BeNil())
+		Expect(msiResp.Properties.PrincipalID).NotTo(BeNil())
+		replacementResourceID := *msiResp.ID
+		replacementPrincipalID := *msiResp.Properties.PrincipalID
+
+		By("assigning the operator's role to the replacement identity at VNet scope")
+		_, err = clients.RoleAssignments.Create(ctx, vnetScope, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+				RoleDefinitionID: &operatorRoleDefinitionID,
+				PrincipalID:      &replacementPrincipalID,
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("assigning the federated credential role to the cluster identity at the scope of the replacement identity")
+		_, err = clients.RoleAssignments.Create(ctx, replacementResourceID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+				RoleDefinitionID: &federatedCredentialRoleDefinitionID,
+				PrincipalID:      &clusterIdentityPrincipalID,
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("sending the PATCH request to replace the operator identity")
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20250725.OpenShiftClusterUpdate{
+			OpenShiftClusterProperties: &mgmtredhatopenshift20250725.OpenShiftClusterProperties{
+				PlatformWorkloadIdentityProfile: &mgmtredhatopenshift20250725.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*mgmtredhatopenshift20250725.PlatformWorkloadIdentity{
+						operatorName: {
+							ResourceID: &replacementResourceID,
+						},
+					},
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("verifying the identity was replaced")
+		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(*oc.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[operatorName].ResourceID).To(Equal(replacementResourceID))
 	})
 
 	// This tests the API which is most commonly generated by

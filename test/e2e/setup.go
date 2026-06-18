@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/davecgh/go-spew/spew"
+	gofrsuuid "github.com/gofrs/uuid"
 	"github.com/jongio/azidext/go/azidext"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
@@ -37,6 +38,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -47,6 +49,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -54,6 +57,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	redhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2025-07-25/redhatopenshift"
@@ -91,19 +95,22 @@ var (
 )
 
 type clientSet struct {
-	Operations        redhatopenshift20250725.OperationsClient
-	OpenshiftClusters redhatopenshift20250725.OpenShiftClustersClient
+	Operations                       redhatopenshift20250725.OperationsClient
+	OpenshiftClusters                redhatopenshift20250725.OpenShiftClustersClient
+	PlatformWorkloadIdentityRoleSets mgmtredhatopenshift20250725.PlatformWorkloadIdentityRoleSetsClient
 
-	VirtualMachines       compute.VirtualMachinesClient
-	Resources             features.ResourcesClient
-	DiskEncryptionSets    compute.DiskEncryptionSetsClient
-	Disks                 compute.DisksClient
-	Interfaces            armnetwork.InterfacesClient
-	LoadBalancers         armnetwork.LoadBalancersClient
-	NetworkSecurityGroups armnetwork.SecurityGroupsClient
-	Subnet                armnetwork.SubnetsClient
-	VirtualNetworks       armnetwork.VirtualNetworksClient
-	Storage               storage.AccountsClient
+	VirtualMachines        compute.VirtualMachinesClient
+	Resources              features.ResourcesClient
+	DiskEncryptionSets     compute.DiskEncryptionSetsClient
+	Disks                  compute.DisksClient
+	Interfaces             armnetwork.InterfacesClient
+	LoadBalancers          armnetwork.LoadBalancersClient
+	NetworkSecurityGroups  armnetwork.SecurityGroupsClient
+	Subnet                 armnetwork.SubnetsClient
+	VirtualNetworks        armnetwork.VirtualNetworksClient
+	Storage                storage.AccountsClient
+	UserAssignedIdentities armmsi.UserAssignedIdentitiesClient
+	RoleAssignments        authorization.RoleAssignmentsClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -523,20 +530,38 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	return &clientSet{
-		Operations:        redhatopenshift20250725.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClusters: clusters,
+	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(_env.SubscriptionID(), tokenCredential, &arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: _env.Environment().Cloud,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
 
-		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Disks:                 compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClientWithAROEnvironment(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Interfaces:            interfacesClient,
-		LoadBalancers:         loadBalancersClient,
-		NetworkSecurityGroups: securityGroupsClient,
-		Subnet:                subnetsClient,
-		VirtualNetworks:       virtualNetworksClient,
-		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+	roleSetsClient := mgmtredhatopenshift20250725.NewPlatformWorkloadIdentityRoleSetsClientWithBaseURI(
+		_env.Environment().ResourceManagerEndpoint,
+		gofrsuuid.FromStringOrNil(_env.SubscriptionID()),
+	)
+	roleSetsClient.Authorizer = authorizer
+
+	return &clientSet{
+		Operations:                       redhatopenshift20250725.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClusters:                clusters,
+		PlatformWorkloadIdentityRoleSets: roleSetsClient,
+
+		VirtualMachines:        compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Resources:              features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Disks:                  compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		DiskEncryptionSets:     compute.NewDiskEncryptionSetsClientWithAROEnvironment(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Interfaces:             interfacesClient,
+		LoadBalancers:          loadBalancersClient,
+		NetworkSecurityGroups:  securityGroupsClient,
+		Subnet:                 subnetsClient,
+		VirtualNetworks:        virtualNetworksClient,
+		Storage:                storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		UserAssignedIdentities: *msiClient,
+		RoleAssignments:        authorization.NewRoleAssignmentsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
