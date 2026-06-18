@@ -279,6 +279,15 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 								},
 							},
 							{
+								Name: "machine-id",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/etc/machine-id",
+										Type: pointerutils.ToPtr(corev1.HostPathFile),
+									},
+								},
+							},
+							{
 								Name: "otel-config",
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{

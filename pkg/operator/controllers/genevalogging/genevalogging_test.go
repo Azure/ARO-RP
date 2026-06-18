@@ -48,6 +48,15 @@ func getContainer(d *appsv1.DaemonSet, name string) (corev1.Container, bool) {
 	return corev1.Container{}, false
 }
 
+func hasVolume(d *appsv1.DaemonSet, name string) bool {
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func TestGetOTelProfiles(t *testing.T) {
 	profiles, err := getOTelProfiles(arov1alpha1.OperatorFlags{})
 	if err != nil {
@@ -295,6 +304,9 @@ func TestOTelDaemonSets(t *testing.T) {
 		}
 		if collector.Image == "" {
 			t.Fatalf("missing image for %s", ds.Name)
+		}
+		if !hasVolume(ds, "machine-id") {
+			t.Fatalf("missing machine-id volume for %s", ds.Name)
 		}
 		if ds.Spec.Template.Spec.PriorityClassName == "" {
 			t.Fatalf("missing priority class for %s", ds.Name)
