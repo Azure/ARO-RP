@@ -4,6 +4,7 @@ package gatewayauth
 // Licensed under the Apache License 2.0.
 
 import (
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -61,7 +62,7 @@ func (c *gatewayCache) OnDoc(doc *api.GatewayDocument) {
 				// don't do anything if it already exists
 				return oldValue, xsync.CancelOp
 			} else {
-				return doc.Gateway.ID, xsync.UpdateOp
+				return strings.ToLower(doc.Gateway.ID), xsync.UpdateOp
 			}
 		}
 	})

@@ -178,7 +178,22 @@ exporters:
 processors:
   attributes/cluster:
     actions:
-      - key: resourceid
+      - key: environment
+        value: \"${ENVIRONMENT,,}\"
+        action: upsert
+      - key: region
+        value: \"${LOCATION,,}\"
+        action: upsert
+      - key: subscription_id
+        from_context: \"auth.clusterSubscriptionID\"
+        action: upsert
+      - key: resource_group
+        from_context: \"auth.clusterResourceGroup\"
+        action: upsert
+      - key: resource_name
+        from_context: \"auth.clusterResourceName\"
+        action: upsert
+      - key: resource_id
         from_context: \"auth.clusterResourceID\"
         action: upsert
 
