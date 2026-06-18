@@ -373,28 +373,28 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 										Type: "spc_t",
 									},
 								},
-											VolumeMounts: []corev1.VolumeMount{
-												{
-													Name:      "log",
-													ReadOnly:  true,
-													MountPath: "/var/log",
-												},
-												{
-													Name:      "machine-id",
-													ReadOnly:  true,
-													MountPath: "/etc/machine-id",
-												},
-												{
-													Name:      "otel-config",
-													ReadOnly:  true,
-													MountPath: "/etc/otel",
-												},
-												{
-													Name:      "otel-file-storage",
-													ReadOnly:  false,
-													MountPath: "/var/lib/otelcol/file_storage",
-												},
-											},
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											Name:      "log",
+											ReadOnly:  true,
+											MountPath: "/var/log",
+										},
+										{
+											Name:      "machine-id",
+											ReadOnly:  true,
+											MountPath: "/etc/machine-id",
+										},
+										{
+											Name:      "otel-config",
+											ReadOnly:  true,
+											MountPath: "/etc/otel",
+										},
+										{
+											Name:      "otel-file-storage",
+											ReadOnly:  false,
+											MountPath: "/var/lib/otelcol/file_storage",
+										},
+									},
 							},
 						},
 					},
