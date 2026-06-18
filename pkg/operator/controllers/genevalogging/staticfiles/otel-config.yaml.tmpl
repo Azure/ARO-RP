@@ -46,7 +46,7 @@ receivers:
       - /var/log/containers/*_openshift-serverless_*.log
       - /var/log/containers/*_openshift-pipelines_*.log
       - /var/log/containers/*_openshift-nfd_*.log
-    start_at: beginning
+    start_at: end
     storage: file_storage
     include_file_path: true
     include_file_path_resolved: true
@@ -71,6 +71,21 @@ receivers:
             fatal: F
             info: I
             debug: D
+        on_error: send_quiet
+      - id: logrus_parse
+        type: regex_parser
+        parse_from: body
+        parse_to: body
+        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?:(?: [^= ]+=[^ ]+)*)?(?: file="(?<src_file>[^":]+):(?<src_line>\d+)")?.*$'
+        severity:
+          parse_from: body.severity
+          mapping:
+            warn: warn
+            warning: warn
+            error: error
+            fatal: fatal
+            info: info
+            debug: debug
         on_error: send_quiet
       - id: klog_value_parse
         type: key_value_parser
@@ -108,6 +123,24 @@ processors:
     logs:
       log_record:
         - 'not ((IsString(body) and (IsMatch(body, "level=(error|warn|warning)") or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body, "Update error .*: ClusterOperatorDegraded"))) or (IsMap(body) and ((IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$")) or (IsString(body["message"]) and (IsMatch(body["message"], "level=(error|warn|warning)") or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body["message"], "Update error .*: ClusterOperatorDegraded"))))))'
+  filter/drop-journald-noise:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body) and IsMatch(body, "flow_mods")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body) and IsMatch(body, "kex_exchange_identification|Connection reset by")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body) and IsMatch(body, "new Veth device|new Open vSwitch Port device|carrier: link connected")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body) and IsMatch(body, "entered promiscuous mode|left promiscuous mode")'
+  filter/keep-journald-high-signal:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'not ((IsString(attributes["PRIORITY"]) and (attributes["PRIORITY"] == "0" or attributes["PRIORITY"] == "1" or attributes["PRIORITY"] == "2" or attributes["PRIORITY"] == "3" or attributes["PRIORITY"] == "4")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kubenswrapper" and IsString(body) and IsMatch(body, "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr=")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "crio" and IsString(body) and IsMatch(body, "level=(error|warn|warning|fatal)|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berror\\b")))'
+  filter/keep-audit-write-verbs:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'not (IsMap(body) and IsString(body["verb"]) and IsMatch(body["verb"], "^(create|update|delete|patch)$"))'
 {{- else if eq .Profile "reduced-logs" }}
   filter/drop-olm-noise:
     error_mode: ignore
@@ -118,6 +151,14 @@ processors:
         - IsString(body) and IsMatch(body, "resolving sources|checking if subscriptions need update")
         - IsString(body) and IsMatch(body, "evaluating current pod|matching label selector, 1 have the correct images and matching hash")
         - IsString(body) and IsMatch(body, "No subscriptions were found in namespace")
+  filter/drop-journald-noise:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body) and IsMatch(body, "flow_mods")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body) and IsMatch(body, "kex_exchange_identification|Connection reset by")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body) and IsMatch(body, "new Veth device|new Open vSwitch Port device|carrier: link connected")'
+        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body) and IsMatch(body, "entered promiscuous mode|left promiscuous mode")'
 {{- end }}
   transform/log-parity:
     error_mode: ignore
@@ -164,8 +205,33 @@ processors:
           - set(log.attributes["CONTAINER"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
           - set(log.attributes["POD"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
           - set(log.attributes["NAMESPACE"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
-          - set(log.attributes["NODE"], "${env:MONITORING_ROLE_INSTANCE}")
+          - set(log.attributes["container"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
+          - set(log.attributes["pod"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
+          - set(log.attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
+          - set(log.attributes["node"], "${env:MONITORING_ROLE_INSTANCE}")
+          - set(log.attributes["RoleInstance"], "${env:MONITORING_ROLE_INSTANCE}")
+          - set(log.attributes["MESSAGE"], log.body)
+          - set(log.attributes["raw_json_body"], log.body)
           # Preserve original nested objects so unmapped keys are retained.
+  attributes/common:
+    actions:
+      - key: ENVIRONMENT
+        value: ${env:ENVIRONMENT}
+        action: upsert
+      - key: Environment
+        action: delete
+{{- if .EmitSourceFields }}
+{{- range .Sources }}
+  attributes/source-{{ .Name }}:
+    actions:
+      - key: source_name
+        value: {{ .Name }}
+        action: upsert
+      - key: EventName
+        value: {{ .EventName }}
+        action: upsert
+{{- end }}
+{{- end }}
   batch: {}
 
 extensions:
@@ -186,13 +252,63 @@ exporters:
 service:
   extensions: [health_check, file_storage]
   pipelines:
-    logs:
-      receivers: [journald, file_log/containers, file_log/audit]
-{{- if eq .Profile "minimal-logs" }}
-      processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, batch]
-{{- else if eq .Profile "reduced-logs" }}
-      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, batch]
+{{- range .Sources }}
+    logs/{{ .Name }}:
+      receivers: [{{ .Receiver }}]
+{{- if eq .Name "journald" }}
+{{- if eq $.Profile "minimal-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
-      processors: [memory_limiter, transform/log-parity, batch]
+      processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, batch]
 {{- end }}
-      exporters: [{{ .GatewayExporterID }}]
+{{- else if eq $.Profile "reduced-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- end }}
+{{- else if eq .Name "audit" }}
+{{- if eq $.Profile "minimal-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- end }}
+{{- else }}
+{{- if eq $.Profile "minimal-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else if eq $.Profile "reduced-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- end }}
+{{- end }}
+      exporters: [{{ $.GatewayExporterID }}]
+{{- end }}

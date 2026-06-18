@@ -82,7 +82,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action configureAPIServerCertificate]",
 		"[Action configureIngressCertificate]",
 		"[Action initializeOperatorDeployer]",
-		"[Action renewMDSDCertificate]",
 	}
 
 	managedIdentityCertificateRenewalSteps := append(

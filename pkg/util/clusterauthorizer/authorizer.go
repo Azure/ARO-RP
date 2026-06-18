@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -64,5 +63,5 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 }
 
 func GetTokenCredential(environment *azureclient.AROEnvironment) (azcore.TokenCredential, error) {
-	return azidentity.NewDefaultAzureCredential(environment.DefaultAzureCredentialOptions())
+	return environment.NewTokenCredential()
 }

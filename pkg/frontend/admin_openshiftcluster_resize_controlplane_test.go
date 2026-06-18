@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -74,11 +74,11 @@ func masterMachine(name, vmSize, phase string) machinev1beta1.Machine {
 func strPtr(s string) *string { return &s }
 
 func cpmsJSON(state string) []byte {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"apiVersion": "machine.openshift.io/v1",
 		"kind":       "ControlPlaneMachineSet",
-		"metadata":   map[string]interface{}{"name": "cluster", "namespace": machineNamespace},
-		"spec":       map[string]interface{}{"state": state},
+		"metadata":   map[string]any{"name": "cluster", "namespace": machineNamespace},
+		"spec":       map[string]any{"state": state},
 	}
 	b, _ := json.Marshal(obj)
 	return b
@@ -93,16 +93,22 @@ func nodeJSONWithSchedulability(name string, ready, unschedulable bool) []byte {
 	if ready {
 		status = "True"
 	}
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"apiVersion": "v1",
 		"kind":       "Node",
-		"metadata":   map[string]interface{}{"name": name},
-		"spec": map[string]interface{}{
+		"metadata": map[string]any{
+			"name": name,
+			"labels": map[string]any{
+				nodeLabelInstanceType:     "Standard_D8s_v3",
+				nodeLabelBetaInstanceType: "Standard_D8s_v3",
+			},
+		},
+		"spec": map[string]any{
 			"unschedulable": unschedulable,
 		},
-		"status": map[string]interface{}{
-			"conditions": []interface{}{
-				map[string]interface{}{"type": "Ready", "status": status},
+		"status": map[string]any{
+			"conditions": []any{
+				map[string]any{"type": "Ready", "status": status},
 			},
 		},
 	}
@@ -111,20 +117,20 @@ func nodeJSONWithSchedulability(name string, ready, unschedulable bool) []byte {
 }
 
 func machineJSON(name, vmSize string) []byte {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"apiVersion": "machine.openshift.io/v1beta1",
 		"kind":       "Machine",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":              name,
 			"namespace":         machineNamespace,
 			"creationTimestamp": "2024-01-01T00:00:00Z",
-			"labels":            map[string]interface{}{machineLabelInstanceType: vmSize},
+			"labels":            map[string]any{machineLabelInstanceType: vmSize},
 		},
-		"spec": map[string]interface{}{
-			"providerSpec": map[string]interface{}{
-				"value": map[string]interface{}{
+		"spec": map[string]any{
+			"providerSpec": map[string]any{
+				"value": map[string]any{
 					"vmSize": vmSize,
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"creationTimestamp": nil,
 					},
 				},
@@ -293,11 +299,13 @@ func TestResizeControlPlane(t *testing.T) {
 
 	running := "Running"
 	desiredSize := "Standard_D16s_v5"
+	clusterResourceGroupName := "test-cluster"
 
 	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_adminactions.MockKubeActions, *mock_adminactions.MockAzureActions)
-		wantErr string
+		name            string
+		mocks           func(*mock_adminactions.MockKubeActions, *mock_adminactions.MockAzureActions)
+		wantErr         string
+		wantErrContains []string
 	}{
 		{
 			name: "all nodes already at desired size - no-op",
@@ -308,12 +316,26 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachine("master-2", desiredSize, running),
 				)
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
-				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-					Return(nodeJSON("master-2", true), nil)
-				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
-					Return(nodeJSON("master-1", true), nil)
-				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-					Return(nodeJSON("master-0", true), nil)
+				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+						Return(nodeJSON("master-0", true), nil),
+				)
 			},
 		},
 		{
@@ -333,6 +355,10 @@ func TestResizeControlPlane(t *testing.T) {
 						Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), clusterResourceGroupName, "master-2", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize("Standard_D8s_v3"), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-2", true).Return(nil),
@@ -347,100 +373,20 @@ func TestResizeControlPlane(t *testing.T) {
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
 						Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-				)
-			},
-		},
-		{
-			name: "drain fails",
-			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
-					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
-
-				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
-					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").
-						Return(errors.New("could not drain node after 3 retries: drain error")),
-				)
-			},
-			wantErr: "failed to resize node master-0: draining node: could not drain node after 3 retries: drain error",
-		},
-		{
-			name: "stop VM fails",
-			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
-					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
-
-				gomock.InOrder(
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+						Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+						Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
-					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
-					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).
-						Return(errors.New("Azure capacity error")),
 				)
 			},
-			wantErr: "failed to resize node master-0: stopping VM: Azure capacity error",
-		},
-		{
-			name: "resize VM fails",
-			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
-					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
-
-				gomock.InOrder(
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
-					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
-					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
-					a.EXPECT().VMResize(gomock.Any(), "master-0", desiredSize).
-						Return(errors.New("Azure resize error")),
-				)
-			},
-			wantErr: "failed to resize node master-0: resizing VM: Azure resize error",
-		},
-		{
-			name: "start VM fails",
-			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
-					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
-
-				gomock.InOrder(
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
-					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
-					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
-					a.EXPECT().VMResize(gomock.Any(), "master-0", desiredSize).Return(nil),
-					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").
-						Return(errors.New("start failed")),
-				)
-			},
-			wantErr: "failed to resize node master-0: starting VM: start failed",
-		},
-		{
-			name: "uncordon fails",
-			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
-					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
-
-				gomock.InOrder(
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
-					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
-					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
-					a.EXPECT().VMResize(gomock.Any(), "master-0", desiredSize).Return(nil),
-					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).
-						Return(errors.New("uncordon failure")),
-				)
-			},
-			wantErr: "failed to resize node master-0: uncordoning node: uncordon failure",
 		},
 		{
 			name: "pre-loop gate fails when node is not ready",
@@ -477,9 +423,15 @@ func TestResizeControlPlane(t *testing.T) {
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			a := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(k, a)
+			k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+				Return(healthyEtcdJSON(), nil).AnyTimes()
 
-			err := resizeControlPlane(ctx, log, k, a, desiredSize, true)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			err := resizeControlPlane(ctx, log, k, a, desiredSize, true, clusterResourceGroupName)
+			if len(tt.wantErrContains) > 0 {
+				assertErrorContainsAll(t, err, tt.wantErrContains...)
+			} else {
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			}
 		})
 	}
 }
@@ -540,32 +492,111 @@ func TestUpdateMachineVMSize(t *testing.T) {
 	}
 }
 
-func TestUpdateNodeInstanceTypeLabels(t *testing.T) {
+func TestSetNodeInstanceTypeLabels(t *testing.T) {
 	ctx := context.Background()
+	wantVMSize := "Standard_D16s_v5"
+
+	t.Run("rejects empty vmSize", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		k := mock_adminactions.NewMockKubeActions(ctrl)
+
+		err := setNodeInstanceTypeLabels(ctx, k, "master-0", "")
+		utilerror.AssertErrorMessage(t, err, "node instance type labels require a non-empty VM size")
+	})
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mock_adminactions.MockKubeActions)
+		mocks   func(*testing.T, *mock_adminactions.MockKubeActions)
 		wantErr string
 	}{
 		{
 			name: "success",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
+			mocks: func(t *testing.T, k *mock_adminactions.MockKubeActions) {
+				t.Helper()
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 					Return(nodeJSON("master-0", true), nil)
-				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil)
+				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, obj any) error {
+						t.Helper()
+
+						unstructuredObj, ok := obj.(*unstructured.Unstructured)
+						if !ok {
+							t.Fatalf("unexpected object type %T", obj)
+						}
+
+						labels, found, err := unstructured.NestedStringMap(unstructuredObj.Object, "metadata", "labels")
+						if err != nil {
+							t.Fatalf("unexpected nested labels error: %v", err)
+						}
+						if !found {
+							t.Fatal("expected metadata.labels to be present")
+						}
+						if labels[nodeLabelInstanceType] != wantVMSize {
+							t.Fatalf("expected %s label to be %q, got %q", nodeLabelInstanceType, wantVMSize, labels[nodeLabelInstanceType])
+						}
+						if labels[nodeLabelBetaInstanceType] != wantVMSize {
+							t.Fatalf("expected %s label to be %q, got %q", nodeLabelBetaInstanceType, wantVMSize, labels[nodeLabelBetaInstanceType])
+						}
+
+						return nil
+					})
 			},
 		},
 		{
 			name: "retries on failure",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
+			mocks: func(t *testing.T, k *mock_adminactions.MockKubeActions) {
+				t.Helper()
 				gomock.InOrder(
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(errors.New("conflict")),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).
+						DoAndReturn(func(_ context.Context, obj any) error {
+							t.Helper()
+
+							unstructuredObj, ok := obj.(*unstructured.Unstructured)
+							if !ok {
+								t.Fatalf("unexpected object type %T", obj)
+							}
+
+							labels, found, err := unstructured.NestedStringMap(unstructuredObj.Object, "metadata", "labels")
+							if err != nil {
+								t.Fatalf("unexpected nested labels error: %v", err)
+							}
+							if !found {
+								t.Fatal("expected metadata.labels to be present")
+							}
+							if labels[nodeLabelInstanceType] != wantVMSize || labels[nodeLabelBetaInstanceType] != wantVMSize {
+								t.Fatalf("expected both instance type labels to be %q, got %q and %q", wantVMSize, labels[nodeLabelInstanceType], labels[nodeLabelBetaInstanceType])
+							}
+
+							return errors.New("conflict")
+						}),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 						Return(nodeJSON("master-0", true), nil),
-					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).
+						DoAndReturn(func(_ context.Context, obj any) error {
+							t.Helper()
+
+							unstructuredObj, ok := obj.(*unstructured.Unstructured)
+							if !ok {
+								t.Fatalf("unexpected object type %T", obj)
+							}
+
+							labels, found, err := unstructured.NestedStringMap(unstructuredObj.Object, "metadata", "labels")
+							if err != nil {
+								t.Fatalf("unexpected nested labels error: %v", err)
+							}
+							if !found {
+								t.Fatal("expected metadata.labels to be present")
+							}
+							if labels[nodeLabelInstanceType] != wantVMSize || labels[nodeLabelBetaInstanceType] != wantVMSize {
+								t.Fatalf("expected both instance type labels to be %q, got %q and %q", wantVMSize, labels[nodeLabelInstanceType], labels[nodeLabelBetaInstanceType])
+							}
+
+							return nil
+						}),
 				)
 			},
 		},
@@ -575,9 +606,9 @@ func TestUpdateNodeInstanceTypeLabels(t *testing.T) {
 			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
-			tt.mocks(k)
+			tt.mocks(t, k)
 
-			err := updateNodeInstanceTypeLabels(ctx, k, "master-0", "Standard_D16s_v5")
+			err := setNodeInstanceTypeLabels(ctx, k, "master-0", wantVMSize)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -641,46 +672,27 @@ func TestAdminResizeControlPlane(t *testing.T) {
 				addSubscriptionDoc(f)
 			},
 			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+					masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
+					masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
+					masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
+				))
 				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(healthyKubeAPIServerJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(healthyKubeAPIServerPodsJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-					Return(healthyEtcdJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-					Return(validServicePrincipalJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-					AnyTimes()
-
-				running := "Running"
-				k.EXPECT().
-					KubeList(gomock.Any(), "Machine", machineNamespace).
-					Return(masterMachineListJSON(
-						masterMachine("master-0", "Standard_D8s_v3", running),
-						masterMachine("master-1", "Standard_D8s_v3", running),
-						masterMachine("master-2", "Standard_D8s_v3", running),
-					), nil).
-					AnyTimes()
+					KubeList(gomock.Any(), "Node", "").
+					Return(controlPlaneNodeListJSON(
+						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+					), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
-					Return(nodeJSON("master-2", true), nil)
+					Return(nodeJSON("master-2", true), nil).
+					AnyTimes()
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
-					Return(nodeJSON("master-1", true), nil)
+					Return(nodeJSON("master-1", true), nil).
+					AnyTimes()
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
-					Return(nodeJSON("master-0", true), nil)
+					Return(nodeJSON("master-0", true), nil).
+					AnyTimes()
 			},
 			azureMocks: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
@@ -704,6 +716,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 					"master-1": "Standard_D8s_v3",
 					"master-2": "Standard_D8s_v3",
 				})
+				healthyControlPlaneInventoryMock(nil, a, "test-cluster", "Standard_D8s_v3")
 			},
 			wantStatusCode: http.StatusOK,
 		},

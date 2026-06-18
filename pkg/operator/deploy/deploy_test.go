@@ -140,6 +140,47 @@ func TestCheckIngressIP(t *testing.T) {
 	}
 }
 
+func TestGatewayTelemetryDomain(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		location  string
+		appSuffix string
+		want      string
+	}{
+		{
+			name:      "public cloud endpoint",
+			location:  "eastus",
+			appSuffix: "aro.azure.com",
+			want:      "telemetry.eastus.aro.azure.com",
+		},
+		{
+			name:      "us gov endpoint",
+			location:  "usgovvirginia",
+			appSuffix: "aro.azure.us",
+			want:      "telemetry.usgovvirginia.aro.azure.us",
+		},
+		{
+			name:      "returns empty for missing location",
+			location:  "",
+			appSuffix: "aro.azure.com",
+			want:      "",
+		},
+		{
+			name:      "returns empty for missing app suffix",
+			location:  "eastus",
+			appSuffix: "",
+			want:      "",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := gatewayTelemetryDomain(tt.location, tt.appSuffix)
+			if got != tt.want {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCreateDeploymentData(t *testing.T) {
 	operatorImageTag := "v20071110"
 	operatorImageUntagged := "arosvc.azurecr.io/aro"

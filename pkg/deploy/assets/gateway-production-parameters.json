@@ -14,6 +14,12 @@
         "azureSecPackVSATenantId": {
             "value": ""
         },
+        "clusterMdsdAccount": {
+            "value": ""
+        },
+        "clusterMdsdNamespace": {
+            "value": ""
+        },
         "databaseAccountName": {
             "value": ""
         },
@@ -33,6 +39,9 @@
             "value": "info"
         },
         "gatewayMdsdConfigVersion": {
+            "value": ""
+        },
+        "gatewayOtelCollectorImage": {
             "value": ""
         },
         "gatewayServicePrincipalId": {
@@ -69,6 +78,9 @@
                 "japanwest",
                 "uaecentral"
             ]
+        },
+        "otelClusterMdsdConfigVersion": {
+            "value": ""
         },
         "rpImage": {
             "value": ""

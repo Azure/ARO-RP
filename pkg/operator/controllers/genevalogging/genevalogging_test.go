@@ -5,6 +5,7 @@ package genevalogging
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,6 +26,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -44,6 +46,15 @@ func getContainer(d *appsv1.DaemonSet, name string) (corev1.Container, bool) {
 		}
 	}
 	return corev1.Container{}, false
+}
+
+func hasVolume(d *appsv1.DaemonSet, name string) bool {
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func TestGetOTelProfiles(t *testing.T) {
@@ -68,19 +79,140 @@ func TestGetOTelProfiles(t *testing.T) {
 }
 
 func TestSelectOTelConfig(t *testing.T) {
-	full := selectOTelConfig(otelProfileMaxLogs)
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, batch]") {
+	full, err := selectOTelConfig(otelProfileMaxLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
 		t.Fatal("full config missing expected processor chain")
 	}
+	if !strings.Contains(full, "logs/journald:") || !strings.Contains(full, "logs/containers:") || !strings.Contains(full, "logs/audit:") {
+		t.Fatal("full config missing expected per-source pipelines")
+	}
+	if strings.Contains(full, "key: EventName") || strings.Contains(full, "key: source_name") {
+		t.Fatal("full config should not include source fields when disabled")
+	}
+	if !strings.Contains(full, "key: ENVIRONMENT") {
+		t.Fatal("full config missing ENVIRONMENT mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
+		t.Fatal("full config missing node mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"RoleInstance\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
+		t.Fatal("full config missing RoleInstance mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"namespace\"], resource.attributes[\"k8s.namespace.name\"]) where resource.attributes[\"k8s.namespace.name\"] != nil") {
+		t.Fatal("full config missing lowercase namespace mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"pod\"], resource.attributes[\"k8s.pod.name\"]) where resource.attributes[\"k8s.pod.name\"] != nil") {
+		t.Fatal("full config missing lowercase pod mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"container\"], resource.attributes[\"k8s.container.name\"]) where resource.attributes[\"k8s.container.name\"] != nil") {
+		t.Fatal("full config missing lowercase container mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body)") {
+		t.Fatal("full config missing raw MESSAGE mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
+		t.Fatal("full config missing raw_json_body mapping")
+	}
+	if !strings.Contains(full, "id: logrus_parse") {
+		t.Fatal("full config missing logrus parser for container logs")
+	}
 
-	reduced := selectOTelConfig(otelProfileReducedLogs)
+	reduced, err := selectOTelConfig(otelProfileReducedLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(reduced, "filter/drop-olm-noise:") {
 		t.Fatal("reduced config missing noise filter")
 	}
+	if !strings.Contains(reduced, "filter/drop-journald-noise:") {
+		t.Fatal("reduced config missing journald noise filter")
+	}
+	if !strings.Contains(reduced, "processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("reduced config missing expected journald processor chain")
+	}
+	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("reduced config missing unfiltered audit pipeline")
+	}
+}
 
-	highSignal := selectOTelConfig(otelProfileMinimalLogs)
+	highSignal, err := selectOTelConfig(otelProfileMinimalLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(highSignal, "filter/keep-only-high-signal:") {
 		t.Fatal("high-signal config missing keep-only-high-signal filter")
+	}
+	if !strings.Contains(highSignal, "filter/drop-journald-noise:") {
+		t.Fatal("high-signal config missing journald noise filter")
+	}
+	if !strings.Contains(highSignal, "filter/keep-journald-high-signal:") {
+		t.Fatal("high-signal config missing journald high-signal filter")
+	}
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("high-signal config missing expected journald processor chain")
+	}
+	if !strings.Contains(highSignal, "filter/keep-audit-write-verbs:") {
+		t.Fatal("high-signal config missing audit write-verb filter")
+	}
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("high-signal config missing expected audit processor chain")
+	}
+}
+
+func TestSelectOTelConfigIncludesSourceFieldsWhenEnabled(t *testing.T) {
+	full, err := selectOTelConfig(otelProfileMaxLogs, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(full, "key: EventName") || !strings.Contains(full, "key: source_name") {
+		t.Fatal("full config missing source fields when enabled")
+	}
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
+		t.Fatal("full config missing source processor when enabled")
+	}
+}
+
+func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	_, err := selectOTelConfig(otelProfileMaxLogs, false)
+	if err == nil {
+		t.Fatal("expected selectOTelConfig to return an error")
+	}
+}
+
+func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	var calledProfiles []otelProfile
+	renderOTelConfigFn = func(profile otelProfile, _ bool) (string, error) {
+		calledProfiles = append(calledProfiles, profile)
+		if profile == otelProfileMinimalLogs {
+			return "minimal-config", nil
+		}
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	cfg, err := selectOTelConfig(otelProfileMaxLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg != "minimal-config" {
+		t.Fatalf("expected minimal fallback config, got %q", cfg)
+	}
+	if !reflect.DeepEqual(calledProfiles, []otelProfile{otelProfileMaxLogs, otelProfileMinimalLogs}) {
+		t.Fatalf("unexpected render order: %#v", calledProfiles)
 	}
 }
 
@@ -154,8 +286,11 @@ func TestOTelDaemonSets(t *testing.T) {
 		Spec: arov1alpha1.ClusterSpec{
 			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
 			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				"aro.environment": "Test",
+			},
 		},
-	}, "10.0.0.8:4317", nil)
+	}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,8 +306,28 @@ func TestOTelDaemonSets(t *testing.T) {
 		if collector.Image == "" {
 			t.Fatalf("missing image for %s", ds.Name)
 		}
+		if !hasVolume(ds, "machine-id") {
+			t.Fatalf("missing machine-id volume for %s", ds.Name)
+		}
 		if ds.Spec.Template.Spec.PriorityClassName == "" {
 			t.Fatalf("missing priority class for %s", ds.Name)
+		}
+		wantHash := "worker-hash"
+		if ds.Name == "otel-collector-master" {
+			wantHash = "master-hash"
+		}
+		if gotHash := ds.Spec.Template.Annotations["aro.openshift.io/otel-config-sha256"]; gotHash != wantHash {
+			t.Fatalf("unexpected config hash annotation for %s: got %q want %q", ds.Name, gotHash, wantHash)
+		}
+		foundEnvironment := false
+		for _, env := range collector.Env {
+			if env.Name == "ENVIRONMENT" && env.Value == "Test" {
+				foundEnvironment = true
+				break
+			}
+		}
+		if !foundEnvironment {
+			t.Fatalf("missing ENVIRONMENT var for %s", ds.Name)
 		}
 	}
 }
@@ -245,6 +400,38 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 	}
 	if daemonsetCount != 0 {
 		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
+	}
+
+func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	instance := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+			},
+		},
+	}
+	cv := clusterVersion("4.11.0")
+
+	r := &Reconciler{
+		AROController: base.AROController{
+			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+		},
+	}
+
+	_, err := r.resources(context.Background(), instance)
+	if err == nil {
+		t.Fatal("expected resources to return an error when OTel config rendering fails")
 	}
 }
 

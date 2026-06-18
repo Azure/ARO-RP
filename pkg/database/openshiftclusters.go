@@ -93,7 +93,16 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 		return nil, err
 	}
 
-	doc, err = c.c.Create(ctx, doc.PartitionKey, doc, nil)
+	key := doc.Key
+	partitionKey := doc.PartitionKey
+	doc, err = c.c.Create(ctx, partitionKey, doc, nil)
+
+	if doc == nil && err == nil {
+		return nil, &cosmosdb.Error{
+			StatusCode: http.StatusInternalServerError,
+			Message:    fmt.Sprintf("creating OpenShift cluster: CosmosDB returned nil document with no error for key %q and partition key %q", key, partitionKey),
+		}
+	}
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -214,7 +223,15 @@ func (c *openShiftClusters) update(ctx context.Context, doc *api.OpenShiftCluste
 		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
-	return c.c.Replace(ctx, doc.PartitionKey, doc, options)
+	updatedDoc, err := c.c.Replace(ctx, doc.PartitionKey, doc, options)
+	if updatedDoc == nil && err == nil {
+		return nil, &cosmosdb.Error{
+			StatusCode: http.StatusInternalServerError,
+			Message:    fmt.Sprintf("OpenShiftClusters Replace returned nil document with nil error for key %q and partition key %q", doc.Key, doc.PartitionKey),
+		}
+	}
+
+	return updatedDoc, err
 }
 
 func (c *openShiftClusters) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {

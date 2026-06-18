@@ -179,17 +179,49 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	wg.Wait()
 
 	if len(details) > 0 {
-		return nil, &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInvalidParameter,
-				Message: "Pre-flight validation failed.",
-				Details: details,
-			},
-		}
+		return nil, preResizeControlPlaneValidationError(details)
+	}
+
+	collect(validateResizeControlPlaneInventory(ctx, log, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
+	if len(details) > 0 {
+		return nil, preResizeControlPlaneValidationError(details)
 	}
 
 	return json.Marshal("All pre-flight checks passed")
+}
+
+func preResizeControlPlaneValidationError(details []api.CloudErrorBody) *api.CloudError {
+	return &api.CloudError{
+		StatusCode: http.StatusBadRequest,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code:    api.CloudErrorCodeInvalidParameter,
+			Message: "Pre-flight validation failed.",
+			Details: details,
+		},
+	}
+}
+
+// validateResizeControlPlaneInventory reuses the live control-plane inventory
+// validation path so snapshot capture only needs to record rollback state.
+func validateResizeControlPlaneInventory(
+	ctx context.Context,
+	log *logrus.Entry,
+	k adminactions.KubeActions,
+	a adminactions.AzureActions,
+	clusterResourceGroupID string,
+) error {
+	err := validateLiveControlPlaneInventory(log, ctx, k, a, clusterResourceGroupID)
+	if err != nil {
+		err = convertErrorLineEndings(err)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidParameter,
+			"controlPlaneInventory",
+			err.Error(),
+		)
+	}
+
+	return nil
 }
 
 // defaultValidateResizeQuota creates an FP-authorized compute usage client and
