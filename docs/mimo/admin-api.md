@@ -20,6 +20,15 @@ curl -X PUT -k "https://localhost:8443/admin/subscriptions/SUBSCRIPTION_ID/resou
 
 Replace `SUBSCRIPTION_ID`, `RESOURCE_GROUP`, and `CLUSTER_NAME` with the target cluster's values. Registered task IDs are defined in [`pkg/mimo/const.go`](../../pkg/mimo/const.go).
 
+### Common task IDs
+
+- TLS cert rotation: `9b741734-6505-447f-8510-85eb0ae561a2`
+- Operator flags update: `b41749fc-af26-4ab7-b5a1-e03f3ee4cba6`
+
+The operator-flags task is used for fleet rollouts of
+`properties.operatorFlags` changes (for example OTEL profile and source-field
+settings).
+
 ## GET /admin/RESOURCE_ID/maintenancemanifests/MANIFEST_ID
 
 Returns a manifest.

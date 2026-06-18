@@ -50,3 +50,19 @@ Used in development only.
   in local development, full service development, and INT to tell the RP to use a
   mocked version of the MSI dataplane for the cluster MSI. Only relevant to
   clusters that have a cluster MSI.
+
+## Cluster operator flags (includes OTEL)
+
+Cluster-scoped operator flags are stored in `OpenShiftCluster` documents
+(`properties.operatorFlags`) and applied in-cluster by operator deploy logic.
+
+OTEL/Geneva logging controls are operator flags, including:
+
+- `aro.genevalogging.enabled`
+- `aro.genevalogging.otel.profile`
+- `aro.genevalogging.otel.master.profile`
+- `aro.genevalogging.otel.worker.profile`
+- `aro.genevalogging.otel.emitsourcefields`
+
+For OTEL rollout details (including gateway dependency and MIMO operator-flags
+task usage), see [Geneva Logging OTEL Developer Guide](./otel-geneva-logging.md).
