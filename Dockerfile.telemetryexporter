@@ -27,6 +27,7 @@ RUN microdnf install -y systemd && \
     microdnf clean all && \
     rm -rf /var/cache/dnf /var/cache/yum
 COPY --from=builder /app/telemetry/exporter/build/collector/telemetryexporter /usr/local/bin/
-ENTRYPOINT ["telemetryexporter"]
+RUN chmod 0755 /usr/local/bin/telemetryexporter
+ENTRYPOINT ["/usr/local/bin/telemetryexporter"]
 USER 1000
 ENV HOME=/tmp

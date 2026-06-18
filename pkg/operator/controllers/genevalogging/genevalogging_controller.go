@@ -10,6 +10,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,7 +21,7 @@ import (
 
 	securityv1 "github.com/openshift/api/security/v1"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
@@ -30,10 +31,8 @@ import (
 const (
 	ControllerName = "GenevaLogging"
 
-	// full pullspec of fluentbit image
-	controllerFluentbitPullSpec = "aro.genevalogging.fluentbit.pullSpec"
-	// full pullspec of mdsd image
-	controllerMDSDPullSpec = "aro.genevalogging.mdsd.pullSpec"
+	// full pullspec of otel collector image
+	controllerOTelPullSpec = "aro.genevalogging.otel.pullSpec"
 )
 
 // Reconciler reconciles a Cluster object
@@ -55,17 +54,11 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 }
 
 func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.Cluster) error {
-	operatorSecret := &corev1.Secret{}
-	operatorSecretName := types.NamespacedName{
-		Namespace: operator.Namespace,
-		Name:      operator.SecretName,
-	}
-	err := r.Client.Get(ctx, operatorSecretName, operatorSecret)
-	if err != nil {
+	if err := r.cleanupStaleResources(ctx); err != nil {
 		return err
 	}
 
-	resources, err := r.resources(ctx, instance, operatorSecret.Data[GenevaCertName], operatorSecret.Data[GenevaKeyName])
+	resources, err := r.resources(ctx, instance)
 	if err != nil {
 		return err
 	}
@@ -85,6 +78,59 @@ func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.
 		return err
 	}
 
+	// OTel daemonsets should never be manually "scaled down" via pod template
+	// node selectors. Reconciliation owns this field and clears any drift.
+	if err := r.clearOTelDaemonSetNodeSelectors(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Reconciler) clearOTelDaemonSetNodeSelectors(ctx context.Context) error {
+	for _, name := range []string{"otel-collector-master", "otel-collector-worker"} {
+		ds := &appsv1.DaemonSet{}
+		err := r.Client.Get(ctx, types.NamespacedName{Namespace: kubeNamespace, Name: name}, ds)
+		if kerrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		if len(ds.Spec.Template.Spec.NodeSelector) == 0 {
+			continue
+		}
+
+		ds.Spec.Template.Spec.NodeSelector = nil
+		if err := r.Client.Update(ctx, ds); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) cleanupStaleResources(ctx context.Context) error {
+	type staleResource struct {
+		groupKind string
+		namespace string
+		name      string
+	}
+
+	stale := []staleResource{
+		{"DaemonSet.apps", kubeNamespace, "mdsd"},
+		{"ConfigMap", kubeNamespace, "fluent-config"},
+		{"Secret", kubeNamespace, "certificates"},
+		{"ConfigMap", kubeNamespace, legacyGatewayCACMName},
+	}
+
+	for _, res := range stale {
+		if err := r.dh.EnsureDeleted(ctx, res.groupKind, res.namespace, res.name); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -96,7 +142,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.GenevaLoggingEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

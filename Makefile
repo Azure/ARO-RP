@@ -246,6 +246,22 @@ publish-image-autorest: image-autorest
 publish-image-fluentbit: image-fluentbit
 	docker push $(FLUENTBIT_IMAGE)
 
+.PHONY: publish-image-telemetrycollector
+publish-image-telemetrycollector: image-telemetrycollector
+	docker push $(TELEMETRY_COLLECTOR_IMAGE)
+
+.PHONY: print-image-digest-telemetrycollector
+print-image-digest-telemetrycollector:
+	@digest=$$(docker inspect --format='{{range .RepoDigests}}{{println .}}{{end}}' $(TELEMETRY_COLLECTOR_IMAGE) | grep -m1 '@sha256:' | sed 's/.*@//' || true); \
+	if [ -z "$$digest" ]; then \
+		echo "error: no repo digest found for $(TELEMETRY_COLLECTOR_IMAGE). Build/push first with 'make publish-image-telemetrycollector'."; \
+		exit 1; \
+	fi; \
+	echo "$$digest"
+
+.PHONY: publish-image-telemetrycollector-and-print-digest
+publish-image-telemetrycollector-and-print-digest: publish-image-telemetrycollector print-image-digest-telemetrycollector
+
 .PHONY: publish-image-proxy
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest

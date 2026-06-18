@@ -6,26 +6,20 @@ package genevalogging
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -33,525 +27,454 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
-
-func getContainer(d *appsv1.DaemonSet, containerName string) (corev1.Container, error) {
-	for _, container := range d.Spec.Template.Spec.Containers {
-		if container.Name == containerName {
-			return container, nil
-		}
-	}
-	return corev1.Container{}, errors.New("not found")
-}
 
 func clusterVersion(version string) configv1.ClusterVersion {
 	return configv1.ClusterVersion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "version",
-		},
-		Spec: configv1.ClusterVersionSpec{},
+		ObjectMeta: metav1.ObjectMeta{Name: "version"},
 		Status: configv1.ClusterVersionStatus{
-			History: []configv1.UpdateHistory{
-				{
-					State:   configv1.CompletedUpdate,
-					Version: version,
-				},
-			},
+			History: []configv1.UpdateHistory{{State: configv1.CompletedUpdate, Version: version}},
 		},
+	}
+}
+
+func getContainer(d *appsv1.DaemonSet, name string) (corev1.Container, bool) {
+	for _, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == name {
+			return c, true
+		}
+	}
+	return corev1.Container{}, false
+}
+
+func hasVolume(d *appsv1.DaemonSet, name string) bool {
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		if v.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func TestGetOTelProfiles(t *testing.T) {
+	profiles, err := getOTelProfiles(arov1alpha1.OperatorFlags{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profiles.master != otelProfileMinimalLogs || profiles.worker != otelProfileMinimalLogs {
+		t.Fatalf("unexpected default profiles: %#v", profiles)
+	}
+
+	profiles, err = getOTelProfiles(arov1alpha1.OperatorFlags{
+		operator.GenevaLoggingOTelMasterProfile: operator.GenevaLoggingOTelProfileMaxLogs,
+		operator.GenevaLoggingOTelWorkerProfile: operator.GenevaLoggingOTelProfileReducedLogs,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profiles.master != otelProfileMaxLogs || profiles.worker != otelProfileReducedLogs {
+		t.Fatalf("unexpected override profiles: %#v", profiles)
+	}
+}
+
+func TestSelectOTelConfig(t *testing.T) {
+	full, err := selectOTelConfig(otelProfileMaxLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("full config missing expected processor chain")
+	}
+	if !strings.Contains(full, "logs/journald:") || !strings.Contains(full, "logs/containers:") || !strings.Contains(full, "logs/audit:") {
+		t.Fatal("full config missing expected per-source pipelines")
+	}
+	if strings.Contains(full, "key: EventName") || strings.Contains(full, "key: source_name") {
+		t.Fatal("full config should not include source fields when disabled")
+	}
+	if !strings.Contains(full, "key: ENVIRONMENT") {
+		t.Fatal("full config missing ENVIRONMENT mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
+		t.Fatal("full config missing node mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"RoleInstance\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
+		t.Fatal("full config missing RoleInstance mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"namespace\"], resource.attributes[\"k8s.namespace.name\"]) where resource.attributes[\"k8s.namespace.name\"] != nil") {
+		t.Fatal("full config missing lowercase namespace mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"pod\"], resource.attributes[\"k8s.pod.name\"]) where resource.attributes[\"k8s.pod.name\"] != nil") {
+		t.Fatal("full config missing lowercase pod mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"container\"], resource.attributes[\"k8s.container.name\"]) where resource.attributes[\"k8s.container.name\"] != nil") {
+		t.Fatal("full config missing lowercase container mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body)") {
+		t.Fatal("full config missing raw MESSAGE mapping")
+	}
+	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
+		t.Fatal("full config missing raw_json_body mapping")
+	}
+	if !strings.Contains(full, "id: logrus_parse") {
+		t.Fatal("full config missing logrus parser for container logs")
+	}
+
+	reduced, err := selectOTelConfig(otelProfileReducedLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(reduced, "filter/drop-olm-noise:") {
+		t.Fatal("reduced config missing noise filter")
+	}
+	if !strings.Contains(reduced, "filter/drop-journald-noise:") {
+		t.Fatal("reduced config missing journald noise filter")
+	}
+	if !strings.Contains(reduced, "processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("reduced config missing expected journald processor chain")
+	}
+	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("reduced config missing unfiltered audit pipeline")
+	}
+
+	highSignal, err := selectOTelConfig(otelProfileMinimalLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(highSignal, "filter/keep-only-high-signal:") {
+		t.Fatal("high-signal config missing keep-only-high-signal filter")
+	}
+	if !strings.Contains(highSignal, "filter/drop-journald-noise:") {
+		t.Fatal("high-signal config missing journald noise filter")
+	}
+	if !strings.Contains(highSignal, "filter/keep-journald-high-signal:") {
+		t.Fatal("high-signal config missing journald high-signal filter")
+	}
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("high-signal config missing expected journald processor chain")
+	}
+	if !strings.Contains(highSignal, "filter/keep-audit-write-verbs:") {
+		t.Fatal("high-signal config missing audit write-verb filter")
+	}
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("high-signal config missing expected audit processor chain")
+	}
+}
+
+func TestSelectOTelConfigIncludesSourceFieldsWhenEnabled(t *testing.T) {
+	full, err := selectOTelConfig(otelProfileMaxLogs, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(full, "key: EventName") || !strings.Contains(full, "key: source_name") {
+		t.Fatal("full config missing source fields when enabled")
+	}
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
+		t.Fatal("full config missing source processor when enabled")
+	}
+}
+
+func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	_, err := selectOTelConfig(otelProfileMaxLogs, false)
+	if err == nil {
+		t.Fatal("expected selectOTelConfig to return an error")
+	}
+}
+
+func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	var calledProfiles []otelProfile
+	renderOTelConfigFn = func(profile otelProfile, _ bool) (string, error) {
+		calledProfiles = append(calledProfiles, profile)
+		if profile == otelProfileMinimalLogs {
+			return "minimal-config", nil
+		}
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	cfg, err := selectOTelConfig(otelProfileMaxLogs, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg != "minimal-config" {
+		t.Fatalf("expected minimal fallback config, got %q", cfg)
+	}
+	if !reflect.DeepEqual(calledProfiles, []otelProfile{otelProfileMaxLogs, otelProfileMinimalLogs}) {
+		t.Fatalf("unexpected render order: %#v", calledProfiles)
 	}
 }
 
 func TestGenevaLoggingNamespaceLabels(t *testing.T) {
-	tests := []struct {
-		name       string
-		cv         configv1.ClusterVersion
-		wantLabels map[string]string
-		wantErr    string
-	}{
-		{
-			name:       "cluster < 4.11, no labels",
-			cv:         clusterVersion("4.10.99"),
-			wantLabels: map[string]string{},
-		},
-		{
-			name:       "cluster >= 4.11, use pod security labels",
-			cv:         clusterVersion("4.11.0"),
-			wantLabels: privilegedNamespaceLabels,
-		},
-		{
-			name:    "cluster version doesn't exist",
-			cv:      configv1.ClusterVersion{},
-			wantErr: `clusterversions.config.openshift.io "version" not found`,
-		},
-		{
-			name:    "invalid version",
-			cv:      clusterVersion("abcd"),
-			wantErr: `could not parse version "abcd"`,
+	cv := clusterVersion("4.11.0")
+	r := &Reconciler{
+		AROController: base.AROController{
+			Client: ctrlfake.NewClientBuilder().WithObjects(&cv).Build(),
 		},
 	}
-	for _, tt := range tests {
-		ctx := context.Background()
 
-		controller := gomock.NewController(t)
-		defer controller.Finish()
-
-		mockDh := mock_dynamichelper.NewMockInterface(controller)
-
-		r := &Reconciler{
-			AROController: base.AROController{
-				Log:    logrus.NewEntry(logrus.StandardLogger()),
-				Client: ctrlfake.NewClientBuilder().WithObjects(&tt.cv).Build(),
-				Name:   ControllerName,
-			},
-			dh: mockDh,
-		}
-
-		labels, err := r.namespaceLabels(ctx)
-		utilerror.AssertErrorMessage(t, err, tt.wantErr)
-
-		if !reflect.DeepEqual(labels, tt.wantLabels) {
-			t.Errorf("got: %v\nwanted:%v\n", labels, tt.wantLabels)
-		}
-	}
-}
-
-// validateEnvironmentVars validates that both fluentbit and mdsd containers have the correct environment variables
-func validateEnvironmentVars(d *appsv1.DaemonSet, expectedValue string) []error {
-	var errs []error
-
-	// verify fluentbit has ENVIRONMENT env var
-	fluentbit, err := getContainer(d, "fluentbit")
+	labels, err := r.namespaceLabels(context.Background())
 	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to get fluentbit container: %w", err))
-		return errs
+		t.Fatal(err)
 	}
-	foundFluentbitEnv := false
-	for _, env := range fluentbit.Env {
-		if env.Name == "ENVIRONMENT" {
-			if env.Value != expectedValue {
-				errs = append(errs, fmt.Errorf("fluentbit ENVIRONMENT env var has value '%s', expected '%s'", env.Value, expectedValue))
-			}
-			foundFluentbitEnv = true
-			break
-		}
+	if !reflect.DeepEqual(labels, privilegedNamespaceLabels) {
+		t.Fatalf("got labels %v, want %v", labels, privilegedNamespaceLabels)
 	}
-	if !foundFluentbitEnv {
-		errs = append(errs, fmt.Errorf("fluentbit container missing ENVIRONMENT env var (expected value: '%s')", expectedValue))
+}
+
+func TestGenevaLoggingResourcesOTel(t *testing.T) {
+	instance := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID:               testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:                "acrDomain",
+			GatewayPrivateEndpointIP: "10.0.0.8",
+			GatewayTelemetryDomain:   "telemetry.eastus.aro.azure.com",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+			},
+		},
+	}
+	cv := clusterVersion("4.11.0")
+
+	r := &Reconciler{
+		AROController: base.AROController{
+			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+		},
 	}
 
-	// verify mdsd has MONITORING_ENVIRONMENT env var
-	mdsd, err := getContainer(d, "mdsd")
+	out, err := r.resources(context.Background(), instance)
 	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to get mdsd container: %w", err))
-		return errs
+		t.Fatal(err)
 	}
-	foundMdsdEnv := false
-	for _, env := range mdsd.Env {
-		if env.Name == "MONITORING_ENVIRONMENT" {
-			if env.Value != expectedValue {
-				errs = append(errs, fmt.Errorf("mdsd MONITORING_ENVIRONMENT env var has value '%s', expected '%s'", env.Value, expectedValue))
+
+	var daemonsetNames []string
+	var foundConfig bool
+	for _, obj := range out {
+		switch typed := obj.(type) {
+		case *corev1.ConfigMap:
+			if typed.Name == otelConfigMapName {
+				foundConfig = true
 			}
-			foundMdsdEnv = true
-			break
+		case *appsv1.DaemonSet:
+			daemonsetNames = append(daemonsetNames, typed.Name)
 		}
 	}
-	if !foundMdsdEnv {
-		errs = append(errs, fmt.Errorf("mdsd container missing MONITORING_ENVIRONMENT env var (expected value: '%s')", expectedValue))
+
+	if !foundConfig {
+		t.Fatal("missing expected OTel configmap")
 	}
-
-	return errs
-}
-
-func TestGenevaLoggingDaemonset(t *testing.T) {
-	nominalMocks := func(mockDh *mock_dynamichelper.MockInterface) {
-		mockDh.EXPECT().Ensure(
-			gomock.Any(),
-			gomock.AssignableToTypeOf(&securityv1.SecurityContextConstraints{}),
-			gomock.AssignableToTypeOf(&corev1.Namespace{}),
-			gomock.AssignableToTypeOf(&corev1.ConfigMap{}),
-			gomock.AssignableToTypeOf(&corev1.Secret{}),
-			gomock.AssignableToTypeOf(&corev1.ServiceAccount{}),
-			gomock.AssignableToTypeOf(&appsv1.DaemonSet{}),
-		).Times(1)
-	}
-
-	defaultConditions := []operatorv1.OperatorCondition{
-		utilconditions.ControllerDefaultAvailable(ControllerName),
-		utilconditions.ControllerDefaultProgressing(ControllerName),
-		utilconditions.ControllerDefaultDegraded(ControllerName),
-	}
-
-	tests := []struct {
-		name              string
-		request           ctrl.Request
-		operatorFlags     arov1alpha1.OperatorFlags
-		validateDaemonset func(*appsv1.DaemonSet) []error
-		mocks             func(mockDh *mock_dynamichelper.MockInterface)
-		wantErrMsg        string
-		wantConditions    []operatorv1.OperatorCondition
-	}{
-		{
-			name: "no flags given",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-
-				// we want the default fluentbit image
-				fluentbit, err := getContainer(d, "fluentbit")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(fluentbit.Image, version.FluentbitImage("acrDomain")) {
-					errs = append(errs, errors.New(err))
-				}
-
-				// we want the default mdsd image
-				mdsd, err := getContainer(d, "mdsd")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(mdsd.Image, version.MdsdImage("acrDomain")) {
-					errs = append(errs, errors.New(err))
-				}
-
-				return
-			},
-			mocks:          nominalMocks,
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "fluentbit/mdsd specs provided as empty strings",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-				controllerFluentbitPullSpec:   "",
-				controllerMDSDPullSpec:        "",
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-
-				// we want the default fluentbit image
-				fluentbit, err := getContainer(d, "fluentbit")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(fluentbit.Image, version.FluentbitImage("acrDomain")) {
-					errs = append(errs, errors.New(err))
-				}
-
-				// we want the default mdsd image
-				mdsd, err := getContainer(d, "mdsd")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(mdsd.Image, version.MdsdImage("acrDomain")) {
-					errs = append(errs, errors.New(err))
-				}
-
-				return
-			},
-			mocks:          nominalMocks,
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "fluentbit changed",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-				controllerFluentbitPullSpec:   "otherurl/fluentbit",
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-
-				// we want our fluentbit image
-				fluentbit, err := getContainer(d, "fluentbit")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(fluentbit.Image, "otherurl/fluentbit") {
-					errs = append(errs, errors.New(err))
-				}
-
-				// we want the default mdsd image
-				mdsd, err := getContainer(d, "mdsd")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(mdsd.Image, version.MdsdImage("acrDomain")) {
-					errs = append(errs, errors.New(err))
-				}
-
-				return
-			},
-			mocks:          nominalMocks,
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "mdsd changed",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-				controllerMDSDPullSpec:        "otherurl/mdsd",
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-
-				// we want the default fluentbit image
-				fluentbit, err := getContainer(d, "fluentbit")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(fluentbit.Image, version.FluentbitImage("acrDomain")) {
-					errs = append(errs, errors.New(err))
-				}
-
-				// we want the default mdsd image
-				mdsd, err := getContainer(d, "mdsd")
-				if err != nil {
-					errs = append(errs, err)
-					return
-				}
-				for _, err := range deep.Equal(mdsd.Image, "otherurl/mdsd") {
-					errs = append(errs, errors.New(err))
-				}
-
-				return
-			},
-			mocks:      nominalMocks,
-			wantErrMsg: "",
-			wantConditions: []operatorv1.OperatorCondition{
-				utilconditions.ControllerDefaultAvailable(ControllerName),
-				utilconditions.ControllerDefaultProgressing(ControllerName),
-				utilconditions.ControllerDefaultDegraded(ControllerName),
-			},
-		},
-		{
-			name: "ENVIRONMENT env var set to 'prod' from aro.environment operator flag",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-				"aro.environment":             "prod",
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-				errs = append(errs, validateEnvironmentVars(d, "prod")...)
-				return
-			},
-			mocks:          nominalMocks,
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "ENVIRONMENT env var set to 'int' from aro.environment operator flag",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-				"aro.environment":             "int",
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-				errs = append(errs, validateEnvironmentVars(d, "int")...)
-				return
-			},
-			mocks:          nominalMocks,
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-		{
-			name: "ENVIRONMENT env var empty when aro.environment flag not set",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
-			},
-			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
-				if len(d.Spec.Template.Spec.Containers) != 2 {
-					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
-				}
-				errs = append(errs, validateEnvironmentVars(d, "")...)
-				return
-			},
-			mocks:          nominalMocks,
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			instance := &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-				Status:     arov1alpha1.ClusterStatus{Conditions: defaultConditions},
-				Spec: arov1alpha1.ClusterSpec{
-					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
-					OperatorFlags: tt.operatorFlags,
-					ACRDomain:     "acrDomain",
-				},
-			}
-
-			cv := clusterVersion("4.11.0")
-			resources := []client.Object{
-				instance,
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: operator.Namespace,
-						Name:      operator.SecretName,
-					},
-					Data: map[string][]byte{
-						GenevaCertName: {},
-						GenevaKeyName:  {},
-					},
-				},
-				&securityv1.SecurityContextConstraints{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "privileged",
-					},
-				},
-				&cv,
-			}
-
-			mockDh := mock_dynamichelper.NewMockInterface(controller)
-
-			r := &Reconciler{
-				AROController: base.AROController{
-					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: ctrlfake.NewClientBuilder().WithObjects(resources...).Build(),
-					Name:   ControllerName,
-				},
-				dh: mockDh,
-			}
-
-			daemonset, err := r.daemonset(instance)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			errs := tt.validateDaemonset(daemonset)
-			for _, err := range errs {
-				t.Error(err)
-			}
-
-			tt.mocks(mockDh)
-			ctx := context.Background()
-			_, err = r.Reconcile(ctx, tt.request)
-
-			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
-			utilconditions.AssertControllerConditions(t, ctx, r.Client, tt.wantConditions)
-		})
+	if !reflect.DeepEqual(daemonsetNames, []string{"otel-collector-master", "otel-collector-worker"}) {
+		t.Fatalf("unexpected daemonsets: %v", daemonsetNames)
 	}
 }
 
-func TestGenevaConfigMapResources(t *testing.T) {
-	// Expected number of ENVIRONMENT filters in fluent.conf (one per log input type: journald, containers, audit)
-	const expectedEnvironmentFilterCount = 3
-
-	tests := []struct {
-		name          string
-		request       ctrl.Request
-		operatorFlags arov1alpha1.OperatorFlags
-		validate      func([]runtime.Object) []error
-	}{
-		{
-			name: "enabled",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				operator.GenevaLoggingEnabled: operator.FlagTrue,
+func TestOTelDaemonSets(t *testing.T) {
+	r := &Reconciler{}
+	daemonsets, err := r.otelDaemonSets(&arov1alpha1.Cluster{
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				"aro.environment": "Test",
 			},
-			validate: func(r []runtime.Object) (errs []error) {
-				maps := make(map[string]*corev1.ConfigMap)
-				for _, i := range r {
-					if d, ok := i.(*corev1.ConfigMap); ok {
-						maps[d.Name] = d
-					}
-				}
+		},
+	}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(daemonsets) != 2 {
+		t.Fatalf("got %d daemonsets, want 2", len(daemonsets))
+	}
 
-				c, ok := maps["fluent-config"]
-				if !ok {
-					errs = append(errs, errors.New("missing fluent-config ConfigMap"))
-				} else {
-					fConf := c.Data["fluent.conf"]
-					pConf := c.Data["parsers.conf"]
+	for _, ds := range daemonsets {
+		collector, ok := getContainer(ds, "otel-collector")
+		if !ok {
+			t.Fatalf("missing otel-collector container in %s", ds.Name)
+		}
+		if collector.Image == "" {
+			t.Fatalf("missing image for %s", ds.Name)
+		}
+		if !hasVolume(ds, "machine-id") {
+			t.Fatalf("missing machine-id volume for %s", ds.Name)
+		}
+		if ds.Spec.Template.Spec.PriorityClassName == "" {
+			t.Fatalf("missing priority class for %s", ds.Name)
+		}
+		wantHash := "worker-hash"
+		if ds.Name == "otel-collector-master" {
+			wantHash = "master-hash"
+		}
+		if gotHash := ds.Spec.Template.Annotations["aro.openshift.io/otel-config-sha256"]; gotHash != wantHash {
+			t.Fatalf("unexpected config hash annotation for %s: got %q want %q", ds.Name, gotHash, wantHash)
+		}
+		foundEnvironment := false
+		for _, env := range collector.Env {
+			if env.Name == "ENVIRONMENT" && env.Value == "Test" {
+				foundEnvironment = true
+				break
+			}
+		}
+		if !foundEnvironment {
+			t.Fatalf("missing ENVIRONMENT var for %s", ds.Name)
+		}
+	}
+}
 
-					if !strings.Contains(fConf, "[INPUT]") {
-						errs = append(errs, errors.New("fluent.conf missing required [INPUT] section"))
-					}
+func TestTelemetryGatewayTarget(t *testing.T) {
+	target, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{GatewayPrivateEndpointIP: "10.0.0.8", GatewayTelemetryDomain: "telemetry.eastus.aro.azure.com"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ready {
+		t.Fatal("expected telemetry target to be ready")
+	}
+	if target.endpoint != "telemetry.eastus.aro.azure.com:4317" {
+		t.Fatalf("got endpoint %q", target.endpoint)
+	}
+	if len(target.hostAliases) != 1 || target.hostAliases[0].IP != "10.0.0.8" {
+		t.Fatalf("unexpected host aliases: %#v", target.hostAliases)
+	}
+}
 
-					if !strings.Contains(pConf, "[PARSER]") {
-						errs = append(errs, errors.New("parsers.conf missing required [PARSER] section"))
-					}
+func TestTelemetryGatewayTargetNotReadyWithoutEndpointIP(t *testing.T) {
+	_, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ready {
+		t.Fatal("expected telemetry target to be not ready when gateway endpoint IP is missing")
+	}
+}
 
-					// verify ENVIRONMENT filters are present for all log types
-					if !strings.Contains(fConf, "Add Environment ${ENVIRONMENT}") {
-						errs = append(errs, errors.New("fluent.conf missing ENVIRONMENT filter - logs will not include environment field"))
-					}
-
-					// count how many times the ENVIRONMENT filter appears (should match expectedEnvironmentFilterCount)
-					environmentFilterCount := strings.Count(fConf, "Add Environment ${ENVIRONMENT}")
-					if environmentFilterCount != expectedEnvironmentFilterCount {
-						errs = append(errs, fmt.Errorf("expected %d ENVIRONMENT filters in fluent.conf (journald, containers, audit), got %d", expectedEnvironmentFilterCount, environmentFilterCount))
-					}
-				}
-
-				return
+func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T) {
+	instance := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instance := &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
-				Spec: arov1alpha1.ClusterSpec{
-					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
-					OperatorFlags: tt.operatorFlags,
-					ACRDomain:     "acrDomain",
-				},
-			}
+	cv := clusterVersion("4.11.0")
 
-			scc := &securityv1.SecurityContextConstraints{
-				ObjectMeta: metav1.ObjectMeta{Name: "privileged"},
-			}
+	r := &Reconciler{
+		AROController: base.AROController{
+			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+		},
+	}
 
-			cv := clusterVersion("4.11.0")
-			r := &Reconciler{
-				AROController: base.AROController{
-					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: ctrlfake.NewClientBuilder().WithObjects(instance, scc, &cv).Build(),
-					Name:   ControllerName,
-				},
-			}
+	out, err := r.resources(context.Background(), instance)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-			out, err := r.resources(context.Background(), instance, []byte{}, []byte{})
-			if err != nil {
-				t.Fatal(err)
+	var daemonsetCount int
+	var foundConfig bool
+	for _, obj := range out {
+		switch typed := obj.(type) {
+		case *corev1.ConfigMap:
+			if typed.Name == otelConfigMapName {
+				foundConfig = true
 			}
+		case *appsv1.DaemonSet:
+			daemonsetCount++
+		}
+	}
 
-			errs := tt.validate(out)
-			for _, err := range errs {
-				t.Error(err)
-			}
-		})
+	if !foundConfig {
+		t.Fatal("missing OTel configmap when gateway endpoint is not yet available")
+	}
+	if daemonsetCount != 0 {
+		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
+	}
+}
+
+func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.T) {
+	originalRender := renderOTelConfigFn
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
+		return "", errors.New("render failure")
+	}
+	defer func() {
+		renderOTelConfigFn = originalRender
+	}()
+
+	instance := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+			ACRDomain:  "acrDomain",
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+			},
+		},
+	}
+	cv := clusterVersion("4.11.0")
+
+	r := &Reconciler{
+		AROController: base.AROController{
+			Client: ctrlfake.NewClientBuilder().WithObjects(instance, &securityv1.SecurityContextConstraints{ObjectMeta: metav1.ObjectMeta{Name: "privileged"}}, &cv).Build(),
+		},
+	}
+
+	_, err := r.resources(context.Background(), instance)
+	if err == nil {
+		t.Fatal("expected resources to return an error when OTel config rendering fails")
+	}
+}
+
+func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
+	ctx := context.Background()
+	master := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{Name: "otel-collector-master", Namespace: kubeNamespace},
+		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
+	}
+	worker := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{Name: "otel-collector-worker", Namespace: kubeNamespace},
+		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
+	}
+
+	r := &Reconciler{AROController: base.AROController{Client: ctrlfake.NewClientBuilder().WithObjects(master, worker).Build()}}
+	if err := r.clearOTelDaemonSetNodeSelectors(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range []string{"otel-collector-master", "otel-collector-worker"} {
+		ds := &appsv1.DaemonSet{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: name, Namespace: kubeNamespace}, ds); err != nil {
+			t.Fatal(err)
+		}
+		if len(ds.Spec.Template.Spec.NodeSelector) != 0 {
+			t.Fatalf("expected cleared node selector for %s, got %v", name, ds.Spec.Template.Spec.NodeSelector)
+		}
+	}
+}
+
+func TestCleanupStaleResources(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	mockDh := mock_dynamichelper.NewMockInterface(controller)
+	r := &Reconciler{dh: mockDh}
+
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, "mdsd").Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "ConfigMap", kubeNamespace, "fluent-config").Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "Secret", kubeNamespace, "certificates").Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "ConfigMap", kubeNamespace, legacyGatewayCACMName).Times(1)
+
+	if err := r.cleanupStaleResources(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 }

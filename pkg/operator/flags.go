@@ -4,43 +4,50 @@ package operator
 // Licensed under the Apache License 2.0.
 
 const (
-	AlertWebhookEnabled                = "aro.alertwebhook.enabled"
-	AzureSubnetsEnabled                = "aro.azuresubnets.enabled"
-	AzureSubnetsNsgManaged             = "aro.azuresubnets.nsg.managed"
-	AzureSubnetsServiceEndpointManaged = "aro.azuresubnets.serviceendpoint.managed"
-	BannerEnabled                      = "aro.banner.enabled"
-	CheckerEnabled                     = "aro.checker.enabled"
-	CPMSEnabled                        = "aro.cpms.enabled"
-	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
-	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
-	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
-	ImageConfigEnabled                 = "aro.imageconfig.enabled"
-	IngressEnabled                     = "aro.ingress.enabled"
-	MachineEnabled                     = "aro.machine.enabled"
-	MachineSetEnabled                  = "aro.machineset.enabled"
-	MachineHealthCheckEnabled          = "aro.machinehealthcheck.enabled"
-	MachineHealthCheckManaged          = "aro.machinehealthcheck.managed"
-	MonitoringEnabled                  = "aro.monitoring.enabled"
-	NodeDrainerEnabled                 = "aro.nodedrainer.enabled"
-	PullSecretEnabled                  = "aro.pullsecret.enabled"
-	PullSecretManaged                  = "aro.pullsecret.managed"
-	RbacEnabled                        = "aro.rbac.enabled"
-	RouteFixEnabled                    = "aro.routefix.enabled"
-	StorageAccountsEnabled             = "aro.storageaccounts.enabled"
-	WorkaroundEnabled                  = "aro.workaround.enabled"
-	CopyFailWorkaroundEnabled          = "aro.workaround.copyfail.enabled"
-	DirtyfragWorkaroundEnabled         = "aro.workaround.dirtyfrag.enabled"
-	AutosizedNodesEnabled              = "aro.autosizednodes.enabled"
-	MuoEnabled                         = "rh.srep.muo.enabled"
-	MuoManaged                         = "rh.srep.muo.managed"
-	GuardrailsEnabled                  = "aro.guardrails.enabled"
-	GuardrailsDeployManaged            = "aro.guardrails.deploy.managed"
-	CloudProviderConfigEnabled         = "aro.cloudproviderconfig.enabled"
-	ForceReconciliation                = "aro.forcereconciliation"
-	EtcHostsEnabled                    = "aro.etchosts.enabled" // true = enable etchosts controller
-	EtcHostsManaged                    = "aro.etchosts.managed" // true = apply etchosts mc | false = remove etchosts mc
-	FlagTrue                           = "true"
-	FlagFalse                          = "false"
+	AlertWebhookEnabled                 = "aro.alertwebhook.enabled"
+	AzureSubnetsEnabled                 = "aro.azuresubnets.enabled"
+	AzureSubnetsNsgManaged              = "aro.azuresubnets.nsg.managed"
+	AzureSubnetsServiceEndpointManaged  = "aro.azuresubnets.serviceendpoint.managed"
+	BannerEnabled                       = "aro.banner.enabled"
+	CheckerEnabled                      = "aro.checker.enabled"
+	CPMSEnabled                         = "aro.cpms.enabled"
+	DnsmasqEnabled                      = "aro.dnsmasq.enabled"
+	RestartDnsmasqEnabled               = "aro.restartdnsmasq.enabled"
+	GenevaLoggingEnabled                = "aro.genevalogging.enabled"
+	GenevaLoggingOTelProfile            = "aro.genevalogging.otel.profile"
+	GenevaLoggingOTelMasterProfile      = "aro.genevalogging.otel.master.profile"
+	GenevaLoggingOTelWorkerProfile      = "aro.genevalogging.otel.worker.profile"
+	GenevaLoggingOTelEmitSourceFields   = "aro.genevalogging.otel.emitsourcefields"
+	GenevaLoggingOTelProfileMaxLogs     = "max-logs"
+	GenevaLoggingOTelProfileReducedLogs = "reduced-logs"
+	GenevaLoggingOTelProfileMinimalLogs = "minimal-logs"
+	ImageConfigEnabled                  = "aro.imageconfig.enabled"
+	IngressEnabled                      = "aro.ingress.enabled"
+	MachineEnabled                      = "aro.machine.enabled"
+	MachineSetEnabled                   = "aro.machineset.enabled"
+	MachineHealthCheckEnabled           = "aro.machinehealthcheck.enabled"
+	MachineHealthCheckManaged           = "aro.machinehealthcheck.managed"
+	MonitoringEnabled                   = "aro.monitoring.enabled"
+	NodeDrainerEnabled                  = "aro.nodedrainer.enabled"
+	PullSecretEnabled                   = "aro.pullsecret.enabled"
+	PullSecretManaged                   = "aro.pullsecret.managed"
+	RbacEnabled                         = "aro.rbac.enabled"
+	RouteFixEnabled                     = "aro.routefix.enabled"
+	StorageAccountsEnabled              = "aro.storageaccounts.enabled"
+	WorkaroundEnabled                   = "aro.workaround.enabled"
+	CopyFailWorkaroundEnabled           = "aro.workaround.copyfail.enabled"
+	DirtyfragWorkaroundEnabled          = "aro.workaround.dirtyfrag.enabled"
+	AutosizedNodesEnabled               = "aro.autosizednodes.enabled"
+	MuoEnabled                          = "rh.srep.muo.enabled"
+	MuoManaged                          = "rh.srep.muo.managed"
+	GuardrailsEnabled                   = "aro.guardrails.enabled"
+	GuardrailsDeployManaged             = "aro.guardrails.deploy.managed"
+	CloudProviderConfigEnabled          = "aro.cloudproviderconfig.enabled"
+	ForceReconciliation                 = "aro.forcereconciliation"
+	EtcHostsEnabled                     = "aro.etchosts.enabled" // true = enable etchosts controller
+	EtcHostsManaged                     = "aro.etchosts.managed" // true = apply etchosts mc | false = remove etchosts mc
+	FlagTrue                            = "true"
+	FlagFalse                           = "false"
 
 	// Guardrails policies switches
 	GuardrailsPolicyMachineDenyManaged           = "aro.guardrails.policies.aro-machines-deny.managed"
@@ -80,6 +87,8 @@ func DefaultOperatorFlags() map[string]string {
 		DnsmasqEnabled:                     FlagTrue,
 		RestartDnsmasqEnabled:              FlagFalse,
 		GenevaLoggingEnabled:               FlagTrue,
+		GenevaLoggingOTelProfile:           GenevaLoggingOTelProfileMinimalLogs,
+		GenevaLoggingOTelEmitSourceFields:  FlagFalse,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,
 		MachineEnabled:                     FlagTrue,

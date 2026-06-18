@@ -6,16 +6,13 @@ package genevalogging
 import _ "embed"
 
 const (
-	kubeNamespace          = "openshift-azure-logging"
-	kubeServiceAccount     = "system:serviceaccount:" + kubeNamespace + ":geneva"
-	certificatesSecretName = "certificates"
-
-	GenevaCertName = "gcscert.pem"
-	GenevaKeyName  = "gcskey.pem"
+	kubeNamespace         = "openshift-azure-logging"
+	kubeServiceAccount    = "system:serviceaccount:" + kubeNamespace + ":geneva"
+	otelConfigMapName     = "otel-config"
+	otelMasterConfigKey   = "master-config.yaml"
+	otelWorkerConfigKey   = "worker-config.yaml"
+	legacyGatewayCACMName = "gateway-ca"
 )
 
-//go:embed staticfiles/fluent.conf
-var fluentConf string
-
-//go:embed staticfiles/parsers.conf
-var parsersConf string
+//go:embed staticfiles/otel-config.yaml.tmpl
+var otelConfigTemplate string
