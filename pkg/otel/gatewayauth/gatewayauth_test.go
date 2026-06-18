@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,7 +53,7 @@ func TestServerHandshake(t *testing.T) {
 	fakeSubscriptionID := "00000000-0000-0000-0000-000000000000"
 	fakeResourceGroup := "resourceGroup"
 	fakeResourceName := "resourceName"
-	fakeResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/microsoft.redhatopenshift/openshiftclusters/%s", fakeSubscriptionID, fakeResourceGroup, fakeResourceName)
+	fakeResourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", fakeSubscriptionID, fakeResourceGroup, fakeResourceName)
 
 	testCases := []struct {
 		desc string
@@ -158,10 +159,10 @@ func TestServerHandshake(t *testing.T) {
 				ourAuth, ok := authInfo.(gatewayAuthInfo)
 				r.True(ok, "authInfo wasn't ours")
 
-				r.Equal(fakeResourceID, ourAuth.ClusterResourceID)
-				r.Equal(fakeSubscriptionID, ourAuth.ClusterSubscriptionID)
-				r.Equal(fakeResourceName, ourAuth.ClusterResourceName)
-				r.Equal(fakeResourceGroup, ourAuth.ClusterResourceGroup)
+				r.Equal(strings.ToLower(fakeResourceID), ourAuth.ClusterResourceID)
+				r.Equal(strings.ToLower(fakeSubscriptionID), ourAuth.ClusterSubscriptionID)
+				r.Equal(strings.ToLower(fakeResourceName), ourAuth.ClusterResourceName)
+				r.Equal(strings.ToLower(fakeResourceGroup), ourAuth.ClusterResourceGroup)
 
 				// verify we can talk over it with the TLS client returned
 				buf := new(bytes.Buffer)
