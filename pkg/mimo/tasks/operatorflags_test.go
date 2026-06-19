@@ -86,7 +86,7 @@ func TestSetGenevaLoggingOTelProfileInClusterDoc(t *testing.T) {
 
 			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 			doc := &api.OpenShiftClusterDocument{
-				Key: "cluster-key",
+					Key: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster",
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						OperatorFlags: api.OperatorFlags{

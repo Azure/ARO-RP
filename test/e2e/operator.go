@@ -42,7 +42,6 @@ import (
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/ready"
 	utilversion "github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -124,27 +123,27 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 })
 
 var _ = Describe("ARO Operator - Geneva Logging", func() {
-	It("must be repaired if DaemonSet deleted", func(ctx context.Context) {
+	It("must repair OTel collector DaemonSets if deleted", func(ctx context.Context) {
 		if _env.IsLocalDevelopmentMode() {
 			Skip("skipping tests in development environment")
 		}
-		mdsdIsReady := func(g Gomega, ctx context.Context) {
-			done, err := ready.CheckDaemonSetIsReady(ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")()
 
-			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(done).To(BeTrue())
+		for _, daemonSetName := range []string{"otel-collector-master", "otel-collector-worker"} {
+			By(fmt.Sprintf("checking that %s DaemonSet exists before the test", daemonSetName))
+			GetK8sObjectWithRetry(
+				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get, daemonSetName, metav1.GetOptions{},
+			)
+
+			By(fmt.Sprintf("deleting %s DaemonSet", daemonSetName))
+			DeleteK8sObjectWithRetry(
+				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete, daemonSetName, metav1.DeleteOptions{},
+			)
+
+			By(fmt.Sprintf("checking that %s DaemonSet is repaired", daemonSetName))
+			GetK8sObjectWithRetry(
+				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get, daemonSetName, metav1.GetOptions{},
+			)
 		}
-
-		By("checking that mdsd DaemonSet is ready before the test")
-		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("deleting mdsd DaemonSet")
-		DeleteK8sObjectWithRetry(
-			ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete, "mdsd", metav1.DeleteOptions{},
-		)
-
-		By("checking that mdsd DaemonSet is ready")
-		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 

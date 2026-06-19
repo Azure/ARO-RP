@@ -338,6 +338,7 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 			APIIntIP:                 o.oc.Properties.APIServerProfile.IntIP,
 			IngressIP:                ingressIP,
 			GatewayPrivateEndpointIP: o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
+			GatewayTelemetryDomain:   o.env.GatewayDomains()[0],
 			// Update the OperatorFlags from the version in the RP
 			OperatorFlags: arov1alpha1.OperatorFlags(o.oc.Properties.OperatorFlags),
 		},

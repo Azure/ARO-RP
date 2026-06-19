@@ -276,12 +276,8 @@ func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certif
 		if err != nil {
 			return nil, nil, err
 		}
-		certKey := "tls.crt"
-		if sec.secretName == "cluster" {
-			certKey = "gcscert.pem"
-		}
 		data := map[string][]byte{
-			certKey: pem.EncodeToMemory(&pem.Block{
+			"tls.crt": pem.EncodeToMemory(&pem.Block{
 				Type:  "CERTIFICATE",
 				Bytes: cert[0].Raw,
 			}),

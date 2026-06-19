@@ -87,12 +87,5 @@ func isIgnorable(alert prometheusv1.Alert) bool {
 	if !_env.IsLocalDevelopmentMode() {
 		return false
 	}
-	// In dev, ignore mdsd pods alerts
-	switch alert.Labels["alertname"] {
-	case "KubePodCrashLooping":
-		return alert.Labels["namespace"] == "openshift-azure-logging" && alert.Labels["container"] == "mdsd"
-	case "KubeDaemonSetRolloutStuck":
-		return alert.Labels["namespace"] == "openshift-azure-logging" && alert.Labels["daemonset"] == "mdsd"
-	}
 	return false
 }

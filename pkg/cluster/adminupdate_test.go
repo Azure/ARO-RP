@@ -210,7 +210,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 			),
 		},
 		{
-			name: "Rotate in-cluster MDSD/Ingress/API certs",
+			name: "Rotate in-cluster Ingress/API certs",
 			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
