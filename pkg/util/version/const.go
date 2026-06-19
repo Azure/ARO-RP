@@ -84,7 +84,7 @@ func MiseImage(acrDomain string) string {
 }
 
 func TelemetryExporterImage(acrDomain string) string {
-	image := acrDomain + "/telemetryexporter"
+	image := acrDomain + "/telemetryexporter:sha256:5dcfe4c0db9e46e84096c22fbc51084cc8c3925941b326c4081882a16749b248"
 	if TelemetryExporterImageDigest != "" {
 		image += "@" + TelemetryExporterImageDigest
 	}
