@@ -4,7 +4,7 @@ This guide shows how to:
 
 1. Build local test images with Docker
 2. Push them to the connected cluster's internal registry
-3. Point ARO operator + Geneva OTel collectors at those images
+3. Point ARO operator + Geneva OTel exporters at those images
 
 ## Prerequisites
 
@@ -92,21 +92,21 @@ oc -n openshift-azure-operator rollout status deployment/aro-operator-worker --t
 oc -n openshift-azure-operator rollout status deployment/aro-operator-master --timeout=8m
 ```
 
-## 6. Point Geneva OTel to the local collector image
+## 6. Point Geneva OTel to the local exporter image
 
 ```bash
 oc -n default patch cluster.aro.openshift.io cluster --type merge -p \
   "{\"spec\":{\"operatorflags\":{\"aro.genevalogging.otel.pullSpec\":\"${OTEL_IMG}\"}}}"
 ```
 
-Restart collectors after config/image changes:
+Restart exporters after config/image changes:
 
 ```bash
-oc -n openshift-azure-logging rollout restart daemonset/otel-collector-master
-oc -n openshift-azure-logging rollout restart daemonset/otel-collector-worker
+oc -n openshift-azure-logging rollout restart daemonset/otel-exporter-master
+oc -n openshift-azure-logging rollout restart daemonset/otel-exporter-worker
 
-oc -n openshift-azure-logging rollout status daemonset/otel-collector-master --timeout=8m
-oc -n openshift-azure-logging rollout status daemonset/otel-collector-worker --timeout=8m
+oc -n openshift-azure-logging rollout status daemonset/otel-exporter-master --timeout=8m
+oc -n openshift-azure-logging rollout status daemonset/otel-exporter-worker --timeout=8m
 ```
 
 ## 7. Quick verification
@@ -114,8 +114,8 @@ oc -n openshift-azure-logging rollout status daemonset/otel-collector-worker --t
 ```bash
 oc -n openshift-azure-operator get pods -l app=aro-operator-worker -o wide
 oc -n openshift-azure-operator get pods -l app=aro-operator-master -o wide
-oc -n openshift-azure-logging get pods -l app=otel-collector-worker -o wide
-oc -n openshift-azure-logging get pods -l app=otel-collector-master -o wide
+oc -n openshift-azure-logging get pods -l app=otel-exporter-worker -o wide
+oc -n openshift-azure-logging get pods -l app=otel-exporter-master -o wide
 
 oc -n openshift-azure-logging get configmap otel-config -o jsonpath='{.data.worker-config\.yaml}' | head -n 60
 ```

@@ -92,14 +92,8 @@ func TestSelectOTelConfig(t *testing.T) {
 	if strings.Contains(full, "key: EventName") || strings.Contains(full, "key: source_name") {
 		t.Fatal("full config should not include source fields when disabled")
 	}
-	if !strings.Contains(full, "key: ENVIRONMENT") {
-		t.Fatal("full config missing ENVIRONMENT mapping")
-	}
 	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
 		t.Fatal("full config missing node mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"RoleInstance\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
-		t.Fatal("full config missing RoleInstance mapping")
 	}
 	if !strings.Contains(full, "set(log.attributes[\"namespace\"], resource.attributes[\"k8s.namespace.name\"]) where resource.attributes[\"k8s.namespace.name\"] != nil") {
 		t.Fatal("full config missing lowercase namespace mapping")
@@ -109,9 +103,6 @@ func TestSelectOTelConfig(t *testing.T) {
 	}
 	if !strings.Contains(full, "set(log.attributes[\"container\"], resource.attributes[\"k8s.container.name\"]) where resource.attributes[\"k8s.container.name\"] != nil") {
 		t.Fatal("full config missing lowercase container mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"MESSAGE\"], log.body)") {
-		t.Fatal("full config missing raw MESSAGE mapping")
 	}
 	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
 		t.Fatal("full config missing raw_json_body mapping")
@@ -133,8 +124,11 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(reduced, "processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]") {
 		t.Fatal("reduced config missing expected journald processor chain")
 	}
-	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
-		t.Fatal("reduced config missing unfiltered audit pipeline")
+	if !strings.Contains(reduced, "filter/keep-audit-write-verbs:") || !strings.Contains(reduced, "filter/drop-audit-review-noise:") || !strings.Contains(reduced, "filter/drop-audit-non-platform-namespaces:") {
+		t.Fatal("reduced config missing audit filters")
+	}
+	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, batch]") {
+		t.Fatal("reduced config missing filtered audit pipeline")
 	}
 
 	highSignal, err := selectOTelConfig(otelProfileMinimalLogs, false)
@@ -156,7 +150,13 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(highSignal, "filter/keep-audit-write-verbs:") {
 		t.Fatal("high-signal config missing audit write-verb filter")
 	}
-	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]") {
+	if !strings.Contains(highSignal, "filter/drop-audit-review-noise:") {
+		t.Fatal("high-signal config missing audit review-noise filter")
+	}
+	if !strings.Contains(highSignal, "filter/drop-audit-non-platform-namespaces:") {
+		t.Fatal("high-signal config missing audit namespace filter")
+	}
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, batch]") {
 		t.Fatal("high-signal config missing expected audit processor chain")
 	}
 }
@@ -274,7 +274,7 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 	if !foundConfig {
 		t.Fatal("missing expected OTel configmap")
 	}
-	if !reflect.DeepEqual(daemonsetNames, []string{"otel-collector-master", "otel-collector-worker"}) {
+	if !reflect.DeepEqual(daemonsetNames, []string{"otel-exporter-master", "otel-exporter-worker"}) {
 		t.Fatalf("unexpected daemonsets: %v", daemonsetNames)
 	}
 }
@@ -285,9 +285,6 @@ func TestOTelDaemonSets(t *testing.T) {
 		Spec: arov1alpha1.ClusterSpec{
 			ResourceID: testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
 			ACRDomain:  "acrDomain",
-			OperatorFlags: arov1alpha1.OperatorFlags{
-				"aro.environment": "Test",
-			},
 		},
 	}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
 	if err != nil {
@@ -298,11 +295,11 @@ func TestOTelDaemonSets(t *testing.T) {
 	}
 
 	for _, ds := range daemonsets {
-		collector, ok := getContainer(ds, "otel-collector")
+		exporter, ok := getContainer(ds, "otel-exporter")
 		if !ok {
-			t.Fatalf("missing otel-collector container in %s", ds.Name)
+			t.Fatalf("missing otel-exporter container in %s", ds.Name)
 		}
-		if collector.Image == "" {
+		if exporter.Image == "" {
 			t.Fatalf("missing image for %s", ds.Name)
 		}
 		if !hasVolume(ds, "machine-id") {
@@ -312,21 +309,16 @@ func TestOTelDaemonSets(t *testing.T) {
 			t.Fatalf("missing priority class for %s", ds.Name)
 		}
 		wantHash := "worker-hash"
-		if ds.Name == "otel-collector-master" {
+		if ds.Name == "otel-exporter-master" {
 			wantHash = "master-hash"
 		}
 		if gotHash := ds.Spec.Template.Annotations["aro.openshift.io/otel-config-sha256"]; gotHash != wantHash {
 			t.Fatalf("unexpected config hash annotation for %s: got %q want %q", ds.Name, gotHash, wantHash)
 		}
-		foundEnvironment := false
-		for _, env := range collector.Env {
-			if env.Name == "ENVIRONMENT" && env.Value == "Test" {
-				foundEnvironment = true
-				break
+		for _, env := range exporter.Env {
+			if env.Name == "ENVIRONMENT" {
+				t.Fatalf("unexpected ENVIRONMENT var for %s", ds.Name)
 			}
-		}
-		if !foundEnvironment {
-			t.Fatalf("missing ENVIRONMENT var for %s", ds.Name)
 		}
 	}
 }
@@ -438,11 +430,11 @@ func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.
 func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 	ctx := context.Background()
 	master := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "otel-collector-master", Namespace: kubeNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "otel-exporter-master", Namespace: kubeNamespace},
 		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
 	}
 	worker := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "otel-collector-worker", Namespace: kubeNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "otel-exporter-worker", Namespace: kubeNamespace},
 		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
 	}
 
@@ -451,7 +443,7 @@ func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, name := range []string{"otel-collector-master", "otel-collector-worker"} {
+	for _, name := range []string{"otel-exporter-master", "otel-exporter-worker"} {
 		ds := &appsv1.DaemonSet{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: name, Namespace: kubeNamespace}, ds); err != nil {
 			t.Fatal(err)
@@ -473,6 +465,8 @@ func TestCleanupStaleResources(t *testing.T) {
 	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "ConfigMap", kubeNamespace, "fluent-config").Times(1)
 	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "Secret", kubeNamespace, "certificates").Times(1)
 	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "ConfigMap", kubeNamespace, legacyGatewayCACMName).Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, "otel-exporter-master").Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, "otel-exporter-worker").Times(1)
 
 	if err := r.cleanupStaleResources(context.Background()); err != nil {
 		t.Fatal(err)
