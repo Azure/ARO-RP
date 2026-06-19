@@ -332,8 +332,9 @@ func isCapacityError(err error) bool {
 // Requires 409 Conflict + "OperationNotAllowed" + a VM-reference substring to avoid
 // retrying unrelated OperationNotAllowed errors (e.g. subscription policy restrictions)
 // for the full 7.5-minute budget.
-// NOTE: Azure error messages use either "virtual machine" or the shorter "VM"/"VMSS VM"
-// depending on the resource type. Both patterns are checked here.
+// NOTE: Azure error messages use either "virtual machine" (for standalone VMs) or
+// "vmss" (for VMSS members) depending on the resource type. Both substrings are
+// checked case-insensitively here.
 func isReferencedByVMError(err error) bool {
 	var responseError *azcore.ResponseError
 	if !errors.As(err, &responseError) ||
