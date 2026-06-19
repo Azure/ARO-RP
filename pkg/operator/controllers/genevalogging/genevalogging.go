@@ -39,6 +39,7 @@ const (
 )
 
 var renderOTelConfigFn = renderOTelConfig
+var renderOTelConfigWithoutAuditFn = renderOTelConfigWithoutAudit
 
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc := &securityv1.SecurityContextConstraints{}
@@ -106,7 +107,12 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 	emitSourceFields := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelEmitSourceFields)
 
 	renderProfileConfig := func(nodeRole string, profile otelProfile) (string, error) {
-		cfg, err := selectOTelConfig(profile, emitSourceFields)
+		selectConfig := selectOTelConfig
+		if nodeRole == "worker" {
+			selectConfig = selectOTelConfigWithoutAudit
+		}
+
+		cfg, err := selectConfig(profile, emitSourceFields)
 		if err != nil {
 			return "", fmt.Errorf("rendering %s otel config: %w", nodeRole, err)
 		}
@@ -173,9 +179,17 @@ func otelConfigSHA256(config string) string {
 // selectOTelConfig renders the requested profile and falls back to minimal logs if needed.
 // If both renders fail, return an error so reconciliation fails fast instead of writing an empty config.
 func selectOTelConfig(profile otelProfile, emitSourceFields bool) (string, error) {
-	cfg, err := renderOTelConfigFn(profile, emitSourceFields)
+	return selectOTelConfigWithRenderer(profile, emitSourceFields, renderOTelConfigFn)
+}
+
+func selectOTelConfigWithoutAudit(profile otelProfile, emitSourceFields bool) (string, error) {
+	return selectOTelConfigWithRenderer(profile, emitSourceFields, renderOTelConfigWithoutAuditFn)
+}
+
+func selectOTelConfigWithRenderer(profile otelProfile, emitSourceFields bool, renderFn func(otelProfile, bool) (string, error)) (string, error) {
+	cfg, err := renderFn(profile, emitSourceFields)
 	if err != nil {
-		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs, emitSourceFields)
+		cfg, minimalErr := renderFn(otelProfileMinimalLogs, emitSourceFields)
 		if minimalErr != nil {
 			return "", fmt.Errorf("failed to render otel config for profile %q (%v) and fallback profile %q (%v)", profile, err, otelProfileMinimalLogs, minimalErr)
 		}
@@ -221,7 +235,6 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	if otelPullspec == "" {
 		otelPullspec = version.OTelImage(cluster.Spec.ACRDomain)
 	}
-	environment := cluster.Spec.OperatorFlags.GetWithDefault("aro.environment", "")
 
 	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey, configHash string) *appsv1.DaemonSet {
 		return &appsv1.DaemonSet{
@@ -300,17 +313,13 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 						},
 						Containers: []corev1.Container{
 							{
-								Name:  "otel-collector",
+								Name:  "otel-exporter",
 								Image: otelPullspec,
 								Args:  []string{"--config", "/etc/otel/" + configKey},
 								Env: []corev1.EnvVar{
 									{
 										Name:  "GENEVA_GATEWAY_ENDPOINT",
 										Value: gatewayEndpoint,
-									},
-									{
-										Name:  "ENVIRONMENT",
-										Value: environment,
 									},
 									{
 										Name: "MONITORING_ROLE_INSTANCE",
@@ -433,7 +442,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	}
 
 	return []*appsv1.DaemonSet{
-		newDaemonSet("otel-collector-master", "300m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
-		newDaemonSet("otel-collector-worker", "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
+		newDaemonSet("otel-exporter-master", "400m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
+		newDaemonSet("otel-exporter-worker", "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
 	}, nil
 }

@@ -96,6 +96,7 @@ receivers:
       - type: flatten
         field: body
         if: 'type(body) == "map"'
+{{- if .IncludeAudit }}
   file_log/audit:
     include:
       - /var/log/kube-apiserver/audit.log
@@ -111,6 +112,7 @@ receivers:
           parse_from: body.stageTimestamp
           layout_type: strptime
           layout: "%Y-%m-%dT%H:%M:%S.%LZ"
+{{- end }}
 
 processors:
   memory_limiter:
@@ -141,6 +143,17 @@ processors:
     logs:
       log_record:
         - 'not (IsMap(body) and IsString(body["verb"]) and IsMatch(body["verb"], "^(create|update|delete|patch)$"))'
+  filter/drop-audit-review-noise:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["resource"]) and IsMatch(body["objectRef"]["resource"], "^(tokenreviews|accessreviews|selfsubjectaccessreviews)$")'
+        - 'IsMap(body) and IsString(body["requestURI"]) and IsMatch(body["requestURI"], "/(tokenreviews|accessreviews|selfsubjectaccessreviews)(/|\\?|$)")'
+  filter/drop-audit-non-platform-namespaces:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'not (IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["namespace"]) and IsMatch(body["objectRef"]["namespace"], "^(default|kube-.+|openshift(?:-.+)?)$") and not IsMatch(body["objectRef"]["namespace"], "^openshift-(logging|keda|gitops|user-workload-monitoring|adp|distributed-tracing|cnv|serverless|pipelines|nfd)$"))'
 {{- else if eq .Profile "reduced-logs" }}
   filter/drop-olm-noise:
     error_mode: ignore
@@ -159,6 +172,22 @@ processors:
         - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body) and IsMatch(body, "kex_exchange_identification|Connection reset by")'
         - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body) and IsMatch(body, "new Veth device|new Open vSwitch Port device|carrier: link connected")'
         - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body) and IsMatch(body, "entered promiscuous mode|left promiscuous mode")'
+  filter/keep-audit-write-verbs:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'not (IsMap(body) and IsString(body["verb"]) and IsMatch(body["verb"], "^(create|update|delete|patch)$"))'
+  filter/drop-audit-review-noise:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["resource"]) and IsMatch(body["objectRef"]["resource"], "^(tokenreviews|accessreviews|selfsubjectaccessreviews)$")'
+        - 'IsMap(body) and IsString(body["requestURI"]) and IsMatch(body["requestURI"], "/(tokenreviews|accessreviews|selfsubjectaccessreviews)(/|\\?|$)")'
+  filter/drop-audit-non-platform-namespaces:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'not (IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["namespace"]) and IsMatch(body["objectRef"]["namespace"], "^(default|kube-.+|openshift(?:-.+)?)$") and not IsMatch(body["objectRef"]["namespace"], "^openshift-(logging|keda|gitops|user-workload-monitoring|adp|distributed-tracing|cnv|serverless|pipelines|nfd)$"))'
 {{- end }}
   transform/log-parity:
     error_mode: ignore
@@ -202,22 +231,14 @@ processors:
           - set(log.body["objectRef_apiVersion"], log.body["objectRef"]["apiVersion"]) where IsMap(log.body) and IsMap(log.body["objectRef"]) and log.body["objectRef"]["apiVersion"] != nil
           - set(log.body["objectRef_resourceVersion"], log.body["objectRef"]["resourceVersion"]) where IsMap(log.body) and IsMap(log.body["objectRef"]) and log.body["objectRef"]["resourceVersion"] != nil
           - set(log.body["objectRef_subresource"], log.body["objectRef"]["subresource"]) where IsMap(log.body) and IsMap(log.body["objectRef"]) and log.body["objectRef"]["subresource"] != nil
-          - set(log.attributes["CONTAINER"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
-          - set(log.attributes["POD"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
-          - set(log.attributes["NAMESPACE"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
           - set(log.attributes["container"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
           - set(log.attributes["pod"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
           - set(log.attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
           - set(log.attributes["node"], "${env:MONITORING_ROLE_INSTANCE}")
-          - set(log.attributes["RoleInstance"], "${env:MONITORING_ROLE_INSTANCE}")
-          - set(log.attributes["MESSAGE"], log.body)
           - set(log.attributes["raw_json_body"], log.body)
           # Preserve original nested objects so unmapped keys are retained.
   attributes/common:
     actions:
-      - key: ENVIRONMENT
-        value: ${env:ENVIRONMENT}
-        action: upsert
       - key: Environment
         action: delete
 {{- if .EmitSourceFields }}
@@ -285,9 +306,15 @@ service:
 {{- else if eq .Name "audit" }}
 {{- if eq $.Profile "minimal-logs" }}
 {{- if $.EmitSourceFields }}
-      processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
-      processors: [memory_limiter, filter/keep-audit-write-verbs, transform/log-parity, attributes/common, batch]
+      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, batch]
+{{- end }}
+{{- else if eq $.Profile "reduced-logs" }}
+{{- if $.EmitSourceFields }}
+      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+{{- else }}
+      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, batch]
 {{- end }}
 {{- else }}
 {{- if $.EmitSourceFields }}

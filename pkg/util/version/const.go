@@ -33,9 +33,9 @@ var (
 
 var GitCommit = "unknown"
 
-// OTelImageDigest is populated from the telemetry-collector build/publish workflow
+// TelemetryExporterImageDigest is populated from the telemetry exporter build/publish workflow
 // and used to pin the image by digest.
-var OTelImageDigest = ""
+var TelemetryExporterImageDigest = ""
 
 type Stream struct {
 	Version  Version `json:"version"`
@@ -83,12 +83,10 @@ func MiseImage(acrDomain string) string {
 	return acrDomain + "/msftonly/mise:1.42.1-azurelinux3.0-distroless"
 }
 
-func OTelImage(acrDomain string) string {
-	// image-telemetrycollector builds ${REGISTRY}/telemetry-collector:$(VERSION),
-	// and VERSION maps to the RP build's GitCommit/tag.
-	image := acrDomain + "/telemetry-collector:" + GitCommit
-	if OTelImageDigest != "" {
-		image += "@" + OTelImageDigest
+func TelemetryExporterImage(acrDomain string) string {
+	image := acrDomain + "/telemetryexporter"
+	if TelemetryExporterImageDigest != "" {
+		image += "@" + TelemetryExporterImageDigest
 	}
 	return image
 }
