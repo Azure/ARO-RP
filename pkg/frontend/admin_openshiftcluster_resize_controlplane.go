@@ -339,8 +339,9 @@ func teardownCRG(ctx context.Context, log *logrus.Entry, a adminactions.AzureAct
 // control plane node: cordon → drain → stop → resize → start → wait
 // ready → uncordon → update Machine metadata → update Node labels.
 // When crgID is non-empty the stop/resize/start steps are replaced by a single
-// VMResizeWithCRG call, which deallocates the VM, resizes and associates it with
-// the shared CRG, then starts it.
+// VMResizeWithCRG call, which always deallocates the VM (required by the CRG
+// association protocol), resizes and associates it with the shared CRG, then
+// starts it. The deallocateVM parameter is therefore ignored on this path.
 func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool, crgID string) error {
 	log.Infof("Cordoning node %s", machineName)
 	if err := cordonNode(ctx, k, machineName); err != nil {
