@@ -25,7 +25,7 @@ Collector endpoint selection:
 
 ## Current OTEL log shape
 
-Top-level fields emitted for workload identity:
+Top-level fields emitted for log source identification:
 
 - `node`
 - `namespace`
