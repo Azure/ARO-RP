@@ -186,28 +186,28 @@ exporters:
       queue_size: 128
       num_consumers: 2
 
-  # Kusto exporter for containerLogs table
   azuredataexplorer/containers:
     cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
     managed_identity_id: \"${GATEWAYCLIENTID}\"
     db_name: \"AROClusterLogs\"
     logs_table_name: \"containerLogs\"
+    logs_table_json_mapping: \"ingestionMapping\"
     ingestion_type: \"managed\"
 
-  # Kusto exporter for journald table
   azuredataexplorer/journald:
     cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
     managed_identity_id: \"${GATEWAYCLIENTID}\"
     db_name: \"AROClusterLogs\"
     logs_table_name: \"journald\"
+    logs_table_json_mapping: \"ingestionMapping\"
     ingestion_type: \"managed\"
 
-  # Kusto exporter for audit table
   azuredataexplorer/audit:
     cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
     managed_identity_id: \"${GATEWAYCLIENTID}\"
     db_name: \"AROClusterLogs\"
     logs_table_name: \"audit\"
+    logs_table_json_mapping: \"ingestionMapping\"
     ingestion_type: \"managed\"
 
 processors:
@@ -243,7 +243,6 @@ processors:
     send_batch_max_size: 8192
 
 connectors:
-  # Route logs to appropriate Kusto pipelines based on source_name attribute
   routing/kusto:
     default_pipelines: []
     table:
@@ -262,19 +261,16 @@ service:
     - health_check
     - gatewayauth
   pipelines:
-    # Primary pipeline: ship to MDSD (existing)
     logs/mdsd:
       receivers: [otlp]
       processors: [memory_limiter, attributes/cluster, batch]
       exporters: [otlp/cluster-mdsd]
 
-    # Secondary pipelines: route from OTLP to connector
     logs/kusto-router:
       receivers: [otlp]
       processors: [memory_limiter, attributes/cluster]
       exporters: [routing/kusto]
 
-    # Destination pipelines from connector to Kusto
     logs/kusto-containers:
       receivers: [routing/kusto]
       processors: [batch]
