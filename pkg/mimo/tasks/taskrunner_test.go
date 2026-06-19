@@ -14,4 +14,3 @@ func TestDefaultMaintenanceTasksIncludesOperatorImageAutoUpdate(t *testing.T) {
 		t.Fatalf("task map missing %q", mimo.OPERATOR_IMAGE_AUTO_UPDATE_ID)
 	}
 }
-

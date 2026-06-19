@@ -9,12 +9,19 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/kubernetes"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -32,7 +39,8 @@ type th struct {
 	sub *api.SubscriptionDocument
 	dbs actuatorDBs
 
-	_ch clienthelper.Interface
+	_ch                  clienthelper.Interface
+	_aroOperatorDeployer deploy.Operator
 
 	az *azClients
 }
@@ -97,6 +105,49 @@ func (t *th) ClientHelper() (clienthelper.Interface, error) {
 
 	t._ch = clienthelper.NewWithClient(t.log, client)
 	return t._ch, nil
+}
+
+func (t *th) AROOperatorDeployer() (deploy.Operator, error) {
+	if t._aroOperatorDeployer != nil {
+		return t._aroOperatorDeployer, nil
+	}
+
+	restConfig, err := restconfig.RestConfig(t.env, t.oc.OpenShiftCluster)
+	if err != nil {
+		return nil, err
+	}
+
+	ch, err := t.ClientHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	kubernetescli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	extensionscli, err := extensionsclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	operatorcli, err := operatorclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	arocli, err := aroclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	t._aroOperatorDeployer, err = deploy.New(t.log, t.env, t.oc.OpenShiftCluster, t.sub, arocli, ch, extensionscli, kubernetescli, operatorcli)
+	if err != nil {
+		return nil, err
+	}
+
+	return t._aroOperatorDeployer, nil
 }
 
 func (t *th) Log() *logrus.Entry {

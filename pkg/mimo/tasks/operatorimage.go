@@ -4,19 +4,24 @@ package tasks
 // Licensed under the Apache License 2.0.
 
 import (
+	"time"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/mimo/steps/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
-// AutoUpdateOperatorImage checks for a newer ARO operator image version in ACR
-// and schedules an operator update by patching the cluster document.
+// AutoUpdateOperatorImage updates the ARO operator to the image selected by the
+// RP environment, matching the existing admin update operator path.
 func AutoUpdateOperatorImage(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
 	s := []steps.Step{
-		steps.Action(cluster.EnsureOperatorImageUpdateScheduled),
+		steps.Action(cluster.EnsureAPIServerIsUp),
+		steps.Action(cluster.UpdateAROOperatorImage),
+		steps.Condition(cluster.AROOperatorDeploymentReady, 20*time.Minute, true),
+		steps.Condition(cluster.EnsureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
+		steps.Action(cluster.SyncClusterObject),
 	}
 
 	return run(t, s)
 }
-

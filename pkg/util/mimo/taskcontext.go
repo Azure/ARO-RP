@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -39,6 +40,7 @@ type TaskContext interface {
 
 	// Kubernetes client
 	ClientHelper() (clienthelper.Interface, error)
+	AROOperatorDeployer() (deploy.Operator, error)
 
 	// All Azure clients that MIMO tasks interact with _must_ be Track 2 SDK
 	// clients. If you need something with only a Track 1 client in pkg/util/,

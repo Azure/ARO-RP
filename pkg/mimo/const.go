@@ -6,12 +6,12 @@ import "github.com/Azure/ARO-RP/pkg/api"
 // Licensed under the Apache License 2.0.
 
 const (
-	TLS_CERT_ROTATION_ID     api.MIMOTaskID = "9b741734-6505-447f-8510-85eb0ae561a2"
-	OPERATOR_FLAGS_UPDATE_ID api.MIMOTaskID = "b41749fc-af26-4ab7-b5a1-e03f3ee4cba6"
+	TLS_CERT_ROTATION_ID          api.MIMOTaskID = "9b741734-6505-447f-8510-85eb0ae561a2"
+	OPERATOR_FLAGS_UPDATE_ID      api.MIMOTaskID = "b41749fc-af26-4ab7-b5a1-e03f3ee4cba6"
 	OPERATOR_IMAGE_AUTO_UPDATE_ID api.MIMOTaskID = "f5ec2d0d-bf87-4dad-aa87-a566293f4f0b"
-	ACR_TOKEN_CHECKER_ID     api.MIMOTaskID = "082978ce-3700-4972-835f-53d48658d291"
-	MDSD_CERT_ROTATION_ID    api.MIMOTaskID = "a4477c3a-ddbb-41a0-88e8-b5cda67b623a"
-	MSI_CERT_RENEWAL_ID      api.MIMOTaskID = "7c3f8e2d-9a4b-4f1e-8c5d-2b6a9e7f3d1c"
-	MIGRATE_LB_ZONES_ID      api.MIMOTaskID = "c28a07c1-462f-42d2-8031-4b0222256596"
-	FIX_SSH_ID               api.MIMOTaskID = "888fc221-b059-49db-bd02-22ad86cccd6b"
+	ACR_TOKEN_CHECKER_ID          api.MIMOTaskID = "082978ce-3700-4972-835f-53d48658d291"
+	MDSD_CERT_ROTATION_ID         api.MIMOTaskID = "a4477c3a-ddbb-41a0-88e8-b5cda67b623a"
+	MSI_CERT_RENEWAL_ID           api.MIMOTaskID = "7c3f8e2d-9a4b-4f1e-8c5d-2b6a9e7f3d1c"
+	MIGRATE_LB_ZONES_ID           api.MIMOTaskID = "c28a07c1-462f-42d2-8031-4b0222256596"
+	FIX_SSH_ID                    api.MIMOTaskID = "888fc221-b059-49db-bd02-22ad86cccd6b"
 )

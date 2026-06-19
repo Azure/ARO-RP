@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -30,7 +31,8 @@ type fakeTestContext struct {
 	doc    *api.OpenShiftClusterDocument
 	subDoc *api.SubscriptionDocument
 
-	ocDb database.OpenShiftClusters
+	ocDb                database.OpenShiftClusters
+	aroOperatorDeployer deploy.Operator
 
 	interfacesClient          *armnetwork.InterfacesClient
 	loadBalancerClient        *armnetwork.LoadBalancersClient
@@ -106,6 +108,12 @@ func WithOpenShiftDatabase(d database.OpenShiftClusters) Option {
 	}
 }
 
+func WithAROOperatorDeployer(d deploy.Operator) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.aroOperatorDeployer = d
+	}
+}
+
 func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entry, now func() time.Time, o ...Option) *fakeTestContext {
 	ftc := &fakeTestContext{
 		Context: ctx,
@@ -135,6 +143,13 @@ func (t *fakeTestContext) ClientHelper() (clienthelper.Interface, error) {
 		return nil, fmt.Errorf("missing clienthelper")
 	}
 	return t.ch, nil
+}
+
+func (t *fakeTestContext) AROOperatorDeployer() (deploy.Operator, error) {
+	if t.aroOperatorDeployer == nil {
+		return nil, fmt.Errorf("missing ARO operator deployer")
+	}
+	return t.aroOperatorDeployer, nil
 }
 
 func (t *fakeTestContext) Log() *logrus.Entry {
