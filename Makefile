@@ -167,8 +167,11 @@ swagger-checksums:
 # clientset with controller-runtime so we don't need to generate it.
 .PHONY: generate-operator-apiclient
 generate-operator-apiclient: $(CLIENT_GEN)
-	$(CLIENT_GEN) --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
-	gofmt -s -w ./pkg/operator/clientset
+	@tmpdir="$$(mktemp -d)"; \
+	$(CLIENT_GEN) --clientset-name versioned --input-base github.com/Azure/ARO-RP/pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package github.com/Azure/ARO-RP/pkg/operator/clientset --output-base "$$tmpdir" --go-header-file ./hack/licenses/boilerplate.go.txt; \
+	rsync -a --delete "$$tmpdir/github.com/Azure/ARO-RP/pkg/operator/clientset/" ./pkg/operator/clientset/; \
+	rm -rf "$$tmpdir"
+	$(MAKE) fmt
 	$(MAKE) imports
 
 .PHONY: generate-guardrails
