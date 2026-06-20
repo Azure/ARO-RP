@@ -17,15 +17,15 @@ type otelLogSource struct {
 	EventName string
 }
 
-func renderOTelConfig(profile otelProfile, emitSourceFields bool) (string, error) {
-	return renderOTelConfigWithAudit(profile, emitSourceFields, true)
+func renderOTelConfig(profile otelProfile) (string, error) {
+	return renderOTelConfigWithAudit(profile, true)
 }
 
-func renderOTelConfigWithoutAudit(profile otelProfile, emitSourceFields bool) (string, error) {
-	return renderOTelConfigWithAudit(profile, emitSourceFields, false)
+func renderOTelConfigWithoutAudit(profile otelProfile) (string, error) {
+	return renderOTelConfigWithAudit(profile, false)
 }
 
-func renderOTelConfigWithAudit(profile otelProfile, emitSourceFields bool, includeAudit bool) (string, error) {
+func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, error) {
 	sources := []otelLogSource{
 		{
 			Name:      "journald",
@@ -49,13 +49,11 @@ func renderOTelConfigWithAudit(profile otelProfile, emitSourceFields bool, inclu
 	var rendered bytes.Buffer
 	err := otelConfigParsedTemplate.Execute(&rendered, struct {
 		Profile           otelProfile
-		EmitSourceFields  bool
 		GatewayExporterID string
 		IncludeAudit      bool
 		Sources           []otelLogSource
 	}{
 		Profile:           profile,
-		EmitSourceFields:  emitSourceFields,
 		GatewayExporterID: "otlp_grpc/gateway",
 		IncludeAudit:      includeAudit,
 		Sources:           sources,

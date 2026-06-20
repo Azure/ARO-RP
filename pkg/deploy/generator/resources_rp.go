@@ -447,7 +447,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 	)
 
 	parts = append(parts,
-		"'OTELIMAGE=''"+version.OTelImage("")+"''\n'",
+		"'OTELIMAGE=''"+version.TelemetryExporterImage("")+"''\n'",
 	)
 
 	parts = append(parts,
