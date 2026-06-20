@@ -202,8 +202,9 @@ processors:
     limit_mib: 512
 
   batch:
-    timeout: 10s
-    send_batch_size: 1024
+    timeout: 30s
+    send_batch_size: 4096
+    send_batch_max_size: 8192
 
 service:
   extensions:
