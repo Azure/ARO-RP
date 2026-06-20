@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	gomock "go.uber.org/mock/gomock"
+
+	subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 )
 
 // MockKubeManager is a mock of KubeManager interface.

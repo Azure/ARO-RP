@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	service "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockBlobsClient is a mock of BlobsClient interface.

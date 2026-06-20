@@ -12,8 +12,9 @@ package mock_instancemetadata
 import (
 	reflect "reflect"
 
-	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 	gomock "go.uber.org/mock/gomock"
+
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // MockInstanceMetadata is a mock of InstanceMetadata interface.

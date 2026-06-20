@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	privatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	gomock "go.uber.org/mock/gomock"
+
+	privatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 )
 
 // MockPrivateZonesClient is a mock of PrivateZonesClient interface.

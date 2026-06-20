@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	graph "github.com/Azure/ARO-RP/pkg/cluster/graph"
 	gomock "go.uber.org/mock/gomock"
+
+	graph "github.com/Azure/ARO-RP/pkg/cluster/graph"
 )
 
 // MockManager is a mock of Manager interface.

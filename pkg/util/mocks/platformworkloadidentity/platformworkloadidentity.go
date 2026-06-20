@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
 	api "github.com/Azure/ARO-RP/pkg/api"
 	database "github.com/Azure/ARO-RP/pkg/database"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPlatformWorkloadIdentityRolesByVersion is a mock of PlatformWorkloadIdentityRolesByVersion interface.

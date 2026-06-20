@@ -14,9 +14,11 @@ import (
 	fs "io/fs"
 	reflect "reflect"
 
-	v1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
+
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	v1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
 // MockDeployer is a mock of Deployer interface.

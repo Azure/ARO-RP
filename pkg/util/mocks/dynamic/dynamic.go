@@ -13,12 +13,14 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "go.uber.org/mock/gomock"
+
+	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+
 	api "github.com/Azure/ARO-RP/pkg/api"
 	armauthorization "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	armmsi "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	dynamic "github.com/Azure/ARO-RP/pkg/validate/dynamic"
-	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockServicePrincipalValidator is a mock of ServicePrincipalValidator interface.

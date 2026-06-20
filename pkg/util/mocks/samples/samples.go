@@ -13,14 +13,16 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1 "github.com/openshift/api/samples/v1"
-	v10 "github.com/openshift/client-go/samples/applyconfigurations/samples/v1"
-	v11 "github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1"
 	gomock "go.uber.org/mock/gomock"
+
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+
+	v1 "github.com/openshift/api/samples/v1"
+	v10 "github.com/openshift/client-go/samples/applyconfigurations/samples/v1"
+	v11 "github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1"
 )
 
 // MockSamplesV1Interface is a mock of SamplesV1Interface interface.

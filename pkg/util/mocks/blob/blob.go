@@ -13,9 +13,11 @@ import (
 	context "context"
 	reflect "reflect"
 
-	azblob "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
-	armstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	gomock "go.uber.org/mock/gomock"
+
+	armstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
+
+	azblob "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
 )
 
 // MockManager is a mock of Manager interface.

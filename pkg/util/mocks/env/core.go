@@ -14,14 +14,16 @@ import (
 	reflect "reflect"
 	time "time"
 
-	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
-	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	logrus "github.com/sirupsen/logrus"
+	gomock "go.uber.org/mock/gomock"
+
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	arm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	autorest "github.com/Azure/go-autorest/autorest"
-	logrus "github.com/sirupsen/logrus"
-	gomock "go.uber.org/mock/gomock"
+
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 // MockCore is a mock of Core interface.

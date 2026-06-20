@@ -13,12 +13,14 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1 "github.com/openshift/api/config/v1"
-	v10 "github.com/openshift/client-go/config/applyconfigurations/config/v1"
 	gomock "go.uber.org/mock/gomock"
+
 	v11 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
+
+	v1 "github.com/openshift/api/config/v1"
+	v10 "github.com/openshift/client-go/config/applyconfigurations/config/v1"
 )
 
 // MockDNSIClient is a mock of DNSIClient interface.
