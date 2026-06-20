@@ -484,8 +484,6 @@ func TestCleanupStaleResources(t *testing.T) {
 	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "ConfigMap", kubeNamespace, "fluent-config").Times(1)
 	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "Secret", kubeNamespace, "certificates").Times(1)
 	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "ConfigMap", kubeNamespace, legacyGatewayCACMName).Times(1)
-	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, "otel-exporter-master").Times(1)
-	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, "otel-exporter-worker").Times(1)
 
 	if err := r.cleanupStaleResources(context.Background()); err != nil {
 		t.Fatal(err)
