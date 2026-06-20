@@ -60,6 +60,27 @@ Cluster-side batching is intentional even though gateway also batches:
 - It provides early smoothing/backpressure at the edge of each cluster, so the gateway receives a steadier stream and spends less work on micro-batch churn.
 - It preserves the gateway’s role as the global optimization stage: gateway still re-aggregates across all clusters into larger batches tuned for downstream ingestion efficiency.
 
+## Queue depth and backpressure policy (cluster vs gateway)
+
+Queue depth determines how much temporary downstream slowness each stage can absorb before data is dropped.
+
+- **Cluster-side collector policy**
+  - `retry_on_failure.enabled: true`
+  - `sending_queue.enabled: true`
+  - `sending_queue.queue_size: 1200`
+  - `sending_queue.num_consumers: 2`
+  - `sending_queue.storage: file_storage`
+  - Intent: absorb short-to-moderate gateway/network stalls with bounded local buffering, while keeping queue growth explicit and capped.
+- **Gateway collector policy**
+  - `retry_on_failure.enabled: false`
+  - `sending_queue.enabled: true`
+  - `sending_queue.queue_size: 128`
+  - `sending_queue.num_consumers: 2`
+  - `memory_limiter.limit_mib: 512` and `spike_limit_mib: 64`
+  - Intent: gateway OTEL runs alongside mission-critical VMSS workloads, so it is tuned to fail fast and drop logs under sustained pressure rather than consume excessive CPU/memory.
+
+In short: cluster prefers bounded buffering first; gateway prefers bounded resource protection first.
+
 ## How many simultaneous gateway batches might we see?
 
 For the current gateway logs pipeline, the batch processor keeps one aggregate batcher because `metadata_keys` is not configured.
