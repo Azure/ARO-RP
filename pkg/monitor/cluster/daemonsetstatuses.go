@@ -16,8 +16,8 @@ import (
 const genevaLoggingNamespace = "openshift-azure-logging"
 
 var genevaLoggingOTelDaemonSets = map[string]struct{}{
-	"otel-collector-master": {},
-	"otel-collector-worker": {},
+	"otel-exporter-master": {},
+	"otel-exporter-worker": {},
 }
 
 func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
