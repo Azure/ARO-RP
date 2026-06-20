@@ -72,12 +72,15 @@ Queue depth determines how much temporary downstream slowness each stage can abs
   - `sending_queue.storage: file_storage`
   - Intent: absorb short-to-moderate gateway/network stalls with bounded local buffering, while keeping queue growth explicit and capped.
 - **Gateway collector policy**
-  - `retry_on_failure.enabled: false`
+  - `retry_on_failure.enabled: true`
+  - `retry_on_failure.initial_interval: 1s`
+  - `retry_on_failure.max_interval: 1s`
+  - `retry_on_failure.max_elapsed_time: 2s` (very small retry budget)
   - `sending_queue.enabled: true`
   - `sending_queue.queue_size: 128`
   - `sending_queue.num_consumers: 2`
   - `memory_limiter.limit_mib: 512` and `spike_limit_mib: 64`
-  - Intent: gateway OTEL runs alongside mission-critical VMSS workloads, so it is tuned to fail fast and drop logs under sustained pressure rather than consume excessive CPU/memory.
+  - Intent: gateway OTEL runs alongside mission-critical VMSS workloads, so it uses only brief retries and then drops under sustained pressure rather than consume excessive CPU/memory.
 
 In short: cluster prefers bounded buffering first; gateway prefers bounded resource protection first.
 

@@ -175,9 +175,12 @@ exporters:
     tls:
       insecure: true
     # Gateway Otel Collector runs alongside mission-critical workloads:
-    # fail fast under sustained downstream pressure instead of retrying.
+    # allow only a very small retry budget, then fail fast.
     retry_on_failure:
-      enabled: false
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
     sending_queue:
       enabled: true
       queue_size: 128
