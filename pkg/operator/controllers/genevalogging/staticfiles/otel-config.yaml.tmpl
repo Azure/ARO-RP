@@ -241,7 +241,6 @@ processors:
     actions:
       - key: Environment
         action: delete
-{{- if .EmitSourceFields }}
 {{- range .Sources }}
   attributes/source-{{ .Name }}:
     actions:
@@ -251,7 +250,6 @@ processors:
       - key: EventName
         value: {{ .EventName }}
         action: upsert
-{{- end }}
 {{- end }}
   batch: {}
 
@@ -278,63 +276,27 @@ service:
       receivers: [{{ .Receiver }}]
 {{- if eq .Name "journald" }}
 {{- if eq $.Profile "minimal-logs" }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
-{{- else }}
-      processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, batch]
-{{- end }}
 {{- else if eq $.Profile "reduced-logs" }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
-      processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, batch]
-{{- end }}
-{{- else }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
-{{- else }}
-      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
-{{- end }}
 {{- end }}
 {{- else if eq .Name "audit" }}
 {{- if eq $.Profile "minimal-logs" }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
-{{- else }}
-      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, batch]
-{{- end }}
 {{- else if eq $.Profile "reduced-logs" }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
-      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, batch]
-{{- end }}
-{{- else }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
-{{- else }}
-      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
-{{- end }}
 {{- end }}
 {{- else }}
 {{- if eq $.Profile "minimal-logs" }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
-{{- else }}
-      processors: [memory_limiter, filter/keep-only-high-signal, transform/log-parity, attributes/common, batch]
-{{- end }}
 {{- else if eq $.Profile "reduced-logs" }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
-      processors: [memory_limiter, filter/drop-olm-noise, transform/log-parity, attributes/common, batch]
-{{- end }}
-{{- else }}
-{{- if $.EmitSourceFields }}
       processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
-{{- else }}
-      processors: [memory_limiter, transform/log-parity, attributes/common, batch]
-{{- end }}
 {{- end }}
 {{- end }}
       exporters: [{{ $.GatewayExporterID }}]

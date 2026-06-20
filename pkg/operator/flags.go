@@ -88,7 +88,7 @@ func DefaultOperatorFlags() map[string]string {
 		RestartDnsmasqEnabled:              FlagFalse,
 		GenevaLoggingEnabled:               FlagTrue,
 		GenevaLoggingOTelProfile:           GenevaLoggingOTelProfileMinimalLogs,
-		GenevaLoggingOTelEmitSourceFields:  FlagFalse,
+		GenevaLoggingOTelEmitSourceFields:  FlagTrue,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,
 		MachineEnabled:                     FlagTrue,
