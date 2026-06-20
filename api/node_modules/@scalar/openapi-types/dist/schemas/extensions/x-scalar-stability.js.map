@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-scalar-stability.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\nexport const XScalarStabilityValues = {\n  Deprecated: 'deprecated',\n  Experimental: 'experimental',\n  Stable: 'stable',\n} as const\n\nexport type XScalarStabilityValues = (typeof XScalarStabilityValues)[keyof typeof XScalarStabilityValues]\n\n/**\n * An OpenAPI extension to indicate the stability of the operation\n *\n * @example\n * ```yaml\n * x-scalar-stability: deprecated\n * ```\n */\nexport const XScalarStabilitySchema = z.object({\n  'x-scalar-stability': z\n    .enum(Object.values(XScalarStabilityValues) as [string, ...string[]])\n    .optional()\n    .catch(undefined),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,yBAAyB;AAAA,EACpC,YAAY;AAAA,EACZ,cAAc;AAAA,EACd,QAAQ;AACV;AAYO,MAAM,yBAAyB,EAAE,OAAO;AAAA,EAC7C,sBAAsB,EACnB,KAAK,OAAO,OAAO,sBAAsB,CAA0B,EACnE,SAAS,EACT,MAAM,MAAS;AACpB,CAAC;",
-  "names": []
-}

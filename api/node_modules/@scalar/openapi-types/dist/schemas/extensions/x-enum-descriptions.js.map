@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-enum-descriptions.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * x-enumDescriptions\n *\n * Maps enum values to their descriptions. Each key should correspond to\n * an enum value, and the value is the description for that enum value.\n *\n * Example:\n * x-enumDescriptions:\n *   missing_features: \"Missing features\"\n *   too_expensive: \"Too expensive\"\n *   unused: \"Unused\"\n *   other: \"Other\"\n */\nexport const XEnumDescriptionsSchema = z.object({\n  'x-enumDescriptions': z.record(z.string(), z.string()).catch({}),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAeX,MAAM,0BAA0B,EAAE,OAAO;AAAA,EAC9C,sBAAsB,EAAE,OAAO,EAAE,OAAO,GAAG,EAAE,OAAO,CAAC,EAAE,MAAM,CAAC,CAAC;AACjE,CAAC;",
-  "names": []
-}

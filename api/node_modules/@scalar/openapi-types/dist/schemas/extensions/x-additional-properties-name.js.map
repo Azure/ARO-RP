@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-additional-properties-name.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * x-additionalPropertiesName\n *\n * Custom attribute name for additionalProperties in a schema.\n * This allows specifying a descriptive name for additional properties\n * that may be present in an object.\n */\nexport const XAdditionalPropertiesNameSchema = z.object({\n  'x-additionalPropertiesName': z.string().optional().catch(undefined),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AASX,MAAM,kCAAkC,EAAE,OAAO;AAAA,EACtD,8BAA8B,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AACrE,CAAC;",
-  "names": []
-}

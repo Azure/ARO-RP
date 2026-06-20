@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/helpers/resolve-reference-path.ts"],
-  "sourcesContent": ["import path from 'pathe'\n\nimport { isHttpUrl } from '@/helpers/is-http-url'\n\n/**\n * Resolves a reference path by combining a base path with a relative path.\n * Handles both remote URLs and local file paths.\n *\n * @param base - The base path (can be a URL or local file path)\n * @param relativePath - The relative path to resolve against the base\n * @returns The resolved absolute path\n * @example\n * // Resolve remote URL\n * resolveReferencePath('https://example.com/api/schema.json', 'user.json')\n * // Returns: 'https://example.com/api/user.json'\n *\n * // Resolve local path\n * resolveReferencePath('/path/to/schema.json', 'user.json')\n * // Returns: '/path/to/user.json'\n */\nexport const resolveReferencePath = (base: string, relativePath: string) => {\n  if (isHttpUrl(relativePath)) {\n    return relativePath\n  }\n\n  if (isHttpUrl(base)) {\n    const baseUrl = new URL(base)\n    baseUrl.pathname = path.posix.resolve('/', path.dirname(baseUrl.pathname), relativePath)\n    return baseUrl.toString()\n  }\n\n  return path.resolve(path.dirname(base), relativePath)\n}\n"],
-  "mappings": "AAAA,OAAO,UAAU;AAEjB,SAAS,iBAAiB;AAkBnB,MAAM,uBAAuB,CAAC,MAAc,iBAAyB;AAC1E,MAAI,UAAU,YAAY,GAAG;AAC3B,WAAO;AAAA,EACT;AAEA,MAAI,UAAU,IAAI,GAAG;AACnB,UAAM,UAAU,IAAI,IAAI,IAAI;AAC5B,YAAQ,WAAW,KAAK,MAAM,QAAQ,KAAK,KAAK,QAAQ,QAAQ,QAAQ,GAAG,YAAY;AACvF,WAAO,QAAQ,SAAS;AAAA,EAC1B;AAEA,SAAO,KAAK,QAAQ,KAAK,QAAQ,IAAI,GAAG,YAAY;AACtD;",
-  "names": []
-}

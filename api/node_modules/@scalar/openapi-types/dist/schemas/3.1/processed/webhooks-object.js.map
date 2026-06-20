@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/processed/webhooks-object.ts"],
-  "sourcesContent": ["import { z } from 'zod'\nimport { PathItemObjectSchemaWithoutCallbacks } from './path-item-object-without-callbacks'\n\n/**\n * Webhooks Object\n *\n * The incoming webhooks that MAY be received as part of this API and that the API consumer MAY choose to implement.\n * Closely related to the callbacks feature, this section describes requests initiated other than by an API call, for\n * example by an out of band registration.\n *\n * The key name is a unique string to refer to each webhook, while the\n * (optionally referenced) Path Item Object describes a request that may be initiated by the API provider and the\n * expected responses. An example is available.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#oas-webhooks\n */\nexport const WebhooksObjectSchema = z.record(z.string(), PathItemObjectSchemaWithoutCallbacks)\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAClB,SAAS,4CAA4C;AAe9C,MAAM,uBAAuB,EAAE,OAAO,EAAE,OAAO,GAAG,oCAAoC;",
-  "names": []
-}

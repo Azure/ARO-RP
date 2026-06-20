@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/request-body-object.ts"],
-  "sourcesContent": ["import { RequestBodyObjectSchema as OriginalRequestBodyObjectSchema } from '../processed/request-body-object'\n\n/**\n * Request Body Object\n *\n * Describes a single request body.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#request-body-object\n */\nexport const RequestBodyObjectSchema = OriginalRequestBodyObjectSchema\n"],
-  "mappings": "AAAA,SAAS,2BAA2B,uCAAuC;AASpE,MAAM,0BAA0B;",
-  "names": []
-}

@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-scalar-redirect-uri.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\nexport const XScalarRedirectUriSchema = z.object({\n  'x-scalar-redirect-uri': z.string().optional().catch(undefined),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,2BAA2B,EAAE,OAAO;AAAA,EAC/C,yBAAyB,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AAChE,CAAC;",
-  "names": []
-}

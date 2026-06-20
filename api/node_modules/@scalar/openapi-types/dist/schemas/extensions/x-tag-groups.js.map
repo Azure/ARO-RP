@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-tag-groups.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\nexport const XTagGroupSchema = z.object({\n  /**\n   * The group name.\n   */\n  name: z.string(),\n  /**\n   * List of tags to include in this group.\n   */\n  tags: z.coerce.string().array().catch([]),\n})\n\n/**\n * x-tagGroups\n *\n * List of tags to include in this group.\n */\nexport const XTagGroupsSchema = XTagGroupSchema.array().catch([])\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,kBAAkB,EAAE,OAAO;AAAA;AAAA;AAAA;AAAA,EAItC,MAAM,EAAE,OAAO;AAAA;AAAA;AAAA;AAAA,EAIf,MAAM,EAAE,OAAO,OAAO,EAAE,MAAM,EAAE,MAAM,CAAC,CAAC;AAC1C,CAAC;AAOM,MAAM,mBAAmB,gBAAgB,MAAM,EAAE,MAAM,CAAC,CAAC;",
-  "names": []
-}

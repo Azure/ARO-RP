@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/object/get-value-at-path.ts"],
-  "sourcesContent": ["/**\n * Retrieves a nested value from the source document using a path array\n *\n * @example\n * ```ts\n * getValueByPath(document, ['components', 'schemas', 'User'])\n *\n * { id: '123', name: 'John Doe' }\n * ```\n */\nexport function getValueAtPath<R = unknown>(obj: any, pointer: string[]): R {\n  return pointer.reduce((acc, part) => {\n    if (acc === undefined || acc === null) {\n      return undefined\n    }\n    return acc[part]\n  }, obj)\n}\n"],
-  "mappings": "AAUO,SAAS,eAA4B,KAAU,SAAsB;AAC1E,SAAO,QAAQ,OAAO,CAAC,KAAK,SAAS;AACnC,QAAI,QAAQ,UAAa,QAAQ,MAAM;AACrC,aAAO;AAAA,IACT;AACA,WAAO,IAAI,IAAI;AAAA,EACjB,GAAG,GAAG;AACR;",
-  "names": []
-}

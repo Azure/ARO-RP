@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/xml-object.ts"],
-  "sourcesContent": ["import { XmlObjectSchema as OriginalXmlObjectSchema } from '../processed/xml-object'\n\n/**\n *\n * XML Object\n *\n * A metadata object that allows for more fine-tuned XML model definitions.\n *\n * When using arrays, XML element names are not inferred (for singular/plural forms) and the name field SHOULD be used\n * to add that information. See examples for expected behavior.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#xml-object\n */\nexport const XmlObjectSchema = OriginalXmlObjectSchema\n"],
-  "mappings": "AAAA,SAAS,mBAAmB,+BAA+B;AAapD,MAAM,kBAAkB;",
-  "names": []
-}

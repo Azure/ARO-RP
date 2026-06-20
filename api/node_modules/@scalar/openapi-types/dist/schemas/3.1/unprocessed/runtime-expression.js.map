@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/runtime-expression.ts"],
-  "sourcesContent": ["import { RuntimeExpressionSchema as OriginalRuntimeExpressionSchema } from '../processed/runtime-expression'\n\n/**\n * Runtime Expression Schema\n *\n * Runtime expressions allow defining values based on information that will only be available within the HTTP message in\n * an actual API call. This mechanism is used by Link Objects and Callback Objects.\n *\n * Expressions can be:\n * 1. Pure runtime expressions starting with $ (e.g. $method, $request.path.id)\n * 2. Embedded expressions in strings using curly braces (e.g. \"Hello {$request.body#/name}!\")\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#runtime-expressions\n */\nexport const RuntimeExpressionSchema = OriginalRuntimeExpressionSchema\n"],
-  "mappings": "AAAA,SAAS,2BAA2B,uCAAuC;AAcpE,MAAM,0BAA0B;",
-  "names": []
-}

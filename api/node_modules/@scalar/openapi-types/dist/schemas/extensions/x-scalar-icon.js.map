@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-scalar-icon.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\nexport const XScalarIconSchema = z.object({\n  'x-scalar-icon': z.string().optional().catch(undefined),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,oBAAoB,EAAE,OAAO;AAAA,EACxC,iBAAiB,EAAE,OAAO,EAAE,SAAS,EAAE,MAAM,MAAS;AACxD,CAAC;",
-  "names": []
-}

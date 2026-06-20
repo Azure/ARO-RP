@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-scalar-security-body.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * An OpenAPI extension to set any additional body parameters for the OAuth token request\n *\n * @example\n * ```yaml\n * x-scalar-security-body: {\n *   audience: 'https://api.example.com',\n *   resource: 'user-profile'\n * }\n * ```\n */\nexport const XScalarSecurityBody = z.object({\n  'x-scalar-security-body': z.record(z.string(), z.string()).optional(),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAaX,MAAM,sBAAsB,EAAE,OAAO;AAAA,EAC1C,0BAA0B,EAAE,OAAO,EAAE,OAAO,GAAG,EAAE,OAAO,CAAC,EAAE,SAAS;AACtE,CAAC;",
-  "names": []
-}

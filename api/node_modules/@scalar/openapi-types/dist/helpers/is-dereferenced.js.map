@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/helpers/is-dereferenced.ts"],
-  "sourcesContent": ["import type { OpenAPIV3_1 } from '../openapi-types'\n\n/**\n * Type guard to check if an object is not a ReferenceObject.\n * A ReferenceObject is defined by having a $ref property that is a string.\n */\nexport const isDereferenced = <T>(obj: T | OpenAPIV3_1.ReferenceObject): obj is T =>\n  typeof obj === 'object' &&\n  obj !== null &&\n  !('$ref' in obj && typeof (obj as OpenAPIV3_1.ReferenceObject).$ref === 'string')\n"],
-  "mappings": "AAMO,MAAM,iBAAiB,CAAI,QAChC,OAAO,QAAQ,YACf,QAAQ,QACR,EAAE,UAAU,OAAO,OAAQ,IAAoC,SAAS;",
-  "names": []
-}

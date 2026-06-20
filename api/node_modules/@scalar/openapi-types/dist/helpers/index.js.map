@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/helpers/index.ts"],
-  "sourcesContent": ["export { isDereferenced } from './is-dereferenced'\n"],
-  "mappings": "AAAA,SAAS,sBAAsB;",
-  "names": []
-}

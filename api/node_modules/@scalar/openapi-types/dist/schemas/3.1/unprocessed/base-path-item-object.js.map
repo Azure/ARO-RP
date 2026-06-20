@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/base-path-item-object.ts"],
-  "sourcesContent": ["import { z } from 'zod'\nimport { BasePathItemObjectSchema as OriginalBasePathItemObjectSchema } from '../processed/base-path-item-object'\nimport { ParameterObjectSchema } from './parameter-object'\nimport { ReferenceObjectSchema } from './reference-object'\n\n/**\n * Base Path Item Object Schema\n *\n * This helps break circular dependencies between path-item-object and callback-object\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#path-item-object\n */\nexport const BasePathItemObjectSchema = OriginalBasePathItemObjectSchema.extend({\n  /**\n   * A list of parameters that are applicable for all the operations described under this path. These parameters can be\n   * overridden at the operation level, but cannot be removed there. The list MUST NOT include duplicated parameters. A\n   * unique parameter is defined by a combination of a name and location. The list can use the Reference Object to link\n   * to parameters that are defined at the OpenAPI Object's components/parameters.\n   */\n  parameters: z.array(z.union([ReferenceObjectSchema, ParameterObjectSchema])).optional(),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAClB,SAAS,4BAA4B,wCAAwC;AAC7E,SAAS,6BAA6B;AACtC,SAAS,6BAA6B;AAS/B,MAAM,2BAA2B,iCAAiC,OAAO;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,EAO9E,YAAY,EAAE,MAAM,EAAE,MAAM,CAAC,uBAAuB,qBAAqB,CAAC,CAAC,EAAE,SAAS;AACxF,CAAC;",
-  "names": []
-}

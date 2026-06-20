@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/index.ts"],
-  "sourcesContent": ["export { XAdditionalPropertiesNameSchema } from './x-additional-properties-name'\nexport { type XCodeSample, XCodeSampleSchema, XCodeSamplesSchema } from './x-code-samples'\nexport { XEnumDescriptionsSchema } from './x-enum-descriptions'\nexport { XInternalSchema } from './x-internal'\nexport { PostResponseSchema, XPostResponseSchema } from './x-post-response'\nexport { XScalarIconSchema } from './x-scalar-icon'\nexport { XScalarIgnoreSchema } from './x-scalar-ignore'\nexport { XScalarRedirectUriSchema } from './x-scalar-redirect-uri'\nexport { XScalarSdkInstallationSchema } from './x-scalar-sdk-installation'\nexport { XScalarSecurityQuery } from './x-scalar-security-query'\nexport { XScalarStabilitySchema, XScalarStabilityValues } from './x-scalar-stability'\nexport { XTagGroupSchema, XTagGroupsSchema } from './x-tag-groups'\nexport { XUsePkceValues, XusePkceSchema } from './x-use-pkce'\n"],
-  "mappings": "AAAA,SAAS,uCAAuC;AAChD,SAA2B,mBAAmB,0BAA0B;AACxE,SAAS,+BAA+B;AACxC,SAAS,uBAAuB;AAChC,SAAS,oBAAoB,2BAA2B;AACxD,SAAS,yBAAyB;AAClC,SAAS,2BAA2B;AACpC,SAAS,gCAAgC;AACzC,SAAS,oCAAoC;AAC7C,SAAS,4BAA4B;AACrC,SAAS,wBAAwB,8BAA8B;AAC/D,SAAS,iBAAiB,wBAAwB;AAClD,SAAS,gBAAgB,sBAAsB;",
-  "names": []
-}

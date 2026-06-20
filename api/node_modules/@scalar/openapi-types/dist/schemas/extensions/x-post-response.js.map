@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-post-response.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\n/** The code to execute */\nexport const PostResponseSchema = z.string()\n\n/**\n * Post response scripts allow to execute arbitrary code after a response is received\n *\n * This is useful for:\n * - Extracting data from the response, or\n * - Testing the response\n *\n * @example\n * ```yaml\n * x-post-response: |\n *   pm.test(\"Status code is 200\", () => {\n *     pm.response.to.have.status(200)\n *   })\n * ```\n */\nexport const XPostResponseSchema = z.object({\n  'x-post-response': PostResponseSchema.optional(),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAGX,MAAM,qBAAqB,EAAE,OAAO;AAiBpC,MAAM,sBAAsB,EAAE,OAAO;AAAA,EAC1C,mBAAmB,mBAAmB,SAAS;AACjD,CAAC;",
-  "names": []
-}

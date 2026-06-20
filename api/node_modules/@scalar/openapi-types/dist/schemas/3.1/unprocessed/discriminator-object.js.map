@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/discriminator-object.ts"],
-  "sourcesContent": ["import { DiscriminatorObjectSchema as OriginalDiscriminatorObjectSchema } from '../processed/discriminator-object'\n\n/**\n * Discriminator Object\n *\n * When request bodies or response payloads may be one of a number of different schemas, a Discriminator Object gives a\n * hint about the expected schema of the document. This hint can be used to aid in serialization, deserialization, and\n * validation. The Discriminator Object does this by implicitly or explicitly associating the possible values of a named\n * property with alternative schemas.\n *\n * Note that discriminator MUST NOT change the validation outcome of the schema.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#discriminator-object\n */\nexport const DiscriminatorObjectSchema = OriginalDiscriminatorObjectSchema\n"],
-  "mappings": "AAAA,SAAS,6BAA6B,yCAAyC;AAcxE,MAAM,4BAA4B;",
-  "names": []
-}

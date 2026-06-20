@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-use-pkce.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\n/** Options for the x-usePkce extension */\nexport const XUsePkceValues = ['SHA-256', 'plain', 'no'] as const\n\nexport const XusePkceSchema = z.object({\n  /**\n   * Use x-usePkce to enable Proof Key for Code Exchange (PKCE) for the Oauth2 authorization code flow.\n   */\n  'x-usePkce': z.enum(XUsePkceValues).optional().default('no'),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAGX,MAAM,iBAAiB,CAAC,WAAW,SAAS,IAAI;AAEhD,MAAM,iBAAiB,EAAE,OAAO;AAAA;AAAA;AAAA;AAAA,EAIrC,aAAa,EAAE,KAAK,cAAc,EAAE,SAAS,EAAE,QAAQ,IAAI;AAC7D,CAAC;",
-  "names": []
-}

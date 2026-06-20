@@ -1,1 +1,0 @@
-# @typespec/asset-emitter

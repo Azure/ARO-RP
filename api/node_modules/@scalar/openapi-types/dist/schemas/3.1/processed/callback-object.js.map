@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/processed/callback-object.ts"],
-  "sourcesContent": ["import { z } from 'zod'\nimport { PathItemObjectSchemaWithoutCallbacks } from './path-item-object-without-callbacks'\nimport { RuntimeExpressionSchema } from './runtime-expression'\n\n/**\n * Callback Object\n *\n * A map of possible out-of-band callbacks related to the parent operation. Each value in the map is a\n * Path Item Object that describes a set of requests that may be initiated by the API provider and the\n * expected responses. The key value used to identify the callback object is an expression, evaluated\n * at runtime, that identifies a URL to be used for the callback operation.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#callback-object\n */\nexport const CallbackObjectSchema = z.record(RuntimeExpressionSchema, PathItemObjectSchemaWithoutCallbacks)\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAClB,SAAS,4CAA4C;AACrD,SAAS,+BAA+B;AAYjC,MAAM,uBAAuB,EAAE,OAAO,yBAAyB,oCAAoC;",
-  "names": []
-}

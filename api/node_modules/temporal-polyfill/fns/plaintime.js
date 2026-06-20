@@ -1,3 +1,0 @@
-import "../chunks/internal.js";
-
-export { add$4 as add, compare$4 as compare, create$4 as create, equals$4 as equals, fromFields$3 as fromFields, fromString$4 as fromString, getFields$3 as getFields, getISOFields$3 as getISOFields, isInstance$4 as isInstance, rangeToLocaleString$4 as rangeToLocaleString, rangeToLocaleStringParts$4 as rangeToLocaleStringParts, round$3 as round, since$4 as since, subtract$4 as subtract, toLocaleString$4 as toLocaleString, toLocaleStringParts$4 as toLocaleStringParts, toPlainDateTime$2 as toPlainDateTime, toString$4 as toString, toZonedDateTime$3 as toZonedDateTime, until$4 as until, withFields$3 as withFields } from "../chunks/funcApi.js";

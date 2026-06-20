@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/server-object.ts"],
-  "sourcesContent": ["import { ServerObjectSchema as OriginalServerObjectSchema } from '../processed/server-object'\n/**\n * Server Object\n *\n * An object representing a Server.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#server-object\n */\nexport const ServerObjectSchema = OriginalServerObjectSchema\n"],
-  "mappings": "AAAA,SAAS,sBAAsB,kCAAkC;AAQ1D,MAAM,qBAAqB;",
-  "names": []
-}

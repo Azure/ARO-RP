@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/contact-object.ts"],
-  "sourcesContent": ["import { ContactObjectSchema as OriginalContactObjectSchema } from '../processed/contact-object'\n\n/**\n * Contact Object\n *\n * Contact information for the exposed API.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#contact-object\n */\nexport const ContactObjectSchema = OriginalContactObjectSchema\n"],
-  "mappings": "AAAA,SAAS,uBAAuB,mCAAmC;AAS5D,MAAM,sBAAsB;",
-  "names": []
-}

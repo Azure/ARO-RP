@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-tokenName.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * An OpenAPI extension to specify a custom token name for OAuth2 flows\n *\n * @example\n * ```yaml\n * x-tokenName: 'custom_access_token'\n * ```\n */\nexport const XTokenName = z.object({\n  'x-tokenName': z.string().optional(),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAUX,MAAM,aAAa,EAAE,OAAO;AAAA,EACjC,eAAe,EAAE,OAAO,EAAE,SAAS;AACrC,CAAC;",
-  "names": []
-}

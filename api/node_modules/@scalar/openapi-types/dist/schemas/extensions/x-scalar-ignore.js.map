@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-scalar-ignore.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\nexport const XScalarIgnoreSchema = z.object({\n  'x-scalar-ignore': z.boolean().optional().catch(undefined),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAEX,MAAM,sBAAsB,EAAE,OAAO;AAAA,EAC1C,mBAAmB,EAAE,QAAQ,EAAE,SAAS,EAAE,MAAM,MAAS;AAC3D,CAAC;",
-  "names": []
-}

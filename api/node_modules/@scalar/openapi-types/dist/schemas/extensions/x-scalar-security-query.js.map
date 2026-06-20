@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../src/schemas/extensions/x-scalar-security-query.ts"],
-  "sourcesContent": ["import { z } from 'zod'\n\n/**\n * An OpenAPI extension set any query parameters for the OAuth authorize request\n *\n * @example\n * ```yaml\n * x-scalar-security-query: {\n *   prompt: 'consent',\n *   audience: 'scalar'\n * }\n * ```\n */\nexport const XScalarSecurityQuery = z.object({\n  'x-scalar-security-query': z.record(z.string(), z.string()).optional(),\n})\n"],
-  "mappings": "AAAA,SAAS,SAAS;AAaX,MAAM,uBAAuB,EAAE,OAAO;AAAA,EAC3C,2BAA2B,EAAE,OAAO,EAAE,OAAO,GAAG,EAAE,OAAO,CAAC,EAAE,SAAS;AACvE,CAAC;",
-  "names": []
-}

@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../../src/schemas/3.1/unprocessed/link-object.ts"],
-  "sourcesContent": ["import { LinkObjectSchema as OriginalLinkObjectSchema } from '../processed/link-object'\n\n/**\n * Link Object\n *\n * The Link Object represents a possible design-time link for a response. The presence of a link does not guarantee the\n * caller's ability to successfully invoke it, rather it provides a known relationship and traversal mechanism between\n * responses and other operations.\n *\n * Unlike dynamic links (i.e. links provided in the response payload), the OAS linking mechanism does not require link\n * information in the runtime response.\n *\n * For computing links and providing instructions to execute them, a runtime expression is used for accessing values in an\n * operation and using them as parameters while invoking the linked operation.\n *\n * @see https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#link-object\n */\nexport const LinkObjectSchema = OriginalLinkObjectSchema\n"],
-  "mappings": "AAAA,SAAS,oBAAoB,gCAAgC;AAiBtD,MAAM,mBAAmB;",
-  "names": []
-}

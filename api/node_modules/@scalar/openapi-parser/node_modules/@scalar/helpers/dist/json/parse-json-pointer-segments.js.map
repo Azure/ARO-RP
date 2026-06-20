@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/json/parse-json-pointer-segments.ts"],
-  "sourcesContent": ["import { unescapeJsonPointer } from './unescape-json-pointer'\n\n/**\n * Translate `/paths/~1test` to `['paths', '/test']`\n */\nexport const parseJsonPointerSegments = (path: string): string[] =>\n  path\n    // ['', 'paths', '~1test']\n    .split('/')\n    // ['paths', '~1test']\n    .slice(1)\n    // ['paths', '/test']\n    .map(unescapeJsonPointer)\n"],
-  "mappings": "AAAA,SAAS,2BAA2B;AAK7B,MAAM,2BAA2B,CAAC,SACvC,KAEG,MAAM,GAAG,EAET,MAAM,CAAC,EAEP,IAAI,mBAAmB;",
-  "names": []
-}

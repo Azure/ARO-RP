@@ -1,1 +1,0 @@
-{"version":3,"file":"json2xml.d.ts","sourceRoot":"","sources":["../../src/file/json2xml.ts"],"names":[],"mappings":"AAkBA;;;GAGG;AACH,wBAAgB,QAAQ,CACtB,IAAI,EAAE,MAAM,CAAC,MAAM,EAAE,GAAG,CAAC,EACzB,OAAO,GAAE;IACP,MAAM,CAAC,EAAE,MAAM,CAAA;IACf,MAAM,CAAC,EAAE,OAAO,CAAA;IAChB,cAAc,CAAC,EAAE,OAAO,CAAA;CACpB,UA2EP"}
