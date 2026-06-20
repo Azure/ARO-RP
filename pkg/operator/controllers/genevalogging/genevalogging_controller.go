@@ -123,8 +123,6 @@ func (r *Reconciler) cleanupStaleResources(ctx context.Context) error {
 		{"ConfigMap", kubeNamespace, "fluent-config"},
 		{"Secret", kubeNamespace, "certificates"},
 		{"ConfigMap", kubeNamespace, legacyGatewayCACMName},
-		{"DaemonSet.apps", kubeNamespace, "otel-exporter-master"},
-		{"DaemonSet.apps", kubeNamespace, "otel-exporter-worker"},
 	}
 
 	for _, res := range stale {
