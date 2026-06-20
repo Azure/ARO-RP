@@ -1,29 +1,35 @@
-# Gateway OTEL batching performance reasoning
+# OTEL batching performance reasoning (cluster + gateway)
 
-This note captures the mathematical reasoning behind the gateway OTEL batch tuning:
+This note captures the reasoning behind the two-stage OTEL batch tuning:
 
-- `timeout: 30s`
-- `send_batch_size: 4096`
-- `send_batch_max_size: 8192`
+- **Cluster-side collector (per cluster node path):**
+  - `timeout: 10s`
+  - `send_batch_size: 2048`
+  - `send_batch_max_size: 4096`
+- **Gateway collector (cross-cluster aggregation path):**
+  - `timeout: 30s`
+  - `send_batch_size: 4096`
+  - `send_batch_max_size: 8192`
 
-## Why this is performant with thousands of sources
+## Why two-stage batching is performant with thousands of sources
 
 Let:
 
-- \(R\) = total incoming log records per second across all clusters
+- \(R_c\) = incoming records/sec at a cluster-side collector
+- \(R_g\) = total incoming records/sec at gateway (\(R_g=\sum R_c\))
 - \(B\) = batch size trigger (`send_batch_size`)
 - \(T\) = timeout trigger (`timeout`)
 
-The batch flush rate is approximated by:
+For any stage, the batch flush rate is approximated by:
 
 \[
 \lambda_{\text{flush}}=\max\left(\frac{R}{B},\frac{1}{T}\right)
 \]
 
-Compared with old settings (\(B=1024, T=10s\)):
+Applied to current settings:
 
-- Increasing \(B\) to 4096 can reduce size-triggered flushes by up to \(4\times\)
-- Increasing \(T\) to 30s can reduce timeout-triggered flushes by up to \(3\times\)
+- **Cluster-side stage** (\(B=2048, T=10s\)): reduces per-node exporter call rate versus smaller defaults and smooths bursty container/journald input before traffic reaches gateway.
+- **Gateway stage** (\(B=4096, T=30s\)): further reduces fixed per-batch overhead at fan-in scale where \(R_g\) is large.
 
 A simple CPU/work model:
 
@@ -34,7 +40,7 @@ A simple CPU/work model:
 - \(aR\): unavoidable per-record processing
 - \(c\lambda_{\text{flush}}\): per-batch fixed overhead (serialization boundaries, RPC setup, TLS framing, headers, queue bookkeeping)
 
-Larger batches reduce \(\lambda_{\text{flush}}\), so the fixed-overhead term falls nearly linearly.
+Larger batches reduce \(\lambda_{\text{flush}}\), so the fixed-overhead term falls nearly linearly at both stages.
 
 Queueing view with per-batch service time \(S(B)=s_0+s_1B\):
 
@@ -44,9 +50,17 @@ Queueing view with per-batch service time \(S(B)=s_0+s_1B\):
 
 The fixed-cost portion \(\frac{Rs_0}{B}\) drops as \(B\) grows; going 1024 \(\rightarrow\) 4096 reduces this term by 75%.
 
-With many independent sources (\(R=\sum r_i\)), aggregate arrival variance relative to mean decreases (roughly \(\propto 1/\sqrt{N}\)), so size-triggered batching becomes more stable. This increases batching efficiency and aligns with Kusto guidance favoring fewer, larger ingestion batches for throughput/cost efficiency.
+With many independent sources (\(R_g=\sum r_i\)), aggregate arrival variance relative to mean decreases (roughly \(\propto 1/\sqrt{N}\)), so gateway size-triggered batching becomes more stable. This increases batching efficiency and aligns with Kusto guidance favoring fewer, larger ingestion batches for throughput/cost efficiency.
 
-## How many simultaneous batches might we see?
+## Why add cluster-side batching now
+
+Cluster-side batching is intentional even though gateway also batches:
+
+- It converts many tiny, bursty per-node exports into fewer larger payloads before network transit, which lowers per-request CPU/TLS/header overhead between clusters and gateway.
+- It provides early smoothing/backpressure at the edge of each cluster, so the gateway receives a steadier stream and spends less work on micro-batch churn.
+- It preserves the gateway’s role as the global optimization stage: gateway still re-aggregates across all clusters into larger batches tuned for downstream ingestion efficiency.
+
+## How many simultaneous gateway batches might we see?
 
 For the current gateway logs pipeline, the batch processor keeps one aggregate batcher because `metadata_keys` is not configured.
 
