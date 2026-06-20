@@ -13,31 +13,33 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeSubscriptionDocumentTriggerHandler func(context.Context, *pkg.SubscriptionDocument) error
-type fakeSubscriptionDocumentQueryHandler func(SubscriptionDocumentClient, *Query, *Options) SubscriptionDocumentRawIterator
+type (
+	fakeSubscriptionDocumentTriggerHandler func(context.Context, *pkg.SubscriptionDocument) error
+	fakeSubscriptionDocumentQueryHandler   func(SubscriptionDocumentClient, *Query, *Options) SubscriptionDocumentRawIterator
+)
 
 var _ SubscriptionDocumentClient = &FakeSubscriptionDocumentClient{}
 
 // NewFakeSubscriptionDocumentClient returns a FakeSubscriptionDocumentClient
 func NewFakeSubscriptionDocumentClient(h *codec.JsonHandle) *FakeSubscriptionDocumentClient {
 	return &FakeSubscriptionDocumentClient{
-		jsonHandle:      h,
-		subscriptionDocuments:       make(map[string]*pkg.SubscriptionDocument),
-		triggerHandlers: make(map[string]fakeSubscriptionDocumentTriggerHandler),
-		queryHandlers:   make(map[string]fakeSubscriptionDocumentQueryHandler),
+		jsonHandle:            h,
+		subscriptionDocuments: make(map[string]*pkg.SubscriptionDocument),
+		triggerHandlers:       make(map[string]fakeSubscriptionDocumentTriggerHandler),
+		queryHandlers:         make(map[string]fakeSubscriptionDocumentQueryHandler),
 	}
 }
 
 // FakeSubscriptionDocumentClient is a FakeSubscriptionDocumentClient
 type FakeSubscriptionDocumentClient struct {
-	lock                sync.RWMutex
-	jsonHandle          *codec.JsonHandle
-	subscriptionDocuments           map[string]*pkg.SubscriptionDocument
-	triggerHandlers     map[string]fakeSubscriptionDocumentTriggerHandler
-	queryHandlers       map[string]fakeSubscriptionDocumentQueryHandler
-	sorter              func([]*pkg.SubscriptionDocument)
-	etag                int
-	changeFeedIterators []*fakeSubscriptionDocumentIterator
+	lock                  sync.RWMutex
+	jsonHandle            *codec.JsonHandle
+	subscriptionDocuments map[string]*pkg.SubscriptionDocument
+	triggerHandlers       map[string]fakeSubscriptionDocumentTriggerHandler
+	queryHandlers         map[string]fakeSubscriptionDocumentQueryHandler
+	sorter                func([]*pkg.SubscriptionDocument)
+	etag                  int
+	changeFeedIterators   []*fakeSubscriptionDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.SubscriptionDocument, *pkg.SubscriptionDocument) bool
@@ -322,9 +324,9 @@ func NewFakeSubscriptionDocumentIterator(subscriptionDocuments []*pkg.Subscripti
 }
 
 type fakeSubscriptionDocumentIterator struct {
-	subscriptionDocuments    []*pkg.SubscriptionDocument
-	continuation int
-	done         bool
+	subscriptionDocuments []*pkg.SubscriptionDocument
+	continuation          int
+	done                  bool
 }
 
 func (i *fakeSubscriptionDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -353,7 +355,7 @@ func (i *fakeSubscriptionDocumentIterator) Next(ctx context.Context, maxItemCoun
 
 	return &pkg.SubscriptionDocuments{
 		SubscriptionDocuments: subscriptionDocuments,
-		Count:     len(subscriptionDocuments),
+		Count:                 len(subscriptionDocuments),
 	}, nil
 }
 

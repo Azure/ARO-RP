@@ -13,18 +13,20 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeBillingDocumentTriggerHandler func(context.Context, *pkg.BillingDocument) error
-type fakeBillingDocumentQueryHandler func(BillingDocumentClient, *Query, *Options) BillingDocumentRawIterator
+type (
+	fakeBillingDocumentTriggerHandler func(context.Context, *pkg.BillingDocument) error
+	fakeBillingDocumentQueryHandler   func(BillingDocumentClient, *Query, *Options) BillingDocumentRawIterator
+)
 
 var _ BillingDocumentClient = &FakeBillingDocumentClient{}
 
 // NewFakeBillingDocumentClient returns a FakeBillingDocumentClient
 func NewFakeBillingDocumentClient(h *codec.JsonHandle) *FakeBillingDocumentClient {
 	return &FakeBillingDocumentClient{
-		jsonHandle:      h,
-		billingDocuments:       make(map[string]*pkg.BillingDocument),
-		triggerHandlers: make(map[string]fakeBillingDocumentTriggerHandler),
-		queryHandlers:   make(map[string]fakeBillingDocumentQueryHandler),
+		jsonHandle:       h,
+		billingDocuments: make(map[string]*pkg.BillingDocument),
+		triggerHandlers:  make(map[string]fakeBillingDocumentTriggerHandler),
+		queryHandlers:    make(map[string]fakeBillingDocumentQueryHandler),
 	}
 }
 
@@ -32,7 +34,7 @@ func NewFakeBillingDocumentClient(h *codec.JsonHandle) *FakeBillingDocumentClien
 type FakeBillingDocumentClient struct {
 	lock                sync.RWMutex
 	jsonHandle          *codec.JsonHandle
-	billingDocuments           map[string]*pkg.BillingDocument
+	billingDocuments    map[string]*pkg.BillingDocument
 	triggerHandlers     map[string]fakeBillingDocumentTriggerHandler
 	queryHandlers       map[string]fakeBillingDocumentQueryHandler
 	sorter              func([]*pkg.BillingDocument)
@@ -322,9 +324,9 @@ func NewFakeBillingDocumentIterator(billingDocuments []*pkg.BillingDocument, con
 }
 
 type fakeBillingDocumentIterator struct {
-	billingDocuments    []*pkg.BillingDocument
-	continuation int
-	done         bool
+	billingDocuments []*pkg.BillingDocument
+	continuation     int
+	done             bool
 }
 
 func (i *fakeBillingDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -353,7 +355,7 @@ func (i *fakeBillingDocumentIterator) Next(ctx context.Context, maxItemCount int
 
 	return &pkg.BillingDocuments{
 		BillingDocuments: billingDocuments,
-		Count:     len(billingDocuments),
+		Count:            len(billingDocuments),
 	}, nil
 }
 

@@ -13,31 +13,33 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeOpenShiftClusterDocumentTriggerHandler func(context.Context, *pkg.OpenShiftClusterDocument) error
-type fakeOpenShiftClusterDocumentQueryHandler func(OpenShiftClusterDocumentClient, *Query, *Options) OpenShiftClusterDocumentRawIterator
+type (
+	fakeOpenShiftClusterDocumentTriggerHandler func(context.Context, *pkg.OpenShiftClusterDocument) error
+	fakeOpenShiftClusterDocumentQueryHandler   func(OpenShiftClusterDocumentClient, *Query, *Options) OpenShiftClusterDocumentRawIterator
+)
 
 var _ OpenShiftClusterDocumentClient = &FakeOpenShiftClusterDocumentClient{}
 
 // NewFakeOpenShiftClusterDocumentClient returns a FakeOpenShiftClusterDocumentClient
 func NewFakeOpenShiftClusterDocumentClient(h *codec.JsonHandle) *FakeOpenShiftClusterDocumentClient {
 	return &FakeOpenShiftClusterDocumentClient{
-		jsonHandle:      h,
-		openShiftClusterDocuments:       make(map[string]*pkg.OpenShiftClusterDocument),
-		triggerHandlers: make(map[string]fakeOpenShiftClusterDocumentTriggerHandler),
-		queryHandlers:   make(map[string]fakeOpenShiftClusterDocumentQueryHandler),
+		jsonHandle:                h,
+		openShiftClusterDocuments: make(map[string]*pkg.OpenShiftClusterDocument),
+		triggerHandlers:           make(map[string]fakeOpenShiftClusterDocumentTriggerHandler),
+		queryHandlers:             make(map[string]fakeOpenShiftClusterDocumentQueryHandler),
 	}
 }
 
 // FakeOpenShiftClusterDocumentClient is a FakeOpenShiftClusterDocumentClient
 type FakeOpenShiftClusterDocumentClient struct {
-	lock                sync.RWMutex
-	jsonHandle          *codec.JsonHandle
-	openShiftClusterDocuments           map[string]*pkg.OpenShiftClusterDocument
-	triggerHandlers     map[string]fakeOpenShiftClusterDocumentTriggerHandler
-	queryHandlers       map[string]fakeOpenShiftClusterDocumentQueryHandler
-	sorter              func([]*pkg.OpenShiftClusterDocument)
-	etag                int
-	changeFeedIterators []*fakeOpenShiftClusterDocumentIterator
+	lock                      sync.RWMutex
+	jsonHandle                *codec.JsonHandle
+	openShiftClusterDocuments map[string]*pkg.OpenShiftClusterDocument
+	triggerHandlers           map[string]fakeOpenShiftClusterDocumentTriggerHandler
+	queryHandlers             map[string]fakeOpenShiftClusterDocumentQueryHandler
+	sorter                    func([]*pkg.OpenShiftClusterDocument)
+	etag                      int
+	changeFeedIterators       []*fakeOpenShiftClusterDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.OpenShiftClusterDocument, *pkg.OpenShiftClusterDocument) bool
@@ -322,9 +324,9 @@ func NewFakeOpenShiftClusterDocumentIterator(openShiftClusterDocuments []*pkg.Op
 }
 
 type fakeOpenShiftClusterDocumentIterator struct {
-	openShiftClusterDocuments    []*pkg.OpenShiftClusterDocument
-	continuation int
-	done         bool
+	openShiftClusterDocuments []*pkg.OpenShiftClusterDocument
+	continuation              int
+	done                      bool
 }
 
 func (i *fakeOpenShiftClusterDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -353,7 +355,7 @@ func (i *fakeOpenShiftClusterDocumentIterator) Next(ctx context.Context, maxItem
 
 	return &pkg.OpenShiftClusterDocuments{
 		OpenShiftClusterDocuments: openShiftClusterDocuments,
-		Count:     len(openShiftClusterDocuments),
+		Count:                     len(openShiftClusterDocuments),
 	}, nil
 }
 

@@ -13,31 +13,33 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler func(context.Context, *pkg.PlatformWorkloadIdentityRoleSetDocument) error
-type fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler func(PlatformWorkloadIdentityRoleSetDocumentClient, *Query, *Options) PlatformWorkloadIdentityRoleSetDocumentRawIterator
+type (
+	fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler func(context.Context, *pkg.PlatformWorkloadIdentityRoleSetDocument) error
+	fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler   func(PlatformWorkloadIdentityRoleSetDocumentClient, *Query, *Options) PlatformWorkloadIdentityRoleSetDocumentRawIterator
+)
 
 var _ PlatformWorkloadIdentityRoleSetDocumentClient = &FakePlatformWorkloadIdentityRoleSetDocumentClient{}
 
 // NewFakePlatformWorkloadIdentityRoleSetDocumentClient returns a FakePlatformWorkloadIdentityRoleSetDocumentClient
 func NewFakePlatformWorkloadIdentityRoleSetDocumentClient(h *codec.JsonHandle) *FakePlatformWorkloadIdentityRoleSetDocumentClient {
 	return &FakePlatformWorkloadIdentityRoleSetDocumentClient{
-		jsonHandle:      h,
-		platformWorkloadIdentityRoleSetDocuments:       make(map[string]*pkg.PlatformWorkloadIdentityRoleSetDocument),
-		triggerHandlers: make(map[string]fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler),
-		queryHandlers:   make(map[string]fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler),
+		jsonHandle:                               h,
+		platformWorkloadIdentityRoleSetDocuments: make(map[string]*pkg.PlatformWorkloadIdentityRoleSetDocument),
+		triggerHandlers:                          make(map[string]fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler),
+		queryHandlers:                            make(map[string]fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler),
 	}
 }
 
 // FakePlatformWorkloadIdentityRoleSetDocumentClient is a FakePlatformWorkloadIdentityRoleSetDocumentClient
 type FakePlatformWorkloadIdentityRoleSetDocumentClient struct {
-	lock                sync.RWMutex
-	jsonHandle          *codec.JsonHandle
-	platformWorkloadIdentityRoleSetDocuments           map[string]*pkg.PlatformWorkloadIdentityRoleSetDocument
-	triggerHandlers     map[string]fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler
-	queryHandlers       map[string]fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler
-	sorter              func([]*pkg.PlatformWorkloadIdentityRoleSetDocument)
-	etag                int
-	changeFeedIterators []*fakePlatformWorkloadIdentityRoleSetDocumentIterator
+	lock                                     sync.RWMutex
+	jsonHandle                               *codec.JsonHandle
+	platformWorkloadIdentityRoleSetDocuments map[string]*pkg.PlatformWorkloadIdentityRoleSetDocument
+	triggerHandlers                          map[string]fakePlatformWorkloadIdentityRoleSetDocumentTriggerHandler
+	queryHandlers                            map[string]fakePlatformWorkloadIdentityRoleSetDocumentQueryHandler
+	sorter                                   func([]*pkg.PlatformWorkloadIdentityRoleSetDocument)
+	etag                                     int
+	changeFeedIterators                      []*fakePlatformWorkloadIdentityRoleSetDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.PlatformWorkloadIdentityRoleSetDocument, *pkg.PlatformWorkloadIdentityRoleSetDocument) bool
@@ -322,9 +324,9 @@ func NewFakePlatformWorkloadIdentityRoleSetDocumentIterator(platformWorkloadIden
 }
 
 type fakePlatformWorkloadIdentityRoleSetDocumentIterator struct {
-	platformWorkloadIdentityRoleSetDocuments    []*pkg.PlatformWorkloadIdentityRoleSetDocument
-	continuation int
-	done         bool
+	platformWorkloadIdentityRoleSetDocuments []*pkg.PlatformWorkloadIdentityRoleSetDocument
+	continuation                             int
+	done                                     bool
 }
 
 func (i *fakePlatformWorkloadIdentityRoleSetDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -353,7 +355,7 @@ func (i *fakePlatformWorkloadIdentityRoleSetDocumentIterator) Next(ctx context.C
 
 	return &pkg.PlatformWorkloadIdentityRoleSetDocuments{
 		PlatformWorkloadIdentityRoleSetDocuments: platformWorkloadIdentityRoleSetDocuments,
-		Count:     len(platformWorkloadIdentityRoleSetDocuments),
+		Count:                                    len(platformWorkloadIdentityRoleSetDocuments),
 	}, nil
 }
 

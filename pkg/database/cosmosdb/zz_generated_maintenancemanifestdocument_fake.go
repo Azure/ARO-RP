@@ -13,31 +13,33 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeMaintenanceManifestDocumentTriggerHandler func(context.Context, *pkg.MaintenanceManifestDocument) error
-type fakeMaintenanceManifestDocumentQueryHandler func(MaintenanceManifestDocumentClient, *Query, *Options) MaintenanceManifestDocumentRawIterator
+type (
+	fakeMaintenanceManifestDocumentTriggerHandler func(context.Context, *pkg.MaintenanceManifestDocument) error
+	fakeMaintenanceManifestDocumentQueryHandler   func(MaintenanceManifestDocumentClient, *Query, *Options) MaintenanceManifestDocumentRawIterator
+)
 
 var _ MaintenanceManifestDocumentClient = &FakeMaintenanceManifestDocumentClient{}
 
 // NewFakeMaintenanceManifestDocumentClient returns a FakeMaintenanceManifestDocumentClient
 func NewFakeMaintenanceManifestDocumentClient(h *codec.JsonHandle) *FakeMaintenanceManifestDocumentClient {
 	return &FakeMaintenanceManifestDocumentClient{
-		jsonHandle:      h,
-		maintenanceManifestDocuments:       make(map[string]*pkg.MaintenanceManifestDocument),
-		triggerHandlers: make(map[string]fakeMaintenanceManifestDocumentTriggerHandler),
-		queryHandlers:   make(map[string]fakeMaintenanceManifestDocumentQueryHandler),
+		jsonHandle:                   h,
+		maintenanceManifestDocuments: make(map[string]*pkg.MaintenanceManifestDocument),
+		triggerHandlers:              make(map[string]fakeMaintenanceManifestDocumentTriggerHandler),
+		queryHandlers:                make(map[string]fakeMaintenanceManifestDocumentQueryHandler),
 	}
 }
 
 // FakeMaintenanceManifestDocumentClient is a FakeMaintenanceManifestDocumentClient
 type FakeMaintenanceManifestDocumentClient struct {
-	lock                sync.RWMutex
-	jsonHandle          *codec.JsonHandle
-	maintenanceManifestDocuments           map[string]*pkg.MaintenanceManifestDocument
-	triggerHandlers     map[string]fakeMaintenanceManifestDocumentTriggerHandler
-	queryHandlers       map[string]fakeMaintenanceManifestDocumentQueryHandler
-	sorter              func([]*pkg.MaintenanceManifestDocument)
-	etag                int
-	changeFeedIterators []*fakeMaintenanceManifestDocumentIterator
+	lock                         sync.RWMutex
+	jsonHandle                   *codec.JsonHandle
+	maintenanceManifestDocuments map[string]*pkg.MaintenanceManifestDocument
+	triggerHandlers              map[string]fakeMaintenanceManifestDocumentTriggerHandler
+	queryHandlers                map[string]fakeMaintenanceManifestDocumentQueryHandler
+	sorter                       func([]*pkg.MaintenanceManifestDocument)
+	etag                         int
+	changeFeedIterators          []*fakeMaintenanceManifestDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.MaintenanceManifestDocument, *pkg.MaintenanceManifestDocument) bool
@@ -322,9 +324,9 @@ func NewFakeMaintenanceManifestDocumentIterator(maintenanceManifestDocuments []*
 }
 
 type fakeMaintenanceManifestDocumentIterator struct {
-	maintenanceManifestDocuments    []*pkg.MaintenanceManifestDocument
-	continuation int
-	done         bool
+	maintenanceManifestDocuments []*pkg.MaintenanceManifestDocument
+	continuation                 int
+	done                         bool
 }
 
 func (i *fakeMaintenanceManifestDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -353,7 +355,7 @@ func (i *fakeMaintenanceManifestDocumentIterator) Next(ctx context.Context, maxI
 
 	return &pkg.MaintenanceManifestDocuments{
 		MaintenanceManifestDocuments: maintenanceManifestDocuments,
-		Count:     len(maintenanceManifestDocuments),
+		Count:                        len(maintenanceManifestDocuments),
 	}, nil
 }
 

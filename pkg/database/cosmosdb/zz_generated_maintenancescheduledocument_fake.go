@@ -13,31 +13,33 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeMaintenanceScheduleDocumentTriggerHandler func(context.Context, *pkg.MaintenanceScheduleDocument) error
-type fakeMaintenanceScheduleDocumentQueryHandler func(MaintenanceScheduleDocumentClient, *Query, *Options) MaintenanceScheduleDocumentRawIterator
+type (
+	fakeMaintenanceScheduleDocumentTriggerHandler func(context.Context, *pkg.MaintenanceScheduleDocument) error
+	fakeMaintenanceScheduleDocumentQueryHandler   func(MaintenanceScheduleDocumentClient, *Query, *Options) MaintenanceScheduleDocumentRawIterator
+)
 
 var _ MaintenanceScheduleDocumentClient = &FakeMaintenanceScheduleDocumentClient{}
 
 // NewFakeMaintenanceScheduleDocumentClient returns a FakeMaintenanceScheduleDocumentClient
 func NewFakeMaintenanceScheduleDocumentClient(h *codec.JsonHandle) *FakeMaintenanceScheduleDocumentClient {
 	return &FakeMaintenanceScheduleDocumentClient{
-		jsonHandle:      h,
-		maintenanceScheduleDocuments:       make(map[string]*pkg.MaintenanceScheduleDocument),
-		triggerHandlers: make(map[string]fakeMaintenanceScheduleDocumentTriggerHandler),
-		queryHandlers:   make(map[string]fakeMaintenanceScheduleDocumentQueryHandler),
+		jsonHandle:                   h,
+		maintenanceScheduleDocuments: make(map[string]*pkg.MaintenanceScheduleDocument),
+		triggerHandlers:              make(map[string]fakeMaintenanceScheduleDocumentTriggerHandler),
+		queryHandlers:                make(map[string]fakeMaintenanceScheduleDocumentQueryHandler),
 	}
 }
 
 // FakeMaintenanceScheduleDocumentClient is a FakeMaintenanceScheduleDocumentClient
 type FakeMaintenanceScheduleDocumentClient struct {
-	lock                sync.RWMutex
-	jsonHandle          *codec.JsonHandle
-	maintenanceScheduleDocuments           map[string]*pkg.MaintenanceScheduleDocument
-	triggerHandlers     map[string]fakeMaintenanceScheduleDocumentTriggerHandler
-	queryHandlers       map[string]fakeMaintenanceScheduleDocumentQueryHandler
-	sorter              func([]*pkg.MaintenanceScheduleDocument)
-	etag                int
-	changeFeedIterators []*fakeMaintenanceScheduleDocumentIterator
+	lock                         sync.RWMutex
+	jsonHandle                   *codec.JsonHandle
+	maintenanceScheduleDocuments map[string]*pkg.MaintenanceScheduleDocument
+	triggerHandlers              map[string]fakeMaintenanceScheduleDocumentTriggerHandler
+	queryHandlers                map[string]fakeMaintenanceScheduleDocumentQueryHandler
+	sorter                       func([]*pkg.MaintenanceScheduleDocument)
+	etag                         int
+	changeFeedIterators          []*fakeMaintenanceScheduleDocumentIterator
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.MaintenanceScheduleDocument, *pkg.MaintenanceScheduleDocument) bool
@@ -322,9 +324,9 @@ func NewFakeMaintenanceScheduleDocumentIterator(maintenanceScheduleDocuments []*
 }
 
 type fakeMaintenanceScheduleDocumentIterator struct {
-	maintenanceScheduleDocuments    []*pkg.MaintenanceScheduleDocument
-	continuation int
-	done         bool
+	maintenanceScheduleDocuments []*pkg.MaintenanceScheduleDocument
+	continuation                 int
+	done                         bool
 }
 
 func (i *fakeMaintenanceScheduleDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -353,7 +355,7 @@ func (i *fakeMaintenanceScheduleDocumentIterator) Next(ctx context.Context, maxI
 
 	return &pkg.MaintenanceScheduleDocuments{
 		MaintenanceScheduleDocuments: maintenanceScheduleDocuments,
-		Count:     len(maintenanceScheduleDocuments),
+		Count:                        len(maintenanceScheduleDocuments),
 	}, nil
 }
 

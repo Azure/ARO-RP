@@ -13,18 +13,20 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
-type fakeGatewayDocumentTriggerHandler func(context.Context, *pkg.GatewayDocument) error
-type fakeGatewayDocumentQueryHandler func(GatewayDocumentClient, *Query, *Options) GatewayDocumentRawIterator
+type (
+	fakeGatewayDocumentTriggerHandler func(context.Context, *pkg.GatewayDocument) error
+	fakeGatewayDocumentQueryHandler   func(GatewayDocumentClient, *Query, *Options) GatewayDocumentRawIterator
+)
 
 var _ GatewayDocumentClient = &FakeGatewayDocumentClient{}
 
 // NewFakeGatewayDocumentClient returns a FakeGatewayDocumentClient
 func NewFakeGatewayDocumentClient(h *codec.JsonHandle) *FakeGatewayDocumentClient {
 	return &FakeGatewayDocumentClient{
-		jsonHandle:      h,
-		gatewayDocuments:       make(map[string]*pkg.GatewayDocument),
-		triggerHandlers: make(map[string]fakeGatewayDocumentTriggerHandler),
-		queryHandlers:   make(map[string]fakeGatewayDocumentQueryHandler),
+		jsonHandle:       h,
+		gatewayDocuments: make(map[string]*pkg.GatewayDocument),
+		triggerHandlers:  make(map[string]fakeGatewayDocumentTriggerHandler),
+		queryHandlers:    make(map[string]fakeGatewayDocumentQueryHandler),
 	}
 }
 
@@ -32,7 +34,7 @@ func NewFakeGatewayDocumentClient(h *codec.JsonHandle) *FakeGatewayDocumentClien
 type FakeGatewayDocumentClient struct {
 	lock                sync.RWMutex
 	jsonHandle          *codec.JsonHandle
-	gatewayDocuments           map[string]*pkg.GatewayDocument
+	gatewayDocuments    map[string]*pkg.GatewayDocument
 	triggerHandlers     map[string]fakeGatewayDocumentTriggerHandler
 	queryHandlers       map[string]fakeGatewayDocumentQueryHandler
 	sorter              func([]*pkg.GatewayDocument)
@@ -322,9 +324,9 @@ func NewFakeGatewayDocumentIterator(gatewayDocuments []*pkg.GatewayDocument, con
 }
 
 type fakeGatewayDocumentIterator struct {
-	gatewayDocuments    []*pkg.GatewayDocument
-	continuation int
-	done         bool
+	gatewayDocuments []*pkg.GatewayDocument
+	continuation     int
+	done             bool
 }
 
 func (i *fakeGatewayDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
@@ -353,7 +355,7 @@ func (i *fakeGatewayDocumentIterator) Next(ctx context.Context, maxItemCount int
 
 	return &pkg.GatewayDocuments{
 		GatewayDocuments: gatewayDocuments,
-		Count:     len(gatewayDocuments),
+		Count:            len(gatewayDocuments),
 	}, nil
 }
 
