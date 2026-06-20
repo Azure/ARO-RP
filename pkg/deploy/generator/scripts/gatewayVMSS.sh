@@ -174,6 +174,14 @@ exporters:
     endpoint: host.containers.internal:2020
     tls:
       insecure: true
+    # Gateway Otel Collector runs alongside mission-critical workloads:
+    # fail fast under sustained downstream pressure instead of retrying.
+    retry_on_failure:
+      enabled: false
+    sending_queue:
+      enabled: true
+      queue_size: 128
+      num_consumers: 2
 
 processors:
   attributes/cluster:
@@ -200,6 +208,7 @@ processors:
   memory_limiter:
     check_interval: 1s
     limit_mib: 512
+    spike_limit_mib: 64
 
   batch:
     timeout: 30s

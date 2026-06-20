@@ -251,6 +251,10 @@ exporters:
       enabled: true
     sending_queue:
       enabled: true
+      # Prefer bounded local buffering over unbounded in-memory growth.
+      queue_size: 1200
+      num_consumers: 2
+      storage: file_storage
 
 service:
   extensions: [health_check, file_storage]
