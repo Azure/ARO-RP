@@ -5,12 +5,14 @@ package cluster
 
 import (
 	"context"
+	"net/http"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
@@ -65,8 +67,17 @@ func SetOperatorFlagInClusterDoc(ctx context.Context, flagName string, flagValue
 	}
 
 	_, err = th.PatchOpenShiftClusterDocument(ctx, func(oscd *api.OpenShiftClusterDocument) error {
+		if oscd.OpenShiftCluster.Properties.OperatorFlags == nil {
+			oscd.OpenShiftCluster.Properties.OperatorFlags = api.OperatorFlags{}
+		}
 		oscd.OpenShiftCluster.Properties.OperatorFlags[flagName] = flagValue
 		return nil
 	})
-	return err
+	if err != nil {
+		if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+			return mimo.TerminalError(err)
+		}
+		return mimo.TransientError(err)
+	}
+	return nil
 }

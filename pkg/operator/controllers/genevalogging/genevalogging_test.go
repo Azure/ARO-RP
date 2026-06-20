@@ -400,6 +400,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 	if daemonsetCount != 0 {
 		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
 	}
+}
 
 func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.T) {
 	originalRender := renderOTelConfigFn

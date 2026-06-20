@@ -164,7 +164,13 @@ func (t *fakeTestContext) PatchOpenShiftClusterDocument(ctx context.Context, f d
 	if t.doc == nil {
 		panic("didn't set up OpenShiftClusterDocument in test")
 	}
-	return t.ocDb.Patch(ctx, t.doc.Key, f)
+	updatedDoc, err := t.ocDb.Patch(ctx, t.doc.Key, f)
+	if err != nil {
+		return nil, err
+	}
+
+	t.doc = updatedDoc
+	return updatedDoc, nil
 }
 
 // Result

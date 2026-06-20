@@ -80,12 +80,5 @@ var _ = Describe("Alerts", Label(smoke, basichealth, install), Serial, func() {
 
 func isIgnorable(alert prometheusv1.Alert) bool {
 	severity := []model.LabelValue{"critical", "error", "warning"}
-	if !slices.Contains(severity, alert.Labels["severity"]) {
-		return true
-	}
-	// In prod, all alerts shouldn't be firing
-	if !_env.IsLocalDevelopmentMode() {
-		return false
-	}
-	return false
+	return !slices.Contains(severity, alert.Labels["severity"])
 }
