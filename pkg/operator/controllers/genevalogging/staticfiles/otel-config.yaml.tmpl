@@ -76,7 +76,7 @@ receivers:
         type: regex_parser
         parse_from: body
         parse_to: body
-        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?:(?: [^= ]+=[^ ]+)*)?(?: file="(?<src_file>[^":]+):(?<src_line>\d+)")?.*$'
+        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?<fields>(?: [^= ]+=(?:"(?:[^"\\\\]|\\\\.)*"|[^ ]+))*)(?: file="(?<src_file>[^":]+):(?<src_line>\d+)")?.*$'
         severity:
           parse_from: body.severity
           mapping:
@@ -86,6 +86,12 @@ receivers:
             fatal: fatal
             info: info
             debug: debug
+        on_error: send_quiet
+      - id: logrus_fields_parse
+        type: key_value_parser
+        if: 'type(body) == "map" and body.fields != nil'
+        parse_from: body.fields
+        parse_to: body.fields
         on_error: send_quiet
       - id: klog_value_parse
         type: key_value_parser
@@ -149,6 +155,12 @@ processors:
       log_record:
         - 'IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["resource"]) and IsMatch(body["objectRef"]["resource"], "^(tokenreviews|accessreviews|selfsubjectaccessreviews)$")'
         - 'IsMap(body) and IsString(body["requestURI"]) and IsMatch(body["requestURI"], "/(tokenreviews|accessreviews|selfsubjectaccessreviews)(/|\\?|$)")'
+  filter/drop-audit-leases:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["resource"]) and body["objectRef"]["resource"] == "leases"'
+        - 'IsMap(body) and IsString(body["objectRef_resource"]) and body["objectRef_resource"] == "leases"'
   filter/drop-audit-non-platform-namespaces:
     error_mode: ignore
     logs:
@@ -183,6 +195,12 @@ processors:
       log_record:
         - 'IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["resource"]) and IsMatch(body["objectRef"]["resource"], "^(tokenreviews|accessreviews|selfsubjectaccessreviews)$")'
         - 'IsMap(body) and IsString(body["requestURI"]) and IsMatch(body["requestURI"], "/(tokenreviews|accessreviews|selfsubjectaccessreviews)(/|\\?|$)")'
+  filter/drop-audit-leases:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'IsMap(body) and IsMap(body["objectRef"]) and IsString(body["objectRef"]["resource"]) and body["objectRef"]["resource"] == "leases"'
+        - 'IsMap(body) and IsString(body["objectRef_resource"]) and body["objectRef_resource"] == "leases"'
   filter/drop-audit-non-platform-namespaces:
     error_mode: ignore
     logs:
@@ -284,9 +302,9 @@ service:
 {{- end }}
 {{- else if eq .Name "audit" }}
 {{- if eq $.Profile "minimal-logs" }}
-      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-leases, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else if eq $.Profile "reduced-logs" }}
-      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
+      processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-leases, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- else }}
       processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-{{ .Name }}, batch]
 {{- end }}

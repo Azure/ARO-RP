@@ -114,6 +114,9 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "id: logrus_parse") {
 		t.Fatal("full config missing logrus parser for container logs")
 	}
+	if !strings.Contains(full, "id: logrus_fields_parse") {
+		t.Fatal("full config missing logrus structured fields parser for container logs")
+	}
 
 	reduced, err := selectOTelConfig(otelProfileReducedLogs)
 	if err != nil {
@@ -128,10 +131,10 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(reduced, "processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
 		t.Fatal("reduced config missing expected journald processor chain")
 	}
-	if !strings.Contains(reduced, "filter/keep-audit-write-verbs:") || !strings.Contains(reduced, "filter/drop-audit-review-noise:") || !strings.Contains(reduced, "filter/drop-audit-non-platform-namespaces:") {
+	if !strings.Contains(reduced, "filter/keep-audit-write-verbs:") || !strings.Contains(reduced, "filter/drop-audit-review-noise:") || !strings.Contains(reduced, "filter/drop-audit-leases:") || !strings.Contains(reduced, "filter/drop-audit-non-platform-namespaces:") {
 		t.Fatal("reduced config missing audit filters")
 	}
-	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-audit, batch]") {
+	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-leases, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-audit, batch]") {
 		t.Fatal("reduced config missing filtered audit pipeline")
 	}
 
@@ -157,10 +160,13 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(highSignal, "filter/drop-audit-review-noise:") {
 		t.Fatal("high-signal config missing audit review-noise filter")
 	}
+	if !strings.Contains(highSignal, "filter/drop-audit-leases:") {
+		t.Fatal("high-signal config missing leases filter")
+	}
 	if !strings.Contains(highSignal, "filter/drop-audit-non-platform-namespaces:") {
 		t.Fatal("high-signal config missing audit namespace filter")
 	}
-	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-audit, batch]") {
+	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-leases, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-audit, batch]") {
 		t.Fatal("high-signal config missing expected audit processor chain")
 	}
 }
