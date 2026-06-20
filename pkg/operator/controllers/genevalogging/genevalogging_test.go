@@ -136,7 +136,6 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, transform/log-parity, attributes/common, batch]") {
 		t.Fatal("reduced config missing unfiltered audit pipeline")
 	}
-}
 
 	highSignal, err := selectOTelConfig(otelProfileMinimalLogs, false)
 	if err != nil {
