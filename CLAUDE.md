@@ -48,8 +48,8 @@ Conversion files (`_convert.go`) bridge them with explicit casts. Getting casts 
 
 **`client-generate` is destructive** — it deletes all generated SDK clients before regenerating. If Docker/autorest fails mid-run, restore with `git checkout -- pkg/client/ python/client/`.
 
-**NEVER modify `deps.go`** — this file exists solely to declare tool dependencies for `go mod`. Do NOT add Go version imports (e.g., `golang.org/toolchain`) or any other dependencies to this file. Tool dependencies are managed via the Makefile and `.bingo/` directory, not `deps.go`.
-
+**NEVER modify `deps.go`** — this is a `//go:build tools` file used only to keep the root module’s `go.mod`/`go.sum` in sync for a small, pinned set of tooling packages.
+Do NOT add new blank imports here (including `golang.org/toolchain`); add/update tool dependencies via the Makefile and `.bingo/*.mod` files instead.
 ## Where Code Runs
 
 | Runtime context | Packages |
