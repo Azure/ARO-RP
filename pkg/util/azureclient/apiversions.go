@@ -24,6 +24,7 @@ var apiVersions = map[string]string{
 	"microsoft.resources/deployments":          "2021-04-01",
 	"microsoft.documentdb":                     "2023-04-15",
 	"microsoft.insights":                       "2018-03-01",
+	"microsoft.insights/autoscalesettings":     "2022-10-01",
 	"microsoft.keyvault":                       "2019-09-01",
 	"microsoft.keyvault/vaults/accesspolicies": "2021-10-01",
 	"microsoft.managedidentity":                "2018-11-30",

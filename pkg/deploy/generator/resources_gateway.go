@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
+	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -473,5 +474,69 @@ func (g *generator) gatewayRBAC() []*arm.Resource {
 			"Microsoft.Network/privateLinkServices",
 			"'gateway-pls-001'",
 		),
+	}
+}
+
+func (g *generator) gatewayVMSSAutoscale() *arm.Resource {
+	vmssID := "[resourceId('Microsoft.Compute/virtualMachineScaleSets', concat('gateway-vmss-', parameters('vmssName')))]"
+
+	cpuTrigger := func(op mgmtinsights.ComparisonOperationType, threshold float64) *mgmtinsights.MetricTrigger {
+		return &mgmtinsights.MetricTrigger{
+			MetricName:        pointerutils.ToPtr("Percentage CPU"),
+			MetricNamespace:   pointerutils.ToPtr("microsoft.compute/virtualmachinescalesets"),
+			MetricResourceURI: pointerutils.ToPtr(vmssID),
+			TimeGrain:         pointerutils.ToPtr("PT1M"),
+			Statistic:         mgmtinsights.MetricStatisticTypeAverage,
+			TimeWindow:        pointerutils.ToPtr("PT5M"),
+			TimeAggregation:   mgmtinsights.TimeAggregationTypeAverage,
+			Operator:          op,
+			Threshold:         pointerutils.ToPtr(threshold),
+		}
+	}
+
+	scaleAction := func(dir mgmtinsights.ScaleDirection) *mgmtinsights.ScaleAction {
+		return &mgmtinsights.ScaleAction{
+			Direction: dir,
+			Type:      mgmtinsights.ChangeCount,
+			Value:     pointerutils.ToPtr("1"),
+			Cooldown:  pointerutils.ToPtr("PT5M"),
+		}
+	}
+
+	return &arm.Resource{
+		Resource: mgmtinsights.AutoscaleSettingResource{
+			AutoscaleSetting: &mgmtinsights.AutoscaleSetting{
+				Name:              pointerutils.ToPtr("[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]"),
+				Enabled:           pointerutils.ToPtr(true),
+				TargetResourceURI: pointerutils.ToPtr(vmssID),
+				Profiles: &[]mgmtinsights.AutoscaleProfile{
+					{
+						Name: pointerutils.ToPtr("gateway-cpu-autoscale"),
+						Capacity: &mgmtinsights.ScaleCapacity{
+							Minimum: pointerutils.ToPtr("3"),
+							Maximum: pointerutils.ToPtr("7"),
+							Default: pointerutils.ToPtr("3"),
+						},
+						Rules: &[]mgmtinsights.ScaleRule{
+							{
+								MetricTrigger: cpuTrigger(mgmtinsights.GreaterThan, 66),
+								ScaleAction:   scaleAction(mgmtinsights.ScaleDirectionIncrease),
+							},
+							{
+								MetricTrigger: cpuTrigger(mgmtinsights.LessThan, 40),
+								ScaleAction:   scaleAction(mgmtinsights.ScaleDirectionDecrease),
+							},
+						},
+					},
+				},
+			},
+			Name:     pointerutils.ToPtr("[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]"),
+			Type:     pointerutils.ToPtr("Microsoft.Insights/autoscaleSettings"),
+			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Insights/autoscaleSettings"),
+		DependsOn: []string{
+			vmssID,
+		},
 	}
 }

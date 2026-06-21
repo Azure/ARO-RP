@@ -391,6 +391,70 @@
             ]
         },
         {
+            "properties": {
+                "profiles": [
+                    {
+                        "name": "gateway-cpu-autoscale",
+                        "capacity": {
+                            "minimum": "3",
+                            "maximum": "7",
+                            "default": "3"
+                        },
+                        "rules": [
+                            {
+                                "metricTrigger": {
+                                    "metricName": "Percentage CPU",
+                                    "metricNamespace": "microsoft.compute/virtualmachinescalesets",
+                                    "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', concat('gateway-vmss-', parameters('vmssName')))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT5M",
+                                    "timeAggregation": "Average",
+                                    "operator": "GreaterThan",
+                                    "threshold": 66
+                                },
+                                "scaleAction": {
+                                    "direction": "Increase",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT5M"
+                                }
+                            },
+                            {
+                                "metricTrigger": {
+                                    "metricName": "Percentage CPU",
+                                    "metricNamespace": "microsoft.compute/virtualmachinescalesets",
+                                    "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', concat('gateway-vmss-', parameters('vmssName')))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT5M",
+                                    "timeAggregation": "Average",
+                                    "operator": "LessThan",
+                                    "threshold": 40
+                                },
+                                "scaleAction": {
+                                    "direction": "Decrease",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT5M"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "enabled": true,
+                "name": "[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]",
+                "targetResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', concat('gateway-vmss-', parameters('vmssName')))]"
+            },
+            "name": "[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]",
+            "type": "Microsoft.Insights/autoscaleSettings",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2022-10-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachineScaleSets', concat('gateway-vmss-', parameters('vmssName')))]"
+            ]
+        },
+        {
             "apiVersion": "2020-08-01",
             "location": "[resourceGroup().location]",
             "name": "gateway-vnet/peering-rp-vnet",

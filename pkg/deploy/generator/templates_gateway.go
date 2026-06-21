@@ -97,6 +97,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		g.gatewayLB(),
 		g.gatewayPLS(),
 		g.gatewayVMSS(),
+		g.gatewayVMSSAutoscale(),
 		// TODO: use rpLBAlert() to define Azure monitoring alerts around the readiness of the gateway ILB
 	)
 
