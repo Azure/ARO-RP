@@ -76,7 +76,7 @@ receivers:
         type: regex_parser
         parse_from: body
         parse_to: body
-        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?<fields>(?: [^= ]+=(?:"(?:[^"\\\\]|\\\\.)*"|[^ ]+))*)(?: file="(?<src_file>[^":]+):(?<src_line>\d+)")?.*$'
+        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?<fields>(?: (?!file=)[^= ]+=(?:"(?:[^"\\\\]|\\\\.)*"|[^ ]+))*)(?: file="(?<src_file>[^":]+):(?<src_line>\d+)")?.*$'
         severity:
           parse_from: body.severity
           mapping:
