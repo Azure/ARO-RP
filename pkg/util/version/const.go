@@ -62,12 +62,6 @@ func MdmImage(acrDomain string) string {
 	return acrDomain + "/geneva/distroless/mdm:2.202604071548.0-20260407-1@sha256:390a13ab26a4c90baa9d1a47ef2b502b7ec635840587d89d05120b6952fe680b"
 }
 
-// MdsdImage contains the location of the MDSD container image
-// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-func MdsdImage(acrDomain string) string {
-	return acrDomain + "/geneva/distroless/mdsd:1.40.3-20260409-1@sha256:1fb51857a0a34e7e7445a91c0a1082d97df235349a66a166a58c86029c80ea89"
-}
-
 // MUOImage contains the location of the Managed Upgrade Operator container image
 func MUOImage(acrDomain string) string {
 	return acrDomain + "/app-sre/managed-upgrade-operator:" + MUOImageTag
@@ -81,6 +75,11 @@ func GateKeeperImage(acrDomain string) string {
 // MiseImage contains the location of the Mise container image
 func MiseImage(acrDomain string) string {
 	return acrDomain + "/msftonly/mise:1.42.1-azurelinux3.0-distroless"
+}
+
+// OtelImage contains the location of the OpenTelemetry container image for MISE
+func OTelImage(acrDomain string) string {
+	return "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
 }
 
 // TelemetryExporterImage contains the location of the telemetry exporter container image
