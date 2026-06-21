@@ -139,10 +139,23 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete, daemonSetName, metav1.DeleteOptions{},
 			)
 
-			By(fmt.Sprintf("checking that %s DaemonSet is repaired", daemonSetName))
-			GetK8sObjectWithRetry(
-				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get, daemonSetName, metav1.GetOptions{},
-			)
+			By(fmt.Sprintf("waiting for %s DaemonSet to be deleted", daemonSetName))
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get(ctx, daemonSetName, metav1.GetOptions{})
+				g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expected %s to be deleted, got %v", daemonSetName, err)
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			By(fmt.Sprintf("waiting for %s DaemonSet to be repaired and ready", daemonSetName))
+			Eventually(func(g Gomega, ctx context.Context) {
+				ds, err := clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get(ctx, daemonSetName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0))
+				g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.NumberAvailable))
+				g.Expect(ds.Status.DesiredNumberScheduled).To(Equal(ds.Status.UpdatedNumberScheduled))
+				g.Expect(ds.Status.CurrentNumberScheduled).To(Equal(ds.Status.NumberReady))
+				g.Expect(ds.Generation).To(Equal(ds.Status.ObservedGeneration))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}
 	})
 })
