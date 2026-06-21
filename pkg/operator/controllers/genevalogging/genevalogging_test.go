@@ -93,8 +93,8 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "key: EventName") || !strings.Contains(full, "key: source_name") {
 		t.Fatal("full config missing source fields")
 	}
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
-		t.Fatal("full config missing source processor")
+	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-containers, batch]") {
+		t.Fatal("full config missing containers source processor")
 	}
 	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
 		t.Fatal("full config missing node mapping")
