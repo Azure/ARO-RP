@@ -48,7 +48,7 @@
             "value": ""
         },
         "gatewayVmSize": {
-            "value": "Standard_D4s_v3"
+            "value": "Standard_D8s_v4"
         },
         "gatewayVmssCapacity": {
             "value": 3

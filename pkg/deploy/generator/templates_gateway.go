@@ -63,7 +63,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 			"gatewayFeatures":
 			p.DefaultValue = ""
 		case "gatewayVmSize":
-			p.DefaultValue = "Standard_D4s_v3"
+			p.DefaultValue = "Standard_D8s_v4"
 		case "gatewayVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
