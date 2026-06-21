@@ -33,10 +33,6 @@ var (
 
 var GitCommit = "unknown"
 
-// TelemetryExporterImageDigest is populated from the telemetry exporter build/publish workflow
-// and used to pin the image by digest.
-var TelemetryExporterImageDigest = ""
-
 type Stream struct {
 	Version  Version `json:"version"`
 	PullSpec string  `json:"-"`
@@ -90,9 +86,6 @@ func OTelImage(acrDomain string) string {
 
 // TelemetryExporterImage contains the location of the telemetry exporter container image
 func TelemetryExporterImage(acrDomain string) string {
-	if TelemetryExporterImageDigest != "" {
-		return acrDomain + "/telemetryexporter@" + TelemetryExporterImageDigest
-	}
 	return acrDomain + "/telemetryexporter:sha256:5dcfe4c0db9e46e84096c22fbc51084cc8c3925941b326c4081882a16749b248"
 }
 
