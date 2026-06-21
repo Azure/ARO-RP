@@ -150,6 +150,10 @@ MONITORING_ENVIRONMENT=$ENVIRONMENT
 
 ENABLE_GIG_BRIDGE_MODE=1"
 
+    local -i otel_mem_mib=$(( $(host_mem_mib) * 7 / 100 ))
+    local -i otel_limit_mib=$(( otel_mem_mib * 80 / 100 ))
+    local -i otel_spike_mib=$(( otel_limit_mib * 12 / 100 ))
+
     # shellcheck disable=SC2034
     local -r gateway_otel_collector_conf="extensions:
   health_check:
@@ -261,8 +265,8 @@ processors:
 
   memory_limiter:
     check_interval: 1s
-    limit_mib: 512
-    spike_limit_mib: 64
+    limit_mib: ${otel_limit_mib}
+    spike_limit_mib: ${otel_spike_mib}
 
   batch:
     timeout: 30s

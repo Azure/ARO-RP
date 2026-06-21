@@ -42,13 +42,16 @@ configure_service_aro_gateway() {
     log "starting"
     log "Configuring aro-gateway service"
 
+    local -i mem_limit_mib=$(( $(host_mem_mib) * 15 / 100 ))
+
     # shellcheck disable=SC2034
     local -r aro_gateway_conf_filename='/etc/sysconfig/aro-gateway'
     local -r add_conf_file="PODMAN_NETWORK='podman'
 IPADDRESS='$ipaddress'
 ROLE='${role,,}'
 ARO_LOG_LEVEL='$GATEWAYLOGLEVEL'
-ENVIRONMENT='$ENVIRONMENT'"
+ENVIRONMENT='$ENVIRONMENT'
+MEM_LIMIT_MIB='$mem_limit_mib'"
 
     write_file aro_gateway_conf_filename conf_file true
     write_file aro_gateway_conf_filename add_conf_file false
@@ -80,7 +83,8 @@ ExecStart=/usr/bin/podman run \
   -e MDM_NAMESPACE \
   -e ARO_LOG_LEVEL \
   -e ENVIRONMENT \
-  -m 2g \
+  --cpu-shares 2048 \
+  -m ${MEM_LIMIT_MIB}m \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -p 80:8080 \
@@ -852,6 +856,8 @@ configure_service_gateway_otel_collector() {
     log "starting"
     log "Configuring gateway-otel-collector service"
 
+    local -i mem_limit_mib=$(( $(host_mem_mib) * 7 / 100 ))
+
     # Create config directory and write config file
     mkdir -p /etc/otel-collector/tls
     mkdir -p /var/log/otel-collector
@@ -873,7 +879,8 @@ DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 DATABASE_NAME='ARO'
 ENVIRONMENT='$ENVIRONMENT'
 LOCATION='$LOCATION'
-RESOURCEGROUP='$RESOURCEGROUPNAME'"
+RESOURCEGROUP='$RESOURCEGROUPNAME'
+MEM_LIMIT_MIB='$mem_limit_mib'"
 
     write_file gateway_otel_collector_conf_filename gateway_otel_collector_conf_file true
 
@@ -899,8 +906,7 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   --cpu-shares 512 \
-  --cpus 0.5 \
-  -m 1g \
+  -m ${MEM_LIMIT_MIB}m \
   -p 4317:4317 \
   -p 13133:13133 \
   -e DATABASE_ACCOUNT_NAME \
@@ -1314,6 +1320,8 @@ configure_service_mdm() {
 
     verify_role role
 
+    local -i mem_limit_mib=$(( $(host_mem_mib) * 13 / 100 ))
+
     # shellcheck disable=SC2034
     local -r sysconfig_mdm_filename="/etc/sysconfig/mdm"
     # shellcheck disable=SC2034
@@ -1327,7 +1335,8 @@ MDM_NAMESPACE='OTEL'
 MDM_ACCOUNT='AzureRedHatOpenShiftRP'
 PODMAN_NETWORK='podman'
 ENVIRONMENT='$ENVIRONMENT'
-IPADDRESS='$ipaddress'"
+IPADDRESS='$ipaddress'
+MEM_LIMIT_MIB='$mem_limit_mib'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
 
@@ -1355,7 +1364,8 @@ ExecStart=/usr/bin/podman run \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   -e ENVIRONMENT \
-  -m 2g \
+  --cpu-shares 1024 \
+  -m ${MEM_LIMIT_MIB}m \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
   ${MDMIMAGE} \
