@@ -193,6 +193,15 @@ exporters:
     logs_table_name: \"containerLogs\"
     logs_table_json_mapping: \"ingestionMapping\"
     ingestion_type: \"managed\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 128
+      num_consumers: 2
 
   azuredataexplorer/journald:
     cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
@@ -201,6 +210,15 @@ exporters:
     logs_table_name: \"journald\"
     logs_table_json_mapping: \"ingestionMapping\"
     ingestion_type: \"managed\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 128
+      num_consumers: 2
 
   azuredataexplorer/audit:
     cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
@@ -209,6 +227,15 @@ exporters:
     logs_table_name: \"audit\"
     logs_table_json_mapping: \"ingestionMapping\"
     ingestion_type: \"managed\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 128
+      num_consumers: 2
 
 processors:
   attributes/cluster:
