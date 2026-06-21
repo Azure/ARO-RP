@@ -83,6 +83,7 @@ func MiseImage(acrDomain string) string {
 	return acrDomain + "/msftonly/mise:1.42.1-azurelinux3.0-distroless"
 }
 
+// TelemetryExporterImage contains the location of the telemetry exporter container image
 func TelemetryExporterImage(acrDomain string) string {
 	image := acrDomain + "/telemetryexporter:sha256:5dcfe4c0db9e46e84096c22fbc51084cc8c3925941b326c4081882a16749b248"
 	if TelemetryExporterImageDigest != "" {
