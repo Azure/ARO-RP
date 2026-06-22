@@ -157,8 +157,9 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 	for name, m := range filteredMachines {
 		sizes[m.size] = append(sizes[m.size], name)
 	}
+	// During a partial resize, old and new VM sizes can coexist temporarily, so warn instead of failing.
 	if len(sizes) > 1 {
-		log.Warnf("heterogeneous control plane VM sizes (may indicate a partial resize): %v", sizes)
+		log.Warnf("different control plane VM sizes detected (may indicate a partial resize): %v", sizes)
 	}
 
 	if err := errors.Join(validationErrs...); err != nil {
