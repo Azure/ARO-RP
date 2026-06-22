@@ -56,7 +56,7 @@ type Operator interface {
 	Update(context.Context) error
 	CreateOrUpdateCredentialsRequest(context.Context) error
 	IsReady(context.Context) (bool, error)
-	Restart(context.Context, []string) error
+	Restart(context.Context, kubernetes.Interface, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	EnsureUpgradeAnnotation(context.Context) error
 	SyncClusterObject(context.Context) error
@@ -69,18 +69,16 @@ type operator struct {
 	oc              *api.OpenShiftCluster
 	subscriptiondoc *api.SubscriptionDocument
 
-	client        clienthelper.Interface
-	kubernetescli kubernetes.Interface
+	client clienthelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, client clienthelper.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, client clienthelper.Interface) (Operator, error) {
 	return &operator{
 		log: log,
 		env: env,
 		oc:  oc,
 
 		client:          client,
-		kubernetescli:   kubernetescli,
 		subscriptiondoc: subscriptionDoc,
 	}, nil
 }
@@ -597,10 +595,10 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	return deploymentOk, deploymentErr
 }
 
-func (o *operator) Restart(ctx context.Context, deploymentNames []string) error {
+func (o *operator) Restart(ctx context.Context, kubernetescli kubernetes.Interface, deploymentNames []string) error {
 	var result error
 	for _, dn := range deploymentNames {
-		err := utilkubernetes.Restart(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), pkgoperator.Namespace, dn)
+		err := utilkubernetes.Restart(ctx, kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), pkgoperator.Namespace, dn)
 		if err != nil {
 			result = multierror.Append(result, err)
 		}
