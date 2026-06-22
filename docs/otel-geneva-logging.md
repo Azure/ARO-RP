@@ -6,6 +6,7 @@ This guide captures how OTEL collector behavior is wired in ARO, how gateway tar
 
 - Controller: `pkg/operator/controllers/genevalogging/`
 - OTEL template: `pkg/operator/controllers/genevalogging/staticfiles/otel-config.yaml.tmpl`
+- OTEL template renderer: `pkg/operator/controllers/genevalogging/otel_config_template.go`
 - Operator flags: `pkg/operator/flags.go`
 - Gateway fields population: `pkg/operator/deploy/deploy.go`
 
@@ -23,6 +24,8 @@ Collector endpoint selection:
 1. If `gatewayTelemetryDomain` exists: use `<gatewayTelemetryDomain>:4317` and add a host alias to `gatewayPrivateEndpointIP`.
 2. Otherwise: use `<gatewayPrivateEndpointIP>:4317`.
 
+The controller always creates the OTEL config ConfigMap first (`config.yaml`, `master-config.yaml`, `worker-config.yaml`) and only creates daemonsets once gateway endpoint data is ready.
+
 ## Current OTEL log shape
 
 Top-level fields emitted for log source identification:
@@ -31,12 +34,14 @@ Top-level fields emitted for log source identification:
 - `namespace`
 - `pod`
 - `container`
+- `source_name`
+- `EventName`
 
 Raw payload retention:
 
 - `raw_json_body` contains the full original log body.
 
-Compatibility fields (for existing consumers) are still emitted (`RoleInstance`, `CONTAINER`, `POD`, `NAMESPACE`).
+Worker collectors do not include the audit receiver; audit logs are collected on the master/control-plane collector config.
 
 ## OTEL operator flags
 
@@ -46,7 +51,6 @@ Compatibility fields (for existing consumers) are still emitted (`RoleInstance`,
 | `aro.genevalogging.otel.profile` | Global profile (`max-logs`, `reduced-logs`, `minimal-logs`). | `minimal-logs` |
 | `aro.genevalogging.otel.master.profile` | Optional master override. | unset |
 | `aro.genevalogging.otel.worker.profile` | Optional worker override. | unset |
-| `aro.genevalogging.otel.emitsourcefields` | Adds per-source `source_name` and `EventName`. | `false` |
 
 ## Rollout paths
 

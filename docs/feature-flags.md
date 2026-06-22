@@ -62,7 +62,6 @@ OTEL/Geneva logging controls are operator flags, including:
 - `aro.genevalogging.otel.profile`
 - `aro.genevalogging.otel.master.profile`
 - `aro.genevalogging.otel.worker.profile`
-- `aro.genevalogging.otel.emitsourcefields`
 
 For OTEL rollout details (including gateway dependency and MIMO operator-flags
 task usage), see [Geneva Logging OTEL Developer Guide](./otel-geneva-logging.md).
