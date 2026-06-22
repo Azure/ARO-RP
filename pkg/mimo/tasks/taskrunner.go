@@ -18,12 +18,13 @@ const (
 )
 
 var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
-	mimo.TLS_CERT_ROTATION_ID:     TLSCertRotation,
-	mimo.ACR_TOKEN_CHECKER_ID:     ACRTokenChecker,
-	mimo.OPERATOR_FLAGS_UPDATE_ID: UpdateOperatorFlags,
-	mimo.MSI_CERT_RENEWAL_ID:      MSICertificateRenewal,
-	mimo.MIGRATE_LB_ZONES_ID:      MigrateInternalLoadBalancerZones,
-	mimo.FIX_SSH_ID:               FixSSH,
+	mimo.TLS_CERT_ROTATION_ID:      TLSCertRotation,
+	mimo.ACR_TOKEN_CHECKER_ID:      ACRTokenChecker,
+	mimo.OPERATOR_VERSION_RESET_ID: ResetOperatorVersion,
+	mimo.OPERATOR_FLAGS_UPDATE_ID:  UpdateOperatorFlags,
+	mimo.MSI_CERT_RENEWAL_ID:       MSICertificateRenewal,
+	mimo.MIGRATE_LB_ZONES_ID:       MigrateInternalLoadBalancerZones,
+	mimo.FIX_SSH_ID:                FixSSH,
 
 	// Operator flag tasks
 	mimo.OPERATOR_FLAG_SET_GENEVA_OTEL:                      SetOperatorFlagGenevaLoggingUseOTel,
