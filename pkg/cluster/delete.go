@@ -29,7 +29,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
-	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -221,7 +220,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 
 			case "microsoft.network/privatednszones":
 				m.log.Printf("deleting private DNS nested resources of %s", *resource.ID)
-				err = utilnet.DeletePrivateDNSVNetLinks(ctx, m.virtualNetworkLinks, *resource.ID)
+				err = DeletePrivateDNSVNetLinks(ctx, m.virtualNetworkLinks, *resource.ID)
 				if err != nil {
 					return err
 				}
