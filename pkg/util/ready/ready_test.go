@@ -12,13 +12,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestNodeIsReady(t *testing.T) {
@@ -520,35 +527,36 @@ func TestCheckPodIsRunningError(t *testing.T) {
 }
 
 func TestCheckDeploymentIsReady(t *testing.T) {
-	ctx := context.Background()
-
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment-not-found",
 			Namespace: "default",
 		},
 	}
-	clientset := fake.NewSimpleClientset()
-	_, err := clientset.AppsV1().Deployments("default").Create(ctx, deployment, metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("error creating deployment: %v", err)
-	}
-	_, err = CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.Name)()
+
+	_, log := testlog.LogForTesting(t)
+	builder := clientfake.NewClientBuilder().WithRuntimeObjects(deployment)
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	_, err := CheckDeploymentIsReady(t.Context(), ch, types.NamespacedName{Name: deployment.Name, Namespace: "default"})()
 	if err != nil {
 		t.Fatalf("check deployement is not ready: %v", err)
 	}
 }
 
 func TestCheckDeploymentIsReadyNotFound(t *testing.T) {
-	ctx := context.Background()
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment-not-found",
 			Namespace: "default",
 		},
 	}
-	clientset := fake.NewSimpleClientset()
-	ok, _ := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.Name)()
+
+	_, log := testlog.LogForTesting(t)
+	builder := clientfake.NewClientBuilder()
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	ok, _ := CheckDeploymentIsReady(t.Context(), ch, types.NamespacedName{Name: deployment.Name, Namespace: "default"})()
 
 	if ok {
 		t.Fatalf("check deployment is found")
@@ -556,14 +564,15 @@ func TestCheckDeploymentIsReadyNotFound(t *testing.T) {
 }
 
 func TestCheckDeploymentIsReadyError(t *testing.T) {
-	ctx := context.Background()
-
-	clientset := fake.NewSimpleClientset()
-	clientset.PrependReactor("get", "deployments", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &appsv1.Deployment{}, errors.New("error getting deployment")
+	_, log := testlog.LogForTesting(t)
+	builder := clientfake.NewClientBuilder()
+	hc := testclienthelper.NewHookingClient(builder.Build())
+	hc.WithPreGetHook(func(key client.ObjectKey, obj client.Object) error {
+		return errors.New("error getting deployment")
 	})
-	_, err := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), "")()
+	ch := clienthelper.NewWithClient(log, hc)
 
+	_, err := CheckDeploymentIsReady(t.Context(), ch, types.NamespacedName{Name: "deployment", Namespace: "default"})()
 	if err == nil {
 		t.Fatalf("check deployment error is: %v", err)
 	}

@@ -18,9 +18,9 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,26 +29,23 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 //go:embed staticresources
@@ -72,35 +69,18 @@ type operator struct {
 	oc              *api.OpenShiftCluster
 	subscriptiondoc *api.SubscriptionDocument
 
-	arocli        aroclient.Interface
 	client        clienthelper.Interface
-	extensionscli extensionsclient.Interface
 	kubernetescli kubernetes.Interface
-	operatorcli   operatorclient.Interface
-	dh            dynamichelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, arocli aroclient.Interface, client clienthelper.Interface, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface) (Operator, error) {
-	restConfig, err := restconfig.RestConfig(env, oc)
-	if err != nil {
-		return nil, err
-	}
-	dh, err := dynamichelper.New(log, restConfig)
-	if err != nil {
-		return nil, err
-	}
-
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, client clienthelper.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
 	return &operator{
 		log: log,
 		env: env,
 		oc:  oc,
 
-		arocli:          arocli,
 		client:          client,
-		extensionscli:   extensionscli,
 		kubernetescli:   kubernetescli,
-		operatorcli:     operatorcli,
-		dh:              dh,
 		subscriptiondoc: subscriptionDoc,
 	}, nil
 }
@@ -117,7 +97,8 @@ type deploymentData struct {
 
 func (o *operator) SetForceReconcile(ctx context.Context, enable bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		c, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+		c := &arov1alpha1.Cluster{}
+		err := o.client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, c)
 		if err != nil {
 			return err
 		}
@@ -126,8 +107,8 @@ func (o *operator) SetForceReconcile(ctx context.Context, enable bool) error {
 		} else {
 			c.Spec.OperatorFlags[pkgoperator.ForceReconciliation] = "false"
 		}
-		_, err = o.arocli.AroV1alpha1().Clusters().Update(ctx, c, metav1.UpdateOptions{})
-		return err
+
+		return o.client.Update(ctx, c)
 	})
 }
 
@@ -375,7 +356,7 @@ func (o *operator) SyncClusterObject(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return o.dh.Ensure(ctx, resource)
+	return o.client.Ensure(ctx, resource)
 }
 
 func (o *operator) Install(ctx context.Context) error {
@@ -410,7 +391,7 @@ func (o *operator) applyDeployment(ctx context.Context, resources []kruntime.Obj
 	}
 
 	for _, resource := range resources {
-		err = o.dh.Ensure(ctx, resource)
+		err = o.client.Ensure(ctx, resource)
 		if err != nil {
 			return err
 		}
@@ -428,18 +409,14 @@ func (o *operator) applyDeployment(ctx context.Context, resources []kruntime.Obj
 			}
 
 			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
-				crd, err := o.extensionscli.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, acc.GetName(), metav1.GetOptions{})
+				crd := &extensionsv1.CustomResourceDefinition{}
+				err := o.client.GetOne(ctx, types.NamespacedName{Namespace: acc.GetName()}, crd)
 				if err != nil {
 					return false, err
 				}
 
 				return isCRDEstablished(crd), nil
 			})
-			if err != nil {
-				return err
-			}
-
-			err = o.dh.Refresh()
 			if err != nil {
 				return err
 			}
@@ -461,12 +438,14 @@ func (o *operator) applyDeployment(ctx context.Context, resources []kruntime.Obj
 				// "aro.openshift.io/v1alpha1"
 				return kerrors.IsForbidden(err) || kerrors.IsConflict(err)
 			}, func() error {
-				cluster, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+				cluster := &arov1alpha1.Cluster{}
+				err := o.client.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 				if err != nil {
 					return err
 				}
 
-				s, err := o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
+				s := &corev1.Secret{}
+				err = o.client.GetOne(ctx, types.NamespacedName{Namespace: pkgoperator.Namespace, Name: pkgoperator.SecretName}, s)
 				if err != nil {
 					return err
 				}
@@ -476,8 +455,7 @@ func (o *operator) applyDeployment(ctx context.Context, resources []kruntime.Obj
 					return err
 				}
 
-				_, err = o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
-				return err
+				return o.client.Update(ctx, s)
 			})
 			if err != nil {
 				return err
@@ -506,7 +484,7 @@ func (o *operator) CreateOrUpdateCredentialsRequest(ctx context.Context) error {
 		return err
 	}
 
-	return o.dh.Ensure(ctx, crUnstructured)
+	return o.client.Ensure(ctx, crUnstructured)
 }
 
 func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
@@ -534,24 +512,24 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 		return err
 	}
 
-	_, err = o.operatorcli.OperatorV1().CloudCredentials().Patch(ctx, "cluster", types.MergePatchType, patchBytes, metav1.PatchOptions{})
-	if err != nil {
-		return err
+	cc := &operatorv1.CloudCredential{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster",
+		},
 	}
-
-	return nil
+	return o.client.Patch(ctx, cc, client.RawPatch(types.MergePatchType, patchBytes))
 }
 
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	deploymentOk := true
 	var deploymentErr error
 
-	deployments := o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace)
-	replicasets := o.kubernetescli.AppsV1().ReplicaSets(pkgoperator.Namespace)
-	pods := o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace)
-
 	for _, deployment := range []string{"aro-operator-master", "aro-operator-worker"} {
-		ok, err := ready.CheckDeploymentIsReady(ctx, deployments, deployment)()
+		ok, err := ready.CheckDeploymentIsReady(
+			ctx,
+			o.client,
+			types.NamespacedName{Name: deployment, Namespace: pkgoperator.Namespace},
+		)()
 		o.log.Infof("deployment %q ok status is: %v, err is: %v", deployment, ok, err)
 		deploymentOk = deploymentOk && ok
 		if deploymentErr == nil && err != nil {
@@ -561,7 +539,8 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 			continue
 		}
 
-		d, err := deployments.Get(ctx, deployment, metav1.GetOptions{})
+		d := &appsv1.Deployment{}
+		err = o.client.GetOne(ctx, types.NamespacedName{Name: deployment, Namespace: pkgoperator.Namespace}, d)
 		if err != nil {
 			o.log.Errorf("failed to get deployment %q: %s", deployment, err)
 			continue
@@ -574,18 +553,19 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 		o.log.Infof("deployment %q status: %s", deployment, string(j))
 
 		// Gather and print status of this deployment's replicasets
-		rs, err := replicasets.List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", deployment)})
+		rs := &appsv1.ReplicaSetList{}
+		err = o.client.List(
+			ctx,
+			rs,
+			client.InNamespace(pkgoperator.Namespace),
+			client.MatchingLabels(map[string]string{"app": deployment}),
+		)
 		if err != nil {
 			o.log.Errorf("failed to list replicasets: %s", err)
 			continue
 		}
 		for _, replicaset := range rs.Items {
-			r, err := replicasets.Get(ctx, replicaset.Name, metav1.GetOptions{})
-			if err != nil {
-				o.log.Errorf("failed to get replicaset %s: %s", replicaset.Name, err)
-				continue
-			}
-			j, err := json.Marshal(r.Status)
+			j, err := json.Marshal(replicaset.Status)
 			if err != nil {
 				o.log.Errorf("failed to serialize replicaset status %q: %s", replicaset.Name, err)
 				continue
@@ -594,18 +574,19 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 		}
 
 		// Gather and print status of this deployment's pods
-		ps, err := pods.List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", deployment)})
+		ps := &corev1.PodList{}
+		err = o.client.List(
+			ctx,
+			ps,
+			client.InNamespace(pkgoperator.Namespace),
+			client.MatchingLabels(map[string]string{"app": deployment}),
+		)
 		if err != nil {
 			o.log.Errorf("failed to list pods: %s", err)
 			continue
 		}
 		for _, pod := range ps.Items {
-			p, err := pods.Get(ctx, pod.Name, metav1.GetOptions{})
-			if err != nil {
-				o.log.Errorf("failed to get pod %s: %s", pod.Name, err)
-				continue
-			}
-			j, err := json.Marshal(p.Status)
+			j, err := json.Marshal(pod.Status)
 			if err != nil {
 				o.log.Errorf("failed to serialize pod status %q: %s", pod.Name, err)
 				continue
@@ -628,8 +609,9 @@ func (o *operator) Restart(ctx context.Context, deploymentNames []string) error 
 	return result
 }
 
-func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, desiredVersion string) (bool, error) {
-	d, err := cli.Get(ctx, name, metav1.GetOptions{})
+func checkOperatorDeploymentVersion(ctx context.Context, ch clienthelper.Interface, tgt types.NamespacedName, desiredVersion string) (bool, error) {
+	d := &appsv1.Deployment{}
+	err := ch.GetOne(ctx, tgt, d)
 	switch {
 	case kerrors.IsNotFound(err):
 		return false, nil
@@ -642,8 +624,14 @@ func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.Deploy
 	return true, nil
 }
 
-func checkPodImageVersion(ctx context.Context, cli corev1client.PodInterface, role string, desiredVersion string) (bool, error) {
-	podList, err := cli.List(ctx, metav1.ListOptions{LabelSelector: "app=" + role})
+func checkPodImageVersion(ctx context.Context, ch clienthelper.Interface, role string, desiredVersion string) (bool, error) {
+	podList := &corev1.PodList{}
+	err := ch.List(
+		ctx,
+		podList,
+		client.InNamespace(pkgoperator.Namespace),
+		client.MatchingLabels(map[string]string{"app": role}),
+	)
 	switch {
 	case kerrors.IsNotFound(err):
 		return false, nil
@@ -676,20 +664,20 @@ func (o *operator) IsRunningDesiredVersion(ctx context.Context) (bool, error) {
 	}
 
 	// Check if aro-operator-master is running desired version
-	ok, err := checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master", desiredVersion)
+	ok, err := checkOperatorDeploymentVersion(ctx, o.client, types.NamespacedName{Namespace: pkgoperator.Namespace, Name: "aro-operator-master"}, desiredVersion)
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-master", desiredVersion)
+	ok, err = checkPodImageVersion(ctx, o.client, "aro-operator-master", desiredVersion)
 	if !ok || err != nil {
 		return ok, err
 	}
 	// Check if aro-operator-worker is running desired version
-	ok, err = checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker", desiredVersion)
+	ok, err = checkOperatorDeploymentVersion(ctx, o.client, types.NamespacedName{Namespace: pkgoperator.Namespace, Name: "aro-operator-worker"}, desiredVersion)
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-worker", desiredVersion)
+	ok, err = checkPodImageVersion(ctx, o.client, "aro-operator-worker", desiredVersion)
 	if !ok || err != nil {
 		return ok, err
 	}
