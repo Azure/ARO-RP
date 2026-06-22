@@ -29,6 +29,9 @@
         "fluentbitImage": {
             "value": ""
         },
+        "gatewayClientId": {
+            "value": ""
+        },
         "gatewayDomains": {
             "value": ""
         },
@@ -42,6 +45,9 @@
             "value": ""
         },
         "gatewayOtelCollectorImage": {
+            "value": ""
+        },
+        "gatewayOtelKustoIngestionEndpoint": {
             "value": ""
         },
         "gatewayServicePrincipalId": {
