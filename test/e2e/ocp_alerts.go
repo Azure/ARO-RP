@@ -80,19 +80,5 @@ var _ = Describe("Alerts", Label(smoke, basichealth, install), Serial, func() {
 
 func isIgnorable(alert prometheusv1.Alert) bool {
 	severity := []model.LabelValue{"critical", "error", "warning"}
-	if !slices.Contains(severity, alert.Labels["severity"]) {
-		return true
-	}
-	// In prod, all alerts shouldn't be firing
-	if !_env.IsLocalDevelopmentMode() {
-		return false
-	}
-	// In dev, ignore mdsd pods alerts
-	switch alert.Labels["alertname"] {
-	case "KubePodCrashLooping":
-		return alert.Labels["namespace"] == "openshift-azure-logging" && alert.Labels["container"] == "mdsd"
-	case "KubeDaemonSetRolloutStuck":
-		return alert.Labels["namespace"] == "openshift-azure-logging" && alert.Labels["daemonset"] == "mdsd"
-	}
-	return false
+	return !slices.Contains(severity, alert.Labels["severity"])
 }

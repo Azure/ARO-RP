@@ -124,7 +124,13 @@ func (t *th) PatchOpenShiftClusterDocument(ctx context.Context, f database.OpenS
 	if err != nil {
 		return nil, err
 	}
-	return db.Patch(ctx, t.oc.Key, f)
+	updatedDoc, err := db.Patch(ctx, t.oc.Key, f)
+	if err != nil {
+		return nil, err
+	}
+
+	t.oc = updatedDoc
+	return updatedDoc, nil
 }
 
 // GetOpenShiftClusterDocument implements mimo.TaskContext.
