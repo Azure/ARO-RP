@@ -33,10 +33,6 @@ var (
 
 var GitCommit = "unknown"
 
-// OTelImageDigest is populated from the telemetry-collector build/publish workflow
-// and used to pin the image by digest.
-var OTelImageDigest = ""
-
 type Stream struct {
 	Version  Version `json:"version"`
 	PullSpec string  `json:"-"`
@@ -83,14 +79,14 @@ func MiseImage(acrDomain string) string {
 	return acrDomain + "/msftonly/mise:1.42.1-azurelinux3.0-distroless"
 }
 
+// OtelImage contains the location of the OpenTelemetry container image for MISE
 func OTelImage(acrDomain string) string {
-	// image-telemetrycollector builds ${REGISTRY}/telemetry-collector:$(VERSION),
-	// and VERSION maps to the RP build's GitCommit/tag.
-	image := acrDomain + "/telemetry-collector:" + GitCommit
-	if OTelImageDigest != "" {
-		image += "@" + OTelImageDigest
-	}
-	return image
+	return "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
+}
+
+// TelemetryExporterImage contains the location of the telemetry exporter container image
+func TelemetryExporterImage(acrDomain string) string {
+	return acrDomain + "/telemetryexporter@sha256:5dcfe4c0db9e46e84096c22fbc51084cc8c3925941b326c4081882a16749b248"
 }
 
 // HolmesImage contains the location of the HolmesGPT investigation container image

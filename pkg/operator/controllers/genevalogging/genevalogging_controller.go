@@ -31,7 +31,7 @@ import (
 const (
 	ControllerName = "GenevaLogging"
 
-	// full pullspec of otel collector image
+	// full pullspec of otel exporter image
 	controllerOTelPullSpec = "aro.genevalogging.otel.pullSpec"
 )
 
@@ -88,7 +88,7 @@ func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.
 }
 
 func (r *Reconciler) clearOTelDaemonSetNodeSelectors(ctx context.Context) error {
-	for _, name := range []string{"otel-collector-master", "otel-collector-worker"} {
+	for _, name := range []string{"otel-exporter-master", "otel-exporter-worker"} {
 		ds := &appsv1.DaemonSet{}
 		err := r.Client.Get(ctx, types.NamespacedName{Namespace: kubeNamespace, Name: name}, ds)
 		if kerrors.IsNotFound(err) {
