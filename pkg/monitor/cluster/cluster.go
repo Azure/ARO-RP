@@ -182,6 +182,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mon.emitClusterOperatorVersions,
 		mon.emitClusterVersionConditions,
 		mon.emitClusterVersions,
+		mon.emitDaemonsetStatuses,
 		mon.emitMachineConfigPoolConditions,
 		mon.emitMachineConfigPoolUnmanagedNodeCounts,
 		mon.emitMachineConditions,
