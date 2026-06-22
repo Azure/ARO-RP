@@ -196,7 +196,7 @@ exporters:
     db_name: \"AROClusterLogs\"
     logs_table_name: \"containerLogs\"
     logs_table_json_mapping: \"ingestionMapping\"
-    ingestion_type: \"managed\"
+    ingestion_type: \"queued\"
     retry_on_failure:
       enabled: true
       initial_interval: 1s
@@ -204,7 +204,7 @@ exporters:
       max_elapsed_time: 2s
     sending_queue:
       enabled: true
-      queue_size: 128
+      queue_size: 1024
       num_consumers: 2
 
   azuredataexplorer/journald:
@@ -213,7 +213,7 @@ exporters:
     db_name: \"AROClusterLogs\"
     logs_table_name: \"journald\"
     logs_table_json_mapping: \"ingestionMapping\"
-    ingestion_type: \"managed\"
+    ingestion_type: \"queued\"
     retry_on_failure:
       enabled: true
       initial_interval: 1s
@@ -221,7 +221,7 @@ exporters:
       max_elapsed_time: 2s
     sending_queue:
       enabled: true
-      queue_size: 128
+      queue_size: 1024
       num_consumers: 2
 
   azuredataexplorer/audit:
@@ -230,7 +230,7 @@ exporters:
     db_name: \"AROClusterLogs\"
     logs_table_name: \"audit\"
     logs_table_json_mapping: \"ingestionMapping\"
-    ingestion_type: \"managed\"
+    ingestion_type: \"queued\"
     retry_on_failure:
       enabled: true
       initial_interval: 1s
@@ -238,7 +238,7 @@ exporters:
       max_elapsed_time: 2s
     sending_queue:
       enabled: true
-      queue_size: 128
+      queue_size: 1024
       num_consumers: 2
 
 processors:
