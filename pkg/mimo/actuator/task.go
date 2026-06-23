@@ -138,6 +138,10 @@ func (t *th) GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument {
 	return t.oc
 }
 
+func (t *th) GetSubscriptionDocument() *api.SubscriptionDocument {
+	return t.sub
+}
+
 // getResultMessage is used by the Actuator to retrieve the finished result
 // message out of the TaskContext
 func (t *th) getResultMessage() string {

@@ -33,6 +33,9 @@ type TaskContext interface {
 	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
 	GetOpenShiftClusterDocument() *api.OpenShiftClusterDocument
 
+	// Subscription
+	GetSubscriptionDocument() *api.SubscriptionDocument
+
 	// PatchOpenShiftClusterDocument works without a lease and only operates on
 	// the single document in this context
 	PatchOpenShiftClusterDocument(context.Context, database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
