@@ -114,11 +114,17 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "id: logrus_parse") {
 		t.Fatal("full config missing logrus parser for container logs")
 	}
-	if !strings.Contains(full, "(?<fields>(?: (?!file=)[^= ]+=") {
-		t.Fatal("full config missing logrus file exclusion in generic fields capture")
+	if !strings.Contains(full, "(?<fields>(?: [^= ]+=") {
+		t.Fatal("full config missing logrus generic fields capture")
+	}
+	if strings.Contains(full, "(?!file=)") {
+		t.Fatal("full config contains unsupported RE2 negative lookahead")
 	}
 	if !strings.Contains(full, "id: logrus_fields_parse") {
 		t.Fatal("full config missing logrus structured fields parser for container logs")
+	}
+	if !strings.Contains(full, "id: logrus_file_split") {
+		t.Fatal("full config missing logrus file split parser for container logs")
 	}
 
 	reduced, err := selectOTelConfig(otelProfileReducedLogs)
