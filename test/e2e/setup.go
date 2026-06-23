@@ -111,6 +111,7 @@ type clientSet struct {
 	Storage                storage.AccountsClient
 	UserAssignedIdentities armmsi.UserAssignedIdentitiesClient
 	RoleAssignments        authorization.RoleAssignmentsClient
+	RoleDefinitions        authorization.RoleDefinitionsClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -563,6 +564,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Storage:                storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		UserAssignedIdentities: *msiClient,
 		RoleAssignments:        authorization.NewRoleAssignmentsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		RoleDefinitions:        authorization.NewRoleDefinitionsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,

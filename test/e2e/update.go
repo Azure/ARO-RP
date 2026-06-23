@@ -84,7 +84,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(newRevision).To(Equal(oldRevision + 1))
 	})
 
-	It("should successfully replace platform workload identity with stable API version", func(ctx context.Context) {
+	It("should successfully replace platform workload identity", func(ctx context.Context) {
 		if !isMiwi {
 			Skip("This test is only relevant for workload identity clusters")
 		}
@@ -140,6 +140,27 @@ var _ = Describe("Update clusters", func() {
 		}
 		Expect(clusterIdentityPrincipalID).NotTo(BeEmpty())
 
+		By("checking the operator's role definition for DiskEncryptionSet permissions")
+		roleDef, err := clients.RoleDefinitions.GetByID(ctx, operatorRoleDefinitionID)
+		Expect(err).NotTo(HaveOccurred())
+		var requiresDESPermission bool
+		if roleDef.RoleDefinitionProperties != nil && roleDef.Permissions != nil {
+			for _, perm := range *roleDef.Permissions {
+				if perm.Actions == nil {
+					continue
+				}
+				for _, action := range *perm.Actions {
+					if strings.Contains(action, "Microsoft.Compute/diskEncryptionSets") {
+						requiresDESPermission = true
+						break
+					}
+				}
+				if requiresDESPermission {
+					break
+				}
+			}
+		}
+
 		By("deriving the VNet scope from the master subnet")
 		masterSubnetID := *oc.MasterProfile.SubnetID
 		subnetsIdx := strings.LastIndex(masterSubnetID, "/subnets/")
@@ -157,6 +178,25 @@ var _ = Describe("Update clusters", func() {
 		replacementResourceID := *msiResp.ID
 		replacementPrincipalID := *msiResp.Properties.PrincipalID
 
+		DeferCleanup(func(ctx context.Context) {
+			By("cleaning up the original identity and its role assignments")
+			originalMsi, err := clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
+			if err != nil {
+				return
+			}
+			if originalMsi.Properties != nil && originalMsi.Properties.PrincipalID != nil {
+				roleAssignments, err := clients.RoleAssignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *originalMsi.Properties.PrincipalID))
+				if err == nil {
+					for _, ra := range roleAssignments {
+						if strings.HasPrefix(strings.ToLower(*ra.Scope), strings.ToLower("/subscriptions/"+_env.SubscriptionID()+"/resourceGroups/"+vnetResourceGroup)) {
+							_, _ = clients.RoleAssignments.Delete(ctx, *ra.Scope, *ra.Name)
+						}
+					}
+				}
+			}
+			_, _ = clients.UserAssignedIdentities.Delete(ctx, vnetResourceGroup, operatorName, nil)
+		})
+
 		By("assigning the operator's role to the replacement identity at VNet scope")
 		_, err = clients.RoleAssignments.Create(ctx, vnetScope, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
 			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
@@ -166,6 +206,18 @@ var _ = Describe("Update clusters", func() {
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
+
+		if requiresDESPermission && oc.MasterProfile.DiskEncryptionSetID != nil && *oc.MasterProfile.DiskEncryptionSetID != "" {
+			By("assigning the operator's role to the replacement identity at DiskEncryptionSet scope")
+			_, err = clients.RoleAssignments.Create(ctx, *oc.MasterProfile.DiskEncryptionSetID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+					RoleDefinitionID: &operatorRoleDefinitionID,
+					PrincipalID:      &replacementPrincipalID,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		By("assigning the federated credential role to the cluster identity at the scope of the replacement identity")
 		_, err = clients.RoleAssignments.Create(ctx, replacementResourceID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
