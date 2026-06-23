@@ -76,7 +76,7 @@ receivers:
         type: regex_parser
         parse_from: body
         parse_to: body
-        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?<fields>(?: (?!file=)[^= ]+=(?:"(?:[^"\\\\]|\\\\.)*"|[^ ]+))*)(?: file="(?<src_file>[^":]+):(?<src_line>\d+)")?.*$'
+        regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?<fields>(?: [^= ]+=(?:"(?:[^"\\\\]|\\\\.)*"|[^ ]+))*).*$'
         severity:
           parse_from: body.severity
           mapping:
@@ -92,6 +92,13 @@ receivers:
         if: 'type(body) == "map" and body.fields != nil'
         parse_from: body.fields
         parse_to: body.fields
+        on_error: send_quiet
+      - id: logrus_file_split
+        type: regex_parser
+        if: 'type(body) == "map" and type(body.fields) == "map" and body.fields.file != nil'
+        parse_from: body.fields.file
+        parse_to: body
+        regex: '^(?<src_file>[^:]+):(?<src_line>\d+)$'
         on_error: send_quiet
       - id: klog_value_parse
         type: key_value_parser
