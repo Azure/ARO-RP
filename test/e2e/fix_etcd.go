@@ -14,6 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,15 +64,22 @@ var _ = Describe("Master replacement", Label(regressiontest), func() {
 		constraintPresent := true
 
 		aroConstraintClient, err := clients.Dynamic.GetClient(templateAroConstraint)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = aroConstraintClient.Get(ctx, "aro-machines-deny", metav1.GetOptions{})
-		if err != nil {
-			if kerrors.IsNotFound(err) {
-				// This cluster does not have guardrails, so we don't need to disable and enable again
-				constraintPresent = false
-			} else {
-				// something else happened and we can't continue testing
-				Expect(err).ToNot(HaveOccurred())
+		if meta.IsNoMatchError(err) {
+			constraintPresent = false
+		} else {
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		if constraintPresent {
+			_, err = aroConstraintClient.Get(ctx, "aro-machines-deny", metav1.GetOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					// This cluster does not have guardrails, so we don't need to disable and enable again
+					constraintPresent = false
+				} else {
+					// something else happened and we can't continue testing
+					Expect(err).ToNot(HaveOccurred())
+				}
 			}
 		}
 
