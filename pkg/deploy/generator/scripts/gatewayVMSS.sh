@@ -150,6 +150,10 @@ MONITORING_ENVIRONMENT=$ENVIRONMENT
 
 ENABLE_GIG_BRIDGE_MODE=1"
 
+    local -i otel_mem_mib=$(( $(host_mem_mib) * 7 / 100 ))
+    local -i otel_limit_mib=$(( otel_mem_mib * 80 / 100 ))
+    local -i otel_spike_mib=$(( otel_limit_mib * 12 / 100 ))
+
     # shellcheck disable=SC2034
     local -r gateway_otel_collector_conf="extensions:
   health_check:
@@ -186,6 +190,57 @@ exporters:
       queue_size: 128
       num_consumers: 2
 
+  azuredataexplorer/containers:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"containerLogs\"
+    logs_table_json_mapping: \"ingestionMapping\"
+    ingestion_type: \"queued\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
+
+  azuredataexplorer/journald:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"journald\"
+    logs_table_json_mapping: \"ingestionMapping\"
+    ingestion_type: \"queued\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
+
+  azuredataexplorer/audit:
+    cluster_uri: \"${GATEWAYOTELKUSTOINGESTIONENDPOINT}\"
+    managed_identity_id: \"${GATEWAYCLIENTID}\"
+    db_name: \"AROClusterLogs\"
+    logs_table_name: \"audit\"
+    logs_table_json_mapping: \"ingestionMapping\"
+    ingestion_type: \"queued\"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 1s
+      max_elapsed_time: 2s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
+
 processors:
   attributes/cluster:
     actions:
@@ -210,23 +265,57 @@ processors:
 
   memory_limiter:
     check_interval: 1s
-    limit_mib: 512
-    spike_limit_mib: 64
+    limit_mib: ${otel_limit_mib}
+    spike_limit_mib: ${otel_spike_mib}
 
   batch:
     timeout: 30s
     send_batch_size: 4096
     send_batch_max_size: 8192
 
+connectors:
+  routing/kusto:
+    default_pipelines: []
+    table:
+      - context: log
+        condition: attributes[\"source_name\"] == \"containers\"
+        pipelines: [logs/kusto-containers]
+      - context: log
+        condition: attributes[\"source_name\"] == \"journald\"
+        pipelines: [logs/kusto-journald]
+      - context: log
+        condition: attributes[\"source_name\"] == \"audit\"
+        pipelines: [logs/kusto-audit]
+
 service:
   extensions:
     - health_check
     - gatewayauth
   pipelines:
-    logs:
+    logs/mdsd:
       receivers: [otlp]
       processors: [memory_limiter, attributes/cluster, batch]
-      exporters: [otlp/cluster-mdsd]"
+      exporters: [otlp/cluster-mdsd]
+
+    logs/kusto-router:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/cluster]
+      exporters: [routing/kusto]
+
+    logs/kusto-containers:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/containers]
+
+    logs/kusto-journald:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/journald]
+
+    logs/kusto-audit:
+      receivers: [routing/kusto]
+      processors: [batch]
+      exporters: [azuredataexplorer/audit]"
 
     # values are references to variables, they should not be dereferenced here
     # shellcheck disable=SC2034

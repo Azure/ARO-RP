@@ -40,6 +40,10 @@ declare -r role_rp="rp"
 #   * Is used to determine which VMSS is being bootstrapped
 declare -r role_devproxy="devproxy"
 
+host_mem_mib() {
+    awk '/^MemTotal:/{print int($2/1024)}' /proc/meminfo
+}
+
 # declare -i XTRACE_SET=1
 #
 # constant value signifying xtrace shell value is/should be set
