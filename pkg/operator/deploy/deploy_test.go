@@ -884,5 +884,5 @@ func TestCredentialsRequest(t *testing.T) {
 
 	// Our desired CredentialRequest is made
 	r.Len(result.Items, 1)
-	r.Equal(result.Items[0].Spec.ServiceAccountNames, []string{"aro-operator-master"})
+	r.Equal([]string{"aro-operator-master"}, result.Items[0].Spec.ServiceAccountNames)
 }
