@@ -77,7 +77,8 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			fmt.Sprintf(
 				"The Resource '%s/%s' under resource group '%s' was not found.",
-				resType, resName, resGroupName))
+				resType, resName, resGroupName,
+			))
 	case err != nil:
 		return nil, err
 	}
@@ -136,8 +137,10 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	if err := k.CheckAPIServerReadyz(ctx); err != nil {
 		return nil, api.NewCloudError(
 			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError, "kube-apiserver",
-			fmt.Sprintf("API server is reporting a non-ready status: %v", err))
+			api.CloudErrorCodeInternalServerError,
+			"kube-apiserver",
+			fmt.Sprintf("API server is reporting a non-ready status: %v", err),
+		)
 	}
 
 	// safeGo wraps a validation function with panic recovery. The
@@ -182,9 +185,12 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 		return nil, preResizeControlPlaneValidationError(details)
 	}
 
-	collect(validateResizeControlPlaneInventory(ctx, log, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID))
-	if len(details) > 0 {
-		return nil, preResizeControlPlaneValidationError(details)
+	if err := validateResizeControlPlaneInventory(ctx, log, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID); err != nil {
+		var ce *api.CloudError
+		if errors.As(err, &ce) && ce.StatusCode == http.StatusBadRequest && ce.CloudErrorBody != nil {
+			return nil, preResizeControlPlaneValidationError([]api.CloudErrorBody{*ce.CloudErrorBody})
+		}
+		return nil, err
 	}
 
 	return json.Marshal("All pre-flight checks passed")
@@ -201,8 +207,23 @@ func preResizeControlPlaneValidationError(details []api.CloudErrorBody) *api.Clo
 	}
 }
 
-// validateResizeControlPlaneInventory reuses the live control-plane inventory
-// validation path so snapshot capture only needs to record rollback state.
+// classifyInventoryError passes through infrastructure errors (already
+// wrapped as *api.CloudError with 500 by the helper that hit Kube/Azure)
+// and wraps pure-validation errors as 400 InvalidParameter.
+func classifyInventoryError(err error) error {
+	var ce *api.CloudError
+	if errors.As(err, &ce) {
+		return ce
+	}
+	err = convertErrorLineEndings(err)
+	return api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidParameter,
+		"controlPlaneInventory",
+		err.Error(),
+	)
+}
+
 func validateResizeControlPlaneInventory(
 	ctx context.Context,
 	log *logrus.Entry,
@@ -210,17 +231,9 @@ func validateResizeControlPlaneInventory(
 	a adminactions.AzureActions,
 	clusterResourceGroupID string,
 ) error {
-	err := validateLiveControlPlaneInventory(log, ctx, k, a, clusterResourceGroupID)
-	if err != nil {
-		err = convertErrorLineEndings(err)
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidParameter,
-			"controlPlaneInventory",
-			err.Error(),
-		)
+	if err := validateLiveControlPlaneInventory(log, ctx, k, a, clusterResourceGroupID); err != nil {
+		return classifyInventoryError(err)
 	}
-
 	return nil
 }
 
@@ -339,7 +352,8 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver",
-			fmt.Sprintf("Failed to retrieve kube-apiserver ClusterOperator: %v", err))
+			fmt.Sprintf("Failed to retrieve kube-apiserver ClusterOperator: %v", err),
+		)
 	}
 
 	var co configv1.ClusterOperator
@@ -347,7 +361,8 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver",
-			fmt.Sprintf("Failed to parse kube-apiserver ClusterOperator: %v", err))
+			fmt.Sprintf("Failed to parse kube-apiserver ClusterOperator: %v", err),
+		)
 	}
 
 	if !clusteroperators.IsOperatorAvailable(&co) {
@@ -355,7 +370,8 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 			http.StatusConflict,
 			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver",
 			fmt.Sprintf("kube-apiserver is not healthy: %s. Resize is not safe while the API server is degraded.",
-				clusteroperators.OperatorStatusText(&co)))
+				clusteroperators.OperatorStatusText(&co)),
+		)
 	}
 
 	return nil
@@ -372,7 +388,8 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
-			fmt.Sprintf("Failed to list pods in %s namespace: %v", kubeAPIServerNamespace, err))
+			fmt.Sprintf("Failed to list pods in %s namespace: %v", kubeAPIServerNamespace, err),
+		)
 	}
 
 	var podList corev1.PodList
@@ -380,7 +397,8 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "kube-apiserver-pods",
-			fmt.Sprintf("Failed to parse pod list: %v", err))
+			fmt.Sprintf("Failed to parse pod list: %v", err),
+		)
 	}
 
 	var unhealthyPods []string
@@ -397,7 +415,8 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 			http.StatusConflict,
 			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
 			fmt.Sprintf("Expected %d kube-apiserver pods, found %d. Resize is not safe without full API server redundancy.",
-				api.ControlPlaneNodeCount, apiServerPodCount))
+				api.ControlPlaneNodeCount, apiServerPodCount),
+		)
 	}
 
 	if len(unhealthyPods) > 0 {
@@ -405,7 +424,8 @@ func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) erro
 			http.StatusConflict,
 			api.CloudErrorCodeRequestNotAllowed, "kube-apiserver-pods",
 			fmt.Sprintf("Unhealthy kube-apiserver pods: %v. Resize is not safe without full API server redundancy.",
-				unhealthyPods))
+				unhealthyPods),
+		)
 	}
 
 	return nil
@@ -436,7 +456,8 @@ func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "etcd",
-			fmt.Sprintf("Failed to retrieve etcd ClusterOperator: %v", err))
+			fmt.Sprintf("Failed to retrieve etcd ClusterOperator: %v", err),
+		)
 	}
 
 	var co configv1.ClusterOperator
@@ -444,7 +465,8 @@ func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "etcd",
-			fmt.Sprintf("Failed to parse etcd ClusterOperator: %v", err))
+			fmt.Sprintf("Failed to parse etcd ClusterOperator: %v", err),
+		)
 	}
 
 	if !clusteroperators.IsOperatorAvailable(&co) {
@@ -452,7 +474,8 @@ func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 			http.StatusConflict,
 			api.CloudErrorCodeRequestNotAllowed, "etcd",
 			fmt.Sprintf("etcd is not healthy: %s. Resize is not safe while etcd quorum is at risk.",
-				clusteroperators.OperatorStatusText(&co)))
+				clusteroperators.OperatorStatusText(&co)),
+		)
 	}
 
 	return nil
@@ -466,7 +489,8 @@ func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "servicePrincipal",
-			fmt.Sprintf("Failed to retrieve ARO Cluster resource: %v", err))
+			fmt.Sprintf("Failed to retrieve ARO Cluster resource: %v", err),
+		)
 	}
 
 	var cluster arov1alpha1.Cluster
@@ -474,7 +498,8 @@ func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
 			api.CloudErrorCodeInternalServerError, "servicePrincipal",
-			fmt.Sprintf("Failed to parse ARO Cluster resource: %v", err))
+			fmt.Sprintf("Failed to parse ARO Cluster resource: %v", err),
+		)
 	}
 
 	for _, cond := range cluster.Status.Conditions {
@@ -485,14 +510,16 @@ func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 			return api.NewCloudError(
 				http.StatusConflict,
 				api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
-				fmt.Sprintf("Cluster Service Principal is invalid: %s", cond.Message))
+				fmt.Sprintf("Cluster Service Principal is invalid: %s", cond.Message),
+			)
 		}
 	}
 
 	return api.NewCloudError(
 		http.StatusConflict,
 		api.CloudErrorCodeInvalidServicePrincipalCredentials, "servicePrincipal",
-		"ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.")
+		"ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.",
+	)
 }
 
 func (f *frontend) validateVMSKU(
@@ -553,9 +580,16 @@ func currentControlPlaneVMSizes(
 	}
 
 	if len(machines) != api.ControlPlaneNodeCount {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-			fmt.Sprintf("Expected %d control plane machines but found %d. Resize cannot proceed until all control plane machines are present.",
-				api.ControlPlaneNodeCount, len(machines)))
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeInternalServerError,
+			"controlPlaneMachines",
+			fmt.Sprintf(
+				"Expected %d control plane machines but found %d. Resize cannot proceed until all control plane machines are present.",
+				api.ControlPlaneNodeCount,
+				len(machines),
+			),
+		)
 	}
 
 	clusterRGName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -565,13 +599,21 @@ func currentControlPlaneVMSizes(
 	for _, machineName := range machineNames {
 		vm, err := a.GetVirtualMachine(ctx, clusterRGName, machineName, "")
 		if err != nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-				fmt.Sprintf("Failed to retrieve current control plane VM %q from Azure: %v", machineName, err))
+			return nil, api.NewCloudError(
+				http.StatusInternalServerError,
+				api.CloudErrorCodeInternalServerError,
+				fmt.Sprintf("controlPlaneVM/%s", machineName),
+				fmt.Sprintf("Failed to retrieve current control plane VM %q from Azure: %v", machineName, err),
+			)
 		}
 
 		if vm.VirtualMachineProperties == nil || vm.HardwareProfile == nil {
-			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
-				fmt.Sprintf("Control plane VM %q has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.", machineName))
+			return nil, api.NewCloudError(
+				http.StatusInternalServerError,
+				api.CloudErrorCodeInternalServerError,
+				fmt.Sprintf("controlPlaneVM/%s", machineName),
+				fmt.Sprintf("Control plane VM %q has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.", machineName),
+			)
 		}
 
 		sizes = append(sizes, string(vm.HardwareProfile.VMSize))

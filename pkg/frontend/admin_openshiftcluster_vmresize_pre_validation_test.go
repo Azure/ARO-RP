@@ -314,7 +314,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 	ctx := context.Background()
 	_, log := testlog.New()
 
-	t.Run("rejects heterogeneous control plane machine sizes", func(t *testing.T) {
+	t.Run("propagates Azure SDK error from GetVirtualMachine as 500", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -325,15 +325,45 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 			KubeList(gomock.Any(), "Machine", machineNamespace).
 			Return(masterMachineListJSON(
 				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
-				masterMachineWithZone("master-1", "Standard_D16s_v5", "2"),
+				masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
 				masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
 			), nil)
+		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", gomock.Any(), mgmtcompute.InstanceView).
+			Return(mgmtcompute.VirtualMachine{}, fmt.Errorf("azure auth timeout")).
+			AnyTimes()
 
 		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
-		assertErrorContainsAll(t, err,
-			"control plane machine inventory is inconsistent",
-			"All machines should have the same size",
-		)
+		var ce *api.CloudError
+		if !errors.As(err, &ce) {
+			t.Fatalf("expected *api.CloudError, got %T: %v", err, err)
+		}
+		if ce.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status 500, got %d", ce.StatusCode)
+		}
+		if !strings.HasPrefix(ce.Target, "controlPlaneVM/master-") {
+			t.Errorf("expected target to include controlPlaneVM/master-*, got %q", ce.Target)
+		}
+	})
+
+	t.Run("propagates Kube API error from getClusterMachines as 500", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		k := mock_adminactions.NewMockKubeActions(ctrl)
+		a := mock_adminactions.NewMockAzureActions(ctrl)
+
+		k.EXPECT().
+			KubeList(gomock.Any(), "Machine", machineNamespace).
+			Return(nil, fmt.Errorf("connection refused"))
+
+		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
+		var ce *api.CloudError
+		if !errors.As(err, &ce) {
+			t.Fatalf("expected *api.CloudError, got %T: %v", err, err)
+		}
+		if ce.StatusCode != http.StatusInternalServerError {
+			t.Errorf("expected status 500, got %d", ce.StatusCode)
+		}
 	})
 
 	t.Run("rejects inconsistent control plane node labels", func(t *testing.T) {
@@ -372,65 +402,25 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 	})
 }
 
-func TestPreResizeControlPlaneVMsValidationRejectsHeterogeneousInventory(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
+func TestClassifyInventoryErrorPreservesCloudErrorTarget(t *testing.T) {
+	t.Parallel()
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	k := mock_adminactions.NewMockKubeActions(ctrl)
-	a := mock_adminactions.NewMockAzureActions(ctrl)
-	heterogeneousMachines := masterMachineListJSON(
-		masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
-		masterMachineWithZone("master-1", "Standard_D16s_v5", "2"),
-		masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
+	original := api.NewCloudError(
+		http.StatusInternalServerError,
+		api.CloudErrorCodeInternalServerError,
+		"controlPlaneVM/master-0",
+		"failed to get Azure VM master-0: VM not found",
 	)
-	allKubeChecksHealthyMockWithMachineList(k, heterogeneousMachines)
 
-	f := &frontend{
-		validateResizeQuota: quotaCheckDisabled,
+	classified := classifyInventoryError(original)
+	var ce *api.CloudError
+	if !errors.As(classified, &ce) {
+		t.Fatalf("expected *api.CloudError, got %T: %v", classified, classified)
 	}
 
-	doc := &api.OpenShiftClusterDocument{
-		OpenShiftCluster: &api.OpenShiftCluster{
-			Location: "eastus",
-			Properties: api.OpenShiftClusterProperties{
-				MasterProfile: api.MasterProfile{
-					VMSize: api.VMSizeStandardD8sV3,
-				},
-				ClusterProfile: api.ClusterProfile{
-					ResourceGroupID: "/subscriptions/000/resourceGroups/test-cluster",
-				},
-			},
-		},
+	if ce.Target != "controlPlaneVM/master-0" {
+		t.Fatalf("expected target controlPlaneVM/master-0, got %q", ce.Target)
 	}
-	subscriptionDoc := &api.SubscriptionDocument{}
-
-	a.EXPECT().
-		VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
-		Return(map[string]*armcompute.ResourceSKU{
-			"Standard_D8s_v3": {
-				Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-				ResourceType: pointerutils.ToPtr("virtualMachines"),
-				Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-				LocationInfo: []*armcompute.ResourceSKULocationInfo{{Location: pointerutils.ToPtr("eastus")}},
-				Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-				Capabilities: []*armcompute.ResourceSKUCapabilities{},
-			},
-		}, nil)
-	expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
-		"master-0": "Standard_D8s_v3",
-		"master-1": "Standard_D16s_v5",
-		"master-2": "Standard_D8s_v3",
-	})
-
-	_, err := f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, "Standard_D8s_v3", log)
-	assertErrorContainsAll(t, err,
-		"Pre-flight validation failed",
-		"controlPlaneInventory",
-		"All machines should have the same size",
-	)
 }
 
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
@@ -790,7 +780,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneVM/master-0: Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
 		},
 		{
 			name:       "control plane VM missing HardwareProfile",
@@ -848,7 +838,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneVM/master-1: Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
 		},
 		{
 			name:       "control plane machine inventory incomplete",
@@ -906,7 +896,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 				))
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: : Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
+			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneMachines: Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
 		},
 		{
 			name:       "panic recovery is sanitized",
