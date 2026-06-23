@@ -4,7 +4,6 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"flag"
 	"fmt"
 
@@ -54,7 +53,7 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-func operator(ctx context.Context, log *logrus.Entry) error {
+func operator(log *logrus.Entry) error {
 	role := flag.Arg(1)
 	switch role {
 	case pkgoperator.RoleMaster, pkgoperator.RoleWorker:
