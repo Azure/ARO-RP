@@ -477,12 +477,12 @@ func (o *operator) CreateOrUpdateCredentialsRequest(ctx context.Context) error {
 		return err
 	}
 
-	crUnstructured, err := dynamichelper.DecodeUnstructured(buff.Bytes())
+	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(buff.Bytes(), nil, nil)
 	if err != nil {
 		return err
 	}
 
-	return o.client.Ensure(ctx, crUnstructured)
+	return o.client.Ensure(ctx, obj)
 }
 
 func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {

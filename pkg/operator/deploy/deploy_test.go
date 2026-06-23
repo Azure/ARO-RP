@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,11 +19,13 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
@@ -848,4 +851,38 @@ func TestTemplateManifestsAzureTokenCredentials(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCredentialsRequest(t *testing.T) {
+	ctx := t.Context()
+	r := require.New(t)
+	_, log := testlog.LogForTesting(t)
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	env := mock_env.NewMockInterface(controller)
+
+	oc := &api.OpenShiftCluster{}
+
+	builder := fake.NewClientBuilder()
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	o := operator{
+		oc:     oc,
+		env:    env,
+		client: ch,
+	}
+
+	err := o.CreateOrUpdateCredentialsRequest(ctx)
+	r.NoError(err)
+	result := &cloudcredentialv1.CredentialsRequestList{}
+	err = ch.List(ctx, result, client.InNamespace("openshift-cloud-credential-operator"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Our desired CredentialRequest is made
+	r.Len(result.Items, 1)
+	r.Equal(result.Items[0].Spec.ServiceAccountNames, []string{"aro-operator-master"})
 }
