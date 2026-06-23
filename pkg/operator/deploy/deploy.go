@@ -408,7 +408,7 @@ func (o *operator) applyDeployment(ctx context.Context, resources []kruntime.Obj
 
 			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
 				crd := &extensionsv1.CustomResourceDefinition{}
-				err := o.client.GetOne(ctx, types.NamespacedName{Namespace: acc.GetName()}, crd)
+				err := o.client.GetOne(ctx, types.NamespacedName{Name: acc.GetName()}, crd)
 				if err != nil {
 					return false, err
 				}
@@ -499,6 +499,7 @@ func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 
 	patch := &metav1.PartialObjectMetadata{
 		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster",
 			Annotations: map[string]string{
 				upgradeableAnnotation: upgradeableTo,
 			},
