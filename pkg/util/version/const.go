@@ -86,7 +86,7 @@ func OTelImage(acrDomain string) string {
 
 // TelemetryExporterImage contains the location of the telemetry exporter container image
 func TelemetryExporterImage(acrDomain string) string {
-	return acrDomain + "/telemetryexporter@sha256:5dcfe4c0db9e46e84096c22fbc51084cc8c3925941b326c4081882a16749b248"
+	return acrDomain + "/telemetryexporter:v20260622.00@sha256:a946e947f46a83f0515acb7fdd5be878a4300328f37f13e57f69c829c83a3fde"
 }
 
 // HolmesImage contains the location of the HolmesGPT investigation container image
