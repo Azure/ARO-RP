@@ -187,7 +187,7 @@ tox==4.34.1
 tqdm==4.67.3
 typing_extensions==4.15.0
 urllib3==2.7.0
-vcrpy==8.1.1
+vcrpy==8.2.1
 virtualenv==20.36.1
 websocket-client==1.3.3
 wheel==0.30.0
