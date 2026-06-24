@@ -80,6 +80,8 @@ type prod struct {
 	clusterGenevaLoggingEnvironment   string
 	clusterGenevaLoggingNamespace     string
 
+	rpParentDomainName string
+
 	gatewayDomains []string
 
 	log *logrus.Entry
@@ -101,7 +103,8 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 			"GATEWAY_DOMAINS",
 			"GATEWAY_RESOURCEGROUP",
 			"MDSD_ENVIRONMENT",
-			"CLUSTER_MDSD_NAMESPACE")
+			"CLUSTER_MDSD_NAMESPACE",
+			"RP_PARENT_DOMAIN_NAME")
 		if err != nil {
 			return nil, err
 		}
@@ -128,6 +131,8 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
 		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
 		environment:                       os.Getenv("ENVIRONMENT"),
+
+		rpParentDomainName: os.Getenv("RP_PARENT_DOMAIN_NAME"),
 
 		log: log,
 
@@ -407,6 +412,10 @@ func (p *prod) ClusterMsiKeyVaultName() string {
 
 func (p *prod) Domain() string {
 	return os.Getenv("DOMAIN_NAME")
+}
+
+func (p *prod) RPParentDomainName() string {
+	return p.rpParentDomainName
 }
 
 func (p *prod) EnvironmentType() string {
