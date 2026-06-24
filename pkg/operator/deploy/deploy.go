@@ -354,7 +354,7 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		gatewayDomains := append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
 		cluster.Spec.GatewayDomains = gatewayDomains
-		cluster.Spec.GatewayTelemetryDomain = gatewayTelemetryDomain(cluster.Spec.Location, o.env.Environment().AppSuffix)
+		cluster.Spec.GatewayTelemetryDomain = gatewayTelemetryDomain(cluster.Spec.Location, o.env.RPParentDomainName())
 	} else {
 		// covers the case of an admin-disable, we need to update dnsmasq on each node
 		cluster.Spec.GatewayDomains = make([]string, 0)
