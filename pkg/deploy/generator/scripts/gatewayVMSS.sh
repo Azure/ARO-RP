@@ -132,7 +132,7 @@ MDSD_ROLE_PREFIX=\${MDSD_RUN_DIR}/default
 MDSD_LOG=\${MDSD_VAR}/log/\${TENANT_NAME}
 MDSD_SPOOL_DIRECTORY=\${MDSD_VAR}/spool/\${TENANT_NAME}
 
-MDSD_OPTIONS=\"-A -c /etc/opt/microsoft/azuremonitoragent/mdsd.xml -C -R -r \${MDSD_ROLE_PREFIX} -S \${MDSD_SPOOL_DIRECTORY}/eh -e \${MDSD_LOG}/\${TENANT_NAME}.err -w \${MDSD_LOG}/\${TENANT_NAME}.warn -o \${MDSD_LOG}/\${TENANT_NAME}.info -q \${MDSD_LOG}/\${TENANT_NAME}.qos\"
+MDSD_OPTIONS=\"-A -f 29235 -c /etc/opt/microsoft/azuremonitoragent/mdsd.xml -C -R -r \${MDSD_ROLE_PREFIX} -S \${MDSD_SPOOL_DIRECTORY}/eh -e \${MDSD_LOG}/\${TENANT_NAME}.err -w \${MDSD_LOG}/\${TENANT_NAME}.warn -o \${MDSD_LOG}/\${TENANT_NAME}.info -q \${MDSD_LOG}/\${TENANT_NAME}.qos\"
 
 MONITORING_TENANT=$LOCATION
 MONITORING_ROLE=cluster
