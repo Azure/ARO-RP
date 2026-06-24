@@ -723,6 +723,20 @@ func (mr *MockInterfaceMockRecorder) OtelAuditQueueSize() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OtelAuditQueueSize", reflect.TypeOf((*MockInterface)(nil).OtelAuditQueueSize))
 }
 
+// RPParentDomainName mocks base method.
+func (m *MockInterface) RPParentDomainName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RPParentDomainName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// RPParentDomainName indicates an expected call of RPParentDomainName.
+func (mr *MockInterfaceMockRecorder) RPParentDomainName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPParentDomainName", reflect.TypeOf((*MockInterface)(nil).RPParentDomainName))
+}
+
 // ResourceGroup mocks base method.
 func (m *MockInterface) ResourceGroup() string {
 	m.ctrl.T.Helper()
