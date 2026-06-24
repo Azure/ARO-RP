@@ -365,6 +365,7 @@ Today the VAP tree contains:
 
 - `aro-machines-deny`
 - `aro-machine-config-deny`
+- `aro-nodes-deny`
 - `aro-privileged-namespace-deny`
 
 ### VAP policy structure

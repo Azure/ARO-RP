@@ -1,0 +1,43 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: aro-nodes-deny
+spec:
+  failurePolicy: Ignore
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["*"]
+      operations: ["DELETE"]
+      resources: ["nodes"]
+  variables:
+  - name: denyLabelKey
+    expression: |
+      "node-role.kubernetes.io/master"
+  - name: exemptedUsers
+    expression: |
+      ["system:kube-controller-manager", "system:kube-scheduler", "system:admin", "system:aro-service"]
+  - name: isExempted
+    # Use prefix/exact matching to avoid substring bypasses such as
+    # "not-system:node-foo" or "my-system:nodegroup" being granted
+    # exemption. system:nodes / system:serviceaccounts cover the
+    # built-in groups (and their per-namespace variants for SAs);
+    # system:masters is matched exactly.
+    expression: |
+      !has(request.userInfo) ||
+      !has(request.userInfo.username) ||
+      request.userInfo.username in variables.exemptedUsers ||
+      (has(request.userInfo.groups) && request.userInfo.groups.exists(g,
+        g.startsWith("system:nodes") || g.startsWith("system:serviceaccounts") || g == "system:masters"
+      ))
+  - name: isMasterNode
+    expression: |
+      has(oldObject.metadata) &&
+      has(oldObject.metadata.labels) &&
+      variables.denyLabelKey in oldObject.metadata.labels
+  validations:
+  - expression: |
+      !variables.isMasterNode || variables.isExempted
+    message: "Deletion of master nodes is not allowed"
+    messageExpression: |
+      "user <" + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + "> not allowed to delete resource with label <node-role.kubernetes.io/master: " + (has(oldObject.metadata) && has(oldObject.metadata.labels) && "node-role.kubernetes.io/master" in oldObject.metadata.labels ? oldObject.metadata.labels["node-role.kubernetes.io/master"] : "unknown") + ">"

@@ -288,12 +288,14 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyNodesDenyManaged:             operator.FlagTrue,
+				operator.GuardrailsPolicyNodesDenyEnforcement:         operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 3 policies + 3 bindings = 6 Ensure calls (server-side apply)
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				// 4 policies + 4 bindings = 8 Ensure calls (server-side apply)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(8)
 			},
 		},
 		{
@@ -306,6 +308,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyNodesDenyManaged:             operator.FlagTrue,
+				operator.GuardrailsPolicyNodesDenyEnforcement:         operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
@@ -315,9 +319,9 @@ func TestReconcileVAP(t *testing.T) {
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// cleanupGatekeeper: removePolicy calls EnsureDeletedGVR for GK constraints
-				// then deployVAP: 3 Ensure (policy) + 3 EnsureDeletedGVR (binding delete) + 3 Ensure (binding recreate)
+				// then deployVAP: 4 Ensure (policy) + 4 EnsureDeletedGVR (binding delete) + 4 Ensure (binding recreate)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(8)
 			},
 		},
 		{
@@ -328,8 +332,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsMethod:        operator.GuardrailsMethodAuto,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 3 policies × (binding delete + policy delete) = 6 deletions
-				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				// 4 policies x (binding delete + policy delete) = 8 deletions
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(8)
 			},
 		},
 		{
@@ -427,6 +431,7 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyManaged:       operator.FlagTrue,
 				operator.GuardrailsPolicyMachineDenyEnforcement:   operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged: operator.FlagFalse,
+				operator.GuardrailsPolicyNodesDenyManaged:         operator.FlagFalse,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged: operator.FlagFalse,
 			},
 		},
@@ -472,6 +477,9 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 	}
 	if !slices.Contains(ensured, "ValidatingAdmissionPolicyBinding/aro-machines-deny-binding") {
 		t.Fatalf("expected aro-machines-deny binding to be ensured, got %v", ensured)
+	}
+	if slices.Contains(ensured, "ValidatingAdmissionPolicy/aro-nodes-deny") {
+		t.Fatalf("did not expect aro-nodes-deny policy to be ensured while disabled, got %v", ensured)
 	}
 
 	ensured = nil
@@ -601,11 +609,13 @@ func TestReconcileMethodSelection(t *testing.T) {
 				operator.GuardrailsPolicyMachineDenyEnforcement:       operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyMachineConfigDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyMachineConfigDenyEnforcement: operator.GuardrailsPolicyDryrun,
+				operator.GuardrailsPolicyNodesDenyManaged:             operator.FlagTrue,
+				operator.GuardrailsPolicyNodesDenyEnforcement:         operator.GuardrailsPolicyDeny,
 				operator.GuardrailsPolicyPrivNamespaceDenyManaged:     operator.FlagTrue,
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(8)
 			},
 		},
 	}
