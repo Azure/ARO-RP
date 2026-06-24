@@ -238,11 +238,9 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		}
 	}
 
-	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		resources = append(resources,
-			m.networkPrivateEndpoint(),
-		)
-	}
+	resources = append(resources,
+		m.networkPrivateEndpoint(),
+	)
 
 	if !m.env.FeatureIsSet(env.FeatureDisableDenyAssignments) {
 		resources = append(resources, m.denyAssignment())
@@ -464,11 +462,9 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	// already match a desired condition of 'Disabled' or not.
 	var needsUpdate bool
 
-	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
-			needsUpdate = true
-			s.Properties.PrivateEndpointNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
-		}
+	if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
+		needsUpdate = true
+		s.Properties.PrivateEndpointNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
 	}
 
 	if s.Properties.PrivateLinkServiceNetworkPolicies == nil || *s.Properties.PrivateLinkServiceNetworkPolicies != armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled {

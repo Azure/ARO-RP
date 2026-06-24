@@ -752,6 +752,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				}, nil)
 				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "test-rg", "test-vnet", "test-subnet", sdknetwork.Subnet{
 					Properties: &sdknetwork.SubnetPropertiesFormat{
+						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
 						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 					},
 				}, nil).Return(nil)
@@ -778,6 +779,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
 					Subnet: sdknetwork.Subnet{
 						Properties: &sdknetwork.SubnetPropertiesFormat{
+							PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
 							PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 						},
 					},

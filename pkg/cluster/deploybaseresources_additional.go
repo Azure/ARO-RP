@@ -324,22 +324,11 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 }
 
 func (m *manager) networkPrivateEndpoint() *arm.Resource {
-	return &arm.Resource{
+	npe := &arm.Resource{
 		Resource: &sdknetwork.PrivateEndpoint{
 			Properties: &sdknetwork.PrivateEndpointProperties{
 				Subnet: &sdknetwork.Subnet{
 					ID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
-				},
-				ManualPrivateLinkServiceConnections: []*sdknetwork.PrivateLinkServiceConnection{
-					{
-						Name: pointerutils.ToPtr("gateway-plsconnection"),
-						Properties: &sdknetwork.PrivateLinkServiceConnectionProperties{
-							// TODO: in the future we will need multiple PLSes.
-							// It will be necessary to decide which the PLS for
-							// a cluster somewhere around here.
-							PrivateLinkServiceID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/privateLinkServices/gateway-pls-001"),
-						},
-					},
 				},
 			},
 			Name:     pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pe"),
@@ -348,6 +337,40 @@ func (m *manager) networkPrivateEndpoint() *arm.Resource {
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
+
+	if m.env.IsLocalDevelopmentMode() {
+		// Hack: The private endpoint doesn't really need to be connected to anything in
+		// local development, but we have to connect it to something to make the ARM deployment work.
+		// So we connect it to the API server PLS. The OTEL exporter will attempt to connect to the
+		// cluster API server thinking it's the gateway's OTEL collector, and it will fail. But at least
+		// we can check the OTEL exporter logs to observe that the private endpoint got wired in correctly.
+		apiServerPls := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + m.doc.OpenShiftCluster.Properties.InfraID + "-pls"
+		npe.Resource.(*sdknetwork.PrivateEndpoint).Properties.ManualPrivateLinkServiceConnections = []*sdknetwork.PrivateLinkServiceConnection{
+			{
+				Name: pointerutils.ToPtr("hack-apiserver-plsconnection"),
+				Properties: &sdknetwork.PrivateLinkServiceConnectionProperties{
+					PrivateLinkServiceID: pointerutils.ToPtr(apiServerPls),
+				},
+			},
+		}
+		npe.DependsOn = []string{
+			apiServerPls,
+		}
+	} else {
+		npe.Resource.(*sdknetwork.PrivateEndpoint).Properties.ManualPrivateLinkServiceConnections = []*sdknetwork.PrivateLinkServiceConnection{
+			{
+				Name: pointerutils.ToPtr("gateway-plsconnection"),
+				Properties: &sdknetwork.PrivateLinkServiceConnectionProperties{
+					// TODO: in the future we will need multiple PLSes.
+					// It will be necessary to decide which the PLS for
+					// a cluster somewhere around here.
+					PrivateLinkServiceID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/privateLinkServices/gateway-pls-001"),
+				},
+			},
+		}
+	}
+
+	return npe
 }
 
 func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.Resource {

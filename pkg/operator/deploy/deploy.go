@@ -284,7 +284,10 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 		"/subscriptions/" + o.env.SubscriptionID() + "/resourceGroups/" + o.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet",
 	}
 
-	// Avoiding issues with dev environment when gateway is not present
+	// Note that we don't need to worry about adding the gateway subnet as a service subnet for clusters without
+	// egress lockdown. The storage accounts controller is the only controller that uses the service subnets,
+	// and it uses them to make sure the storage account NACLs allow traffic from the ARO service. There's no
+	// reason the gateway subnet would need to access the storage accounts for a cluster without egress lockdown.
 	if o.oc.Properties.FeatureProfile.GatewayEnabled {
 		serviceSubnets = append(serviceSubnets, "/subscriptions/"+o.env.SubscriptionID()+"/resourceGroups/"+o.env.GatewayResourceGroup()+"/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet")
 	}
@@ -330,14 +333,20 @@ func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 		cluster.Spec.OperatorFlags["aro.environment"] = o.env.EnvironmentType()
 	}
 
-	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		gatewayDomains := append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
-		cluster.Spec.GatewayDomains = gatewayDomains
+	if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		cluster.Spec.GatewayTelemetryDomain = gatewayTelemetryDomain(cluster.Spec.Location, o.env.RPParentDomainName())
 	} else {
-		// covers the case of an admin-disable, we need to update dnsmasq on each node
-		cluster.Spec.GatewayDomains = make([]string, 0)
+		// We shouldn't get here. If a cluster is in this state following the rollout of the OTEL logging stack, it means
+		// something is wrong. But just in case, clearing the telemetry domain here provides a way to search for these
+		// problem clusters.
 		cluster.Spec.GatewayTelemetryDomain = ""
+	}
+
+	if o.oc.Properties.FeatureProfile.GatewayEnabled {
+		gatewayDomains := append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+		cluster.Spec.GatewayDomains = gatewayDomains
+	} else {
+		cluster.Spec.GatewayDomains = make([]string, 0)
 	}
 	return cluster, nil
 }

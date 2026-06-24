@@ -823,9 +823,6 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		wantErr                  string
 	}{
 		{
-			name: "noop: gateway not enabled",
-		},
-		{
 			name:                     "noop: IP set",
 			gatewayPrivateEndpointIP: privateIP,
 		},
@@ -865,7 +862,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 			wantErr:        "private endpoint connection not found",
 		},
 		{
-			name: "ok",
+			name: "ok - gateway enabled",
 			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
 				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
@@ -960,6 +957,102 @@ func TestEnsureGatewayCreate(t *testing.T) {
 				})
 			},
 			gatewayEnabled: true,
+		},
+		{
+			name: "ok - gateway not enabled, but we still need private endpoint, etc. for OTEL logging stack to work",
+			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
+				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
+					PrivateEndpoint: armnetwork.PrivateEndpoint{
+						Properties: &armnetwork.PrivateEndpointProperties{
+							NetworkInterfaces: []*armnetwork.Interface{
+								{
+									Properties: &armnetwork.InterfacePropertiesFormat{
+										IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
+											{
+												Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
+													PrivateIPAddress: pointerutils.ToPtr(privateIP),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						ID: pointerutils.ToPtr("peID"),
+					},
+				}, nil)
+				rpPrivateLinkServices.EXPECT().Get(ctx, "gatewayResourceGroup", "gateway-pls-001", nil).Return(armnetwork.PrivateLinkServicesClientGetResponse{
+					PrivateLinkService: armnetwork.PrivateLinkService{
+						Properties: &armnetwork.PrivateLinkServiceProperties{
+							PrivateEndpointConnections: []*armnetwork.PrivateEndpointConnection{
+								{
+									Properties: &armnetwork.PrivateEndpointConnectionProperties{
+										PrivateEndpoint: &armnetwork.PrivateEndpoint{
+											ID: pointerutils.ToPtr("otherPeID"),
+										},
+									},
+								},
+								{
+									Properties: &armnetwork.PrivateEndpointConnectionProperties{
+										PrivateEndpoint: &armnetwork.PrivateEndpoint{
+											ID: pointerutils.ToPtr("peID"),
+										},
+										PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
+											Status: pointerutils.ToPtr(""),
+										},
+										LinkIdentifier: pointerutils.ToPtr("1234"),
+									},
+									Name: pointerutils.ToPtr("conn"),
+								},
+							},
+						},
+					},
+				}, nil)
+				rpPrivateLinkServices.EXPECT().UpdatePrivateEndpointConnection(ctx, "gatewayResourceGroup", "gateway-pls-001", "conn", armnetwork.PrivateEndpointConnection{
+					Properties: &armnetwork.PrivateEndpointConnectionProperties{
+						PrivateEndpoint: &armnetwork.PrivateEndpoint{
+							ID: pointerutils.ToPtr("peID"),
+						},
+						PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
+							Status:      pointerutils.ToPtr("Approved"),
+							Description: pointerutils.ToPtr("Approved"),
+						},
+						LinkIdentifier: pointerutils.ToPtr("1234"),
+					},
+					Name: pointerutils.ToPtr("conn"),
+				}, nil).Return(armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionResponse{}, nil)
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: resourceID,
+					},
+				})
+			},
+			checker: func(c *testdatabase.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: resourceID,
+						Properties: api.OpenShiftClusterProperties{
+							NetworkProfile: api.NetworkProfile{
+								GatewayPrivateEndpointIP: privateIP,
+								GatewayPrivateLinkID:     "1234",
+							},
+						},
+					},
+				})
+				c.AddGatewayDocuments(&api.GatewayDocument{
+					ID: "1234",
+					Gateway: &api.Gateway{
+						ID:                              resourceID,
+						StorageSuffix:                   "storageSuffix",
+						ImageRegistryStorageAccountName: "imageRegistryStorageAccountName",
+					},
+				})
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

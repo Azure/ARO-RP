@@ -15,8 +15,7 @@ import (
 // the private endpoint, approves the gateway PE/PLS connection, creates the
 // gateway database record and updates the model with the private endpoint IP.
 func (m *manager) ensureGatewayUpgrade(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled ||
-		m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		return nil
 	}
 
