@@ -540,7 +540,7 @@ func TestCheckDeploymentIsReady(t *testing.T) {
 
 	_, err := CheckDeploymentIsReady(t.Context(), ch, types.NamespacedName{Name: deployment.Name, Namespace: "default"})()
 	if err != nil {
-		t.Fatalf("check deployement is not ready: %v", err)
+		t.Fatalf("check deployment is not ready: %v", err)
 	}
 }
 
