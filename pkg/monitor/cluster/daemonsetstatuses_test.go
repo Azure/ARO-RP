@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -97,7 +98,7 @@ func TestEmitDaemonsetStatusesOTelCannotStart(t *testing.T) {
 		namespaceObject("openshift-azure-logging"),
 		&appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "otel-exporter-master",
+				Name:      genevalogging.MasterDaemonsetName,
 				Namespace: "openshift-azure-logging",
 			},
 			Status: appsv1.DaemonSetStatus{
@@ -129,7 +130,7 @@ func TestEmitDaemonsetStatusesOTelCannotStart(t *testing.T) {
 
 	dims := map[string]string{
 		"desiredNumberScheduled": strconv.Itoa(2),
-		"name":                   "otel-exporter-master",
+		"name":                   genevalogging.MasterDaemonsetName,
 		"namespace":              "openshift-azure-logging",
 		"numberAvailable":        strconv.Itoa(0),
 	}

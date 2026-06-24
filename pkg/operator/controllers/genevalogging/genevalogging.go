@@ -37,8 +37,8 @@ const (
 	masterRoleLabel       = "node-role.kubernetes.io/master"
 	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
 
-	MasterDaemonsetName   = "otel-exporter-master"
-	WorkerDaemonsetName   = "otel-exporter-worker"
+	MasterDaemonsetName = "otel-exporter-master"
+	WorkerDaemonsetName = "otel-exporter-worker"
 )
 
 var (

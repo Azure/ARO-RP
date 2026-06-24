@@ -11,13 +11,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 )
 
 const genevaLoggingNamespace = "openshift-azure-logging"
 
 var genevaLoggingOTelDaemonSets = map[string]struct{}{
-	"otel-exporter-master": {},
-	"otel-exporter-worker": {},
+	genevalogging.MasterDaemonsetName: {},
+	genevalogging.WorkerDaemonsetName: {},
 }
 
 func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
