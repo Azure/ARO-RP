@@ -10,27 +10,31 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/apimachinery/pkg/types"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestCheckIngressIP(t *testing.T) {
@@ -316,7 +320,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			o := operator{
 				oc:     oc,
 				env:    env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
+				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), fake.NewClientBuilder().WithObjects(cv).Build()),
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)
@@ -386,10 +390,14 @@ func TestOperatorVersion(t *testing.T) {
 				},
 			}
 
+			_, log := testlog.LogForTesting(t)
+			builder := fake.NewClientBuilder().WithRuntimeObjects(cv)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
 			o := &operator{
 				oc:     &api.OpenShiftCluster{Properties: *oc},
 				env:    _env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), ctrlfake.NewClientBuilder().WithObjects(cv).Build()),
+				client: ch,
 			}
 
 			staticResources, err := o.createObjects(ctx)
@@ -464,13 +472,15 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
-			_, err := clientset.AppsV1().Deployments("openshift-azure-operator").Create(ctx, tt.deployment, metav1.CreateOptions{})
-			if err != nil {
-				t.Fatalf("error creating deployment: %v", err)
-			}
+			_, log := testlog.LogForTesting(t)
+			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.deployment)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
-			got, err := checkOperatorDeploymentVersion(ctx, clientset.AppsV1().Deployments("openshift-azure-operator"), tt.deployment.Name, tt.desiredVersion)
+			got, err := checkOperatorDeploymentVersion(
+				ctx, ch,
+				types.NamespacedName{Namespace: "openshift-azure-operator", Name: tt.deployment.Name},
+				tt.desiredVersion,
+			)
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 
 			if tt.want != got {
@@ -532,13 +542,11 @@ func TestCheckPodImageVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset()
-			_, err := clientset.CoreV1().Pods("openshift-azure-operator").Create(ctx, tt.pod, metav1.CreateOptions{})
-			if err != nil {
-				t.Fatalf("error creating pod: %v", err)
-			}
+			_, log := testlog.New()
+			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.pod)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
-			got, err := checkPodImageVersion(ctx, clientset.CoreV1().Pods("openshift-azure-operator"), tt.pod.Name, tt.desiredVersion)
+			got, err := checkPodImageVersion(ctx, ch, tt.pod.Name, tt.desiredVersion)
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 
 			if tt.want != got {
@@ -636,6 +644,8 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			_, log := testlog.New()
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -655,16 +665,22 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 					Annotations: tt.annotation,
 				},
 			}
+			builder := fake.NewClientBuilder().WithRuntimeObjects(cloudcredentialobject)
+			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 			o := operator{
-				oc:          oc,
-				env:         env,
-				operatorcli: operatorfake.NewSimpleClientset(cloudcredentialobject),
+				oc:     oc,
+				env:    env,
+				client: ch,
 			}
 
 			err := o.EnsureUpgradeAnnotation(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			result, _ := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
+			result := &operatorv1.CloudCredentialList{}
+			err = ch.List(ctx, result)
+			if err != nil {
+				t.Error(err)
+			}
 			for _, v := range result.Items {
 				actualAnnotations := v.Annotations
 				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
@@ -835,4 +851,38 @@ func TestTemplateManifestsAzureTokenCredentials(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCredentialsRequest(t *testing.T) {
+	ctx := t.Context()
+	r := require.New(t)
+	_, log := testlog.LogForTesting(t)
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	env := mock_env.NewMockInterface(controller)
+
+	oc := &api.OpenShiftCluster{}
+
+	builder := fake.NewClientBuilder()
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	o := operator{
+		oc:     oc,
+		env:    env,
+		client: ch,
+	}
+
+	err := o.CreateOrUpdateCredentialsRequest(ctx)
+	r.NoError(err)
+	result := &cloudcredentialv1.CredentialsRequestList{}
+	err = ch.List(ctx, result, client.InNamespace("openshift-cloud-credential-operator"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Our desired CredentialRequest is made
+	r.Len(result.Items, 1)
+	r.Equal([]string{"aro-operator-master"}, result.Items[0].Spec.ServiceAccountNames)
 }

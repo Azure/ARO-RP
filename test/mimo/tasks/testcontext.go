@@ -126,6 +126,13 @@ func (t *fakeTestContext) GetOpenShiftClusterDocument() *api.OpenShiftClusterDoc
 	return t.doc
 }
 
+func (t *fakeTestContext) GetSubscriptionDocument() *api.SubscriptionDocument {
+	if t.subDoc == nil {
+		panic("didn't set up SubscriptionDocument in test")
+	}
+	return t.subDoc
+}
+
 func (t *fakeTestContext) Environment() env.Interface {
 	return t.env
 }

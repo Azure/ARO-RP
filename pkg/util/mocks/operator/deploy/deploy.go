@@ -14,6 +14,8 @@ import (
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
+
+	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 // MockOperator is a mock of Operator interface.
@@ -113,17 +115,17 @@ func (mr *MockOperatorMockRecorder) IsRunningDesiredVersion(arg0 any) *gomock.Ca
 }
 
 // Restart mocks base method.
-func (m *MockOperator) Restart(arg0 context.Context, arg1 []string) error {
+func (m *MockOperator) Restart(arg0 context.Context, arg1 kubernetes.Interface, arg2 []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Restart", arg0, arg1)
+	ret := m.ctrl.Call(m, "Restart", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Restart indicates an expected call of Restart.
-func (mr *MockOperatorMockRecorder) Restart(arg0, arg1 any) *gomock.Call {
+func (mr *MockOperatorMockRecorder) Restart(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockOperator)(nil).Restart), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockOperator)(nil).Restart), arg0, arg1, arg2)
 }
 
 // SetForceReconcile mocks base method.

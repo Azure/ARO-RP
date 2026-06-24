@@ -24,13 +24,11 @@ import (
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/containerinstall"
 	"github.com/Azure/ARO-RP/pkg/database"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	utilgenerics "github.com/Azure/ARO-RP/pkg/util/generics"
@@ -643,17 +641,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.securitycli, err = securityclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
 	m.samplescli, err = samplesclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	m.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -684,7 +672,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
 func (m *manager) initializeOperatorDeployer(ctx context.Context) (err error) {
-	m.aroOperatorDeployer, err = deploy.New(m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.arocli, m.ch, m.extensionscli, m.kubernetescli, m.operatorcli)
+	m.aroOperatorDeployer, err = deploy.New(m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.ch)
 	return
 }
 
