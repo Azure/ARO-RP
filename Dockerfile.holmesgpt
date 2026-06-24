@@ -1,4 +1,4 @@
-ARG BASE_REGISTRY=registry.access.redhat.com
+ARG BASE_REGISTRY
 ARG REPOSITORY=ubi9/python-311
 ARG TAG=latest
 FROM ${BASE_REGISTRY}/${REPOSITORY}:${TAG} AS builder
