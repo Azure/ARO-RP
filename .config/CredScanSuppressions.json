@@ -54,7 +54,7 @@
             "_justification": "example secret in comment on line 8048"
         },
         {
-            "file": "extract_test.go",
+            "file": "pkg/util/pullsecret/extract_test.go",
             "_justification": "test assertion matching expected error message text containing username:password format description, not a real credential"
         },
         {
