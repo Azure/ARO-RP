@@ -358,7 +358,7 @@ func TestOTelDaemonSetsUseConfiguredPullSpec(t *testing.T) {
 }
 
 func TestTelemetryGatewayTarget(t *testing.T) {
-	target, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{GatewayPrivateEndpointIP: "10.0.0.8", GatewayTelemetryDomain: "telemetry.eastus.aro.azure.com"}})
+	target, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{GatewayPrivateEndpointIP: "10.0.0.8", GatewayTelemetryDomain: "telemetry.EastUS.aro.azure.com"}})
 	if err != nil {
 		t.Fatal(err)
 	}
