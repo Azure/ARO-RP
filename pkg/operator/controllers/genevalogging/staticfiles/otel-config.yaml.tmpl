@@ -7,9 +7,9 @@ receivers:
     operators:
       - id: kubenswrapper-multiline
         type: recombine
-        if: attributes["SYSLOG_IDENTIFIER"] == "kubenswrapper"
-        combine_field: body
-        is_first_entry: body matches "^[^\\s]"
+        if: body["SYSLOG_IDENTIFIER"] == "kubenswrapper"
+        combine_field: body.MESSAGE
+        is_first_entry: body["MESSAGE"] matches "^[^\\s]"
   file_log/containers:
     include:
 {{- if eq .Profile "minimal-logs" }}
@@ -109,7 +109,7 @@ receivers:
       - type: flatten
         field: body
         if: 'type(body) == "map"'
-{{- if .IncludeAudit }}
+{{- if .IsControlPlane }}
   file_log/audit:
     include:
       - /var/log/kube-apiserver/audit.log
@@ -137,20 +137,21 @@ processors:
     error_mode: ignore
     logs:
       log_record:
-        - 'not ((IsString(body) and (IsMatch(body, "level=(error|warn|warning)") or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body, "Update error .*: ClusterOperatorDegraded"))) or (IsMap(body) and ((IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$")) or (IsString(body["message"]) and (IsMatch(body["message"], "level=(error|warn|warning)") or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b") or IsMatch(body["message"], "Update error .*: ClusterOperatorDegraded"))))))'
+        - '{{ include "keep-only-high-signal-expr" . | oneline }}'
   filter/drop-journald-noise:
     error_mode: ignore
     logs:
       log_record:
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body) and IsMatch(body, "flow_mods")'
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body) and IsMatch(body, "kex_exchange_identification|Connection reset by")'
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body) and IsMatch(body, "new Veth device|new Open vSwitch Port device|carrier: link connected")'
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body) and IsMatch(body, "entered promiscuous mode|left promiscuous mode")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "flow_mods")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "kex_exchange_identification|Connection reset by")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "new Veth device|new Open vSwitch Port device|carrier: link connected")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "entered promiscuous mode|left promiscuous mode")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "crio" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "not allowed with host net enabled")'
   filter/keep-journald-high-signal:
     error_mode: ignore
     logs:
       log_record:
-        - 'not ((IsString(attributes["PRIORITY"]) and (attributes["PRIORITY"] == "0" or attributes["PRIORITY"] == "1" or attributes["PRIORITY"] == "2" or attributes["PRIORITY"] == "3" or attributes["PRIORITY"] == "4")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kubenswrapper" and IsString(body) and IsMatch(body, "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr=")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "crio" and IsString(body) and IsMatch(body, "level=(error|warn|warning|fatal)|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berror\\b")))'
+        - '{{ include "keep-journald-high-signal-expr" . | oneline }}'
   filter/keep-audit-write-verbs:
     error_mode: ignore
     logs:
@@ -187,10 +188,11 @@ processors:
     error_mode: ignore
     logs:
       log_record:
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body) and IsMatch(body, "flow_mods")'
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body) and IsMatch(body, "kex_exchange_identification|Connection reset by")'
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body) and IsMatch(body, "new Veth device|new Open vSwitch Port device|carrier: link connected")'
-        - 'IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body) and IsMatch(body, "entered promiscuous mode|left promiscuous mode")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "ovs-vswitchd" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "flow_mods")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "sshd" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "kex_exchange_identification|Connection reset by")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "NetworkManager" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "new Veth device|new Open vSwitch Port device|carrier: link connected")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "kernel" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "entered promiscuous mode|left promiscuous mode")'
+        - 'IsString(body["SYSLOG_IDENTIFIER"]) and body["SYSLOG_IDENTIFIER"] == "crio" and IsString(body["MESSAGE"]) and IsMatch(body["MESSAGE"], "not allowed with host net enabled")'
   filter/keep-audit-write-verbs:
     error_mode: ignore
     logs:
@@ -219,25 +221,48 @@ processors:
     log_statements:
       - context: log
         statements:
-          # Match Fluent Bit journald key pruning behavior.
-          - delete_matching_keys(log.attributes, "^_")
-          - delete_matching_keys(log.attributes, "^JOB_")
-          - delete_matching_keys(log.attributes, "^NM_")
-          - delete_matching_keys(log.attributes, "^COREDUMP_")
-          - delete_key(log.attributes, "TIMESTAMP")
-          - delete_key(log.attributes, "TIMESTAMP_MONOTONIC")
-          - delete_key(log.attributes, "SYSLOG_FACILITY")
-          - delete_key(log.attributes, "SYSLOG_TIMESTAMP")
-          - delete_key(log.attributes, "SYSLOG_PID")
-          - delete_key(log.attributes, "MESSAGE_ID")
-          - delete_key(log.attributes, "INVOCATION_ID")
-          - delete_key(log.attributes, "CPU_USAGE_NSEC")
-          - delete_key(log.attributes, "BOOT_ID")
-          - delete_key(log.attributes, "PENDING")
           # Drop Kubernetes audit request/response object payloads to avoid
           # ingesting large WriteRequestBodies/RequestResponse records.
           - delete_key(log.body, "requestObject") where IsMap(log.body)
           - delete_key(log.body, "responseObject") where IsMap(log.body)
+          # For journald: build a structured "journald" attribute.
+          # Start from the full body, strip underscore-prefixed keys and known noise,
+          # then restore the allowlisted underscore fields.
+          - set(log.attributes["journald"], log.body) where IsMap(log.body) and IsString(log.body["SYSLOG_IDENTIFIER"])
+          - delete_matching_keys(log.attributes["journald"], "^_")
+          - delete_matching_keys(log.attributes["journald"], "^JOB_")
+          - delete_matching_keys(log.attributes["journald"], "^NM_")
+          - delete_matching_keys(log.attributes["journald"], "^COREDUMP_")
+          - delete_key(log.attributes["journald"], "SYSLOG_FACILITY")
+          - delete_key(log.attributes["journald"], "SYSLOG_TIMESTAMP")
+          - delete_key(log.attributes["journald"], "SYSLOG_PID")
+          - delete_key(log.attributes["journald"], "MESSAGE_ID")
+          - delete_key(log.attributes["journald"], "INVOCATION_ID")
+          - delete_key(log.attributes["journald"], "CPU_USAGE_NSEC")
+          - delete_key(log.attributes["journald"], "BOOT_ID")
+          - delete_key(log.attributes["journald"], "PENDING")
+          - delete_key(log.attributes["journald"], "TIMESTAMP")
+          - delete_key(log.attributes["journald"], "TIMESTAMP_MONOTONIC")
+          - set(log.attributes["journald"]["_PID"], log.body["_PID"]) where IsMap(log.body) and IsString(log.body["SYSLOG_IDENTIFIER"]) and log.body["_PID"] != nil
+          - set(log.attributes["journald"]["_SYSTEMD_UNIT"], log.body["_SYSTEMD_UNIT"]) where IsMap(log.body) and IsString(log.body["SYSLOG_IDENTIFIER"]) and log.body["_SYSTEMD_UNIT"] != nil
+          - set(log.attributes["journald"]["_BOOT_ID"], log.body["_BOOT_ID"]) where IsMap(log.body) and IsString(log.body["SYSLOG_IDENTIFIER"]) and log.body["_BOOT_ID"] != nil
+          # For containers and audit: snapshot body into raw_json_body.
+          - set(log.attributes["raw_json_body"], log.body) where not (IsMap(log.body) and IsString(log.body["SYSLOG_IDENTIFIER"]))
+          # Remove underscore-prefixed journald metadata and noisy fields from log.body.
+          - delete_matching_keys(log.body, "^_") where IsMap(log.body)
+          - delete_matching_keys(log.body, "^JOB_") where IsMap(log.body)
+          - delete_matching_keys(log.body, "^NM_") where IsMap(log.body)
+          - delete_matching_keys(log.body, "^COREDUMP_") where IsMap(log.body)
+          - delete_key(log.body, "TIMESTAMP") where IsMap(log.body)
+          - delete_key(log.body, "TIMESTAMP_MONOTONIC") where IsMap(log.body)
+          - delete_key(log.body, "SYSLOG_FACILITY") where IsMap(log.body)
+          - delete_key(log.body, "SYSLOG_TIMESTAMP") where IsMap(log.body)
+          - delete_key(log.body, "SYSLOG_PID") where IsMap(log.body)
+          - delete_key(log.body, "MESSAGE_ID") where IsMap(log.body)
+          - delete_key(log.body, "INVOCATION_ID") where IsMap(log.body)
+          - delete_key(log.body, "CPU_USAGE_NSEC") where IsMap(log.body)
+          - delete_key(log.body, "BOOT_ID") where IsMap(log.body)
+          - delete_key(log.body, "PENDING") where IsMap(log.body)
           # Match Fluent Bit audit nesting lift behavior.
           - set(log.body["user_username"], log.body["user"]["username"]) where IsMap(log.body) and IsMap(log.body["user"]) and log.body["user"]["username"] != nil
           - set(log.body["user_uid"], log.body["user"]["uid"]) where IsMap(log.body) and IsMap(log.body["user"]) and log.body["user"]["uid"] != nil
@@ -260,11 +285,29 @@ processors:
           - set(log.body["objectRef_apiVersion"], log.body["objectRef"]["apiVersion"]) where IsMap(log.body) and IsMap(log.body["objectRef"]) and log.body["objectRef"]["apiVersion"] != nil
           - set(log.body["objectRef_resourceVersion"], log.body["objectRef"]["resourceVersion"]) where IsMap(log.body) and IsMap(log.body["objectRef"]) and log.body["objectRef"]["resourceVersion"] != nil
           - set(log.body["objectRef_subresource"], log.body["objectRef"]["subresource"]) where IsMap(log.body) and IsMap(log.body["objectRef"]) and log.body["objectRef"]["subresource"] != nil
+          - set(log.attributes["SYSLOG_IDENTIFIER"], log.attributes["journald"]["SYSLOG_IDENTIFIER"]) where log.attributes["journald"]["SYSLOG_IDENTIFIER"] != nil
+          # Severity mapping per https://opentelemetry.io/docs/specs/otel/logs/data-model-appendix/#appendix-b-severitynumber-example-mappings
+          - set(log.severity_text, "EMERG")   where IsMap(log.body) and log.body["PRIORITY"] == "0" and log.severity_number == 0
+          - set(log.severity_number, 21)       where IsMap(log.body) and log.body["PRIORITY"] == "0" and log.severity_number == 0
+          - set(log.severity_text, "ALERT")   where IsMap(log.body) and log.body["PRIORITY"] == "1" and log.severity_number == 0
+          - set(log.severity_number, 19)       where IsMap(log.body) and log.body["PRIORITY"] == "1" and log.severity_number == 0
+          - set(log.severity_text, "CRIT")    where IsMap(log.body) and log.body["PRIORITY"] == "2" and log.severity_number == 0
+          - set(log.severity_number, 18)       where IsMap(log.body) and log.body["PRIORITY"] == "2" and log.severity_number == 0
+          - set(log.severity_text, "ERR")     where IsMap(log.body) and log.body["PRIORITY"] == "3" and log.severity_number == 0
+          - set(log.severity_number, 17)       where IsMap(log.body) and log.body["PRIORITY"] == "3" and log.severity_number == 0
+          - set(log.severity_text, "WARNING") where IsMap(log.body) and log.body["PRIORITY"] == "4" and log.severity_number == 0
+          - set(log.severity_number, 13)       where IsMap(log.body) and log.body["PRIORITY"] == "4" and log.severity_number == 0
+          - set(log.severity_text, "NOTICE")  where IsMap(log.body) and log.body["PRIORITY"] == "5" and log.severity_number == 0
+          - set(log.severity_number, 10)       where IsMap(log.body) and log.body["PRIORITY"] == "5" and log.severity_number == 0
+          - set(log.severity_text, "INFO")    where IsMap(log.body) and log.body["PRIORITY"] == "6" and log.severity_number == 0
+          - set(log.severity_number, 9)        where IsMap(log.body) and log.body["PRIORITY"] == "6" and log.severity_number == 0
+          - set(log.severity_text, "DEBUG")   where IsMap(log.body) and log.body["PRIORITY"] == "7" and log.severity_number == 0
+          - set(log.severity_number, 5)        where IsMap(log.body) and log.body["PRIORITY"] == "7" and log.severity_number == 0
+          - set(log.body, log.body["MESSAGE"]) where IsMap(log.body) and log.body["MESSAGE"] != nil
           - set(log.attributes["container"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
           - set(log.attributes["pod"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
           - set(log.attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
           - set(log.attributes["node"], "${env:MONITORING_ROLE_INSTANCE}")
-          - set(log.attributes["raw_json_body"], log.body)
           # Preserve original nested objects so unmapped keys are retained.
   attributes/common:
     actions:
@@ -337,3 +380,40 @@ service:
 {{- end }}
       exporters: [{{ $.GatewayExporterID }}]
 {{- end }}
+{{- define "keep-only-high-signal-expr" -}}
+not ((IsString(body) and (
+    IsMatch(body, "level=(error|warn|warning)")
+    or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
+    or IsMatch(body, "Update error .*: ClusterOperatorDegraded")))
+  or (IsMap(body) and (
+    (IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$"))
+    or (IsString(body["message"]) and (
+      IsMatch(body["message"], "level=(error|warn|warning)")
+      or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
+      or IsMatch(body["message"], "Update error .*: ClusterOperatorDegraded"))))))
+{{- end -}}
+{{- define "keep-journald-high-signal-expr" -}}
+not (
+  (IsString(body["PRIORITY"]) and (
+      body["PRIORITY"] == "0"
+      or body["PRIORITY"] == "1"
+      or body["PRIORITY"] == "2"
+      or body["PRIORITY"] == "3"
+      or body["PRIORITY"] == "4"))
+  or (IsString(body["SYSLOG_IDENTIFIER"])
+      and body["SYSLOG_IDENTIFIER"] == "kubenswrapper"
+      and IsString(body["MESSAGE"])
+      and IsMatch(body["MESSAGE"], "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr={{ if .IsControlPlane }}|SyncLoop{{ end }}"))
+  or (IsString(body["SYSLOG_IDENTIFIER"])
+      and body["SYSLOG_IDENTIFIER"] == "crio"
+      and IsString(body["MESSAGE"])
+      and IsMatch(body["MESSAGE"], "level=(error|warn|warning|fatal)|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berror\\b"))
+  or (IsString(body["SYSLOG_IDENTIFIER"])
+      and body["SYSLOG_IDENTIFIER"] == "kernel"
+      and IsString(body["MESSAGE"])
+      and IsMatch(body["MESSAGE"], "^Kernel command line: "))
+  or (IsString(body["_SYSTEMD_UNIT"])
+      and body["_SYSTEMD_UNIT"] == "init.scope"
+      and IsString(body["UNIT"])
+      and IsMatch(body["UNIT"], "\\.service$")))
+{{- end -}}

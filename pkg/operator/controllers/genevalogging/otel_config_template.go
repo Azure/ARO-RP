@@ -6,10 +6,25 @@ package genevalogging
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 )
 
-var otelConfigParsedTemplate = template.Must(template.New("otel-config").Parse(otelConfigTemplate))
+var otelConfigParsedTemplate *template.Template
+
+func init() {
+	otelConfigParsedTemplate = template.New("otel-config").Funcs(template.FuncMap{
+		"include": func(name string, data any) (string, error) {
+			var buf bytes.Buffer
+			err := otelConfigParsedTemplate.ExecuteTemplate(&buf, name, data)
+			return buf.String(), err
+		},
+		"oneline": func(s string) string {
+			return strings.Join(strings.Fields(s), " ")
+		},
+	})
+	template.Must(otelConfigParsedTemplate.Parse(otelConfigTemplate))
+}
 
 type otelLogSource struct {
 	Name      string
@@ -25,7 +40,7 @@ func renderOTelConfigWithoutAudit(profile otelProfile) (string, error) {
 	return renderOTelConfigWithAudit(profile, false)
 }
 
-func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, error) {
+func renderOTelConfigWithAudit(profile otelProfile, isControlPlane bool) (string, error) {
 	sources := []otelLogSource{
 		{
 			Name:      "journald",
@@ -38,7 +53,7 @@ func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, 
 			EventName: "containers",
 		},
 	}
-	if includeAudit {
+	if isControlPlane {
 		sources = append(sources, otelLogSource{
 			Name:      "audit",
 			Receiver:  "file_log/audit",
@@ -50,12 +65,12 @@ func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, 
 	err := otelConfigParsedTemplate.Execute(&rendered, struct {
 		Profile           otelProfile
 		GatewayExporterID string
-		IncludeAudit      bool
+		IsControlPlane    bool
 		Sources           []otelLogSource
 	}{
 		Profile:           profile,
 		GatewayExporterID: "otlp_grpc/gateway",
-		IncludeAudit:      includeAudit,
+		IsControlPlane:    isControlPlane,
 		Sources:           sources,
 	})
 	if err != nil {

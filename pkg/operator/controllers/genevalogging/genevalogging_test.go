@@ -117,8 +117,8 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "set(log.attributes[\"container\"], resource.attributes[\"k8s.container.name\"]) where resource.attributes[\"k8s.container.name\"] != nil") {
 		t.Fatal("full config missing lowercase container mapping")
 	}
-	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
-		t.Fatal("full config missing raw_json_body mapping")
+	if !strings.Contains(full, `set(log.attributes["raw_json_body"], log.body) where not`) {
+		t.Fatal("full config missing raw_json_body mapping for containers/audit")
 	}
 	if !strings.Contains(full, "delete_key(log.body, \"requestObject\") where IsMap(log.body)") {
 		t.Fatal("full config missing requestObject pruning")
@@ -185,8 +185,28 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(highSignal, "filter/drop-journald-noise:") {
 		t.Fatal("high-signal config missing journald noise filter")
 	}
-	if !strings.Contains(highSignal, "filter/keep-journald-high-signal:") {
+	keepJournaldIdx := strings.Index(highSignal, "filter/keep-journald-high-signal:")
+	if keepJournaldIdx == -1 {
 		t.Fatal("high-signal config missing journald high-signal filter")
+	}
+	if !strings.Contains(highSignal[keepJournaldIdx:], `body["PRIORITY"]`) {
+		t.Fatal("high-signal config must reference body[\"PRIORITY\"], not attributes[\"PRIORITY\"]")
+	}
+	if !strings.Contains(highSignal[keepJournaldIdx:], "SyncLoop") {
+		t.Fatal("high-signal master config missing SyncLoop PLEG pattern in filter/keep-journald-high-signal")
+	}
+	if !strings.Contains(highSignal[keepJournaldIdx:], `IsMatch(body["MESSAGE"], "^Kernel command line: ")`) {
+		t.Fatal("high-signal config missing kernel command line pattern in filter/keep-journald-high-signal")
+	}
+	if !strings.Contains(highSignal[keepJournaldIdx:], `"init.scope"`) || !strings.Contains(highSignal[keepJournaldIdx:], `body["UNIT"]`) || !strings.Contains(highSignal[keepJournaldIdx:], `\\.service$`) {
+		t.Fatal("high-signal config missing systemd service lifecycle pattern in filter/keep-journald-high-signal")
+	}
+	workerHighSignal, err := renderOTelConfigWithoutAudit(otelProfileMinimalLogs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(workerHighSignal, "SyncLoop") {
+		t.Fatal("high-signal worker config must not contain SyncLoop (control-plane-only pattern)")
 	}
 	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
 		t.Fatal("high-signal config missing expected journald processor chain")
