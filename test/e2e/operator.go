@@ -131,19 +131,21 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 
 		for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
 			By(fmt.Sprintf("checking that %s DaemonSet exists before the test", daemonSetName))
-			GetK8sObjectWithRetry(
+			original := GetK8sObjectWithRetry(
 				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get, daemonSetName, metav1.GetOptions{},
 			)
+			originalUID := original.UID
 
 			By(fmt.Sprintf("deleting %s DaemonSet", daemonSetName))
 			DeleteK8sObjectWithRetry(
 				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete, daemonSetName, metav1.DeleteOptions{},
 			)
 
-			By(fmt.Sprintf("waiting for %s DaemonSet to be deleted", daemonSetName))
+			By(fmt.Sprintf("waiting for %s DaemonSet to be recreated", daemonSetName))
 			Eventually(func(g Gomega, ctx context.Context) {
-				_, err := clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get(ctx, daemonSetName, metav1.GetOptions{})
-				g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expected %s to be deleted, got %v", daemonSetName, err)
+				ds, err := clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get(ctx, daemonSetName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(ds.UID).NotTo(Equal(originalUID))
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 			By(fmt.Sprintf("waiting for %s DaemonSet to be repaired and ready", daemonSetName))
