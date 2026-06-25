@@ -40,4 +40,4 @@ spec:
       !variables.isMasterNode || variables.isExempted
     message: "Deletion of master nodes is not allowed"
     messageExpression: |
-      "user <" + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + "> not allowed to delete resource with label <node-role.kubernetes.io/master: " + (has(oldObject.metadata) && has(oldObject.metadata.labels) && "node-role.kubernetes.io/master" in oldObject.metadata.labels ? oldObject.metadata.labels["node-role.kubernetes.io/master"] : "unknown") + ">"
+      "user <" + (has(request.userInfo.username) ? request.userInfo.username : "unknown") + "> not allowed to delete resource with label <node-role.kubernetes.io/master>"
