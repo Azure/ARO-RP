@@ -628,6 +628,215 @@ func TestResourceGroupsFromError(t *testing.T) {
 	}
 }
 
+func Test_isQuotaOperationNotAllowed(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		msg  string
+		want bool
+	}{
+		{
+			name: "empty string",
+			msg:  "",
+			want: false,
+		},
+		{
+			name: "bare OperationNotAllowed without quota wording",
+			msg:  `RESPONSE 409, ERROR CODE: OperationNotAllowed, Message: Some generic denial`,
+			want: false,
+		},
+		{
+			name: "OperationNotAllowed with quota keyword",
+			msg:  `RESPONSE 409, ERROR CODE: OperationNotAllowed, Message: Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota`,
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed with Cores keyword",
+			msg:  `OperationNotAllowed: exceeding approved standardDSv5Family Cores`,
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed with Current Limit keyword",
+			msg:  `OperationNotAllowed: Current Limit: 200, Current Usage: 200`,
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed with New Limit Required keyword",
+			msg:  `OperationNotAllowed: (Minimum) New Limit Required: 204`,
+			want: true,
+		},
+		{
+			name: "quota keyword without OperationNotAllowed",
+			msg:  `Some other error with Cores quota exceeded`,
+			want: false,
+		},
+		{
+			name: "realistic Azure quota error",
+			msg:  `{"error":{"code":"OperationNotAllowed","message":"Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Additional details - Deployment Model: Resource Manager, Location: centralus, Current Limit: 200, Current Usage: 200, Additional Required: 4, (Minimum) New Limit Required: 204."}}`,
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isQuotaOperationNotAllowed(tt.msg)
+			if got != tt.want {
+				t.Errorf("isQuotaOperationNotAllowed(%q) = %v, want %v", tt.msg, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContainsVMSKUErrorMessage(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		msg  string
+		want bool
+	}{
+		{
+			name: "empty string",
+			msg:  "",
+			want: false,
+		},
+		{
+			name: "generic error",
+			msg:  "some random error message",
+			want: false,
+		},
+		{
+			name: "SkuNotAvailable",
+			msg:  `Code="SkuNotAvailable" Message="The requested size is not available"`,
+			want: true,
+		},
+		{
+			name: "NotAvailableForSubscription",
+			msg:  `Restrictions: NotAvailableForSubscription, type: Zone`,
+			want: true,
+		},
+		{
+			name: "QuotaExceeded",
+			msg:  `Code="QuotaExceeded" Message="Exceeded cores quota"`,
+			want: true,
+		},
+		{
+			name: "OperationNotAllowed with quota wording",
+			msg:  `OperationNotAllowed: exceeding approved Cores quota. Current Limit: 200`,
+			want: true,
+		},
+		{
+			name: "bare OperationNotAllowed",
+			msg:  `OperationNotAllowed: generic denial`,
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ContainsVMSKUErrorMessage(tt.msg)
+			if got != tt.want {
+				t.Errorf("ContainsVMSKUErrorMessage(%q) = %v, want %v", tt.msg, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsVMSKUError_OperationNotAllowed(t *testing.T) {
+	for _, tt := range []struct {
+		name            string
+		err             error
+		wantIsVMError   bool
+		wantProfileType VMProfileType
+	}{
+		{
+			name:            "OperationNotAllowed with quota wording - string error",
+			err:             errors.New(`Code="OperationNotAllowed" Message="Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Current Limit: 200"`),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "OperationNotAllowed with quota wording and worker profile",
+			err:             errors.New(`Code="OperationNotAllowed" Message="exceeding approved Cores quota" Target="properties.workerProfiles[0].VMSize"`),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileWorker,
+		},
+		{
+			name:            "OperationNotAllowed without quota wording",
+			err:             errors.New(`Code="OperationNotAllowed" Message="Some generic operation not allowed"`),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "azcore ResponseError with OperationNotAllowed but no quota message",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusConflict,
+				ErrorCode:  CODE_OPERATIONNOTALLOWED,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusConflict,
+				},
+			},
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with OperationNotAllowed and quota in ServiceError message",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_OPERATIONNOTALLOWED,
+					Message: "Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Current Limit: 200, Current Usage: 200",
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest DetailedError with OperationNotAllowed but no quota wording",
+			err: autorest.DetailedError{
+				Original: &azure.ServiceError{
+					Code:    CODE_OPERATIONNOTALLOWED,
+					Message: "The operation is not allowed on this resource",
+				},
+			},
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name: "autorest RequestError with OperationNotAllowed and quota message",
+			err: autorest.DetailedError{
+				Original: &azure.RequestError{
+					ServiceError: &azure.ServiceError{
+						Code:    CODE_OPERATIONNOTALLOWED,
+						Message: "exceeding approved standardDSv5Family Cores quota. Current Limit: 200",
+					},
+				},
+			},
+			wantIsVMError:   true,
+			wantProfileType: VMProfileUnknown,
+		},
+		{
+			name:            "sanitized CloudError with QuotaExceeded from worker condition",
+			err:             errors.New(`500: QuotaExceeded: properties.workerProfiles[0].VMSize: Worker VM quota or capacity error detected`),
+			wantIsVMError:   true,
+			wantProfileType: VMProfileWorker,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotIsVMError, gotProfileType := IsVMSKUError(tt.err)
+			if gotIsVMError != tt.wantIsVMError {
+				t.Errorf("IsVMSKUError() isVMError = %v, want %v", gotIsVMError, tt.wantIsVMError)
+			}
+			if gotProfileType != tt.wantProfileType {
+				t.Errorf("IsVMSKUError() profileType = %v, want %v", gotProfileType, tt.wantProfileType)
+			}
+		})
+	}
+}
+
+func TestGenericMinimumWorkerTimeoutNotClassifiedAsVMSKUError(t *testing.T) {
+	// Requirement (e): the sanitized DeploymentFailed error from
+	// enrichConditionTimeoutError for minimumWorkerNodesReady must NOT
+	// trigger VM-size retry in the E2E loop.
+	genericTimeoutErr := errors.New("500: DeploymentFailed: : Minimum number of worker nodes have not been successfully created. Please retry, and if the issue persists, raise an Azure support ticket")
+	isVMError, profile := IsVMSKUError(genericTimeoutErr)
+	if isVMError {
+		t.Errorf("generic minimumWorkerNodesReady timeout should not be classified as VM SKU error, got profile=%v", profile)
+	}
+}
+
 func TestIsManagedResourceGroupError(t *testing.T) {
 	for _, tt := range []struct {
 		name       string

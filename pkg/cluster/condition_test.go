@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -83,7 +84,6 @@ func TestOperatorConsoleExists(t *testing.T) {
 
 func TestMinimumWorkerNodesReady(t *testing.T) {
 	ctx := context.Background()
-	const phaseFailed = "Failed"
 
 	for _, tt := range []struct {
 		name           string
@@ -212,6 +212,248 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 		if ready != tt.want {
 			t.Error(tt.name, ready)
 		}
+	}
+}
+
+func TestDetectWorkerVMQuotaError(t *testing.T) {
+	workerLabels := map[string]string{
+		"machine.openshift.io/cluster-api-machine-role": "worker",
+	}
+
+	for _, tt := range []struct {
+		name     string
+		machines []machinev1beta1.Machine
+		wantErr  bool
+	}{
+		{
+			name:     "no machines",
+			machines: nil,
+			wantErr:  false,
+		},
+		{
+			name: "running machines",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase:          pointerutils.ToPtr(phaseRunning),
+						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "failed machine without quota error",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"some generic Azure error"}]}`),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "failed machine with OperationNotAllowed quota error",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"RESPONSE 409, ERROR CODE: OperationNotAllowed, Operation could not be completed as it results in exceeding approved standardDSv5Family Cores quota. Additional details - Deployment Model: Resource Manager, Location: centralus, Current Limit: 200, Current Usage: 200, Additional Required: 4, (Minimum) New Limit Required: 204."}]}`),
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed machine with QuotaExceeded error",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"QuotaExceeded"}]}`),
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed machine with SkuNotAvailable error",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"SkuNotAvailable"}]}`),
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed machine with bare OperationNotAllowed without quota wording",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"RESPONSE 409, ERROR CODE: OperationNotAllowed, The operation is not allowed on this resource"}]}`),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "failed machine with nil ProviderStatus",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "mix of running and failed-with-quota machines",
+			machines: []machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w1", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase:          pointerutils.ToPtr(phaseRunning),
+						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "w2", Labels: workerLabels},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"type":"MachineCreation","status":"False","reason":"CreateError","message":"OperationNotAllowed: exceeding approved Cores quota"}]}`),
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := detectWorkerVMQuotaError(tt.machines)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("detectWorkerVMQuotaError() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
+				errStr := err.Error()
+				if !strings.Contains(errStr, "QuotaExceeded") {
+					t.Errorf("expected error to contain 'QuotaExceeded', got: %s", errStr)
+				}
+				if !strings.Contains(errStr, "workerProfiles") {
+					t.Errorf("expected error to contain 'workerProfiles', got: %s", errStr)
+				}
+			}
+		})
+	}
+}
+
+func TestMinimumWorkerNodesReady_QuotaError(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name       string
+		machines   []*machinev1beta1.Machine
+		wantReady  bool
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name: "all machines failed with quota error returns terminal error",
+			machines: []*machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "w1", Namespace: "openshift-machine-api",
+						Labels: map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
+					},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"message":"OperationNotAllowed: exceeding approved Cores quota. Current Limit: 200"}]}`),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "w2", Namespace: "openshift-machine-api",
+						Labels: map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
+					},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"message":"OperationNotAllowed: exceeding approved Cores quota. Current Limit: 200"}]}`),
+						},
+					},
+				},
+			},
+			wantReady:  false,
+			wantErr:    true,
+			wantErrMsg: "QuotaExceeded",
+		},
+		{
+			name: "machines failed without quota error returns false nil",
+			machines: []*machinev1beta1.Machine{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "w1", Namespace: "openshift-machine-api",
+						Labels: map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
+					},
+					Status: machinev1beta1.MachineStatus{
+						Phase: pointerutils.ToPtr(phaseFailed),
+						ProviderStatus: &runtime.RawExtension{
+							Raw: []byte(`{"vmState":"Failed","conditions":[{"message":"some generic infrastructure error"}]}`),
+						},
+					},
+				},
+			},
+			wantReady: false,
+			wantErr:   false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			objs := make([]runtime.Object, len(tt.machines))
+			for i, m := range tt.machines {
+				objs[i] = m
+			}
+			mgr := &manager{
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+				maocli:        machinefake.NewSimpleClientset(objs...),
+				kubernetescli: fake.NewSimpleClientset(),
+			}
+			ready, err := mgr.minimumWorkerNodesReady(ctx)
+			if ready != tt.wantReady {
+				t.Errorf("ready = %v, want %v", ready, tt.wantReady)
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErrMsg != "" && err != nil && !strings.Contains(err.Error(), tt.wantErrMsg) {
+				t.Errorf("expected error containing %q, got: %s", tt.wantErrMsg, err.Error())
+			}
+		})
 	}
 }
 

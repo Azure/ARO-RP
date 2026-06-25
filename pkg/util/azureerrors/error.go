@@ -29,9 +29,14 @@ const (
 	// VM SKU availability error codes
 	CODE_INVALIDPARAM          = "InvalidParameter"
 	CODE_NOTAVAILABLEFORSUBSCR = "NotAvailableForSubscription"
+	CODE_OPERATIONNOTALLOWED   = "OperationNotAllowed"
 	CODE_QUOTAEXCEEDED         = "QuotaExceeded"
 	CODE_SKUNOTAVAILABLE       = "SkuNotAvailable"
 )
+
+// quotaKeywords are terms that, combined with OperationNotAllowed, indicate a
+// VM quota error rather than a generic permission denial.
+var quotaKeywords = []string{"quota", "Cores", "Current Limit", "New Limit Required"}
 
 // VMProfileType identifies which VM profile (master or worker) is affected by an error.
 type VMProfileType int
@@ -226,6 +231,33 @@ func ResourceGroupNotFound(err error) bool {
 	return false
 }
 
+// isQuotaOperationNotAllowed checks if a message contains OperationNotAllowed
+// combined with quota-specific wording. Bare OperationNotAllowed without quota
+// context is NOT classified as a quota error.
+func isQuotaOperationNotAllowed(msg string) bool {
+	if !strings.Contains(msg, CODE_OPERATIONNOTALLOWED) {
+		return false
+	}
+	for _, kw := range quotaKeywords {
+		if strings.Contains(msg, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsVMSKUErrorMessage checks if a message string contains patterns
+// indicating a VM SKU availability or quota error. Use this to inspect raw
+// status messages (e.g. Machine ProviderStatus) for VM-size-related failures.
+func ContainsVMSKUErrorMessage(msg string) bool {
+	if strings.Contains(msg, CODE_SKUNOTAVAILABLE) ||
+		strings.Contains(msg, CODE_NOTAVAILABLEFORSUBSCR) ||
+		strings.Contains(msg, CODE_QUOTAEXCEEDED) {
+		return true
+	}
+	return isQuotaOperationNotAllowed(msg)
+}
+
 // IsVMSKUError checks if the error is a VM SKU availability error and returns
 // which profile (master/worker) is affected.
 // Azure Resource Manager error codes: https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-sku-not-available
@@ -278,6 +310,9 @@ func IsVMSKUError(err error) (bool, VMProfileType) {
 	if strings.Contains(errStr, CODE_SKUNOTAVAILABLE) ||
 		strings.Contains(errStr, CODE_NOTAVAILABLEFORSUBSCR) ||
 		strings.Contains(errStr, CODE_QUOTAEXCEEDED) {
+		return true, detectVMProfile(errStr)
+	}
+	if isQuotaOperationNotAllowed(errStr) {
 		return true, detectVMProfile(errStr)
 	}
 	if strings.Contains(errStr, CODE_INVALIDPARAM) && strings.Contains(errStr, "SKU") {

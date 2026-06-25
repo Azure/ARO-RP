@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -15,7 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
 )
 
@@ -23,6 +28,7 @@ const (
 	minimumWorkerNodes     = 2
 	workerMachineRoleLabel = "machine.openshift.io/cluster-api-machine-role=worker"
 	workerNodeRoleLabel    = "node-role.kubernetes.io/worker"
+	phaseFailed            = "Failed"
 	phaseRunning           = "Running"
 )
 
@@ -52,7 +58,7 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 	for _, machine := range machines.Items {
 		if machine.Status.Phase == nil || machine.Status.ProviderStatus == nil {
 			m.log.Infof("Unable to determine status of machine %s: %v", machine.Name, machine.Status)
-			break
+			continue
 		}
 		m.log.Infof("Machine %s is %s; status: %s", machine.Name, *machine.Status.Phase, string(machine.Status.ProviderStatus.Raw))
 		if *machine.Status.Phase == phaseRunning {
@@ -61,6 +67,10 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 	}
 
 	if readyWorkerMachines < minimumWorkerNodes {
+		if quotaErr := detectWorkerVMQuotaError(machines.Items); quotaErr != nil {
+			m.log.Errorf("detected terminal worker VM quota/SKU error: %v", quotaErr)
+			return false, quotaErr
+		}
 		m.log.Infof("%d machines running, need at least %d", readyWorkerMachines, minimumWorkerNodes)
 		return false, nil
 	}
@@ -84,6 +94,30 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 
 	m.log.Infof("%d nodes ready, need at least %d", readyWorkerMachines, minimumWorkerNodes)
 	return readyWorkers >= minimumWorkerNodes, nil
+}
+
+// detectWorkerVMQuotaError inspects failed worker Machine ProviderStatus for
+// VM quota/SKU errors. Returns a sanitized CloudError if any failed Machine
+// has a quota/SKU error in its ProviderStatus, nil otherwise.
+func detectWorkerVMQuotaError(machines []machinev1beta1.Machine) error {
+	for _, machine := range machines {
+		if machine.Status.Phase == nil || *machine.Status.Phase != phaseFailed {
+			continue
+		}
+		if machine.Status.ProviderStatus == nil || len(machine.Status.ProviderStatus.Raw) == 0 {
+			continue
+		}
+		providerStatusStr := string(machine.Status.ProviderStatus.Raw)
+		if azureerrors.ContainsVMSKUErrorMessage(providerStatusStr) {
+			return api.NewCloudError(
+				http.StatusInternalServerError,
+				api.CloudErrorCodeQuotaExceeded,
+				"properties.workerProfiles[0].VMSize",
+				fmt.Sprintf("Worker VM quota or capacity error detected on machine %s. Please retry with a different VM size, and if the issue persists, raise an Azure support ticket.", machine.Name),
+			)
+		}
+	}
+	return nil
 }
 
 func (m *manager) operatorConsoleExists(ctx context.Context) (bool, error) {
