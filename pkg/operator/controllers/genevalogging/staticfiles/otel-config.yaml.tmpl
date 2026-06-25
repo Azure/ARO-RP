@@ -109,7 +109,7 @@ receivers:
       - type: flatten
         field: body
         if: 'type(body) == "map"'
-{{- if .IncludeAudit }}
+{{- if .IsControlPlane }}
   file_log/audit:
     include:
       - /var/log/kube-apiserver/audit.log
@@ -150,7 +150,7 @@ processors:
     error_mode: ignore
     logs:
       log_record:
-        - 'not ((IsString(attributes["PRIORITY"]) and (attributes["PRIORITY"] == "0" or attributes["PRIORITY"] == "1" or attributes["PRIORITY"] == "2" or attributes["PRIORITY"] == "3" or attributes["PRIORITY"] == "4")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kubenswrapper" and IsString(body) and IsMatch(body, "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr=")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "crio" and IsString(body) and IsMatch(body, "level=(error|warn|warning|fatal)|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berror\\b")))'
+        - 'not ((IsString(attributes["PRIORITY"]) and (attributes["PRIORITY"] == "0" or attributes["PRIORITY"] == "1" or attributes["PRIORITY"] == "2" or attributes["PRIORITY"] == "3" or attributes["PRIORITY"] == "4")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "kubenswrapper" and IsString(body) and IsMatch(body, "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr={{ if .IsControlPlane }}|SyncLoop{{ end }}")) or (IsString(attributes["SYSLOG_IDENTIFIER"]) and attributes["SYSLOG_IDENTIFIER"] == "crio" and IsString(body) and IsMatch(body, "level=(error|warn|warning|fatal)|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berror\\b")))'
   filter/keep-audit-write-verbs:
     error_mode: ignore
     logs:

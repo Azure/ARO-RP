@@ -25,7 +25,7 @@ func renderOTelConfigWithoutAudit(profile otelProfile) (string, error) {
 	return renderOTelConfigWithAudit(profile, false)
 }
 
-func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, error) {
+func renderOTelConfigWithAudit(profile otelProfile, isControlPlane bool) (string, error) {
 	sources := []otelLogSource{
 		{
 			Name:      "journald",
@@ -38,7 +38,7 @@ func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, 
 			EventName: "containers",
 		},
 	}
-	if includeAudit {
+	if isControlPlane {
 		sources = append(sources, otelLogSource{
 			Name:      "audit",
 			Receiver:  "file_log/audit",
@@ -50,12 +50,12 @@ func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, 
 	err := otelConfigParsedTemplate.Execute(&rendered, struct {
 		Profile           otelProfile
 		GatewayExporterID string
-		IncludeAudit      bool
+		IsControlPlane    bool
 		Sources           []otelLogSource
 	}{
 		Profile:           profile,
 		GatewayExporterID: "otlp_grpc/gateway",
-		IncludeAudit:      includeAudit,
+		IsControlPlane:    isControlPlane,
 		Sources:           sources,
 	})
 	if err != nil {
