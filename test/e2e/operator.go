@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	cpcController "github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
@@ -123,12 +124,12 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 })
 
 var _ = Describe("ARO Operator - Geneva Logging", func() {
-	It("must repair OTel collector DaemonSets if deleted", func(ctx context.Context) {
+	It("must repair OTel exporter DaemonSets if deleted", func(ctx context.Context) {
 		if _env.IsLocalDevelopmentMode() {
 			Skip("skipping tests in development environment")
 		}
 
-		for _, daemonSetName := range []string{"otel-collector-master", "otel-collector-worker"} {
+		for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
 			By(fmt.Sprintf("checking that %s DaemonSet exists before the test", daemonSetName))
 			GetK8sObjectWithRetry(
 				ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Get, daemonSetName, metav1.GetOptions{},

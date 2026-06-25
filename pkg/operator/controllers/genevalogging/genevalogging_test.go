@@ -280,7 +280,7 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 	if !foundConfig {
 		t.Fatal("missing expected OTel configmap")
 	}
-	if !reflect.DeepEqual(daemonsetNames, []string{"otel-exporter-master", "otel-exporter-worker"}) {
+	if !reflect.DeepEqual(daemonsetNames, []string{MasterDaemonsetName, WorkerDaemonsetName}) {
 		t.Fatalf("unexpected daemonsets: %v", daemonsetNames)
 	}
 }
@@ -316,7 +316,7 @@ func TestOTelDaemonSets(t *testing.T) {
 			t.Fatalf("missing priority class for %s", ds.Name)
 		}
 		wantHash := "worker-hash"
-		if ds.Name == "otel-exporter-master" {
+		if ds.Name == MasterDaemonsetName {
 			wantHash = "master-hash"
 		}
 		if gotHash := ds.Spec.Template.Annotations["aro.openshift.io/otel-config-sha256"]; gotHash != wantHash {
@@ -464,11 +464,11 @@ func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.
 func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 	ctx := context.Background()
 	master := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "otel-exporter-master", Namespace: kubeNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: MasterDaemonsetName, Namespace: kubeNamespace},
 		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
 	}
 	worker := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "otel-exporter-worker", Namespace: kubeNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: WorkerDaemonsetName, Namespace: kubeNamespace},
 		Spec:       appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{NodeSelector: map[string]string{"custom": "true"}}}},
 	}
 
@@ -477,7 +477,7 @@ func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, name := range []string{"otel-exporter-master", "otel-exporter-worker"} {
+	for _, name := range []string{MasterDaemonsetName, WorkerDaemonsetName} {
 		ds := &appsv1.DaemonSet{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: name, Namespace: kubeNamespace}, ds); err != nil {
 			t.Fatal(err)

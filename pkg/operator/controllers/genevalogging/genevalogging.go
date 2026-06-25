@@ -36,6 +36,9 @@ var privilegedNamespaceLabels = map[string]string{
 const (
 	masterRoleLabel       = "node-role.kubernetes.io/master"
 	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
+
+	MasterDaemonsetName = "otel-exporter-master"
+	WorkerDaemonsetName = "otel-exporter-worker"
 )
 
 var (
@@ -442,7 +445,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	}
 
 	return []*appsv1.DaemonSet{
-		newDaemonSet("otel-exporter-master", "400m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
-		newDaemonSet("otel-exporter-worker", "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
+		newDaemonSet(MasterDaemonsetName, "400m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
+		newDaemonSet(WorkerDaemonsetName, "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
 	}, nil
 }
