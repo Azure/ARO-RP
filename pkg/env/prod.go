@@ -132,7 +132,7 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
 		environment:                       os.Getenv("ENVIRONMENT"),
 
-		rpParentDomainName: os.Getenv("RP_PARENT_DOMAIN_NAME"),
+		rpParentDomainName: strings.ToLower(os.Getenv("RP_PARENT_DOMAIN_NAME")),
 
 		log: log,
 
