@@ -346,7 +346,7 @@ func gatewayTelemetryDomain(location string, appSuffix string) string {
 	if location == "" || appSuffix == "" {
 		return ""
 	}
-	return fmt.Sprintf("telemetry.%s.%s", location, appSuffix)
+	return strings.ToLower(fmt.Sprintf("telemetry.%s.%s", location, appSuffix))
 }
 
 func (o *operator) SyncClusterObject(ctx context.Context) error {

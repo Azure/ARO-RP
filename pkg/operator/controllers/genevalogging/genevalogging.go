@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -216,12 +217,10 @@ func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTarge
 	}
 
 	if cluster.Spec.GatewayTelemetryDomain == "" {
-		return telemetryGatewayTargetSpec{
-			endpoint: net.JoinHostPort(gatewayPrivateEndpointIP.String(), "4317"),
-		}, true, nil
+		return telemetryGatewayTargetSpec{}, false, fmt.Errorf("invalid cluster spec field %q: empty", "gatewayTelemetryDomain")
 	}
 
-	gatewayHostname := cluster.Spec.GatewayTelemetryDomain
+	gatewayHostname := strings.ToLower(cluster.Spec.GatewayTelemetryDomain)
 	return telemetryGatewayTargetSpec{
 		endpoint: net.JoinHostPort(gatewayHostname, "4317"),
 		hostAliases: []corev1.HostAlias{
