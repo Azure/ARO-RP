@@ -125,6 +125,10 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 
 var _ = Describe("ARO Operator - Geneva Logging", func() {
 	It("must repair OTel exporter DaemonSets if deleted", func(ctx context.Context) {
+		if _env.IsLocalDevelopmentMode() {
+			Skip("skipping tests in development environment")
+		}
+
 		for _, daemonSetName := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
 			By(fmt.Sprintf("checking that %s DaemonSet exists before the test", daemonSetName))
 			GetK8sObjectWithRetry(
