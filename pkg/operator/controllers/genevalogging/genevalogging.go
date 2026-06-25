@@ -217,9 +217,7 @@ func telemetryGatewayTarget(cluster *arov1alpha1.Cluster) (telemetryGatewayTarge
 	}
 
 	if cluster.Spec.GatewayTelemetryDomain == "" {
-		return telemetryGatewayTargetSpec{
-			endpoint: net.JoinHostPort(gatewayPrivateEndpointIP.String(), "4317"),
-		}, true, nil
+		return telemetryGatewayTargetSpec{}, false, fmt.Errorf("invalid cluster spec field %q: empty", "gatewayTelemetryDomain")
 	}
 
 	gatewayHostname := strings.ToLower(cluster.Spec.GatewayTelemetryDomain)

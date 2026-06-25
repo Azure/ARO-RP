@@ -29,6 +29,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func clusterVersion(version string) configv1.ClusterVersion {
@@ -358,28 +359,65 @@ func TestOTelDaemonSetsUseConfiguredPullSpec(t *testing.T) {
 }
 
 func TestTelemetryGatewayTarget(t *testing.T) {
-	target, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{GatewayPrivateEndpointIP: "10.0.0.8", GatewayTelemetryDomain: "telemetry.EastUS.aro.azure.com"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !ready {
-		t.Fatal("expected telemetry target to be ready")
-	}
-	if target.endpoint != "telemetry.eastus.aro.azure.com:4317" {
-		t.Fatalf("got endpoint %q", target.endpoint)
-	}
-	if len(target.hostAliases) != 1 || target.hostAliases[0].IP != "10.0.0.8" {
-		t.Fatalf("unexpected host aliases: %#v", target.hostAliases)
-	}
-}
+	for _, tt := range []struct {
+		name            string
+		cluster         *arov1alpha1.Cluster
+		wantReady       bool
+		wantEndpoint    string
+		wantHostAliases []corev1.HostAlias
+		wantErr         string
+	}{
+		{
+			name:      "not ready when gateway endpoint IP is missing",
+			cluster:   &arov1alpha1.Cluster{},
+			wantReady: false,
+		},
+		{
+			name: "error when gateway endpoint IP is not a valid IP address",
+			cluster: &arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{
+				GatewayPrivateEndpointIP: "not-an-ip",
+				GatewayTelemetryDomain:   "telemetry.eastus.aro.azure.com",
+			}},
+			wantErr: `invalid cluster spec field "gatewayPrivateEndpointIP": "not-an-ip" is not a valid IP address`,
+		},
+		{
+			name: "error when gateway telemetry domain is empty",
+			cluster: &arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{
+				GatewayPrivateEndpointIP: "10.0.0.8",
+				GatewayTelemetryDomain:   "",
+			}},
+			wantErr: `invalid cluster spec field "gatewayTelemetryDomain": empty`,
+		},
+		{
+			name: "ready with lowercased endpoint and host alias",
+			cluster: &arov1alpha1.Cluster{Spec: arov1alpha1.ClusterSpec{
+				GatewayPrivateEndpointIP: "10.0.0.8",
+				GatewayTelemetryDomain:   "telemetry.EastUS.aro.azure.com",
+			}},
+			wantReady:    true,
+			wantEndpoint: "telemetry.eastus.aro.azure.com:4317",
+			wantHostAliases: []corev1.HostAlias{
+				{
+					IP:        "10.0.0.8",
+					Hostnames: []string{"telemetry.eastus.aro.azure.com"},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			target, ready, err := telemetryGatewayTarget(tt.cluster)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
-func TestTelemetryGatewayTargetNotReadyWithoutEndpointIP(t *testing.T) {
-	_, ready, err := telemetryGatewayTarget(&arov1alpha1.Cluster{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ready {
-		t.Fatal("expected telemetry target to be not ready when gateway endpoint IP is missing")
+			if ready != tt.wantReady {
+				t.Fatalf("got ready %v, want %v", ready, tt.wantReady)
+			}
+			if target.endpoint != tt.wantEndpoint {
+				t.Fatalf("got endpoint %q, want %q", target.endpoint, tt.wantEndpoint)
+			}
+			if !reflect.DeepEqual(target.hostAliases, tt.wantHostAliases) {
+				t.Fatalf("got host aliases %#v, want %#v", target.hostAliases, tt.wantHostAliases)
+			}
+		})
 	}
 }
 
