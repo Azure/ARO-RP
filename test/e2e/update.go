@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
@@ -221,9 +220,7 @@ var _ = Describe("Update clusters", func() {
 
 		if requiresRouteTablePermission {
 			By("looking up the route table from the master subnet")
-			vnetR, err := azure.ParseResourceID(vnetScope)
-			Expect(err).NotTo(HaveOccurred())
-			subnetResp, err := clients.Subnet.Get(ctx, vnetR.ResourceGroup, vnetR.ResourceName, stringutils.LastTokenByte(masterSubnetID, '/'), nil)
+			subnetResp, err := clients.Subnet.Get(ctx, vnetResourceGroup, stringutils.LastTokenByte(vnetScope, '/'), stringutils.LastTokenByte(masterSubnetID, '/'), nil)
 			Expect(err).NotTo(HaveOccurred())
 			if subnetResp.Properties != nil && subnetResp.Properties.RouteTable != nil && subnetResp.Properties.RouteTable.ID != nil {
 				By("assigning the operator's role to the replacement identity at route table scope")
