@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
@@ -140,10 +141,10 @@ var _ = Describe("Update clusters", func() {
 		}
 		Expect(clusterIdentityPrincipalID).NotTo(BeEmpty())
 
-		By("checking the operator's role definition for DiskEncryptionSet permissions")
+		By("checking the operator's role definition for additional scope requirements")
 		roleDef, err := clients.RoleDefinitions.GetByID(ctx, operatorRoleDefinitionID)
 		Expect(err).NotTo(HaveOccurred())
-		var requiresDESPermission bool
+		var requiresDESPermission, requiresRouteTablePermission bool
 		if roleDef.RoleDefinitionProperties != nil && roleDef.Permissions != nil {
 			for _, perm := range *roleDef.Permissions {
 				if perm.Actions == nil {
@@ -152,11 +153,10 @@ var _ = Describe("Update clusters", func() {
 				for _, action := range *perm.Actions {
 					if strings.Contains(action, "Microsoft.Compute/diskEncryptionSets") {
 						requiresDESPermission = true
-						break
 					}
-				}
-				if requiresDESPermission {
-					break
+					if strings.Contains(action, "Microsoft.Network/routeTables") {
+						requiresRouteTablePermission = true
+					}
 				}
 			}
 		}
@@ -217,6 +217,25 @@ var _ = Describe("Update clusters", func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
+		}
+
+		if requiresRouteTablePermission {
+			By("looking up the route table from the master subnet")
+			vnetR, err := azure.ParseResourceID(vnetScope)
+			Expect(err).NotTo(HaveOccurred())
+			subnetResp, err := clients.Subnet.Get(ctx, vnetR.ResourceGroup, vnetR.ResourceName, stringutils.LastTokenByte(masterSubnetID, '/'), nil)
+			Expect(err).NotTo(HaveOccurred())
+			if subnetResp.Properties != nil && subnetResp.Properties.RouteTable != nil && subnetResp.Properties.RouteTable.ID != nil {
+				By("assigning the operator's role to the replacement identity at route table scope")
+				_, err = clients.RoleAssignments.Create(ctx, *subnetResp.Properties.RouteTable.ID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+						RoleDefinitionID: &operatorRoleDefinitionID,
+						PrincipalID:      &replacementPrincipalID,
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
 		}
 
 		By("assigning the federated credential role to the cluster identity at the scope of the replacement identity")
