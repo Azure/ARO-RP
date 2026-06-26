@@ -21,8 +21,7 @@ When gateway is enabled and endpoint data is present, deploy logic sets:
 
 Collector endpoint selection:
 
-1. If `gatewayTelemetryDomain` exists: use `<gatewayTelemetryDomain>:4317` and add a host alias to `gatewayPrivateEndpointIP`.
-2. Otherwise: use `<gatewayPrivateEndpointIP>:4317`.
+If `gatewayTelemetryDomain` exists: use `<gatewayTelemetryDomain>:4317` and add a pod level host alias to `gatewayPrivateEndpointIP`.
 
 The controller always creates the OTEL config ConfigMap first (`config.yaml`, `master-config.yaml`, `worker-config.yaml`) and only creates daemonsets once gateway endpoint data is ready.
 
@@ -48,9 +47,9 @@ Worker collectors do not include the audit receiver; audit logs are collected on
 | Flag | Meaning | Default |
 | --- | --- | --- |
 | `aro.genevalogging.enabled` | Enables Geneva logging behavior. | `true` |
-| `aro.genevalogging.otel.profile` | Global profile (`max-logs`, `reduced-logs`, `minimal-logs`). | `minimal-logs` |
-| `aro.genevalogging.otel.master.profile` | Optional master override. | unset |
-| `aro.genevalogging.otel.worker.profile` | Optional worker override. | unset |
+| `aro.genevalogging.otel.profile` | Global profile (`max-logs`, `reduced-logs`, `minimal-logs`). | `minimal-logs` | Default is Minimal
+| `aro.genevalogging.otel.master.profile` | Optional master override. | unse which defaults to the global profile |
+| `aro.genevalogging.otel.worker.profile` | Optional worker override. | unset which defaults to the global profile |
 
 ## Rollout paths
 
@@ -61,10 +60,15 @@ PATCH admin cluster with `operatorFlags` and optional `operatorFlagsMergeStrateg
 - `merge` (default): overlay provided flags on current cluster flags
 - `reset`: reset to defaults, then overlay provided flags
 
-### MIMO (fleet rollout)
-
+### MIMO (Single Cluster Update)
 MIMO task ID for operator flags update:
-
 - `b41749fc-af26-4ab7-b5a1-e03f3ee4cba6` (`OPERATOR_FLAGS_UPDATE_ID`)
-
 Use this task in manifests/schedules to roll out OTEL flag updates across selected clusters.
+
+### MIMO (fleet rollout)
+To change the fleet within a region apply the task via the Create or Update Schedule Manifest MIMO Action
+
+
+
+
+
