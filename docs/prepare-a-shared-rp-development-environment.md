@@ -485,18 +485,6 @@ each of the bash functions below.
    deploy_miwi_infra_dev
    ```
 
-   If you encounter a "VirtualNetworkGatewayCannotUseStandardPublicIP" error
-   when running the `deploy_env_dev` command, you have to override two
-   additional parameters. Run this command instead:
-
-   ```bash
-   deploy_env_dev_override
-   ```
-
-   If you encounter a "SkuCannotBeChangedOnUpdate" error
-   when running the `deploy_env_dev_override` command, delete the `-pip` resource
-   and re-run.
-
 1. Get the AKS kubeconfig and upload it to the storage account:
 
    ```bash
