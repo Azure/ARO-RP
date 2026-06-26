@@ -219,12 +219,30 @@ var _ = Describe("Update clusters", func() {
 		}
 
 		if requiresRouteTablePermission {
-			By("looking up the route table from the master subnet")
-			subnetResp, err := clients.Subnet.Get(ctx, vnetResourceGroup, stringutils.LastTokenByte(vnetScope, '/'), stringutils.LastTokenByte(masterSubnetID, '/'), nil)
-			Expect(err).NotTo(HaveOccurred())
-			if subnetResp.Properties != nil && subnetResp.Properties.RouteTable != nil && subnetResp.Properties.RouteTable.ID != nil {
+			By("looking up route tables from the cluster subnets")
+
+			vnetName := stringutils.LastTokenByte(vnetScope, '/')
+			subnetIDs := []string{*oc.MasterProfile.SubnetID}
+			if oc.WorkerProfiles != nil {
+				for _, wp := range *oc.WorkerProfiles {
+					subnetIDs = append(subnetIDs, *wp.SubnetID)
+				}
+			}
+
+			routeTableIDs := map[string]struct{}{}
+			for _, subnetID := range subnetIDs {
+				subnetName := stringutils.LastTokenByte(subnetID, '/')
+				subnetResp, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetName, subnetName, nil)
+				Expect(err).NotTo(HaveOccurred())
+				if subnetResp.Properties != nil && subnetResp.Properties.RouteTable != nil && subnetResp.Properties.RouteTable.ID != nil {
+					routeTableIDs[*subnetResp.Properties.RouteTable.ID] = struct{}{}
+				}
+			}
+			Expect(routeTableIDs).NotTo(BeEmpty(), "requiresRouteTablePermission=true but no route table was found on cluster subnets")
+
+			for routeTableID := range routeTableIDs {
 				By("assigning the operator's role to the replacement identity at route table scope")
-				_, err = clients.RoleAssignments.Create(ctx, *subnetResp.Properties.RouteTable.ID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+				_, err = clients.RoleAssignments.Create(ctx, routeTableID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
 					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 						RoleDefinitionID: &operatorRoleDefinitionID,
 						PrincipalID:      &replacementPrincipalID,
