@@ -64,9 +64,14 @@ PATCH admin cluster with `operatorFlags` and optional `operatorFlagsMergeStrateg
 MIMO task ID for operator flags update:
 - `b41749fc-af26-4ab7-b5a1-e03f3ee4cba6` (`OPERATOR_FLAGS_UPDATE_ID`)
 Use this task in manifests/schedules to roll out OTEL flag updates across selected clusters.
+While not necessarily expected, task IDs can change, please see pkg/mimo/const.go for the most current task IDs.
 
 ### MIMO (fleet rollout)
 To change the fleet within a region apply the task via the Create or Update Schedule Manifest MIMO Action
+
+
+### Profile Render Failure Fallback
+If the new profile fails to render for any reason the minimal-logs profile will act as the fallback.
 
 
 
