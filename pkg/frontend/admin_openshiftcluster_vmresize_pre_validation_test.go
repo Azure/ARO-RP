@@ -146,7 +146,7 @@ func expectControlPlaneVMGetCalls(a *mock_adminactions.MockAzureActions, resourc
 
 func masterMachineWithZone(name, vmSize, zone string) machinev1beta1.Machine {
 	providerSpec := &machinev1beta1.AzureMachineProviderSpec{
-		Zone:   &zone,
+		Zone:   zone,
 		VMSize: vmSize,
 	}
 	raw, _ := json.Marshal(providerSpec)
@@ -232,7 +232,7 @@ func inventoryValidationVM(vmSize, zone string) mgmtcompute.VirtualMachine {
 func zonedMasterMachine(name, vmSize, phase, zone string) machinev1beta1.Machine {
 	machine := masterMachine(name, vmSize, phase)
 	providerSpec := &machinev1beta1.AzureMachineProviderSpec{
-		Zone:   pointerutils.ToPtr(zone),
+		Zone:   zone,
 		VMSize: vmSize,
 	}
 	rawProviderSpec, _ := json.Marshal(providerSpec)

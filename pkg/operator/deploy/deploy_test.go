@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -865,7 +864,7 @@ func TestCredentialsRequest(t *testing.T) {
 
 	oc := &api.OpenShiftCluster{}
 
-	builder := fake.NewClientBuilder()
+	builder := testclienthelper.NewAROFakeClientBuilder()
 	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 	o := operator{
