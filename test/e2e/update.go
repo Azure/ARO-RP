@@ -140,10 +140,10 @@ var _ = Describe("Update clusters", func() {
 		}
 		Expect(clusterIdentityPrincipalID).NotTo(BeEmpty())
 
-		By("checking the operator's role definition for DiskEncryptionSet permissions")
+		By("checking the operator's role definition for additional scope requirements")
 		roleDef, err := clients.RoleDefinitions.GetByID(ctx, operatorRoleDefinitionID)
 		Expect(err).NotTo(HaveOccurred())
-		var requiresDESPermission bool
+		var requiresDESPermission, requiresRouteTablePermission bool
 		if roleDef.RoleDefinitionProperties != nil && roleDef.Permissions != nil {
 			for _, perm := range *roleDef.Permissions {
 				if perm.Actions == nil {
@@ -152,11 +152,10 @@ var _ = Describe("Update clusters", func() {
 				for _, action := range *perm.Actions {
 					if strings.Contains(action, "Microsoft.Compute/diskEncryptionSets") {
 						requiresDESPermission = true
-						break
 					}
-				}
-				if requiresDESPermission {
-					break
+					if strings.Contains(action, "Microsoft.Network/routeTables") {
+						requiresRouteTablePermission = true
+					}
 				}
 			}
 		}
@@ -217,6 +216,41 @@ var _ = Describe("Update clusters", func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
+		}
+
+		if requiresRouteTablePermission {
+			By("looking up route tables from the cluster subnets")
+
+			vnetName := stringutils.LastTokenByte(vnetScope, '/')
+			subnetIDs := []string{*oc.MasterProfile.SubnetID}
+			if oc.WorkerProfiles != nil {
+				for _, wp := range *oc.WorkerProfiles {
+					subnetIDs = append(subnetIDs, *wp.SubnetID)
+				}
+			}
+
+			routeTableIDs := map[string]struct{}{}
+			for _, subnetID := range subnetIDs {
+				subnetName := stringutils.LastTokenByte(subnetID, '/')
+				subnetResp, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetName, subnetName, nil)
+				Expect(err).NotTo(HaveOccurred())
+				if subnetResp.Properties != nil && subnetResp.Properties.RouteTable != nil && subnetResp.Properties.RouteTable.ID != nil {
+					routeTableIDs[*subnetResp.Properties.RouteTable.ID] = struct{}{}
+				}
+			}
+			Expect(routeTableIDs).NotTo(BeEmpty(), "requiresRouteTablePermission=true but no route table was found on cluster subnets")
+
+			for routeTableID := range routeTableIDs {
+				By("assigning the operator's role to the replacement identity at route table scope")
+				_, err = clients.RoleAssignments.Create(ctx, routeTableID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+						RoleDefinitionID: &operatorRoleDefinitionID,
+						PrincipalID:      &replacementPrincipalID,
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
 		}
 
 		By("assigning the federated credential role to the cluster identity at the scope of the replacement identity")
