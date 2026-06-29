@@ -829,6 +829,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		{
 			name: "error: private endpoint connection not found",
 			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+				env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
 				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
 					PrivateEndpoint: armnetwork.PrivateEndpoint{
@@ -864,6 +865,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		{
 			name: "ok - gateway enabled",
 			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+				env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
 				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
 					PrivateEndpoint: armnetwork.PrivateEndpoint{
@@ -961,6 +963,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		{
 			name: "ok - gateway not enabled, but we still need private endpoint, etc. for OTEL logging stack to work",
 			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+				env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
 				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
 					PrivateEndpoint: armnetwork.PrivateEndpoint{
