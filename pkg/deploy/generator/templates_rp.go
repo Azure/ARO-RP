@@ -125,9 +125,11 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "cosmosDB":
 			p.Type = "object"
 			p.DefaultValue = map[string]int{
-				"standardProvisionedThroughput": 1000,
-				"portalProvisionedThroughput":   400,
-				"gatewayProvisionedThroughput":  400,
+				"standardProvisionedThroughput":      1000,
+				"portalProvisionedThroughput":        400,
+				"gatewayProvisionedThroughput":       400,
+				"mimoManifestsProvisionedThroughput": 1000,
+				"mimoSchedulesProvisionedThroughput": 1000,
 			}
 		case "rpVmssCapacity":
 			p.Type = "int"
