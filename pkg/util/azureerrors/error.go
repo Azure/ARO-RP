@@ -36,7 +36,7 @@ const (
 
 // quotaKeywords are terms that, combined with OperationNotAllowed, indicate a
 // VM quota error rather than a generic permission denial.
-var quotaKeywords = []string{"quota", "Cores", "Current Limit", "New Limit Required"}
+var quotaKeywords = []string{"quota", "cores", "current limit", "new limit required"}
 
 // VMProfileType identifies which VM profile (master or worker) is affected by an error.
 type VMProfileType int
@@ -238,8 +238,9 @@ func isQuotaOperationNotAllowed(msg string) bool {
 	if !strings.Contains(msg, CODE_OPERATIONNOTALLOWED) {
 		return false
 	}
+	msgLower := strings.ToLower(msg)
 	for _, kw := range quotaKeywords {
-		if strings.Contains(msg, kw) {
+		if strings.Contains(msgLower, kw) {
 			return true
 		}
 	}
