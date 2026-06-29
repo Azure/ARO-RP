@@ -34,8 +34,6 @@ type dirtyfragworkaround struct {
 
 var _ Workaround = &dirtyfragworkaround{}
 
-const ipsecModeDisabled = "Disabled"
-
 var dirtyfragFixedPatchVersions = map[string]version.Version{
 	"4.21": version.NewVersion(4, 21, 15),
 	"4.20": version.NewVersion(4, 20, 22),
@@ -45,8 +43,6 @@ var dirtyfragFixedPatchVersions = map[string]version.Version{
 	"4.14": version.NewVersion(4, 14, 66),
 	"4.12": version.NewVersion(4, 12, 90),
 }
-
-var marshalDirtyfragIgnition = json.Marshal
 
 func NewDirtyfragWorkaround(log *logrus.Entry, client client.Client) *dirtyfragworkaround {
 	ch := clienthelper.NewWithClient(log, client)
@@ -148,8 +144,7 @@ install rxrpc /bin/false
 		},
 	}
 
-	// Marshal to JSON
-	ignitionJSON, err := marshalDirtyfragIgnition(ignitionConfig)
+	ignitionJSON, err := json.Marshal(ignitionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal dirtyfrag ignition config: %w", err)
 	}
