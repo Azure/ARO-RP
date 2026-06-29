@@ -84,9 +84,6 @@ type conditionStep struct {
 
 func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 	var pollInterval time.Duration
-	timeoutCtx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-
 	// If no pollInterval has been set, use a default
 	if c.pollInterval == time.Duration(0) {
 		pollInterval = 10 * time.Second
@@ -98,8 +95,8 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 	// runner.pollInterval, until the condition returns true or timeoutCtx's
 	// timeout fires. Errors from `f` are returned directly unless the error
 	// is a timeout. Internal timeout errors are wrapped to avoid
-	// confusion with the external PollUntilContextCancel.
-	err := wait.PollUntilContextCancel(timeoutCtx, pollInterval, true, func(_ context.Context) (bool, error) {
+	// confusion with the external PollUntilContextTimeout.
+	err := wait.PollUntilContextTimeout(ctx, pollInterval, c.timeout, true, func(_ context.Context) (bool, error) {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.

@@ -263,11 +263,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition step failed: internalTimeoutCondition: condition encountered internal timeout: context deadline exceeded"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: internal timeout"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition step failed: internalTimeoutCondition: condition encountered internal timeout: context deadline exceeded",
+			wantErr: "condition encountered internal timeout: internal timeout",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
