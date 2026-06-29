@@ -8,11 +8,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"net"
 	"strings"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +44,8 @@ const (
 
 	MasterDaemonsetName = "otel-exporter-master"
 	WorkerDaemonsetName = "otel-exporter-worker"
+	podMonitorName      = "otel-exporter"
+	prometheusNamespace = "openshift-monitoring"
 )
 
 var (
@@ -83,10 +89,12 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
-	nsLabels, err := r.namespaceLabels(ctx)
+	podSecurityLabels, err := r.namespaceLabels(ctx)
 	if err != nil {
 		return nil, err
 	}
+	nsLabels := maps.Clone(podSecurityLabels)
+	nsLabels["openshift.io/cluster-monitoring"] = "true"
 
 	resources := []kruntime.Object{
 		&corev1.Namespace{
@@ -103,6 +111,57 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 			},
 		},
 		scc,
+		&rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-k8s",
+				Namespace: kubeNamespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"services", "endpoints", "pods"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-k8s",
+				Namespace: kubeNamespace,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "prometheus-k8s",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "prometheus-k8s",
+					Namespace: prometheusNamespace,
+				},
+			},
+		},
+		&monitoringv1.PodMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      podMonitorName,
+				Namespace: kubeNamespace,
+			},
+			Spec: monitoringv1.PodMonitorSpec{
+				Selector: metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "app",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{MasterDaemonsetName, WorkerDaemonsetName},
+						},
+					},
+				},
+				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+					{Port: "metrics"},
+				},
+			},
+		},
 	}
 
 	profiles, err := getOTelProfiles(cluster.Spec.OperatorFlags)
@@ -337,6 +396,10 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 									{
 										Name:          "health",
 										ContainerPort: 13133,
+									},
+									{
+										Name:          "metrics",
+										ContainerPort: 8888,
 									},
 								},
 								LivenessProbe: &corev1.Probe{
