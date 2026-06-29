@@ -28,13 +28,15 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name        string
-		infraID     string
-		archVersion api.ArchitectureVersion
-		subnetID    string
-		wpStatus    bool
-		wantNSGID   string
-		wantErr     string
+		name         string
+		infraID      string
+		archVersion  api.ArchitectureVersion
+		subnetID     string
+		wpStatus     bool
+		wpEmpty      bool
+		wpEmptyFirst bool
+		wantNSGID    string
+		wantErr      string
 	}{
 		{
 			name:      "master arch v1",
@@ -73,17 +75,58 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 			subnetID:    "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
 			wantNSGID:   "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-nsg",
 		},
+		{
+			name:         "worker arch v2 skip empty SubnetID when empty comes first",
+			infraID:      "test-1234",
+			archVersion:  api.ArchitectureVersionV2,
+			wpStatus:     true,
+			wpEmpty:      true,
+			wpEmptyFirst: true,
+			subnetID:     "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
+			wantNSGID:    "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-nsg",
+		},
+		{
+			name:         "worker arch v1 skip empty SubnetID when empty comes first",
+			infraID:      "test-1234",
+			wpStatus:     true,
+			wpEmpty:      true,
+			wpEmptyFirst: true,
+			subnetID:     "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
+			wantNSGID:    "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-node-nsg",
+		},
+		{
+			name:      "worker arch v1 all empty SubnetIDs returns master NSG",
+			infraID:   "test-1234",
+			wpEmpty:   true,
+			subnetID:  "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-controlplane-nsg",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc.Properties.InfraID = tt.infraID
 			oc.Properties.ArchitectureVersion = tt.archVersion
 
+			// Reset worker profiles for each test
+			oc.Properties.WorkerProfilesStatus = nil
+
+			if tt.wpEmpty && tt.wpEmptyFirst {
+				// Add empty profile first
+				oc.Properties.WorkerProfilesStatus = append(oc.Properties.WorkerProfilesStatus, api.WorkerProfile{
+					SubnetID: "",
+				})
+			}
+
 			if tt.wpStatus {
-				oc.Properties.WorkerProfilesStatus = []api.WorkerProfile{
-					{
-						SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
-					},
-				}
+				oc.Properties.WorkerProfilesStatus = append(oc.Properties.WorkerProfilesStatus, api.WorkerProfile{
+					SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
+				})
+			}
+
+			if tt.wpEmpty && !tt.wpEmptyFirst {
+				// Add empty profile after non-empty one
+				oc.Properties.WorkerProfilesStatus = append(oc.Properties.WorkerProfilesStatus, api.WorkerProfile{
+					SubnetID: "",
+				})
 			}
 
 			nsgID, err := NetworkSecurityGroupID(oc, tt.subnetID)

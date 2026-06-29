@@ -45,12 +45,14 @@ var (
 func TestEnsureServiceEndpoints(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
+		isUpdate    bool
 		oc          *api.OpenShiftCluster
 		mock        func(subnets *mock_armnetwork.MockSubnetsClient)
 		expectedErr string
 	}{
 		{
-			name: "It should do nothing when egress lockdown is enabled",
+			name:     "It should do nothing when egress lockdown is enabled",
+			isUpdate: false,
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -68,7 +70,8 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "It should update subnet when egress lockdown is disabled",
+			name:     "It should update subnet when egress lockdown is disabled",
+			isUpdate: false,
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -117,7 +120,8 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "It should return error when subnet ID is empty",
+			name:     "It should return error when subnet ID is empty on create",
+			isUpdate: false,
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -136,7 +140,51 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 			expectedErr: "WorkerProfile 'workerProfile' has no SubnetID; check that the corresponding MachineSet is valid",
 		},
 		{
-			name: "It should not update subnet when subnet already have service endpoints",
+			name:     "It should not error when subnet ID is empty on update (skip worker profile)",
+			isUpdate: true,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							Name:     "workerProfile",
+							SubnetID: "",
+						},
+					},
+				},
+			},
+			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
+				masterSubnetWithProperties := armnetwork.Subnet{
+					ID: pointerutils.ToPtr(subnetIdMaster),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
+					},
+				}
+				expectedMasterSubnet := armnetwork.Subnet{
+					ID: pointerutils.ToPtr(subnetIdMaster),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:   pointerutils.ToPtr("Microsoft.ContainerRegistry"),
+								Locations: []*string{pointerutils.ToPtr("*")},
+							},
+							{
+								Service:   pointerutils.ToPtr("Microsoft.Storage"),
+								Locations: []*string{pointerutils.ToPtr("*")},
+							},
+						},
+					},
+				}
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: masterSubnetWithProperties}, nil)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, expectedMasterSubnet, nil).Times(1)
+			},
+			expectedErr: "",
+		},
+		{
+			name:     "It should not update subnet when subnet already have service endpoints",
+			isUpdate: false,
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -146,30 +194,40 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				},
 			},
 			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
-				masterSubnetWithServiceEndpoints := masterSubnet
-				masterSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.Storage"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
-					},
-					{
-						Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				masterSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: masterSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: masterSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.Storage"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+							{
+								Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
-				workerSubnetWithServiceEndpoints := workerSubnet
-				workerSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.Storage"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
-					},
-					{
-						Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				workerSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: workerSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: workerSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.Storage"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+							{
+								Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
 				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: masterSubnetWithServiceEndpoints}, nil)
@@ -178,7 +236,8 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "It updates subnet when subnet already have one of the service endpoints",
+			name:     "It updates subnet when subnet already have one of the service endpoints",
+			isUpdate: false,
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -188,20 +247,30 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				},
 			},
 			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
-				masterSubnetWithServiceEndpoints := masterSubnet
-				masterSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.Storage"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				masterSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: masterSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: masterSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.Storage"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
-				workerSubnetWithServiceEndpoints := workerSubnet
-				workerSubnetWithServiceEndpoints.Properties.ServiceEndpoints = []*armnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations:         []*string{pointerutils.ToPtr("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+				workerSubnetWithServiceEndpoints := armnetwork.Subnet{
+					ID: workerSubnet.ID,
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: workerSubnet.Properties.ProvisioningState,
+						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service:           pointerutils.ToPtr("Microsoft.ContainerRegistry"),
+								Locations:         []*string{pointerutils.ToPtr("*")},
+								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							},
+						},
 					},
 				}
 				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: masterSubnetWithServiceEndpoints}, nil)
@@ -261,7 +330,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				},
 			}
 
-			err := m.ensureServiceEndpoints(ctx)
+			err := m.ensureServiceEndpoints(ctx, tt.isUpdate)
 			if tt.expectedErr != "" {
 				assert.EqualError(t, err, tt.expectedErr)
 			} else {

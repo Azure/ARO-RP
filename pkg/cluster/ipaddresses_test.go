@@ -344,6 +344,95 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 					Return(nil)
 			},
 		},
+		{
+			name: "private with first worker having empty subnet, should use second",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									SubnetID: "",
+								},
+								{
+									SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+								},
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPrivate,
+								},
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "10.0.255.254"
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_armnetwork.MockSubnetsClient) {
+				publicIPAddresses.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				subnet.EXPECT().
+					Get(gomock.Any(), "vnetResourceGroup", "vnet", "worker", gomock.Any()).
+					Return(armnetwork.SubnetsClientGetResponse{
+						Subnet: armnetwork.Subnet{
+							Properties: &armnetwork.SubnetPropertiesFormat{
+								AddressPrefix: pointerutils.ToPtr("10.0.0.0/16"),
+							},
+						},
+					}, nil)
+				dns.EXPECT().
+					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+		},
+		{
+			name: "private with all workers having empty subnet, should error",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									SubnetID: "",
+								},
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPrivate,
+								},
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_armnetwork.MockSubnetsClient) {
+				publicIPAddresses.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				subnet.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				dns.EXPECT().CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: "no valid worker subnet found: all worker profiles have empty subnetId; set properties.workerProfiles[].subnetId",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
