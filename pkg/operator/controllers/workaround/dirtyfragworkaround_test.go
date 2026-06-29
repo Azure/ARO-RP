@@ -23,12 +23,13 @@ import (
 	apiversion "github.com/Azure/ARO-RP/pkg/api/util/version"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func expectedMasterDirtyfragMachineConfig() *mcv1.MachineConfig {
-	mc, err := makeDirtyfragMachineConfig("master")
+	mc, err := makeDirtyfragMachineConfig(json.Marshal, "master")
 	if err != nil {
 		panic(err)
 	}
@@ -332,20 +333,19 @@ func TestDirtyfragWorkaroundEnsureMarshalError(t *testing.T) {
 	expectedErr := errors.New("marshal failed")
 	ensureCalled := false
 
-	marshalDirtyfragIgnition = func(v interface{}) ([]byte, error) {
-		return nil, expectedErr
-	}
-	t.Cleanup(func() {
-		marshalDirtyfragIgnition = json.Marshal
-	})
-
 	cl := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder().Build())
 	cl.WithPreCreateHook(func(obj client.Object) error {
 		ensureCalled = true
 		return nil
 	})
 
-	workaround := NewDirtyfragWorkaround(log, cl)
+	workaround := &dirtyfragworkaround{
+		log: log,
+		ch:  clienthelper.NewWithClient(log, cl),
+		marshal: func(v interface{}) ([]byte, error) {
+			return nil, expectedErr
+		},
+	}
 
 	err := workaround.Ensure(t.Context())
 	r.ErrorIs(err, expectedErr)

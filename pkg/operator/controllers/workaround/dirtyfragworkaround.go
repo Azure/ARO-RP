@@ -30,6 +30,8 @@ import (
 type dirtyfragworkaround struct {
 	log *logrus.Entry
 	ch  clienthelper.Interface
+
+	marshal func(v interface{}) ([]byte, error)
 }
 
 var _ Workaround = &dirtyfragworkaround{}
@@ -46,7 +48,7 @@ var dirtyfragFixedPatchVersions = map[string]version.Version{
 
 func NewDirtyfragWorkaround(log *logrus.Entry, client client.Client) *dirtyfragworkaround {
 	ch := clienthelper.NewWithClient(log, client)
-	return &dirtyfragworkaround{log: log, ch: ch}
+	return &dirtyfragworkaround{log: log, ch: ch, marshal: json.Marshal}
 }
 
 // IsRequired implements [Workaround].
@@ -57,26 +59,22 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 	}
 
 	network := &operatorv1.Network{}
-
 	err := a.ch.Get(ctx, types.NamespacedName{Name: "cluster"}, network)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return false, fmt.Errorf("failed to get Network resource: %w", err)
 	}
 
+	// If Network resource is missing, assume IPSec is off
 	if err == nil {
 		// Spec.DefaultNetwork.OVNKubernetesConfig.IPsecConfig is 'disabled' by
 		// default, so treat nils as disabled
 		ovnConfig := network.Spec.DefaultNetwork.OVNKubernetesConfig
-		if ovnConfig == nil {
-			return true, nil
+		if ovnConfig != nil {
+			ipsecConfig := network.Spec.DefaultNetwork.OVNKubernetesConfig.IPsecConfig
+			if ipsecConfig != nil && (ipsecConfig.Mode == operatorv1.IPsecModeFull || ipsecConfig.Mode == operatorv1.IPsecModeExternal) {
+				return false, nil
+			}
 		}
-		ipsecConfig := network.Spec.DefaultNetwork.OVNKubernetesConfig.IPsecConfig
-		if ipsecConfig == nil || ipsecConfig.Mode == operatorv1.IPsecModeDisabled {
-			return true, nil
-		}
-	} else if kerrors.IsNotFound(err) {
-		// missing = apply
-		return true, nil
 	}
 
 	if !clusterVersion.Lt(version.NewVersion(4, 22, 0)) {
@@ -93,7 +91,7 @@ func (a *dirtyfragworkaround) IsRequired(ctx context.Context, clusterVersion ver
 
 // Ensure implements [Workaround].
 func (a *dirtyfragworkaround) Ensure(ctx context.Context) error {
-	mc, err := makeDirtyfragMachineConfig("master")
+	mc, err := makeDirtyfragMachineConfig(a.marshal, "master")
 	if err != nil {
 		return err
 	}
@@ -115,7 +113,7 @@ func (a *dirtyfragworkaround) Remove(ctx context.Context) error {
 	)
 }
 
-func makeDirtyfragMachineConfig(role string) (*mcv1.MachineConfig, error) {
+func makeDirtyfragMachineConfig(marshal func(interface{}) ([]byte, error), role string) (*mcv1.MachineConfig, error) {
 	// File content to write
 	content := `install esp4 /bin/false
 install esp6 /bin/false
@@ -144,7 +142,7 @@ install rxrpc /bin/false
 		},
 	}
 
-	ignitionJSON, err := json.Marshal(ignitionConfig)
+	ignitionJSON, err := marshal(ignitionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal dirtyfrag ignition config: %w", err)
 	}
