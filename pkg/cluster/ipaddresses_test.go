@@ -815,7 +815,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                     string
-		mocks                    func(*mock_env.MockInterface, *mock_armnetwork.MockPrivateEndpointsClient, *mock_armnetwork.MockPrivateLinkServicesClient)
+		mocks                    func(*mock_env.MockInterface, *mock_armnetwork.MockPrivateEndpointsClient, *mock_armnetwork.MockPrivateLinkServicesClient, *mock_armnetwork.MockPrivateLinkServicesClient)
 		fixture                  func(*testdatabase.Fixture)
 		checker                  func(*testdatabase.Checker)
 		gatewayEnabled           bool
@@ -828,7 +828,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		},
 		{
 			name: "error: private endpoint connection not found",
-			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient, _ *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
 				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
@@ -864,7 +864,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		},
 		{
 			name: "ok - gateway enabled",
-			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient, _ *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
 				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
@@ -962,7 +962,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		},
 		{
 			name: "ok - gateway not enabled, but we still need private endpoint, etc. for OTEL logging stack to work",
-			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient, _ *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
 				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
@@ -1057,6 +1057,91 @@ func TestEnsureGatewayCreate(t *testing.T) {
 				})
 			},
 		},
+		{
+			name: "ok - local dev uses cluster PLS client",
+			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, _ *mock_armnetwork.MockPrivateLinkServicesClient, clusterPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
+				env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(true)
+				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
+					PrivateEndpoint: armnetwork.PrivateEndpoint{
+						Properties: &armnetwork.PrivateEndpointProperties{
+							NetworkInterfaces: []*armnetwork.Interface{
+								{
+									Properties: &armnetwork.InterfacePropertiesFormat{
+										IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
+											{
+												Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
+													PrivateIPAddress: pointerutils.ToPtr(privateIP),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						ID: pointerutils.ToPtr("peID"),
+					},
+				}, nil)
+				clusterPrivateLinkServices.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pls", nil).Return(armnetwork.PrivateLinkServicesClientGetResponse{
+					PrivateLinkService: armnetwork.PrivateLinkService{
+						Properties: &armnetwork.PrivateLinkServiceProperties{
+							PrivateEndpointConnections: []*armnetwork.PrivateEndpointConnection{
+								{
+									Properties: &armnetwork.PrivateEndpointConnectionProperties{
+										PrivateEndpoint: &armnetwork.PrivateEndpoint{ID: pointerutils.ToPtr("peID")},
+										PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
+											Status: pointerutils.ToPtr(""),
+										},
+										LinkIdentifier: pointerutils.ToPtr("local-1234"),
+									},
+									Name: pointerutils.ToPtr("conn"),
+								},
+							},
+						},
+					},
+				}, nil)
+				clusterPrivateLinkServices.EXPECT().UpdatePrivateEndpointConnection(ctx, "clusterResourceGroup", "infra-pls", "conn", armnetwork.PrivateEndpointConnection{
+					Properties: &armnetwork.PrivateEndpointConnectionProperties{
+						PrivateEndpoint: &armnetwork.PrivateEndpoint{ID: pointerutils.ToPtr("peID")},
+						PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
+							Status:      pointerutils.ToPtr("Approved"),
+							Description: pointerutils.ToPtr("Approved"),
+						},
+						LinkIdentifier: pointerutils.ToPtr("local-1234"),
+					},
+					Name: pointerutils.ToPtr("conn"),
+				}, nil).Return(armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionResponse{}, nil)
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: resourceID,
+					},
+				})
+			},
+			checker: func(c *testdatabase.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: resourceID,
+						Properties: api.OpenShiftClusterProperties{
+							NetworkProfile: api.NetworkProfile{
+								GatewayPrivateEndpointIP: privateIP,
+								GatewayPrivateLinkID:     "local-1234",
+							},
+						},
+					},
+				})
+				c.AddGatewayDocuments(&api.GatewayDocument{
+					ID: "local-1234",
+					Gateway: &api.Gateway{
+						ID:                              resourceID,
+						StorageSuffix:                   "storageSuffix",
+						ImageRegistryStorageAccountName: "imageRegistryStorageAccountName",
+					},
+				})
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -1065,13 +1150,14 @@ func TestEnsureGatewayCreate(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			privateEndpoints := mock_armnetwork.NewMockPrivateEndpointsClient(controller)
 			rpPrivateLinkServices := mock_armnetwork.NewMockPrivateLinkServicesClient(controller)
+			clusterPrivateLinkServices := mock_armnetwork.NewMockPrivateLinkServicesClient(controller)
 
 			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
 			dbGateway, clientGateway := testdatabase.NewFakeGateway()
 
 			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters).WithGateway(dbGateway)
 			if tt.mocks != nil {
-				tt.mocks(env, privateEndpoints, rpPrivateLinkServices)
+				tt.mocks(env, privateEndpoints, rpPrivateLinkServices, clusterPrivateLinkServices)
 			}
 			if tt.fixture != nil {
 				tt.fixture(f)
@@ -1105,8 +1191,9 @@ func TestEnsureGatewayCreate(t *testing.T) {
 						},
 					},
 				},
-				armPrivateEndpoints:      privateEndpoints,
-				armRPPrivateLinkServices: rpPrivateLinkServices,
+				armPrivateEndpoints:           privateEndpoints,
+				armRPPrivateLinkServices:      rpPrivateLinkServices,
+				armClusterPrivateLinkServices: clusterPrivateLinkServices,
 			}
 
 			err = m.ensureGatewayCreate(ctx)
