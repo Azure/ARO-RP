@@ -35,7 +35,9 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 		},
 	}
 
-	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+	return arm.Retryable(ctx, func() error {
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+	}, m.log, "deploying storage accounts")
 }
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {

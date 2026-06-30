@@ -14,7 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcertificates"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
@@ -57,12 +58,16 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 
 	if *nic.Properties.ProvisioningState == armnetwork.ProvisioningStateFailed {
 		m.log.Printf("NIC '%s' is in a Failed provisioning state, attempting to reconcile prior to deletion.", *nic.ID)
-		err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic.Interface, nil)
+		err := arm.Retryable(ctx, func() error {
+			return m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic.Interface, nil)
+		}, m.log, "reconciling NIC "+nicName)
 		if err != nil {
 			return err
 		}
 	}
-	return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
+	return arm.RetryableDelete(ctx, func() error {
+		return m.armInterfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name, nil)
+	}, m.log, "deleting NIC "+nicName)
 }
 
 func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string) error {
@@ -85,7 +90,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		// Note: subnet only has value in the ID field,
 		// so we have to make another API request to get full subnet struct
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		r, err := arm.ParseResourceID(*subnet.ID)
+		r, err := armsdk.ParseResourceID(*subnet.ID)
 		if err != nil {
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
@@ -125,7 +130,9 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		s.Properties.NetworkSecurityGroup = nil
 
 		m.log.Printf("disconnecting network security group from subnet %s", *s.ID)
-		err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+		err = arm.Retryable(ctx, func() error {
+			return m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+		}, m.log, "disconnecting network security group from subnet "+*s.ID)
 		if err != nil {
 			b, _ := json.Marshal(err)
 
@@ -232,7 +239,12 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				}
 			}
 
-			future, err := m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
+			var future mgmtfeatures.ResourcesDeleteByIDFuture
+			err = arm.Retryable(ctx, func() error {
+				var deleteErr error
+				future, deleteErr = m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
+				return deleteErr
+			}, m.log, "deleting "+*resource.ID)
 			if err != nil {
 				return deleteByIdCloudError(err)
 			}
@@ -241,6 +253,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 		}
 
 		// wait for all the deletions to complete
+		// Note: WaitForCompletionRef is not wrapped with retry; LRO polling errors propagate immediately.
 		for i, future := range futures {
 			m.log.Printf("waiting for deletion of %s", *resourceMap[level][i].ID)
 
@@ -255,8 +268,10 @@ func (m *manager) deleteResources(ctx context.Context) error {
 }
 
 func deleteByIdCloudError(err error) error {
+	// Non-autorest errors pass through unchanged; only autorest.DetailedError is mapped to *api.CloudError.
+	// Some autorest.DetailedError values may have a nil Original, so guard it to avoid panics when calling Error().
 	detailedError, ok := err.(autorest.DetailedError)
-	if !ok {
+	if !ok || detailedError.Original == nil {
 		return err
 	}
 	switch {
@@ -296,7 +311,10 @@ func (m *manager) deleteRoleAssignments(ctx context.Context) error {
 		}
 
 		m.log.Infof("deleting role assignment %s", *assignment.Name)
-		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+		err := arm.RetryableDelete(ctx, func() error {
+			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+			return e
+		}, m.log, "deleting role assignment "+*assignment.Name)
 		if err != nil {
 			return err
 		}
@@ -321,7 +339,10 @@ func (m *manager) deleteRoleDefinition(ctx context.Context) error {
 		}
 
 		m.log.Infof("deleting role definition %s", *definition.Name)
-		_, err := m.roleDefinitions.Delete(ctx, (*definition.AssignableScopes)[0], *definition.Name)
+		err := arm.RetryableDelete(ctx, func() error {
+			_, e := m.roleDefinitions.Delete(ctx, (*definition.AssignableScopes)[0], *definition.Name)
+			return e
+		}, m.log, "deleting role definition "+*definition.Name)
 		if err != nil {
 			return err
 		}
@@ -443,13 +464,16 @@ func (m *manager) deleteFederatedCredentials(ctx context.Context) error {
 				*federatedCredential.Properties.Issuer != string(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer):
 				continue
 			default:
-				_, err = m.clusterMsiFederatedIdentityCredentials.Delete(
-					ctx,
-					identityResourceId.ResourceGroup,
-					identityResourceId.ResourceName,
-					*federatedCredential.Name,
-					&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
-				)
+				err = arm.RetryableDelete(ctx, func() error {
+					_, e := m.clusterMsiFederatedIdentityCredentials.Delete(
+						ctx,
+						identityResourceId.ResourceGroup,
+						identityResourceId.ResourceName,
+						*federatedCredential.Name,
+						&armmsi.FederatedIdentityCredentialsClientDeleteOptions{},
+					)
+					return e
+				}, m.log, "deleting federated identity credential "+*federatedCredential.Name)
 				if err != nil {
 					if azureerrors.IsStatusNotFoundError(err) {
 						m.log.Infof("federated identity credentials not found for %s: %v", identity.ResourceID, err.Error())
@@ -503,13 +527,9 @@ func (m *manager) shouldDeleteResourceGroup(ctx context.Context, name string) (b
 }
 
 func (m *manager) deleteResourceGroup(ctx context.Context, name string) error {
-	err := m.resourceGroups.DeleteAndWait(ctx, name)
-
-	detailedErr, isDetailedErr := err.(autorest.DetailedError)
-	if azureerrors.ResourceGroupNotFound(err) || (isDetailedErr && (detailedErr.StatusCode == http.StatusNotFound)) {
-		return nil
-	}
-	return err
+	return arm.RetryableDelete(ctx, func() error {
+		return m.resourceGroups.DeleteAndWait(ctx, name)
+	}, m.log, "deleting resource group "+name)
 }
 
 func (m *manager) Delete(ctx context.Context) error {
@@ -526,7 +546,9 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Print("deleting private endpoint")
-	err = m.armFPPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, nil)
+	err = arm.RetryableDelete(ctx, func() error {
+		return m.armFPPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, nil)
+	}, m.log, "deleting private endpoint "+env.RPPrivateEndpointPrefix+m.doc.ID)
 	if err != nil {
 		return err
 	}

@@ -245,7 +245,10 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 
 	for _, assignment := range toDelete {
 		m.log.Infof("deleting role assignment %s", *assignment.Name)
-		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+		err := arm.RetryableDelete(ctx, func() error {
+			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+			return e
+		}, m.log, "deleting role assignment "+*assignment.Name)
 		if err != nil {
 			return err
 		}
@@ -258,7 +261,9 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 			ContentVersion: "1.0.0.0",
 			Resources:      toAdd,
 		}
-		err = arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "platformworkloadidentityrbac", t, nil)
+		err = arm.Retryable(ctx, func() error {
+			return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "platformworkloadidentityrbac", t, nil)
+		}, m.log, "deploying platform workload identity RBAC")
 		if err != nil {
 			return err
 		}

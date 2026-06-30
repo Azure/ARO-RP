@@ -115,11 +115,17 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 // ArmClientOptions returns an arm.ClientOptions to be passed in when instantiating
 // Azure SDK for Go clients.
 func (e *AROEnvironment) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
+	policies := []policy.Policy{NewLoggingPolicy()}
+	if ff := common.NewFirstFailPolicy(); ff != nil {
+		// fault injector is in PerCallPolicies (before the SDK retry loop), so injected errors
+		// are presented to the retry machinery and logged by NewLoggingPolicy() at index 0.
+		policies = append(policies, ff)
+	}
 	return &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud:           e.Cloud,
 			Retry:           common.RetryOptions,
-			PerCallPolicies: append([]policy.Policy{NewLoggingPolicy()}, middlewares...),
+			PerCallPolicies: append(policies, middlewares...),
 		},
 	}
 }

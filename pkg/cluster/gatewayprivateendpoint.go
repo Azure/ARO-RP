@@ -33,7 +33,9 @@ func (m *manager) ensureGatewayUpgrade(ctx context.Context) error {
 		ContentVersion: "1.0.0.0",
 		Resources:      []*arm.Resource{m.networkPrivateEndpoint()},
 	}
-	err = arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "gatewayprivateendpoint", t, nil)
+	err = arm.Retryable(ctx, func() error {
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "gatewayprivateendpoint", t, nil)
+	}, m.log, "deploying gateway private endpoint")
 	if err != nil {
 		m.log.Print(err)
 		return nil

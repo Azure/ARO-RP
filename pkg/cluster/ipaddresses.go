@@ -15,12 +15,14 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/installer"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -30,7 +32,12 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
+	var pg graph.PersistedGraph
+	err := arm.Retryable(ctx, func() error {
+		var e error
+		pg, e = m.graph.LoadPersisted(ctx, resourceGroup, account)
+		return e
+	}, m.log, "loading persisted graph")
 	if err != nil {
 		return err
 	}
@@ -117,7 +124,7 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 		workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
 		workerSubnetId := workerProfiles[0].SubnetID
 
-		r, err := arm.ParseResourceID(workerSubnetId)
+		r, err := armsdk.ParseResourceID(workerSubnetId)
 		if err != nil {
 			return err
 		}
@@ -351,25 +358,27 @@ func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 		infraID = "aro"
 	}
 
-	err := m.armFPPrivateEndpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, armnetwork.PrivateEndpoint{
-		Properties: &armnetwork.PrivateEndpointProperties{
-			Subnet: &armnetwork.Subnet{
-				// TODO: in the future we will need multiple vnets for our PEs.
-				// It will be necessary to decide the vnet for a cluster's PE
-				// somewhere around here.
-				ID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
-			},
-			ManualPrivateLinkServiceConnections: []*armnetwork.PrivateLinkServiceConnection{
-				{
-					Name: pointerutils.ToPtr("rp-plsconnection"),
-					Properties: &armnetwork.PrivateLinkServiceConnectionProperties{
-						PrivateLinkServiceID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
+	err := arm.Retryable(ctx, func() error {
+		return m.armFPPrivateEndpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, armnetwork.PrivateEndpoint{
+			Properties: &armnetwork.PrivateEndpointProperties{
+				Subnet: &armnetwork.Subnet{
+					// TODO: in the future we will need multiple vnets for our PEs.
+					// It will be necessary to decide the vnet for a cluster's PE
+					// somewhere around here.
+					ID: pointerutils.ToPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+				},
+				ManualPrivateLinkServiceConnections: []*armnetwork.PrivateLinkServiceConnection{
+					{
+						Name: pointerutils.ToPtr("rp-plsconnection"),
+						Properties: &armnetwork.PrivateLinkServiceConnectionProperties{
+							PrivateLinkServiceID: pointerutils.ToPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
+						},
 					},
 				},
 			},
-		},
-		Location: &m.doc.OpenShiftCluster.Location,
-	}, nil)
+			Location: &m.doc.OpenShiftCluster.Location,
+		}, nil)
+	}, m.log, "creating API server private endpoint "+env.RPPrivateEndpointPrefix+m.doc.ID)
 	if err != nil {
 		return err
 	}

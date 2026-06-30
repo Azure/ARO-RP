@@ -78,6 +78,8 @@ variables:
     value: localhost
   - name: E2E_LABEL
     value: "!smoke&&!regressiontest"
+  - name: ARO_ARM_FAULT_FIRST
+    value: ConflictingConcurrentWriteNotAllowed,CanceledAndSupersededDueToAnotherOperation,TooManyRequests,RetryableError
 
 stages:
   - stage: Set_Tag_Stage

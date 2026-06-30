@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -141,7 +142,10 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
 	// re-PUTting our RG should re-create RP RBAC after a customer subscription
 	// migrates between tenants.
-	_, err = m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
+	err = arm.Retryable(ctx, func() error {
+		_, e := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
+		return e
+	}, m.log, "creating resource group "+resourceGroup)
 
 	var serviceError *azure.ServiceError
 	// CreateOrUpdate wraps DetailedError wrapping a *RequestError (if error generated in ResourceGroup CreateOrUpdateResponder at least)
@@ -176,7 +180,9 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		return err
 	}
 
-	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, resourceGroup)
+	return arm.Retryable(ctx, func() error {
+		return m.env.EnsureARMResourceGroupRoleAssignment(ctx, resourceGroup)
+	}, m.log, "ensuring RP RBAC on resource group "+resourceGroup)
 }
 
 // deployBaseResourceTemplate is only called during bootstrap
@@ -248,7 +254,9 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		Resources:      resources,
 	}
 
-	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+	return arm.Retryable(ctx, func() error {
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+	}, m.log, "deploying base resources")
 }
 
 func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.Resource) {
@@ -411,13 +419,14 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 					ID: pointerutils.ToPtr(nsgID),
 				}
 
-				// Because we attempt to attach the NSG immediately after the base resource deployment
-				// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
-				// an error to occur here. So if this particular error occurs, return nil to retry.
-				// But if some other type of error occurs, just return that error.
+				// NSG may not be ready immediately after deployment; nsgNotReadyErrorRegex and IsRetryableError both continue the poll.
 				err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
 				if err != nil {
 					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
+						return false, nil
+					}
+					if azureerrors.IsRetryableError(err) {
+						m.log.Warnf("error attaching NSG to subnet %s, retrying: %v", subnetID, err)
 						return false, nil
 					}
 					return false, err
@@ -472,10 +481,12 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 		return nil
 	}
 
-	err = m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+	err = arm.Retryable(ctx, func() error {
+		return m.armSubnets.CreateOrUpdateAndWait(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, s, nil)
+	}, m.log, "setting master subnet policies for subnet "+subnetId)
 
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
+		if detailedErr.Original != nil && strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
@@ -530,20 +541,23 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				return err
 			}
 
-			_, err = m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
-				ctx,
-				identityResourceId.ResourceGroup,
-				identityResourceId.ResourceName,
-				federatedIdentityCredentialResourceName,
-				armmsi.FederatedIdentityCredential{
-					Properties: &armmsi.FederatedIdentityCredentialProperties{
-						Audiences: []*string{pointerutils.ToPtr("openshift")},
-						Issuer:    issuer,
-						Subject:   pointerutils.ToPtr(sa),
+			err = arm.Retryable(ctx, func() error {
+				_, e := m.clusterMsiFederatedIdentityCredentials.CreateOrUpdate(
+					ctx,
+					identityResourceId.ResourceGroup,
+					identityResourceId.ResourceName,
+					federatedIdentityCredentialResourceName,
+					armmsi.FederatedIdentityCredential{
+						Properties: &armmsi.FederatedIdentityCredentialProperties{
+							Audiences: []*string{pointerutils.ToPtr("openshift")},
+							Issuer:    issuer,
+							Subject:   pointerutils.ToPtr(sa),
+						},
 					},
-				},
-				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
-			)
+					&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},
+				)
+				return e
+			}, m.log, "creating federated identity credential "+federatedIdentityCredentialResourceName)
 			if err != nil {
 				return err
 			}
