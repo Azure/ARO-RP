@@ -14,10 +14,12 @@ This guide captures how OTEL collector behavior is wired in ARO, how gateway tar
 
 The OTEL daemonsets are created only when `spec.gatewayPrivateEndpointIP` is populated and valid. Until then, the controller still creates OTEL config resources and waits for gateway readiness.
 
-When gateway is enabled and endpoint data is present, deploy logic sets:
+A private endpoint is provisioned for all clusters (not just gateway-enabled ones) and connected to the regional gateway private link service. Once the PE is approved and the gateway database record is created, deploy logic sets:
 
 - `spec.gatewayPrivateEndpointIP`
 - `spec.gatewayTelemetryDomain` (formatted as `telemetry.<location>.<appSuffix>`)
+
+If `gatewayPrivateEndpointIP` is absent for any reason after the OTEL logging stack has rolled out, `spec.gatewayTelemetryDomain` is explicitly cleared to `""` — this allows problem clusters to be identified via a search on that field.
 
 Collector endpoint selection:
 
