@@ -23,10 +23,13 @@ var genevaLoggingOTelDaemonSets = map[string]struct{}{
 func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 	for name := range genevaLoggingOTelDaemonSets {
 		var ds appsv1.DaemonSet
-		err := mon.ocpclientset.Get(ctx, client.ObjectKey{Namespace: genevaLoggingNamespace, Name: name}, &ds)
-		if err != nil {
-			return fmt.Errorf("error in get operation: %w", err)
+	err := mon.ocpclientset.Get(ctx, client.ObjectKey{Namespace: genevaLoggingNamespace, Name: name}, &ds)
+	if err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			continue
 		}
+		return fmt.Errorf("error getting DaemonSet %s/%s: %w", genevaLoggingNamespace, name, err)
+	}
 
 		if ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable {
 			continue
