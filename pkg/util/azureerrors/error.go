@@ -234,6 +234,7 @@ func ResourceGroupNotFound(err error) bool {
 // isQuotaOperationNotAllowed checks if a message contains OperationNotAllowed
 // combined with quota-specific wording. Bare OperationNotAllowed without quota
 // context is NOT classified as a quota error.
+// Azure resource quota errors: https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-resource-quota
 func isQuotaOperationNotAllowed(msg string) bool {
 	if !strings.Contains(msg, CODE_OPERATIONNOTALLOWED) {
 		return false
