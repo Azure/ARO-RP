@@ -74,7 +74,7 @@ func main() {
 		err = portal(ctx, log, audit)
 	case env.SERVICE_OPERATOR:
 		checkArgs(2)
-		err = operator(ctx, log)
+		err = operator(log)
 	case env.SERVICE_UPDATE_OCP_VERSIONS:
 		checkArgs(1)
 		err = updateOCPVersions(ctx, log)
