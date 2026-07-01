@@ -38,8 +38,9 @@ pip install azdev
 azdev setup -c
 ```
 
-The `az aro` command is located in `src/azure-cli/azure/cli/command_modules/aro`
-with tests in the corresponding `tests` folder.
+The `az aro` command is located in
+`src/azure-cli/azure/cli/command_modules/aro` with tests in the corresponding
+`tests` directory.
 
 
 ## Dev environment setup for the `az aro` **extension**
@@ -100,7 +101,6 @@ azdev test aro (--live) (--lf) (--verbose) (--debug)
 > Add this variable to your env or add it to your profile to make it permanent
 > in `~/.bash_profile` or `~/.zshrc`: `export
 > OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
-
 
 There are two main types of tests:
 
@@ -171,9 +171,9 @@ editing individual packages.
 
 ## Caveats
 
-- `azure-cli` CI is not entirely isolated.  Test runs may pass or fail
-  depending on the state of `dev` branch.  Force push to rerun the tests.
-- Pulling `azure-cli` can break the `venv`.  If this happens, delete and
+- `azure-cli` CI is not entirely isolated. Test runs may pass or fail depending
+  on the state of `dev` branch. Force push to rerun the tests.
+- Pulling `azure-cli` can break the `venv`. If this happens, delete and
   recreate it.
 - Care needs to be taken when designing tests for live recording. The recording
   framework rewrites some fields, possibly including UUIDs.
