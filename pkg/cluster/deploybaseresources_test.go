@@ -843,11 +843,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 func TestSetMasterSubnetPoliciesRetry(t *testing.T) {
 	// must not be called with t.Parallel(); mutates package-level arm.TransientBackoff
 	subnetID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet"
-	wantSubnet := sdknetwork.Subnet{
-		Properties: &sdknetwork.SubnetPropertiesFormat{
-			PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
-		},
-	}
+
+	subnetMatcher := &subnetPoliciesMatcher{}
 
 	for _, tt := range []struct {
 		name     string
@@ -872,8 +869,8 @@ func TestSetMasterSubnetPoliciesRetry(t *testing.T) {
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
-			first := armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(tt.firstErr)
-			armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(nil).After(first)
+			first := armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", subnetMatcher, nil).Return(tt.firstErr)
+			armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", subnetMatcher, nil).Return(nil).After(first)
 
 			m := &manager{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -900,18 +897,15 @@ func TestSetMasterSubnetPoliciesRetryExhausted(t *testing.T) {
 	defer func() { arm.TransientBackoff = origBackoff }()
 
 	subnetID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet"
-	wantSubnet := sdknetwork.Subnet{
-		Properties: &sdknetwork.SubnetPropertiesFormat{
-			PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
-		},
-	}
+
+	subnetMatcher := &subnetPoliciesMatcher{}
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
 	armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 	armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
-	armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", wantSubnet, nil).Return(
+	armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", subnetMatcher, nil).Return(
 		autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
 	)
 
@@ -2661,4 +2655,25 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
+}
+
+type subnetPoliciesMatcher struct{}
+
+// Used to compare subnets by field value rather than pointer identity.
+func (s *subnetPoliciesMatcher) Matches(x interface{}) bool {
+	subnet, ok := x.(sdknetwork.Subnet)
+	if !ok {
+		return false
+	}
+	if subnet.Properties == nil {
+		return false
+	}
+	if subnet.Properties.PrivateLinkServiceNetworkPolicies == nil {
+		return false
+	}
+	return *subnet.Properties.PrivateLinkServiceNetworkPolicies == sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled
+}
+
+func (s *subnetPoliciesMatcher) String() string {
+	return "subnet with PrivateLinkServiceNetworkPolicies set to Disabled"
 }
