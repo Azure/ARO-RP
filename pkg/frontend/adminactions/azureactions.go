@@ -38,12 +38,9 @@ type AzureActions interface {
 	VMSizeList(ctx context.Context) ([]string, error)
 	VMGetSKUs(ctx context.Context, vmSizes []string) (map[string]*sdkcompute.ResourceSKU, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
-	// CRGSetupForResize creates a single shared Capacity Reservation Group for all given VMs,
-	// reserving target-SKU capacity in each VM's zone. All VMs must be zonal.
-	// Returns the CRG ID, name, and list of zones so the caller can tear down after all resizes.
+	// CRGSetupForResize creates a shared Capacity Reservation Group for the given VMs.
 	CRGSetupForResize(ctx context.Context, vmNames []string, targetSKU string) (crgID, crgName string, zones []string, err error)
-	// VMResizeWithCRG performs the per-VM resize steps using an already-created CRG:
-	// deallocate → resize + associate → start. CRG lifecycle is the caller's responsibility.
+	// VMResizeWithCRG resizes a single VM using an already-created CRG.
 	VMResizeWithCRG(ctx context.Context, vmName, crgID, targetVMSize string) error
 	// CRGTeardown tears down the shared CRG created by CRGSetupForResize.
 	CRGTeardown(ctx context.Context, targetSKU string, zones, vmNames []string, crgName string) error

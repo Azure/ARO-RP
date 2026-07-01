@@ -445,69 +445,89 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 	_, log := testlog.New()
 
 	running := "Running"
+	originalSize := "Standard_D8s_v3"
 	desiredSize := "Standard_D16s_v5"
 	testCRGID := "/subscriptions/00000000/resourceGroups/test-cluster/providers/Microsoft.Compute/capacityReservationGroups/aro-resize-crg-cp-test"
 	testCRGName := "aro-resize-crg-cp-test"
 	testZones := []string{"1", "2", "3"}
 
 	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_adminactions.MockKubeActions, *mock_adminactions.MockAzureActions)
-		wantErr string
+		name            string
+		mocks           func(*mock_adminactions.MockKubeActions, *mock_adminactions.MockAzureActions)
+		wantErr         string
+		wantErrContains []string
 	}{
 		{
 			name: "shared CRG: all three nodes resized successfully",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				machines := masterMachineListJSON(
-					masterMachine("master-0", "Standard_D8s_v3", running),
-					masterMachine("master-1", "Standard_D8s_v3", running),
-					masterMachine("master-2", "Standard_D8s_v3", running),
+					masterMachine("master-0", originalSize, running),
+					masterMachine("master-1", originalSize, running),
+					masterMachine("master-2", originalSize, running),
 				)
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
 
 				sortedNames := []string{"master-2", "master-1", "master-0"}
 				gomock.InOrder(
-					// pre-flight readiness check
+					// pre-flight health check (all nodes)
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					// shared CRG setup
 					a.EXPECT().CRGSetupForResize(gomock.Any(), sortedNames, desiredSize).
 						Return(testCRGID, testCRGName, testZones, nil),
-					// master-2
+					// master-2: per-node health + snapshot + resize sequence
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-2", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-2", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-2").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-2", testCRGID, desiredSize).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-2", false).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-2").
-						Return(machineJSON("master-2", "Standard_D8s_v3"), nil),
+						Return(machineJSON("master-2", originalSize), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					// master-1
+					// master-1: per-node health + snapshot + resize sequence
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-1", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-1").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-1", testCRGID, desiredSize).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-1", false).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-1").
-						Return(machineJSON("master-1", "Standard_D8s_v3"), nil),
+						Return(machineJSON("master-1", originalSize), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					// master-0
+					// master-0: per-node health + snapshot + resize sequence
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
-						Return(machineJSON("master-0", "Standard_D8s_v3"), nil),
+						Return(machineJSON("master-0", originalSize), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					// deferred CRG teardown
+					// CRG teardown (associatedVMs = all three nodes)
 					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, testZones, sortedNames, testCRGName).Return(nil),
 				)
 			},
@@ -516,9 +536,10 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 			name: "shared CRG: setup fails before any node touched",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
-					masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
+					masterMachineListJSON(masterMachine("master-0", originalSize, running)), nil)
 
 				gomock.InOrder(
+					// pre-flight health check
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					a.EXPECT().CRGSetupForResize(gomock.Any(), []string{"master-0"}, desiredSize).
 						Return("", "", nil, errors.New("no capacity in zone 1")),
@@ -527,41 +548,66 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 			wantErr: "setting up capacity reservation group: no capacity in zone 1",
 		},
 		{
-			name: "shared CRG: second node resize fails, teardown still runs",
+			// Second node fails: teardown runs before rollback so CRG-associated master-1
+			// is disassociated and can be rolled back via standard VMResize.
+			name: "shared CRG: second node resize fails, teardown and rollback run",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				machines := masterMachineListJSON(
-					masterMachine("master-0", "Standard_D8s_v3", running),
-					masterMachine("master-1", "Standard_D8s_v3", running),
+					masterMachine("master-0", originalSize, running),
+					masterMachine("master-1", originalSize, running),
 				)
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
 
 				sortedNames := []string{"master-1", "master-0"}
 				gomock.InOrder(
+					// pre-flight health check
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					a.EXPECT().CRGSetupForResize(gomock.Any(), sortedNames, desiredSize).
 						Return(testCRGID, testCRGName, testZones, nil),
-					// master-1 succeeds
+					// master-1: per-node health + snapshot + succeeds
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-1", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-1").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-1", testCRGID, desiredSize).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-1", false).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-1").
-						Return(machineJSON("master-1", "Standard_D8s_v3"), nil),
+						Return(machineJSON("master-1", originalSize), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					// master-0 resize fails
+					// master-0: per-node health + snapshot + resize fails
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).
 						Return(errors.New("Azure error")),
-					// teardown still runs (deferred)
+					// teardown runs before rollback (disassociates master-1 so standard VMResize works)
 					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, testZones, sortedNames, testCRGName).Return(nil),
+					// rollback master-0 (vmResized=false, schedulabilityNeedsRestore=true): just uncordon
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
+					// rollback master-1 (vmResized=true): stop → resize → start → waitReady → machineRestore → labelsRestore
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-1", true).Return(nil),
+					a.EXPECT().VMResize(gomock.Any(), "master-1", originalSize).Return(nil),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-1").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-1").
+						Return(machineJSON("master-1", desiredSize), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 				)
 			},
-			wantErr: "failed to resize node master-0: resizing VM: Azure error",
+			wantErrContains: []string{"failed to resize node master-0", "crgResize: Azure error"},
 		},
 		{
 			// Only nodes that need resizing are passed to CRGSetupForResize and CRGTeardown.
@@ -569,44 +615,57 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 			name: "shared CRG: one node already at target size is excluded from CRG setup and teardown",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				machines := masterMachineListJSON(
-					masterMachine("master-0", "Standard_D8s_v3", running),
-					masterMachine("master-1", "Standard_D8s_v3", running),
+					masterMachine("master-0", originalSize, running),
+					masterMachine("master-1", originalSize, running),
 					masterMachine("master-2", desiredSize, running), // already at target
 				)
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
 
-				// Readiness check runs against all three nodes.
 				resizeNames := []string{"master-1", "master-0"} // master-2 excluded
 				gomock.InOrder(
+					// pre-flight health check runs against all three nodes
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
-					// CRG setup receives only the two nodes that need resizing.
+					// CRG setup receives only the two nodes that need resizing
 					a.EXPECT().CRGSetupForResize(gomock.Any(), resizeNames, desiredSize).
 						Return(testCRGID, testCRGName, []string{"1", "2"}, nil),
-					// master-1 resize
+					// master-2 is skipped in the loop (no health check, no snapshot)
+					// master-1: per-node health (all three) + snapshot + resize
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-1", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-1").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-1", testCRGID, desiredSize).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-1", false).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-1").
-						Return(machineJSON("master-1", "Standard_D8s_v3"), nil),
+						Return(machineJSON("master-1", originalSize), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					// master-0 resize
+					// master-0: per-node health (all three) + snapshot + resize
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
-						Return(machineJSON("master-0", "Standard_D8s_v3"), nil),
+						Return(machineJSON("master-0", originalSize), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
-					// Teardown receives only resizeNames, not all three masters.
+					// Teardown receives only resizeNames, not all three masters
 					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, []string{"1", "2"}, resizeNames, testCRGName).Return(nil),
 				)
 			},
@@ -616,29 +675,39 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 			name: "shared CRG: resize fails and teardown also fails - both errors returned",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				machines := masterMachineListJSON(
-					masterMachine("master-0", "Standard_D8s_v3", running),
+					masterMachine("master-0", originalSize, running),
 				)
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
 
 				resizeNames := []string{"master-0"}
 				gomock.InOrder(
+					// pre-flight health check
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					a.EXPECT().CRGSetupForResize(gomock.Any(), resizeNames, desiredSize).
 						Return(testCRGID, testCRGName, testZones, nil),
+					// master-0: per-node health + snapshot + resize fails
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).
 						Return(errors.New("resize error")),
-					// Teardown also fails.
+					// teardown also fails
 					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, testZones, resizeNames, testCRGName).
 						Return(errors.New("teardown error")),
+					// rollback master-0 (vmResized=false, schedulabilityNeedsRestore=true): just uncordon
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 				)
 			},
-			wantErr: "failed to resize node master-0: resizing VM: resize error\nCRG teardown failed for aro-resize-crg-cp-test: teardown error",
+			wantErrContains: []string{
+				"failed to resize node master-0", "crgResize: resize error",
+				"CRG teardown failed for aro-resize-crg-cp-test: teardown error",
+			},
 		},
 		{
-			// When all nodes are already at the target size, no CRG is created and
-			// nothing is returned as an error.
+			// When all nodes are already at the target size, no health check, CRG, or resize occurs.
 			name: "shared CRG: all nodes already at target size - no CRG setup",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
 				machines := masterMachineListJSON(
@@ -647,13 +716,7 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 					masterMachine("master-2", desiredSize, running),
 				)
 				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
-
-				gomock.InOrder(
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil),
-					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
-					// No CRGSetupForResize, no VMResizeWithCRG, no CRGTeardown calls.
-				)
+				// No KubeGet, CRGSetupForResize, VMResizeWithCRG, or CRGTeardown calls.
 			},
 		},
 	} {
@@ -664,9 +727,15 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			a := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(k, a)
+			k.EXPECT().KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
+				Return(healthyEtcdJSON(), nil).AnyTimes()
 
 			err := resizeControlPlane(ctx, log, k, a, desiredSize, true, "test-cluster", true)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if len(tt.wantErrContains) > 0 {
+				assertErrorContainsAll(t, err, tt.wantErrContains...)
+			} else {
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			}
 		})
 	}
 }
@@ -993,6 +1062,19 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidParameter: useCapacityReservation: useCapacityReservation must be 'true' or 'false'`,
+		},
+		{
+			name:       "useCapacityReservation=true with deallocateVM=false is rejected",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			requestURL: fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D8s_v3&useCapacityReservation=true&deallocateVM=false", testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
+			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidParameter: deallocateVM: deallocateVM=false is not supported when useCapacityReservation=true; the CRG resize path always deallocates VMs.`,
 		},
 		{
 			name:       "cluster not found",
