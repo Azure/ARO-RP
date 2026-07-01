@@ -134,6 +134,11 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 		}
 	}
 
+	if useCapacityReservation && !deallocateVM {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "deallocateVM",
+			"deallocateVM=false is not supported when useCapacityReservation=true; the CRG resize path always deallocates VMs.")
+	}
+
 	if err := validateAdminMasterVMSize(vmSize); err != nil {
 		return err
 	}
@@ -206,7 +211,7 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 	})
 
 	if useCapacityReservation {
-		return resizeControlPlaneWithCRG(ctx, log, k, a, machines, sortedNames, desiredVMSize, deallocateVM)
+		return resizeControlPlaneWithCRG(ctx, log, k, a, machines, sortedNames, desiredVMSize, clusterResourceGroupName)
 	}
 
 	return resizeControlPlaneWithRollback(ctx, log, k, a, machines, sortedNames, desiredVMSize, deallocateVM, clusterResourceGroupName)
@@ -262,13 +267,13 @@ func resizeControlPlaneWithRollback(ctx context.Context, log *logrus.Entry, k ad
 
 // resizeControlPlaneWithCRG handles the capacity reservation path: creates a shared CRG
 // upfront covering only the zones of nodes that need resizing, resizes each node using
-// that CRG, and tears down the CRG after all nodes complete (or on failure).
-func resizeControlPlaneWithCRG(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machines map[string]machineValidationData, sortedNames []string, desiredVMSize string, deallocateVM bool) (retErr error) {
-	// Guard the whole operation before touching any VM.
-	if err := ensureControlPlaneNodesReadyAndSchedulable(ctx, k, sortedNames); err != nil {
-		return err
-	}
-
+// that CRG, and tears down the CRG after all nodes complete.
+// It applies the same rollback and per-node health-gate semantics as
+// resizeControlPlaneWithRollback, so a failed mid-loop resize rolls back already-resized
+// nodes. The CRG is always torn down before rollback so VMs are disassociated and can
+// be resized back to their original SKU via standard VMResize.
+// The CRG path always deallocates VMs; callers must reject deallocateVM=false.
+func resizeControlPlaneWithCRG(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machines map[string]machineValidationData, sortedNames []string, desiredVMSize string, clusterResourceGroupName string) error {
 	// Pre-compute the nodes that actually need resizing so the shared CRG can be
 	// sized per zone. Nodes already at the target SKU are skipped here exactly as
 	// the resize loop below skips them, so no capacity is reserved for them.
@@ -283,6 +288,11 @@ func resizeControlPlaneWithCRG(ctx context.Context, log *logrus.Entry, k adminac
 		return nil
 	}
 
+	// Pre-flight: all control plane nodes + etcd must be healthy before any VM is touched.
+	if err := ensureControlPlaneAndEtcdHealthy(ctx, k, sortedNames); err != nil {
+		return err
+	}
+
 	// Create a single shared CRG covering only the zones of nodes that need
 	// resizing. This guarantees target-SKU capacity in the required zones upfront,
 	// so a capacity shortage is detected before the first VM is drained.
@@ -292,11 +302,36 @@ func resizeControlPlaneWithCRG(ctx context.Context, log *logrus.Entry, k adminac
 	}
 	log.Infof("Shared capacity reservation group %s created for zones %v", crgName, crgZones)
 
-	// associatedVMs tracks the subset of VMs that entered the per-node resize loop.
-	var associatedVMs []string
-	// A single deferred teardown keeps cleanup on every exit path (success, resize
-	// failure, panic).
-	defer teardownCRG(ctx, log, a, desiredVMSize, crgZones, &associatedVMs, crgName, &retErr)
+	// deallocateVM is unused on the CRG path: VMResizeWithCRG always deallocates.
+	operation := newResizeControlPlaneOperation(log, k, a, desiredVMSize, true, clusterResourceGroupName)
+	operation.crgID = crgID
+
+	runTeardown := func(primary error) error {
+		log.Infof("Tearing down capacity reservation group %s", crgName)
+		// Build the associated-VM list from nodes that entered the resize loop
+		// (pre-resize entry ensures teardown disassociates on partial failures).
+		associatedVMs := make([]string, 0, len(operation.nodes))
+		for _, n := range operation.nodes {
+			associatedVMs = append(associatedVMs, n.snapshot.machineName)
+		}
+		if tdErr := a.CRGTeardown(ctx, desiredVMSize, crgZones, associatedVMs, crgName); tdErr != nil {
+			tdErr = fmt.Errorf("CRG teardown failed for %s: %w", crgName, tdErr)
+			return errors.Join(primary, tdErr)
+		}
+		return primary
+	}
+
+	triggerRollback := func(baseErr error) error {
+		// Tear down the CRG before rollback so VMs are disassociated; only then
+		// can standard VMResize (used inside rollbackAll) succeed.
+		baseErr = runTeardown(baseErr)
+		rollbackErr := operation.rollbackAll(ctx)
+		return &resizeControlPlaneError{
+			baseErr:     baseErr,
+			steps:       operation.steps,
+			rollbackErr: rollbackErr,
+		}
+	}
 
 	for _, name := range sortedNames {
 		machine := machines[name]
@@ -305,97 +340,33 @@ func resizeControlPlaneWithCRG(ctx context.Context, log *logrus.Entry, k adminac
 			continue
 		}
 
-		// Record before attempting the resize: VMResizeWithCRG may associate this
-		// VM with the CRG and then fail, so teardown must still disassociate it.
-		associatedVMs = append(associatedVMs, name)
+		// Per-node health gate: mirrors resizeControlPlaneWithRollback behavior so
+		// etcd or node degradation after earlier resizes halts the loop and triggers rollback.
+		if err := ensureControlPlaneAndEtcdHealthy(ctx, k, sortedNames); err != nil {
+			if len(operation.nodes) == 0 {
+				return runTeardown(err)
+			}
+			return triggerRollback(err)
+		}
+
+		snapshot, err := operation.captureNodeSnapshot(ctx, name, machine)
+		if err != nil {
+			if len(operation.nodes) == 0 {
+				return runTeardown(err)
+			}
+			return triggerRollback(err)
+		}
+		nodeState := &controlPlaneNodeProgress{snapshot: snapshot}
+		operation.nodes = append(operation.nodes, nodeState)
 
 		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, desiredVMSize)
-		if err := resizeControlPlaneNode(ctx, log, k, a, name, desiredVMSize, deallocateVM, crgID); err != nil {
-			return fmt.Errorf("failed to resize node %s: %w", name, err)
+		if err := operation.resizeNode(ctx, nodeState); err != nil {
+			return triggerRollback(fmt.Errorf("failed to resize node %s: %w", name, err))
 		}
 		log.Infof("Successfully resized node %s to %s", name, desiredVMSize)
 	}
 
-	return nil
-}
-
-// teardownCRG tears down the shared Capacity Reservation Group created for the resize.
-// Any teardown error is merged into retErr so a cleanup failure is surfaced without
-// masking the primary error. associatedVMs is taken by pointer so the deferred call
-// sees the full set of VMs that were associated during the resize loop.
-func teardownCRG(ctx context.Context, log *logrus.Entry, a adminactions.AzureActions, desiredVMSize string, crgZones []string, associatedVMs *[]string, crgName string, retErr *error) {
-	log.Infof("Tearing down capacity reservation group %s", crgName)
-	if teardownErr := a.CRGTeardown(ctx, desiredVMSize, crgZones, *associatedVMs, crgName); teardownErr != nil {
-		teardownErr = fmt.Errorf("CRG teardown failed for %s: %w", crgName, teardownErr)
-		if *retErr == nil {
-			*retErr = teardownErr
-		} else {
-			*retErr = errors.Join(*retErr, teardownErr)
-		}
-	}
-}
-
-// resizeControlPlaneNode performs the full resize sequence for a single
-// control plane node: cordon → drain → stop → resize → start → wait
-// ready → uncordon → update Machine metadata → update Node labels.
-// When crgID is non-empty the stop/resize/start steps are replaced by a single
-// VMResizeWithCRG call, which always deallocates the VM (required by the CRG
-// association protocol), resizes and associates it with the shared CRG, then
-// starts it. The deallocateVM parameter is therefore ignored on this path.
-func resizeControlPlaneNode(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, a adminactions.AzureActions, machineName, desiredVMSize string, deallocateVM bool, crgID string) error {
-	log.Infof("Cordoning node %s", machineName)
-	if err := cordonNode(ctx, k, machineName); err != nil {
-		return fmt.Errorf("cordoning node: %w", err)
-	}
-
-	log.Infof("Draining node %s", machineName)
-	if err := k.DrainNodeWithRetries(ctx, machineName); err != nil {
-		return fmt.Errorf("draining node: %w", err)
-	}
-
-	if crgID != "" {
-		log.Infof("Resizing VM %s to %s using capacity reservation", machineName, desiredVMSize)
-		if err := a.VMResizeWithCRG(ctx, machineName, crgID, desiredVMSize); err != nil {
-			return fmt.Errorf("resizing VM: %w", err)
-		}
-	} else {
-		log.Infof("Stopping VM %s (deallocate=%v)", machineName, deallocateVM)
-		if err := a.VMStopAndWait(ctx, machineName, deallocateVM); err != nil {
-			return fmt.Errorf("stopping VM: %w", err)
-		}
-
-		log.Infof("Resizing VM %s to %s", machineName, desiredVMSize)
-		if err := a.VMResize(ctx, machineName, desiredVMSize); err != nil {
-			return fmt.Errorf("resizing VM: %w", err)
-		}
-
-		log.Infof("Starting VM %s", machineName)
-		if err := a.VMStartAndWait(ctx, machineName); err != nil {
-			return fmt.Errorf("starting VM: %w", err)
-		}
-	}
-
-	log.Infof("Waiting for node %s to become Ready", machineName)
-	if err := waitForNodeReady(ctx, log, k, machineName); err != nil {
-		return fmt.Errorf("waiting for node ready: %w", err)
-	}
-
-	log.Infof("Uncordoning node %s", machineName)
-	if err := uncordonNode(ctx, k, machineName); err != nil {
-		return fmt.Errorf("uncordoning node: %w", err)
-	}
-
-	log.Infof("Updating Machine object for %s", machineName)
-	if err := updateMachineVMSize(ctx, k, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("updating Machine object: %w", err)
-	}
-
-	log.Infof("Updating Node labels for %s", machineName)
-	if err := setNodeInstanceTypeLabels(ctx, k, machineName, desiredVMSize); err != nil {
-		return fmt.Errorf("updating Node labels: %w", err)
-	}
-
-	return nil
+	return runTeardown(nil)
 }
 
 func cordonNode(ctx context.Context, k adminactions.KubeActions, nodeName string) error {

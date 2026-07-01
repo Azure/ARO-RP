@@ -106,14 +106,15 @@ func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, loc
 }
 
 // crgDelete deletes the resize CRG and all its capacity reservations.
-// Azure requires this specific sequence to avoid constraint violations:
+// The teardown sequence diverges from the official Azure docs (which show disassociate
+// before delete) because zeroing capacity first avoids 409 errors from the reservation
+// delete step even when virtualMachinesAssociated hasn't fully propagated. This ordering
+// is empirically required; see the PR description for detailed justification.
 //  1. Set each reservation's capacity to 0 (while VMs are still associated).
 //  2. Disassociate all VMs from the CRG (GET + PUT with capacityReservationGroup: null).
 //  3. Delete each reservation.
 //  4. Delete the CRG (must be empty).
 //
-// Zeroing capacity BEFORE disassociating is critical: it removes the allocation
-// constraint that causes 409 errors on reservation delete even when VMs are associated.
 // vmNames may be nil or empty if no VMs have been associated yet.
 // All errors are collected and joined — cleanup continues even if individual steps fail.
 func (a *azureActions) crgDelete(ctx context.Context, clusterRG, location, targetSKU string, zones []string, vmNames []string, crgName string) error {
@@ -388,7 +389,7 @@ func (a *azureActions) CRGSetupForResize(ctx context.Context, vmNames []string, 
 			return "", "", nil, fmt.Errorf("reading VM %s: %w", vmName, err)
 		}
 		if len(vm.Zones) == 0 || vm.Zones[0] == nil {
-			return "", "", nil, fmt.Errorf("VM %s has no availability zone; capacity reservation requires zonal VMs", vmName)
+			return "", "", nil, fmt.Errorf("VM %s has no availability zone; ARO control plane nodes are expected to be zonal (one per availability zone per OpenShift architecture)", vmName)
 		}
 		zoneCount[*vm.Zones[0]]++
 	}
@@ -400,8 +401,8 @@ func (a *azureActions) CRGSetupForResize(ctx context.Context, vmNames []string, 
 	}
 	sort.Strings(uniqueZones)
 
-	// Use a per-operation unique name to prevent collisions between concurrent resizes
-	// or with lingering CRGs from prior failed runs.
+	// Use a per-operation unique name to prevent interference from lingering CRGs
+	// left behind by prior failed runs (which may not yet be fully deleted by ARM).
 	crgName := fmt.Sprintf("aro-resize-crg-cp-%s", uuid.New().String())
 
 	a.log.Infof("creating shared capacity reservation group %s for zones %v (SKU %s)", crgName, uniqueZones, targetSKU)
