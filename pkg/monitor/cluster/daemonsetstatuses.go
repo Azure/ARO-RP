@@ -23,32 +23,29 @@ var genevaLoggingOTelDaemonSets = map[string]struct{}{
 func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 	for name := range genevaLoggingOTelDaemonSets {
 		var ds appsv1.DaemonSet
-	err := mon.ocpclientset.Get(ctx, client.ObjectKey{Namespace: genevaLoggingNamespace, Name: name}, &ds)
-	if err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			continue
+		err := mon.ocpclientset.Get(ctx, client.ObjectKey{Namespace: genevaLoggingNamespace, Name: name}, &ds)
+		if err != nil {
+			if client.IgnoreNotFound(err) == nil {
+				continue
+			}
+			return fmt.Errorf("error getting DaemonSet %s/%s: %w", genevaLoggingNamespace, name, err)
 		}
-		return fmt.Errorf("error getting DaemonSet %s/%s: %w", genevaLoggingNamespace, name, err)
-	}
 
 		if ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable {
 			continue
 		}
 
-		mon.emitGauge("daemonset.statuses", 1, map[string]string{
+		dimensions := map[string]string{
 			"desiredNumberScheduled": strconv.Itoa(int(ds.Status.DesiredNumberScheduled)),
 			"name":                   ds.Name,
 			"namespace":              ds.Namespace,
 			"numberAvailable":        strconv.Itoa(int(ds.Status.NumberAvailable)),
-		})
+		}
 
-		if ds.Status.DesiredNumberScheduled > 0 && ds.Status.NumberAvailable == 0 {
-			mon.emitGauge("genevalogging.otel.cannotstart", 1, map[string]string{
-				"desiredNumberScheduled": strconv.Itoa(int(ds.Status.DesiredNumberScheduled)),
-				"name":                   ds.Name,
-				"namespace":              ds.Namespace,
-				"numberAvailable":        strconv.Itoa(int(ds.Status.NumberAvailable)),
-			})
+		mon.emitGauge("daemonset.statuses", 1, dimensions)
+
+		if ds.Status.NumberAvailable == 0 {
+			mon.emitGauge("genevalogging.otel.cannotstart", 1, dimensions)
 		}
 	}
 	return nil
