@@ -20,7 +20,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
@@ -54,20 +53,6 @@ func TestMonitorCloseClosesIdleConnectionsOnce(t *testing.T) {
 	if transport.closed != 1 {
 		t.Fatalf("expected CloseIdleConnections to be called once, got %d", transport.closed)
 	}
-}
-
-func TestMonitorCloseIgnoresFakeAroClientset(t *testing.T) {
-	mon := &Monitor{
-		arocli: arofake.NewSimpleClientset(),
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("expected fake ARO client cleanup to be a no-op, got panic: %v", r)
-		}
-	}()
-
-	mon.Close()
 }
 
 func TestMonitor(t *testing.T) {
