@@ -76,7 +76,6 @@ func TestClusterServidePrincipalEnricherTask(t *testing.T) {
 				},
 			}
 			e := clusterServicePrincipalEnricher{}
-			e.SetDefaults(oc)
 
 			clients := clients{k8s: tt.client}
 			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
