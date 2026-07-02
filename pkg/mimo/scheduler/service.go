@@ -6,6 +6,8 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"fmt"
+	"iter"
 	"log"
 	"math/rand"
 	"net"
@@ -24,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
@@ -34,36 +37,58 @@ type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{}) error
 }
 
+var (
+	defaultWorkerMaxStartupDelay          = 60 * time.Second
+	defaultServiceInterval                = 180 * time.Second
+	defaultReadinessDelay                 = 2 * time.Minute
+	defaultSchedulePollInterval           = 30 * time.Second
+	defaultSchedulePollReadinessInterval  = 90 * time.Second
+	defaultChangefeedInteval              = 10 * time.Second
+	defaultChangefeedReadinessInterval    = time.Minute
+	defaultBucketRefreshInterval          = 10 * time.Second
+	defaultBucketRefreshTTL               = 60 * time.Second
+	defaultBucketRefreshReadinessInterval = defaultBucketRefreshTTL
+)
+
 type service struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 
 	dbGroup schedulerDBs
 
-	m              metrics.Emitter
-	mu             sync.RWMutex
-	stopping       *atomic.Bool
-	workers        *atomic.Int32
-	workerRoutines sync.WaitGroup
-	newScheduler   newSchedulerFunc
+	m            metrics.Emitter
+	mu           sync.RWMutex
+	stopping     *atomic.Bool
+	workerCount  *atomic.Int32
+	newScheduler newSchedulerFunc
 
-	b        buckets.BucketWorker[*api.MaintenanceScheduleDocument]
+	buckets  atomic.Value // []int
+	b        buckets.WorkerPool[*api.MaintenanceScheduleDocument]
 	subs     changefeed.SubscriptionsCache
 	clusters *openShiftClusterCache
 
+	bucketCount         int
 	changefeedBatchSize int
-	changefeedInterval  time.Duration
 
-	lastChangefeed atomic.Value // time.Time
-	startTime      time.Time
+	lastScheduleUpdate atomic.Value // time.Time
+	lastBucketUpdate   atomic.Value // time.Time
+	startTime          time.Time
 
-	pollTime    time.Duration
-	now         func() time.Time
-	workerDelay func() time.Duration
+	workerMaxStartupDelay          time.Duration // Maximum interval before a worker starts
+	interval                       time.Duration // Interval between service runs
+	schedulePollInterval           time.Duration // Interval between updates to Schedules
+	schedulePollReadinessInterval  time.Duration // Time that the Schedules should have been updated within to be ready
+	changefeedInterval             time.Duration // Interval between changefeed runs (updates to cluster docs + subscriptions)
+	bucketRefreshInterval          time.Duration
+	bucketRefreshTTL               time.Duration // TTL for worker PoolWorker documents
+	bucketRefreshReadinessInterval time.Duration
+	changefeedReadinessInterval    time.Duration // Time that the changefeed should have been changed within to be healthy
+	readinessDelay                 time.Duration // Minimal time until the service will allow itself to be marked ready
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
 
-	serveHealthz bool
+	serveHealthz  bool
+	emitHeartbeat bool
 }
 
 var _ Runnable = (*service)(nil)
@@ -73,38 +98,44 @@ type schedulerDBs interface {
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithMaintenanceManifests
 	database.DatabaseGroupWithMaintenanceSchedules
+	database.DatabaseGroupWithPoolWorkers
 }
 
-func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metrics.Emitter, ownedBuckets []int) *service {
+func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metrics.Emitter) *service {
 	s := &service{
 		env:     env,
 		baseLog: log,
 
 		dbGroup: dbg,
 
-		m:        m,
-		stopping: &atomic.Bool{},
-		workers:  &atomic.Int32{},
+		m:           m,
+		stopping:    &atomic.Bool{},
+		workerCount: &atomic.Int32{},
+		bucketCount: bucket.Buckets,
 
-		startTime:    time.Now(),
-		workerDelay:  func() time.Duration { return time.Duration(rand.Intn(60)) * time.Second },
-		now:          time.Now,
-		pollTime:     time.Minute,
-		newScheduler: NewSchedulerForSchedule,
+		startTime:             env.Now(),
+		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
+		newScheduler:          NewSchedulerForSchedule,
 
-		changefeedBatchSize: 50,
-		changefeedInterval:  10 * time.Second,
+		changefeedBatchSize:            50,
+		interval:                       defaultServiceInterval,
+		changefeedInterval:             defaultChangefeedInteval,
+		changefeedReadinessInterval:    defaultChangefeedReadinessInterval,
+		bucketRefreshInterval:          defaultBucketRefreshInterval,
+		bucketRefreshTTL:               defaultBucketRefreshTTL,
+		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
+		readinessDelay:                 defaultReadinessDelay,
+		schedulePollInterval:           defaultSchedulePollInterval,
+		schedulePollReadinessInterval:  defaultSchedulePollReadinessInterval,
 
 		subs: changefeed.NewSubscriptionsChangefeedCache(m, false),
 
-		serveHealthz: true,
+		serveHealthz:  true,
+		emitHeartbeat: true,
 	}
 
-	s.clusters = newOpenShiftClusterCache(log, m, s.subs, ownedBuckets)
-	s.b = buckets.NewBucketWorker[*api.MaintenanceScheduleDocument](log, s.spawnWorker, &s.mu)
-	// All Schedules have a bucket of 0
-	s.b.SetBuckets([]int{0})
-
+	s.clusters = newOpenShiftClusterCache(log, m, s.subs)
+	s.b = buckets.NewWorkerPool[*api.MaintenanceScheduleDocument](log, s.worker)
 	return s
 }
 
@@ -112,8 +143,18 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 	s.tasks = tasks
 }
 
-func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
+func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+
+	// Set up a cancel context for signalling exits (e.g. the stop channel
+	// closing, bucket fetching erroring)
+	ctx, cancel := context.WithCancelCause(_ctx)
+	defer cancel(nil)
+
+	dbPoolWorkers, err := s.dbGroup.PoolWorkers()
+	if err != nil {
+		return err
+	}
 
 	// Only enable the healthz endpoint if configured (disabled in unit tests)
 	if s.serveHealthz {
@@ -152,9 +193,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
-	t := time.NewTicker(s.changefeedInterval)
-	defer t.Stop()
-
 	if stop != nil {
 		go func() {
 			defer recover.Panic(s.baseLog)
@@ -162,15 +200,41 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			<-stop
 			s.baseLog.Print("stopping")
 			s.stopping.Store(true)
+			cancel(nil)
 		}()
 	}
 
-	err := s.startChangefeeds(ctx, stop)
+	if s.emitHeartbeat {
+		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", stop, s.checkReady)
+	}
+
+	waitForFirstBucketUpdate := &sync.WaitGroup{}
+	waitForFirstBucketUpdate.Add(1)
+
+	// Start the bucket worker update loop which will coordinate buckets between
+	// the MIMO instances
+	go buckets.StartBucketRefreshLoop(
+		_ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
+		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
+			s.buckets.Store(i)
+			s.lastBucketUpdate.Store(s.env.Now())
+		}, stop, cancel, waitForFirstBucketUpdate,
+	)
+
+	// Wait until we have collected our buckets before starting the poll loop/changefeeds
+	waitForFirstBucketUpdate.Wait()
+	if ctx.Err() != nil {
+		s.baseLog.Errorf("bucket worker startup failed, exiting: %s", context.Cause(ctx))
+		close(done)
+		return context.Cause(ctx)
+	}
+
+	err = s.startChangefeeds(ctx, stop)
 	if err != nil {
 		return err
 	}
 
-	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "scheduler.heartbeat", nil, s.checkReady)
+	t := time.NewTicker(s.schedulePollInterval)
 
 	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
 	for !s.stopping.Load() {
@@ -184,14 +248,14 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		select {
 		case <-t.C:
 		case <-ctx.Done():
-			s.baseLog.Warn("context closed, stopping")
+			s.baseLog.Warnf("context closed, stopping poll loop: %s", context.Cause(ctx))
 			s.stopping.Store(true)
 		}
 	}
 
 	// If we're here, we're exiting
 	s.baseLog.Print("exiting, waiting for all workers to finish")
-	s.workerRoutines.Wait()
+	s.b.StopAndWait()
 	close(done)
 	return nil
 }
@@ -232,7 +296,7 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 		return nil, err
 	}
 
-	// Fetch all of the cluster UUIDs
+	// Fetch all of the valid schedules
 	i, err := dbMaintenanceSchedules.GetValid(ctx, "")
 	if err != nil {
 		return nil, err
@@ -279,10 +343,10 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 	}
 
 	// Store when we last fetched the schedules
-	s.lastChangefeed.Store(s.now())
+	s.lastScheduleUpdate.Store(s.env.Now())
 
 	// Emit a metric containing the size of our cache
-	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
+	s.m.EmitGauge("changefeed.caches.size", int64(s.b.CacheSize()), map[string]string{
 		"name": "MaintenanceScheduleDocument",
 	})
 
@@ -290,7 +354,14 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 }
 
 func (s *service) checkReady() bool {
-	lastChangefeedTime, ok := s.lastChangefeed.Load().(time.Time)
+	now := s.env.Now()
+
+	lastBucketUpdate, ok := s.lastBucketUpdate.Load().(time.Time)
+	if !ok {
+		return false
+	}
+
+	lastScheduleUpdate, ok := s.lastScheduleUpdate.Load().(time.Time)
 	if !ok {
 		return false
 	}
@@ -305,26 +376,17 @@ func (s *service) checkReady() bool {
 		return false
 	}
 
-	if s.env.IsLocalDevelopmentMode() {
-		return (time.Since(lastChangefeedTime) < time.Minute && // did we update our changefeeds recently?
-			time.Since(lastClusterChangefeed) < time.Minute &&
-			time.Since(lastSubsChangefeed) < time.Minute)
-	} else {
-		return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
-			(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
-	}
-}
-
-func (s *service) spawnWorker(stop <-chan struct{}, id string) {
-	s.workerRoutines.Add(1)
-	go s.worker(stop, id)
+	return (now.Sub(lastScheduleUpdate) < s.schedulePollReadinessInterval && // did we update our changefeeds recently?
+		now.Sub(lastClusterChangefeed) < s.changefeedReadinessInterval &&
+		now.Sub(lastSubsChangefeed) < s.changefeedReadinessInterval &&
+		now.Sub(lastBucketUpdate) < s.bucketRefreshReadinessInterval &&
+		now.Sub(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
 }
 
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
-	defer s.workerRoutines.Done()
 
-	delay := s.workerDelay()
+	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*rand.Float64())
 	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
@@ -332,8 +394,37 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	time.Sleep(delay)
 
 	getDoc := func() (*api.MaintenanceScheduleDocument, bool) { return s.b.Doc(id) }
+	getClusters := func() iter.Seq2[string, selectorData] {
+		return func(yield func(string, selectorData) bool) {
+			_ownedBuckets, ok := s.buckets.Load().([]int)
+			if !ok {
+				// no owned buckets yet
+				return
+			}
 
-	a, err := s.newScheduler(s.env, log, s.m, getDoc, s.clusters.GetClusters, s.dbGroup, s.now)
+			ownedBuckets := make(map[string]struct{})
+			for _, i := range _ownedBuckets {
+				ownedBuckets[fmt.Sprintf("%d", i)] = struct{}{}
+			}
+
+			// Only give clusters belonging to buckets we currently have owned
+			for cl, d := range s.clusters.GetClusters() {
+				bucket, ok := d.GetString(string(SelectorDataKeyBucketID))
+				if !ok {
+					continue
+				}
+
+				_, ownedBucket := ownedBuckets[bucket]
+				if ownedBucket {
+					if !yield(cl, d) {
+						return
+					}
+				}
+			}
+		}
+	}
+
+	a, err := s.newScheduler(s.env, log, s.m, getDoc, getClusters, s.dbGroup)
 	if err != nil {
 		log.Error(err)
 		return
@@ -342,7 +433,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	// load in valid tasks
 	a.AddMaintenanceTasks(s.tasks)
 
-	t := time.NewTicker(s.pollTime)
+	t := time.NewTicker(s.interval)
 	defer func() {
 		log.Debugf("stopping worker for %s...", id)
 		t.Stop()
@@ -356,11 +447,11 @@ out:
 				break out
 			}
 			func() {
-				s.workers.Add(1)
-				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
+				s.workerCount.Add(1)
+				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
 				defer func() {
-					s.workers.Add(-1)
-					s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workers.Load()), nil)
+					s.workerCount.Add(-1)
+					s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
 				}()
 				// Run each process in the background context so that completion
 				// of the current loop is finished before we exit cleanly, as

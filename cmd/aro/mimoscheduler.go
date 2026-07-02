@@ -11,11 +11,13 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/go-autorest/tracing"
+
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
-	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
 	"github.com/Azure/ARO-RP/pkg/mimo/scheduler"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -52,6 +54,8 @@ func mimoScheduler(ctx context.Context, _log *logrus.Entry) error {
 	}
 	go g.Run()
 
+	tracing.Register(azure.New(m))
+
 	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
@@ -87,16 +91,19 @@ func mimoScheduler(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
+	poolWorkers, err := database.NewPoolWorkers(ctx, dbc, dbName)
+	if err != nil {
+		return err
+	}
+
 	dbg := database.NewDBGroup().
 		WithOpenShiftClusters(clusters).
 		WithSubscriptions(subscriptions).
 		WithMaintenanceManifests(manifests).
-		WithMaintenanceSchedules(schedules)
+		WithMaintenanceSchedules(schedules).
+		WithPoolWorkers(poolWorkers)
 
-	buckets := actuator.DetermineBuckets(_env, os.Hostname)
-	log.Printf("serving %d buckets: %v", len(buckets), buckets)
-
-	a := scheduler.NewService(_env, log, dbg, m, buckets)
+	a := scheduler.NewService(_env, log, dbg, m)
 	a.SetMaintenanceTasks(tasks.DEFAULT_MAINTENANCE_TASKS)
 
 	sigterm := make(chan os.Signal, 1)

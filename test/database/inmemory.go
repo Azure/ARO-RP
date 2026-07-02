@@ -40,15 +40,15 @@ func NewFakeSubscriptions() (db database.Subscriptions, client *cosmosdb.FakeSub
 	return db, client
 }
 
-func NewFakeMonitors(now func() time.Time) (db database.Monitors, client *cosmosdb.FakeMonitorDocumentClient) {
-	client = cosmosdb.NewFakeMonitorDocumentClient(jsonHandle)
-	injectMonitors(client, now)
-	db = database.NewMonitorsWithProvidedClient(client, uuid.DefaultGenerator.Generate())
+func NewFakePoolWorkers(now func() time.Time) (db database.PoolWorkers, client *cosmosdb.FakePoolWorkerDocumentClient) {
+	client = cosmosdb.NewFakePoolWorkerDocumentClient(jsonHandle)
+	injectPoolWorkers(client, now)
+	db = database.NewPoolWorkersWithProvidedClient(client, uuid.DefaultGenerator.Generate())
 	return db, client
 }
 
-func NewFakeMonitorWithExistingClient(client *cosmosdb.FakeMonitorDocumentClient) database.Monitors {
-	return database.NewMonitorsWithProvidedClient(client, uuid.DefaultGenerator.Generate())
+func NewFakePoolWorkersWithExistingClient(client *cosmosdb.FakePoolWorkerDocumentClient) database.PoolWorkers {
+	return database.NewPoolWorkersWithProvidedClient(client, uuid.DefaultGenerator.Generate())
 }
 
 func NewFakeBilling() (db database.Billing, client *cosmosdb.FakeBillingDocumentClient) {

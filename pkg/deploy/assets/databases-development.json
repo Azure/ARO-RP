@@ -141,16 +141,16 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ],
             "location": "[resourceGroup().location]",
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/PoolWorkers')]",
             "properties": {
                 "options": {},
                 "resource": {
                     "defaultTtl": -1,
-                    "id": "Monitors",
+                    "id": "PoolWorkers",
                     "partitionKey": {
                         "kind": "Hash",
                         "paths": [
-                            "/id"
+                            "/workerType"
                         ]
                     }
                 }
@@ -378,10 +378,10 @@
             "apiVersion": "2023-04-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'Monitors')]"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), parameters('databaseName'), 'PoolWorkers')]"
             ],
             "location": "[resourceGroup().location]",
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors/renewLease')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/PoolWorkers/renewLease')]",
             "properties": {
                 "resource": {
                     "body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",

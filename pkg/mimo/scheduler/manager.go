@@ -34,7 +34,6 @@ type newSchedulerFunc func(
 	cachedDoc getCachedScheduleDocFunc,
 	getClusters getClustersFunc,
 	dbs schedulerDBs,
-	now func() time.Time,
 ) (Scheduler, error)
 type getCachedScheduleDocFunc func() (*api.MaintenanceScheduleDocument, bool)
 
@@ -49,7 +48,6 @@ type Scheduler interface {
 type scheduler struct {
 	env env.Interface
 	log *logrus.Entry
-	now func() time.Time
 	m   metrics.Emitter
 
 	cachedDoc   getCachedScheduleDocFunc
@@ -69,7 +67,6 @@ func NewSchedulerForSchedule(
 	cachedDoc getCachedScheduleDocFunc,
 	getClusters getClustersFunc,
 	dbs schedulerDBs,
-	now func() time.Time,
 ) (Scheduler, error) {
 	a := &scheduler{
 		env: _env,
@@ -81,8 +78,6 @@ func NewSchedulerForSchedule(
 
 		dbs:   dbs,
 		tasks: make(map[api.MIMOTaskID]tasks.MaintenanceTask),
-
-		now: now,
 	}
 
 	return a, nil
@@ -115,7 +110,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	now := a.now()
+	now := a.env.Now()
 
 	next, hasFutureTime := Next(now, calDef)
 	if !hasFutureTime {
