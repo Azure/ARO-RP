@@ -63,18 +63,6 @@ func (mr *MockClusterEnricherMockRecorder) Enrich(arg0, arg1, arg2, arg3, arg4, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enrich", reflect.TypeOf((*MockClusterEnricher)(nil).Enrich), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
-// SetDefaults mocks base method.
-func (m *MockClusterEnricher) SetDefaults(arg0 *api.OpenShiftCluster) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetDefaults", arg0)
-}
-
-// SetDefaults indicates an expected call of SetDefaults.
-func (mr *MockClusterEnricherMockRecorder) SetDefaults(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDefaults", reflect.TypeOf((*MockClusterEnricher)(nil).SetDefaults), arg0)
-}
-
 // MockBestEffortEnricher is a mock of BestEffortEnricher interface.
 type MockBestEffortEnricher struct {
 	ctrl     *gomock.Controller

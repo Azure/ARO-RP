@@ -307,7 +307,6 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := &api.OpenShiftCluster{}
 			e := ingressProfileEnricher{}
-			e.SetDefaults(oc)
 
 			clients := clients{
 				k8s:      tt.kubecli,

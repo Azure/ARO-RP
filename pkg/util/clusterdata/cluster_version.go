@@ -40,7 +40,3 @@ func (ce clusterVersionEnricher) Enrich(
 	oc.Properties.ClusterProfile.Version = cv.Status.Desired.Version
 	return nil
 }
-
-func (ce clusterVersionEnricher) SetDefaults(oc *api.OpenShiftCluster) {
-	oc.Properties.ClusterProfile.Version = ""
-}

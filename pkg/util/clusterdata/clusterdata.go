@@ -40,7 +40,6 @@ type ParallelEnricher struct {
 
 type ClusterEnricher interface {
 	Enrich(context.Context, *logrus.Entry, *api.OpenShiftCluster, kubernetes.Interface, configclient.Interface, machineclient.Interface, operatorclient.Interface) error
-	SetDefaults(*api.OpenShiftCluster)
 }
 
 type clients struct {
@@ -131,7 +130,6 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 				defer p.metricsWG.Done()
 			}
 
-			e.SetDefaults(oc)
 			errors <- e.Enrich(ctx, log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
 
 			p.emitter.EmitGauge(

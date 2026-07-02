@@ -141,7 +141,6 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			e := machineClientEnricher{}
 
 			// When
-			e.SetDefaults(tc.givenOc)
 			err := e.Enrich(context.Background(), log, tc.givenOc, clients.k8s, clients.config, clients.machine, clients.operator)
 
 			// Then

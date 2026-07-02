@@ -41,5 +41,3 @@ func (ce clusterServicePrincipalEnricher) Enrich(
 	oc.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(secret.Data["azure_client_secret"])
 	return nil
 }
-
-func (ef clusterServicePrincipalEnricher) SetDefaults(oc *api.OpenShiftCluster) {}

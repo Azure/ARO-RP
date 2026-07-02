@@ -109,10 +109,6 @@ func (ce machineClientEnricher) Enrich(
 	return nil
 }
 
-func (ce machineClientEnricher) SetDefaults(oc *api.OpenShiftCluster) {
-	oc.Properties.WorkerProfilesStatus = nil
-}
-
 // Azure availability zones are expected to be strings despite being numeric.
 // YAML conversion can cause these numeric values to be parsed as ints unless
 // they are explicitly wrapped with "". We forcibly convert the zone field

@@ -63,7 +63,6 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 			oc := &api.OpenShiftCluster{}
 			clients := clients{config: tt.client}
 			e := clusterVersionEnricher{}
-			e.SetDefaults(oc)
 
 			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
 
