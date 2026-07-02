@@ -16,7 +16,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -31,19 +30,11 @@ func TestEmitNetworkMTU(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		oc             *api.OpenShiftCluster
 		networkConfig  *configv1.Network
 		expectedMetric metricExpectation
 	}{
 		{
 			name: "MTU cluster test",
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					NetworkProfile: api.NetworkProfile{
-						MTUSize: api.MTU1500,
-					},
-				},
-			},
 			networkConfig: &configv1.Network{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster",
@@ -75,7 +66,6 @@ func TestEmitNetworkMTU(t *testing.T) {
 			configcli := configfake.NewSimpleClientset(tt.networkConfig)
 
 			mon := &Monitor{
-				oc:        tt.oc,
 				configcli: configcli,
 				m:         m,
 				log:       log,
@@ -98,18 +88,9 @@ func TestEmitNetworkMTUError(t *testing.T) {
 	m := mock_metrics.NewMockEmitter(controller)
 	_, log := testlog.New()
 
-	oc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			NetworkProfile: api.NetworkProfile{
-				MTUSize: api.MTU1500,
-			},
-		},
-	}
-
 	configcli := configfake.NewSimpleClientset()
 
 	mon := &Monitor{
-		oc:        oc,
 		configcli: configcli,
 		m:         m,
 		log:       log,
