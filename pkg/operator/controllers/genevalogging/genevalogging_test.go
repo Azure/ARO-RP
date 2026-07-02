@@ -158,8 +158,12 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(highSignal, "filter/drop-journald-noise:") {
 		t.Fatal("high-signal config missing journald noise filter")
 	}
-	if !strings.Contains(highSignal, "filter/keep-journald-high-signal:") {
+	keepJournaldIdx := strings.Index(highSignal, "filter/keep-journald-high-signal:")
+	if keepJournaldIdx == -1 {
 		t.Fatal("high-signal config missing journald high-signal filter")
+	}
+	if !strings.Contains(highSignal[keepJournaldIdx:], "SyncLoop") {
+		t.Fatal("high-signal master config missing SyncLoop PLEG pattern in filter/keep-journald-high-signal")
 	}
 	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
 		t.Fatal("high-signal config missing expected journald processor chain")
