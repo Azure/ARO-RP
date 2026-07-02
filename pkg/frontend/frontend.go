@@ -6,10 +6,12 @@ package frontend
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -58,6 +60,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithMaintenanceManifests
 	database.DatabaseGroupWithMaintenanceSchedules
 	database.DatabaseGroupWithBilling
+	database.DatabaseGroupWithPortal
 }
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
@@ -107,6 +110,10 @@ type frontend struct {
 	featuresValidator  FeaturesValidator
 
 	clusterEnricher clusterdata.BestEffortEnricher
+
+	// portalServingCert pins the portal binary's serving cert as the CA
+	// bundle in admin-issued kubeconfigs. nil => kubeconfig endpoints 503.
+	portalServingCert *x509.Certificate
 
 	l net.Listener
 	s *http.Server
@@ -259,8 +266,50 @@ func NewFrontend(ctx context.Context,
 
 	f.l = tls.NewListener(l, config)
 
+	// Best-effort: admin kubeconfig endpoints need the portal cert as the CA
+	// bundle. On failure those endpoints return 503; RP still starts.
+	if cert, certErr := loadPortalServingCert(ctx, _env); certErr != nil {
+		baseLog.WithError(certErr).Warning("portal serving cert not available; admin kubeconfig endpoints will return 503")
+	} else {
+		f.portalServingCert = cert
+	}
+
 	f.ready.Store(true)
 	return f, nil
+}
+
+func loadPortalServingCert(ctx context.Context, _env env.Interface) (*x509.Certificate, error) {
+	msiCredential, err := _env.NewMSITokenCredential()
+	if err != nil {
+		return nil, err
+	}
+
+	keyVaultPrefix := os.Getenv(encryption.KeyVaultPrefix)
+	if keyVaultPrefix == "" {
+		return nil, fmt.Errorf("%s env var not set", encryption.KeyVaultPrefix)
+	}
+
+	portalKeyvaultURI := azsecrets.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
+	secretsClient, err := azsecrets.NewClient(portalKeyvaultURI, msiCredential, _env.Environment().AzureClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create portal keyvault secrets client: %w", err)
+	}
+
+	portalCert, err := secretsClient.GetSecret(ctx, env.PortalServerSecretName, "", nil)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get portal server certificate secret: %w", err)
+	}
+
+	_, portalCerts, err := azsecrets.ParseSecretAsCertificate(portalCert)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(portalCerts) == 0 {
+		return nil, fmt.Errorf("portal server certificate secret contained no certificates")
+	}
+
+	return portalCerts[0], nil
 }
 
 func (f *frontend) chiUnauthenticatedRoutes(router chi.Router) {
@@ -432,6 +481,12 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.Get("/selectors", f.getAdminOpenShiftClusterSelectors)
 
 				r.Post("/investigate", f.postAdminOpenShiftClusterInvestigate)
+
+				// Kubeconfig tokens consumed by the portal binary's
+				// /kubeconfig/proxy/* subtree. /newelevated is JIT-gated
+				// in its ACIS manifest.
+				r.Post("/kubeconfig/new", f.postAdminOpenShiftClusterKubeconfigNew)
+				r.Post("/kubeconfig/newelevated", f.postAdminOpenShiftClusterKubeconfigNewElevated)
 			})
 		})
 
