@@ -92,7 +92,7 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 		}
 	}
 
-	m.log.Infof("%d nodes ready, need at least %d", readyWorkerMachines, minimumWorkerNodes)
+	m.log.Infof("%d nodes ready, need at least %d", readyWorkers, minimumWorkerNodes)
 	return readyWorkers >= minimumWorkerNodes, nil
 }
 
