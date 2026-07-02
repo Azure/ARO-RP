@@ -61,6 +61,7 @@ type Configuration struct {
 	DisableCosmosDBFirewall           *bool                  `json:"disableCosmosDBFirewall,omitempty"`
 	ExtraCosmosDBIPs                  []string               `json:"extraCosmosDBIPs,omitempty"`
 	FluentbitImage                    *string                `json:"fluentbitImage,omitempty" value:"required"`
+	ForceNSGsOnly                     *bool                  `json:"forceNSGsOnly,omitempty"`
 	GatewayOtelCollectorImage         *string                `json:"gatewayOtelCollectorImage,omitempty" value:"required"`
 	GatewayOtelKustoIngestionEndpoint *string                `json:"gatewayOtelKustoIngestionEndpoint,omitempty"`
 	FPClientID                        *string                `json:"fpClientId,omitempty" value:"required"`

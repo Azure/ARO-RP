@@ -170,6 +170,8 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
+	// forceNSGsOnly must not be used on fresh region deployments where
+	// secrets have not yet been bootstrapped by configureServiceSecrets.
 	if d.forceNSGs {
 		d.log.Info("forceNSGs set, skipping secret configuration and VMSS restart")
 		return nil
