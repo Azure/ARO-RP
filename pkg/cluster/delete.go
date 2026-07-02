@@ -352,9 +352,6 @@ func (m *manager) deleteRoleDefinition(ctx context.Context) error {
 }
 
 func (m *manager) deleteGatewayAndWait(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID == "" {
 		return nil
 	}
@@ -365,7 +362,7 @@ func (m *manager) deleteGatewayAndWait(ctx context.Context) error {
 	}
 
 	m.log.Info("waiting for gateway record deletion")
-	return wait.PollUntilContextCancel(timeoutCtx, 15*time.Second, true, func(_ context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, 15*time.Second, 5*time.Minute, true, func(_ context.Context) (bool, error) {
 		_, err := m.dbGateway.Get(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID)
 		if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) /* already gone */ {
 			return true, nil
