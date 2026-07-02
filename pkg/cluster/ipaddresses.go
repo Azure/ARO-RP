@@ -268,8 +268,7 @@ func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 // ensureGatewayCreate approves the gateway PE/PLS connection, creates the
 // gateway database record and updates the model with the private endpoint IP.
 func (m *manager) ensureGatewayCreate(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled ||
-		m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		return nil
 	}
 
@@ -282,7 +281,14 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 		return err
 	}
 
-	pls, err := m.armRPPrivateLinkServices.Get(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", nil)
+	var pls armnetwork.PrivateLinkServicesClientGetResponse
+
+	if m.env.IsLocalDevelopmentMode() {
+		pls, err = m.armClusterPrivateLinkServices.Get(ctx, resourceGroup, m.doc.OpenShiftCluster.Properties.InfraID+"-pls", nil)
+	} else {
+		pls, err = m.armRPPrivateLinkServices.Get(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", nil)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -303,7 +309,12 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 			conn.Properties.PrivateLinkServiceConnectionState.Status = pointerutils.ToPtr("Approved")
 			conn.Properties.PrivateLinkServiceConnectionState.Description = pointerutils.ToPtr("Approved")
 
-			_, err = m.armRPPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, *conn, nil)
+			if m.env.IsLocalDevelopmentMode() {
+				_, err = m.armClusterPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, resourceGroup, m.doc.OpenShiftCluster.Properties.InfraID+"-pls", *conn.Name, *conn, nil)
+			} else {
+				_, err = m.armRPPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, *conn, nil)
+			}
+
 			if err != nil {
 				return err
 			}
