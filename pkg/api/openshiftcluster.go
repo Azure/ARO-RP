@@ -185,6 +185,13 @@ type OpenShiftClusterProperties struct {
 	InfraID string      `json:"infraId,omitempty"`
 	SSHKey  SecureBytes `json:"sshKey,omitempty"`
 
+	// SSHHostPublicKeys stores the SSH host public keys for master nodes in SSH
+	// wire format (ssh.PublicKey.Marshal()), keyed by the string form of the
+	// master node index (e.g. "0", "1", "2"). Keys are captured on the first
+	// portal SSH connection to each master (TOFU) and used to verify all
+	// subsequent connections. Never exposed via any external API.
+	SSHHostPublicKeys map[string]SecureBytes `json:"sshHostPublicKeys,omitempty"`
+
 	// AdminKubeconfig is installer generated kubeconfig. It is 10 year config,
 	// and should never be returned to the user.
 	AdminKubeconfig SecureBytes `json:"adminKubeconfig,omitempty"`
