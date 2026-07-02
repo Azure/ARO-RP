@@ -18,7 +18,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 )
 
@@ -195,7 +195,7 @@ somethingElse:
 				},
 			}
 
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(instance)
 			if tt.configMap != nil {
 				clientBuilder.WithObjects(tt.configMap)
 			}
@@ -230,7 +230,6 @@ somethingElse:
 }
 
 func TestReconcilePVC(t *testing.T) {
-	volumeMode := corev1.PersistentVolumeFilesystem
 	tests := []struct {
 		name           string
 		pvcs           []client.Object
@@ -298,12 +297,6 @@ func TestReconcilePVC(t *testing.T) {
 						},
 						ResourceVersion: "1",
 					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						VolumeMode: &volumeMode,
-					},
-					Status: corev1.PersistentVolumeClaimStatus{
-						Phase: corev1.ClaimPending,
-					},
 				},
 			},
 			wantConditions: defaultConditions(),
@@ -325,7 +318,7 @@ func TestReconcilePVC(t *testing.T) {
 				},
 			}
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.pvcs...).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(instance).WithObjects(tt.pvcs...).Build()
 
 			r := &MonitoringReconciler{
 				AROController: base.AROController{

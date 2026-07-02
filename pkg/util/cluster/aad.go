@@ -47,8 +47,8 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 	// check if returned error is 404 not found, if so, retry the operation
 	numRetries := 0
 	var pwResult msgraph_models.PasswordCredentialable
-	err = wait.PollImmediateUntilWithContext(ctx, GraphApiRetryInterval, func(ctx context.Context) (done bool, err error) {
-		pwResult, err = c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
+	err = wait.PollUntilContextCancel(ctx, GraphApiRetryInterval, true, func(_ctx context.Context) (done bool, err error) {
+		pwResult, err = c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(_ctx, pwCredentialRequestBody, nil)
 		if err == nil {
 			return true, nil
 		}
@@ -78,13 +78,10 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 	var result msgraph_models.ServicePrincipalable
 	var err error
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-
 	// NOTE: Do not override err with the error returned by
-	// wait.PollImmediateUntilWithContext. Doing this will not propagate the latest error
+	// wait.PollUntilContextTimeout. Doing this will not propagate the latest error
 	// to the user in case when wait exceeds the timeout.
-	_ = wait.PollImmediateUntilWithContext(timeoutCtx, 10*time.Second, func(ctx context.Context) (bool, error) {
+	_ = wait.PollUntilContextTimeout(ctx, 10*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 		requestBody := msgraph_models.NewServicePrincipal()
 		requestBody.SetAppId(&appID)
 		result, err = c.spGraphClient.ServicePrincipals().Post(ctx, requestBody, nil)

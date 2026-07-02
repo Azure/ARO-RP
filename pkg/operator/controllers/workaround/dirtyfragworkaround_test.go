@@ -12,24 +12,24 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 
 	apiversion "github.com/Azure/ARO-RP/pkg/api/util/version"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/test/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func expectedMasterDirtyfragMachineConfig() *mcv1.MachineConfig {
-	mc, err := makeDirtyfragMachineConfig("master")
+	mc, err := makeDirtyfragMachineConfig(json.Marshal, "master")
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +48,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 		expectedIsRequired    bool
 		clusterFlags          map[string]string
 		clusterVersion        apiversion.Version
-		addHooks              func(*clienthelper.HookingClient)
+		addHooks              func(*testclienthelper.HookingClient)
 		objects               []client.Object
 		expectedMachineConfig *mcv1.MachineConfig
 		expectedErr           error
@@ -76,22 +76,15 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			clusterFlags:   dirtyfragEnabled,
 			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
-				// The necessary parameters for this ipsec config were introduced in
-				// OpenShift 4.15, and our vendored APIs are pinned to 4.12.
-				// We need to handle this object as unstructured as a result.
-				&unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"apiVersion": "operator.openshift.io/v1",
-						"kind":       "Network",
-						"metadata": map[string]interface{}{
-							"name": "cluster",
-						},
-						"spec": map[string]interface{}{
-							"defaultNetwork": map[string]interface{}{
-								"ovnKubernetesConfig": map[string]interface{}{
-									"ipsecConfig": map[string]interface{}{
-										"mode": "Disabled",
-									},
+				&operatorv1.Network{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: operatorv1.NetworkSpec{
+						DefaultNetwork: operatorv1.DefaultNetworkDefinition{
+							OVNKubernetesConfig: &operatorv1.OVNKubernetesConfig{
+								IPsecConfig: &operatorv1.IPsecConfig{
+									Mode: operatorv1.IPsecModeDisabled,
 								},
 							},
 						},
@@ -106,21 +99,29 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			clusterFlags:   dirtyfragEnabled,
 			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
-				&unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"apiVersion": "operator.openshift.io/v1",
-						"kind":       "Network",
-						"metadata": map[string]interface{}{
-							"name": "cluster",
-						},
-						"spec": map[string]interface{}{
-							"defaultNetwork": map[string]interface{}{
-								"ovnKubernetesConfig": map[string]interface{}{
-									"ipsecConfig": map[string]interface{}{
-										"mode": true,
-									},
-								},
-							},
+				&operatorv1.Network{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: operatorv1.NetworkSpec{},
+				},
+			},
+			expectedIsRequired:    true,
+			expectedMachineConfig: expectedMasterDirtyfragMachineConfig(),
+		},
+		{
+			desc: "enabled, ipsec mode missing",
+			clusterFlags: map[string]string{
+				operator.DirtyfragWorkaroundEnabled: operator.FlagTrue,
+			},
+			objects: []client.Object{
+				&operatorv1.Network{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: operatorv1.NetworkSpec{
+						DefaultNetwork: operatorv1.DefaultNetworkDefinition{
+							OVNKubernetesConfig: &operatorv1.OVNKubernetesConfig{},
 						},
 					},
 				},
@@ -133,22 +134,15 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			clusterFlags:   dirtyfragEnabled,
 			clusterVersion: apiversion.NewVersion(4, 21, 0),
 			objects: []client.Object{
-				// The necessary parameters for this ipsec config were introduced in
-				// OpenShift 4.15, and our vendored APIs are pinned to 4.12.
-				// We need to handle this object as unstructured as a result.
-				&unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"apiVersion": "operator.openshift.io/v1",
-						"kind":       "Network",
-						"metadata": map[string]interface{}{
-							"name": "cluster",
-						},
-						"spec": map[string]interface{}{
-							"defaultNetwork": map[string]interface{}{
-								"ovnKubernetesConfig": map[string]interface{}{
-									"ipsecConfig": map[string]interface{}{
-										"mode": "Full",
-									},
+				&operatorv1.Network{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: operatorv1.NetworkSpec{
+						DefaultNetwork: operatorv1.DefaultNetworkDefinition{
+							OVNKubernetesConfig: &operatorv1.OVNKubernetesConfig{
+								IPsecConfig: &operatorv1.IPsecConfig{
+									Mode: operatorv1.IPsecModeFull,
 								},
 							},
 						},
@@ -164,7 +158,7 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			clusterVersion:     apiversion.NewVersion(4, 21, 0),
 			expectedIsRequired: true,
 			expectedErr:        errFail,
-			addHooks: func(hc *clienthelper.HookingClient) {
+			addHooks: func(hc *testclienthelper.HookingClient) {
 				hc.WithPreCreateHook(func(obj client.Object) error {
 					return errFail
 				})
@@ -272,18 +266,9 @@ func TestDirtyfragWorkaround(t *testing.T) {
 			r := require.New(t)
 			_, log := testlog.LogForTesting(t)
 
-			// Create a scheme that allows unstructured objects to pass through
-			// without validation against the vendored 4.12 openshift/api types
-			scheme := runtime.NewScheme()
-			// Register only MachineConfig types to allow the test to fetch them
-			err := mcv1.Install(scheme)
-			r.NoError(err)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(tC.objects...)
 
-			clientBuilder := ctrlfake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tC.objects...)
-
-			cl := clienthelper.NewHookingClient(clientBuilder.Build())
+			cl := testclienthelper.NewHookingClient(clientBuilder.Build())
 			if tC.addHooks != nil {
 				tC.addHooks(cl)
 			}
@@ -348,20 +333,19 @@ func TestDirtyfragWorkaroundEnsureMarshalError(t *testing.T) {
 	expectedErr := errors.New("marshal failed")
 	ensureCalled := false
 
-	marshalDirtyfragIgnition = func(v interface{}) ([]byte, error) {
-		return nil, expectedErr
-	}
-	t.Cleanup(func() {
-		marshalDirtyfragIgnition = json.Marshal
-	})
-
-	cl := clienthelper.NewHookingClient(ctrlfake.NewClientBuilder().Build())
+	cl := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder().Build())
 	cl.WithPreCreateHook(func(obj client.Object) error {
 		ensureCalled = true
 		return nil
 	})
 
-	workaround := NewDirtyfragWorkaround(log, cl)
+	workaround := &dirtyfragworkaround{
+		log: log,
+		ch:  clienthelper.NewWithClient(log, cl),
+		marshal: func(v interface{}) ([]byte, error) {
+			return nil, expectedErr
+		},
+	}
 
 	err := workaround.Ensure(t.Context())
 	r.ErrorIs(err, expectedErr)

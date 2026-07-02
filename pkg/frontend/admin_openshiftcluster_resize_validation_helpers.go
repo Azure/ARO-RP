@@ -99,7 +99,7 @@ func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeAction
 
 			machineBasic := machineValidationData{
 				labelZone:         machine.Labels[machineLabelZone],
-				specZone:          *providerSpec.Zone,
+				specZone:          providerSpec.Zone,
 				size:              providerSpec.VMSize,
 				phase:             phase,
 				labelInstanceType: machine.Labels[machineLabelInstanceType],

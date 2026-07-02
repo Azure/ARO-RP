@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -27,7 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
-	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 func clusterVersionForTest(version string) *configv1.ClusterVersion {
@@ -230,7 +229,7 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 			}
 			dep := mock_deployer.NewMockDeployer(controller)
 			dh := mock_dynamichelper.NewMockInterface(controller)
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(cluster, cv)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(cluster, cv)
 
 			if tt.mocks != nil {
 				tt.mocks(dep, cluster)
@@ -370,7 +369,7 @@ func TestReconcileVAP(t *testing.T) {
 			r := &Reconciler{
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 				deployer:      dep,
-				client:        ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
+				client:        testclienthelper.NewAROFakeClientBuilder(cluster, cv).Build(),
 				dh:            dh,
 				cleanupNeeded: tt.cleanupNeeded,
 			}
@@ -459,7 +458,7 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 
 	r := &Reconciler{
 		log:    logrus.NewEntry(logrus.StandardLogger()),
-		client: ctrlfake.NewClientBuilder().WithObjects(cluster).Build(),
+		client: testclienthelper.NewAROFakeClientBuilder(cluster).Build(),
 		dh:     dh,
 	}
 
@@ -639,7 +638,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 				log:               logrus.NewEntry(logrus.StandardLogger()),
 				deployer:          dep,
 				dh:                dh,
-				client:            ctrlfake.NewClientBuilder().WithObjects(cluster, cv).Build(),
+				client:            testclienthelper.NewAROFakeClientBuilder(cluster, cv).Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}

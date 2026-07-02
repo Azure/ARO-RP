@@ -18,7 +18,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -135,15 +134,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	// lazy discovery will not attempt to reach out to the apiserver immediately
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return nil, err
-	}
-
-	ocpclientset, err := client.New(restConfig, client.Options{
-		Mapper: mapper,
-	})
+	ocpclientset, err := client.New(restConfig, client.Options{HTTPClient: httpClient})
 	if err != nil {
 		return nil, err
 	}

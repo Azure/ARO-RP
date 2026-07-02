@@ -314,11 +314,9 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 }
 
 func waitForEtcdHealthy(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions) error {
-	ctx, cancel := context.WithTimeout(ctx, etcdHealthPollTimeout)
-	defer cancel()
-
-	return wait.PollImmediateUntilWithContext(ctx, etcdHealthPollInterval, func(ctx context.Context) (bool, error) {
-		if err := validateEtcdHealth(ctx, k); err != nil {
+	return wait.PollUntilContextTimeout(ctx, etcdHealthPollInterval, etcdHealthPollTimeout, true, func(innerCtx context.Context) (bool, error) {
+		err := validateEtcdHealth(innerCtx, k)
+		if err != nil {
 			var cloudErr *api.CloudError
 			if errors.As(err, &cloudErr) && cloudErr.StatusCode == http.StatusConflict {
 				log.Infof("Waiting for etcd to become healthy: %v", err)

@@ -8,13 +8,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type (
-	getFunc  func(key client.ObjectKey, obj client.Object) error
+	getFunc  func(key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
 	listFunc func(obj client.ObjectList, opts *client.ListOptions) error
 	hookFunc func(obj client.Object) error
 )
@@ -124,21 +125,21 @@ func (c *HookingClient) WithPrePatchHook(f hookFunc) *HookingClient {
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.Get]
-func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	for _, h := range c.preGetHook {
-		err := h(key, obj)
+		err := h(key, obj, opts...)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := c.f.Get(ctx, key, obj)
+	err := c.f.Get(ctx, key, obj, opts...)
 	if err != nil {
 		return err
 	}
 
 	for _, h := range c.postGetHook {
-		err := h(key, obj)
+		err := h(key, obj, opts...)
 		if err != nil {
 			return err
 		}
@@ -289,4 +290,18 @@ func (c *HookingClient) RESTMapper() meta.RESTMapper {
 // See [sigs.k8s.io/controller-runtime/pkg/client.Client.Status]
 func (c *HookingClient) Status() client.StatusWriter {
 	return c.f.Status()
+}
+
+// See [sigs.k8s.io/controller-runtime/pkg/client.Client.GroupVersionKindFor]
+func (c *HookingClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	return c.f.GroupVersionKindFor(obj)
+}
+
+// See [sigs.k8s.io/controller-runtime/pkg/client.Client.IsObjectNamespaced]
+func (c *HookingClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return c.f.IsObjectNamespaced(obj)
+}
+
+func (c *HookingClient) SubResource(input string) client.SubResourceClient {
+	return c.f.SubResource(input)
 }

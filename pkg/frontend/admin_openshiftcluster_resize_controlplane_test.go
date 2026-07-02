@@ -45,7 +45,7 @@ func masterMachineListJSON(machines ...machinev1beta1.Machine) []byte {
 
 func masterMachine(name, vmSize, phase string) machinev1beta1.Machine {
 	providerSpec := &machinev1beta1.AzureMachineProviderSpec{
-		Zone:   strPtr("1"),
+		Zone:   "1",
 		VMSize: vmSize,
 	}
 	raw, _ := json.Marshal(providerSpec)
@@ -70,8 +70,6 @@ func masterMachine(name, vmSize, phase string) machinev1beta1.Machine {
 	}
 	return m
 }
-
-func strPtr(s string) *string { return &s }
 
 func cpmsJSON(state string) []byte {
 	obj := map[string]any{

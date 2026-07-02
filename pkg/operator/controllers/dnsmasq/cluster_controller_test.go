@@ -14,11 +14,10 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -364,8 +363,7 @@ func TestClusterReconciler(t *testing.T) {
 			createTally := make(map[string]int)
 			updateTally := make(map[string]int)
 
-			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
-				WithObjects(tt.objects...).
+			client := testclienthelper.NewHookingClient(testclienthelper.NewAROFakeClientBuilder(tt.objects...).
 				Build()).WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
 			log := logrus.NewEntry(logrus.StandardLogger())
