@@ -153,7 +153,7 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 		config:      config,
 		version:     version,
 		vmssCleaner: vmsscleaner.New(_env.LoggerForComponent("vmsscleaner"), vmssClient),
-		forceNSGs:   config.Configuration.ForceNSGsOnly != nil && *config.Configuration.ForceNSGsOnly,
+		forceNSGs:   true,
 	}, nil
 }
 
