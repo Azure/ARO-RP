@@ -294,6 +294,10 @@ exporters:
       enabled: true
 
 service:
+  telemetry:
+    metrics:
+      level: basic
+      address: 0.0.0.0:8888
   extensions: [health_check, file_storage]
   pipelines:
 {{- range .Sources }}

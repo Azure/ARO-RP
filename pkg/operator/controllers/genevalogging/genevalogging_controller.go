@@ -6,10 +6,12 @@ package genevalogging
 import (
 	"context"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -168,6 +170,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Namespace{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
+		Owns(&monitoringv1.PodMonitor{}).
+		Owns(&rbacv1.Role{}).
+		Owns(&rbacv1.RoleBinding{}).
 		Owns(&securityv1.SecurityContextConstraints{}).
 		Named(ControllerName).
 		Complete(r)
