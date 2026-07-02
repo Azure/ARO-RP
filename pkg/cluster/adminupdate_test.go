@@ -68,7 +68,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action ensureGatewayUpgrade]",
 		"[Action rotateACRTokenPassword]",
 		"[Action populateRegistryStorageAccountName]",
-		"[Action ensureMTUSize]",
 		"[Action reconcileSoftwareDefinedNetwork]",
 	}
 
