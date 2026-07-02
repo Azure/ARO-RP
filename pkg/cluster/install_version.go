@@ -10,5 +10,6 @@ import (
 )
 
 func (m *manager) openShiftVersionFromVersion(ctx context.Context) (*api.OpenShiftVersion, error) {
-	return m.openShiftClusterDocumentVersioner.Get(ctx, m.doc, m.dbOpenShiftVersions, m.env, m.installViaHive)
+	// Use the enhanced version resolver with subscription data for AFEC flag support
+	return m.openShiftClusterDocumentVersioner.GetWithSubscription(ctx, m.doc, m.dbOpenShiftVersions, m.env, m.installViaHive, m.subscriptionDoc)
 }
