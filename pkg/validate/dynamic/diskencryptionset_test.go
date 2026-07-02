@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -26,6 +25,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestValidateDiskEncryptionSets(t *testing.T) {
@@ -421,6 +421,8 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 				},
 			} {
 				t.Run(tt.name, func(t *testing.T) {
+					_, log := testlog.LogForTesting(t)
+
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
@@ -436,7 +438,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 						appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 						env:                        _env,
 						authorizerType:             authorizerType,
-						log:                        logrus.NewEntry(logrus.StandardLogger()),
+						log:                        log,
 						diskEncryptionSets:         diskEncryptionSetsClient,
 						pdpClient:                  remotePDPClient,
 						checkAccessSubjectInfoCred: tokenCred,

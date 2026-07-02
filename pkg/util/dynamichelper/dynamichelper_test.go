@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type mockGVRResolver struct{}
@@ -36,6 +35,8 @@ func (gvr mockGVRResolver) Resolve(groupKind, optionalVersion string) (*schema.G
 }
 
 func TestEsureDeleted(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctx := context.Background()
 
 	mockGVRResolver := mockGVRResolver{}
@@ -67,7 +68,7 @@ func TestEsureDeleted(t *testing.T) {
 	dh := &dynamicHelper{
 		GVRResolver: mockGVRResolver,
 		restcli:     mockRestCLI,
-		log:         logrus.NewEntry(logrus.StandardLogger()),
+		log:         log,
 	}
 
 	err := dh.EnsureDeleted(ctx, "configmap", "test-ns-1", "test-name-1")

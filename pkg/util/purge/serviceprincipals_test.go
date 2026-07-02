@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -19,6 +18,7 @@ import (
 
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestBuildIDPattern(t *testing.T) {
@@ -70,8 +70,9 @@ func TestBuildIDPattern(t *testing.T) {
 }
 
 func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctx := context.Background()
-	log := logrus.NewEntry(logrus.New())
 	ttl := 48 * time.Hour
 	now := time.Now()
 

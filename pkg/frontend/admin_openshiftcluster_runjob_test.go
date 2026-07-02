@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminPostRunJob(t *testing.T) {
@@ -581,6 +582,7 @@ func TestWaitForJobPod_ErrorBranches(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			fw := watch.NewFake()
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -593,7 +595,7 @@ func TestWaitForJobPod_ErrorBranches(t *testing.T) {
 				cancel()
 			}
 
-			podName, err := waitForJobPod(ctx, logrus.NewEntry(logrus.New()), fw)
+			podName, err := waitForJobPod(ctx, log, fw)
 			if tt.wantErrContains != "" {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -615,11 +617,13 @@ func TestWaitForJobPod_ErrorBranches(t *testing.T) {
 
 // TestWaitForJobPod_ClosedChannelWithCancelledContext verifies ctx.Err() is preferred over generic error.
 func TestWaitForJobPod_ClosedChannelWithCancelledContext(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	fw := watch.NewFake()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()  // cancel first so ctx.Err() is non-nil
 	fw.Stop() // close the channel; the !ok branch should inspect ctx.Err()
-	_, err := waitForJobPod(ctx, logrus.NewEntry(logrus.New()), fw)
+	_, err := waitForJobPod(ctx, log, fw)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -630,6 +634,8 @@ func TestWaitForJobPod_ClosedChannelWithCancelledContext(t *testing.T) {
 
 // TestWaitForJobTerminal_MaxErrors verifies exit after maxConsecutiveErrors consecutive failures.
 func TestWaitForJobTerminal_MaxErrors(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -639,7 +645,7 @@ func TestWaitForJobTerminal_MaxErrors(t *testing.T) {
 		Return(nil, errors.New("apiserver down")).
 		Times(10)
 
-	result := waitForJobTerminal(context.Background(), logrus.NewEntry(logrus.New()), k, "test-ns", "test-job", 0)
+	result := waitForJobTerminal(context.Background(), log, k, "test-ns", "test-job", 0)
 	if !strings.Contains(result, "fetching job status") {
 		t.Errorf("unexpected result %q; want it to contain 'fetching job status'", result)
 	}
@@ -714,6 +720,8 @@ func TestJobResult(t *testing.T) {
 
 // TestRunJobStream_LogStreamingError verifies log failure writes error then continues.
 func TestRunJobStream_LogStreamingError(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -756,7 +764,7 @@ func TestRunJobStream_LogStreamingError(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	got := buf.String()
 	if !strings.Contains(got, "Log streaming error:") {
@@ -769,6 +777,8 @@ func TestRunJobStream_LogStreamingError(t *testing.T) {
 
 // TestRunJobStream_CleanupFailure verifies KubeDelete failure writes "Cleanup failed:".
 func TestRunJobStream_CleanupFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -814,7 +824,7 @@ func TestRunJobStream_CleanupFailure(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -827,6 +837,8 @@ func TestRunJobStream_CleanupFailure(t *testing.T) {
 
 // TestRunJobStream_CleanupNotFound verifies 404 during cleanup is treated as success.
 func TestRunJobStream_CleanupNotFound(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -871,7 +883,7 @@ func TestRunJobStream_CleanupNotFound(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -887,6 +899,8 @@ func TestRunJobStream_CleanupNotFound(t *testing.T) {
 
 // TestRunJobStream_ContextCancellation verifies cancel skips terminal status writes.
 func TestRunJobStream_ContextCancellation(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -936,7 +950,7 @@ func TestRunJobStream_ContextCancellation(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -949,6 +963,8 @@ func TestRunJobStream_ContextCancellation(t *testing.T) {
 
 // TestRunJobStream_PollExhausted verifies exit after maxConsecutiveErrors writes "Job polling exhausted".
 func TestRunJobStream_PollExhausted(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -986,7 +1002,7 @@ func TestRunJobStream_PollExhausted(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	if !strings.Contains(buf.String(), "Job polling exhausted") {
 		t.Errorf("output %q does not contain 'Job polling exhausted'", buf.String())
@@ -995,6 +1011,8 @@ func TestRunJobStream_PollExhausted(t *testing.T) {
 
 // TestRunJobStream_WaitForPodErrorWithCleanupFailure verifies pod error is streamed, cleanup error is logged.
 func TestRunJobStream_WaitForPodErrorWithCleanupFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -1021,7 +1039,7 @@ func TestRunJobStream_WaitForPodErrorWithCleanupFailure(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(context.Background(), logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(context.Background(), log, k, job, wc, 0)
 
 	got := buf.String()
 	if !strings.Contains(got, "Error waiting for pod:") {
@@ -1034,6 +1052,8 @@ func TestRunJobStream_WaitForPodErrorWithCleanupFailure(t *testing.T) {
 
 // TestRunJobStream_ContextCancellationWithCleanupFailure verifies cancel skips all pipe writes.
 func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -1076,7 +1096,7 @@ func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 	if !wc.closed {
 		t.Error("expected WriteCloser to be closed")
 	}
@@ -1089,6 +1109,8 @@ func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
 
 // TestRunJobStream_LogErrorWithCancelledContext verifies log errors are suppressed when cancelled.
 func TestRunJobStream_LogErrorWithCancelledContext(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -1130,7 +1152,7 @@ func TestRunJobStream_LogErrorWithCancelledContext(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 
 	got := buf.String()
 	if strings.Contains(got, "Log streaming error:") {
@@ -1150,6 +1172,8 @@ func (w *bufferedTestWatcher) ResultChan() <-chan watch.Event { return w.ch }
 
 // TestRunJobStream_ContextCancelledBetweenPodAndLogs verifies log streaming is skipped on cancel.
 func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
@@ -1193,7 +1217,7 @@ func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	runJobStream(ctx, logrus.NewEntry(logrus.New()), k, job, wc, 0)
+	runJobStream(ctx, log, k, job, wc, 0)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")

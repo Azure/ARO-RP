@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -19,6 +17,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestConditions(t *testing.T) {
@@ -119,6 +118,7 @@ func TestConditions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			client := testclienthelper.NewAROFakeClientBuilder(
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
@@ -132,7 +132,7 @@ func TestConditions(t *testing.T) {
 			).Build()
 
 			controller := AROController{
-				Log:    logrus.NewEntry(logrus.StandardLogger()),
+				Log:    log,
 				Client: client,
 				Name:   controllerName,
 			}

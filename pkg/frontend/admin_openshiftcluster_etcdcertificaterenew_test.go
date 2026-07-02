@@ -31,6 +31,7 @@ import (
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminEtcdCertificateRenew(t *testing.T) {
@@ -799,7 +800,7 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			log := logrus.NewEntry(logrus.New())
+			_, log := testlog.LogForTesting(t)
 
 			err = f._postAdminOpenShiftClusterEtcdCertificateRenew(ctx, strings.ToLower(tt.resourceID), log, time.Duration(tt.timeout)*time.Second)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)

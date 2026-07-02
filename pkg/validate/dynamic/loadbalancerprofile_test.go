@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -17,6 +16,7 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestValidateLoadBalancerProfile(t *testing.T) {
@@ -99,6 +99,8 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -112,7 +114,7 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 				tt.mocks(networkUsageClient, loadBalancerBackendAddressPoolsClient)
 			}
 			dv := &dynamic{
-				log:                                   logrus.NewEntry(logrus.StandardLogger()),
+				log:                                   log,
 				spNetworkUsage:                        networkUsageClient,
 				loadBalancerBackendAddressPoolsClient: loadBalancerBackendAddressPoolsClient,
 			}
@@ -299,6 +301,8 @@ func TestValidatePublicIPQuota(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -312,7 +316,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				log:            logrus.NewEntry(logrus.StandardLogger()),
+				log:            log,
 				spNetworkUsage: networkUsageClient,
 			}
 
@@ -419,6 +423,8 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -432,7 +438,7 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				log:                                   logrus.NewEntry(logrus.StandardLogger()),
+				log:                                   log,
 				loadBalancerBackendAddressPoolsClient: loadBalancerBackendAddressPoolsClient,
 			}
 

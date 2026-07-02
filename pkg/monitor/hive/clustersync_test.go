@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -20,6 +18,7 @@ import (
 
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitClusterSync(t *testing.T) {
@@ -173,8 +172,7 @@ func TestEmitClusterSync(t *testing.T) {
 			mockHiveClusterManager.EXPECT().GetClusterSync(ctx, gomock.Any()).Return(tt.clusterSync, tt.getClusterSyncErr).AnyTimes()
 
 			m := mock_metrics.NewMockEmitter(ctrl)
-			logger, hook := test.NewNullLogger()
-			log := logrus.NewEntry(logger)
+			hook, log := testlog.LogForTesting(t)
 
 			mockMonitor := &Monitor{
 				hiveClusterManager: mockHiveClusterManager,

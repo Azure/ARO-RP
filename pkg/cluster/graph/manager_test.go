@@ -8,7 +8,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -17,6 +16,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/storage"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestLoadPersisted(t *testing.T) {
@@ -55,8 +55,9 @@ func TestLoadPersisted(t *testing.T) {
 
 			tt.mocks(storage, env, kv)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:     logrus.NewEntry(logrus.StandardLogger()),
+				log:     log,
 				storage: storage,
 				env:     env,
 			}

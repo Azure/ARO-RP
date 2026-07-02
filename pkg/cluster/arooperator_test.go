@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_deploy "github.com/Azure/ARO-RP/pkg/util/mocks/operator/deploy"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnsureAROOperator(t *testing.T) {
@@ -114,8 +114,10 @@ func TestEnsureAROOperator(t *testing.T) {
 				tt.mocks(dep)
 			}
 
+			_, log := testlog.LogForTesting(t)
+
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: tt.doc,
 
 				aroOperatorDeployer: dep,
@@ -209,8 +211,9 @@ func TestInstallAROOperator(t *testing.T) {
 				tt.mocks(dep)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: tt.doc,
 
 				aroOperatorDeployer: dep,
@@ -290,8 +293,10 @@ func TestSyncClusterObject(t *testing.T) {
 				tt.mocks(dep)
 			}
 
+			_, log := testlog.LogForTesting(t)
+
 			m := &manager{
-				log:                 logrus.NewEntry(logrus.StandardLogger()),
+				log:                 log,
 				doc:                 tt.doc,
 				aroOperatorDeployer: dep,
 			}
@@ -384,8 +389,9 @@ func TestAroDeploymentReady(t *testing.T) {
 				tt.mocks(dep)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:                 logrus.NewEntry(logrus.StandardLogger()),
+				log:                 log,
 				doc:                 tt.doc,
 				aroOperatorDeployer: dep,
 			}
@@ -480,8 +486,9 @@ func TestEnsureAROOperatorRunningDesiredVersion(t *testing.T) {
 				tt.mocks(dep)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:                 logrus.NewEntry(logrus.StandardLogger()),
+				log:                 log,
 				doc:                 tt.doc,
 				aroOperatorDeployer: dep,
 			}

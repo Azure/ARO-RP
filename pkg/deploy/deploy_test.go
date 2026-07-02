@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -25,6 +24,7 @@ import (
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeploy(t *testing.T) {
@@ -144,8 +144,9 @@ func TestDeploy(t *testing.T) {
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 			mockVMSSCleaner := mock_vmsscleaner.NewMockInterface(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:         logrus.NewEntry(logrus.StandardLogger()),
+				log:         log,
 				deployments: mockDeployments,
 				vmssCleaner: mockVMSSCleaner,
 				config: &RPConfig{
@@ -415,8 +416,9 @@ func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
 				},
 			)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:  logrus.NewEntry(logrus.StandardLogger()),
+				log:  log,
 				vmss: mockVMSS,
 			}
 
@@ -440,8 +442,9 @@ func TestRunCommandWithRetrySuccess(t *testing.T) {
 	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(nil)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -466,8 +469,9 @@ func TestRunCommandWithRetryRetriesOnOperationPreempted(t *testing.T) {
 		mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(nil),
 	)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -495,8 +499,9 @@ func TestRunCommandWithRetryReturnsLastError(t *testing.T) {
 	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(wantErr).Times(3)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -525,8 +530,9 @@ func TestRunCommandWithRetryReturnsNonRetryableError(t *testing.T) {
 	mockVMSSVMs := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 	mockVMSSVMs.EXPECT().RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input).Return(wantErr)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 
@@ -555,8 +561,9 @@ func TestRunCommandWithRetryContextCancelled(t *testing.T) {
 		},
 	)
 
+	_, log := testlog.LogForTesting(t)
 	d := deployer{
-		log:     logrus.NewEntry(logrus.StandardLogger()),
+		log:     log,
 		vmssvms: mockVMSSVMs,
 	}
 

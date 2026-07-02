@@ -6,7 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -16,9 +15,12 @@ import (
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitCWPStatus(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -28,7 +30,7 @@ func TestEmitCWPStatus(t *testing.T) {
 	mon := &Monitor{
 		configcli: fakeConfigClient,
 		m:         mockMetrics,
-		log:       logrus.NewEntry(logrus.New()),
+		log:       log,
 	}
 
 	tests := []struct {

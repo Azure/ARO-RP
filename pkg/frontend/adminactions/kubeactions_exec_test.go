@@ -24,6 +24,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
+
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // newExecTestServer starts a TLS httptest server speaking v4.channel.k8s.io.
@@ -77,7 +79,7 @@ func sendFrame(conn *websocket.Conn, channelID byte, data []byte) error {
 	return websocket.Message.Send(conn, msg)
 }
 
-func runExecWithContext(ctx context.Context, rc *restclient.Config, execURL *url.URL, stdout, stderr io.Writer) error {
+func runExecWithContext(ctx context.Context, log *logrus.Entry, rc *restclient.Config, execURL *url.URL, stdout, stderr io.Writer) error {
 	wsConn, tlsConn, err := dialExecWebSocket(ctx, rc, execURL)
 	if err != nil {
 		return err
@@ -85,14 +87,14 @@ func runExecWithContext(ctx context.Context, rc *restclient.Config, execURL *url
 	var closeOnce sync.Once
 	closeTLS := func() { closeOnce.Do(func() { tlsConn.Close() }) }
 	defer closeTLS()
-	return execWebSocketFrames(ctx, logrus.NewEntry(logrus.New()), wsConn, closeTLS, stdout, stderr)
+	return execWebSocketFrames(ctx, log, wsConn, closeTLS, stdout, stderr)
 }
 
 // runExec is a convenience wrapper that uses a 5-second safety timeout.
-func runExec(rc *restclient.Config, execURL *url.URL, stdout, stderr io.Writer) error {
+func runExec(log *logrus.Entry, rc *restclient.Config, execURL *url.URL, stdout, stderr io.Writer) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return runExecWithContext(ctx, rc, execURL, stdout, stderr)
+	return runExecWithContext(ctx, log, rc, execURL, stdout, stderr)
 }
 
 // TestDialExecWebSocket_UpgradeRejected verifies that a non-101 HTTP response from the API server
@@ -161,6 +163,8 @@ func TestDialExecWebSocket_UpgradeRejected(t *testing.T) {
 
 // TestDialExecWebSocket_StdoutStderr verifies channel-1/2 frames route to correct writers.
 func TestDialExecWebSocket_StdoutStderr(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		defer conn.Close()
 		_ = sendFrame(conn, 1, []byte("hello stdout"))
@@ -171,7 +175,7 @@ func TestDialExecWebSocket_StdoutStderr(t *testing.T) {
 	})
 
 	var stdout, stderr bytes.Buffer
-	if err := runExec(rc, execWebSocketURL(ts), &stdout, &stderr); err != nil {
+	if err := runExec(log, rc, execWebSocketURL(ts), &stdout, &stderr); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if got := stdout.String(); got != "hello stdout" {
@@ -184,6 +188,8 @@ func TestDialExecWebSocket_StdoutStderr(t *testing.T) {
 
 // TestDialExecWebSocket_NonZeroExit verifies a Failure status frame surfaces as an error.
 func TestDialExecWebSocket_NonZeroExit(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		defer conn.Close()
 		statusJSON, _ := json.Marshal(metav1.Status{
@@ -194,7 +200,7 @@ func TestDialExecWebSocket_NonZeroExit(t *testing.T) {
 	})
 
 	var stdout, stderr bytes.Buffer
-	err := runExec(rc, execWebSocketURL(ts), &stdout, &stderr)
+	err := runExec(log, rc, execWebSocketURL(ts), &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected error for non-zero exit; got nil")
 	}
@@ -206,6 +212,8 @@ func TestDialExecWebSocket_NonZeroExit(t *testing.T) {
 // TestDialExecWebSocket_NonZeroExit_EmptyMessage verifies that StatusFailure with an empty Message
 // falls through to the hardcoded sentinel string.
 func TestDialExecWebSocket_NonZeroExit_EmptyMessage(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		defer conn.Close()
 		statusJSON, _ := json.Marshal(metav1.Status{
@@ -216,7 +224,7 @@ func TestDialExecWebSocket_NonZeroExit_EmptyMessage(t *testing.T) {
 	})
 
 	var stdout, stderr bytes.Buffer
-	err := runExec(rc, execWebSocketURL(ts), &stdout, &stderr)
+	err := runExec(log, rc, execWebSocketURL(ts), &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected error for StatusFailure with empty message; got nil")
 	}
@@ -228,6 +236,8 @@ func TestDialExecWebSocket_NonZeroExit_EmptyMessage(t *testing.T) {
 // TestDialExecWebSocket_ZeroLengthFrameSkipped verifies that a zero-length WebSocket frame is
 // silently skipped and does not affect the final result.
 func TestDialExecWebSocket_ZeroLengthFrameSkipped(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		defer conn.Close()
 		// Send a zero-length frame; the client should skip it without error.
@@ -238,7 +248,7 @@ func TestDialExecWebSocket_ZeroLengthFrameSkipped(t *testing.T) {
 	})
 
 	var stdout, stderr bytes.Buffer
-	err := runExec(rc, execWebSocketURL(ts), &stdout, &stderr)
+	err := runExec(log, rc, execWebSocketURL(ts), &stdout, &stderr)
 	if err != nil {
 		t.Errorf("expected nil error after zero-length frame; got %v", err)
 	}
@@ -246,6 +256,8 @@ func TestDialExecWebSocket_ZeroLengthFrameSkipped(t *testing.T) {
 
 // TestDialExecWebSocket_ContextCancellation verifies cancel unblocks even when the server hangs.
 func TestDialExecWebSocket_ContextCancellation(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	// serverReady is closed once the server-side goroutine is running.
 	serverReady := make(chan struct{})
 
@@ -270,7 +282,7 @@ func TestDialExecWebSocket_ContextCancellation(t *testing.T) {
 	}()
 
 	var stdout, stderr bytes.Buffer
-	err := runExecWithContext(ctx, rc, execWebSocketURL(ts), &stdout, &stderr)
+	err := runExecWithContext(ctx, log, rc, execWebSocketURL(ts), &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected context.Canceled; got nil")
 	}
@@ -281,6 +293,8 @@ func TestDialExecWebSocket_ContextCancellation(t *testing.T) {
 
 // TestDialExecWebSocket_PrematureEOF verifies close without status frame surfaces an error.
 func TestDialExecWebSocket_PrematureEOF(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		// Send some stdout, then abruptly close - no status frame.
 		_ = sendFrame(conn, 1, []byte("partial"))
@@ -288,7 +302,7 @@ func TestDialExecWebSocket_PrematureEOF(t *testing.T) {
 	})
 
 	var stdout, stderr bytes.Buffer
-	err := runExec(rc, execWebSocketURL(ts), &stdout, &stderr)
+	err := runExec(log, rc, execWebSocketURL(ts), &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected error for premature server close; got nil")
 	}
@@ -303,6 +317,8 @@ func TestDialExecWebSocket_PrematureEOF(t *testing.T) {
 
 // TestDialExecWebSocket_UnexpectedChannelID verifies unknown channel IDs surface an error.
 func TestDialExecWebSocket_UnexpectedChannelID(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		defer conn.Close()
 		// Send a frame on channel 4, which is not part of the v4.channel.k8s.io protocol.
@@ -310,7 +326,7 @@ func TestDialExecWebSocket_UnexpectedChannelID(t *testing.T) {
 	})
 
 	var stdout, stderr bytes.Buffer
-	err := runExec(rc, execWebSocketURL(ts), &stdout, &stderr)
+	err := runExec(log, rc, execWebSocketURL(ts), &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected error for unknown channel ID; got nil")
 	}
@@ -327,6 +343,8 @@ func (e *errWriter) Write(_ []byte) (int, error) { return 0, e.err }
 
 // TestDialExecWebSocket_WriterError verifies stdout write errors are propagated.
 func TestDialExecWebSocket_WriterError(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	writeErr := errors.New("disk full")
 
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
@@ -340,7 +358,7 @@ func TestDialExecWebSocket_WriterError(t *testing.T) {
 
 	stdout := &errWriter{err: writeErr}
 	var stderr bytes.Buffer
-	err := runExec(rc, execWebSocketURL(ts), stdout, &stderr)
+	err := runExec(log, rc, execWebSocketURL(ts), stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected write error; got nil")
 	}
@@ -351,13 +369,15 @@ func TestDialExecWebSocket_WriterError(t *testing.T) {
 
 // TestDialExecWebSocket_MalformedStatusFrame verifies invalid JSON on channel 3 surfaces an error.
 func TestDialExecWebSocket_MalformedStatusFrame(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		defer conn.Close()
 		_ = sendFrame(conn, 3, []byte("not-valid-json"))
 	})
 
 	var stdout, stderr bytes.Buffer
-	err := runExec(rc, execWebSocketURL(ts), &stdout, &stderr)
+	err := runExec(log, rc, execWebSocketURL(ts), &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected error for malformed status frame; got nil")
 	}
@@ -369,6 +389,8 @@ func TestDialExecWebSocket_MalformedStatusFrame(t *testing.T) {
 // TestDialExecWebSocket_HeartbeatTimeout verifies that an expired read deadline surfaces the
 // "exec connection timed out" error from the heartbeat receive goroutine.
 func TestDialExecWebSocket_HeartbeatTimeout(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ts, rc := newExecTestServer(t, func(conn *websocket.Conn) {
 		// Hold the connection without sending anything; client will time out.
 		var msg []byte
@@ -393,7 +415,7 @@ func TestDialExecWebSocket_HeartbeatTimeout(t *testing.T) {
 	defer closeTLS()
 
 	var stdout, stderr bytes.Buffer
-	err = execWebSocketFrames(ctx, logrus.NewEntry(logrus.New()), wsConn, closeTLS, &stdout, &stderr)
+	err = execWebSocketFrames(ctx, log, wsConn, closeTLS, &stdout, &stderr)
 	if err == nil {
 		t.Fatal("expected timeout error; got nil")
 	}

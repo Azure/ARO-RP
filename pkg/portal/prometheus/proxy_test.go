@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +37,7 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/listener"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type conn struct {
@@ -249,6 +249,8 @@ func TestProxy(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			dbOpenShiftClusters, openShiftClustersClient := testdatabase.NewFakeOpenShiftClusters()
 
 			fixture := testdatabase.NewFixture().
@@ -281,7 +283,7 @@ func TestProxy(t *testing.T) {
 				tt.mocks(dialer)
 			}
 
-			prom := New(logrus.NewEntry(logrus.StandardLogger()), dbOpenShiftClusters, dialer)
+			prom := New(log, dbOpenShiftClusters, dialer)
 			aadAuthenticatedRouter := &mux.Router{}
 
 			if tt.r != nil {

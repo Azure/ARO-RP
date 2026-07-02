@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // newKubeActionsTestFrontend creates a frontend for streaming admin endpoint unit tests
@@ -133,8 +134,10 @@ func TestLimitedWriter(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			var buf bytes.Buffer
-			lw := newLimitedWriter(&buf, "stdout", logrus.NewEntry(logrus.New()))
+			lw := newLimitedWriter(&buf, "stdout", log)
 
 			for _, w := range tt.writes {
 				n, err := lw.Write([]byte(w))
@@ -158,9 +161,11 @@ func TestLimitedWriter(t *testing.T) {
 }
 
 func TestLimitedWriter_UnderlyingWriterError(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	wantErr := errors.New("disk full")
 	ew := &errWriter{err: wantErr}
-	lw := newLimitedWriter(ew, "stdout", logrus.NewEntry(logrus.New()))
+	lw := newLimitedWriter(ew, "stdout", log)
 
 	n, err := lw.Write([]byte("hello"))
 	if !errors.Is(err, wantErr) {

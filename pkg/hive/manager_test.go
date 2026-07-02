@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +29,7 @@ import (
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestIsClusterDeploymentReady(t *testing.T) {
@@ -120,7 +120,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.LogForTesting(t)
 
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
@@ -132,7 +132,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				env:           mockEnv,
 			}
 
@@ -364,7 +364,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.LogForTesting(t)
 
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
@@ -381,7 +381,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				env:           mockEnv,
 			}
 
@@ -550,13 +550,15 @@ func TestGetClusterDeployment(t *testing.T) {
 		{name: "cd does not exist err returned", wantErr: `clusterdeployments.hive.openshift.io "cluster" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(cd)
 			}
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
 			result, err := c.GetClusterDeployment(context.Background(), doc.OpenShiftCluster)
@@ -599,13 +601,15 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 		{name: "syncset does not exist err returned", wantErr: `clustersyncs.hiveinternal.openshift.io "cluster" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(cs)
 			}
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
 			result, err := c.GetClusterSync(context.Background(), doc.OpenShiftCluster)
@@ -656,13 +660,15 @@ func TestListSyncSet(t *testing.T) {
 		{name: "syncsets exists and are returned"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(syncsetTest)
 			}
 			s := syncSetManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
 			result, err := s.List(context.Background(), tt.namespace, tt.label, reflect.TypeOf(hivev1.SyncSetList{}))
@@ -697,13 +703,15 @@ func TestGetSyncSet(t *testing.T) {
 		{name: "syncset does not exist err returned", syncsetname: "", namespace: "", wantErr: `syncsets.hive.openshift.io "" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(syncsetTest)
 			}
 			s := syncSetManager{
 				hiveClientset: fakeClientBuilder.Build(),
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 			}
 
 			result, err := s.Get(context.Background(), tt.namespace, tt.syncsetname, reflect.TypeOf(hivev1.SyncSet{}))

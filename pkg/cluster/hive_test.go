@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +18,7 @@ import (
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestHiveClusterDeploymentReady(t *testing.T) {
@@ -187,6 +187,7 @@ func TestHiveCreateNamespace(t *testing.T) {
 }
 
 func createManagerForTests(t *testing.T, existingNamespaceName string) *manager {
+	_, log := testlog.LogForTesting(t)
 	fakeDb, _ := testdatabase.NewFakeOpenShiftClusters()
 	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 
@@ -210,7 +211,7 @@ func createManagerForTests(t *testing.T, existingNamespaceName string) *manager 
 	}
 
 	return &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 		db:  fakeDb,
 		doc: doc,
 
