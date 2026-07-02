@@ -236,12 +236,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 
 		ctx, cancel = context.WithCancel(context.Background())
 
-		log = logrus.NewEntry(&logrus.Logger{
-			Out:       GinkgoWriter,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.DebugLevel,
-		})
+		_, log = testlog.LogForTesting(GinkgoTB())
 
 		fixtures = testdatabase.NewFixture()
 		checker = testdatabase.NewChecker()
@@ -438,12 +433,7 @@ var _ = Describe("MIMO Bucket Partitioning", Ordered, func() {
 	var log *logrus.Entry
 
 	BeforeAll(func() {
-		log = logrus.NewEntry(&logrus.Logger{
-			Out:       GinkgoWriter,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.DebugLevel,
-		})
+		_, log = testlog.LogForTesting(GinkgoTB())
 
 		controller = gomock.NewController(nil)
 		_env = mock_env.NewMockInterface(controller)

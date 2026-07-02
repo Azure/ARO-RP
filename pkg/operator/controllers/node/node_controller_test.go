@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -27,6 +25,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconciler(t *testing.T) {
@@ -405,6 +404,8 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if !tt.clusterNotFound {
 				cluster := &arov1alpha1.Cluster{
@@ -428,7 +429,7 @@ func TestReconciler(t *testing.T) {
 
 			client := clientBuilder.Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), client, fake.NewSimpleClientset(tt.nodeObject))
+			r := NewReconciler(log, client, fake.NewSimpleClientset(tt.nodeObject))
 
 			request := ctrl.Request{}
 			request.Name = tt.nodeName

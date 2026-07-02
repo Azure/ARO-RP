@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminHiveK8sObjectsList(t *testing.T) {
@@ -66,6 +66,8 @@ func TestAdminHiveK8sObjectsList(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			controller := gomock.NewController(t)
 			defer ti.done()
@@ -95,7 +97,7 @@ func TestAdminHiveK8sObjectsList(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("resource", "pods")
 			reqCtx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
-			reqCtx = context.WithValue(reqCtx, middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger()))
+			reqCtx = context.WithValue(reqCtx, middleware.ContextKeyLog, log)
 			req = req.WithContext(reqCtx)
 
 			f.adminHiveK8sObjectsList(w, req)

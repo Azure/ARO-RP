@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -292,6 +291,8 @@ func TestCreateDeploymentData(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -320,7 +321,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			o := operator{
 				oc:     oc,
 				env:    env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), fake.NewClientBuilder().WithObjects(cv).Build()),
+				client: clienthelper.NewWithClient(log, fake.NewClientBuilder().WithObjects(cv).Build()),
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)

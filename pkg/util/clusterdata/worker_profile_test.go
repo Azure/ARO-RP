@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	gocmp "github.com/google/go-cmp/cmp"
-	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -26,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 )
 
 func TestWorkerProfilesEnricherTask(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	clusterID := fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/group/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",

@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type testRoundTripper struct {
@@ -113,6 +113,8 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -120,7 +122,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 			tt.mocks(m)
 
 			tripper := &tracerRoundTripper{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				m:   m,
 				tr:  tt.rt,
 			}

@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -27,6 +25,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachineConfigReconciler(t *testing.T) {
@@ -112,11 +111,11 @@ func TestMachineConfigReconciler(t *testing.T) {
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigReconciler(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				client,
 				ch,
 			)
@@ -292,11 +291,11 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigReconciler(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				client,
 				ch,
 			)
@@ -516,11 +515,11 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigReconciler(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				client,
 				ch,
 			)

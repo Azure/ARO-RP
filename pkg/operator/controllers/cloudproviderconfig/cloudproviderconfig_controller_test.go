@@ -6,11 +6,9 @@ package cloudproviderconfig
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +21,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var cmMetadata = metav1.ObjectMeta{Name: "cloud-provider-config", Namespace: "openshift-config"}
@@ -92,13 +91,8 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 	} {
 		ctx := context.Background()
 
-		logger := &logrus.Logger{
-			Out:       io.Discard,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.TraceLevel,
-		}
-		hook := logtest.NewLocal(logger)
+		hook, log := testlog.LogForTesting(t)
+		log.Logger.SetLevel(logrus.DebugLevel)
 
 		instance := &arov1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -118,7 +112,7 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 
 		r := &CloudProviderConfigReconciler{
 			AROController: base.AROController{
-				Log:    logrus.NewEntry(logger),
+				Log:    log,
 				Client: clientBuilder.Build(),
 				Name:   ControllerName,
 			},
@@ -129,7 +123,7 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 
 		_, err := r.Reconcile(ctx, request)
 		if err != nil {
-			logger.Log(logrus.ErrorLevel, err)
+			log.Log(logrus.ErrorLevel, err)
 		}
 
 		actualLog := hook.LastEntry()

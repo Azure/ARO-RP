@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.podman.io/image/v5/types"
 	"go.uber.org/mock/gomock"
 
@@ -24,6 +23,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAcrAuthGet(t *testing.T) {
@@ -47,6 +47,8 @@ func TestAcrAuthGet(t *testing.T) {
 	}
 
 	t.Run("all calls succeed as expected", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
 		controller := gomock.NewController(t)
 		env := mock_env.NewMockInterface(controller)
 		env.EXPECT().
@@ -66,7 +68,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 		acrauth := &AcrAuth{
 			acr:                  acr,
-			log:                  logrus.NewEntry(logrus.StandardLogger()),
+			log:                  log,
 			env:                  env,
 			tokenCredential:      tokenCredential,
 			authenticationClient: authenticationClient,
@@ -82,6 +84,8 @@ func TestAcrAuthGet(t *testing.T) {
 	})
 
 	t.Run("GetToken returns err", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
 		controller := gomock.NewController(t)
 		env := mock_env.NewMockInterface(controller)
 		env.EXPECT().
@@ -96,7 +100,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 		acrauth := &AcrAuth{
 			acr:             acr,
-			log:             logrus.NewEntry(logrus.StandardLogger()),
+			log:             log,
 			env:             env,
 			tokenCredential: tokenCredential,
 			now:             func() time.Time { return time.Now() },
@@ -107,6 +111,8 @@ func TestAcrAuthGet(t *testing.T) {
 	})
 
 	t.Run("ExchangeAADAccessTokenForACRRefreshToken returns err", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
 		controller := gomock.NewController(t)
 		env := mock_env.NewMockInterface(controller)
 		env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -123,7 +129,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 		acrauth := &AcrAuth{
 			acr:                  acr,
-			log:                  logrus.NewEntry(logrus.StandardLogger()),
+			log:                  log,
 			env:                  env,
 			tokenCredential:      tokenCredential,
 			authenticationClient: authenticationClient,
@@ -135,6 +141,8 @@ func TestAcrAuthGet(t *testing.T) {
 	})
 
 	t.Run("subsequent calls use cached token", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
 		controller := gomock.NewController(t)
 		env := mock_env.NewMockInterface(controller)
 		env.EXPECT().
@@ -156,7 +164,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 		acrauth := &AcrAuth{
 			acr:                  acr,
-			log:                  logrus.NewEntry(logrus.StandardLogger()),
+			log:                  log,
 			env:                  env,
 			tokenCredential:      tokenCredential,
 			authenticationClient: authenticationClient,
@@ -170,6 +178,8 @@ func TestAcrAuthGet(t *testing.T) {
 	})
 
 	t.Run("subsequent calls after token expiration time request new token", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
 		controller := gomock.NewController(t)
 		env := mock_env.NewMockInterface(controller)
 		env.EXPECT().
@@ -193,7 +203,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 		acrauth := &AcrAuth{
 			acr:                  acr,
-			log:                  logrus.NewEntry(logrus.StandardLogger()),
+			log:                  log,
 			env:                  env,
 			tokenCredential:      tokenCredential,
 			authenticationClient: authenticationClient,
@@ -210,6 +220,8 @@ func TestAcrAuthGet(t *testing.T) {
 	})
 
 	t.Run("concurrent calls will sync and wait", func(t *testing.T) {
+		_, log := testlog.LogForTesting(t)
+
 		controller := gomock.NewController(t)
 		env := mock_env.NewMockInterface(controller)
 		env.EXPECT().
@@ -231,7 +243,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 		acrauth := &AcrAuth{
 			acr:                  acr,
-			log:                  logrus.NewEntry(logrus.StandardLogger()),
+			log:                  log,
 			env:                  env,
 			tokenCredential:      tokenCredential,
 			authenticationClient: authenticationClient,
