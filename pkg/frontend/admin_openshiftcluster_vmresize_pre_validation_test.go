@@ -1099,7 +1099,7 @@ func TestValidateResizeControlPlaneInventoryNormalizesJoinedErrorLineEndings(t *
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
 
 	k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).
 		Return(masterMachineListJSON(

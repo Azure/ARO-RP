@@ -7,8 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,6 +20,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconcile(t *testing.T) {
@@ -77,7 +76,7 @@ func TestReconcile(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 
 			operatorFlag := operator.FlagFalse
 			if tt.enabled {

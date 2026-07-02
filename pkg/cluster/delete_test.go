@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -39,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeleteNic(t *testing.T) {
@@ -121,8 +121,9 @@ func TestDeleteNic(t *testing.T) {
 
 			tt.mocks(armNetworkInterfaces)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -204,8 +205,9 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().Get(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.getResourceGroup, tt.getErr)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID: clusterResourceId,
@@ -272,8 +274,9 @@ func TestDeleteResourceGroup(t *testing.T) {
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.deleteErr).Times(1)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID: clusterResourceId,
@@ -388,8 +391,9 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 
 			tt.mocks(securityGroups, subnets)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				armSecurityGroups: securityGroups,
 				armSubnets:        subnets,
 			}
@@ -440,8 +444,9 @@ func TestDisconnectSecurityGroupRetryExhausted(t *testing.T) {
 		autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
 	)
 
+	_, log := testlog.LogForTesting(t)
 	m := manager{
-		log:               logrus.NewEntry(logrus.StandardLogger()),
+		log:               log,
 		armSecurityGroups: securityGroups,
 		armSubnets:        subnets,
 	}
@@ -539,8 +544,9 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: tt.doc,
 			}
 
@@ -1021,8 +1027,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			}
 			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:                                    logrus.NewEntry(logrus.StandardLogger()),
+				log:                                    log,
 				doc:                                    tt.doc,
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
 				clusterMsiKeyVaultStore:                mockKvClient,
@@ -1120,8 +1127,9 @@ func TestDeleteResourcesRetry(t *testing.T) {
 			).After(first)
 			resources.EXPECT().Client().Return(autorest.Client{})
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -1166,8 +1174,9 @@ func TestDeleteResourcesRetryExhausted(t *testing.T) {
 		mgmtfeatures.ResourcesDeleteByIDFuture{}, autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
 	)
 
+	_, log := testlog.LogForTesting(t)
 	m := manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{

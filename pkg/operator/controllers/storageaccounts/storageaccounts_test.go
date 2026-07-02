@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +30,7 @@ import (
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -106,7 +106,7 @@ func getValidSubnet(resourceId string) *armnetwork.Subnet {
 }
 
 func TestReconcileManager(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	for _, tt := range []struct {
 		name         string

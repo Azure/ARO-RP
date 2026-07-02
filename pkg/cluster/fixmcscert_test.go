@@ -4,7 +4,6 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
@@ -13,7 +12,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +29,7 @@ import (
 	mock_graph "github.com/Azure/ARO-RP/pkg/util/mocks/graph"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestFixMCSCert(t *testing.T) {
@@ -48,7 +47,7 @@ func TestFixMCSCert(t *testing.T) {
 		name             string
 		manager          func(*gomock.Controller, *bool) (*manager, error)
 		wantDeleteCalled bool
-		want             string
+		wantRun          bool
 	}{
 		{
 			name: "basic",
@@ -128,6 +127,7 @@ func TestFixMCSCert(t *testing.T) {
 				}, nil
 			},
 			wantDeleteCalled: true,
+			wantRun:          true,
 		},
 		{
 			name: "noop",
@@ -179,6 +179,7 @@ func TestFixMCSCert(t *testing.T) {
 					}),
 				}, nil
 			},
+			wantRun: true,
 		},
 		{
 			name: "cluster version >= 4.19.0",
@@ -199,10 +200,12 @@ func TestFixMCSCert(t *testing.T) {
 					}),
 				}, nil
 			},
-			want: "Skipping FixMCSCert step for cluster version",
+			wantRun: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -211,23 +214,19 @@ func TestFixMCSCert(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-
-			var logBuffer bytes.Buffer
-			logger := logrus.New()
-			logger.SetOutput(&logBuffer)
-			m.log = logrus.NewEntry(logger)
+			m.log = log
 
 			err = m.fixMCSCert(ctx)
 			if err != nil {
 				t.Error(err)
 			}
 
-			if bytes.Contains(logBuffer.Bytes(), []byte(tt.want)) {
-				return
-			}
-
 			if deleteCalled != tt.wantDeleteCalled {
 				t.Error(deleteCalled)
+			}
+
+			if !tt.wantRun {
+				return
 			}
 
 			s, err := m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get(ctx, "machine-config-server-tls", metav1.GetOptions{})

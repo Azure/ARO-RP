@@ -20,6 +20,7 @@ linters:
     - usestdlibvars
     - whitespace
     - depguard
+    - forbidigo
   settings:
     depguard:
       rules:
@@ -32,6 +33,10 @@ linters:
               desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
             - pkg: "k8s.io/utils/ptr"
               desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
+    forbidigo:
+      forbid:
+        - pattern: logrus\.NewEntry
+          msg: Do not create loggers. Use test/util/log.LoggerForTesting instead.
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
@@ -192,6 +197,9 @@ linters:
       - linters:
           - staticcheck
         path: (.+/)?bindata.go
+      - path-except: (.+)_test\.go
+        linters:
+          - forbidigo
 issues:
   max-same-issues: 0
 formatters:

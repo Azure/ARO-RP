@@ -8,8 +8,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -177,6 +176,8 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			instance := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -203,7 +204,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
+				log:    log,
 				client: ctrlfake.NewClientBuilder().WithObjects(instance, secret).Build(),
 			}
 

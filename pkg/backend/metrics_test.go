@@ -8,12 +8,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitMetrics(t *testing.T) {
@@ -23,7 +23,7 @@ func TestEmitMetrics(t *testing.T) {
 	env.EXPECT().SubscriptionID().AnyTimes()
 	env.EXPECT().Domain().AnyTimes()
 
-	log := logrus.NewEntry(&logrus.Logger{})
+	_, log := testlog.LogForTesting(t)
 
 	b := &backend{
 		baseLog: log,

@@ -27,6 +27,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
@@ -52,6 +53,8 @@ type TestEnvironment struct {
 
 // SetupTestEnvironment creates a common test environment for monitor tests
 func SetupTestEnvironment(t *testing.T) *TestEnvironment {
+	_, log := testlog.LogForTesting(t)
+
 	// Create databases
 	openShiftClusterDB, openShiftClusterClient := testdatabase.NewFakeOpenShiftClusters()
 	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
@@ -59,7 +62,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 
 	// Create mocks
 	ctrl := gomock.NewController(t)
-	testlogger := logrus.NewEntry(logrus.StandardLogger())
+	testlogger := log
 	testlogger.Logger.SetLevel(logrus.DebugLevel)
 	dialer := mock_proxy.NewMockDialer(ctrl)
 	mockEnv := mock_env.NewMockInterface(ctrl)

@@ -9,8 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,6 +24,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachineReconciler(t *testing.T) {
@@ -131,6 +130,8 @@ func TestMachineReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			baseCluster := arov1alpha1.Cluster{
@@ -146,7 +147,7 @@ func TestMachineReconciler(t *testing.T) {
 			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).WithObjects(tt.objects...).Build()
 
 			r := &Reconciler{
-				log:                    logrus.NewEntry(logrus.StandardLogger()),
+				log:                    log,
 				isLocalDevelopmentMode: false,
 				role:                   "master",
 				client:                 clientFake,

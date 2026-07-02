@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -21,6 +20,7 @@ import (
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestPlatformWorkloadIdentityIDs(t *testing.T) {
@@ -276,8 +276,9 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:                    logrus.NewEntry(logrus.StandardLogger()),
+				log:                    log,
 				doc:                    tt.doc,
 				db:                     openShiftClustersDatabase,
 				userAssignedIdentities: mockUserAssignedIdentities,

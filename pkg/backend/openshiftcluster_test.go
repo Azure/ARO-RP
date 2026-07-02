@@ -614,7 +614,7 @@ func TestBackendTry(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)
@@ -866,7 +866,7 @@ func TestNullOrInvalidGuidExcludePrincipalIdReclassification(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)

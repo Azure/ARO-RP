@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -29,6 +28,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -536,6 +536,8 @@ func TestMonitor(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			subnetClient := mock_armnetwork.NewMockSubnetsClient(ctrl)
@@ -553,7 +555,7 @@ func TestMonitor(t *testing.T) {
 			}
 
 			n := &NSGMonitor{
-				log:     logrus.NewEntry(logrus.New()),
+				log:     log,
 				emitter: emitter,
 				oc:      &oc,
 
@@ -578,12 +580,13 @@ func isOfType[T any](mon monitoring.Monitor) bool {
 }
 
 func TestNewMonitor(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	dims := map[string]string{
 		dimension.ResourceID:     ocID,
 		dimension.SubscriptionID: subscriptionID,
 		dimension.Location:       ocLocation,
 	}
-	log := logrus.NewEntry(logrus.New())
 
 	for _, tt := range []struct {
 		name          string

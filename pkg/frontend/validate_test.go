@@ -9,12 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestValidateAdminNamespacePodContainer(t *testing.T) {
@@ -393,6 +392,8 @@ func TestValidateInstallVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.test, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			enabledOcpVersions := map[string]*api.OpenShiftVersion{}
@@ -403,7 +404,7 @@ func TestValidateInstallVersion(t *testing.T) {
 			f := frontend{
 				enabledOcpVersions: enabledOcpVersions,
 				defaultOcpVersion:  tt.defaultOcpVersion,
-				baseLog:            logrus.NewEntry(logrus.StandardLogger()),
+				baseLog:            log,
 			}
 
 			oc := &api.OpenShiftCluster{

@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -27,6 +25,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachineConfigPoolReconciler(t *testing.T) {
@@ -118,7 +117,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigPoolReconciler(
@@ -378,7 +377,7 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigPoolReconciler(
@@ -538,7 +537,7 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 
 			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigPoolReconciler(

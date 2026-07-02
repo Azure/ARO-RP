@@ -6,8 +6,6 @@ package clusterauthorizer
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -15,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -27,32 +26,25 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 		name       string
 		azCloudEnv *azureclient.AROEnvironment
 		secret     *corev1.Secret
-		log        *logrus.Entry
 		wantErr    string
 	}{
 		{
 			name:    "fail: nil azure cloud environment",
 			secret:  newV1CoreSecret(azureSecretName, nameSpace),
 			wantErr: "azureEnvironment cannot be nil",
-			log:     logrus.NewEntry(logrus.StandardLogger()),
-		},
-		{
-			name:       "fail: nil log entry",
-			azCloudEnv: &azureclient.PublicCloud,
-			secret:     newV1CoreSecret(azureSecretName, nameSpace),
-			wantErr:    "log entry cannot be nil",
 		},
 		{
 			name:       "pass: create new azrefreshable authorizer",
 			azCloudEnv: &azureclient.PublicCloud,
 			secret:     newV1CoreSecret(azureSecretName, nameSpace),
-			log:        logrus.NewEntry(logrus.StandardLogger()),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
 
-			_, err := NewAzRefreshableAuthorizer(tt.log, tt.azCloudEnv, clientFake)
+			_, err := NewAzRefreshableAuthorizer(log, tt.azCloudEnv, clientFake)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
