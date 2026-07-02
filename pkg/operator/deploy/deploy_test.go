@@ -15,6 +15,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -428,6 +429,34 @@ func TestOperatorVersion(t *testing.T) {
 				image := d.Spec.Template.Spec.Containers[0].Image
 				if image != tt.wantPullspec {
 					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
+				}
+
+				containerResources := d.Spec.Template.Spec.Containers[0].Resources
+				var wantCPUReq, wantMemReq resource.Quantity
+				switch d.Name {
+				case "aro-operator-master":
+					wantCPUReq = resource.MustParse("10m")
+					wantMemReq = resource.MustParse("250Mi")
+				case "aro-operator-worker":
+					wantCPUReq = resource.MustParse("10m")
+					wantMemReq = resource.MustParse("100Mi")
+				default:
+					t.Errorf("unexpected deployment name: %s", d.Name)
+					continue
+				}
+
+				if containerResources.Requests == nil {
+					t.Errorf("%s: resource requests not set", d.Name)
+				} else {
+					if !containerResources.Requests.Cpu().Equal(wantCPUReq) {
+						t.Errorf("%s CPU request: got %s, want %s", d.Name, containerResources.Requests.Cpu(), wantCPUReq.String())
+					}
+					if !containerResources.Requests.Memory().Equal(wantMemReq) {
+						t.Errorf("%s memory request: got %s, want %s", d.Name, containerResources.Requests.Memory(), wantMemReq.String())
+					}
+				}
+				if containerResources.Limits != nil {
+					t.Errorf("%s: resource limits should not be set, got %v", d.Name, containerResources.Limits)
 				}
 			}
 		})
