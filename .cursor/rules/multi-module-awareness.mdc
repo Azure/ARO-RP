@@ -1,0 +1,37 @@
+---
+description: Two Go modules — root and pkg/api — with critical testing and build implications
+alwaysApply: true
+---
+
+# Multi-Module Awareness
+
+ARO-RP has two Go modules. Getting this wrong causes silent test gaps or CI failures.
+
+## Module Layout
+
+| Module | go.mod | Path |
+|--------|--------|------|
+| Root | `go.mod` | `github.com/Azure/ARO-RP` |
+| API | `pkg/api/go.mod` | `github.com/Azure/ARO-RP/pkg/api` |
+
+Root imports API via a `replace` directive. Go's `./...` wildcard **excludes** subdirectories with their own `go.mod`.
+
+## Critical Implications
+
+1. **`go test ./...` from root does NOT test `pkg/api/`** — you must `cd pkg/api && go test ./...` separately.
+2. **`go mod tidy` from root does NOT update `pkg/api/go.mod`** — use `make go-tidy` which handles both.
+3. **`make fmt` and `make lint-go-fix` handle both modules** — these are safe to run from root.
+
+## Adding Dependencies
+
+- If a new dependency is used in `pkg/api/`, add it to `pkg/api/go.mod`.
+- If used in the root module, add it to the root `go.mod`.
+- If used in both, it must appear in both. Always run `make go-tidy` after changes.
+
+## Three VMSize Types (NOT interchangeable)
+
+1. `api.VMSize` — internal, stored in CosmosDB
+2. `vms.VMSize` — utility type with metadata, used by admin API and validate
+3. Local `VMSize` in each `pkg/api/v*/` — external ARM-facing, matches swagger
+
+Conversion files (`_convert.go`) bridge them with explicit casts.
