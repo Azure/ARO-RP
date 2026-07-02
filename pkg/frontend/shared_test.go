@@ -99,6 +99,8 @@ type testInfra struct {
 	maintenanceManifestsDatabase             database.MaintenanceManifests
 	maintenanceSchedulesClient               *cosmosdb.FakeMaintenanceScheduleDocumentClient
 	maintenanceSchedulesDatabase             database.MaintenanceSchedules
+	portalClient                             *cosmosdb.FakePortalDocumentClient
+	portalDatabase                           database.Portal
 }
 
 func newTestInfra(t *testing.T) *testInfra {
@@ -234,6 +236,13 @@ func (ti *testInfra) WithMaintenanceSchedules(now func() time.Time) *testInfra {
 	ti.maintenanceSchedulesDatabase, ti.maintenanceSchedulesClient = testdatabase.NewFakeMaintenanceSchedules()
 	ti.fixture.WithMaintenanceSchedules(ti.maintenanceSchedulesDatabase)
 	ti.dbGroup.WithMaintenanceSchedules(ti.maintenanceSchedulesDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithPortal() *testInfra {
+	ti.portalDatabase, ti.portalClient = testdatabase.NewFakePortal()
+	ti.fixture.WithPortal(ti.portalDatabase)
+	ti.dbGroup.WithPortal(ti.portalDatabase)
 	return ti
 }
 
