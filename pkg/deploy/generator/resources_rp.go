@@ -835,7 +835,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					DefaultTTL: pointerutils.ToPtr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: pointerutils.ToPtr(int32(cosmosDbGatewayProvisionedThroughputHack)),
+					Throughput: pointerutils.ToPtr(int32(cosmosDbMimoManifestsProvisionedThroughputHack)),
 				},
 			},
 			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/MaintenanceManifests')]"),
@@ -862,7 +862,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					DefaultTTL: pointerutils.ToPtr(int32(-1)),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
-					Throughput: pointerutils.ToPtr(int32(cosmosDbGatewayProvisionedThroughputHack)),
+					Throughput: pointerutils.ToPtr(int32(cosmosDbMimoSchedulesProvisionedThroughputHack)),
 				},
 			},
 			Name:     pointerutils.ToPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/MaintenanceSchedules')]"),
