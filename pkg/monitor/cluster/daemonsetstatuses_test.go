@@ -26,34 +26,25 @@ func TestEmitDaemonsetStatuses(t *testing.T) {
 	ctx := context.Background()
 
 	objects := []client.Object{
-		namespaceObject("openshift"),
-		namespaceObject("customer"),
-		&appsv1.DaemonSet{ // metrics expected
+		namespaceObject("openshift-azure-logging"),
+		&appsv1.DaemonSet{ // unhealthy master - metric expected
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name1",
-				Namespace: "openshift",
+				Name:      genevalogging.MasterDaemonsetName,
+				Namespace: "openshift-azure-logging",
 			},
 			Status: appsv1.DaemonSetStatus{
 				DesiredNumberScheduled: 2,
 				NumberAvailable:        1,
 			},
-		}, &appsv1.DaemonSet{ // no metric expected
+		},
+		&appsv1.DaemonSet{ // healthy worker - no metric expected
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name2",
-				Namespace: "openshift",
+				Name:      genevalogging.WorkerDaemonsetName,
+				Namespace: "openshift-azure-logging",
 			},
 			Status: appsv1.DaemonSetStatus{
 				DesiredNumberScheduled: 2,
 				NumberAvailable:        2,
-			},
-		}, &appsv1.DaemonSet{
-			ObjectMeta: metav1.ObjectMeta{ // no metric expected -customer
-				Name:      "name2",
-				Namespace: "customer",
-			},
-			Status: appsv1.DaemonSetStatus{
-				DesiredNumberScheduled: 2,
-				NumberAvailable:        1,
 			},
 		},
 	}
@@ -73,19 +64,54 @@ func TestEmitDaemonsetStatuses(t *testing.T) {
 		queryLimit:   1,
 	}
 
-	err := mon.fetchManagedNamespaces(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	m.EXPECT().EmitGauge("daemonset.statuses", int64(1), map[string]string{
 		"desiredNumberScheduled": strconv.Itoa(2),
-		"name":                   "name1",
-		"namespace":              "openshift",
+		"name":                   genevalogging.MasterDaemonsetName,
+		"namespace":              "openshift-azure-logging",
 		"numberAvailable":        strconv.Itoa(1),
 	})
 
-	err = mon.emitDaemonsetStatuses(ctx)
+	err := mon.emitDaemonsetStatuses(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEmitDaemonsetStatusesAllHealthy(t *testing.T) {
+	ctx := context.Background()
+
+	objects := []client.Object{
+		namespaceObject("openshift-azure-logging"),
+	}
+	for _, name := range []string{genevalogging.MasterDaemonsetName, genevalogging.WorkerDaemonsetName} {
+		objects = append(objects, &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "openshift-azure-logging",
+			},
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 2,
+				NumberAvailable:        2,
+			},
+		})
+	}
+
+	controller := gomock.NewController(t)
+	m := mock_metrics.NewMockEmitter(controller)
+
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
+	mon := &Monitor{
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   1,
+	}
+
+	err := mon.emitDaemonsetStatuses(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,6 +132,16 @@ func TestEmitDaemonsetStatusesOTelCannotStart(t *testing.T) {
 				NumberAvailable:        0,
 			},
 		},
+		&appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      genevalogging.WorkerDaemonsetName,
+				Namespace: "openshift-azure-logging",
+			},
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 3,
+				NumberAvailable:        0,
+			},
+		},
 	}
 
 	controller := gomock.NewController(t)
@@ -123,21 +159,26 @@ func TestEmitDaemonsetStatusesOTelCannotStart(t *testing.T) {
 		queryLimit:   1,
 	}
 
-	err := mon.fetchManagedNamespaces(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dims := map[string]string{
+	masterDims := map[string]string{
 		"desiredNumberScheduled": strconv.Itoa(2),
 		"name":                   genevalogging.MasterDaemonsetName,
 		"namespace":              "openshift-azure-logging",
 		"numberAvailable":        strconv.Itoa(0),
 	}
-	m.EXPECT().EmitGauge("daemonset.statuses", int64(1), dims)
-	m.EXPECT().EmitGauge("genevalogging.otel.cannotstart", int64(1), dims)
 
-	err = mon.emitDaemonsetStatuses(ctx)
+	workerDims := map[string]string{
+		"desiredNumberScheduled": strconv.Itoa(3),
+		"name":                   genevalogging.WorkerDaemonsetName,
+		"namespace":              "openshift-azure-logging",
+		"numberAvailable":        strconv.Itoa(0),
+	}
+
+	m.EXPECT().EmitGauge("daemonset.statuses", int64(1), masterDims)
+	m.EXPECT().EmitGauge("genevalogging.otel.cannotstart", int64(1), masterDims)
+	m.EXPECT().EmitGauge("daemonset.statuses", int64(1), workerDims)
+	m.EXPECT().EmitGauge("genevalogging.otel.cannotstart", int64(1), workerDims)
+
+	err := mon.emitDaemonsetStatuses(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
