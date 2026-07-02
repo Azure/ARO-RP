@@ -10,9 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/onsi/gomega/format"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -75,7 +73,12 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 		actual = map[string]int{}
 	}
 
-	r := deep.Equal(expected, actual)
+	diff := cmp.Diff(actual, expected, cmpopts.EquateEmpty())
+	if diff == "" {
+		return nil, nil
+	}
+
+	r := strings.Split(diff, "\n")
 	if len(r) != 0 {
 		return r, errors.New("tallies are not equal")
 	} else {
@@ -83,15 +86,15 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 	}
 }
 
-func copyForComparison(inObj any) client.Object {
+func copyForComparison(inObj any) (client.Object, error) {
 	runtimeObj, ok := inObj.(runtime.Object)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert %v to runtime.Object", inObj))
+		return nil, fmt.Errorf("cannot convert %v to runtime.Object", inObj)
 	}
 
 	ourObj, ok := runtimeObj.DeepCopyObject().(client.Object)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert %v to client.Object", runtimeObj))
+		return nil, fmt.Errorf("cannot convert %v to runtime.Object", runtimeObj)
 	}
 
 	// Don't test for the resourceversion
@@ -99,15 +102,35 @@ func copyForComparison(inObj any) client.Object {
 	// Don't test for the typemeta
 	ourObj.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
 
-	return ourObj
+	return ourObj, nil
 }
 
 // Compare two objects. Calls t.Error() with a diff if they do not match.
-func CompareObjects(t *testing.T, got, want runtime.Object) {
-	ourGot, ourWant := copyForComparison(got), copyForComparison(want)
+func compareObjects(got, want any) ([]string, error) {
+	ourGot, err := copyForComparison(got)
+	if err != nil {
+		return nil, err
+	}
+	ourWant, err := copyForComparison(want)
+	if err != nil {
+		return nil, err
+	}
 
-	diff := strings.SplitSeq(cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty()), "\n")
-	for i := range diff {
+	r := strings.TrimSpace(cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty()))
+	if r == "" {
+		return []string{}, nil
+	}
+
+	return strings.Split(r, "\n"), nil
+}
+
+func CompareObjects(t *testing.T, got, want runtime.Object) {
+	diff, err := compareObjects(got, want)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	for _, i := range diff {
 		if i != "" {
 			t.Error(i)
 		}
@@ -119,10 +142,20 @@ func CompareObjectList(t *testing.T, got, want []runtime.Object) {
 	var gotList, wantList []client.Object
 
 	for _, i := range got {
-		gotList = append(gotList, copyForComparison(i))
+		obj, err := copyForComparison(i)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		gotList = append(gotList, obj)
 	}
 	for _, i := range want {
-		wantList = append(wantList, copyForComparison(i))
+		obj, err := copyForComparison(i)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		wantList = append(wantList, obj)
 	}
 
 	m := meta.NewAccessor()
@@ -163,21 +196,24 @@ type beEqualKubernetesObjects struct {
 }
 
 func (m *beEqualKubernetesObjects) Match(actual any) (success bool, err error) {
-	ourGot, ourWant := copyForComparison(actual), copyForComparison(m.Expected)
-	diff := cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty())
-	return len(diff) == 0, nil
+	diff, err := compareObjects(actual, m.Expected)
+	return len(diff) == 0, err
 }
 
 func (m *beEqualKubernetesObjects) FailureMessage(actual any) (message string) {
-	ourGot, ourWant := copyForComparison(actual), copyForComparison(m.Expected)
-
-	return "expected objects to equal:\n" + cmp.Diff(ourGot, ourWant, cmpopts.EquateEmpty())
+	diff, err := compareObjects(actual, m.Expected)
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	return "expected objects to equal:\n" + strings.Join(diff, "\n")
 }
 
 func (m *beEqualKubernetesObjects) NegatedFailureMessage(actual any) (message string) {
-	ourGot, ourWant := copyForComparison(actual), copyForComparison(m.Expected)
-
-	return format.Message(ourGot, "not to equal", ourWant)
+	diff, err := compareObjects(actual, m.Expected)
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	return "expected objects to be different:\n" + strings.Join(diff, "\n")
 }
 
 func BeEqualToKubernetesObject(obj runtime.Object) *beEqualKubernetesObjects {
