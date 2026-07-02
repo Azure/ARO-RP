@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestValidateClusterUserAssignedIdentity(t *testing.T) {
@@ -225,6 +225,8 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -236,7 +238,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 			dv := &dynamic{
 				env:                        _env,
 				authorizerType:             AuthorizerClusterUserAssignedIdentity,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
 			}
@@ -1139,6 +1141,8 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -1149,7 +1153,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 			dv := &dynamic{
 				env:            _env,
 				authorizerType: AuthorizerWorkloadIdentity,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
+				log:            log,
 			}
 
 			if tt.mocks != nil {

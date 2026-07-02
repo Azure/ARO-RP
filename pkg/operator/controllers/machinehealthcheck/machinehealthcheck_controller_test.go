@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +27,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // Test reconcile function
@@ -266,6 +266,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -286,7 +288,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			r := NewReconciler(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				clientBuilder.Build(),
 				mdh,
 			)

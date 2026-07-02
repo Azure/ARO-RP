@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/holmes"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const (
@@ -204,6 +204,8 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
@@ -236,7 +238,7 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 			// The URL must include /investigate — the outer handler strips it via filepath.Dir.
 			request := httptest.NewRequest(http.MethodPost, "/admin"+tt.resourceID+"/investigate", nil)
 
-			ctx := context.WithValue(request.Context(), middleware.ContextKeyLog, logrus.NewEntry(logrus.StandardLogger()))
+			ctx := context.WithValue(request.Context(), middleware.ContextKeyLog, log)
 			ctx = context.WithValue(ctx, middleware.ContextKeyBody, []byte(tt.body))
 			ctx = context.WithValue(ctx, chi.RouteCtxKey, &chi.Context{
 				URLParams: chi.RouteParams{

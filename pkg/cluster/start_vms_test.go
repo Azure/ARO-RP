@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -26,6 +25,7 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestStartVMsRetry(t *testing.T) {
@@ -83,8 +83,9 @@ func TestStartVMsRetry(t *testing.T) {
 			first := vmClient.EXPECT().StartAndWait(gomock.Any(), clusterRGName, "test-vm").Return(tt.firstErr)
 			vmClient.EXPECT().StartAndWait(gomock.Any(), clusterRGName, "test-vm").Return(nil).After(first)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 				virtualMachines: vmClient,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{

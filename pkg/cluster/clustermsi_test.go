@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnsureClusterMsiCertificate(t *testing.T) {
@@ -257,8 +257,9 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 			mockEnv := mock_env.NewMockInterface(controller)
 			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(now)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:                     logrus.NewEntry(logrus.StandardLogger()),
+				log:                     log,
 				doc:                     tt.doc,
 				msiDataplane:            factory,
 				clusterMsiKeyVaultStore: mockKvClient,
@@ -608,8 +609,9 @@ func TestClusterIdentityIDs(t *testing.T) {
 			}
 			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:          logrus.NewEntry(logrus.StandardLogger()),
+				log:          log,
 				doc:          tt.doc,
 				db:           openShiftClustersDatabase,
 				msiDataplane: factory,

@@ -5,11 +5,9 @@ package etchosts
 
 import (
 	"context"
-	"io"
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -27,6 +25,7 @@ import (
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -354,19 +353,14 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 
 		ctx := context.Background()
 
-		logger := &logrus.Logger{
-			Out:       io.Discard,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.TraceLevel,
-		}
-		hook := logtest.NewLocal(logger)
+		hook, log := testlog.LogForTesting(t)
+		log.Logger.SetLevel(logrus.DebugLevel)
 
 		clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
 
 		r := &EtcHostsClusterReconciler{
 			AROController: base.AROController{
-				Log:    logrus.NewEntry(logger),
+				Log:    log,
 				Client: clientBuilder.Build(),
 				Name:   ControllerName,
 			},
@@ -378,7 +372,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 
 		result, err := r.Reconcile(ctx, request)
 		if err != nil {
-			logger.Log(logrus.ErrorLevel, err)
+			log.Log(logrus.ErrorLevel, err)
 		}
 
 		if tt.wantRequeue != result.Requeue {
@@ -386,7 +380,6 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 		}
 
 		actualLog := hook.LastEntry()
-		logger.Log(logrus.InfoLevel, actualLog)
 		if actualLog == nil {
 			assert.Equal(t, tt.expectedLog, actualLog)
 		} else {

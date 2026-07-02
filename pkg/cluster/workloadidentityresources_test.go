@@ -9,7 +9,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestGenerateWorkloadIdentityResources(t *testing.T) {
@@ -327,12 +327,13 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
 			clientFake := ctrlfake.NewClientBuilder().Build()
 
-			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			ch := clienthelper.NewWithClient(log, clientFake)
 
 			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
 			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
@@ -1263,8 +1264,9 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 				roleAssignments.EXPECT().Delete(gomock.Eq(ctx), gomock.Eq(*wantDeleted.Scope), gomock.Eq(*wantDeleted.Name))
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				subscriptionDoc: &api.SubscriptionDocument{
 					ID: subscriptionId,
 				},

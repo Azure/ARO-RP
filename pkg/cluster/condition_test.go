@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -114,8 +112,9 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 			want: true,
 		},
 	} {
+		_, log := testlog.LogForTesting(t)
 		m := &manager{
-			log: logrus.NewEntry(logrus.StandardLogger()),
+			log: log,
 			maocli: machinefake.NewSimpleClientset(
 				&machinev1beta1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
@@ -399,8 +398,9 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				kubernetescli: tt.kubernetescli(),
 				dynamiccli:    tt.dynamiccli(),
 				doc: &api.OpenShiftClusterDocument{

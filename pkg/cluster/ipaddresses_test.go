@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const (
@@ -167,8 +167,9 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				doc:           doc,
 				db:            dbOpenShiftClusters,
 				dns:           dns,

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/sirupsen/logrus"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -37,9 +36,12 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnsureDeleted(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctx := context.Background()
 
 	builder := fake.NewClientBuilder().WithRuntimeObjects(&corev1.ConfigMap{
@@ -57,7 +59,7 @@ func TestEnsureDeleted(t *testing.T) {
 			return nil
 		})
 
-	ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+	ch := NewWithClient(log, client)
 
 	err := ch.EnsureDeleted(ctx,
 		schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
@@ -1568,6 +1570,8 @@ func TestMergeApply(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			gvks, _, err := scheme.Scheme.ObjectKinds(tt.old)
@@ -1590,7 +1594,7 @@ func TestMergeApply(t *testing.T) {
 
 			ch := &clientHelper{
 				Client: clientFake,
-				log:    logrus.NewEntry(logrus.StandardLogger()),
+				log:    log,
 			}
 
 			err = ch.ensureOne(ctx, tt.new)
@@ -1685,10 +1689,12 @@ func TestGetOne(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			clientFake := fake.NewClientBuilder().WithRuntimeObjects(tt.existing...).Build()
-			ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			ch := NewWithClient(log, clientFake)
 
 			gvks, _, err := scheme.Scheme.ObjectKinds(tt.want)
 			if err != nil {
