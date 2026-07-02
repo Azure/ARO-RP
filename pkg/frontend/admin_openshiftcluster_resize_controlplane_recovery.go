@@ -83,8 +83,12 @@ type resizeControlPlaneOperation struct {
 	desiredVMSize            string
 	deallocateVM             bool
 	clusterResourceGroupName string
-	steps                    []string
-	nodes                    []*controlPlaneNodeProgress
+	// crgID is the ARM resource ID of the shared Capacity Reservation Group when
+	// the CRG resize path is active. When non-empty, resizeNode replaces the
+	// standard stop→resize→start triple with a single VMResizeWithCRG call.
+	crgID string
+	steps []string
+	nodes []*controlPlaneNodeProgress
 }
 
 // newResizeControlPlaneExecutionContext stays local because only the admin
@@ -227,30 +231,52 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 				return o.k.DrainNodeWithRetries(ctx, nodeName)
 			}),
 		},
-		resizeNodeStep{
-			name: "stop",
+	)
+
+	// CRG path: replace stop→resize→start with a single VMResizeWithCRG call.
+	// vmStopped is intentionally left false because VMResizeWithCRG handles
+	// deallocation and restart internally; rollback uses vmResized to decide
+	// whether to restore the VM SKU (by stopping, resizing to original, starting).
+	if o.crgID != "" {
+		stepEntries = append(stepEntries, resizeNodeStep{
+			name: "crgResize",
 			step: steps.Action(func(ctx context.Context) error {
-				return o.a.VMStopAndWait(ctx, nodeName, o.deallocateVM)
-			}),
-			after: func() {
-				state.vmStopped = true
-			},
-		},
-		resizeNodeStep{
-			name: "resize",
-			step: steps.Action(func(ctx context.Context) error {
-				return o.a.VMResize(ctx, nodeName, o.desiredVMSize)
+				return o.a.VMResizeWithCRG(ctx, nodeName, o.crgID, o.desiredVMSize)
 			}),
 			after: func() {
 				state.vmResized = true
 			},
-		},
-		resizeNodeStep{
-			name: "start",
-			step: steps.Action(func(ctx context.Context) error {
-				return o.a.VMStartAndWait(ctx, nodeName)
-			}),
-		},
+		})
+	} else {
+		stepEntries = append(stepEntries,
+			resizeNodeStep{
+				name: "stop",
+				step: steps.Action(func(ctx context.Context) error {
+					return o.a.VMStopAndWait(ctx, nodeName, o.deallocateVM)
+				}),
+				after: func() {
+					state.vmStopped = true
+				},
+			},
+			resizeNodeStep{
+				name: "resize",
+				step: steps.Action(func(ctx context.Context) error {
+					return o.a.VMResize(ctx, nodeName, o.desiredVMSize)
+				}),
+				after: func() {
+					state.vmResized = true
+				},
+			},
+			resizeNodeStep{
+				name: "start",
+				step: steps.Action(func(ctx context.Context) error {
+					return o.a.VMStartAndWait(ctx, nodeName)
+				}),
+			},
+		)
+	}
+
+	stepEntries = append(stepEntries,
 		resizeNodeStep{
 			name: "waitReady",
 			step: steps.Action(func(ctx context.Context) error {
