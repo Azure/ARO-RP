@@ -43,7 +43,7 @@ linters:
     forbidigo:
       forbid:
         - pattern: logrus\.NewEntry
-          msg: Do not create loggers. Use test/util/log.LoggerForTesting instead.
+          msg: Do not create loggers. Use test/util/log.LogForTesting instead.
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
