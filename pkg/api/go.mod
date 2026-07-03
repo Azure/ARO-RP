@@ -9,7 +9,6 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/stretchr/testify v1.10.0
 	github.com/ugorji/go/codec v1.2.12
-	go.uber.org/mock v0.4.0
 )
 
 require (
