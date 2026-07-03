@@ -214,9 +214,7 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
-
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -356,9 +354,7 @@ func TestReconcileVAP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
-
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -490,9 +486,7 @@ func TestEnsureMandatoryVAP(t *testing.T) {
 
 func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
-
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	cluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -698,9 +692,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
-
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
