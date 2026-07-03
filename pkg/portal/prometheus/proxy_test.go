@@ -276,7 +276,6 @@ func TestProxy(t *testing.T) {
 			r.Header.Set("User-Agent", "testua")
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			dialer := mock_proxy.NewMockDialer(ctrl)
 			if tt.mocks != nil {

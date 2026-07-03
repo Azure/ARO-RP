@@ -168,7 +168,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
 			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
@@ -329,7 +328,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 			ctx := context.Background()
 			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			clientFake := ctrlfake.NewClientBuilder().Build()
 
@@ -564,7 +562,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
 			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
@@ -1226,7 +1223,6 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			roleAssignments := mock_authorization.NewMockRoleAssignmentsClient(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)

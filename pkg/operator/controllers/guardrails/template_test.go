@@ -26,7 +26,6 @@ import (
 
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	setPullSpec := "MyGuardRailsPullSpec"
 	cluster := &arov1alpha1.Cluster{

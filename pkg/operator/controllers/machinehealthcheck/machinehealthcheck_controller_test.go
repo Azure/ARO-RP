@@ -269,7 +269,6 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mdh := mock_dynamichelper.NewMockInterface(controller)
 

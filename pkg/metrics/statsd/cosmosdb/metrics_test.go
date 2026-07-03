@@ -116,7 +116,6 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := mock_metrics.NewMockEmitter(controller)
 			tt.mocks(m)

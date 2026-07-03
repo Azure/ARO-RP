@@ -61,7 +61,6 @@ func TestSecurity(t *testing.T) {
 
 	_, log := testlog.LogForTesting(t)
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	keyvault := mock_azsecrets.NewMockClient(controller)
 	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)

@@ -142,7 +142,6 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			dns := mock_dns.NewMockManager(controller)
 			if tt.mocks != nil {
@@ -348,7 +347,6 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			publicIPAddresses := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 			dns := mock_dns.NewMockManager(controller)
@@ -604,7 +602,6 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			if tt.mocks != nil {
@@ -765,7 +762,6 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			publicIPAddresses := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
@@ -1146,7 +1142,6 @@ func TestEnsureGatewayCreate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			privateEndpoints := mock_armnetwork.NewMockPrivateEndpointsClient(controller)

@@ -70,7 +70,6 @@ func TestDeletePrivateDNSVNetLinks(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			vNetLinksClient := mock_privatedns.NewMockVirtualNetworkLinksClient(controller)
 
 			if tc.ensureMocksBehavior != nil {

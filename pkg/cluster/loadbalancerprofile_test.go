@@ -117,7 +117,6 @@ func TestReconcileOutboundIPs(t *testing.T) {
 			tt.m.log = log
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 
 			if tt.mocks != nil {
@@ -278,7 +277,6 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 			tt.m.log = log
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 
@@ -1122,7 +1120,6 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 

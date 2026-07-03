@@ -143,7 +143,6 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			roleAssignments := mock_authorization.NewMockRoleAssignmentsClient(controller)
 			roleDefinitions := mock_authorization.NewMockRoleDefinitionsClient(controller)

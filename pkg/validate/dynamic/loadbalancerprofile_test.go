@@ -105,7 +105,6 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 			defer cancel()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancerBackendAddressPoolsClient := mock_armnetwork.NewMockLoadBalancerBackendAddressPoolsClient(controller)
 			networkUsageClient := mock_armnetwork.NewMockUsagesClient(controller)
@@ -307,7 +306,6 @@ func TestValidatePublicIPQuota(t *testing.T) {
 			defer cancel()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			networkUsageClient := mock_armnetwork.NewMockUsagesClient(controller)
 
@@ -429,7 +427,6 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 			defer cancel()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancerBackendAddressPoolsClient := mock_armnetwork.NewMockLoadBalancerBackendAddressPoolsClient(controller)
 

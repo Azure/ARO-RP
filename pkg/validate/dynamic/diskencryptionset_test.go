@@ -427,7 +427,6 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					defer cancel()
 
 					controller := gomock.NewController(t)
-					defer controller.Finish()
 
 					_env := mock_env.NewMockInterface(controller)
 					diskEncryptionSetsClient := mock_compute.NewMockDiskEncryptionSetsClient(controller)

@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )

@@ -240,7 +240,6 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			factory := mock_msidataplane.NewMockClientFactory(controller)
 			if tt.msiDataplaneStub != nil {
@@ -593,7 +592,6 @@ func TestClusterIdentityIDs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)

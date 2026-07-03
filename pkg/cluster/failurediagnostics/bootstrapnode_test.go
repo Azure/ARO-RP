@@ -143,7 +143,6 @@ func TestSetupBootstrapNodeSSH(t *testing.T) {
 			_, log := testlog.New()
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			m := &manager{
 				log: log,
@@ -222,7 +221,6 @@ func TestWaitForBootstrapNodeSSH(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			_, log := testlog.New()
 			mockEnv := mock_env.NewMockInterface(ctrl)

@@ -238,7 +238,6 @@ func (ti *testInfra) WithMaintenanceSchedules(now func() time.Time) *testInfra {
 }
 
 func (ti *testInfra) done() {
-	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
 	err := ti.l.Close()
 	if err != nil {

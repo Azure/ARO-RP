@@ -107,7 +107,6 @@ func TestEnsureAROOperator(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			dep := mock_deploy.NewMockOperator(controller)
 			if tt.mocks != nil {
@@ -204,7 +203,6 @@ func TestInstallAROOperator(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			dep := mock_deploy.NewMockOperator(controller)
 			if tt.mocks != nil {
@@ -286,7 +284,6 @@ func TestSyncClusterObject(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			dep := mock_deploy.NewMockOperator(controller)
 			if tt.mocks != nil {
@@ -382,7 +379,6 @@ func TestAroDeploymentReady(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			dep := mock_deploy.NewMockOperator(controller)
 			if tt.mocks != nil {
@@ -479,7 +475,6 @@ func TestEnsureAROOperatorRunningDesiredVersion(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			dep := mock_deploy.NewMockOperator(controller)
 			if tt.mocks != nil {

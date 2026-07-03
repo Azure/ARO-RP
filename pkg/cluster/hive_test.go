@@ -54,7 +54,6 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, fakeNamespace)
 
@@ -99,7 +98,6 @@ func TestHiveResetCorrelationData(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			m := createManagerForTests(t, fakeNamespace)
 
 			hiveMock := mock_hive.NewMockClusterManager(controller)
@@ -166,7 +164,6 @@ func TestHiveCreateNamespace(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, tt.existingNamespaceName)
 
@@ -247,7 +244,6 @@ func TestHiveEnsureResources(t *testing.T) {
 	} {
 		t.Run(tt.testName, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, "")
 
@@ -300,7 +296,6 @@ func TestHiveDeleteResources(t *testing.T) {
 	} {
 		t.Run(tt.testName, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, tt.namespace)
 

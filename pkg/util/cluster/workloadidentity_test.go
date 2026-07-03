@@ -298,7 +298,6 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockRoleDefinitionsClient := mock_authorization.NewMockRoleDefinitionsClient(controller)
 			tt.mockSetup(mockRoleDefinitionsClient)
@@ -422,7 +421,6 @@ func TestCreateRoleAssignmentWithRetry(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockRoleAssignmentsClient := mock_authorization.NewMockRoleAssignmentsClient(controller)
 			tt.mockSetup(mockRoleAssignmentsClient)

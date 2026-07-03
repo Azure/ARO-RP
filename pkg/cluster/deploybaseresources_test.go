@@ -221,7 +221,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroupsClient := mock_features.NewMockResourceGroupsClient(controller)
 			env := mock_env.NewMockInterface(controller)
@@ -654,7 +653,6 @@ func TestAttachNSGs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			tt.mocks(armSubnets)
@@ -678,7 +676,6 @@ func TestAttachNSGsRetrySuccess(t *testing.T) {
 	ctx := context.Background()
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 
@@ -815,7 +812,6 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			tt.mocks(armSubnets)
@@ -869,7 +865,6 @@ func TestSetMasterSubnetPoliciesRetry(t *testing.T) {
 			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
@@ -906,7 +901,6 @@ func TestSetMasterSubnetPoliciesRetryExhausted(t *testing.T) {
 	subnetMatcher := &subnetPoliciesMatcher{}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 	armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
@@ -993,9 +987,6 @@ func TestEnsureInfraID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 
 			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
@@ -1213,7 +1204,6 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			tt.mocks(armSubnets)

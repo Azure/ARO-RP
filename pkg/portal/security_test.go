@@ -48,7 +48,6 @@ func TestSecurity(t *testing.T) {
 	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	_env := mock_env.NewMockCore(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)

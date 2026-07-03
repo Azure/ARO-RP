@@ -154,7 +154,6 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 		},
 	} {
 		controller := gomock.NewController(t)
-		defer controller.Finish()
 
 		mdh := mock_dynamichelper.NewMockInterface(controller)
 

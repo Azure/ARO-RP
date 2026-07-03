@@ -238,7 +238,6 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)

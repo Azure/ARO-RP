@@ -316,7 +316,6 @@ func TestExecContainerStream_StderrSuppressedOnCancellation(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -348,7 +347,6 @@ func TestExecContainerStream_ContextCancellation(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -377,7 +375,6 @@ func TestExecContainerStream_NilReturnAfterCancel(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())

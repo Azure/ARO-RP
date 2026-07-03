@@ -218,7 +218,6 @@ func TestPostAdminOpenShiftClusterInvestigate(t *testing.T) {
 
 			if tt.hiveEnabled {
 				controller := gomock.NewController(t)
-				defer controller.Finish()
 				clusterManager := mock_hive.NewMockClusterManager(controller)
 				if tt.mocks != nil {
 					tt.mocks(clusterManager)

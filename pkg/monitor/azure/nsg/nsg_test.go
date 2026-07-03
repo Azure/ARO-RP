@@ -539,7 +539,6 @@ func TestMonitor(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 			subnetClient := mock_armnetwork.NewMockSubnetsClient(ctrl)
 			emitter := mock_metrics.NewMockEmitter(ctrl)
 
@@ -643,7 +642,6 @@ func TestNewMonitor(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 			e := mock_env.NewMockInterface(ctrl)
 			emitter := mock_metrics.NewMockEmitter(ctrl)
 

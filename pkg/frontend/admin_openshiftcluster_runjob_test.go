@@ -637,7 +637,6 @@ func TestWaitForJobTerminal_MaxErrors(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	// KubeGet always returns an error → hits maxConsecutiveErrors (10) and exits.
@@ -692,7 +691,6 @@ func TestJobResult(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 
 			k.EXPECT().KubeGet(gomock.Any(), kubeJobResource, "ns", "job").
@@ -723,7 +721,6 @@ func TestRunJobStream_LogStreamingError(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -780,7 +777,6 @@ func TestRunJobStream_CleanupFailure(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -840,7 +836,6 @@ func TestRunJobStream_CleanupNotFound(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -902,7 +897,6 @@ func TestRunJobStream_ContextCancellation(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -966,7 +960,6 @@ func TestRunJobStream_PollExhausted(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -1014,7 +1007,6 @@ func TestRunJobStream_WaitForPodErrorWithCleanupFailure(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	fw := watch.NewFake()
@@ -1055,7 +1047,6 @@ func TestRunJobStream_ContextCancellationWithCleanupFailure(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1112,7 +1103,6 @@ func TestRunJobStream_LogErrorWithCancelledContext(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1175,7 +1165,6 @@ func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1234,7 +1223,6 @@ func TestRunJobStream_ContextCancelledBetweenPodAndLogs(t *testing.T) {
 // TestCleanupJob_TransientRetry verifies retry on transient errors then success.
 func TestCleanupJob_TransientRetry(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	// Zero the backoff duration so the retry fires immediately in the unit test.
