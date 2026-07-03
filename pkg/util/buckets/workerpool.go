@@ -26,7 +26,8 @@ type cacheDoc[E database.Keyable] struct {
 type workerPool[E database.Keyable] struct {
 	baseLog *logrus.Entry
 
-	docs *xsync.Map[string, *cacheDoc[E]]
+	canonicalize func(string) string
+	docs         *xsync.Map[string, *cacheDoc[E]]
 
 	spawnWorker WorkerFunc
 	workerPool  sync.WaitGroup
@@ -47,21 +48,21 @@ func NewWorkerPool[W database.Keyable](log *logrus.Entry, worker WorkerFunc) *wo
 	return &workerPool[W]{
 		baseLog: log,
 
+		canonicalize: strings.ToLower,
+		docs:         xsync.NewMap[string, *cacheDoc[W]](),
+
 		spawnWorker: worker,
-		docs:        xsync.NewMap[string, *cacheDoc[W]](),
 		stopping:    &atomic.Bool{},
 	}
 }
 
 // Return the size of the document cache.
-func (mon *workerPool[E]) CacheSize() int {
-	return mon.docs.Size()
+func (c *workerPool[E]) CacheSize() int {
+	return c.docs.Size()
 }
 
-func (mon *workerPool[E]) Doc(key string) (r E, ok bool) {
-	key = strings.ToLower(key)
-
-	v, ok := mon.docs.Load(key)
+func (c *workerPool[E]) Doc(key string) (r E, ok bool) {
+	v, ok := c.docs.Load(c.canonicalize(key))
 	if v == nil || !ok {
 		ok = false
 		return
@@ -72,7 +73,7 @@ func (mon *workerPool[E]) Doc(key string) (r E, ok bool) {
 // DeleteDoc deletes the given document from c.docs, signalling the associated
 // worker goroutine to stop if it exists.
 func (c *workerPool[E]) DeleteDoc(doc E) {
-	c.docs.Compute(doc.GetKey(), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
+	c.docs.Compute(c.canonicalize(doc.GetKey()), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
 		if loaded && oldValue.stop != nil {
 			close(oldValue.stop)
 		}
@@ -83,7 +84,7 @@ func (c *workerPool[E]) DeleteDoc(doc E) {
 // UpsertDoc inserts or updates the given document into c.docs, calling fixDoc
 // to potentially spawn a new worker.
 func (c *workerPool[E]) UpsertDoc(doc E) {
-	c.docs.Compute(doc.GetKey(), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
+	c.docs.Compute(c.canonicalize(doc.GetKey()), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
 		if loaded {
 			newValue = &cacheDoc[E]{doc: doc, stop: oldValue.stop}
 			c.fixDoc(newValue)
@@ -99,10 +100,11 @@ func (c *workerPool[E]) UpsertDoc(doc E) {
 // workerPool.fixDoc ensures that there is a worker goroutine for the given document.
 func (c *workerPool[E]) fixDoc(v *cacheDoc[E]) {
 	if v.stop == nil && !c.stopping.Load() {
-		c.baseLog.Debugf("spawning worker for %s", v.doc.GetKey())
+		key := c.canonicalize(v.doc.GetKey())
+		c.baseLog.Debugf("spawning worker for %s", key)
 		ch := make(chan struct{})
 		v.stop = ch
-		c.workerPool.Go(func() { c.spawnWorker(ch, v.doc.GetKey()) })
+		c.workerPool.Go(func() { c.spawnWorker(ch, key) })
 	}
 }
 
@@ -120,7 +122,7 @@ func (c *workerPool[E]) WaitForWorkerCompletion() {
 }
 
 func (c *workerPool[E]) stopWorker(doc E) {
-	c.docs.Compute(doc.GetKey(), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
+	c.docs.Compute(c.canonicalize(doc.GetKey()), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
 		if loaded && oldValue.stop != nil {
 			close(oldValue.stop)
 			oldValue.stop = nil

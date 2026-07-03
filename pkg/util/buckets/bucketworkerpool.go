@@ -7,6 +7,7 @@ import (
 	"maps"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -40,8 +41,10 @@ func NewBucketWorkerPool[E Bucketable](log *logrus.Entry, worker WorkerFunc) *bu
 		workerPool: workerPool[E]{
 			baseLog: log,
 
+			canonicalize: strings.ToLower,
+			docs:         xsync.NewMap[string, *cacheDoc[E]](),
+
 			spawnWorker: worker,
-			docs:        xsync.NewMap[string, *cacheDoc[E]](),
 			stopping:    &atomic.Bool{},
 		},
 
@@ -84,7 +87,7 @@ func (c *bucketWorkerPool[E]) GetBuckets() []int {
 func (c *bucketWorkerPool[E]) UpsertDoc(doc E) {
 	c.bucketMu.RLock()
 	defer c.bucketMu.RUnlock()
-	c.docs.Compute(doc.GetKey(), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
+	c.docs.Compute(c.canonicalize(doc.GetKey()), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
 		if loaded {
 			newValue = &cacheDoc[E]{doc: doc, stop: oldValue.stop}
 			c.fixDoc(newValue)
@@ -104,7 +107,7 @@ func (c *bucketWorkerPool[E]) fixDoc(v *cacheDoc[E]) {
 	_, ours := c.buckets[v.doc.GetBucket()]
 
 	if !ours && v.stop != nil {
-		c.baseLog.Debugf("we no longer own cluster, closing worker for %s", v.doc.GetID())
+		c.baseLog.Debugf("we no longer own cluster, closing worker for %s", c.canonicalize(v.doc.GetKey()))
 		c.stopWorker(v.doc)
 	} else if ours {
 		c.workerPool.fixDoc(v)
