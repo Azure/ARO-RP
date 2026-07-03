@@ -41,9 +41,12 @@ linters:
             - pkg: "sigs.k8s.io/controller-runtime/pkg/client/fake"
               desc: "use test/util/clienthelper's NewAROFakeClientBuilder for new clients to ensure that arov1alpha1.Cluster is registered as having a status subresource"
     forbidigo:
+      analyze-types: true
       forbid:
         - pattern: logrus\.NewEntry
           msg: Do not create loggers. Use test/util/log.LogForTesting instead.
+        - pattern: gomock\.Controller\.Finish
+          msg: Not needed since Go 1.14
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
