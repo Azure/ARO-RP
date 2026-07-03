@@ -221,7 +221,6 @@ func TestCheckCPMSNotActive(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(k)
@@ -295,7 +294,6 @@ func TestIsNodeReady(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(k)
@@ -434,7 +432,6 @@ func TestResizeControlPlane(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -506,7 +503,6 @@ func TestUpdateMachineVMSize(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(k)
@@ -523,7 +519,6 @@ func TestSetNodeInstanceTypeLabels(t *testing.T) {
 
 	t.Run("rejects empty vmSize", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 
@@ -628,7 +623,6 @@ func TestSetNodeInstanceTypeLabels(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(t, k)

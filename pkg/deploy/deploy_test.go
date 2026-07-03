@@ -139,7 +139,6 @@ func TestDeploy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 			mockVMSSCleaner := mock_vmsscleaner.NewMockInterface(controller)
@@ -273,9 +272,6 @@ func TestCheckForKnownError(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			d := deployer{}
 
 			got, err := d.checkForKnownError(tt.serviceError, tt.deployAttempt)
@@ -396,7 +392,6 @@ func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 
@@ -432,7 +427,6 @@ func TestDisableAutomaticRepairsOnVMSS(t *testing.T) {
 func TestRunCommandWithRetrySuccess(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -456,7 +450,6 @@ func TestRunCommandWithRetrySuccess(t *testing.T) {
 func TestRunCommandWithRetryRetriesOnOperationPreempted(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -488,7 +481,6 @@ func TestRunCommandWithRetryRetriesOnOperationPreempted(t *testing.T) {
 func TestRunCommandWithRetryReturnsLastError(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -519,7 +511,6 @@ func TestRunCommandWithRetryReturnsLastError(t *testing.T) {
 func TestRunCommandWithRetryReturnsNonRetryableError(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"
@@ -545,7 +536,6 @@ func TestRunCommandWithRetryReturnsNonRetryableError(t *testing.T) {
 func TestRunCommandWithRetryContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	input := mgmtcompute.RunCommandInput{}
 	resourceGroupName := "rg"

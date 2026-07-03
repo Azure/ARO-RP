@@ -82,7 +82,6 @@ func TestEmitAROOperatorConditions(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx := context.Background()
 			baseCluster.Status.Conditions = tt.conditions

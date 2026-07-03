@@ -146,8 +146,6 @@ func TestNew(t *testing.T) {
 			r.Header.Set("Content-Type", "application/json")
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
 			env := mock_env.NewMockCore(ctrl)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 

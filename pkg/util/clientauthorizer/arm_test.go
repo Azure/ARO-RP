@@ -156,7 +156,6 @@ func TestARMRefreshOnce(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			im := mock_instancemetadata.NewMockInstanceMetadata(controller)
 			im.EXPECT().Environment().AnyTimes().Return(&tt.azureEnv)
@@ -314,7 +313,6 @@ func TestARMIsAuthorized(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			im := mock_instancemetadata.NewMockInstanceMetadata(controller)
 			im.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)

@@ -96,7 +96,6 @@ func TestNewGateway(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_, log := testlog.LogForTesting(t)
 			metrics := mock_metrics.NewMockEmitter(controller)
@@ -157,7 +156,6 @@ func TestNewGatewayDefaultConditions(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 	metrics := mock_metrics.NewMockEmitter(controller)
 	env := mock_env.NewMockCore(controller)
 	env.EXPECT().Environment().AnyTimes().Return(populatedEnv)

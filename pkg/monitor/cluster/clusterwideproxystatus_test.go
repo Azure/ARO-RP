@@ -22,7 +22,6 @@ func TestEmitCWPStatus(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockMetrics := mock_metrics.NewMockEmitter(ctrl)
 	fakeConfigClient := configfake.NewSimpleClientset()

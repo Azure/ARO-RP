@@ -240,7 +240,6 @@ func TestCheckSPNeededBasedOnRGStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockRGClient := mock_features.NewMockResourceGroupsClient(controller)
 			tt.mockSetup(mockRGClient)

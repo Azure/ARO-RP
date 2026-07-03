@@ -75,7 +75,6 @@ func TestStartVMsRetry(t *testing.T) {
 			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
 			vmClient.EXPECT().List(gomock.Any(), clusterRGName).Return([]mgmtcompute.VirtualMachine{{Name: vm.Name}}, nil)
@@ -287,7 +286,6 @@ func TestStartVMs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
 

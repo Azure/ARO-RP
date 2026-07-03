@@ -78,9 +78,6 @@ func TestGetRouteTableID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
 				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
@@ -132,9 +129,6 @@ func TestGetNatGatewayID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
 				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
@@ -202,7 +196,6 @@ func TestValidateCIDRRanges(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -332,7 +325,6 @@ func TestValidateVnetLocation(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vnet := sdknetwork.VirtualNetworksClientGetResponse{
 				VirtualNetwork: sdknetwork.VirtualNetwork{
@@ -564,7 +556,6 @@ func TestValidateSubnets(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -930,7 +921,6 @@ func TestValidateVnetPermissions(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1109,7 +1099,6 @@ func TestValidateSubnetPermissions(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1436,7 +1425,6 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1790,7 +1778,6 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -2187,7 +2174,6 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()

@@ -90,7 +90,6 @@ func TestEnrichOne(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			metricsMock := mock_metrics.NewMockEmitter(controller)
 			metricsMock.EXPECT().EmitGauge("enricher.tasks.count", int64(1), nil).Times(tt.taskCount)

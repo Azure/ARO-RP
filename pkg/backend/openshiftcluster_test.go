@@ -618,7 +618,6 @@ func TestBackendTry(t *testing.T) {
 			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
@@ -870,7 +869,6 @@ func TestNullOrInvalidGuidExcludePrincipalIdReclassification(t *testing.T) {
 			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)

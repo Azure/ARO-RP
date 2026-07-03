@@ -247,7 +247,6 @@ func (ti *testInfra) WithPortal() *testInfra {
 }
 
 func (ti *testInfra) done() {
-	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
 	err := ti.l.Close()
 	if err != nil {

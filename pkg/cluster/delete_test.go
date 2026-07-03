@@ -112,7 +112,6 @@ func TestDeleteNic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
@@ -200,7 +199,6 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().Get(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.getResourceGroup, tt.getErr)
@@ -269,7 +267,6 @@ func TestDeleteResourceGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.deleteErr).Times(1)
@@ -384,7 +381,6 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
 			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
@@ -419,7 +415,6 @@ func TestDisconnectSecurityGroupRetryExhausted(t *testing.T) {
 	subnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
 	subnets := mock_armnetwork.NewMockSubnetsClient(controller)
@@ -542,7 +537,6 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_, log := testlog.LogForTesting(t)
 			m := manager{
@@ -1005,7 +999,6 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			federatedIdentityCredentials := mock_armmsi.NewMockFederatedIdentityCredentialsClient(controller)
 			if tt.mocks != nil {
@@ -1108,7 +1101,6 @@ func TestDeleteResourcesRetry(t *testing.T) {
 			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resources := mock_features.NewMockResourcesClient(controller)
 			resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(
@@ -1159,7 +1151,6 @@ func TestDeleteResourcesRetryExhausted(t *testing.T) {
 	resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/publicIPAddresses/test-pip", subscription, resourceGroup)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	resources := mock_features.NewMockResourcesClient(controller)
 	resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(

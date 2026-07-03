@@ -329,7 +329,6 @@ func TestCreateDeploymentData(t *testing.T) {
 
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().Return(tt.expected.IsLocalDevelopment).AnyTimes()
@@ -403,7 +402,6 @@ func TestOperatorVersion(t *testing.T) {
 			oc := tt.oc()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
@@ -773,7 +771,6 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 			_, log := testlog.New()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 
@@ -985,7 +982,6 @@ func TestCredentialsRequest(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	env := mock_env.NewMockInterface(controller)
 

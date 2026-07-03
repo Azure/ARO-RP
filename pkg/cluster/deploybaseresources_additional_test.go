@@ -184,7 +184,6 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 

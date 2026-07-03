@@ -404,7 +404,6 @@ func TestDeleteManagedResource(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)

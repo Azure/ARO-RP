@@ -66,7 +66,6 @@ func TestCheck(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			var validatorMock dynamic.ServicePrincipalValidator
 			if tt.validator != nil {

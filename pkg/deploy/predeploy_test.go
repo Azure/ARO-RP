@@ -493,7 +493,6 @@ func TestPreDeploy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 			mockResourceGroups := mock_features.NewMockResourceGroupsClient(controller)
@@ -581,7 +580,6 @@ func TestDeployRPSubscription(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
@@ -657,7 +655,6 @@ func TestDeployManagedIdentity(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
@@ -744,7 +741,6 @@ func TestDeployRPGlobal(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
@@ -810,7 +806,6 @@ func TestDeployRPGlobalACRReplication(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
@@ -898,7 +893,6 @@ func TestDeployPreDeploy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
@@ -1131,7 +1125,6 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
@@ -1237,7 +1230,6 @@ func TestEnsureAndRotateSecret(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
@@ -1313,7 +1305,6 @@ func TestEnsureSecret(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
@@ -1372,7 +1363,6 @@ func TestCreateSecret(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
@@ -1445,7 +1435,6 @@ func TestEnsureSecretKey(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
@@ -1537,7 +1526,6 @@ func TestRestartOldScalesets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 			mockVMSSVM := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
@@ -1634,7 +1622,6 @@ func TestRestartOldScaleset(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
@@ -1707,7 +1694,6 @@ func TestWaitForReadiness(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
@@ -1807,7 +1793,6 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 

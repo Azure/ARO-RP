@@ -547,7 +547,6 @@ func TestFixSSH(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			armInterfaces := mock_armnetwork.NewMockInterfacesClient(ctrl)
 			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(ctrl)

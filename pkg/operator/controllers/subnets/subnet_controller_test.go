@@ -533,7 +533,6 @@ func TestReconcileManager(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			kubeSubnets := mock_subnet.NewMockKubeManager(controller)

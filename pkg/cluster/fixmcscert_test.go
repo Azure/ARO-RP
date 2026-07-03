@@ -209,7 +209,6 @@ func TestFixMCSCert(t *testing.T) {
 			hook, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			var deleteCalled bool
 			m, err := tt.manager(controller, &deleteCalled)

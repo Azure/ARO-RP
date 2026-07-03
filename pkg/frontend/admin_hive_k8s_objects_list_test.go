@@ -71,7 +71,6 @@ func TestAdminHiveK8sObjectsList(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			controller := gomock.NewController(t)
 			defer ti.done()
-			defer controller.Finish()
 
 			err := ti.buildFixtures(nil)
 			if err != nil {

@@ -444,7 +444,6 @@ func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) 
 	}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	envMock := mock_env.NewMockInterface(controller)
 	envMock.EXPECT().IsLocalDevelopmentMode().Return(false)

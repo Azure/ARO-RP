@@ -154,7 +154,6 @@ func TestMUOReconciler(t *testing.T) {
 
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			instance := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
