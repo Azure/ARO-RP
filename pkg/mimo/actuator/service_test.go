@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
@@ -213,9 +212,6 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 	var cancel context.CancelFunc
 
 	var log *logrus.Entry
-	var _env env.Interface
-
-	var controller *gomock.Controller
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
@@ -224,16 +220,9 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		if cancel != nil {
 			cancel()
 		}
-
-		if controller != nil {
-			controller.Finish()
-		}
 	})
 
 	BeforeAll(func() {
-		controller = gomock.NewController(nil)
-		_env = mock_env.NewMockInterface(controller)
-
 		ctx, cancel = context.WithCancel(context.Background())
 
 		_, log = testlog.LogForTesting(GinkgoTB())
@@ -251,7 +240,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 		subscriptions, _ = testdatabase.NewFakeSubscriptions()
 		dbg := database.NewDBGroup().WithMaintenanceManifests(manifests).WithOpenShiftClusters(clusters).WithSubscriptions(subscriptions)
 
-		svc = NewService(_env, log, nil, dbg, m, []int{1})
+		svc = NewService(nil, log, nil, dbg, m, []int{1})
 		svc.now = now
 		svc.workerDelay = func() time.Duration { return 0 * time.Second }
 		svc.serveHealthz = false
