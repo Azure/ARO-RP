@@ -358,8 +358,8 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 		return err
 	}
 
-	providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
-	if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, providerSpec); err != nil {
+	providerSpec, err := unmarshalAzureMachineProviderSpec(&machine)
+	if err != nil {
 		return fmt.Errorf("parsing providerSpec: %w", err)
 	}
 

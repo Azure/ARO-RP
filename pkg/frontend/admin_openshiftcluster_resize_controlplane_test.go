@@ -139,6 +139,24 @@ func machineJSON(name, vmSize string) []byte {
 	return b
 }
 
+func machineJSONWithoutProviderSpecValue(name, vmSize string) []byte {
+	obj := map[string]any{
+		"apiVersion": "machine.openshift.io/v1beta1",
+		"kind":       "Machine",
+		"metadata": map[string]any{
+			"name":              name,
+			"namespace":         machineNamespace,
+			"creationTimestamp": "2024-01-01T00:00:00Z",
+			"labels":            map[string]any{machineLabelInstanceType: vmSize},
+		},
+		"spec": map[string]any{
+			"providerSpec": map[string]any{},
+		},
+	}
+	b, _ := json.Marshal(obj)
+	return b
+}
+
 func TestCheckCPMSNotActive(t *testing.T) {
 	ctx := context.Background()
 
@@ -475,6 +493,15 @@ func TestUpdateMachineVMSize(t *testing.T) {
 					k.EXPECT().KubeCreateOrUpdate(gomock.Any(), gomock.Any()).Return(nil),
 				)
 			},
+		},
+		{
+			name: "fails when provider spec value is nil",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().KubeGet(gomock.Any(), "Machine.machine.openshift.io", machineNamespace, "master-0").
+					Return(machineJSONWithoutProviderSpecValue("master-0", "Standard_D8s_v3"), nil).
+					Times(3)
+			},
+			wantErr: "could not update Machine object after 3 attempts: parsing providerSpec: provider spec value is nil",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
