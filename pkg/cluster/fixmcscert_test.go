@@ -12,6 +12,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +49,7 @@ func TestFixMCSCert(t *testing.T) {
 		name             string
 		manager          func(*gomock.Controller, *bool) (*manager, error)
 		wantDeleteCalled bool
-		wantRun          bool
+		wantSkip         bool
 	}{
 		{
 			name: "basic",
@@ -127,7 +129,7 @@ func TestFixMCSCert(t *testing.T) {
 				}, nil
 			},
 			wantDeleteCalled: true,
-			wantRun:          true,
+			wantSkip:         false,
 		},
 		{
 			name: "noop",
@@ -179,7 +181,7 @@ func TestFixMCSCert(t *testing.T) {
 					}),
 				}, nil
 			},
-			wantRun: true,
+			wantSkip: false,
 		},
 		{
 			name: "cluster version >= 4.19.0",
@@ -200,11 +202,11 @@ func TestFixMCSCert(t *testing.T) {
 					}),
 				}, nil
 			},
-			wantRun: false,
+			wantSkip: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, log := testlog.LogForTesting(t)
+			hook, log := testlog.LogForTesting(t)
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -225,7 +227,16 @@ func TestFixMCSCert(t *testing.T) {
 				t.Error(deleteCalled)
 			}
 
-			if !tt.wantRun {
+			if tt.wantSkip {
+				err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
+					{
+						"msg":   gomega.Equal("Skipping FixMCSCert step for cluster version 4.19.1 >= 4.19.0"),
+						"level": gomega.Equal(logrus.InfoLevel),
+					},
+				})
+				if err != nil {
+					t.Error(err)
+				}
 				return
 			}
 
