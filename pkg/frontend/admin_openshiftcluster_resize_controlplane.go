@@ -280,11 +280,8 @@ func checkCPMSNotActive(ctx context.Context, k adminactions.KubeActions) error {
 }
 
 func waitForNodeReady(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, nodeName string) error {
-	ctx, cancel := context.WithTimeout(ctx, nodeReadyPollTimeout)
-	defer cancel()
-
-	return wait.PollImmediateUntilWithContext(ctx, nodeReadyPollInterval, func(ctx context.Context) (bool, error) {
-		ready, err := isNodeReady(ctx, k, nodeName)
+	return wait.PollUntilContextTimeout(ctx, nodeReadyPollInterval, nodeReadyPollTimeout, true, func(_ctx context.Context) (bool, error) {
+		ready, err := isNodeReady(_ctx, k, nodeName)
 		if err != nil {
 			log.Infof("Error checking node %s readiness: %v", nodeName, err)
 			return false, nil

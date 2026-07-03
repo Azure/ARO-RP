@@ -14,6 +14,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	machinev1 "github.com/openshift/api/machine/v1"
 
@@ -74,8 +75,7 @@ func operator(log *logrus.Entry) error {
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		HealthProbeBindAddress: ":8080",
-		MetricsBindAddress:     ":8888",
-		Port:                   8443,
+		Metrics:                server.Options{BindAddress: ":8888"},
 	})
 	if err != nil {
 		return err

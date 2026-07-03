@@ -14,7 +14,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -25,6 +24,7 @@ import (
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -184,7 +184,7 @@ func TestMUOReconciler(t *testing.T) {
 			}
 
 			deployer := mock_deployer.NewMockDeployer(controller)
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance, cv)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(instance, cv)
 
 			if tt.mocks != nil {
 				tt.mocks(deployer, instance)

@@ -11,10 +11,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	operatorv1 "github.com/openshift/api/operator/v1"
 
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -90,7 +89,7 @@ func TestCheck(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientBuilder := ctrlfake.NewClientBuilder()
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.DNS != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.DNS)
 			}

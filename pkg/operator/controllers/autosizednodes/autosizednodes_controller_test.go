@@ -18,14 +18,14 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -55,29 +55,29 @@ func TestAutosizednodesReconciler(t *testing.T) {
 	}{
 		{
 			name:       "is not needed",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false)).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(false)).Build(),
 			wantConfig: &emptyConfig,
 			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name:       "is needed and not present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true)).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(true)).Build(),
 			wantConfig: &config,
 		},
 		{
 			name:       "is needed and present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &config).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(true), &config).Build(),
 			wantConfig: &config,
 		},
 		{
 			name:       "is not needed and is present",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false), &config).Build(),
+			client:     testclienthelper.NewAROFakeClientBuilder(aro(false), &config).Build(),
 			wantConfig: &emptyConfig,
 			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name: "is needed and config got modified",
-			client: fake.NewClientBuilder().WithRuntimeObjects(
+			client: testclienthelper.NewAROFakeClientBuilder(
 				aro(true),
 				&mcv1.KubeletConfig{
 					ObjectMeta: metav1.ObjectMeta{

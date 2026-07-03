@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/go-test/deep"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +43,7 @@ func TestOperatorFlags(t *testing.T) {
 			wantErr: `TerminalError: clusters.aro.openshift.io "cluster" not found`,
 		},
 		{
-			name: "not ready",
+			name: "updates operator flag if found",
 			objects: []runtime.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
@@ -120,8 +119,7 @@ func TestOperatorFlags(t *testing.T) {
 					err = ch.GetOne(ctx, client.ObjectKeyFromObject(i.(client.Object)), o)
 					g.Expect(err).ToNot(HaveOccurred())
 
-					r := deep.Equal(i, o)
-					g.Expect(r).To(BeEmpty())
+					g.Expect(i).To(testclienthelper.BeEqualToKubernetesObject(o))
 				}
 			}
 		})

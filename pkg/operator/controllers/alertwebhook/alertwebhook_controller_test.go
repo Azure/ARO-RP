@@ -15,11 +15,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 var (
@@ -204,7 +204,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 
 			r := &Reconciler{
 				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: ctrlfake.NewClientBuilder().WithObjects(instance, secret).Build(),
+				client: testclienthelper.NewAROFakeClientBuilder(instance, secret).Build(),
 			}
 
 			_, err := r.Reconcile(ctx, ctrl.Request{})

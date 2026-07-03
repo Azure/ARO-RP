@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -322,7 +321,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			o := operator{
 				oc:     oc,
 				env:    env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), fake.NewClientBuilder().WithObjects(cv).Build()),
+				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), testclienthelper.NewAROFakeClientBuilder(cv).Build()),
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)
@@ -393,7 +392,7 @@ func TestOperatorVersion(t *testing.T) {
 			}
 
 			_, log := testlog.LogForTesting(t)
-			builder := fake.NewClientBuilder().WithRuntimeObjects(cv)
+			builder := testclienthelper.NewAROFakeClientBuilder(cv)
 			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 			o := &operator{
@@ -475,7 +474,7 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
-			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.deployment)
+			builder := testclienthelper.NewAROFakeClientBuilder(tt.deployment)
 			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 			got, err := checkOperatorDeploymentVersion(
@@ -545,7 +544,7 @@ func TestCheckPodImageVersion(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.New()
-			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.pod)
+			builder := testclienthelper.NewAROFakeClientBuilder(tt.pod)
 			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 			got, err := checkPodImageVersion(ctx, ch, tt.pod.Name, tt.desiredVersion)
@@ -667,7 +666,7 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 					Annotations: tt.annotation,
 				},
 			}
-			builder := fake.NewClientBuilder().WithRuntimeObjects(cloudcredentialobject)
+			builder := testclienthelper.NewAROFakeClientBuilder(cloudcredentialobject)
 			ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 			o := operator{
@@ -867,7 +866,7 @@ func TestCredentialsRequest(t *testing.T) {
 
 	oc := &api.OpenShiftCluster{}
 
-	builder := fake.NewClientBuilder()
+	builder := testclienthelper.NewAROFakeClientBuilder()
 	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
 
 	o := operator{

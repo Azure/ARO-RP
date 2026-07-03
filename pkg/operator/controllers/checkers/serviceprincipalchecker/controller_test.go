@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -25,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -93,7 +93,7 @@ func TestReconcile(t *testing.T) {
 				instance.Spec.OperatorFlags[operator.CheckerEnabled] = operator.FlagFalse
 			}
 
-			clientFake := fake.NewClientBuilder().WithObjects(instance).Build()
+			clientFake := testclienthelper.NewAROFakeClientBuilder(instance).Build()
 
 			r := &Reconciler{
 				log:  utillog.GetLogger(),

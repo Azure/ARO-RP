@@ -11,12 +11,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 )
 
 type testData struct {
@@ -144,7 +144,7 @@ func TestCheck(t *testing.T) {
 }
 
 func buildFakeClient(testCase testData) client.WithWatch {
-	clientBuilder := ctrlfake.NewClientBuilder()
+	clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 	if testCase.clusterVersion != nil {
 		clientBuilder = clientBuilder.WithObjects(testCase.clusterVersion)
 	}

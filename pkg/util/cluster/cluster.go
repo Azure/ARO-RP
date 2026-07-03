@@ -1544,9 +1544,9 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	// Backoff waits: 0s + 30s + 60s = 90s total. Given perOperationTimeout (35m) and
 	// overallTimeout (45m), realistically only ~1 full retry is expected.
 	backoff := wait.Backoff{Steps: 3, Duration: 30 * time.Second, Factor: 2.0, Cap: 1 * time.Minute}
-	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func() (bool, error) {
+	err := wait.ExponentialBackoffWithContext(timeoutCtx, backoff, func(_ctx context.Context) (bool, error) {
 		opTimeoutCause := fmt.Errorf("DeleteAndWait timed out after %s for %s", perOperationTimeout, clusterName)
-		opCtx, opCancel := context.WithTimeoutCause(timeoutCtx, perOperationTimeout, opTimeoutCause)
+		opCtx, opCancel := context.WithTimeoutCause(_ctx, perOperationTimeout, opTimeoutCause)
 		defer opCancel()
 
 		err := c.openshiftclusters.DeleteAndWait(opCtx, resourceGroup, clusterName)
@@ -1554,8 +1554,8 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 			return true, nil
 		}
 
-		if timeoutCtx.Err() != nil {
-			return false, context.Cause(timeoutCtx)
+		if _ctx.Err() != nil {
+			return false, context.Cause(_ctx)
 		}
 
 		if opCtx.Err() != nil {
@@ -1572,7 +1572,7 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 		return false, err
 	})
 	if err != nil {
-		if err == wait.ErrWaitTimeout && lastErr != nil {
+		if wait.Interrupted(err) && lastErr != nil {
 			return fmt.Errorf("error deleting cluster %s: %w", clusterName, lastErr)
 		}
 		return fmt.Errorf("error deleting cluster %s: %w", clusterName, err)
@@ -1605,11 +1605,11 @@ func (c *Cluster) checkResourceGroupDeleted(ctx context.Context, resourceGroupNa
 		return false, nil
 	}, timeoutCtx.Done())
 	if err != nil {
-		if err == wait.ErrWaitTimeout && lastErr != nil {
-			return fmt.Errorf("timed out checking for resource group %s to be deleted, last error: %w", resourceGroupName, lastErr)
+		if wait.Interrupted(err) && lastErr != nil {
+			return fmt.Errorf("timed out checking for resource group %s to be deleted: %w, last error: %w", resourceGroupName, err, lastErr)
 		}
-		if err == wait.ErrWaitTimeout {
-			return fmt.Errorf("timed out checking for resource group %s to be deleted", resourceGroupName)
+		if wait.Interrupted(err) {
+			return fmt.Errorf("timed out checking for resource group %s to be deleted: %w", resourceGroupName, err)
 		}
 		return err
 	}

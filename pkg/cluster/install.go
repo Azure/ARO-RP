@@ -17,14 +17,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	mcoclient "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/containerinstall"
@@ -656,14 +655,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
-	if err != nil {
-		return err
-	}
-
-	client, err := client.New(restConfig, client.Options{
-		Mapper: mapper,
-	})
+	client, err := client.New(restConfig, client.Options{})
 
 	m.ch = clienthelper.NewWithClient(m.log, client)
 	return err

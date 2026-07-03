@@ -228,7 +228,7 @@ func TestGetClusterMachines(t *testing.T) {
 	// labelInstanceType can be empty string to create a machine without instance-type label
 	createMachine := func(name, role, labelZone, specZone, vmSize, labelInstanceType, phase string) machinev1beta1.Machine {
 		providerSpec := &machinev1beta1.AzureMachineProviderSpec{
-			Zone:   &specZone,
+			Zone:   specZone,
 			VMSize: vmSize,
 		}
 		providerSpecRaw, _ := json.Marshal(providerSpec)
