@@ -6,12 +6,12 @@ package actuator
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 

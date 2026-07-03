@@ -5,10 +5,10 @@ package cluster
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/go-test/deep"
-	"golang.org/x/exp/slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -96,7 +96,7 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 			}
 		}
 
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		if v.IsNil() != w.IsNil() {
 			return newValidationError(path)
 		}
