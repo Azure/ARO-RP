@@ -10,23 +10,20 @@ import (
 
 	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/database"
 )
 
-// Workable is the interface that a database document must implement to be served by a WorkerPool.
-type Workable interface {
-	GetID() string
-	GetKey() string
-}
-
-// WorkerFunc is the type for spawned workers. Workers are given a stop channel and the ID of the item to spawn.
+// WorkerFunc is the type for spawned workers. Workers are given a stop channel
+// and the ID of the item to spawn.
 type WorkerFunc func(<-chan struct{}, string)
 
-type cacheDoc[E Workable] struct {
+type cacheDoc[E database.Keyable] struct {
 	doc  E
 	stop chan<- struct{}
 }
 
-type workerPool[E Workable] struct {
+type workerPool[E database.Keyable] struct {
 	baseLog *logrus.Entry
 
 	docs *xsync.Map[string, *cacheDoc[E]]
@@ -36,7 +33,7 @@ type workerPool[E Workable] struct {
 	stopping    *atomic.Bool
 }
 
-type WorkerPool[E Workable] interface {
+type WorkerPool[E database.Keyable] interface {
 	StopAndWait()
 	WaitForWorkerCompletion()
 	CacheSize() int
@@ -46,7 +43,7 @@ type WorkerPool[E Workable] interface {
 	UpsertDoc(E)
 }
 
-func NewWorkerPool[W Workable](log *logrus.Entry, worker WorkerFunc) *workerPool[W] {
+func NewWorkerPool[W database.Keyable](log *logrus.Entry, worker WorkerFunc) *workerPool[W] {
 	return &workerPool[W]{
 		baseLog: log,
 

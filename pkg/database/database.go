@@ -39,8 +39,8 @@ const (
 	collPoolWorkers                     = "PoolWorkers"
 )
 
-type IDable interface {
-	GetID() string
+type Keyable interface {
+	GetKey() string
 }
 
 // Generic interface of document iterators from pkg/database/cosmosdb/, used in

@@ -9,6 +9,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 )
 
-func CompareIDable(a, b database.IDable) int {
-	return cmp.Compare(a.GetID(), b.GetID())
+func CompareKeyable(a, b database.Keyable) int {
+	return cmp.Compare(a.GetKey(), b.GetKey())
 }

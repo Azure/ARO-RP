@@ -56,6 +56,6 @@ func (c *SubscriptionDocument) String() string {
 	return encodeJSON(c)
 }
 
-func (c *SubscriptionDocument) GetID() string {
+func (c *SubscriptionDocument) GetKey() string {
 	return c.ID
 }

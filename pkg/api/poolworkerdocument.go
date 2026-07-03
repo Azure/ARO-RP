@@ -40,6 +40,6 @@ type PoolWorkerDocument struct {
 	PoolWorker *PoolWorker    `json:"poolWorker,omitempty"`
 }
 
-func (c *PoolWorkerDocument) GetID() string {
+func (c *PoolWorkerDocument) GetKey() string {
 	return c.ID
 }

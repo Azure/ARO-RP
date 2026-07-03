@@ -12,11 +12,13 @@ import (
 
 	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/database"
 )
 
 // Bucketable is the interface that a database document must implement to be served by a BucketWorkerPool.
 type Bucketable interface {
-	Workable
+	database.Keyable
 	GetBucket() int
 }
 

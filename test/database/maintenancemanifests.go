@@ -36,7 +36,7 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 		return fakeMaintenanceManifestsRenewLeaseTrigger(ctx, doc, now)
 	})
 	c.SetSorter(func(in []*api.MaintenanceManifestDocument) {
-		slices.SortFunc(in, func(a, b *api.MaintenanceManifestDocument) int { return CompareIDable(a, b) })
+		slices.SortFunc(in, func(a, b *api.MaintenanceManifestDocument) int { return CompareKeyable(a, b) })
 	})
 }
 

@@ -77,6 +77,6 @@ func injectPoolWorkers(c *cosmosdb.FakePoolWorkerDocumentClient, now func() time
 		return fakePoolWorkerRenewLeaseTrigger(ctx, doc, now)
 	})
 	c.SetSorter(func(in []*api.PoolWorkerDocument) {
-		slices.SortFunc(in, func(a, b *api.PoolWorkerDocument) int { return CompareIDable(a, b) })
+		slices.SortFunc(in, func(a, b *api.PoolWorkerDocument) int { return CompareKeyable(a, b) })
 	})
 }
