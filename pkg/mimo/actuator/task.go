@@ -5,6 +5,7 @@ package actuator
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -33,7 +34,11 @@ type th struct {
 
 	_ch clienthelper.Interface
 
-	az *azClients
+	// azMu guards lazy initialization of az. The Azure client getters in
+	// task_azure.go may be invoked concurrently by a task that fans work out
+	// across goroutines, so az must be published safely.
+	azMu sync.Mutex
+	az   *azClients
 }
 
 // force interface checking

@@ -56,8 +56,11 @@ func NewBucketWorker[E Bucketable](log *logrus.Entry, worker WorkerFunc, mu *syn
 	}
 }
 
-// Return the size of the document cache. Caller must hold mon.mu.
+// Size returns the size of the document cache. It takes mon.mu itself, so
+// (unlike the mutating accessors) callers must not already hold the lock.
 func (mon *monitor[E]) Size() int {
+	mon.mu.RLock()
+	defer mon.mu.RUnlock()
 	return len(mon.docs)
 }
 

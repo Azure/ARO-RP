@@ -248,27 +248,31 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 		docMap[strings.ToLower(d.Key)] = d
 	}
 
-	// Acquire lock for when we're mutating the changefeed cache
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	// Acquire lock for when we're mutating the changefeed cache. Wrapped in a
+	// closure so the deferred unlock runs before we call s.b.Size() below,
+	// which acquires the same (non-reentrant) lock itself.
+	func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
 
-	// remove docs that don't exist in the new set (removed clusters)
-	for oldCluster := range oldDocs {
-		_, ok := docMap[strings.ToLower(oldCluster)]
-		if !ok {
-			s.b.DeleteDoc(oldDocs[oldCluster])
-			s.baseLog.Debugf("removed %s from buckets", oldCluster)
+		// remove docs that don't exist in the new set (removed clusters)
+		for oldCluster := range oldDocs {
+			_, ok := docMap[strings.ToLower(oldCluster)]
+			if !ok {
+				s.b.DeleteDoc(oldDocs[oldCluster])
+				s.baseLog.Debugf("removed %s from buckets", oldCluster)
+			}
 		}
-	}
 
-	s.baseLog.Debugf("updating %d clusters", len(docMap))
+		s.baseLog.Debugf("updating %d clusters", len(docMap))
 
-	for _, cluster := range docMap {
-		s.b.UpsertDoc(cluster)
-	}
+		for _, cluster := range docMap {
+			s.b.UpsertDoc(cluster)
+		}
 
-	// Store when we last fetched the clusters
-	s.lastChangefeed.Store(s.now())
+		// Store when we last fetched the clusters
+		s.lastChangefeed.Store(s.now())
+	}()
 
 	// Emit a metric containing the size of our cache
 	s.m.EmitGauge("changefeed.caches.size", int64(s.b.Size()), map[string]string{
