@@ -24,6 +24,7 @@ import (
 
 const (
 	targetReservationNameFmt = "cr-target-z%s"
+	regionalReservationName  = "cr-target-regional"
 )
 
 // vmIsRunning returns true if the VM's instance view shows PowerState/running.
@@ -49,15 +50,37 @@ func vmIsAtTargetSKUAndRunning(vm armcompute.VirtualMachine, targetVMSize string
 	return strings.EqualFold(string(*vm.Properties.HardwareProfile.VMSize), targetVMSize) && vmIsRunning(vm)
 }
 
+// reservationNameForZone returns the reservation name for a zone.
+// An empty zone indicates a non-zonal (regional) control-plane topology.
+func reservationNameForZone(zone string) string {
+	if zone == "" {
+		return regionalReservationName
+	}
+	return fmt.Sprintf(targetReservationNameFmt, zone)
+}
+
+// reservationZonesForTeardown normalizes zones for teardown loops.
+// Empty zones means non-zonal topology, which uses one regional reservation.
+func reservationZonesForTeardown(zones []string) []string {
+	if len(zones) == 0 {
+		return []string{""}
+	}
+	return zones
+}
+
 // crgCreate creates a Capacity Reservation Group scoped to the given zones.
 // Returns the ARM resource ID of the created CRG.
 // Azure requires the CRG to declare all zones it will serve at creation time.
 func (a *azureActions) crgCreate(ctx context.Context, clusterRG, location string, zones []string, crgName string) (string, error) {
 	a.log.Infof("creating capacity reservation group %q in zones %v", crgName, zones)
+	var zonePtrs []*string
+	if len(zones) > 0 {
+		zonePtrs = pointerutils.ToSlicePtr(zones)
+	}
 	crg, err := a.armCapacityReservationGroups.CreateOrUpdate(ctx, clusterRG, crgName,
 		armcompute.CapacityReservationGroup{
 			Location: &location,
-			Zones:    pointerutils.ToSlicePtr(zones),
+			Zones:    zonePtrs,
 		})
 	if err != nil {
 		if azureerrors.HasAuthorizationFailedError(err) {
@@ -78,13 +101,17 @@ func (a *azureActions) crgCreate(ctx context.Context, clusterRG, location string
 // guaranteeing capacity for the resize destination. capacity must be ≥ 1 and should
 // equal the number of VMs to be resized in that zone.
 func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error {
-	crTarget := fmt.Sprintf(targetReservationNameFmt, zone)
+	crTarget := reservationNameForZone(zone)
 	a.log.Infof("creating target-SKU reservation %s (SKU %s, capacity %d) in zone %s", crTarget, targetSKU, capacity, zone)
+	var zonePtrs []*string
+	if zone != "" {
+		zonePtrs = []*string{pointerutils.ToPtr(zone)}
+	}
 	if err := a.armCapacityReservations.CreateOrUpdateAndWait(ctx, clusterRG, crgName, crTarget,
 		armcompute.CapacityReservation{
 			Location: &location,
 			SKU:      &armcompute.SKU{Name: &targetSKU, Capacity: pointerutils.ToPtr(capacity)},
-			Zones:    []*string{pointerutils.ToPtr(zone)},
+			Zones:    zonePtrs,
 		}); err != nil {
 		if isCapacityError(err) {
 			// No automatic fallback is attempted. The caller must choose a different VM family and retry.
@@ -119,14 +146,15 @@ func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, loc
 // All errors are collected and joined — cleanup continues even if individual steps fail.
 func (a *azureActions) crgDelete(ctx context.Context, clusterRG, location, targetSKU string, zones []string, vmNames []string, crgName string) error {
 	var errs []error
+	reservationZones := reservationZonesForTeardown(zones)
 
 	// Step 1: zero each reservation's capacity BEFORE disassociating VMs.
 	// With capacity=0 the reservation holds no allocation, so Azure allows deletion
 	// even if its virtualMachinesAssociated list hasn't fully propagated yet.
 	// Each step derives from ctx so caller cancellation is still honoured, but caps
 	// the step at its own maximum so one slow ARM call cannot starve later steps.
-	for _, zone := range zones {
-		crTarget := fmt.Sprintf(targetReservationNameFmt, zone)
+	for _, zone := range reservationZones {
+		crTarget := reservationNameForZone(zone)
 		stepCtx, stepCancel := context.WithTimeout(ctx, crgCapacityZeroTimeout)
 		err := a.setReservationCapacityZero(stepCtx, location, clusterRG, crTarget, zone, targetSKU, crgName)
 		stepCancel()
@@ -176,8 +204,8 @@ func (a *azureActions) crgDelete(ctx context.Context, clusterRG, location, targe
 	}
 
 	// Step 3: delete each reservation (capacity is already 0).
-	for _, zone := range zones {
-		crTarget := fmt.Sprintf(targetReservationNameFmt, zone)
+	for _, zone := range reservationZones {
+		crTarget := reservationNameForZone(zone)
 		stepCtx, stepCancel := context.WithTimeout(ctx, crgDeleteReservationTimeout)
 		err := a.deleteReservationWithRetry(stepCtx, clusterRG, crTarget, crgName)
 		stepCancel()
@@ -307,11 +335,15 @@ func (a *azureActions) deleteOrphanedCRG(ctx context.Context, clusterRG, crgName
 // setReservationCapacityZero sets a capacity reservation's capacity to 0.
 // Azure requires capacity to be 0 before a reservation can be deleted.
 func (a *azureActions) setReservationCapacityZero(ctx context.Context, location, clusterRG, crName, zone, skuName, crgName string) error {
+	var zonePtrs []*string
+	if zone != "" {
+		zonePtrs = []*string{pointerutils.ToPtr(zone)}
+	}
 	return a.armCapacityReservations.CreateOrUpdateAndWait(ctx, clusterRG, crgName, crName,
 		armcompute.CapacityReservation{
 			Location: &location,
 			SKU:      &armcompute.SKU{Name: &skuName, Capacity: pointerutils.ToPtr(int64(0))},
-			Zones:    []*string{pointerutils.ToPtr(zone)},
+			Zones:    zonePtrs,
 		})
 }
 
@@ -366,11 +398,13 @@ func isNestedResourcesError(err error) bool {
 }
 
 // CRGSetupForResize creates a single shared Capacity Reservation Group for a set of VMs,
-// reserving target-SKU capacity in each VM's detected availability zone. All VMs must be
-// zonal; non-zonal clusters should use the plain VMResize path instead.
+// reserving target-SKU capacity in each VM's detected availability zone for zonal clusters,
+// or regional capacity for non-zonal clusters.
 //
 // When multiple VMs share an availability zone, the reservation capacity for that zone is
 // set equal to the number of VMs in it, ensuring all of them can associate simultaneously.
+// For non-zonal clusters, one regional reservation is created with capacity equal to the
+// number of VMs being resized.
 //
 // Returns the CRG ID, a unique per-operation CRG name, and the deduplicated list of zones
 // so the caller can pass them to CRGTeardown after all per-VM resizes complete.
@@ -379,27 +413,37 @@ func (a *azureActions) CRGSetupForResize(ctx context.Context, vmNames []string, 
 	clusterRG := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	location := a.oc.Location
 
-	// Detect the availability zone for each VM. All must be zonal.
-	// Count per-zone so we can reserve the right capacity for clusters where
-	// multiple masters land in the same zone.
+	// Detect zonal vs non-zonal topology and count required capacity.
+	// Mixed topology is unsupported for CRG resize and is rejected explicitly.
 	zoneCount := make(map[string]int, len(vmNames))
+	hasZonal := false
+	hasNonZonal := false
 	for _, vmName := range vmNames {
 		vm, err := a.armVirtualMachines.Get(ctx, clusterRG, vmName)
 		if err != nil {
 			return "", "", nil, fmt.Errorf("reading VM %s: %w", vmName, err)
 		}
 		if len(vm.Zones) == 0 || vm.Zones[0] == nil {
-			return "", "", nil, fmt.Errorf("VM %s has no availability zone; ARO control plane nodes are expected to be zonal (one per availability zone per OpenShift architecture)", vmName)
+			hasNonZonal = true
+			zoneCount[""]++
+			continue
 		}
+		hasZonal = true
 		zoneCount[*vm.Zones[0]]++
+	}
+
+	if hasZonal && hasNonZonal {
+		return "", "", nil, fmt.Errorf("control plane topology is mixed zonal/non-zonal; CRG-backed resize requires all control plane VMs to be either zonal or non-zonal")
 	}
 
 	// Build a sorted deduplicated zone list for deterministic CRG creation.
 	uniqueZones := make([]string, 0, len(zoneCount))
-	for z := range zoneCount {
-		uniqueZones = append(uniqueZones, z)
+	if hasZonal {
+		for z := range zoneCount {
+			uniqueZones = append(uniqueZones, z)
+		}
+		sort.Strings(uniqueZones)
 	}
-	sort.Strings(uniqueZones)
 
 	// Use a per-operation unique name to prevent interference from lingering CRGs
 	// left behind by prior failed runs (which may not yet be fully deleted by ARM).
@@ -418,13 +462,14 @@ func (a *azureActions) CRGSetupForResize(ctx context.Context, vmNames []string, 
 		return "", "", nil, err
 	}
 
-	for _, zone := range uniqueZones {
+	reservationZones := reservationZonesForTeardown(uniqueZones)
+	for _, zone := range reservationZones {
 		count := int64(zoneCount[zone])
 		if err := a.crgEnsureReservations(ctx, clusterRG, location, zone, targetSKU, crgName, count); err != nil {
 			cleanCtx, cleanCancel := context.WithTimeout(context.WithoutCancel(ctx), crgCleanupTimeout)
 			if cleanErr := a.crgDelete(cleanCtx, clusterRG, location, targetSKU, uniqueZones, nil, crgName); cleanErr != nil {
 				cleanCancel()
-				a.log.Errorf("CRG cleanup failed after reservation error for zone %s: %v", zone, cleanErr)
+				a.log.Errorf("CRG cleanup failed after reservation error for zone %q: %v", zone, cleanErr)
 				return "", "", nil, errors.Join(err, cleanErr)
 			}
 			cleanCancel()

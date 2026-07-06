@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,6 +62,19 @@ func masterVM(name, zone, sku string) armcomputev7.VirtualMachine {
 	return armcomputev7.VirtualMachine{
 		Name:  pointerutils.ToPtr(name),
 		Zones: []*string{pointerutils.ToPtr(zone)},
+		Properties: &armcomputev7.VirtualMachineProperties{
+			HardwareProfile: &armcomputev7.HardwareProfile{
+				VMSize: &vmSize,
+			},
+		},
+	}
+}
+
+// masterVMNonZonal builds a VM without availability zones.
+func masterVMNonZonal(name, sku string) armcomputev7.VirtualMachine {
+	vmSize := armcomputev7.VirtualMachineSizeTypes(sku)
+	return armcomputev7.VirtualMachine{
+		Name: pointerutils.ToPtr(name),
 		Properties: &armcomputev7.VirtualMachineProperties{
 			HardwareProfile: &armcomputev7.HardwareProfile{
 				VMSize: &vmSize,
@@ -238,6 +252,29 @@ func TestCRGDelete_NoVMs_SkipsDisassociation(t *testing.T) {
 	mockCRGs.EXPECT().Delete(gomock.Any(), "cluster-rg", testCRGName).Return(nil)
 
 	err := a.crgDelete(context.Background(), "cluster-rg", "eastus", "Standard_D16s_v3", []string{"1"}, nil, testCRGName)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCRGDelete_NonZonal_UsesRegionalReservation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	a, _, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+
+	// Non-zonal teardown passes zones=nil and should operate on one regional reservation.
+	mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", testCRGName, "cr-target-regional", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _, _ string, cr armcomputev7.CapacityReservation) error {
+			if len(cr.Zones) != 0 {
+				t.Fatalf("expected no zones for regional reservation, got %v", cr.Zones)
+			}
+			return nil
+		})
+	mockCRs.EXPECT().DeleteAndWait(gomock.Any(), "cluster-rg", testCRGName, "cr-target-regional").Return(nil)
+	mockCRGs.EXPECT().Delete(gomock.Any(), "cluster-rg", testCRGName).Return(nil)
+
+	err := a.crgDelete(context.Background(), "cluster-rg", "eastus", "Standard_D16s_v3", nil, nil, testCRGName)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -678,6 +715,75 @@ func TestCRGSetupForResize_ZoneCapacityCounting(t *testing.T) {
 	// Returned zones must be deduplicated and sorted.
 	if len(gotZones) != 2 || gotZones[0] != "1" || gotZones[1] != "2" {
 		t.Errorf("expected zones=[1 2], got %v", gotZones)
+	}
+}
+
+func TestCRGSetupForResize_NonZonal_UsesRegionalReservation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	a, mockVMs, mockCRGs, mockCRs := newTestAzureActions(t, ctrl)
+	const crgID = "/subscriptions/sub/resourceGroups/cluster-rg/providers/Microsoft.Compute/capacityReservationGroups/test-crg"
+	const targetSKU = "Standard_D16s_v5"
+
+	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-2").Return(masterVMNonZonal("master-2", "Standard_D8s_v3"), nil),
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-1").Return(masterVMNonZonal("master-1", "Standard_D8s_v3"), nil),
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(masterVMNonZonal("master-0", "Standard_D8s_v3"), nil),
+		mockCRGs.EXPECT().CreateOrUpdate(gomock.Any(), "cluster-rg", gomock.Any(),
+			gomock.AssignableToTypeOf(armcomputev7.CapacityReservationGroup{})).
+			DoAndReturn(func(_ context.Context, _, _ string, crg armcomputev7.CapacityReservationGroup) (armcomputev7.CapacityReservationGroup, error) {
+				if len(crg.Zones) != 0 {
+					t.Fatalf("expected CRG zones to be empty for non-zonal topology, got %v", crg.Zones)
+				}
+				return armcomputev7.CapacityReservationGroup{ID: pointerutils.ToPtr(crgID)}, nil
+			}),
+		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", gomock.Any(), "cr-target-regional",
+			gomock.AssignableToTypeOf(armcomputev7.CapacityReservation{})).
+			DoAndReturn(func(_ context.Context, _, _, _ string, cr armcomputev7.CapacityReservation) error {
+				if cr.SKU == nil || cr.SKU.Capacity == nil || *cr.SKU.Capacity != 3 {
+					t.Fatalf("expected regional reservation capacity=3, got %v", cr.SKU.Capacity)
+				}
+				if len(cr.Zones) != 0 {
+					t.Fatalf("expected reservation zones to be empty for non-zonal topology, got %v", cr.Zones)
+				}
+				return nil
+			}),
+	)
+
+	vmNames := []string{"master-2", "master-1", "master-0"}
+	gotID, gotName, gotZones, err := a.CRGSetupForResize(context.Background(), vmNames, targetSKU)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotID != crgID {
+		t.Errorf("expected crgID=%s, got %s", crgID, gotID)
+	}
+	if gotName == "" {
+		t.Error("expected non-empty crgName")
+	}
+	if len(gotZones) != 0 {
+		t.Errorf("expected no zones for non-zonal topology, got %v", gotZones)
+	}
+}
+
+func TestCRGSetupForResize_MixedTopologyRejected(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	a, mockVMs, _, _ := newTestAzureActions(t, ctrl)
+
+	gomock.InOrder(
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-1").Return(masterVM("master-1", "1", "Standard_D8s_v3"), nil),
+		mockVMs.EXPECT().Get(gomock.Any(), "cluster-rg", "master-0").Return(masterVMNonZonal("master-0", "Standard_D8s_v3"), nil),
+	)
+
+	_, _, _, err := a.CRGSetupForResize(context.Background(), []string{"master-1", "master-0"}, "Standard_D16s_v5")
+	if err == nil {
+		t.Fatal("expected mixed-topology error, got nil")
+	}
+	if !strings.Contains(err.Error(), "mixed zonal/non-zonal") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
