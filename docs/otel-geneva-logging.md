@@ -40,9 +40,8 @@ Top-level fields emitted for log source identification:
 
 Raw payload retention:
 
-- `raw_json_body` contains the full original log body.
-- For audit logs, `requestObject` and `responseObject` are removed before export
-  to prevent oversized payload ingestion from `WriteRequestBodies` /
+- `raw_json_body` contains the log body after `transform/log-parity` processing.
+- For audit logs, `requestObject` and `responseObject` are removed before `raw_json_body` is set to prevent oversized payload ingestion from `WriteRequestBodies` /
   `RequestResponse` audit profiles.
 
 Memory limiter behavior:
