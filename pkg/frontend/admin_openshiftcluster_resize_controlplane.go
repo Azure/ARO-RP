@@ -360,7 +360,7 @@ func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, mach
 
 	providerSpec, err := unmarshalAzureMachineProviderSpec(&machine)
 	if err != nil {
-		return fmt.Errorf("parsing providerSpec: %w", err)
+		return fmt.Errorf("parsing providerSpec for machine %s: %w", machineName, err)
 	}
 
 	providerSpec.VMSize = vmSize

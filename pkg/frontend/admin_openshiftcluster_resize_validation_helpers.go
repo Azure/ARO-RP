@@ -99,8 +99,8 @@ func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeAction
 				return nil, api.NewCloudError(
 					http.StatusInternalServerError,
 					api.CloudErrorCodeInternalServerError,
-					"controlPlaneMachines",
-					fmt.Sprintf("failed to decode provider spec, %s", err.Error()),
+					fmt.Sprintf("controlPlaneMachine/%s", machine.Name),
+					fmt.Sprintf("failed to parse provider spec for machine %s: %v", machine.Name, err),
 				)
 			}
 

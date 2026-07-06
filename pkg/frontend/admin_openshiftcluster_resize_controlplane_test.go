@@ -501,7 +501,7 @@ func TestUpdateMachineVMSize(t *testing.T) {
 					Return(machineJSONWithoutProviderSpecValue("master-0", "Standard_D8s_v3"), nil).
 					Times(3)
 			},
-			wantErr: "could not update Machine object after 3 attempts: parsing providerSpec: provider spec value is nil",
+			wantErr: "could not update Machine object after 3 attempts: parsing providerSpec for machine master-0: provider spec value is nil",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

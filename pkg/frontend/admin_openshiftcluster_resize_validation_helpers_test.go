@@ -379,7 +379,7 @@ func TestGetClusterMachines(t *testing.T) {
 				)
 				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
 			},
-			wantErr: "provider spec value is nil",
+			wantErr: "controlPlaneMachine/master-1: failed to parse provider spec for machine master-1: provider spec value is nil",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
