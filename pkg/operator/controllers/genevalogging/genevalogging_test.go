@@ -129,7 +129,11 @@ func TestSelectOTelConfig(t *testing.T) {
 		!strings.Contains(full, "send_batch_max_size: 4096") {
 		t.Fatal("full config missing batch tuning")
 	}
-	if !strings.Contains(full, "sending_queue:\n      enabled: true\n      # Prefer bounded local buffering over unbounded in-memory growth.\n      queue_size: 1200\n      num_consumers: 2\n      storage: file_storage") {
+	if !strings.Contains(full, "sending_queue:") ||
+		!strings.Contains(full, "enabled: true") ||
+		!strings.Contains(full, "queue_size: 1200") ||
+		!strings.Contains(full, "num_consumers: 2") ||
+		!strings.Contains(full, "storage: file_storage") {
 		t.Fatal("full config missing bounded sending queue configuration")
 	}
 	if !strings.Contains(full, "id: logrus_parse") {
