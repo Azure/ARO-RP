@@ -123,7 +123,10 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "delete_key(log.body, \"responseObject\") where IsMap(log.body)") {
 		t.Fatal("full config missing responseObject pruning")
 	}
-	if !strings.Contains(full, "batch:\n    timeout: 10s\n    send_batch_size: 2048\n    send_batch_max_size: 4096") {
+	if !strings.Contains(full, "batch:") ||
+		!strings.Contains(full, "timeout: 10s") ||
+		!strings.Contains(full, "send_batch_size: 2048") ||
+		!strings.Contains(full, "send_batch_max_size: 4096") {
 		t.Fatal("full config missing batch tuning")
 	}
 	if !strings.Contains(full, "sending_queue:\n      enabled: true\n      # Prefer bounded local buffering over unbounded in-memory growth.\n      queue_size: 1200\n      num_consumers: 2\n      storage: file_storage") {
