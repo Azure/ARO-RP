@@ -96,6 +96,12 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-containers, batch]") {
 		t.Fatal("full config missing containers source processor")
 	}
+	if !strings.Contains(full, "memory_limiter:\n    check_interval: 1s\n    limit_percentage: 80\n    spike_limit_percentage: 15") {
+		t.Fatal("full config missing percentage-based memory limiter configuration")
+	}
+	if strings.Contains(full, "limit_mib:") || strings.Contains(full, "spike_limit_mib:") {
+		t.Fatal("full config should not use hardcoded memory limiter MiB settings")
+	}
 	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
 		t.Fatal("full config missing node mapping")
 	}
@@ -110,6 +116,18 @@ func TestSelectOTelConfig(t *testing.T) {
 	}
 	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
 		t.Fatal("full config missing raw_json_body mapping")
+	}
+	if !strings.Contains(full, "delete_key(log.body, \"requestObject\") where IsMap(log.body)") {
+		t.Fatal("full config missing requestObject pruning")
+	}
+	if !strings.Contains(full, "delete_key(log.body, \"responseObject\") where IsMap(log.body)") {
+		t.Fatal("full config missing responseObject pruning")
+	}
+	if !strings.Contains(full, "batch:\n    timeout: 10s\n    send_batch_size: 2048\n    send_batch_max_size: 4096") {
+		t.Fatal("full config missing batch tuning")
+	}
+	if !strings.Contains(full, "sending_queue:\n      enabled: true\n      # Prefer bounded local buffering over unbounded in-memory growth.\n      queue_size: 1200\n      num_consumers: 2\n      storage: file_storage") {
+		t.Fatal("full config missing bounded sending queue configuration")
 	}
 	if !strings.Contains(full, "id: logrus_parse") {
 		t.Fatal("full config missing logrus parser for container logs")
