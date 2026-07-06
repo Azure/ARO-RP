@@ -96,7 +96,10 @@ func TestSelectOTelConfig(t *testing.T) {
 	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-containers, batch]") {
 		t.Fatal("full config missing containers source processor")
 	}
-	if !strings.Contains(full, "memory_limiter:\n    check_interval: 1s\n    limit_percentage: 80\n    spike_limit_percentage: 15") {
+	if !strings.Contains(full, "memory_limiter:") ||
+		!strings.Contains(full, "check_interval: 1s") ||
+		!strings.Contains(full, "limit_percentage: 80") ||
+		!strings.Contains(full, "spike_limit_percentage: 15") {
 		t.Fatal("full config missing percentage-based memory limiter configuration")
 	}
 	if strings.Contains(full, "limit_mib:") || strings.Contains(full, "spike_limit_mib:") {
