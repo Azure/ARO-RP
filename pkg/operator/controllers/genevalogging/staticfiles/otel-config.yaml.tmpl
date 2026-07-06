@@ -2,7 +2,7 @@ receivers:
   journald:
     directory: /var/log/journal
     journalctl_path: /usr/bin/journalctl
-    start_at: beginning
+    start_at: end
     storage: file_storage
     operators:
       - id: kubenswrapper-multiline
@@ -130,8 +130,8 @@ receivers:
 processors:
   memory_limiter:
     check_interval: 1s
-    limit_mib: 1000
-    spike_limit_mib: 150
+    limit_mib: 800
+    spike_limit_mib: 100
 {{- if eq .Profile "minimal-logs" }}
   filter/keep-only-high-signal:
     error_mode: ignore

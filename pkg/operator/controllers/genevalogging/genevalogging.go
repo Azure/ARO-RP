@@ -320,6 +320,10 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 								Args:  []string{"--config", "/etc/otel/" + configKey},
 								Env: []corev1.EnvVar{
 									{
+										Name:  "GOMEMLIMIT",
+										Value: "800MiB",
+									},
+									{
 										Name:  "GENEVA_GATEWAY_ENDPOINT",
 										Value: gatewayEndpoint,
 									},
