@@ -276,7 +276,10 @@ processors:
         value: {{ .EventName }}
         action: upsert
 {{- end }}
-  batch: {}
+  batch:
+    timeout: 10s
+    send_batch_size: 2048
+    send_batch_max_size: 4096
 
 extensions:
   health_check:
@@ -292,6 +295,9 @@ exporters:
       enabled: true
     sending_queue:
       enabled: true
+      queue_size: 1200
+      num_consumers: 2
+      storage: file_storage
 
 service:
   extensions: [health_check, file_storage]
