@@ -55,6 +55,19 @@ type nodeValidationData struct {
 	betaInstanceType string
 }
 
+func unmarshalAzureMachineProviderSpec(machine *machinev1beta1.Machine) (*machinev1beta1.AzureMachineProviderSpec, error) {
+	if machine.Spec.ProviderSpec.Value == nil {
+		return nil, fmt.Errorf("provider spec value is nil")
+	}
+
+	providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
+	if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, providerSpec); err != nil {
+		return nil, err
+	}
+
+	return providerSpec, nil
+}
+
 func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
 	machines := make(map[string]machineValidationData)
 
@@ -81,14 +94,13 @@ func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeAction
 
 	for _, machine := range machineList.Items {
 		if role, ok := machine.Labels[machineLabelClusterAPIRole]; ok && role == machineRoleMaster {
-			providerSpec := &machinev1beta1.AzureMachineProviderSpec{}
-			err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &providerSpec)
+			providerSpec, err := unmarshalAzureMachineProviderSpec(&machine)
 			if err != nil {
 				return nil, api.NewCloudError(
 					http.StatusInternalServerError,
 					api.CloudErrorCodeInternalServerError,
-					"controlPlaneMachines",
-					fmt.Sprintf("failed to decode provider spec, %s", err.Error()),
+					fmt.Sprintf("controlPlaneMachine/%s", machine.Name),
+					fmt.Sprintf("failed to parse provider spec for machine %s: %v", machine.Name, err),
 				)
 			}
 

@@ -366,6 +366,21 @@ func TestGetClusterMachines(t *testing.T) {
 			},
 			wantCount: 2,
 		},
+		{
+			name: "failure - master machine with nil provider spec value",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				machineWithNilProviderSpec := createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running")
+				machineWithNilProviderSpec.Spec.ProviderSpec.Value = nil
+
+				machines := encodeMachineList(
+					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+					machineWithNilProviderSpec,
+					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
+				)
+				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+			},
+			wantErr: "controlPlaneMachine/master-1: failed to parse provider spec for machine master-1: provider spec value is nil",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
