@@ -287,6 +287,53 @@ func TestClusterReconciler(t *testing.T) {
 								Version: "4.18.30",
 							},
 						},
+					},
+				},
+			},
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{
+				"MachineConfig//99-master-aro-dns": 1,
+			},
+			request:        ctrl.Request{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
+			// ARO-26990: Progressing=True during an ARO MCO rollout must NOT allow
+			// updating existing MachineConfigs (history[0] is still Completed).
+			name: "ARO-26990: MCO rollout (Progressing=True, history[0]=Completed): does not update existing MachineConfig",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+				&mcv1.MachineConfig{
+					ObjectMeta: metav1.ObjectMeta{Name: "99-master-aro-dns"},
+					Spec:       mcv1.MachineConfigSpec{},
+				},
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "version",
+					},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.18.30",
+							},
+						},
 						Conditions: []configv1.ClusterOperatorStatusCondition{
 							{
 								Type:   configv1.OperatorProgressing,
@@ -296,10 +343,8 @@ func TestClusterReconciler(t *testing.T) {
 					},
 				},
 			},
-			wantCreated: map[string]int{},
-			wantUpdated: map[string]int{
-				"MachineConfig//99-master-aro-dns": 1,
-			},
+			wantCreated:    map[string]int{},
+			wantUpdated:    map[string]int{},
 			request:        ctrl.Request{},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
@@ -337,12 +382,6 @@ func TestClusterReconciler(t *testing.T) {
 							{
 								State:   configv1.CompletedUpdate,
 								Version: "4.18.30",
-							},
-						},
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorProgressing,
-								Status: configv1.ConditionTrue,
 							},
 						},
 					},
