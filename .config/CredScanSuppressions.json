@@ -55,7 +55,7 @@
         },
         {
             "file": "pkg/util/pullsecret/extract_test.go",
-            "_justification": "test assertion matching expected error message text containing username:password format description, not a real credential"
+            "_justification": "base64-encoded 'testuser:testpass' docker-auth fixture and literal Password: \"testpass\" struct field used for testing, not a real credential"
         },
         {
             "file": "vendor/github.com/docker/docker/api/swagger.yaml",
