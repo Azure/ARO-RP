@@ -40,7 +40,15 @@ Top-level fields emitted for log source identification:
 
 Raw payload retention:
 
-- `raw_json_body` contains the full original log body.
+- `raw_json_body` contains the log body after `transform/log-parity` processing.
+- For audit logs, `requestObject` and `responseObject` are removed before `raw_json_body` is set to prevent oversized payload ingestion from `WriteRequestBodies` /
+  `RequestResponse` audit profiles.
+
+Memory limiter behavior:
+
+- The OTEL `memory_limiter` is configured as a percentage of container memory
+  (`limit_percentage: 80`, `spike_limit_percentage: 15`) so it scales
+  automatically if container memory limits are adjusted.
 
 Worker collectors do not include the audit receiver; audit logs are collected on the master/control-plane collector config.
 
@@ -74,8 +82,6 @@ To change the fleet within a region apply the task via the Create or Update Sche
 
 ### Profile Render Failure Fallback
 If the new profile fails to render for any reason the minimal-logs profile will act as the fallback.
-
-
 
 
 

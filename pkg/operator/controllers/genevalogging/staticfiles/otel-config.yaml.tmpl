@@ -130,8 +130,8 @@ receivers:
 processors:
   memory_limiter:
     check_interval: 1s
-    limit_mib: 1000
-    spike_limit_mib: 150
+    limit_percentage: 80
+    spike_limit_percentage: 15
 {{- if eq .Profile "minimal-logs" }}
   filter/keep-only-high-signal:
     error_mode: ignore
@@ -234,6 +234,10 @@ processors:
           - delete_key(log.attributes, "CPU_USAGE_NSEC")
           - delete_key(log.attributes, "BOOT_ID")
           - delete_key(log.attributes, "PENDING")
+          # Drop Kubernetes audit request/response object payloads to avoid
+          # ingesting large WriteRequestBodies/RequestResponse records.
+          - delete_key(log.body, "requestObject") where IsMap(log.body)
+          - delete_key(log.body, "responseObject") where IsMap(log.body)
           # Match Fluent Bit audit nesting lift behavior.
           - set(log.body["user_username"], log.body["user"]["username"]) where IsMap(log.body) and IsMap(log.body["user"]) and log.body["user"]["username"] != nil
           - set(log.body["user_uid"], log.body["user"]["uid"]) where IsMap(log.body) and IsMap(log.body["user"]) and log.body["user"]["uid"] != nil
@@ -276,7 +280,10 @@ processors:
         value: {{ .EventName }}
         action: upsert
 {{- end }}
-  batch: {}
+  batch:
+    timeout: 10s
+    send_batch_size: 2048
+    send_batch_max_size: 4096
 
 extensions:
   health_check:
@@ -292,6 +299,10 @@ exporters:
       enabled: true
     sending_queue:
       enabled: true
+      # Prefer bounded local buffering over unbounded in-memory growth.
+      queue_size: 1200
+      num_consumers: 2
+      storage: file_storage
 
 service:
   extensions: [health_check, file_storage]
