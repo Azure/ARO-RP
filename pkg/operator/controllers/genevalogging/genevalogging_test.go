@@ -10,12 +10,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -567,5 +570,84 @@ func TestCleanupStaleResources(t *testing.T) {
 
 	if err := r.cleanupStaleResources(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCleanupOTelDaemonSets(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	mockDh := mock_dynamichelper.NewMockInterface(controller)
+	r := &Reconciler{dh: mockDh}
+
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, MasterDaemonsetName).Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, WorkerDaemonsetName).Times(1)
+
+	if err := r.cleanupOTelDaemonSets(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReconcileDisabledCleansUpOTelDaemonSets(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	cluster := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+		Spec: arov1alpha1.ClusterSpec{
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagFalse,
+			},
+		},
+	}
+
+	mockDh := mock_dynamichelper.NewMockInterface(controller)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, MasterDaemonsetName).Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, WorkerDaemonsetName).Times(1)
+
+	r := &Reconciler{
+		AROController: base.AROController{
+			Log:    logrus.NewEntry(logrus.New()),
+			Client: testclienthelper.NewAROFakeClientBuilder(cluster).Build(),
+			Name:   ControllerName,
+		},
+		dh: mockDh,
+	}
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReconcileDisabledCleanupOTelDaemonSetsFailure(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	cluster := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+		Spec: arov1alpha1.ClusterSpec{
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagFalse,
+			},
+		},
+	}
+
+	mockDh := mock_dynamichelper.NewMockInterface(controller)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, MasterDaemonsetName).Return(errors.New("boom")).Times(1)
+	mockDh.EXPECT().EnsureDeleted(gomock.Any(), "DaemonSet.apps", kubeNamespace, WorkerDaemonsetName).Times(0)
+
+	r := &Reconciler{
+		AROController: base.AROController{
+			Log:    logrus.NewEntry(logrus.New()),
+			Client: testclienthelper.NewAROFakeClientBuilder(cluster).Build(),
+			Name:   ControllerName,
+		},
+		dh: mockDh,
+	}
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{})
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }

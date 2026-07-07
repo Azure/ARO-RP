@@ -134,6 +134,16 @@ func (r *Reconciler) cleanupStaleResources(ctx context.Context) error {
 	return nil
 }
 
+func (r *Reconciler) cleanupOTelDaemonSets(ctx context.Context) error {
+	for _, name := range []string{MasterDaemonsetName, WorkerDaemonsetName} {
+		if err := r.dh.EnsureDeleted(ctx, "DaemonSet.apps", kubeNamespace, name); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Reconcile the genevalogging deployment.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
@@ -144,6 +154,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingEnabled) {
 		r.Log.Debug("controller is disabled")
+		if err := r.cleanupOTelDaemonSets(ctx); err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+			return reconcile.Result{}, err
+		}
+		r.ClearConditions(ctx)
 		return reconcile.Result{}, nil
 	}
 
