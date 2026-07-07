@@ -7,11 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -209,7 +209,7 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 
 	case *corev1.ServiceAccount:
 		old, new := old.(*corev1.ServiceAccount), new.(*corev1.ServiceAccount)
-		for _, name := range maps.Keys(old.Annotations) {
+		for name := range maps.Keys(old.Annotations) {
 			if strings.HasPrefix(name, "openshift.io/") {
 				copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
 			}
@@ -254,7 +254,7 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 		new.Finalizers = old.Finalizers
 		new.Status = old.Status
 
-		for _, name := range maps.Keys(old.Labels) {
+		for name := range maps.Keys(old.Labels) {
 			if strings.HasPrefix(name, "hive.openshift.io/") {
 				copyLabel(&new.ObjectMeta, &old.ObjectMeta, name)
 			}

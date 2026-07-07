@@ -20,6 +20,7 @@ linters:
     - usestdlibvars
     - whitespace
     - depguard
+    - exptostd
   settings:
     depguard:
       rules:
@@ -183,6 +184,11 @@ linters:
       - linters:
           - importas
         path: (.+/)?zz_generated_(.+)\.go
+      # bindata.go should not be modernized automatically
+      - linters:
+          - exptostd
+          - govet
+        path: bindata.go
       - linters:
           - importas
         path: pkg/operator/(clientset|mocks)/(.+)\.go

@@ -165,7 +165,7 @@ func getField(obj interface{}, fieldName string) (reflect.Value, error) {
 	if fieldName == "" {
 		return reflect.Value{}, errors.New("empty field name")
 	}
-	if reflect.TypeOf(obj).Kind() != reflect.Ptr {
+	if reflect.TypeOf(obj).Kind() != reflect.Pointer {
 		return reflect.Value{}, errors.New("obj not ptr")
 	}
 	elem := reflect.ValueOf(obj).Elem()

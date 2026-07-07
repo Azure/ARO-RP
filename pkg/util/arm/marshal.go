@@ -152,7 +152,7 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 		}
 		return a
 
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		t := emptyInterfaceType
 		if v.IsNil() {
 			return reflect.Zero(t)
