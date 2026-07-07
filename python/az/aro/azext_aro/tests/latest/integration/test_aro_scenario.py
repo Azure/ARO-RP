@@ -67,11 +67,11 @@ class AroScenarioTests(ScenarioTest):
         self.cmd('network vnet subnet update -g {rg} --vnet-name dev-vnet -n {master_subnet} --private-link-service-network-policies Disabled')
 
         # aro validate
-        with mock.patch('azure.cli.command_modules.aro._rbac._gen_uuid', side_effect=self.create_guid):
+        with mock.patch('azext_aro._rbac._gen_uuid', side_effect=self.create_guid):
             self.cmd('aro validate -g {rg} -n {name} --client-id {aro_csp} --client-secret {aro_csp_pass} --master-subnet {master_subnet_resource} --worker-subnet {worker_subnet_resource} --subscription {subscription}')
 
         # aro create
-        with mock.patch('azure.cli.command_modules.aro._rbac._gen_uuid', side_effect=self.create_guid):
+        with mock.patch('azext_aro._rbac._gen_uuid', side_effect=self.create_guid):
             self.cmd('aro create -g {rg} -n {name} --client-id {aro_csp} --client-secret {aro_csp_pass} --master-subnet {master_subnet_resource} --worker-subnet {worker_subnet_resource} --subscription {subscription} --tags test=create', checks=[
                 self.check('tags.test', 'create'),
                 self.check('name', '{name}'),
@@ -110,3 +110,63 @@ class AroScenarioTests(ScenarioTest):
 
         # aro delete
         self.cmd('aro delete -y -g {rg} -n {name} --subscription {subscription}', expect_failure=False)
+
+    @AllowLargeResponse()
+    @ResourceGroupPreparer(random_name_length=28, name_prefix="cli_test_aro", location="eastus")
+    def test_aro_public_cluster_with_managed_identities(self, resource_group):
+        from azure.mgmt.core.tools import resource_id
+
+        subscription = self.get_subscription_id()
+        master_subnet = self.create_random_name("dev_master", 14)
+        worker_subnet = self.create_random_name("dev_worker", 14)
+        name = self.create_random_name("aro", 14)
+
+        temp_kubeconfig_path = self.create_random_name("kubeconfig", 14) + ".tmp"
+
+        self.kwargs.update({
+            "name": name,
+            "subscription": subscription,
+            "master_subnet": master_subnet,
+            "worker_subnet": worker_subnet,
+            "master_ip_range": "10.{}.{}.0/24".format(randint(0, 127), randint(0, 255)),
+            "worker_ip_range": "10.{}.{}.0/24".format(randint(0, 127), randint(0, 255)),
+            "master_subnet_resource": resource_id(
+                subscription=subscription,
+                resource_group=resource_group,
+                namespace="Microsoft.Network",
+                type="virtualNetworks",
+                child_type_1="subnets",
+                name="dev-vnet",
+                child_name_1=master_subnet
+            ),
+            "worker_subnet_resource": resource_id(
+                subscription=subscription,
+                resource_group=resource_group,
+                namespace="Microsoft.Network",
+                type="virtualNetworks",
+                child_type_1="subnets",
+                name="dev-vnet",
+                child_name_1=worker_subnet
+            ),
+            "temp_kubeconfig_path": temp_kubeconfig_path,
+            "version": "4.18.34",
+            "vnet_name": "dev-vnet",
+        })
+
+        self.cmd("network vnet create -g {rg} -n {vnet_name} --address-prefixes 10.0.0.0/9")
+        self.cmd("network vnet subnet create -g {rg} --vnet-name {vnet_name} -n {master_subnet} --address-prefixes {master_ip_range} --service-endpoints Microsoft.ContainerRegistry --default-outbound false")
+        self.cmd("network vnet subnet create -g {rg} --vnet-name {vnet_name} -n {worker_subnet} --address-prefixes {worker_ip_range} --service-endpoints Microsoft.ContainerRegistry --default-outbound false")
+        self.cmd("network vnet subnet update -g {rg} --vnet-name {vnet_name} -n {master_subnet} --private-link-service-network-policies Disabled")
+
+        with mock.patch("azext_aro._rbac._gen_uuid", side_effect=self.create_guid):
+
+            # aro create
+            self.cmd('aro create -g {rg} -n {name} --enable-mi --version {version} --vnet {vnet_name} --master-subnet {master_subnet_resource} --worker-subnet {worker_subnet_resource} --subscription {subscription} --tags test=create', checks=[
+                self.check('tags.test', 'create'),
+                self.check('name', '{name}'),
+                self.check('masterProfile.subnetId', '{master_subnet_resource}'),
+                self.check('workerProfiles[0].subnetId', '{worker_subnet_resource}'),
+                self.check('provisioningState', 'Succeeded')
+            ])
+
+            self.cmd("aro delete -y -g {rg} -n {name} --subscription {subscription} --delete-identities", expect_failure=False)

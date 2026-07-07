@@ -67,7 +67,7 @@ ARO_FEDERATED_CREDENTIAL_ROLE = "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
 FP_SERVICE_PRINCIPAL_ROLE = "42f3c60f-e7b1-46d7-ba56-6de681664342"
 
 
-class RoleAssignmentScope(enum.Enum):
+class RoleAssignmentScope(enum.IntEnum):
     """Role Assignment Scope"""
     DISK_ENCRYPTION_SET = enum.auto()
     MASTER_SUBNET = enum.auto()
@@ -1033,10 +1033,12 @@ def _validate_version(client, version, location) -> None:
         raise InvalidArgumentValueError("--version invalid")
 
 
-def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentScope]:
+def _determine_required_scopes_from_role_set(cmd, role) -> list[RoleAssignmentScope]:
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
 
+    # We're using a set because sets guarantee uniqueness of elements. We don't
+    # want to accidentally double up on scopes.
     scopes: set[RoleAssignmentScope] = set()
     for permissions in definition.permissions:
         for action in permissions.actions:
@@ -1060,7 +1062,11 @@ def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentSco
             if action.startswith("Microsoft.Network/routeTable/"):
                 scopes.add(RoleAssignmentScope.ROUTE_TABLE)
 
-    return scopes
+    # We're converting the set to a list to maintain a deterministic order.
+    # `azdev test` dislikes nondeterminism.
+    l = list(scopes)
+    l.sort()
+    return l
 
 
 def _determine_required_scopes_from_network_resources(cmd,
