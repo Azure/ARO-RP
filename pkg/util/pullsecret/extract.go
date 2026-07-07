@@ -24,7 +24,7 @@ func userPassFromBase64(secret string) (*UserPass, error) {
 
 	split := strings.SplitN(string(decoded), ":", 2)
 	if len(split) != 2 {
-		return nil, errors.New("not in format of username:password")
+		return nil, errors.New("not in expected user and secret format")
 	}
 
 	return &UserPass{
