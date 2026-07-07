@@ -13,31 +13,49 @@ interactions:
       ParameterSetName:
       - --location
       User-Agent:
-      - AZURECLI/2.0.0
+      - AZURECLI/2.88.0 azsdk-python-core/1.39.0 Python/3.11.15 (Linux-7.0.14-201.fc44.x86_64-x86_64-with-glibc2.43)
     method: GET
     uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.RedHatOpenShift/locations/eastus/openShiftVersions?api-version=2025-07-25
   response:
     body:
-      string: '{"value":[{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.RedHatOpenShift/locations/eastus/openshiftversions/4.10.0","name":"4.10.0","type":"Microsoft.RedHatOpenShift/locations/openshiftversions","properties":{"version":"4.10.0"}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.RedHatOpenShift/locations/eastus/openshiftversions/4.11.0","name":"4.11.0","type":"Microsoft.RedHatOpenShift/locations/openshiftversions","properties":{"version":"4.11.0"}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.RedHatOpenShift/locations/eastus/openshiftversions/4.12.0","name":"4.12.0","type":"Microsoft.RedHatOpenShift/locations/openshiftversions","properties":{"version":"4.12.0"}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.RedHatOpenShift/locations/eastus/openshiftversions/4.13.0","name":"4.13.0","type":"Microsoft.RedHatOpenShift/locations/openshiftversions","properties":{"version":"4.13.0"}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.RedHatOpenShift/locations/eastus/openshiftversions/4.14.0","name":"4.14.0","type":"Microsoft.RedHatOpenShift/locations/openshiftversions","properties":{"version":"4.14.0"}}]}'
+      string: "{\n    \"value\": [\n        {\n            \"name\": \"4.18.26\",\n
+        \           \"type\": \"Microsoft.RedHatOpenShift/OpenShiftVersion\",\n            \"properties\":
+        {\n                \"version\": \"4.18.26\"\n            }\n        },\n        {\n
+        \           \"name\": \"4.19.20\",\n            \"type\": \"Microsoft.RedHatOpenShift/OpenShiftVersion\",\n
+        \           \"properties\": {\n                \"version\": \"4.19.20\"\n
+        \           }\n        },\n        {\n            \"name\": \"4.20.15\",\n
+        \           \"type\": \"Microsoft.RedHatOpenShift/OpenShiftVersion\",\n            \"properties\":
+        {\n                \"version\": \"4.20.15\"\n            }\n        },\n        {\n
+        \           \"name\": \"4.18.34\",\n            \"type\": \"Microsoft.RedHatOpenShift/OpenShiftVersion\",\n
+        \           \"properties\": {\n                \"version\": \"4.18.34\"\n
+        \           }\n        },\n        {\n            \"name\": \"4.19.24\",\n
+        \           \"type\": \"Microsoft.RedHatOpenShift/OpenShiftVersion\",\n            \"properties\":
+        {\n                \"version\": \"4.19.24\"\n            }\n        }\n    ]\n}\n"
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '1234'
+      - '1009'
       content-type:
-      - application/json; charset=utf-8
+      - application/json
       date:
-      - Thu, 20 Feb 2026 15:00:00 GMT
+      - Tue, 07 Jul 2026 19:11:24 GMT
       expires:
       - '-1'
       pragma:
       - no-cache
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
+      x-ms-operation-identifier:
+      - tenantId=64dc69e4-d083-49fc-9569-ebece1dd1408,objectId=3fe7454a-d262-4b62-b608-52e9f5c5b38b/eastus/7505244e-f983-4c04-add1-73e98387e4be
+      x-ms-ratelimit-remaining-subscription-global-reads:
+      - '3749'
+      x-msedge-ref:
+      - 'Ref A: EDFA664F162848CDBD207A84A7175E78 Ref B: BL2AA2010204033 Ref C: 2026-07-07T19:11:24Z'
     status:
       code: 200
       message: OK
