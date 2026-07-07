@@ -21,6 +21,10 @@ ROLE_READER = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
 logger = get_logger(__name__)
 
 
+def _gen_uuid() -> str:
+    return str(uuid.uuid4())
+
+
 def create_identity(cmd, location, group, name) -> typing.Any:
     create = _create_identity(cli_ctx=cmd.cli_ctx)
 
@@ -32,10 +36,7 @@ def create_identity(cmd, location, group, name) -> typing.Any:
     })
 
 
-def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope, name=None) -> typing.Any | None:
-    if not name:
-        name = str(uuid.uuid4())
-
+def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope) -> typing.Any | None:
     create = _role_assignment_create(cli_ctx=cli_ctx)
     try:
         return create(command_args={
@@ -43,7 +44,7 @@ def create_role_assignment(cli_ctx, principal_id, role_definition_id, scope, nam
             "principal_type": "ServicePrincipal",
             "role_definition_id": role_definition_id,
             "scope": scope,
-            "role_assignment_name": name,
+            "role_assignment_name": _gen_uuid(),
         })
     except ResourceExistsError:
         logger.warning("Role Assignment already exists for "
