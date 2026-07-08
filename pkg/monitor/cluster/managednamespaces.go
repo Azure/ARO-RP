@@ -5,39 +5,36 @@ package cluster
 
 import (
 	"context"
-	"errors"
-
-	corev1 "k8s.io/api/core/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
+var scopedNamespaces = []string{
+	"openshift-apiserver",
+	"openshift-apiserver-operator",
+	"openshift-authentication",
+	"openshift-authentication-operator",
+	"openshift-azure-logging",
+	"openshift-azure-operator",
+	"openshift-dns",
+	"openshift-dns-operator",
+	"openshift-etcd",
+	"openshift-etcd-operator",
+	"openshift-ingress",
+	"openshift-ingress-operator",
+	"openshift-kube-apiserver",
+	"openshift-kube-apiserver-operator",
+	"openshift-kube-controller-manager",
+	"openshift-kube-controller-manager-operator",
+	"openshift-kube-scheduler",
+	"openshift-kube-scheduler-operator",
+	"openshift-machine-config-operator",
+	"openshift-machine-api",
+	"openshift-monitoring",
+	"openshift-monitoring-operator",
+	"openshift-network-operator",
+	"openshift-ovn-kubernetes",
+}
+
 func (mon *Monitor) fetchManagedNamespaces(ctx context.Context) error {
-	var cont string
-
-	namespaces := []string{}
-	l := &corev1.NamespaceList{}
-
-	for {
-		err := mon.ocpclientset.List(ctx, l, client.Continue(cont), client.Limit(mon.queryLimit))
-		if err != nil {
-			return errors.Join(errListNamespaces, err)
-		}
-
-		for _, i := range l.Items {
-			if namespace.IsOpenShiftNamespace(i.GetName()) {
-				namespaces = append(namespaces, i.GetName())
-			}
-		}
-
-		cont = l.GetContinue()
-		if cont == "" {
-			break
-		}
-	}
-
-	mon.namespacesToMonitor = namespaces
+	mon.namespacesToMonitor = scopedNamespaces
 	return nil
 }

@@ -25,12 +25,12 @@ func TestEmitPodConditions(t *testing.T) {
 	ctx := context.Background()
 
 	objects := []client.Object{
-		namespaceObject("openshift"),
+		namespaceObject("openshift-monitoring"),
 		namespaceObject("customer"),
 		&corev1.Pod{ // metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Spec: corev1.PodSpec{
 				NodeName: "fake-node-name",
@@ -117,28 +117,28 @@ func TestEmitPodConditions(t *testing.T) {
 
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
-		"namespace": "openshift",
+		"namespace": "openshift-monitoring",
 		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "ContainersReady",
 	})
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
-		"namespace": "openshift",
+		"namespace": "openshift-monitoring",
 		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "Initialized",
 	})
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
-		"namespace": "openshift",
+		"namespace": "openshift-monitoring",
 		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "PodScheduled",
 	})
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
-		"namespace": "openshift",
+		"namespace": "openshift-monitoring",
 		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "Ready",
@@ -154,12 +154,12 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	ctx := context.Background()
 
 	objects := []client.Object{
-		namespaceObject("openshift"),
+		namespaceObject("openshift-monitoring"),
 		namespaceObject("customer"),
 		&corev1.Pod{ // metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -201,7 +201,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		&corev1.Pod{ // oomkilled pod
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "oomkilled-pod1",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -249,7 +249,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 
 	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
 		"name":                 "name",
-		"namespace":            "openshift",
+		"namespace":            "openshift-monitoring",
 		"nodeName":             "fake-node-name",
 		"containername":        "containername",
 		"reason":               "ImagePullBackOff",
@@ -257,7 +257,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	})
 	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
 		"name":                 "oomkilled-pod1",
-		"namespace":            "openshift",
+		"namespace":            "openshift-monitoring",
 		"nodeName":             "fake-node-name",
 		"containername":        "oom-killed-cntr",
 		"reason":               "CrashLoopBackOff",
@@ -274,13 +274,13 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	ctx := context.Background()
 
 	objects := []client.Object{
-		namespaceObject("openshift"),
+		namespaceObject("openshift-monitoring"),
 		namespaceObject("customer"),
 		namespaceObject("default"),
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname1",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -297,7 +297,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		&corev1.Pod{ // #2 no metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname2",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -314,7 +314,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		&corev1.Pod{ // #3 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname3",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -331,7 +331,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		&corev1.Pod{ // #4 no metrics expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname4",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -365,7 +365,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		&corev1.Pod{ // #6 Multi-container pod
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "multi-container-pod",
-				Namespace: "openshift",
+				Namespace: "openshift-monitoring",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -426,21 +426,21 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(42), map[string]string{
 		"name":      "podname1",
-		"namespace": "openshift",
+		"namespace": "openshift-monitoring",
 	})
 
 	// Expecting data for 'podname2' to be dropped
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(restartCounterThreshold), map[string]string{
 		"name":      "podname3",
-		"namespace": "openshift",
+		"namespace": "openshift-monitoring",
 	})
 
 	// Expecting data for 'podname4' to be dropped
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(restartCounterThreshold*2), map[string]string{
 		"name":      "multi-container-pod",
-		"namespace": "openshift",
+		"namespace": "openshift-monitoring",
 	})
 
 	err = mon.emitPodConditions(ctx)
@@ -458,4 +458,65 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	assert.NotEmpty(t, x.Data["name"])
 	assert.NotEmpty(t, x.Data["namespace"])
 	assert.Equal(t, "pod.restartcounter", x.Data["metric"])
+}
+
+func TestEmitPodConditionsAllManagedNamespaces(t *testing.T) {
+	ctx := context.Background()
+
+	var objects []client.Object
+	for _, ns := range scopedNamespaces {
+		objects = append(objects, namespaceObject(ns))
+		objects = append(objects, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pod",
+				Namespace: ns,
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node",
+			},
+			Status: corev1.PodStatus{
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+		})
+	}
+
+	controller := gomock.NewController(t)
+	m := mock_metrics.NewMockEmitter(controller)
+
+	_, log := testlog.New()
+	ocpclientset := clienthelper.NewWithClient(log, fake.
+		NewClientBuilder().
+		WithObjects(objects...).
+		Build())
+
+	mon := &Monitor{
+		ocpclientset: ocpclientset,
+		m:            m,
+		queryLimit:   50,
+	}
+
+	err := mon.fetchManagedNamespaces(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, ns := range scopedNamespaces {
+		m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
+			"name":      "test-pod",
+			"namespace": ns,
+			"nodeName":  "fake-node",
+			"status":    "False",
+			"type":      "Ready",
+		})
+	}
+
+	err = mon.emitPodConditions(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
