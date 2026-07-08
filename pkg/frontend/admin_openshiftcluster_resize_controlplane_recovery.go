@@ -207,6 +207,20 @@ func vmHasTargetSize(vm mgmtcompute.VirtualMachine, targetVMSize string) bool {
 	return vm.HardwareProfile != nil && strings.EqualFold(string(vm.HardwareProfile.VMSize), targetVMSize)
 }
 
+// vmIsRunningView reports whether the VM's InstanceView shows PowerState/running.
+// The VM must have been fetched with InstanceView expansion (mgmtcompute.InstanceView).
+func vmIsRunningView(vm mgmtcompute.VirtualMachine) bool {
+	if vm.VirtualMachineProperties == nil || vm.InstanceView == nil || vm.InstanceView.Statuses == nil {
+		return false
+	}
+	for _, status := range *vm.InstanceView.Statuses {
+		if status.Code != nil && strings.EqualFold(*status.Code, "PowerState/running") {
+			return true
+		}
+	}
+	return false
+}
+
 func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *controlPlaneNodeProgress) error {
 	nodeName := state.snapshot.machineName
 
@@ -239,32 +253,43 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 	)
 
 	// CRG path: replace stop→resize→start with a single VMResizeWithCRG call.
-	// vmStopped is set true up-front because VMResizeWithCRG deallocates the VM as its first action.
-	// This allows rollback to restart a VM that may have been left deallocated if the CRG resize fails.
+	// vmStopped is assumed true up-front because VMResizeWithCRG deallocates the VM as
+	// its first action; on failure a probe clears it when the VM is confirmed running,
+	// and on success the after hook clears it. This lets rollback restart a VM that was
+	// left deallocated without needlessly restarting one that is already running.
 	// vmResized is used to decide whether rollback must restore the original VM SKU.
 	if o.crgID != "" {
 		stepEntries = append(stepEntries, resizeNodeStep{
 			name: "crgResize",
 			step: steps.Action(func(ctx context.Context) error {
-				// VMResizeWithCRG deallocates the VM as its first action, so mark it
-				// stopped up front. If the resize fails before the SKU changes and the
-				// internal best-effort restart also fails, vmResized stays false; this
-				// flag ensures rollback still restarts the (deallocated) VM via the
-				// vmStopped branch. Starting an already-running VM is a safe no-op.
+				// VMResizeWithCRG deallocates the VM as its first action, so optimistically
+				// assume it may be left deallocated and mark it stopped up front; the probe
+				// below clears this if the VM is confirmed still running after a failure.
 				state.vmStopped = true
 				err := o.a.VMResizeWithCRG(ctx, nodeName, o.crgID, o.desiredVMSize)
 				if err != nil {
+					// Probe actual VM state so rollback flags reflect reality: record
+					// vmResized if the target SKU was applied, and clear vmStopped if the
+					// VM is confirmed running (avoids an unnecessary restart during rollback
+					// that could fail and obscure the original error).
 					probeCtx, probeCancel := context.WithTimeout(context.WithoutCancel(ctx), crgResizeProbeTimeout)
 					vm, probeErr := o.a.GetVirtualMachine(probeCtx, o.clusterResourceGroupName, nodeName, mgmtcompute.InstanceView)
 					probeCancel()
-					if probeErr == nil && vmHasTargetSize(vm, o.desiredVMSize) {
-						state.vmResized = true
+					if probeErr == nil {
+						if vmHasTargetSize(vm, o.desiredVMSize) {
+							state.vmResized = true
+						}
+						if vmIsRunningView(vm) {
+							state.vmStopped = false
+						}
 					}
 				}
 				return err
 			}),
 			after: func() {
+				// Success: VMResizeWithCRG leaves the VM resized and running.
 				state.vmResized = true
+				state.vmStopped = false
 			},
 		})
 	} else {

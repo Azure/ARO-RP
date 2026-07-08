@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -35,6 +36,18 @@ func virtualMachineWithSize(vmSize string) mgmtcompute.VirtualMachine {
 			},
 		},
 	}
+}
+
+// virtualMachineRunningWithSize returns a VM whose InstanceView reports
+// PowerState/running, used to exercise the CRG probe's "VM confirmed running" path.
+func virtualMachineRunningWithSize(vmSize string) mgmtcompute.VirtualMachine {
+	vm := virtualMachineWithSize(vmSize)
+	vm.InstanceView = &mgmtcompute.VirtualMachineInstanceView{
+		Statuses: &[]mgmtcompute.InstanceViewStatus{
+			{Code: pointerutils.ToPtr("PowerState/running")},
+		},
+	}
+	return vm
 }
 
 func nodeJSONWithLabels(name string, ready, unschedulable bool, nodeInstanceType, betaInstanceType string) []byte {

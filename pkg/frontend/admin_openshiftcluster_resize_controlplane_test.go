@@ -773,6 +773,43 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 			wantErrContains: []string{"failed to resize node master-0", "crgResize: resize error"},
 		},
 		{
+			// If VMResizeWithCRG fails but the probe confirms the VM is still running
+			// (e.g. failure before/around deallocation, or best-effort restart succeeded),
+			// vmStopped is cleared so rollback does NOT needlessly restart a running VM.
+			name: "shared CRG: resize fails but VM confirmed running - rollback skips restart",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				machines := masterMachineListJSON(
+					masterMachine("master-0", originalSize, running),
+				)
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+
+				resizeNames := []string{"master-0"}
+				gomock.InOrder(
+					// pre-flight health check
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().CRGSetupForResize(gomock.Any(), resizeNames, desiredSize).
+						Return(testCRGID, testCRGName, testZones, nil),
+					// master-0: per-node health + snapshot + resize fails
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
+					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).
+						Return(errors.New("resize error")),
+					// Probe shows original SKU + VM running: vmResized stays false and
+					// vmStopped is cleared, so rollback only uncordons (no restart).
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineRunningWithSize(originalSize), nil),
+					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, testZones, resizeNames, testCRGName).Return(nil),
+					// rollback master-0 (vmResized=false, vmStopped=false): just uncordon.
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
+				)
+			},
+			wantErrContains: []string{"failed to resize node master-0", "crgResize: resize error"},
+		},
+		{
 			// When all nodes are already at the target size, no health check, CRG, or resize occurs.
 			name: "shared CRG: all nodes already at target size - no CRG setup",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
@@ -1235,6 +1272,125 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : setting up capacity reservation group: no capacity`,
+		},
+		{
+			// Proves strconv.ParseBool spellings other than "true" are accepted:
+			// "1" must route to the CRG path (reaching CRGSetupForResize).
+			name:       "useCapacityReservation=1 is accepted and routes to CRG path",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			requestURL: fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D16s_v5&useCapacityReservation=1", testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				running := "Running"
+				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+					masterMachineInZone("master-0", "Standard_D8s_v3", running, "1"),
+					masterMachineInZone("master-1", "Standard_D8s_v3", running, "2"),
+					masterMachineInZone("master-2", "Standard_D8s_v3", running, "3"),
+				))
+				k.EXPECT().
+					KubeList(gomock.Any(), "Node", "").
+					Return(controlPlaneNodeListJSON(
+						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+					), nil).
+					AnyTimes()
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").Return(nodeJSON("master-2", true), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").Return(nodeJSON("master-1", true), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil)
+			},
+			azureMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D16s_v5"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D16s_v5": {
+							Name:         pointerutils.ToPtr("Standard_D16s_v5"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
+				healthyControlPlaneInventoryMock(nil, a, "test-cluster", "Standard_D8s_v3")
+				// CRG setup returns an error so the test remains unit-level (no VM resize calls).
+				a.EXPECT().
+					CRGSetupForResize(gomock.Any(), []string{"master-2", "master-1", "master-0"}, "Standard_D16s_v5").
+					Return("", "", nil, errors.New("no capacity"))
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : setting up capacity reservation group: no capacity`,
+		},
+		{
+			// Proves "0" is accepted and routes to the standard (non-CRG) path:
+			// no CRGSetupForResize call is made and the no-op resize returns 200.
+			name:       "useCapacityReservation=0 is accepted and routes to standard path",
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			requestURL: fmt.Sprintf("https://server/admin%s/resizecontrolplane?vmSize=Standard_D8s_v3&useCapacityReservation=0", testdatabase.GetResourcePath(mockSubID, "resourceName")),
+			fixture: func(f *testdatabase.Fixture) {
+				addClusterDoc(f)
+				addSubscriptionDoc(f)
+			},
+			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
+				allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
+					masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
+					masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
+					masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
+				))
+				k.EXPECT().
+					KubeList(gomock.Any(), "Node", "").
+					Return(controlPlaneNodeListJSON(
+						controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+						controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
+					), nil)
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
+					Return(nodeJSON("master-2", true), nil).
+					AnyTimes()
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-1").
+					Return(nodeJSON("master-1", true), nil).
+					AnyTimes()
+				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
+					Return(nodeJSON("master-0", true), nil).
+					AnyTimes()
+			},
+			azureMocks: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().
+					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
+					Return(map[string]*armcompute.ResourceSKU{
+						"Standard_D8s_v3": {
+							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
+							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
+							LocationInfo: []*armcompute.ResourceSKULocationInfo{
+								{
+									Location: pointerutils.ToPtr("eastus"),
+								},
+							},
+							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
+							Capabilities: []*armcompute.ResourceSKUCapabilities{},
+						},
+					}, nil)
+				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
+					"master-0": "Standard_D8s_v3",
+					"master-1": "Standard_D8s_v3",
+					"master-2": "Standard_D8s_v3",
+				})
+				healthyControlPlaneInventoryMock(nil, a, "test-cluster", "Standard_D8s_v3")
+			},
+			wantStatusCode: http.StatusOK,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

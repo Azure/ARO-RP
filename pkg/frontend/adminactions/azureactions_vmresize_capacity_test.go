@@ -902,6 +902,8 @@ func TestVMResizeWithCRG_StartFails_VMNotRunning_ReturnsError(t *testing.T) {
 		mockVMs.EXPECT().StartAndWait(gomock.Any(), "cluster-rg", "master-0").Return(startErr),
 		mockVMs.EXPECT().GetWithInstanceView(gomock.Any(), "cluster-rg", "master-0").
 			Return(masterVMWithInstanceView("master-0", "1", targetSKU, "PowerState/deallocated"), nil),
+		// VM is not running, so a best-effort restart is attempted before the error is returned.
+		mockVMs.EXPECT().StartAndWait(gomock.Any(), "cluster-rg", "master-0").Return(startErr),
 	)
 
 	err := a.VMResizeWithCRG(context.Background(), "master-0", crgID, targetSKU)

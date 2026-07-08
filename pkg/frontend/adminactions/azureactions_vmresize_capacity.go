@@ -578,6 +578,7 @@ func (a *azureActions) VMResizeWithCRG(ctx context.Context, vmName, crgID, targe
 			a.log.Warnf("VM %s start returned transient error but VM is running (resize complete): %v", vmName, err)
 			return nil
 		}
+		bestEffortRestart("failed start")
 		return fmt.Errorf("starting VM %s after resize: %w", vmName, err)
 	}
 
