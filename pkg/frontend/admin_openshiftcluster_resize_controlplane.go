@@ -130,7 +130,7 @@ func (f *frontend) _postAdminResizeControlPlane(log *logrus.Entry, ctx context.C
 		useCapacityReservation, parseErr = strconv.ParseBool(r.URL.Query().Get("useCapacityReservation"))
 		if parseErr != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "useCapacityReservation",
-				"useCapacityReservation must be 'true' or 'false'")
+				"useCapacityReservation must be a valid boolean value (true/false/1/0/t/f)")
 		}
 	}
 

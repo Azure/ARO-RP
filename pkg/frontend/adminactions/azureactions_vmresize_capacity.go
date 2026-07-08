@@ -34,7 +34,7 @@ func vmIsRunning(vm armcompute.VirtualMachine) bool {
 		return false
 	}
 	for _, s := range vm.Properties.InstanceView.Statuses {
-		if s.Code != nil && strings.EqualFold(*s.Code, "PowerState/running") {
+		if s != nil && s.Code != nil && strings.EqualFold(*s.Code, "PowerState/running") {
 			return true
 		}
 	}
@@ -57,6 +57,13 @@ func reservationNameForZone(zone string) string {
 		return regionalReservationName
 	}
 	return fmt.Sprintf(targetReservationNameFmt, zone)
+}
+
+func reservationScopeLabel(zone string) string {
+	if zone == "" {
+		return "region"
+	}
+	return fmt.Sprintf("zone %s", zone)
 }
 
 // reservationZonesForTeardown normalizes zones for teardown loops.
@@ -102,7 +109,8 @@ func (a *azureActions) crgCreate(ctx context.Context, clusterRG, location string
 // equal the number of VMs to be resized in that zone.
 func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error {
 	crTarget := reservationNameForZone(zone)
-	a.log.Infof("creating target-SKU reservation %s (SKU %s, capacity %d) in zone %s", crTarget, targetSKU, capacity, zone)
+	scopeLabel := reservationScopeLabel(zone)
+	a.log.Infof("creating target-SKU reservation %s (SKU %s, capacity %d) in %s", crTarget, targetSKU, capacity, scopeLabel)
 	var zonePtrs []*string
 	if zone != "" {
 		zonePtrs = []*string{pointerutils.ToPtr(zone)}
@@ -116,9 +124,9 @@ func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, loc
 		if isCapacityError(err) {
 			// No automatic fallback is attempted. The caller must choose a different VM family and retry.
 			return fmt.Errorf(
-				"no capacity available for SKU %s in zone %s — resize aborted, no VMs were modified; "+
+				"no capacity available for SKU %s in %s — resize aborted, no VMs were modified; "+
 					"please retry with a different VM family: %w",
-				targetSKU, zone, err)
+				targetSKU, scopeLabel, err)
 		}
 		if azureerrors.HasAuthorizationFailedError(err) {
 			return fmt.Errorf(
@@ -127,7 +135,7 @@ func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, loc
 					"on resource group %s: %w",
 				location, clusterRG, err)
 		}
-		return fmt.Errorf("creating target-SKU reservation for zone %s: %w", zone, err)
+		return fmt.Errorf("creating target-SKU reservation for %s: %w", scopeLabel, err)
 	}
 	return nil
 }

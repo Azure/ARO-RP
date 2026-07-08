@@ -607,9 +607,15 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).
 						Return(errors.New("Azure error")),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
 					// teardown runs before rollback (disassociates master-1 so standard VMResize works)
 					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, testZones, sortedNames, testCRGName).Return(nil),
-					// rollback master-0 (vmResized=false, schedulabilityNeedsRestore=true): just uncordon
+					// rollback master-0 (vmResized=false, vmStopped=true): VMResizeWithCRG
+					// deallocated the VM, so rollback restarts it and waits for readiness
+					// before uncordoning.
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 					// rollback master-1 (vmResized=true): stop → resize → start → waitReady → machineRestore → labelsRestore
 					a.EXPECT().VMStopAndWait(gomock.Any(), "master-1", true).Return(nil),
@@ -710,10 +716,16 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
 					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).
 						Return(errors.New("resize error")),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
 					// teardown also fails
 					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, testZones, resizeNames, testCRGName).
 						Return(errors.New("teardown error")),
-					// rollback master-0 (vmResized=false, schedulabilityNeedsRestore=true): just uncordon
+					// rollback master-0 (vmResized=false, vmStopped=true): VMResizeWithCRG
+					// deallocated the VM, so rollback restarts it and waits for readiness
+					// before uncordoning.
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
 					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
 				)
 			},
@@ -721,6 +733,44 @@ func TestResizeControlPlane_CRG(t *testing.T) {
 				"failed to resize node master-0", "crgResize: resize error",
 				"CRG teardown failed for aro-resize-crg-cp-test: teardown error",
 			},
+		},
+		{
+			// If VMResizeWithCRG fails after partially applying the target SKU,
+			// the extra probe marks vmResized=true so rollback restores original size.
+			name: "shared CRG: resize fails after partial apply, rollback restores original size",
+			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
+				machines := masterMachineListJSON(
+					masterMachine("master-0", originalSize, running),
+				)
+				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+
+				resizeNames := []string{"master-0"}
+				gomock.InOrder(
+					// pre-flight health check
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().CRGSetupForResize(gomock.Any(), resizeNames, desiredSize).
+						Return(testCRGID, testCRGName, testZones, nil),
+					// master-0: per-node health + snapshot + resize fails
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(originalSize), nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", true).Return(nil),
+					k.EXPECT().DrainNodeWithRetries(gomock.Any(), "master-0").Return(nil),
+					a.EXPECT().VMResizeWithCRG(gomock.Any(), "master-0", testCRGID, desiredSize).
+						Return(errors.New("resize error")),
+					// Probe sees target size already applied, so rollback restores original VM SKU.
+					a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
+						Return(virtualMachineWithSize(desiredSize), nil),
+					a.EXPECT().CRGTeardown(gomock.Any(), desiredSize, testZones, resizeNames, testCRGName).Return(nil),
+					a.EXPECT().VMStopAndWait(gomock.Any(), "master-0", true).Return(nil),
+					a.EXPECT().VMResize(gomock.Any(), "master-0", originalSize).Return(nil),
+					a.EXPECT().VMStartAndWait(gomock.Any(), "master-0").Return(nil),
+					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").Return(nodeJSON("master-0", true), nil),
+					k.EXPECT().CordonNode(gomock.Any(), "master-0", false).Return(nil),
+				)
+			},
+			wantErrContains: []string{"failed to resize node master-0", "crgResize: resize error"},
 		},
 		{
 			// When all nodes are already at the target size, no health check, CRG, or resize occurs.
@@ -1086,7 +1136,7 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			kubeMocks:      func(k *mock_adminactions.MockKubeActions) {},
 			azureMocks:     func(a *mock_adminactions.MockAzureActions) {},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: useCapacityReservation: useCapacityReservation must be 'true' or 'false'`,
+			wantError:      `400: InvalidParameter: useCapacityReservation: useCapacityReservation must be a valid boolean value (true/false/1/0/t/f)`,
 		},
 		{
 			name:       "useCapacityReservation=true with deallocateVM=false is rejected",

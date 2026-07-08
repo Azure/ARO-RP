@@ -39,7 +39,7 @@ func httpResponse(req *http.Request, status int, body string) *http.Response {
 func newTestCRGClient(t *testing.T, transport transportFunc) CapacityReservationGroupsClient {
 	t.Helper()
 	opts := &arm.ClientOptions{
-		ClientOptions: policy.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
 			Transport: transport,
 			// Disable the pipeline's automatic retries so each test controls the exact
 			// number of HTTP calls (e.g. the 500 Get below must not be silently retried).

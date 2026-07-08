@@ -32,6 +32,7 @@ const (
 
 	etcdHealthPollTimeout  = 10 * time.Minute
 	etcdHealthPollInterval = 10 * time.Second
+	crgResizeProbeTimeout  = 30 * time.Second
 )
 
 type resizeControlPlaneError struct {
@@ -202,6 +203,10 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 	return snapshot, nil
 }
 
+func vmHasTargetSize(vm mgmtcompute.VirtualMachine, targetVMSize string) bool {
+	return vm.HardwareProfile != nil && strings.EqualFold(string(vm.HardwareProfile.VMSize), targetVMSize)
+}
+
 func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *controlPlaneNodeProgress) error {
 	nodeName := state.snapshot.machineName
 
@@ -241,7 +246,22 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 		stepEntries = append(stepEntries, resizeNodeStep{
 			name: "crgResize",
 			step: steps.Action(func(ctx context.Context) error {
-				return o.a.VMResizeWithCRG(ctx, nodeName, o.crgID, o.desiredVMSize)
+				// VMResizeWithCRG deallocates the VM as its first action, so mark it
+				// stopped up front. If the resize fails before the SKU changes and the
+				// internal best-effort restart also fails, vmResized stays false; this
+				// flag ensures rollback still restarts the (deallocated) VM via the
+				// vmStopped branch. Starting an already-running VM is a safe no-op.
+				state.vmStopped = true
+				err := o.a.VMResizeWithCRG(ctx, nodeName, o.crgID, o.desiredVMSize)
+				if err != nil {
+					probeCtx, probeCancel := context.WithTimeout(context.WithoutCancel(ctx), crgResizeProbeTimeout)
+					vm, probeErr := o.a.GetVirtualMachine(probeCtx, o.clusterResourceGroupName, nodeName, mgmtcompute.InstanceView)
+					probeCancel()
+					if probeErr == nil && vmHasTargetSize(vm, o.desiredVMSize) {
+						state.vmResized = true
+					}
+				}
+				return err
 			}),
 			after: func() {
 				state.vmResized = true
