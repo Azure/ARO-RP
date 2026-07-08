@@ -45,10 +45,10 @@ func TestEmitPodConditionsMissingNamespace(t *testing.T) {
 
 	var objects []client.Object
 	for _, ns := range scopedNamespaces {
-		objects = append(objects, namespaceObject(ns))
 		if ns == skippedNamespace {
 			continue
 		}
+		objects = append(objects, namespaceObject(ns))
 		objects = append(objects, &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-pod",
