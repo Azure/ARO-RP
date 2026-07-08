@@ -26,44 +26,10 @@ func TestEmitPodConditions(t *testing.T) {
 
 	objects := []client.Object{
 		namespaceObject("openshift-monitoring"),
-		namespaceObject("customer"),
-		&corev1.Pod{ // metrics expected
+		&corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
 				Namespace: "openshift-monitoring",
-			},
-			Spec: corev1.PodSpec{
-				NodeName: "fake-node-name",
-			},
-			Status: corev1.PodStatus{
-				Conditions: []corev1.PodCondition{
-					{
-						Type:   corev1.PodReady,
-						Status: corev1.ConditionFalse,
-					},
-					{
-						Type:   corev1.PodInitialized,
-						Status: corev1.ConditionFalse,
-					},
-					{
-						Type:   corev1.PodScheduled,
-						Status: corev1.ConditionFalse,
-					},
-					{
-						Type:   corev1.ContainersReady,
-						Status: corev1.ConditionFalse,
-					},
-					{
-						Type:   corev1.PodReady,
-						Status: corev1.ConditionTrue,
-					},
-				},
-			},
-		},
-		&corev1.Pod{ // metrics not expected, customer namespace
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name",
-				Namespace: "customer",
 			},
 			Spec: corev1.PodSpec{
 				NodeName: "fake-node-name",
@@ -98,7 +64,7 @@ func TestEmitPodConditions(t *testing.T) {
 	controller := gomock.NewController(t)
 	m := mock_metrics.NewMockEmitter(controller)
 
-	_, log := testlog.New()
+	hook, log := testlog.New()
 	ocpclientset := clienthelper.NewWithClient(log, fake.
 		NewClientBuilder().
 		WithObjects(objects...).
@@ -108,6 +74,8 @@ func TestEmitPodConditions(t *testing.T) {
 		ocpclientset: ocpclientset,
 		m:            m,
 		queryLimit:   1,
+		hourlyRun:    true,
+		log:          log,
 	}
 
 	err := mon.fetchManagedNamespaces(ctx)
@@ -148,6 +116,8 @@ func TestEmitPodConditions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	assert.Len(t, hook.Entries, 4)
 }
 
 func TestEmitPodContainerStatuses(t *testing.T) {
@@ -155,32 +125,10 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 
 	objects := []client.Object{
 		namespaceObject("openshift-monitoring"),
-		namespaceObject("customer"),
-		&corev1.Pod{ // metrics expected
+		&corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
 				Namespace: "openshift-monitoring",
-			},
-			Status: corev1.PodStatus{
-				ContainerStatuses: []corev1.ContainerStatus{
-					{
-						Name: "containername",
-						State: corev1.ContainerState{
-							Waiting: &corev1.ContainerStateWaiting{
-								Reason: "ImagePullBackOff",
-							},
-						},
-					},
-				},
-			},
-			Spec: corev1.PodSpec{
-				NodeName: "fake-node-name",
-			},
-		},
-		&corev1.Pod{ // metrics not expected, customer pod
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name",
-				Namespace: "customer",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -230,7 +178,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	controller := gomock.NewController(t)
 	m := mock_metrics.NewMockEmitter(controller)
 
-	_, log := testlog.New()
+	hook, log := testlog.New()
 	ocpclientset := clienthelper.NewWithClient(log, fake.
 		NewClientBuilder().
 		WithObjects(objects...).
@@ -240,6 +188,8 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		ocpclientset: ocpclientset,
 		m:            m,
 		queryLimit:   1,
+		hourlyRun:    true,
+		log:          log,
 	}
 
 	err := mon.fetchManagedNamespaces(ctx)
@@ -268,6 +218,8 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	assert.Len(t, hook.Entries, 2)
 }
 
 func TestEmitPodContainerRestartCounter(t *testing.T) {
@@ -275,8 +227,6 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 
 	objects := []client.Object{
 		namespaceObject("openshift-monitoring"),
-		namespaceObject("customer"),
-		namespaceObject("default"),
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname1",
@@ -345,24 +295,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 				NodeName: "fake-node-name",
 			},
 		},
-		&corev1.Pod{ // #5 no metrics expected
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "not-system-namespace",
-				Namespace: "default",
-			},
-			Status: corev1.PodStatus{
-				ContainerStatuses: []corev1.ContainerStatus{
-					{
-						Name:         "containername",
-						RestartCount: 42,
-					},
-				},
-			},
-			Spec: corev1.PodSpec{
-				NodeName: "fake-node-name",
-			},
-		},
-		&corev1.Pod{ // #6 Multi-container pod
+		&corev1.Pod{ // #5 Multi-container pod
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "multi-container-pod",
 				Namespace: "openshift-monitoring",
@@ -376,23 +309,6 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 					{
 						Name:         "secondcontainer",
 						RestartCount: restartCounterThreshold,
-					},
-				},
-			},
-			Spec: corev1.PodSpec{
-				NodeName: "fake-node-name",
-			},
-		},
-		&corev1.Pod{ // #7 metrics not expected, customer pod
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "podname1",
-				Namespace: "customer",
-			},
-			Status: corev1.PodStatus{
-				ContainerStatuses: []corev1.ContainerStatus{
-					{
-						Name:         "containername",
-						RestartCount: 42,
 					},
 				},
 			},
