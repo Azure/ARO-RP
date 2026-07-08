@@ -5,6 +5,7 @@ package clusterdata
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/sirupsen/logrus"
@@ -34,7 +35,8 @@ func (ip ingressProfileEnricher) Enrich(
 	// List IngressControllers from  openshift-ingress-operator namespace
 	// Each IngressController will be the basis for an IngressProfile with the below mapping:
 	//     IngressController.Name -> IngressProfile.Name
-	//     IngressController.spec.endpointPublishingStrategy.loadBalancer.scope -> IngressProfile.Visibility
+	//     IngressController.status.endpointPublishingStrategy.loadBalancer.scope -> IngressProfile.Visibility
+	//             or fall back to spec when status is not usable
 	//             Internal -> Private
 	//             External -> Public
 	ingressControllers, err := operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(ctx, metav1.ListOptions{})
@@ -74,25 +76,7 @@ func (ip ingressProfileEnricher) Enrich(
 			IP:   routerIPs[ingressController.Name],
 		}
 
-		var visibility api.Visibility
-		switch {
-		case ingressController.Spec.EndpointPublishingStrategy == nil:
-			// Default case on Azure, LoadBalancerStrategy with External scope
-			// See https://docs.openshift.com/container-platform/4.6/networking/ingress-operator.html#nw-ingress-controller-configuration-parameters_configuring-ingress
-			visibility = api.VisibilityPublic
-		case ingressController.Spec.EndpointPublishingStrategy.LoadBalancer == nil:
-			log.Infof("Cannot determine Visibility for IngressProfile %q. IngressController has EndpointPublishingStrategy but LoadBalancer is nil", ingressProfiles[i].Name)
-		case ingressController.Spec.EndpointPublishingStrategy.LoadBalancer.Scope == operatorv1.InternalLoadBalancer:
-			visibility = api.VisibilityPrivate
-		case ingressController.Spec.EndpointPublishingStrategy.LoadBalancer.Scope == operatorv1.ExternalLoadBalancer:
-			visibility = api.VisibilityPublic
-		default:
-			log.Infof("Cannot determine Visibility for IngressProfile %q. IngressController EndpointPublishingStrategy.LoadBalancer has unexpected Scope value %q",
-				ingressProfiles[i].Name,
-				ingressController.Spec.EndpointPublishingStrategy.LoadBalancer.Scope)
-		}
-
-		ingressProfiles[i].Visibility = visibility
+		ingressProfiles[i].Visibility = ingressProfileVisibility(log, ingressProfiles[i].Name, ingressController)
 	}
 
 	sort.Slice(ingressProfiles, func(i, j int) bool { return ingressProfiles[i].Name < ingressProfiles[j].Name })
@@ -103,4 +87,51 @@ func (ip ingressProfileEnricher) Enrich(
 	oc.Properties.IngressProfiles = ingressProfiles
 
 	return nil
+}
+
+func ingressProfileVisibility(log *logrus.Entry, ingressProfileName string, ingressController operatorv1.IngressController) api.Visibility {
+	if visibility, ok := visibilityFromEndpointPublishingStrategy(ingressController.Status.EndpointPublishingStrategy); ok {
+		return visibility
+	}
+
+	if visibility, ok := visibilityFromEndpointPublishingStrategy(ingressController.Spec.EndpointPublishingStrategy); ok {
+		return visibility
+	}
+
+	log.Infof(
+		"Cannot determine Visibility for IngressProfile %q. IngressController status endpointPublishingStrategy is %s and spec endpointPublishingStrategy is %s",
+		ingressProfileName,
+		endpointPublishingStrategyReason(ingressController.Status.EndpointPublishingStrategy),
+		endpointPublishingStrategyReason(ingressController.Spec.EndpointPublishingStrategy),
+	)
+
+	return ""
+}
+
+func visibilityFromEndpointPublishingStrategy(strategy *operatorv1.EndpointPublishingStrategy) (api.Visibility, bool) {
+	if strategy == nil || strategy.LoadBalancer == nil {
+		return "", false
+	}
+
+	switch strategy.LoadBalancer.Scope {
+	case operatorv1.InternalLoadBalancer:
+		return api.VisibilityPrivate, true
+	case operatorv1.ExternalLoadBalancer:
+		return api.VisibilityPublic, true
+	default:
+		return "", false
+	}
+}
+
+func endpointPublishingStrategyReason(strategy *operatorv1.EndpointPublishingStrategy) string {
+	switch {
+	case strategy == nil:
+		return "missing"
+	case strategy.LoadBalancer == nil:
+		return "present but loadBalancer is nil"
+	case strategy.LoadBalancer.Scope == operatorv1.InternalLoadBalancer || strategy.LoadBalancer.Scope == operatorv1.ExternalLoadBalancer:
+		return fmt.Sprintf("resolvable with loadBalancer scope %q", strategy.LoadBalancer.Scope)
+	default:
+		return fmt.Sprintf("present but loadBalancer scope %q is unsupported", strategy.LoadBalancer.Scope)
+	}
 }
