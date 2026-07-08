@@ -6,6 +6,7 @@ package armcompute
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -29,7 +30,7 @@ func (f transportFunc) Do(req *http.Request) (*http.Response, error) { return f(
 func httpResponse(req *http.Request, status int, body string) *http.Response {
 	return &http.Response{
 		StatusCode: status,
-		Status:     http.StatusText(status),
+		Status:     fmt.Sprintf("%d %s", status, http.StatusText(status)),
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Request:    req,
