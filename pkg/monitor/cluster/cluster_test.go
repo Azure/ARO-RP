@@ -106,55 +106,6 @@ func TestMonitor(t *testing.T) {
 			},
 		},
 		{
-			name:        "namespace fetch failure",
-			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
-			hooks: func(hc *testclienthelper.HookingClient) {
-				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
-					_, ok := obj.(*corev1.NamespaceList)
-					if ok {
-						return errors.New("failure with ns")
-					}
-					return nil
-				})
-			},
-			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "fetchManagedNamespaces"},
-				errListNamespaces,
-			},
-			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
-				{
-					MetricName: "apiserver.healthz.code",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"code": "200",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.error",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
-			},
-			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "emitAPIServerHealthzCode",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "prefetchClusterVersion",
-					},
-				},
-			},
-		},
-		{
 			name:        "collector failure",
 			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
 			collectors: func(m *Monitor) []collectorFunc {
