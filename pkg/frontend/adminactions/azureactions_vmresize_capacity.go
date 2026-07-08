@@ -251,7 +251,7 @@ const (
 var (
 	// crgRetryInterval is the wait between reservation/CRG delete retry attempts.
 	crgRetryInterval = 30 * time.Second
-	// Steps 3+4 are retry loops; each loop can run up to crgMaxRetries*crgRetryInterval = 7.5 min.
+	// Steps 3+4 are retry loops; each loop can run up to crgMaxRetries*crgRetryInterval plus a 1-minute buffer.
 	crgDeleteReservationTimeout = time.Duration(crgMaxRetries)*crgRetryInterval + time.Minute
 	crgDeleteGroupTimeout       = time.Duration(crgMaxRetries)*crgRetryInterval + time.Minute
 	// crgCleanupTimeout is an overall budget for the entire crgDelete call.
