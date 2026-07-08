@@ -239,9 +239,9 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 	)
 
 	// CRG path: replace stop→resize→start with a single VMResizeWithCRG call.
-	// vmStopped is intentionally left false because VMResizeWithCRG handles
-	// deallocation and restart internally; rollback uses vmResized to decide
-	// whether to restore the VM SKU (by stopping, resizing to original, starting).
+	// vmStopped is set true up-front because VMResizeWithCRG deallocates the VM as its first action.
+	// This allows rollback to restart a VM that may have been left deallocated if the CRG resize fails.
+	// vmResized is used to decide whether rollback must restore the original VM SKU.
 	if o.crgID != "" {
 		stepEntries = append(stepEntries, resizeNodeStep{
 			name: "crgResize",
