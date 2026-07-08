@@ -110,6 +110,9 @@ func (a *azureActions) crgCreate(ctx context.Context, clusterRG, location string
 func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error {
 	crTarget := reservationNameForZone(zone)
 	scopeLabel := reservationScopeLabel(zone)
+	if capacity < 1 {
+		return fmt.Errorf("capacity must be >= 1 for %s reservation %s (SKU %s)", scopeLabel, crTarget, targetSKU)
+	}
 	a.log.Infof("creating target-SKU reservation %s (SKU %s, capacity %d) in %s", crTarget, targetSKU, capacity, scopeLabel)
 	var zonePtrs []*string
 	if zone != "" {
