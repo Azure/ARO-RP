@@ -396,9 +396,6 @@ unit-test-go-coverpkg: $(GOTESTSUM)
 lint-bash: ## Lint first-wave bash scripts using shellcheck and .shellcheckrc
 	$(SHELLCHECK) $(BASH_LINT_FILES_ABS)
 
-.PHONY: validate-bash
-validate-bash: lint-bash ## Validate bash linting
-
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (gci, gofumpt)
 	$(GOLANGCI_LINT) fmt
