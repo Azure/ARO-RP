@@ -20,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
+	cryptossh "golang.org/x/crypto/ssh"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -114,6 +115,10 @@ type frontend struct {
 	// portalServingCert pins the portal binary's serving cert as the CA
 	// bundle in admin-issued kubeconfigs. nil => kubeconfig endpoints 503.
 	portalServingCert *x509.Certificate
+
+	// portalSSHHostPubKey pins the portal binary's SSH host key in the
+	// KnownHosts line returned by the admin SSH endpoint. nil => 503.
+	portalSSHHostPubKey cryptossh.PublicKey
 
 	l net.Listener
 	s *http.Server
@@ -276,6 +281,17 @@ func NewFrontend(ctx context.Context,
 		baseLog.WithError(certErr).Warning("portal serving cert not available; admin kubeconfig endpoints will return 503")
 	} else {
 		f.portalServingCert = cert
+	}
+
+	// Admin SSH endpoint pins the portal binary's SSH host key. Same 503
+	// fallback pattern as the kubeconfig cert above.
+	sshCtx, sshCancel := context.WithTimeout(ctx, 30*time.Second)
+	sshPub, sshErr := loadPortalSSHHostPubKey(sshCtx, _env)
+	sshCancel()
+	if sshErr != nil {
+		baseLog.WithError(sshErr).Warning("portal ssh host key not available; admin ssh endpoint will return 503")
+	} else {
+		f.portalSSHHostPubKey = sshPub
 	}
 
 	f.ready.Store(true)
@@ -491,6 +507,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				// in its ACIS manifest.
 				r.Post("/kubeconfig/new", f.postAdminOpenShiftClusterKubeconfigNew)
 				r.Post("/kubeconfig/newelevated", f.postAdminOpenShiftClusterKubeconfigNewElevated)
+
+				// SSH token consumed by the portal binary's SSH reverse
+				// proxy. JIT-gated in its ACIS manifest.
+				r.Post("/ssh/newelevated", f.postAdminOpenShiftClusterSSHNewElevated)
 			})
 		})
 
