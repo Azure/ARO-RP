@@ -431,34 +431,97 @@ func TestOperatorVersion(t *testing.T) {
 				if image != tt.wantPullspec {
 					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
 				}
+			}
+		})
+	}
+}
 
-				containerResources := d.Spec.Template.Spec.Containers[0].Resources
-				var wantCPUReq, wantMemReq resource.Quantity
-				switch d.Name {
-				case "aro-operator-master":
-					wantCPUReq = resource.MustParse("10m")
-					wantMemReq = resource.MustParse("250Mi")
-				case "aro-operator-worker":
-					wantCPUReq = resource.MustParse("10m")
-					wantMemReq = resource.MustParse("100Mi")
-				default:
-					t.Errorf("unexpected deployment name: %s", d.Name)
-					continue
-				}
+func TestOperatorResourceRequests(t *testing.T) {
+	ctx := context.Background()
 
-				if containerResources.Requests == nil {
-					t.Errorf("%s: resource requests not set", d.Name)
-				} else {
-					if !containerResources.Requests.Cpu().Equal(wantCPUReq) {
-						t.Errorf("%s CPU request: got %s, want %s", d.Name, containerResources.Requests.Cpu(), wantCPUReq.String())
-					}
-					if !containerResources.Requests.Memory().Equal(wantMemReq) {
-						t.Errorf("%s memory request: got %s, want %s", d.Name, containerResources.Requests.Memory(), wantMemReq.String())
-					}
-				}
-				if containerResources.Limits != nil {
-					t.Errorf("%s: resource limits should not be set, got %v", d.Name, containerResources.Limits)
-				}
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
+	_env.EXPECT().AROOperatorImage().AnyTimes().Return("defaultaroimagefromenv")
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
+
+	cv := &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "version",
+		},
+		Status: configv1.ClusterVersionStatus{
+			History: []configv1.UpdateHistory{
+				{
+					State:   configv1.CompletedUpdate,
+					Version: "4.10.0",
+				},
+			},
+		},
+	}
+
+	_, log := testlog.LogForTesting(t)
+	builder := testclienthelper.NewAROFakeClientBuilder(cv)
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	o := &operator{
+		oc:     &api.OpenShiftCluster{Properties: api.OpenShiftClusterProperties{}},
+		env:    _env,
+		client: ch,
+	}
+
+	staticResources, err := o.createObjects(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployments := map[string]*appsv1.Deployment{}
+	for _, i := range staticResources {
+		if d, ok := i.(*appsv1.Deployment); ok {
+			deployments[d.Name] = d
+		}
+	}
+
+	for _, tt := range []struct {
+		name       string
+		wantCPU    resource.Quantity
+		wantMemory resource.Quantity
+	}{
+		{
+			name:       "aro-operator-master",
+			wantCPU:    resource.MustParse("10m"),
+			wantMemory: resource.MustParse("250Mi"),
+		},
+		{
+			name:       "aro-operator-worker",
+			wantCPU:    resource.MustParse("10m"),
+			wantMemory: resource.MustParse("100Mi"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			d, ok := deployments[tt.name]
+			if !ok {
+				t.Fatalf("deployment %q not found", tt.name)
+			}
+
+			if len(d.Spec.Template.Spec.Containers) != 1 {
+				t.Fatalf("found %d containers, expected 1", len(d.Spec.Template.Spec.Containers))
+			}
+
+			reqs := d.Spec.Template.Spec.Containers[0].Resources
+			if reqs.Requests == nil {
+				t.Fatal("resource requests not set")
+			}
+
+			if !reqs.Requests.Cpu().Equal(tt.wantCPU) {
+				t.Errorf("CPU request: got %s, want %s", reqs.Requests.Cpu(), tt.wantCPU.String())
+			}
+			if !reqs.Requests.Memory().Equal(tt.wantMemory) {
+				t.Errorf("memory request: got %s, want %s", reqs.Requests.Memory(), tt.wantMemory.String())
+			}
+			if reqs.Limits != nil {
+				t.Errorf("resource limits should not be set, got %v", reqs.Limits)
 			}
 		})
 	}
