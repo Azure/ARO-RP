@@ -421,6 +421,9 @@ func isNestedResourcesError(err error) bool {
 // so the caller can pass them to CRGTeardown after all per-VM resizes complete.
 // On any failure after CRG creation, a best-effort cleanup is attempted before returning.
 func (a *azureActions) CRGSetupForResize(ctx context.Context, vmNames []string, targetSKU string) (string, string, []string, error) {
+	if len(vmNames) == 0 {
+		return "", "", nil, fmt.Errorf("no VMs provided for CRG setup")
+	}
 	clusterRG := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	location := a.oc.Location
 
