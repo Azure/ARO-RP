@@ -858,6 +858,7 @@ configure_service_azuremonitor_coreagent() {
 #       * static ip of podman network to be attached
 configure_service_gateway_otel_collector() {
     local -n image="$1"
+    # shellcheck disable=SC2034
     local -n otel_config="$2"
     local -n ipaddress="$3"
     log "starting"

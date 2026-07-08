@@ -56,10 +56,10 @@ main() {
     local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
     local -r rpimage="$RPIMAGE"
 
-    # shellcheck disable=SC2034
+    # shellcheck disable=SC2034,SC2153
     local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
 
-    # shellcheck disable=SC2034
+    # shellcheck disable=SC2034,SC2153
     local -r otelimage="$OTELIMAGE"
 
     # shellcheck disable=SC2034
