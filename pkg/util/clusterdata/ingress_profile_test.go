@@ -31,6 +31,7 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 	owningIngressLabel := "ingresscontroller.operator.openshift.io/owning-ingresscontroller"
 	for _, tt := range []struct {
 		name        string
+		oc          *api.OpenShiftCluster
 		operatorcli operatorclient.Interface
 		kubecli     kubernetes.Interface
 		wantOc      *api.OpenShiftCluster
@@ -77,7 +78,116 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 			},
 		},
 		{
+			name: "stored visibility is preserved when live visibility is unknown",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name:       "default",
+							Visibility: api.VisibilityPrivate,
+						},
+					},
+				},
+			},
+			operatorcli: operatorfake.NewSimpleClientset(
+				&operatorv1.IngressController{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "default",
+						Namespace: oioNamespace,
+					},
+				},
+			),
+			kubecli: fake.NewSimpleClientset(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "router-default",
+					Namespace: oiNamespace,
+					Labels: map[string]string{
+						"app":              "router",
+						owningIngressLabel: "default",
+					},
+				},
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{
+							{
+								IP: "x.x.x.x",
+							},
+						},
+					},
+				},
+			}),
+			wantOc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name:       "default",
+							Visibility: api.VisibilityPrivate,
+							IP:         "x.x.x.x",
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "private ingress profile found",
+			operatorcli: operatorfake.NewSimpleClientset(
+				&operatorv1.IngressController{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "private",
+						Namespace: oioNamespace,
+					},
+					Spec: operatorv1.IngressControllerSpec{
+						EndpointPublishingStrategy: &operatorv1.EndpointPublishingStrategy{
+							LoadBalancer: &operatorv1.LoadBalancerStrategy{
+								Scope: operatorv1.InternalLoadBalancer,
+							},
+						},
+					},
+				},
+			),
+			kubecli: fake.NewSimpleClientset(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "router-private",
+					Namespace: oiNamespace,
+					Labels: map[string]string{
+						"app":              "router",
+						owningIngressLabel: "private",
+					},
+				},
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{
+							{
+								IP: "x.x.x.x",
+							},
+						},
+					},
+				},
+			}),
+			wantOc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name:       "private",
+							Visibility: api.VisibilityPrivate,
+							IP:         "x.x.x.x",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "live visibility overrides stored visibility when known",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name:       "private",
+							Visibility: api.VisibilityPublic,
+						},
+					},
+				},
+			},
 			operatorcli: operatorfake.NewSimpleClientset(
 				&operatorv1.IngressController{
 					ObjectMeta: metav1.ObjectMeta{
@@ -304,7 +414,10 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			oc := &api.OpenShiftCluster{}
+			oc := tt.oc
+			if oc == nil {
+				oc = &api.OpenShiftCluster{}
+			}
 			e := ingressProfileEnricher{}
 
 			clients := clients{
@@ -315,8 +428,8 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
 				t.Errorf("wanted err to be %s but got %s", err, tt.wantErr)
 			}
-			if !reflect.DeepEqual(oc, tt.wantOc) {
-				t.Error(cmp.Diff(oc, tt.wantOc))
+			if !reflect.DeepEqual(oc.Properties, tt.wantOc.Properties) {
+				t.Error(cmp.Diff(oc.Properties, tt.wantOc.Properties))
 			}
 		})
 	}

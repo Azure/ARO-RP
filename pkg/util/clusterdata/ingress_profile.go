@@ -68,6 +68,13 @@ func (ip ingressProfileEnricher) Enrich(
 		routerIPs[matchingICName] = service.Status.LoadBalancer.Ingress[0].IP
 	}
 
+	existingIngressProfileVisibility := map[string]api.Visibility{}
+	oc.Lock.Lock()
+	for _, ingressProfile := range oc.Properties.IngressProfiles {
+		existingIngressProfileVisibility[ingressProfile.Name] = ingressProfile.Visibility
+	}
+	oc.Lock.Unlock()
+
 	// Reconcile IngressController and corresponding router service
 	ingressProfiles := make([]api.IngressProfile, len(ingressControllers.Items))
 	for i, ingressController := range ingressControllers.Items {
@@ -76,7 +83,11 @@ func (ip ingressProfileEnricher) Enrich(
 			IP:   routerIPs[ingressController.Name],
 		}
 
-		ingressProfiles[i].Visibility = ingressProfileVisibility(log, ingressProfiles[i].Name, ingressController)
+		visibility := ingressProfileVisibility(log, ingressProfiles[i].Name, ingressController)
+		if visibility == "" {
+			visibility = existingIngressProfileVisibility[ingressProfiles[i].Name]
+		}
+		ingressProfiles[i].Visibility = visibility
 	}
 
 	sort.Slice(ingressProfiles, func(i, j int) bool { return ingressProfiles[i].Name < ingressProfiles[j].Name })
