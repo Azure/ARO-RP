@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -34,7 +35,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
-var ErrNoRegistryProfileFound = errors.New("no registry profile found")
+var (
+	ErrNoRegistryProfileFound     = errors.New("no registry profile found")
+	ErrCannotRotateACRTokensInDev = errors.New("attempted to rotate ACR credentials in dev")
+)
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
@@ -129,8 +133,14 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 }
 
 func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, ch clienthelper.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager, updateDB database.OpenShiftClusterDocumentMutatorRunner, force bool) error {
+	// we do not want to rotate tokens in local development
+	if env.IsLocalDevelopmentMode() || env.IsCI() {
+		return ErrCannotRotateACRTokensInDev
+	}
+
 	registryProfile := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
 	if registryProfile == nil {
+		// No registry profile found, needs to be created with ensureACRToken
 		return ErrNoRegistryProfileFound
 	}
 
@@ -174,7 +184,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 
 	err = ch.Update(ctx, pullSecret)
 	if err != nil {
-		return err
+		return fmt.Errorf("when updating pullsecret: %w", err)
 	}
 
 	return retryOperation(func() error {
@@ -183,11 +193,16 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 }
 
 func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clienthelper.Interface, encodedDockerConfigJson []byte) error {
-	openshiftConfigSecret := &corev1.Secret{}
+	openshiftConfigSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pullSecretName.Name,
+			Namespace: pullSecretName.Namespace,
+		},
+	}
 
 	err := ch.GetOne(ctx, pullSecretName, openshiftConfigSecret)
 	if err != nil && !kerrors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("unable to fetch %s: %w", pullSecretName, err)
 	}
 	// by default, we create a patch with only the rotated acr token
 	applyConfiguration := v1.Secret(pullSecretName.Name, pullSecretName.Namespace).
@@ -225,9 +240,13 @@ func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clie
 		return err
 	}
 
-	return retryOperation(func() error {
+	err = retryOperation(func() error {
 		return ch.Patch(ctx, openshiftConfigSecret, client.RawPatch(types.ApplyPatchType, d), &client.PatchOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
 	})
+	if err != nil {
+		return fmt.Errorf("error patching secret %s: %w", pullSecretName, err)
+	}
+	return nil
 }
 
 func retryOperation(retryable func() error) error {
