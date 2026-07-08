@@ -32,6 +32,7 @@ var scopedNamespaces = []string{
 	"openshift-monitoring-operator",
 	"openshift-network-operator",
 	"openshift-ovn-kubernetes",
+	"openshift-sdn",
 }
 
 func (mon *Monitor) fetchManagedNamespaces(ctx context.Context) error {
