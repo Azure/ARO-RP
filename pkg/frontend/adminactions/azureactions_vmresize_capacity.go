@@ -108,9 +108,6 @@ func (a *azureActions) crgCreate(ctx context.Context, clusterRG, location string
 // guaranteeing capacity for the resize destination. capacity must be ≥ 1 and should
 // equal the number of VMs to be resized in that zone.
 func (a *azureActions) crgEnsureReservations(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error {
-	if capacity < 1 {
-		return fmt.Errorf("reservation capacity must be >= 1 (got %d) for %s", capacity, reservationScopeLabel(zone))
-	}
 	crTarget := reservationNameForZone(zone)
 	scopeLabel := reservationScopeLabel(zone)
 	if capacity < 1 {
