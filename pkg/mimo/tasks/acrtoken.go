@@ -17,3 +17,11 @@ func ACRTokenChecker(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, o
 
 	return run(t, s)
 }
+
+func ACRTokenRotate(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) error {
+	s := []steps.Step{
+		steps.Action(cluster.RotateACRToken),
+	}
+
+	return run(t, s)
+}
