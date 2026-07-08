@@ -520,7 +520,7 @@ func TestOperatorResourceRequests(t *testing.T) {
 			if !reqs.Requests.Memory().Equal(tt.wantMemory) {
 				t.Errorf("memory request: got %s, want %s", reqs.Requests.Memory(), tt.wantMemory.String())
 			}
-			if reqs.Limits != nil {
+			if len(reqs.Limits) != 0 {
 				t.Errorf("resource limits should not be set, got %v", reqs.Limits)
 			}
 		})
