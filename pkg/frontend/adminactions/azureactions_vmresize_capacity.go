@@ -197,8 +197,19 @@ func (a *azureActions) crgDelete(ctx context.Context, clusterRG, location, targe
 			errs = append(errs, fmt.Errorf("VM %s has no properties", vmName))
 			continue
 		}
-		if vm.Properties.CapacityReservation == nil || vm.Properties.CapacityReservation.CapacityReservationGroup == nil || vm.Properties.CapacityReservation.CapacityReservationGroup.ID == nil {
+		currentCRGID := ""
+		if vm.Properties.CapacityReservation != nil &&
+			vm.Properties.CapacityReservation.CapacityReservationGroup != nil &&
+			vm.Properties.CapacityReservation.CapacityReservationGroup.ID != nil {
+			currentCRGID = *vm.Properties.CapacityReservation.CapacityReservationGroup.ID
+		}
+		if currentCRGID == "" {
 			a.log.Infof("VM %s has no capacity reservation group association; skipping disassociation", vmName)
+			stepCancel()
+			continue
+		}
+		if !strings.Contains(strings.ToLower(currentCRGID), strings.ToLower("/capacityReservationGroups/"+crgName)) {
+			a.log.Warnf("VM %s is associated with unexpected capacity reservation group %q; skipping disassociation", vmName, currentCRGID)
 			stepCancel()
 			continue
 		}
