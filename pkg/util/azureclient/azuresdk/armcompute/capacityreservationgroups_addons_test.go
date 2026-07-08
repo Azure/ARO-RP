@@ -44,7 +44,7 @@ func newTestCRGClient(t *testing.T, transport transportFunc) CapacityReservation
 			Transport: transport,
 			// Disable the pipeline's automatic retries so each test controls the exact
 			// number of HTTP calls (e.g. the 500 Get below must not be silently retried).
-			Retry: policy.RetryOptions{MaxRetries: -1},
+			Retry: policy.RetryOptions{MaxRetries: 0},
 		},
 	}
 	c, err := NewCapacityReservationGroupsClient("sub-id", &fakeazcore.TokenCredential{}, opts)
