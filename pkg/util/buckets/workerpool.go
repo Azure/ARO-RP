@@ -122,6 +122,8 @@ func (c *workerPool[E]) WaitForWorkerCompletion() {
 }
 
 func (c *workerPool[E]) stopWorker(doc E) {
+	// Use .Compute() which uses the internal lock kept by xsync.Map rather than
+	// having a second locking arrangement
 	c.docs.Compute(c.canonicalize(doc.GetKey()), func(oldValue *cacheDoc[E], loaded bool) (newValue *cacheDoc[E], op xsync.ComputeOp) {
 		if loaded && oldValue.stop != nil {
 			close(oldValue.stop)

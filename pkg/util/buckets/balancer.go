@@ -44,9 +44,8 @@ func capIntervals(log *logrus.Entry, _interval time.Duration, _workerTTL time.Du
 	return interval, workerTTL
 }
 
-// Runs the bucket refresh loop. For a version that can be spawned in a
-// goroutine directly, see StartBucketRefreshLoop.
-func BucketRefreshLoop(
+// Runs the bucket refresh loop.
+func bucketRefreshLoop(
 	ctx context.Context,
 	log *logrus.Entry,
 	workerType api.PoolWorkerType,
@@ -253,21 +252,24 @@ func StartBucketRefreshLoop(
 ) {
 	defer recover.Panic(log)
 
-	// We don't use wg.Go() here as we want Done() to happen when either it
-	// starts or the whole process fails
-	_signalWg := sync.OnceFunc(bucketUpdateStartedOrErrored.Done)
+	_signalWg := func() {}
+	if bucketUpdateStartedOrErrored != nil {
+		// We don't use wg.Go() here as we want Done() to happen when either it
+		// starts or the whole process fails
+		_signalWg = sync.OnceFunc(bucketUpdateStartedOrErrored.Done)
 
-	// If we error out/finish, signal the waitgroup
-	defer _signalWg()
+		// If we error out/finish, signal the waitgroup
+		defer _signalWg()
+	}
 
 	_onBucketChange := func(i []int) {
 		onBucketChange(i)
 		_signalWg()
 	}
 
-	_err := BucketRefreshLoop(ctx, log, workerType, bucketCount, refreshInterval, workerDocTTL, db, _onBucketChange, stop)
+	_err := bucketRefreshLoop(ctx, log, workerType, bucketCount, refreshInterval, workerDocTTL, db, _onBucketChange, stop)
 	if _err != nil {
-		log.Errorf("unable to start bucket worker, exiting: %s", _err.Error())
+		log.Errorf("error in bucket worker, exiting: %s", _err.Error())
 		onError(_err)
 	}
 }

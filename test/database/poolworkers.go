@@ -27,6 +27,8 @@ func fakePoolWorkerGetMasterQuery(client cosmosdb.PoolWorkerDocumentClient, q *c
 
 	out := []*api.PoolWorkerDocument{}
 	for _, r := range input.PoolWorkerDocuments {
+		// The master document always has an ID of the worker type
+		// (e.g. ID: Monitor, WorkerType: Monitor)
 		if r.ID != q.Parameters[0].Value {
 			continue
 		}

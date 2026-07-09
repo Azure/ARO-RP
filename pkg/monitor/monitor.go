@@ -173,7 +173,7 @@ func (mon *monitor) Run(_ctx context.Context, stop <-chan struct{}, done chan<- 
 
 	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", workersDone, mon.checkReady)
 
-	err = buckets.BucketRefreshLoop(
+	buckets.StartBucketRefreshLoop(
 		_ctx, mon.baseLog, api.PoolWorkerTypeMonitor,
 		mon.bucketCount,
 		mon.bucketRefreshInterval,
@@ -184,8 +184,9 @@ func (mon *monitor) Run(_ctx context.Context, stop <-chan struct{}, done chan<- 
 			mon.lastBucketUpdate.Store(mon.env.Now())
 		},
 		stop,
+		cancel,
+		nil,
 	)
-	cancel(err)
 	mon.clusters.workerPool.StopAndWait()
 	return nil
 }
