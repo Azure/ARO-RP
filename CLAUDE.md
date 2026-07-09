@@ -2,6 +2,8 @@
 
 Azure Red Hat OpenShift RP — ARM resource provider for OpenShift clusters on Azure. Single `aro` binary, multiple modes: rp, monitor, portal, gateway, operator, deploy, mirror, mimo-actuator.
 
+All Golang code in this repository is written for Go 1.25+.
+
 ## Architecture Invariant
 
 Cluster mutations (PUT/DELETE) are **async**: Frontend writes to CosmosDB with non-terminal state → Backend polls and processes → updates with terminal state. Never bypass this: frontend handlers must NOT perform cluster operations directly.
