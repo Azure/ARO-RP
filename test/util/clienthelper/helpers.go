@@ -73,7 +73,7 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 		actual = map[string]int{}
 	}
 
-	diff := cmp.Diff(actual, expected, cmpopts.EquateEmpty())
+	diff := cmp.Diff(expected, actual, cmpopts.EquateEmpty())
 	if diff == "" {
 		return nil, nil
 	}
