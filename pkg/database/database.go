@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"reflect"
 	"time"
@@ -38,6 +39,8 @@ const (
 	collMaintenanceSchedules            = "MaintenanceSchedules"
 	collPoolWorkers                     = "PoolWorkers"
 )
+
+var ErrLostLease = errors.New("lost lease")
 
 type Keyable interface {
 	GetKey() string

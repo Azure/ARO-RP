@@ -100,7 +100,7 @@ func (c *poolWorkers) patch(ctx context.Context, poolWorkerType api.PoolWorkerTy
 func (c *poolWorkers) PatchWithLease(ctx context.Context, poolWorkerType api.PoolWorkerType, id string, f func(*api.PoolWorkerDocument) error) (*api.PoolWorkerDocument, error) {
 	return c.patch(ctx, poolWorkerType, id, func(doc *api.PoolWorkerDocument) error {
 		if doc.LeaseOwner != c.uuid {
-			return fmt.Errorf("lost lease")
+			return ErrLostLease
 		}
 
 		return f(doc)

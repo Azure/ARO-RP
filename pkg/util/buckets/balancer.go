@@ -5,6 +5,7 @@ package buckets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -159,7 +160,7 @@ func tryMaster(
 		balance(workers, bucketCount, doc)
 		return nil
 	})
-	if err != nil && err.Error() == "lost lease" {
+	if err != nil && errors.Is(err, database.ErrLostLease) {
 		isMaster = false
 		log.Infof("stopped being the %s master", workerType)
 	}

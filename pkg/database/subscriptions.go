@@ -95,7 +95,7 @@ func (c *subscriptions) patch(ctx context.Context, id string, f func(*api.Subscr
 func (c *subscriptions) patchWithLease(ctx context.Context, key string, f func(*api.SubscriptionDocument) error, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
 	return c.patch(ctx, key, func(doc *api.SubscriptionDocument) error {
 		if doc.LeaseOwner != c.uuid {
-			return fmt.Errorf("lost lease")
+			return ErrLostLease
 		}
 
 		return f(doc)
