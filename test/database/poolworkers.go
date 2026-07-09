@@ -35,7 +35,7 @@ func fakePoolWorkerGetMasterQuery(client cosmosdb.PoolWorkerDocumentClient, q *c
 		if string(r.WorkerType) != q.Parameters[0].Value {
 			continue
 		}
-		if time.Unix(int64(r.LeaseExpires), 0).After(now()) {
+		if int64(r.LeaseExpires) >= now().Unix() {
 			continue
 		}
 		out = append(out, r)
