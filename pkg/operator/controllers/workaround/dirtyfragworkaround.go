@@ -148,10 +148,6 @@ install rxrpc /bin/false
 	}
 
 	return &mcv1.MachineConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: mcv1.SchemeGroupVersion.String(),
-			Kind:       "MachineConfig",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("99-%s-disable-dirtyfrag", role),
 			Labels: map[string]string{

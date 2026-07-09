@@ -599,11 +599,10 @@ func TestFixEtcd(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			containerLogs, err := f.fixEtcd(ctx, ti.log, ti.env, doc, k, &operatorv1fake.FakeEtcds{
-				Fake: &operatorv1fake.FakeOperatorV1{
-					Fake: &ktesting.Fake{},
-				},
-			})
+			fake := &operatorv1fake.FakeOperatorV1{
+				Fake: &ktesting.Fake{},
+			}
+			containerLogs, err := f.fixEtcd(ctx, ti.log, ti.env, doc, k, fake.Etcds())
 			ti.log.Infof("Container logs: \n%s", containerLogs)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
