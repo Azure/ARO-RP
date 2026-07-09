@@ -436,7 +436,7 @@ func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 		},
 		{
 			"level": gomega.Equal(logrus.ErrorLevel),
-			"msg":   gomega.Equal("unable to start bucket worker, exiting: boom"),
+			"msg":   gomega.Equal("error in bucket worker, exiting: boom"),
 		},
 		{
 			"level": gomega.Equal(logrus.ErrorLevel),

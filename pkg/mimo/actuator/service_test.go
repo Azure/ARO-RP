@@ -588,7 +588,7 @@ func TestActuatorStopsIfBucketFailureOnStartup(t *testing.T) {
 		},
 		{
 			"level": Equal(logrus.ErrorLevel),
-			"msg":   Equal("unable to start bucket worker, exiting: boom"),
+			"msg":   Equal("error in bucket worker, exiting: boom"),
 		},
 		{
 			"level": Equal(logrus.ErrorLevel),
