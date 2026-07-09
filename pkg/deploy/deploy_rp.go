@@ -96,9 +96,11 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	if d.config.Configuration.CosmosDB != nil {
 		parameters.Parameters["cosmosDB"] = &arm.ParametersParameter{
 			Value: map[string]int{
-				"standardProvisionedThroughput": d.config.Configuration.CosmosDB.StandardProvisionedThroughput,
-				"portalProvisionedThroughput":   d.config.Configuration.CosmosDB.PortalProvisionedThroughput,
-				"gatewayProvisionedThroughput":  d.config.Configuration.CosmosDB.GatewayProvisionedThroughput,
+				"standardProvisionedThroughput":      d.config.Configuration.CosmosDB.StandardProvisionedThroughput,
+				"portalProvisionedThroughput":        d.config.Configuration.CosmosDB.PortalProvisionedThroughput,
+				"gatewayProvisionedThroughput":       d.config.Configuration.CosmosDB.GatewayProvisionedThroughput,
+				"mimoManifestsProvisionedThroughput": d.config.Configuration.CosmosDB.MimoManifestsProvisionedThroughput,
+				"mimoSchedulesProvisionedThroughput": d.config.Configuration.CosmosDB.MimoSchedulesProvisionedThroughput,
 			},
 		}
 	}

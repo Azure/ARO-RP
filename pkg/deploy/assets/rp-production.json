@@ -77,6 +77,8 @@
             "type": "object",
             "defaultValue": {
                 "gatewayProvisionedThroughput": 400,
+                "mimoManifestsProvisionedThroughput": 1000,
+                "mimoSchedulesProvisionedThroughput": 1000,
                 "portalProvisionedThroughput": 400,
                 "standardProvisionedThroughput": 1000
             }
@@ -989,7 +991,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/MaintenanceManifests')]",
             "properties": {
                 "options": {
-                    "throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"
+                    "throughput": "[parameters('cosmosDB').mimoManifestsProvisionedThroughput]"
                 },
                 "resource": {
                     "defaultTtl": -1,
@@ -1014,7 +1016,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/MaintenanceSchedules')]",
             "properties": {
                 "options": {
-                    "throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"
+                    "throughput": "[parameters('cosmosDB').mimoSchedulesProvisionedThroughput]"
                 },
                 "resource": {
                     "defaultTtl": -1,

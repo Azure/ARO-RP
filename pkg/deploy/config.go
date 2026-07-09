@@ -123,9 +123,11 @@ type Configuration struct {
 
 // Note: if this configuration block is provided, all throughputs must be present and valid
 type CosmosDBConfiguration struct {
-	StandardProvisionedThroughput int `json:"standardProvisionedThroughput,omitempty"`
-	PortalProvisionedThroughput   int `json:"portalProvisionedThroughput,omitempty"`
-	GatewayProvisionedThroughput  int `json:"gatewayProvisionedThroughput,omitempty"`
+	StandardProvisionedThroughput      int `json:"standardProvisionedThroughput,omitempty"`
+	PortalProvisionedThroughput        int `json:"portalProvisionedThroughput,omitempty"`
+	GatewayProvisionedThroughput       int `json:"gatewayProvisionedThroughput,omitempty"`
+	MimoManifestsProvisionedThroughput int `json:"mimoManifestsProvisionedThroughput,omitempty"`
+	MimoSchedulesProvisionedThroughput int `json:"mimoSchedulesProvisionedThroughput,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
