@@ -87,10 +87,6 @@ func (a *copyfailworkaround) Remove(ctx context.Context) error {
 
 func makeMachineConfig(role string) *mcv1.MachineConfig {
 	return &mcv1.MachineConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: mcv1.SchemeGroupVersion.String(),
-			Kind:       "MachineConfig",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("99-%s-disable-algif-aead", role),
 			Labels: map[string]string{
