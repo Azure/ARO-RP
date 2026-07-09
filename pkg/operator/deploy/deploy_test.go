@@ -15,6 +15,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -430,6 +431,97 @@ func TestOperatorVersion(t *testing.T) {
 				if image != tt.wantPullspec {
 					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
 				}
+			}
+		})
+	}
+}
+
+func TestOperatorResourceRequests(t *testing.T) {
+	ctx := context.Background()
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
+	_env.EXPECT().AROOperatorImage().AnyTimes().Return("defaultaroimagefromenv")
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
+
+	cv := &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "version",
+		},
+		Status: configv1.ClusterVersionStatus{
+			History: []configv1.UpdateHistory{
+				{
+					State:   configv1.CompletedUpdate,
+					Version: "4.10.0",
+				},
+			},
+		},
+	}
+
+	_, log := testlog.LogForTesting(t)
+	builder := testclienthelper.NewAROFakeClientBuilder(cv)
+	ch := clienthelper.NewWithClient(log, testclienthelper.NewHookingClient(builder.Build()))
+
+	o := &operator{
+		oc:     &api.OpenShiftCluster{Properties: api.OpenShiftClusterProperties{}},
+		env:    _env,
+		client: ch,
+	}
+
+	staticResources, err := o.createObjects(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployments := map[string]*appsv1.Deployment{}
+	for _, i := range staticResources {
+		if d, ok := i.(*appsv1.Deployment); ok {
+			deployments[d.Name] = d
+		}
+	}
+
+	for _, tt := range []struct {
+		name       string
+		wantCPU    resource.Quantity
+		wantMemory resource.Quantity
+	}{
+		{
+			name:       "aro-operator-master",
+			wantCPU:    resource.MustParse("10m"),
+			wantMemory: resource.MustParse("250Mi"),
+		},
+		{
+			name:       "aro-operator-worker",
+			wantCPU:    resource.MustParse("10m"),
+			wantMemory: resource.MustParse("100Mi"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			d, ok := deployments[tt.name]
+			if !ok {
+				t.Fatalf("deployment %q not found", tt.name)
+			}
+
+			if len(d.Spec.Template.Spec.Containers) != 1 {
+				t.Fatalf("found %d containers, expected 1", len(d.Spec.Template.Spec.Containers))
+			}
+
+			reqs := d.Spec.Template.Spec.Containers[0].Resources
+			if reqs.Requests == nil {
+				t.Fatal("resource requests not set")
+			}
+
+			if !reqs.Requests.Cpu().Equal(tt.wantCPU) {
+				t.Errorf("CPU request: got %s, want %s", reqs.Requests.Cpu(), tt.wantCPU.String())
+			}
+			if !reqs.Requests.Memory().Equal(tt.wantMemory) {
+				t.Errorf("memory request: got %s, want %s", reqs.Requests.Memory(), tt.wantMemory.String())
+			}
+			if len(reqs.Limits) != 0 {
+				t.Errorf("resource limits should not be set, got %v", reqs.Limits)
 			}
 		})
 	}
