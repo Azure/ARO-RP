@@ -40,9 +40,13 @@ reset_absolute_test_state() {
     rm -f /etc/NetworkManager/conf.d/aro-dns.conf
     rm -f /host/usr/bin/jq
     rm -f /host/usr/bin/oc
-    rm -f /usr/lib64/libjq.so.1
-    rm -f /usr/lib64/libonig.so.5
-}
+
+    local lib
+    for lib in /usr/lib64/libjq.so.1 /usr/lib64/libonig.so.5; do
+        if [ -L "${lib}" ] && [ "$(readlink "${lib}")" = "/host${lib}" ]; then
+            rm -f -- "${lib}"
+        fi
+    done
 
 copy_fixture() {
     local source_path="$1"
