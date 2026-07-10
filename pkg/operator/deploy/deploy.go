@@ -700,9 +700,13 @@ func checkIngressIP(ingressProfiles []api.IngressProfile) (string, error) {
 	if len(ingressProfiles) > 1 {
 		for _, p := range ingressProfiles {
 			if p.Name == "default" {
-				return p.IP, nil
+				ingressIP = p.IP
+				break
 			}
 		}
+	}
+	if ingressIP == "" {
+		return "", errors.New("ingress IP is empty")
 	}
 	return ingressIP, nil
 }

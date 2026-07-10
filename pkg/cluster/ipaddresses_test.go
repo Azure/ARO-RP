@@ -90,6 +90,44 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 			}),
 		},
 		{
+			name: "create/update failed - empty router IP",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPublic,
+									Name:       "default",
+								},
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			kubernetescli: fake.NewSimpleClientset(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "router-default",
+					Namespace: "openshift-ingress",
+				},
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{{
+							IP: "",
+						}},
+					},
+				},
+			}),
+			wantErr: "routerIP not found: load balancer ingress IP is empty",
+		},
+		{
 			name: "create/update failed - router IP issue",
 			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
 				doc := &api.OpenShiftClusterDocument{
