@@ -127,7 +127,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
 		readinessDelay:        time.Minute * 2,
 		serveHealthz:          true,
-		emitHeartbeat:         false,
+		emitHeartbeat:         true,
 	}
 
 	s.b = buckets.NewBucketWorkerPool[*api.OpenShiftClusterDocument](log, s.worker)
