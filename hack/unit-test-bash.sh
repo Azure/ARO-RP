@@ -12,12 +12,25 @@ readonly default_report_base="${TMPDIR:-/tmp}/aro-bash-test-report"
 # Reject report paths that could make host-side cleanup delete the wrong tree.
 validate_report_dir() {
     local report_dir="$1"
+    local tmpdir="${TMPDIR:-/tmp}"
     local path_segment
+
+    tmpdir="${tmpdir%/}"
 
     if [[ -z "${report_dir}" || "${report_dir}" != /* || -z "${report_dir//\//}" ]]; then
         echo "error: refusing unsafe report directory '${report_dir}'" >&2
         return 1
     fi
+
+    # Only allow report directories under the temp dir with the expected prefix.
+    case "${report_dir}" in
+        "${tmpdir}"/aro-bash-test-report*)
+            ;;
+        *)
+            echo "error: refusing unsafe report directory '${report_dir}'" >&2
+            return 1
+            ;;
+    esac
 
     IFS='/' read -r -a path_segments <<< "${report_dir#/}"
     for path_segment in "${path_segments[@]}"; do
