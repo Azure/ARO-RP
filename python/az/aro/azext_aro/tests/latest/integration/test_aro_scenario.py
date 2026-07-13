@@ -152,6 +152,7 @@ class AroScenarioTests(ScenarioTest):
                 child_name_1=worker_subnet
             ),
             "temp_kubeconfig_path": temp_kubeconfig_path,
+            "version": "4.18.34",
         })
 
         self.cmd("network vnet create -g {rg} -n dev-vnet --address-prefixes 10.0.0.0/9")
@@ -161,7 +162,7 @@ class AroScenarioTests(ScenarioTest):
 
         # aro create
         with mock.patch("azure.cli.command_modules.aro._rbac._gen_uuid", side_effect=self.create_guid):
-            self.cmd('aro create -g {rg} -n {name} --enable-mi --master-subnet {master_subnet_resource} --worker-subnet {worker_subnet_resource} --subscription {subscription} --tags test=create', checks=[
+            self.cmd('aro create -g {rg} -n {name} --enable-mi --version {version} --master-subnet {master_subnet_resource} --worker-subnet {worker_subnet_resource} --subscription {subscription} --tags test=create', checks=[
                 self.check('tags.test', 'create'),
                 self.check('name', '{name}'),
                 self.check('masterProfile.subnetId', '{master_subnet_resource}'),
