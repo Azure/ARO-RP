@@ -22,6 +22,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -448,7 +449,7 @@ func TestActuatorGoesReady(t *testing.T) {
 	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
 	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 	subscriptions, _ := testdatabase.NewFakeSubscriptions()
-	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now)
+	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
 	dbs := database.NewDBGroup().
 		WithMaintenanceManifests(manifests).
 		WithSubscriptions(subscriptions).
@@ -554,7 +555,7 @@ func TestActuatorStopsIfBucketFailureOnStartup(t *testing.T) {
 	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
 	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 	subscriptions, _ := testdatabase.NewFakeSubscriptions()
-	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now)
+	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
 	dbs := database.NewDBGroup().
 		WithMaintenanceManifests(manifests).
 		WithSubscriptions(subscriptions).

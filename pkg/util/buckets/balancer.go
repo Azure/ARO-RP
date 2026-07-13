@@ -80,19 +80,21 @@ func bucketRefreshLoop(
 		// register ourself as a worker, we need to refresh within workerTTL seconds
 		err := dbPoolWorkers.PoolWorkerHeartbeat(ctx, workerType, int(workerTTL.Seconds()))
 		if err != nil {
-			log.Error(fmt.Errorf("error registering ourselves as a %s poolWorker, continuing: %w", workerType, err))
-		}
-
-		isMaster, err = tryMaster(ctx, log, workerType, bucketCount, dbPoolWorkers, isMaster)
-		if err != nil {
-			log.Error(fmt.Errorf("error registering ourselves as the master, continuing: %w", err))
-		}
-
-		buckets, err := dbPoolWorkers.ListBuckets(ctx, workerType)
-		if err != nil {
-			log.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
+			log.Error(fmt.Errorf("error registering ourselves as a %s poolWorker: %w", workerType, err))
+			onBucketChange([]int{})
 		} else {
-			onBucketChange(buckets)
+			isMaster, err = tryMaster(ctx, log, workerType, bucketCount, dbPoolWorkers, isMaster)
+			if err != nil {
+				log.Error(fmt.Errorf("error registering ourselves as the master, continuing: %w", err))
+			}
+
+			buckets, err := dbPoolWorkers.ListBuckets(ctx, workerType)
+			if err != nil {
+				log.Error(fmt.Errorf("error reading bucket allocation from master: %w", err))
+				onBucketChange([]int{})
+			} else {
+				onBucketChange(buckets)
+			}
 		}
 
 		if err = ctx.Err(); err != nil {

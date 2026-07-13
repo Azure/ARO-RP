@@ -18,6 +18,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -317,7 +318,7 @@ func TestSchedulerGoesReady(t *testing.T) {
 	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
 	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 	subscriptions, _ := testdatabase.NewFakeSubscriptions()
-	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now)
+	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
 	dbs := database.NewDBGroup().
 		WithMaintenanceSchedules(schedules).
 		WithSubscriptions(subscriptions).
@@ -402,7 +403,7 @@ func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
 	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 	subscriptions, _ := testdatabase.NewFakeSubscriptions()
-	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now)
+	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
 
 	// Error when it tries to get the master document
 	poolWorkersClient.SetError(errors.New("boom"))
@@ -454,6 +455,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 	controller := gomock.NewController(t)
 	_env := mock_env.NewMockInterface(controller)
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	ourUUID := uuid.DefaultGenerator.Generate()
 
 	_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
 		now = now.Add(time.Millisecond)
@@ -467,7 +469,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
 	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 	subscriptions, _ := testdatabase.NewFakeSubscriptions()
-	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now)
+	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, ourUUID)
 	dbs := database.NewDBGroup().
 		WithMaintenanceSchedules(schedules).
 		WithSubscriptions(subscriptions).
@@ -476,15 +478,30 @@ func TestSchedulerServesBucket(t *testing.T) {
 		WithMaintenanceManifests(manifests)
 
 	ownedCluster := api.ExampleOpenShiftClusterDocument()
+	ownedCluster.Bucket = 1
 
 	unownedCluster := api.ExampleOpenShiftClusterDocument()
 	unownedCluster.Bucket = 22
-	unownedCluster.ID = "00000000-1111-0000-0000-000000000001"
+	unownedCluster.ID = "00000000-1111-0000-0000-000000000002"
 	unownedCluster.Key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
 	unownedCluster.OpenShiftCluster.ID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
+	unownedCluster.ClusterResourceGroupIDKey = "/subscriptions/00000000-1111-0000-0000-000000000000/resourcegroups/clusterresourcegroup"
+	unownedCluster.ClientIDKey = "2"
+
+	poolWorkerMasterDoc := &api.PoolWorkerDocument{
+		ID:         string(api.PoolWorkerTypeMIMOScheduler),
+		WorkerType: api.PoolWorkerTypeMIMOScheduler,
+		PoolWorker: &api.PoolWorker{
+			// We only have bucket 1, the unowned cluster will not be served
+			Buckets: []string{"other", ourUUID, "other", "other"},
+		},
+		LeaseOwner:   "other",
+		LeaseExpires: 9999999999999,
+	}
 
 	fixtures.AddSubscriptionDocuments(api.ExampleSubscriptionDocument())
 	fixtures.AddOpenShiftClusterDocuments(ownedCluster, unownedCluster)
+	fixtures.AddPoolWorkerDocuments(poolWorkerMasterDoc)
 
 	fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
 		ID: "00000000-0000-0000-0000-000000000001",
@@ -522,6 +539,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 	err := fixtures.WithMaintenanceSchedules(schedules).
 		WithOpenShiftClusters(clusters).
 		WithSubscriptions(subscriptions).
+		WithPoolWorkers(poolWorkers).
 		Create()
 	r.NoError(err)
 
@@ -567,7 +585,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 			Dimensions: map[string]string{
 				"name": "OpenShiftClusterDocument",
 			},
-			Value: 1,
+			Value: 2,
 		},
 		{
 			MetricName: "changefeed.caches.size",

@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -55,7 +56,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	// Create databases
 	openShiftClusterDB, openShiftClusterClient := testdatabase.NewFakeOpenShiftClusters()
 	subscriptionsDB, subscriptionsClient := testdatabase.NewFakeSubscriptions()
-	poolWorkersDB, fakePoolMonitorsDBClient := testdatabase.NewFakePoolWorkers(time.Now)
+	poolWorkersDB, fakePoolMonitorsDBClient := testdatabase.NewFakePoolWorkers(time.Now, uuid.DefaultGenerator.Generate())
 
 	// Create mocks
 	ctrl := gomock.NewController(t)

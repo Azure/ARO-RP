@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -22,6 +23,7 @@ type Fixture struct {
 	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
 	maintenanceManifestDocuments             []*api.MaintenanceManifestDocument
 	maintenanceScheduleDocuments             []*api.MaintenanceScheduleDocument
+	poolWorkerDocuments                      []*api.PoolWorkerDocument
 
 	openShiftClustersDatabase                database.OpenShiftClusters
 	billingDatabase                          database.Billing
@@ -33,6 +35,7 @@ type Fixture struct {
 	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
 	maintenanceManifestsDatabase             database.MaintenanceManifests
 	maintenanceSchedulesDatabase             database.MaintenanceSchedules
+	poolWorkerDatabase                       database.PoolWorkers
 
 	openShiftVersionsUUID                uuid.Generator
 	platformWorkloadIdentityRoleSetsUUID uuid.Generator
@@ -53,6 +56,7 @@ func (f *Fixture) Clear() {
 	f.platformWorkloadIdentityRoleSetDocuments = []*api.PlatformWorkloadIdentityRoleSetDocument{}
 	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
 	f.maintenanceScheduleDocuments = []*api.MaintenanceScheduleDocument{}
+	f.poolWorkerDocuments = []*api.PoolWorkerDocument{}
 }
 
 func (f *Fixture) WithOpenShiftClusters(db database.OpenShiftClusters) *Fixture {
@@ -104,6 +108,11 @@ func (f *Fixture) WithMaintenanceManifests(db database.MaintenanceManifests) *Fi
 
 func (f *Fixture) WithMaintenanceSchedules(db database.MaintenanceSchedules) *Fixture {
 	f.maintenanceSchedulesDatabase = db
+	return f
+}
+
+func (f *Fixture) WithPoolWorkers(db database.PoolWorkers) *Fixture {
+	f.poolWorkerDatabase = db
 	return f
 }
 
@@ -217,6 +226,17 @@ func (f *Fixture) AddMaintenanceScheduleDocuments(docs ...*api.MaintenanceSchedu
 	}
 }
 
+func (f *Fixture) AddPoolWorkerDocuments(docs ...*api.PoolWorkerDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.poolWorkerDocuments = append(f.poolWorkerDocuments, docCopy.(*api.PoolWorkerDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 
@@ -226,7 +246,7 @@ func (f *Fixture) Create() error {
 		}
 		_, err := f.openShiftClustersDatabase.Create(ctx, i)
 		if err != nil {
-			return err
+			return fmt.Errorf("when creating OpenShiftClusterDocuments: %w", err)
 		}
 	}
 
@@ -300,6 +320,13 @@ func (f *Fixture) Create() error {
 			i.ID = f.maintenanceSchedulesDatabase.NewUUID()
 		}
 		_, err := f.maintenanceSchedulesDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.poolWorkerDocuments {
+		_, err := f.poolWorkerDatabase.Create(ctx, i.WorkerType, i)
 		if err != nil {
 			return err
 		}
