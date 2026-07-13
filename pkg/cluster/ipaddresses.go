@@ -87,6 +87,9 @@ func (m *manager) createOrUpdateRouterIPFromCluster(ctx context.Context) error {
 	}
 
 	ipAddress := svc.Status.LoadBalancer.Ingress[0].IP
+	if ipAddress == "" {
+		return fmt.Errorf("routerIP not found: load balancer ingress IP is empty")
+	}
 
 	err = m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, ipAddress)
 	if err != nil {

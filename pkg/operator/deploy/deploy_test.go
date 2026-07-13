@@ -117,6 +117,38 @@ func TestCheckIngressIP(t *testing.T) {
 			want: "1.1.1.1",
 		},
 		{
+			name: "Single IngressProfile with empty IP, Error",
+			oc: func() *api.OpenShiftClusterProperties {
+				return &api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name: "default",
+							IP:   "",
+						},
+					},
+				}
+			},
+			wantErrMsg: "ingress IP is empty",
+		},
+		{
+			name: "Multiple IngressProfiles, default has empty IP, Error",
+			oc: func() *api.OpenShiftClusterProperties {
+				return &api.OpenShiftClusterProperties{
+					IngressProfiles: []api.IngressProfile{
+						{
+							Name: "custom-ingress",
+							IP:   "1.1.1.1",
+						},
+						{
+							Name: "default",
+							IP:   "",
+						},
+					},
+				}
+			},
+			wantErrMsg: "ingress IP is empty",
+		},
+		{
 			name: "No Ingresses in IngressProfiles, Error",
 			oc: func() *api.OpenShiftClusterProperties {
 				return &api.OpenShiftClusterProperties{
