@@ -475,8 +475,16 @@ func TestSchedulerServesBucket(t *testing.T) {
 		WithPoolWorkers(poolWorkers).
 		WithMaintenanceManifests(manifests)
 
+	ownedCluster := api.ExampleOpenShiftClusterDocument()
+
+	unownedCluster := api.ExampleOpenShiftClusterDocument()
+	unownedCluster.Bucket = 22
+	unownedCluster.ID = "00000000-1111-0000-0000-000000000001"
+	unownedCluster.Key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
+	unownedCluster.OpenShiftCluster.ID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
+
 	fixtures.AddSubscriptionDocuments(api.ExampleSubscriptionDocument())
-	fixtures.AddOpenShiftClusterDocuments(api.ExampleOpenShiftClusterDocument())
+	fixtures.AddOpenShiftClusterDocuments(ownedCluster, unownedCluster)
 
 	fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
 		ID: "00000000-0000-0000-0000-000000000001",
