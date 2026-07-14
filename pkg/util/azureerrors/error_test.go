@@ -715,16 +715,6 @@ func TestContainsVMSKUErrorMessage(t *testing.T) {
 			msg:  `Code="QuotaExceeded" Message="Exceeded cores quota"`,
 			want: true,
 		},
-		{
-			name: "OperationNotAllowed with quota wording",
-			msg:  `OperationNotAllowed: exceeding approved Cores quota. Current Limit: 200`,
-			want: true,
-		},
-		{
-			name: "bare OperationNotAllowed",
-			msg:  `OperationNotAllowed: generic denial`,
-			want: false,
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ContainsVMSKUErrorMessage(tt.msg)
@@ -813,6 +803,12 @@ func TestIsVMSKUError_OperationNotAllowed(t *testing.T) {
 			wantIsVMError:   true,
 			wantProfileType: VMProfileWorker,
 		},
+		{
+			name:            "generic minimumWorkerNodesReady timeout does not trigger VM-size retry",
+			err:             errors.New("500: DeploymentFailed: : Minimum number of worker nodes have not been successfully created. Please retry, and if the issue persists, raise an Azure support ticket"),
+			wantIsVMError:   false,
+			wantProfileType: VMProfileUnknown,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			gotIsVMError, gotProfileType := IsVMSKUError(tt.err)
@@ -823,17 +819,6 @@ func TestIsVMSKUError_OperationNotAllowed(t *testing.T) {
 				t.Errorf("IsVMSKUError() profileType = %v, want %v", gotProfileType, tt.wantProfileType)
 			}
 		})
-	}
-}
-
-func TestGenericMinimumWorkerTimeoutNotClassifiedAsVMSKUError(t *testing.T) {
-	// Requirement (e): the sanitized DeploymentFailed error from
-	// enrichConditionTimeoutError for minimumWorkerNodesReady must NOT
-	// trigger VM-size retry in the E2E loop.
-	genericTimeoutErr := errors.New("500: DeploymentFailed: : Minimum number of worker nodes have not been successfully created. Please retry, and if the issue persists, raise an Azure support ticket")
-	isVMError, profile := IsVMSKUError(genericTimeoutErr)
-	if isVMError {
-		t.Errorf("generic minimumWorkerNodesReady timeout should not be classified as VM SKU error, got profile=%v", profile)
 	}
 }
 

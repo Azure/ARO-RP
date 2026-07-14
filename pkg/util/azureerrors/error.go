@@ -309,12 +309,7 @@ func IsVMSKUError(err error) (bool, VMProfileType) {
 	}
 
 	errStr := err.Error()
-	if strings.Contains(errStr, CODE_SKUNOTAVAILABLE) ||
-		strings.Contains(errStr, CODE_NOTAVAILABLEFORSUBSCR) ||
-		strings.Contains(errStr, CODE_QUOTAEXCEEDED) {
-		return true, detectVMProfile(errStr)
-	}
-	if isQuotaOperationNotAllowed(errStr) {
+	if ContainsVMSKUErrorMessage(errStr) {
 		return true, detectVMProfile(errStr)
 	}
 	if strings.Contains(errStr, CODE_INVALIDPARAM) && strings.Contains(errStr, "SKU") {
