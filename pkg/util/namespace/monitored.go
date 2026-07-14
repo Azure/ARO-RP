@@ -1,5 +1,7 @@
-// pkg/util/namespace/monitored.go
 package namespace
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
 
 // MonitoredNamespaces is the curated set of OpenShift/ARO-managed namespaces
 // for which the cluster monitor emits pod.conditions metrics.
