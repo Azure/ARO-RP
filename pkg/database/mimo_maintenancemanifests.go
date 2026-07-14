@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,10 +25,11 @@ const (
 	manifestFetchOnlyRunAfterInFutureFragment = `doc.maintenanceManifest.runAfter > GetCurrentTimestamp() / 1000`
 	manifestFetchOnlyByScheduleID             = `doc.maintenanceManifest.createdBySchedule = @scheduleID`
 
-	MaintenanceManifestDequeueQueryForCluster = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND doc.clusterResourceID = @clusterResourceID AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
-	MaintenanceManifestQueryForCluster        = "SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID"
-	MaintenanceManifestQueueOverallQuery      = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment
-	MaintenanceManifestQueueLengthQuery       = "SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
+	MaintenanceManifestDequeueQueryForCluster         = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND doc.clusterResourceID = @clusterResourceID AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
+	MaintenanceManifestClustersWithRunnableTasksQuery = "SELECT doc.clusterResourceID FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment + " GROUP BY doc.clusterResourceID "
+	MaintenanceManifestQueryForCluster                = "SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterResourceID"
+	MaintenanceManifestQueueOverallQuery              = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment
+	MaintenanceManifestQueueLengthQuery               = "SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestExpiryFragment + " AND " + manifestFetchOnlyRunAfterFragment
 
 	MaintenanceManifestGetFutureForScheduleIDAndCluster = MaintenanceManifestQueryForCluster + " AND " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
 	MaintenanceManifestGetFutureForScheduleID           = "SELECT * FROM MaintenanceManifests doc WHERE " + manifestPendingFragment + " AND " + manifestFetchOnlyByScheduleID + " AND " + manifestFetchOnlyRunAfterInFutureFragment
@@ -45,6 +47,7 @@ type maintenanceManifests struct {
 type MaintenanceManifests interface {
 	Create(context.Context, *api.MaintenanceManifestDocument) (*api.MaintenanceManifestDocument, error)
 	GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+	GetClustersWithRunnableTasks(ctx context.Context) ([]string, error)
 	GetQueuedByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	GetFutureTasksForScheduleID(ctx context.Context, scheduleID string, continuation string) cosmosdb.MaintenanceManifestDocumentIterator
 	GetFutureTasksForClusterAndScheduleID(ctx context.Context, clusterResourceID string, scheduleID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
@@ -258,6 +261,39 @@ func (c *maintenanceManifests) GetQueuedByClusterResourceID(ctx context.Context,
 			},
 		},
 	}, &cosmosdb.Options{Continuation: continuation}), nil
+}
+
+// Gets clusters that have an available task to run. It is up to the caller to
+// determine if the cluster is in a bucket they serve.
+func (c *maintenanceManifests) GetClustersWithRunnableTasks(ctx context.Context) ([]string, error) {
+	clusters := make([]string, 0)
+
+	partitions, err := c.collc.PartitionKeyRanges(ctx, "MaintenanceManifests")
+	if err != nil {
+		return clusters, err
+	}
+
+	for _, r := range partitions.PartitionKeyRanges {
+		result := c.c.Query("", &cosmosdb.Query{
+			Query:      MaintenanceManifestClustersWithRunnableTasksQuery,
+			Parameters: []cosmosdb.Parameter{},
+		}, &cosmosdb.Options{
+			PartitionKeyRangeID: r.ID,
+		})
+
+		// Because we're using an aggregation we shouldn't need to poll Next()
+		docs, err := result.Next(ctx, -1)
+		if err != nil {
+			return []string{}, err
+		}
+
+		for _, cl := range docs.Docs() {
+			clusters = append(clusters, cl.ClusterResourceID)
+		}
+	}
+
+	slices.Sort(clusters)
+	return slices.Compact(clusters), nil
 }
 
 func (c *maintenanceManifests) EndLease(ctx context.Context, clusterResourceID string, id string, provisioningState api.MaintenanceManifestState, statusString *string) (*api.MaintenanceManifestDocument, error) {

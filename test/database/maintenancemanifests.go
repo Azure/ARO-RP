@@ -31,6 +31,9 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetQueryHandler(database.MaintenanceManifestGetFutureForScheduleID, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsForScheduleID(client, query, options, now)
 	})
+	c.SetQueryHandler(database.MaintenanceManifestClustersWithRunnableTasksQuery, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsClustersWithRunnableTasks(client, query, options, now)
+	})
 
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
 		return fakeMaintenanceManifestsRenewLeaseTrigger(ctx, doc, now)
@@ -204,6 +207,44 @@ func fakeMaintenanceManifestsQueuedAll(client cosmosdb.MaintenanceManifestDocume
 
 	slices.SortFunc(results, func(a, b *api.MaintenanceManifestDocument) int {
 		return cmp.Compare(a.ID, b.ID)
+	})
+
+	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
+}
+
+func fakeMaintenanceManifestsClustersWithRunnableTasks(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
+	}
+
+	input, err := client.ListAll(context.Background(), nil)
+	if err != nil {
+		// TODO: should this never happen?
+		panic(err)
+	}
+
+	clusters := make(map[string]bool)
+
+	for _, r := range input.MaintenanceManifestDocuments {
+		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
+			continue
+		}
+		if r.LeaseExpires > 0 && int64(r.LeaseExpires) < now().Unix() {
+			continue
+		}
+
+		clusters[r.ClusterResourceID] = true
+	}
+
+	var results []*api.MaintenanceManifestDocument
+
+	for cluster := range clusters {
+		results = append(results, &api.MaintenanceManifestDocument{ClusterResourceID: cluster})
+	}
+
+	slices.SortFunc(results, func(a, b *api.MaintenanceManifestDocument) int {
+		return cmp.Compare(a.ClusterResourceID, b.ClusterResourceID)
 	})
 
 	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
