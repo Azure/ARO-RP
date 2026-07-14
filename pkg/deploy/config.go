@@ -83,6 +83,13 @@ type Configuration struct {
 	MiseValidAudiences                []string               `json:"miseValidAudiences,omitempty"`
 	MiseValidAppIDs                   []string               `json:"miseValidAppIDs,omitempty"`
 	NonZonalRegions                   []string               `json:"nonZonalRegions,omitempty"`
+	RPLbIpTags                        []interface{}          `json:"rpLbIpTags,omitempty"`
+	PortalLbIpTags                    []interface{}          `json:"portalLbIpTags,omitempty"`
+	LbIpTagsDisabledRegions           []string               `json:"lbIpTagsDisabledRegions,omitempty"`
+	RPVmssIpTags                      []IPTag                `json:"rpVmssIpTags,omitempty"`
+	RPVmssIpTagsDisabledRegions       []string               `json:"rpVmssIpTagsDisabledRegions,omitempty"`
+	GwyVmssIpTags                     []IPTag                `json:"gwyVmssIpTags,omitempty"`
+	GwyVmssIpTagsDisabledRegions      []string               `json:"gwyVmssIpTagsDisabledRegions,omitempty"`
 	PortalAccessGroupIDs              []string               `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                    *string                `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs            []string               `json:"portalElevatedGroupIds,omitempty" value:"required"`
@@ -128,6 +135,12 @@ type CosmosDBConfiguration struct {
 	GatewayProvisionedThroughput       int `json:"gatewayProvisionedThroughput,omitempty"`
 	MimoManifestsProvisionedThroughput int `json:"mimoManifestsProvisionedThroughput,omitempty"`
 	MimoSchedulesProvisionedThroughput int `json:"mimoSchedulesProvisionedThroughput,omitempty"`
+}
+
+// IPTag represents an IP tag configuration for Azure resources
+type IPTag struct {
+	Type  string `json:"type,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
