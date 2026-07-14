@@ -427,6 +427,9 @@ func TestSchedulerStopsIfBucketFailure(t *testing.T) {
 	// We will have no running workers
 	r.Equal(int32(0), svc.workerCount.Load())
 
+	// lastBucketUpdate will not have been set
+	r.Equal(nil, svc.lastBucketUpdate.Load())
+
 	m.AssertFloats()
 	m.AssertGauges()
 

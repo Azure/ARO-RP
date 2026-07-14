@@ -228,7 +228,9 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 		_ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
 		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
 			s.b.SetBuckets(i)
-			s.lastBucketUpdate.Store(s.env.Now())
+			if len(i) > 0 {
+				s.lastBucketUpdate.Store(s.env.Now())
+			}
 		}, stop, cancel, waitForFirstBucketUpdate,
 	)
 

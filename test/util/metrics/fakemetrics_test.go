@@ -90,7 +90,7 @@ func TestAssertChecks(t *testing.T) {
 			},
 		},
 		{
-			desc: "looking for a non-existant gauge fails",
+			desc: "looking for a non-existent gauge fails",
 			emit: func(m *fakeMetricsEmitter) {
 				m.EmitGauge("testmetric", 22, nil)
 			},
@@ -133,7 +133,7 @@ func TestAssertChecks(t *testing.T) {
 			},
 		},
 		{
-			desc: "looking for a non-existant float fails",
+			desc: "looking for a non-existent float fails",
 			emit: func(m *fakeMetricsEmitter) {
 				m.EmitFloat("testmetric", 22.11, nil)
 			},
@@ -218,7 +218,7 @@ func TestAssertSingleGauge(t *testing.T) {
 			testOutput:     []string{},
 		},
 		{
-			desc: "looking for a non-existant gauge fails",
+			desc: "looking for a non-existent gauge fails",
 			emit: func(m *fakeMetricsEmitter) {
 				m.EmitGauge("testmetric", 22, nil)
 			},

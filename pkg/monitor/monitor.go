@@ -181,7 +181,9 @@ func (mon *monitor) Run(_ctx context.Context, stop <-chan struct{}, done chan<- 
 		dbPoolWorkers,
 		func(i []int) {
 			mon.clusters.UpdateBuckets(i)
-			mon.lastBucketUpdate.Store(mon.env.Now())
+			if len(i) > 0 {
+				mon.lastBucketUpdate.Store(mon.env.Now())
+			}
 		},
 		stop,
 		cancel,
