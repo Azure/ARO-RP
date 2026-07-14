@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -71,16 +72,12 @@ func TestEmitPodConditions(t *testing.T) {
 		Build())
 
 	mon := &Monitor{
-		ocpclientset: ocpclientset,
-		m:            m,
-		queryLimit:   1,
-		hourlyRun:    true,
-		log:          log,
-	}
-
-	err := mon.fetchManagedNamespaces(ctx)
-	if err != nil {
-		t.Fatal(err)
+		ocpclientset:        ocpclientset,
+		m:                   m,
+		namespacesToMonitor: namespace.MonitoredNamespaces,
+		queryLimit:          1,
+		hourlyRun:           true,
+		log:                 log,
 	}
 
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
@@ -112,7 +109,7 @@ func TestEmitPodConditions(t *testing.T) {
 		"type":      "Ready",
 	})
 
-	err = mon.emitPodConditions(ctx)
+	err := mon.emitPodConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,16 +182,12 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		Build())
 
 	mon := &Monitor{
-		ocpclientset: ocpclientset,
-		m:            m,
-		queryLimit:   1,
-		hourlyRun:    true,
-		log:          log,
-	}
-
-	err := mon.fetchManagedNamespaces(ctx)
-	if err != nil {
-		t.Fatal(err)
+		ocpclientset:        ocpclientset,
+		m:                   m,
+		namespacesToMonitor: namespace.MonitoredNamespaces,
+		queryLimit:          1,
+		hourlyRun:           true,
+		log:                 log,
 	}
 
 	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
@@ -214,7 +207,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		"lastTerminationState": "OOMKilled",
 	})
 
-	err = mon.emitPodConditions(ctx)
+	err := mon.emitPodConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,16 +321,12 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		Build())
 
 	mon := &Monitor{
-		ocpclientset: ocpclientset,
-		m:            m,
-		queryLimit:   1,
-		hourlyRun:    true,
-		log:          log,
-	}
-
-	err := mon.fetchManagedNamespaces(ctx)
-	if err != nil {
-		t.Fatal(err)
+		ocpclientset:        ocpclientset,
+		m:                   m,
+		namespacesToMonitor: namespace.MonitoredNamespaces,
+		queryLimit:          1,
+		hourlyRun:           true,
+		log:                 log,
 	}
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(42), map[string]string{
@@ -359,7 +348,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		"namespace": "openshift-monitoring",
 	})
 
-	err = mon.emitPodConditions(ctx)
+	err := mon.emitPodConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,7 +369,7 @@ func TestEmitPodConditionsAllManagedNamespaces(t *testing.T) {
 	ctx := context.Background()
 
 	var objects []client.Object
-	for _, ns := range scopedNamespaces {
+	for _, ns := range namespace.MonitoredNamespaces {
 		objects = append(objects, namespaceObject(ns))
 		objects = append(objects, &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -411,17 +400,13 @@ func TestEmitPodConditionsAllManagedNamespaces(t *testing.T) {
 		Build())
 
 	mon := &Monitor{
-		ocpclientset: ocpclientset,
-		m:            m,
-		queryLimit:   50,
+		ocpclientset:        ocpclientset,
+		m:                   m,
+		namespacesToMonitor: namespace.MonitoredNamespaces,
+		queryLimit:          50,
 	}
 
-	err := mon.fetchManagedNamespaces(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, ns := range scopedNamespaces {
+	for _, ns := range namespace.MonitoredNamespaces {
 		m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 			"name":      "test-pod",
 			"namespace": ns,
@@ -431,8 +416,16 @@ func TestEmitPodConditionsAllManagedNamespaces(t *testing.T) {
 		})
 	}
 
-	err = mon.emitPodConditions(ctx)
+	err := mon.emitPodConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func namespaceObject(name string) *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
 	}
 }

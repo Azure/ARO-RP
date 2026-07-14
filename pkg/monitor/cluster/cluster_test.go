@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -96,13 +97,6 @@ func TestMonitor(t *testing.T) {
 						"collector": "prefetchClusterVersion",
 					},
 				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
 			},
 		},
 		{
@@ -153,13 +147,6 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
 					},
 				},
 			},
@@ -233,13 +220,6 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
 					},
 				},
 				{
@@ -389,13 +369,6 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
 						"collector": "1",
 					},
 				},
@@ -450,13 +423,14 @@ func TestMonitor(t *testing.T) {
 			}
 
 			mon := &Monitor{
-				log:          log,
-				rawClient:    fakeRawClient,
-				ocpclientset: ocpclientset,
-				now:          now,
-				m:            m,
-				queryLimit:   1,
-				parallelism:  1,
+				log:                 log,
+				rawClient:            fakeRawClient,
+				ocpclientset:         ocpclientset,
+				namespacesToMonitor:  namespace.MonitoredNamespaces,
+				now:                  now,
+				m:                    m,
+				queryLimit:           1,
+				parallelism:          1,
 			}
 
 			if tt.collectors != nil {
