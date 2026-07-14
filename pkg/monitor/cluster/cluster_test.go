@@ -424,13 +424,13 @@ func TestMonitor(t *testing.T) {
 
 			mon := &Monitor{
 				log:                 log,
-				rawClient:            fakeRawClient,
-				ocpclientset:         ocpclientset,
-				namespacesToMonitor:  namespace.MonitoredNamespaces,
-				now:                  now,
-				m:                    m,
-				queryLimit:           1,
-				parallelism:          1,
+				rawClient:           fakeRawClient,
+				ocpclientset:        ocpclientset,
+				namespacesToMonitor: namespace.MonitoredNamespaces,
+				now:                 now,
+				m:                   m,
+				queryLimit:          1,
+				parallelism:         1,
 			}
 
 			if tt.collectors != nil {

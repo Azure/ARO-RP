@@ -365,7 +365,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	assert.Equal(t, "pod.restartcounter", x.Data["metric"])
 }
 
-func TestEmitPodConditionsAllManagedNamespaces(t *testing.T) {
+func TestEmitPodConditionsAllDesiredNamespaces(t *testing.T) {
 	ctx := context.Background()
 
 	var objects []client.Object
