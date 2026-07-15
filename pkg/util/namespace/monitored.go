@@ -3,9 +3,8 @@ package namespace
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// MonitoredNamespaces is the curated set of OpenShift/ARO-managed namespaces
-// for which the cluster monitor emits pod.conditions metrics.
-// This is intentionally smaller than IsOpenShiftNamespace to minimize API load.
+// MonitoredNamespaces is the curated set of OpenShift/ARO-managed namespaces that the cluster monitor queries
+// when emitting pod.conditions, pod.containerstatuses, and pod.restartcounter metrics.
 var MonitoredNamespaces = []string{
 	"openshift-apiserver",
 	"openshift-azure-logging",

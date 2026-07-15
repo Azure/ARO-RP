@@ -27,6 +27,7 @@ func TestEmitPodConditions(t *testing.T) {
 
 	objects := []client.Object{
 		namespaceObject("openshift-monitoring"),
+		namespaceObject("customer"),
 		&corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
@@ -56,6 +57,23 @@ func TestEmitPodConditions(t *testing.T) {
 					{
 						Type:   corev1.PodReady,
 						Status: corev1.ConditionTrue,
+					},
+				},
+			},
+		},
+		&corev1.Pod{ // non-monitored namespace, no metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "customer-pod",
+				Namespace: "customer",
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+			Status: corev1.PodStatus{
+				Conditions: []corev1.PodCondition{
+					{
+						Type:   corev1.PodReady,
+						Status: corev1.ConditionFalse,
 					},
 				},
 			},
@@ -122,10 +140,32 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 
 	objects := []client.Object{
 		namespaceObject("openshift-monitoring"),
+		namespaceObject("customer"),
 		&corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
 				Namespace: "openshift-monitoring",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name: "containername",
+						State: corev1.ContainerState{
+							Waiting: &corev1.ContainerStateWaiting{
+								Reason: "ImagePullBackOff",
+							},
+						},
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // non-monitored namespace, no metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "customer-pod",
+				Namespace: "customer",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -220,6 +260,24 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 
 	objects := []client.Object{
 		namespaceObject("openshift-monitoring"),
+		namespaceObject("customer"),
+		&corev1.Pod{ // non-monitored namespace, no metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "customer-pod",
+				Namespace: "customer",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: 42,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "podname1",
