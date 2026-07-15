@@ -1019,10 +1019,13 @@ def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentSco
                 scopes.add(RoleAssignmentScope.DISK_ENCRYPTION_SET)
 
             if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
-                scopes.add(RoleAssignmentScope.MASTER_SUBNET)
-                scopes.add(RoleAssignmentScope.WORKER_SUBNET)
+                if RoleAssignmentScope.VNET not in scopes:
+                    scopes.add(RoleAssignmentScope.MASTER_SUBNET)
+                    scopes.add(RoleAssignmentScope.WORKER_SUBNET)
             elif action.startswith("Microsoft.Network/virtualNetworks/"):
                 scopes.add(RoleAssignmentScope.VNET)
+                scopes.discard(RoleAssignmentScope.MASTER_SUBNET)
+                scopes.discard(RoleAssignmentScope.WORKER_SUBNET)
 
             if action.startswith("Microsoft.Network/natGateways/"):
                 scopes.add(RoleAssignmentScope.NAT_GATEWAY)
