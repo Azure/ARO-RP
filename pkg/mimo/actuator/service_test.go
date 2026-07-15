@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -31,28 +30,6 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
-
-type fakeMetricsEmitter struct {
-	Metrics map[string]int64
-	m       sync.RWMutex
-}
-
-func newfakeMetricsEmitter() *fakeMetricsEmitter {
-	m := make(map[string]int64)
-	return &fakeMetricsEmitter{
-		Metrics: m,
-		m:       sync.RWMutex{},
-	}
-}
-
-func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
-	e.m.Lock()
-	defer e.m.Unlock()
-	e.Metrics[metricName] = metricValue
-}
-
-func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
-}
 
 func TestActuatorPolling(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
@@ -329,7 +306,7 @@ func TestActuatorPerformsMaintenance(t *testing.T) {
 		"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 			// Only the ClusterResourceID is available to the bucket
 			// worker, so make sure this is the full document
-			r.Equal(oscd.OpenShiftCluster.Properties.NetworkProfile.PodCIDR, "0.0.0.0/32")
+			r.Equal("0.0.0.0/32", oscd.OpenShiftCluster.Properties.NetworkProfile.PodCIDR)
 
 			// once we've run this task, stop the worker
 			svc.stopping.Store(true)
@@ -384,7 +361,7 @@ func TestActuatorPerformsMaintenance(t *testing.T) {
 	)
 
 	errs := checker.CheckMaintenanceManifests(manifestsClient)
-	r.Nil(errs, fmt.Sprintf("%v", errs))
+	r.Nil(errs, "%v", errs)
 
 	m.AssertFloats()
 	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{

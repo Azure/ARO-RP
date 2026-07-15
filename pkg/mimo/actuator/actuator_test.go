@@ -702,10 +702,10 @@ func TestActuatorLogic(t *testing.T) {
 			})
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
-			r.Len(errs, 0, "MaintenanceManifests don't match")
+			r.Empty(errs, "MaintenanceManifests don't match")
 
 			errs = checker.CheckOpenShiftClusters(clustersClient)
-			r.Len(errs, 0, "OpenShiftClusters don't match")
+			r.Empty(errs, "OpenShiftClusters don't match")
 
 			if tt.wantLogs != nil {
 				err = testlog.AssertLoggingOutput(hook, tt.wantLogs)
