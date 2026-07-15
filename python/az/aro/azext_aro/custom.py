@@ -824,9 +824,19 @@ def aro_identity_get_required(*,
                               version,
                               master_subnet,
                               worker_subnet,
-                              vnet,
+                              vnet=None,
                               disk_encryption_set=None,
                               vnet_resource_group_name=None) -> None:  # pylint: disable=unused-argument
+    if vnet is None:
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
     _validate_version(client, version, location)
     role_set = _get_pwi_role_set(client, version, location)
 
@@ -892,7 +902,7 @@ def aro_identity_create_required(*,
                                  version,
                                  master_subnet,
                                  worker_subnet,
-                                 vnet,
+                                 vnet=None,
                                  disk_encryption_set=None,
                                  vnet_resource_group_name=None) -> list[dict[str, typing.Any]]:  # pylint: disable=unused-argument
     """
@@ -903,6 +913,16 @@ def aro_identity_create_required(*,
     """
     # FIXME:
     # pylint: disable=too-many-locals
+    if vnet is None:
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
     identities = []
     progress = cmd.cli_ctx.get_progress_controller()
 
