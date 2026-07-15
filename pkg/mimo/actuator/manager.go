@@ -5,6 +5,7 @@ package actuator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"sort"
@@ -20,6 +21,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
 )
+
+var errFailedFetchingSubscriptionDocument = errors.New("failed fetching subscription document")
 
 const maxDequeueCount = 5
 
@@ -168,7 +171,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// We need to fetch the subscription for the cluster to get the TenantID
 	subDoc, err := subDb.Get(ctx, strings.ToLower(r.SubscriptionID))
 	if err != nil {
-		err = fmt.Errorf("failed fetching subscription document: %w", err)
+		err = fmt.Errorf("%w: %w", errFailedFetchingSubscriptionDocument, err)
 		a.log.Error(err)
 		return false, err
 	}
