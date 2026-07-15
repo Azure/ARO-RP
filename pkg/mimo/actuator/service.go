@@ -216,7 +216,7 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	}
 
 	if s.emitHeartbeat {
-		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
+		go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", stop, s.checkReady)
 	}
 
 	waitForFirstBucketUpdate := &sync.WaitGroup{}
