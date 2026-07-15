@@ -130,32 +130,36 @@ assert_eq "D2s_v3 Portal"       "${MEM_PORTAL}"         773
 assert_eq "D2s_v3 MIMO Sched"   "${MEM_MIMO_SCHEDULER}" 619
 assert_eq "D2s_v3 MIMO Act"     "${MEM_MIMO_ACTUATOR}"  464
 
-# ── Tiny VM (2 GiB) — all services hit floor ──
-# budget = 2048 - 1536 = 512 MiB
+# ── Tiny VM (2 GiB) — floor sum exceeds host memory, must abort ──
+# budget = 2048 - 1536 = 512 MiB; floors sum to 5632 MiB > 2048 MiB.
+# No production VMSS SKU is this small; the guard catches pathological
+# configurations.
 
-echo "=== Tiny VM RP (2 GiB) ==="
+echo "=== Tiny VM RP (2 GiB) — expect abort ==="
 
-reset_mem_vars
-mock_meminfo 2048
-compute_memory_budget
+test_undersized_vm() {
+    local -ri mem_mib="$1"
+    local -r label="$2"
 
-assert_eq "Tiny RP (floor)"      "${MEM_RP}"             2048
-assert_eq "Tiny Monitor (floor)" "${MEM_MONITOR}"        2048
-assert_eq "Tiny OTEL (floor)"    "${MEM_OTEL}"           512
-assert_eq "Tiny Portal (floor)"  "${MEM_PORTAL}"         512
-assert_eq "Tiny MIMO Sched"      "${MEM_MIMO_SCHEDULER}" 256
-assert_eq "Tiny MIMO Act"        "${MEM_MIMO_ACTUATOR}"  256
+    if bash -c "
+        set -euo pipefail
+        log() { :; }
+        abort() { echo \"ABORT: \$*\" >&2; return 1; }
+        declare -r role_gateway='gateway'
+        declare -r role_rp='rp'
+        source '${WORK_DIR}/util-services.sh'
+        host_mem_mib() { echo ${mem_mib}; }
+        compute_memory_budget
+    " 2>/dev/null; then
+        echo "FAIL: ${label}"
+        FAIL=$((FAIL + 1))
+    else
+        PASS=$((PASS + 1))
+    fi
+}
 
-# ── Sub-reserve VM (1 GiB) — budget clamps to 0 ──
-
-echo "=== Sub-reserve VM (1 GiB) ==="
-
-reset_mem_vars
-mock_meminfo 1024
-compute_memory_budget
-
-assert_eq "Sub-reserve RP"       "${MEM_RP}"             2048   # floor
-assert_eq "Sub-reserve Monitor"  "${MEM_MONITOR}"        2048   # floor
+test_undersized_vm 2048 "Tiny VM (2 GiB) should abort"
+test_undersized_vm 1024 "Sub-reserve VM (1 GiB) should abort"
 
 # ── Zero-weight rejection ──
 # The weights are declared -ir (readonly) in util-services.sh, so we

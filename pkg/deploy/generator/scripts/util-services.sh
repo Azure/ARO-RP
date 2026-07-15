@@ -97,11 +97,12 @@ compute_memory_budget() {
         budget_mib=0
     fi
 
-    local -i w
-    for w in $WEIGHT_RP $WEIGHT_MONITOR $WEIGHT_OTEL \
-             $WEIGHT_PORTAL $WEIGHT_MIMO_SCHEDULER $WEIGHT_MIMO_ACTUATOR; do
+    local name w
+    for name in WEIGHT_RP WEIGHT_MONITOR WEIGHT_OTEL \
+                WEIGHT_PORTAL WEIGHT_MIMO_SCHEDULER WEIGHT_MIMO_ACTUATOR; do
+        w=${!name}
         if (( w <= 0 )); then
-            abort "all service weights must be > 0 (got ${w})"
+            abort "all service weights must be > 0 (${name}=${w})"
         fi
     done
     local -i weight_sum=$(( WEIGHT_RP + WEIGHT_MONITOR + WEIGHT_OTEL \
@@ -114,7 +115,13 @@ compute_memory_budget() {
     MEM_MIMO_SCHEDULER=$(clamp $(( budget_mib * WEIGHT_MIMO_SCHEDULER / weight_sum )) $FLOOR_MIMO_SCHEDULER $CAP_MIMO_SCHEDULER)
     MEM_MIMO_ACTUATOR=$(clamp $(( budget_mib * WEIGHT_MIMO_ACTUATOR / weight_sum )) $FLOOR_MIMO_ACTUATOR $CAP_MIMO_ACTUATOR)
 
-    log "total_mem=${total_mem_mib}MiB os_reserve=${OS_RESERVE_MIB}MiB budget=${budget_mib}MiB"
+    local -i allocated=$(( MEM_RP + MEM_MONITOR + MEM_OTEL \
+        + MEM_PORTAL + MEM_MIMO_SCHEDULER + MEM_MIMO_ACTUATOR ))
+    if (( allocated > total_mem_mib )); then
+        abort "total service allocation ${allocated} MiB exceeds available memory ${total_mem_mib} MiB (budget=${budget_mib} MiB); VM is too small for the configured service floors"
+    fi
+
+    log "total_mem=${total_mem_mib}MiB os_reserve=${OS_RESERVE_MIB}MiB budget=${budget_mib}MiB allocated=${allocated}MiB"
     log "rp=${MEM_RP}MiB monitor=${MEM_MONITOR}MiB otel=${MEM_OTEL}MiB portal=${MEM_PORTAL}MiB mimo_sched=${MEM_MIMO_SCHEDULER}MiB mimo_act=${MEM_MIMO_ACTUATOR}MiB (weight_sum=${weight_sum})"
 }
 
