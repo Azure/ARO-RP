@@ -84,9 +84,13 @@ func bucketRefreshLoop(
 			log.Error(fmt.Errorf("error registering ourselves as a %s poolWorker: %w", workerType, err))
 			onBucketChange([]int{})
 		} else {
+			wasMaster := isMaster
 			isMaster, err = tryMaster(ctx, log, workerType, bucketCount, dbPoolWorkers, isMaster)
 			if err != nil {
 				log.Error(fmt.Errorf("error registering ourselves as the master, continuing: %w", err))
+			}
+			if !isMaster && wasMaster {
+				log.Error("lost lease on master document, continuing as a worker")
 			}
 
 			buckets, err := dbPoolWorkers.ListBuckets(ctx, workerType)
@@ -166,6 +170,7 @@ func tryMaster(
 	if err != nil && errors.Is(err, database.ErrLostLease) {
 		isMaster = false
 		log.Infof("stopped being the %s master", workerType)
+		return isMaster, nil
 	}
 	return isMaster, err
 }

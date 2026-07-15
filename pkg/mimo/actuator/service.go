@@ -140,6 +140,7 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 
 func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+	defer close(done)
 
 	// Verify our databases are correct before starting, just in case
 	_, err := s.dbGroup.MaintenanceManifests()
@@ -238,7 +239,6 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	waitForFirstBucketUpdate.Wait()
 	if ctx.Err() != nil {
 		s.baseLog.Errorf("bucket worker startup failed, exiting: %s", context.Cause(ctx))
-		close(done)
 		return context.Cause(ctx)
 	}
 
@@ -263,7 +263,6 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 
 	s.baseLog.Print("exiting, waiting for all workers to finish")
 	s.b.StopAndWait()
-	close(done)
 	return nil
 }
 

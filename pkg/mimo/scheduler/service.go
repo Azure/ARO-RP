@@ -145,6 +145,7 @@ func (s *service) SetMaintenanceTasks(tasks map[api.MIMOTaskID]tasks.Maintenance
 
 func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
 	defer recover.Panic(s.baseLog)
+	defer close(done)
 
 	// Set up a cancel context for signalling exits (e.g. the stop channel
 	// closing, bucket fetching erroring)
@@ -227,7 +228,6 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	waitForFirstBucketUpdate.Wait()
 	if ctx.Err() != nil {
 		s.baseLog.Errorf("bucket worker startup failed, exiting: %s", context.Cause(ctx))
-		close(done)
 		return context.Cause(ctx)
 	}
 
@@ -258,7 +258,6 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	// If we're here, we're exiting
 	s.baseLog.Print("exiting, waiting for all workers to finish")
 	s.b.StopAndWait()
-	close(done)
 	return nil
 }
 
@@ -436,35 +435,30 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 	a.AddMaintenanceTasks(s.tasks)
 
 	t := time.NewTicker(s.interval)
-	defer func() {
-		log.Debugf("stopping worker for %s...", id)
-		t.Stop()
-	}()
 
 out:
-	for {
+	for !s.stopping.Load() {
+		func() {
+			s.workerCount.Add(1)
+			s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
+			defer func() {
+				s.workerCount.Add(-1)
+				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
+			}()
+			// Run each process in the background context so that completion
+			// of the current loop is finished before we exit cleanly, as
+			// the outer process will wait for s.workers to become 0.
+			_, err := a.Process(context.Background())
+			if err != nil {
+				log.Error(err)
+			}
+		}()
+
 		select {
 		case <-t.C:
-			if s.stopping.Load() {
-				break out
-			}
-			func() {
-				s.workerCount.Add(1)
-				s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
-				defer func() {
-					s.workerCount.Add(-1)
-					s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
-				}()
-				// Run each process in the background context so that completion
-				// of the current loop is finished before we exit cleanly, as
-				// the outer process will wait for s.workers to become 0.
-				_, err := a.Process(context.Background())
-				if err != nil {
-					log.Error(err)
-				}
-			}()
 		case <-stop:
 			break out
 		}
 	}
+	log.Debugf("worker for %s finished", id)
 }

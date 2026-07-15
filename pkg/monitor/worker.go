@@ -172,42 +172,43 @@ func (mon *monitor) worker(stop <-chan struct{}, id string) {
 
 out:
 	for {
+		func() {
+			mon.workerCount.Add(1)
+			mon.m.EmitGauge("monitor.workers.active.count", int64(mon.workerCount.Load()), nil)
+			defer func() {
+				mon.workerCount.Add(-1)
+				mon.m.EmitGauge("monitor.workers.active.count", int64(mon.workerCount.Load()), nil)
+			}()
+
+			doc, ok := mon.clusters.GetCluster(id)
+			if !ok {
+				return
+			}
+			subID := strings.ToLower(r.SubscriptionID)
+			sub, subok := mon.subs.GetSubscription(subID)
+
+			if !subok {
+				select {
+				case <-subscriptionStateLoggingTicker.C:
+					// The changefeed filters out subscriptions in invalid states
+					log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", doc.OpenShiftCluster.ID)
+
+				default:
+				}
+				return
+			}
+
+			newh := mon.env.Now().Hour()
+
+			// TODO: later can modify here to poll once per N minutes and re-issue
+			// cached metrics in the remaining minutes
+			mon.workOne(context.Background(), log, doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
+
+			h = newh
+		}()
+
 		select {
 		case <-t.C:
-			func() {
-				mon.workerCount.Add(1)
-				mon.m.EmitGauge("monitor.workers.active.count", int64(mon.workerCount.Load()), nil)
-				defer func() {
-					mon.workerCount.Add(-1)
-					mon.m.EmitGauge("monitor.workers.active.count", int64(mon.workerCount.Load()), nil)
-				}()
-
-				doc, ok := mon.clusters.GetCluster(id)
-				if !ok {
-					return
-				}
-				subID := strings.ToLower(r.SubscriptionID)
-				sub, subok := mon.subs.GetSubscription(subID)
-
-				if !subok {
-					select {
-					case <-subscriptionStateLoggingTicker.C:
-						// The changefeed filters out subscriptions in invalid states
-						log.Warningf("Skipped monitoring cluster %s because its subscription is in an invalid state", doc.OpenShiftCluster.ID)
-
-					default:
-					}
-					return
-				}
-
-				newh := mon.env.Now().Hour()
-
-				// TODO: later can modify here to poll once per N minutes and re-issue
-				// cached metrics in the remaining minutes
-				mon.workOne(context.Background(), log, doc, subID, sub.TenantID, newh != h, nsgMonitoringTicker)
-
-				h = newh
-			}()
 		case <-stop:
 			break out
 		}

@@ -110,11 +110,19 @@ func mimoScheduler(ctx context.Context, _log *logrus.Entry) error {
 	done := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
-	go a.Run(ctx, stop, done)
+	go func() {
+		err := a.Run(ctx, stop, done)
+		if err != nil {
+			log.Printf("failed to start: %s", err.Error())
+		}
+	}()
 
-	<-sigterm
-	log.Print("received SIGTERM")
-	close(stop)
+	go func() {
+		<-sigterm
+		log.Print("received SIGTERM")
+		close(stop)
+	}()
+
 	<-done
 
 	return nil
