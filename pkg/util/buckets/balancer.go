@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -176,6 +177,9 @@ func balance(workers []string, bucketCount int, doc *api.PoolWorkerDocument) {
 		doc.PoolWorker = &api.PoolWorker{}
 	}
 
+	// sort the workers list so iterating over it is consistent
+	slices.Sort(workers)
+
 	// ensure len(doc.PoolWorker.Buckets) == mon.bucketCount: this should only do
 	// anything on the very first run
 	if len(doc.PoolWorker.Buckets) < bucketCount {
@@ -215,7 +219,7 @@ func balance(workers []string, bucketCount int, doc *api.PoolWorkerDocument) {
 	if len(workers) > 0 {
 		for _, i := range unallocated {
 			var leastWorker string
-			for worker := range m {
+			for _, worker := range workers {
 				if leastWorker == "" ||
 					len(m[worker]) < len(m[leastWorker]) {
 					leastWorker = worker

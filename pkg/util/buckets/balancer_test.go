@@ -131,6 +131,25 @@ func TestBalance(t *testing.T) {
 			},
 		},
 		{
+			name: "reallocating buckets that are above the margin is stable",
+			doc: func() *api.PoolWorkerDocument {
+				return &api.PoolWorkerDocument{
+					PoolWorker: &api.PoolWorker{
+						Buckets: []string{"one", "one", "one", "one", "two", "three", "one", "three"},
+					},
+				}
+			},
+			monitors: []string{"one", "two", "three"},
+			validate: func(t *testing.T, tt *test, doc *api.PoolWorkerDocument) {
+				// Three should be given the bucket first because it sorts first
+				expected := []string{"one", "one", "one", "two", "two", "three", "three", "three"}
+
+				if !reflect.DeepEqual(expected, doc.PoolWorker.Buckets) {
+					t.Error(doc.PoolWorker.Buckets)
+				}
+			},
+		},
+		{
 			name: "3->5",
 			doc: func() *api.PoolWorkerDocument {
 				return &api.PoolWorkerDocument{
