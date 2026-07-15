@@ -975,6 +975,10 @@ def aro_identity_create_required(*,
         create_role_assignment(cmd.cli_ctx, firstparty_principal, des_defn, disk_encryption_set)
 
     progress.end()
+
+    logger.warning("\nManaged identities and role assignments were created. "
+                   "Please note 'id' or 'name' for assigning the identities with the az aro create command.")
+
     return identities
 
 
