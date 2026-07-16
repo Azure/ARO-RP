@@ -33,6 +33,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -161,7 +162,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		httpClient: httpClient,
 
 		ocpclientset:        clienthelper.NewWithClient(log, ocpclientset),
-		namespacesToMonitor: []string{},
+		namespacesToMonitor: namespace.MonitoredNamespaces,
 		queryLimit:          50,
 		parallelism:         MONITOR_GOROUTINES_PER_CLUSTER,
 	}
@@ -266,14 +267,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 	}
 
 	err = mon.timeCall(ctx, mon.prefetchClusterVersion)
-	if err != nil {
-		errs = append(errs, err)
-		return errors.Join(errs...)
-	}
-
-	// Determine the list of OpenShift (or ARO) managed namespaces that we will
-	// query for -- this needs to succeed
-	err = mon.timeCall(ctx, mon.fetchManagedNamespaces)
 	if err != nil {
 		errs = append(errs, err)
 		return errors.Join(errs...)

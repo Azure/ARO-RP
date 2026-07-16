@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -96,62 +97,6 @@ func TestMonitor(t *testing.T) {
 						"collector": "prefetchClusterVersion",
 					},
 				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
-			},
-		},
-		{
-			name:        "namespace fetch failure",
-			healthzCall: func(r *http.Request) (*http.Response, error) { return &http.Response{StatusCode: http.StatusOK}, nil },
-			hooks: func(hc *testclienthelper.HookingClient) {
-				hc.WithPreListHook(func(obj client.ObjectList, opts *client.ListOptions) error {
-					_, ok := obj.(*corev1.NamespaceList)
-					if ok {
-						return errors.New("failure with ns")
-					}
-					return nil
-				})
-			},
-			expectedErrors: []error{
-				&failureToRunClusterCollector{collectorName: "fetchManagedNamespaces"},
-				errListNamespaces,
-			},
-			expectedGauges: []fakemetrics.MetricsAssertion[int64]{
-				{
-					MetricName: "apiserver.healthz.code",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"code": "200",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.error",
-					Value:      int64(1),
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
-			},
-			expectedFloats: []fakemetrics.MetricsAssertion[float64]{
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "emitAPIServerHealthzCode",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "prefetchClusterVersion",
-					},
-				},
 			},
 		},
 		{
@@ -202,13 +147,6 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
 					},
 				},
 			},
@@ -282,13 +220,6 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
 					},
 				},
 				{
@@ -438,13 +369,6 @@ func TestMonitor(t *testing.T) {
 					MetricName: "monitor.cluster.collector.duration",
 					Value:      1.0,
 					Dimensions: map[string]string{
-						"collector": "fetchManagedNamespaces",
-					},
-				},
-				{
-					MetricName: "monitor.cluster.collector.duration",
-					Value:      1.0,
-					Dimensions: map[string]string{
 						"collector": "1",
 					},
 				},
@@ -499,13 +423,14 @@ func TestMonitor(t *testing.T) {
 			}
 
 			mon := &Monitor{
-				log:          log,
-				rawClient:    fakeRawClient,
-				ocpclientset: ocpclientset,
-				now:          now,
-				m:            m,
-				queryLimit:   1,
-				parallelism:  1,
+				log:                 log,
+				rawClient:           fakeRawClient,
+				ocpclientset:        ocpclientset,
+				namespacesToMonitor: namespace.MonitoredNamespaces,
+				now:                 now,
+				m:                   m,
+				queryLimit:          1,
+				parallelism:         1,
 			}
 
 			if tt.collectors != nil {
