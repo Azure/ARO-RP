@@ -113,7 +113,7 @@ func monitor(ctx context.Context, _log *logrus.Entry) error {
 	go func() {
 		err := mon.Run(ctx, stop, monitorWorkersDone)
 		if err != nil {
-			log.Printf("failed to start: %s", err.Error())
+			log.Fatalf("failed to start: %s", err.Error())
 		}
 	}()
 

@@ -122,7 +122,7 @@ func mimoActuator(ctx context.Context, _log *logrus.Entry) error {
 	go func() {
 		err := a.Run(ctx, stop, done)
 		if err != nil {
-			log.Printf("failed to start: %s", err.Error())
+			log.Fatalf("failed to start: %s", err.Error())
 		}
 	}()
 
