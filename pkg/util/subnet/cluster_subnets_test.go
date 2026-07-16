@@ -55,7 +55,7 @@ func TestListFromCluster(t *testing.T) {
 			modify: func(worker *machinev1beta1.MachineSet, master *machinev1beta1.Machine) {
 				master.Spec.ProviderSpec.Value.Raw = []byte("")
 			},
-			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: unexpected end of JSON input",
+			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: cannot convert RawExtension with unrecognized content type to unstructured",
 		},
 		{
 			name:   "worker missing providerSpec",
@@ -63,7 +63,7 @@ func TestListFromCluster(t *testing.T) {
 			modify: func(worker *machinev1beta1.MachineSet, master *machinev1beta1.Machine) {
 				worker.Spec.Template.Spec.ProviderSpec.Value.Raw = []byte("")
 			},
-			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: unexpected end of JSON input",
+			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: cannot convert RawExtension with unrecognized content type to unstructured",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
