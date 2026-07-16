@@ -54,6 +54,8 @@ const (
 	GuardrailsPolicyMachineDenyEnforcement       = "aro.guardrails.policies.aro-machines-deny.enforcement"
 	GuardrailsPolicyMachineConfigDenyManaged     = "aro.guardrails.policies.aro-machine-config-deny.managed"
 	GuardrailsPolicyMachineConfigDenyEnforcement = "aro.guardrails.policies.aro-machine-config-deny.enforcement"
+	GuardrailsPolicyNodesDenyManaged             = "aro.guardrails.policies.aro-nodes-deny.managed"
+	GuardrailsPolicyNodesDenyEnforcement         = "aro.guardrails.policies.aro-nodes-deny.enforcement"
 	GuardrailsPolicyPrivNamespaceDenyManaged     = "aro.guardrails.policies.aro-privileged-namespace-deny.managed"
 	GuardrailsPolicyPrivNamespaceDenyEnforcement = "aro.guardrails.policies.aro-privileged-namespace-deny.enforcement"
 	GuardrailsPolicyDryrun                       = "dryrun"
@@ -119,6 +121,8 @@ func DefaultOperatorFlags() map[string]string {
 		GuardrailsPolicyMachineDenyEnforcement:       GuardrailsPolicyDeny,
 		GuardrailsPolicyMachineConfigDenyManaged:     FlagTrue,
 		GuardrailsPolicyMachineConfigDenyEnforcement: GuardrailsPolicyDryrun,
+		GuardrailsPolicyNodesDenyManaged:             FlagTrue,
+		GuardrailsPolicyNodesDenyEnforcement:         GuardrailsPolicyDeny,
 		GuardrailsPolicyPrivNamespaceDenyManaged:     FlagTrue,
 		GuardrailsPolicyPrivNamespaceDenyEnforcement: GuardrailsPolicyDryrun,
 
