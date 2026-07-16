@@ -9,7 +9,7 @@ import (
 
 type maintenanceScheduleConverter struct{}
 
-func (m maintenanceScheduleConverter) ToExternal(d *api.MaintenanceScheduleDocument) interface{} {
+func (m maintenanceScheduleConverter) ToExternal(d *api.MaintenanceScheduleDocument) any {
 	return &MaintenanceSchedule{
 		ID: d.ID,
 
@@ -24,7 +24,7 @@ func (m maintenanceScheduleConverter) ToExternal(d *api.MaintenanceScheduleDocum
 	}
 }
 
-func (m maintenanceScheduleConverter) ToExternalList(docs []*api.MaintenanceScheduleDocument, nextLink string) interface{} {
+func (m maintenanceScheduleConverter) ToExternalList(docs []*api.MaintenanceScheduleDocument, nextLink string) any {
 	l := &MaintenanceScheduleList{
 		MaintenanceSchedules: make([]*MaintenanceSchedule, 0, len(docs)),
 		NextLink:             nextLink,
@@ -37,7 +37,7 @@ func (m maintenanceScheduleConverter) ToExternalList(docs []*api.MaintenanceSche
 	return l
 }
 
-func (m maintenanceScheduleConverter) ToInternal(_i interface{}, out *api.MaintenanceScheduleDocument) {
+func (m maintenanceScheduleConverter) ToInternal(_i any, out *api.MaintenanceScheduleDocument) {
 	i := _i.(*MaintenanceSchedule)
 
 	out.ID = i.ID

@@ -77,7 +77,7 @@ func (r *checker) Check(URLs []string) error {
 func (r *checker) checkWithRetry(url string) error {
 	var err error
 
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		err = r.checkOnce(url, r.checkTimeout/6)
 		if err == nil {
 			return nil

@@ -148,7 +148,7 @@ func TestRepeatedResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < repeatCount; i++ {
+	for range repeatCount {
 		resp, err := srv.Do(req)
 		if err != nil {
 			t.Fatal(err)
@@ -178,7 +178,7 @@ func TestRepeatedError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < repeatCount; i++ {
+	for range repeatCount {
 		resp, err := srv.Do(req)
 		if !errors.Is(err, repeatError) {
 			t.Fatalf("unexpected error %v", err)

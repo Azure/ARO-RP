@@ -12,7 +12,7 @@ type platformWorkloadIdentityRoleSetConverter struct{}
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWorkloadIdentityRoleSet) interface{} {
+func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWorkloadIdentityRoleSet) any {
 	out := &PlatformWorkloadIdentityRoleSet{
 		Properties: PlatformWorkloadIdentityRoleSetProperties{
 			OpenShiftVersion:              s.Properties.OpenShiftVersion,
@@ -44,7 +44,7 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c platformWorkloadIdentityRoleSetConverter) ToExternalList(sets []*api.PlatformWorkloadIdentityRoleSet) interface{} {
+func (c platformWorkloadIdentityRoleSetConverter) ToExternalList(sets []*api.PlatformWorkloadIdentityRoleSet) any {
 	l := &PlatformWorkloadIdentityRoleSetList{
 		PlatformWorkloadIdentityRoleSets: make([]*PlatformWorkloadIdentityRoleSet, 0, len(sets)),
 	}
@@ -60,7 +60,7 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternalList(sets []*api.Pla
 // all mapped fields from the external representation. ToInternal modifies its
 // argument; there is no pointer aliasing between the passed and returned
 // objects
-func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, out *api.PlatformWorkloadIdentityRoleSet) {
+func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new any, out *api.PlatformWorkloadIdentityRoleSet) {
 	new := _new.(*PlatformWorkloadIdentityRoleSet)
 
 	out.Properties.OpenShiftVersion = new.Properties.OpenShiftVersion

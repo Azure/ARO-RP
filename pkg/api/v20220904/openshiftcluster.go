@@ -35,7 +35,7 @@ type OpenShiftCluster struct {
 	Tags Tags `json:"tags,omitempty" mutable:"true"`
 
 	// The cluster properties.
-	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+	Properties OpenShiftClusterProperties `json:"properties"`
 }
 
 // Tags represents an OpenShift cluster's tags.
@@ -47,25 +47,25 @@ type OpenShiftClusterProperties struct {
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
 	// The cluster profile.
-	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
+	ClusterProfile ClusterProfile `json:"clusterProfile"`
 
 	// The console profile.
-	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
+	ConsoleProfile ConsoleProfile `json:"consoleProfile"`
 
 	// The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
 	// The cluster network profile.
-	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
+	NetworkProfile NetworkProfile `json:"networkProfile"`
 
 	// The cluster master profile.
-	MasterProfile MasterProfile `json:"masterProfile,omitempty"`
+	MasterProfile MasterProfile `json:"masterProfile"`
 
 	// The cluster worker profiles.
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
 	// The cluster API server profile.
-	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
+	APIServerProfile APIServerProfile `json:"apiserverProfile"`
 
 	// The cluster ingress profiles.
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`

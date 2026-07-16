@@ -657,7 +657,7 @@ func TestListSyncSet(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := s.List(context.Background(), tt.namespace, tt.label, reflect.TypeOf(hivev1.SyncSetList{}))
+			result, err := s.List(context.Background(), tt.namespace, tt.label, reflect.TypeFor[hivev1.SyncSetList]())
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
@@ -698,7 +698,7 @@ func TestGetSyncSet(t *testing.T) {
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			result, err := s.Get(context.Background(), tt.namespace, tt.syncsetname, reflect.TypeOf(hivev1.SyncSet{}))
+			result, err := s.Get(context.Background(), tt.namespace, tt.syncsetname, reflect.TypeFor[hivev1.SyncSet]())
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)

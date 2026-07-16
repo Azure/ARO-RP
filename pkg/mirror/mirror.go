@@ -93,14 +93,13 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 
 	wg := &sync.WaitGroup{}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
+	for i := range 10 {
+		wg.Go(func() {
 			l := log.WithField("worker", i)
 			for w := range ch {
 				l.Debugf("mirroring %s", w.tag)
 				var err error
-				for retry := 0; retry < 6; retry++ {
+				for range 6 {
 					workTime := time.Now()
 					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
 					l.WithField("duration", time.Since(workTime)).WithField("tag", w.tag).WithError(err).Debug("completed")
@@ -114,8 +113,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 				}
 				results <- err
 			}
-			wg.Done()
-		}()
+		})
 	}
 
 	go func() {

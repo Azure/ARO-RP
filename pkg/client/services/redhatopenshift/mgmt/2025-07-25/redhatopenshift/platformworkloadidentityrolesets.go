@@ -98,13 +98,13 @@ func (client PlatformWorkloadIdentityRoleSetsClient) List(ctx context.Context, l
 
 // ListPreparer prepares the List request.
 func (client PlatformWorkloadIdentityRoleSetsClient) ListPreparer(ctx context.Context, location string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"location":       autorest.Encode("path", location),
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2025-07-25"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 

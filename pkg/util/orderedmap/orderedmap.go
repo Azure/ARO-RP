@@ -12,7 +12,7 @@ import (
 
 // UnmarshalJSON unmarshals a JSON object into a slice of key/value structs,
 // preserving key order.
-func UnmarshalJSON(b []byte, i interface{}) error {
+func UnmarshalJSON(b []byte, i any) error {
 	xs := reflect.ValueOf(i).Elem()
 	d := json.NewDecoder(bytes.NewReader(b))
 
@@ -60,7 +60,7 @@ func UnmarshalJSON(b []byte, i interface{}) error {
 
 // MarshalJSON unmarshals a slice of key/value structs into a JSON object,
 // preserving key order.
-func MarshalJSON(i interface{}) ([]byte, error) {
+func MarshalJSON(i any) ([]byte, error) {
 	if i == nil {
 		return []byte("null"), nil
 	}

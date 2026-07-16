@@ -127,7 +127,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          pointerutils.ToPtr(phaseRunning),
+						Phase:          new(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},
@@ -141,7 +141,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 						},
 					},
 					Status: machinev1beta1.MachineStatus{
-						Phase:          pointerutils.ToPtr(phaseRunning),
+						Phase:          new(phaseRunning),
 						ProviderStatus: marshalAzureMachineProviderStatus(t, &machinev1beta1.AzureMachineProviderStatus{}),
 					},
 				},

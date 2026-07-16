@@ -21,14 +21,14 @@ func TestExtractClaims(t *testing.T) {
 		name       string
 		token      string
 		wantOid    string
-		wantClaims map[string]interface{}
+		wantClaims map[string]any
 		wantErr    bool
 	}{
 		{
 			name:       "Can extract oid from a valid token",
 			token:      validTestToken,
 			wantOid:    dummyObjectId,
-			wantClaims: map[string]interface{}{"example_claim": "example_value"},
+			wantClaims: map[string]any{"example_claim": "example_value"},
 			wantErr:    false,
 		},
 		{

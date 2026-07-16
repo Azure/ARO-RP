@@ -128,7 +128,7 @@ func (e *etcdrenew) run(ctx context.Context) error {
 	}
 
 	// Fetch secretNames using nodeNames
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		nodeName := e.doc.OpenShiftCluster.Properties.InfraID + "-master-" + strconv.Itoa(i)
 		for _, prefix := range []string{"etcd-peer-", "etcd-serving-", "etcd-serving-metrics-"} {
 			e.secretNames = append(e.secretNames, prefix+nodeName)

@@ -33,19 +33,19 @@ const (
 )
 
 type generator struct {
-	exampleOpenShiftClusterPutParameter                func() interface{}
-	exampleOpenShiftClusterPatchParameter              func() interface{}
-	exampleOpenShiftClusterResponse                    func() interface{}
-	exampleOpenShiftClusterGetResponse                 func() interface{}
-	exampleOpenShiftClusterPutOrPatchResponse          func() interface{}
-	exampleOpenShiftClusterCredentialsResponse         func() interface{}
-	exampleOpenShiftClusterAdminKubeconfigResponse     func() interface{}
-	exampleOpenShiftClusterListResponse                func() interface{}
-	exampleOpenShiftVersionListResponse                func() interface{}
-	exampleOpenShiftVersionResponse                    func() interface{}
-	examplePlatformWorkloadIdentityRoleSetListResponse func() interface{}
-	examplePlatformWorkloadIdentityRoleSetResponse     func() interface{}
-	exampleOperationListResponse                       func() interface{}
+	exampleOpenShiftClusterPutParameter                func() any
+	exampleOpenShiftClusterPatchParameter              func() any
+	exampleOpenShiftClusterResponse                    func() any
+	exampleOpenShiftClusterGetResponse                 func() any
+	exampleOpenShiftClusterPutOrPatchResponse          func() any
+	exampleOpenShiftClusterCredentialsResponse         func() any
+	exampleOpenShiftClusterAdminKubeconfigResponse     func() any
+	exampleOpenShiftClusterListResponse                func() any
+	exampleOpenShiftVersionListResponse                func() any
+	exampleOpenShiftVersionResponse                    func() any
+	examplePlatformWorkloadIdentityRoleSetListResponse func() any
+	examplePlatformWorkloadIdentityRoleSetResponse     func() any
+	exampleOperationListResponse                       func() any
 
 	systemData             bool
 	kubeConfig             bool

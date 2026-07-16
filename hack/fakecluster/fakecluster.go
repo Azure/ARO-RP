@@ -98,7 +98,7 @@ func run(ctx context.Context, l *logrus.Entry) error {
 
 func resp(bytes []byte) func(http.ResponseWriter, *http.Request) {
 	e := func(w http.ResponseWriter, r *http.Request) {
-		var resp interface{}
+		var resp any
 		err := json.Unmarshal(bytes, &resp)
 		if err != nil {
 			return

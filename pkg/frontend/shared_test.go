@@ -34,7 +34,6 @@ import (
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
@@ -111,7 +110,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	controller := gomock.NewController(t)
 
 	keyvault := mock_azsecrets.NewMockClient(controller)
-	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)
+	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: new(string(serverPki))}}, nil)
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 
@@ -238,7 +237,7 @@ func (ti *testInfra) buildFixtures(fixtures func(*testdatabase.Fixture)) error {
 	return ti.fixture.Create()
 }
 
-func (ti *testInfra) request(method, url string, header http.Header, in interface{}) (*http.Response, []byte, error) {
+func (ti *testInfra) request(method, url string, header http.Header, in any) (*http.Response, []byte, error) {
 	var b []byte
 
 	if in != nil {
@@ -270,7 +269,7 @@ func (ti *testInfra) request(method, url string, header http.Header, in interfac
 	return resp, b, nil
 }
 
-func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse interface{}, opts ...cmp.Option) error {
+func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse any, opts ...cmp.Option) error {
 	if resp.StatusCode != wantStatusCode {
 		return fmt.Errorf("unexpected status code %d, wanted %d: %s", resp.StatusCode, wantStatusCode, string(b))
 	}

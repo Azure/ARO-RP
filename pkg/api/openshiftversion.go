@@ -13,7 +13,7 @@ type OpenShiftVersion struct {
 	Deleting bool   `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 
 	// The properties for the OpenShiftVersion resource.
-	Properties OpenShiftVersionProperties `json:"properties,omitempty"`
+	Properties OpenShiftVersionProperties `json:"properties"`
 }
 
 // OpenShiftVersionProperties represents the properties of an OpenShiftVersion.

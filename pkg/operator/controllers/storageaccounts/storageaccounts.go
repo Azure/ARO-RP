@@ -16,7 +16,6 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -110,7 +109,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			// if rule was not found - we add it
 			if !found {
 				*account.NetworkRuleSet.VirtualNetworkRules = append(*account.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-					VirtualNetworkResourceID: pointerutils.ToPtr(subnet),
+					VirtualNetworkResourceID: new(subnet),
 					Action:                   mgmtstorage.ActionAllow,
 				})
 				changed = true

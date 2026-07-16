@@ -12,7 +12,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
@@ -180,13 +179,13 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
 						ClusterProfile: ClusterProfile{
-							OIDCIssuer: (*OIDCIssuer)(pointerutils.ToPtr("validurl")),
+							OIDCIssuer: (*OIDCIssuer)(new("validurl")),
 						},
 					},
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.OIDCIssuer = (*OIDCIssuer)(pointerutils.ToPtr("invalid"))
+				oc.Properties.ClusterProfile.OIDCIssuer = (*OIDCIssuer)(new("invalid"))
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.oidcIssuer: Changing property 'properties.clusterProfile.oidcIssuer' is not allowed.",
 		},

@@ -11,11 +11,11 @@ func examplePlatformWorkloadIdentityRoleSet() *PlatformWorkloadIdentityRoleSet {
 	return ext.(*PlatformWorkloadIdentityRoleSet)
 }
 
-func ExamplePlatformWorkloadIdentityRoleSetResponse() interface{} {
+func ExamplePlatformWorkloadIdentityRoleSetResponse() any {
 	return examplePlatformWorkloadIdentityRoleSet()
 }
 
-func ExamplePlatformWorkloadIdentityRoleSetListResponse() interface{} {
+func ExamplePlatformWorkloadIdentityRoleSetListResponse() any {
 	return &PlatformWorkloadIdentityRoleSetList{
 		PlatformWorkloadIdentityRoleSets: []*PlatformWorkloadIdentityRoleSet{
 			ExamplePlatformWorkloadIdentityRoleSetResponse().(*PlatformWorkloadIdentityRoleSet),

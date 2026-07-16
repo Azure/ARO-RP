@@ -91,14 +91,14 @@ func (client OpenShiftClustersClient) CreateOrUpdate(ctx context.Context, resour
 
 // CreateOrUpdatePreparer prepares the CreateOrUpdate request.
 func (client OpenShiftClustersClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -184,14 +184,14 @@ func (client OpenShiftClustersClient) Delete(ctx context.Context, resourceGroupN
 
 // DeletePreparer prepares the Delete request.
 func (client OpenShiftClustersClient) DeletePreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -281,14 +281,14 @@ func (client OpenShiftClustersClient) Get(ctx context.Context, resourceGroupName
 
 // GetPreparer prepares the Get request.
 func (client OpenShiftClustersClient) GetPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -359,12 +359,12 @@ func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShif
 
 // ListPreparer prepares the List request.
 func (client OpenShiftClustersClient) ListPreparer(ctx context.Context) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -482,14 +482,14 @@ func (client OpenShiftClustersClient) ListAdminCredentials(ctx context.Context, 
 
 // ListAdminCredentialsPreparer prepares the ListAdminCredentials request.
 func (client OpenShiftClustersClient) ListAdminCredentialsPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -574,13 +574,13 @@ func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, r
 
 // ListByResourceGroupPreparer prepares the ListByResourceGroup request.
 func (client OpenShiftClustersClient) ListByResourceGroupPreparer(ctx context.Context, resourceGroupName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -698,14 +698,14 @@ func (client OpenShiftClustersClient) ListCredentials(ctx context.Context, resou
 
 // ListCredentialsPreparer prepares the ListCredentials request.
 func (client OpenShiftClustersClient) ListCredentialsPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 
@@ -780,14 +780,14 @@ func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupN
 
 // UpdatePreparer prepares the Update request.
 func (client OpenShiftClustersClient) UpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftClusterUpdate) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2024-08-12-preview"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 

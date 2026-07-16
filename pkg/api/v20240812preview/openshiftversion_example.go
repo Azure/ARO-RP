@@ -11,11 +11,11 @@ func exampleOpenShiftVersion() *OpenShiftVersion {
 	return ext.(*OpenShiftVersion)
 }
 
-func ExampleOpenShiftVersionResponse() interface{} {
+func ExampleOpenShiftVersionResponse() any {
 	return exampleOpenShiftVersion()
 }
 
-func ExampleOpenShiftVersionListResponse() interface{} {
+func ExampleOpenShiftVersionListResponse() any {
 	return &OpenShiftVersionList{
 		OpenShiftVersions: []*OpenShiftVersion{
 			ExampleOpenShiftVersionResponse().(*OpenShiftVersion),

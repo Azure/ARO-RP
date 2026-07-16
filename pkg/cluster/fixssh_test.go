@@ -28,11 +28,11 @@ var (
 
 func lbBefore(lbID string) armnetwork.LoadBalancer {
 	return armnetwork.LoadBalancer{
-		ID: pointerutils.ToPtr(lbID),
+		ID: new(lbID),
 		Properties: &armnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 				{
-					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: new(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: []*armnetwork.BackendAddressPool{},
@@ -44,95 +44,95 @@ func lbBefore(lbID string) armnetwork.LoadBalancer {
 
 func lbAfter(lbID string) armnetwork.LoadBalancer {
 	return armnetwork.LoadBalancer{
-		ID: pointerutils.ToPtr(lbID),
+		ID: new(lbID),
 		Properties: &armnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 				{
-					ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
+					ID: new(lbID + "/frontendIPConfigurations/" + ipc),
 				},
 			},
 			BackendAddressPools: []*armnetwork.BackendAddressPool{
 				{
-					Name: pointerutils.ToPtr("ssh-0"),
+					Name: new("ssh-0"),
 				},
 				{
-					Name: pointerutils.ToPtr("ssh-1"),
+					Name: new("ssh-1"),
 				},
 				{
-					Name: pointerutils.ToPtr("ssh-2"),
+					Name: new("ssh-2"),
 				},
 			},
 			LoadBalancingRules: []*armnetwork.LoadBalancingRule{
 				{
 					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: new(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-0"),
+							ID: new(lbID + "/backendAddressPools/ssh-0"),
 						},
 						Probe: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
+							ID: new(lbID + "/probes/ssh"),
 						},
 						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-						FrontendPort:         pointerutils.ToPtr(int32(2200)),
-						BackendPort:          pointerutils.ToPtr(int32(22)),
-						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-						DisableOutboundSnat:  pointerutils.ToPtr(true),
+						FrontendPort:         new(int32(2200)),
+						BackendPort:          new(int32(22)),
+						IdleTimeoutInMinutes: new(int32(30)),
+						DisableOutboundSnat:  new(true),
 					},
-					Name: pointerutils.ToPtr("ssh-0"),
+					Name: new("ssh-0"),
 				},
 				{
 					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: new(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-1"),
+							ID: new(lbID + "/backendAddressPools/ssh-1"),
 						},
 						Probe: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
+							ID: new(lbID + "/probes/ssh"),
 						},
 						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-						FrontendPort:         pointerutils.ToPtr(int32(2201)),
-						BackendPort:          pointerutils.ToPtr(int32(22)),
-						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-						DisableOutboundSnat:  pointerutils.ToPtr(true),
+						FrontendPort:         new(int32(2201)),
+						BackendPort:          new(int32(22)),
+						IdleTimeoutInMinutes: new(int32(30)),
+						DisableOutboundSnat:  new(true),
 					},
-					Name: pointerutils.ToPtr("ssh-1"),
+					Name: new("ssh-1"),
 				},
 				{
 					Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 						FrontendIPConfiguration: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/frontendIPConfigurations/" + ipc),
+							ID: new(lbID + "/frontendIPConfigurations/" + ipc),
 						},
 						BackendAddressPool: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/backendAddressPools/ssh-2"),
+							ID: new(lbID + "/backendAddressPools/ssh-2"),
 						},
 						Probe: &armnetwork.SubResource{
-							ID: pointerutils.ToPtr(lbID + "/probes/ssh"),
+							ID: new(lbID + "/probes/ssh"),
 						},
 						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-						FrontendPort:         pointerutils.ToPtr(int32(2202)),
-						BackendPort:          pointerutils.ToPtr(int32(22)),
-						IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-						DisableOutboundSnat:  pointerutils.ToPtr(true),
+						FrontendPort:         new(int32(2202)),
+						BackendPort:          new(int32(22)),
+						IdleTimeoutInMinutes: new(int32(30)),
+						DisableOutboundSnat:  new(true),
 					},
-					Name: pointerutils.ToPtr("ssh-2"),
+					Name: new("ssh-2"),
 				},
 			},
 			Probes: []*armnetwork.Probe{
 				{
 					Properties: &armnetwork.ProbePropertiesFormat{
 						Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
-						Port:              pointerutils.ToPtr(int32(22)),
-						IntervalInSeconds: pointerutils.ToPtr(int32(5)),
-						NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+						Port:              new(int32(22)),
+						IntervalInSeconds: new(int32(5)),
+						NumberOfProbes:    new(int32(2)),
 					},
-					Name: pointerutils.ToPtr("ssh"),
+					Name: new("ssh"),
 				},
 			},
 		},
@@ -146,29 +146,29 @@ func configureInterface(backendPools []string,
 	addIPConfig bool,
 ) *armnetwork.InterfacesClientGetResponse {
 	iface := armnetwork.Interface{
-		Name:       pointerutils.ToPtr(name),
+		Name:       new(name),
 		Properties: &armnetwork.InterfacePropertiesFormat{},
 	}
 
 	if addVM {
-		iface.Properties.VirtualMachine = &armnetwork.SubResource{ID: pointerutils.ToPtr(strings.ReplaceAll(name, "-nic", ""))}
+		iface.Properties.VirtualMachine = &armnetwork.SubResource{ID: new(strings.ReplaceAll(name, "-nic", ""))}
 	} else {
 		iface.Properties.VirtualMachine = nil
 	}
 
 	if addIPConfig {
 		var ipConfigurations []*armnetwork.InterfaceIPConfiguration
-		ipConfig := armnetwork.InterfaceIPConfiguration{Name: pointerutils.ToPtr(name)}
+		ipConfig := armnetwork.InterfaceIPConfiguration{Name: new(name)}
 		ipConfig.Properties = &armnetwork.InterfaceIPConfigurationPropertiesFormat{}
 		if backendPools != nil {
 			var nicBackendPools []*armnetwork.BackendAddressPool
 			for _, backendPool := range backendPools {
-				nicBackendPools = append(nicBackendPools, &armnetwork.BackendAddressPool{ID: pointerutils.ToPtr(backendPool)})
+				nicBackendPools = append(nicBackendPools, &armnetwork.BackendAddressPool{ID: new(backendPool)})
 			}
 			ipConfig.Properties.LoadBalancerBackendAddressPools = nicBackendPools
 		}
 		if subnet != "" {
-			ipConfig.Properties.Subnet = &armnetwork.Subnet{ID: pointerutils.ToPtr(subnet)}
+			ipConfig.Properties.Subnet = &armnetwork.Subnet{ID: new(subnet)}
 		}
 		ipConfigurations = append(ipConfigurations, &ipConfig)
 		iface.Properties.IPConfigurations = ipConfigurations

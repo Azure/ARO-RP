@@ -75,7 +75,6 @@ func (p ParallelEnricher) Enrich(ctx context.Context, log *logrus.Entry, ocs ...
 	wg.Add(len(ocs))
 	for _, oc := range ocs {
 		// https://golang.org/doc/faq#closures_and_goroutines
-		oc := oc
 		go func() {
 			defer recover.Panic(log)
 			defer wg.Done()
@@ -147,7 +146,7 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan error, expectedResults int) {
 	timeout := false
 	// retrieve the errors from the routines
-	for i := 0; i < expectedResults; i++ {
+	for range expectedResults {
 		err := <-errChannel
 		switch err {
 		case nil:

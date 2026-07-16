@@ -6,9 +6,9 @@ package token
 import "github.com/golang-jwt/jwt/v4"
 
 type custom struct {
-	ObjectId   string                 `json:"oid"`
-	ClaimNames map[string]interface{} `json:"_claim_names"`
-	Groups     []string               `json:"groups"`
+	ObjectId   string         `json:"oid"`
+	ClaimNames map[string]any `json:"_claim_names"`
+	Groups     []string       `json:"groups"`
 	jwt.RegisteredClaims
 }
 

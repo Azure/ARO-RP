@@ -25,7 +25,7 @@ import (
 // consists of removing the ARO base package name (so it produces pkg/foobar
 // instead of github.com/Azure/ARO-RP/pkg/foobar) and removing the -fm suffix
 // from Golang struct methods.
-func FriendlyName(f interface{}) string {
+func FriendlyName(f any) string {
 	return strings.TrimPrefix(strings.TrimSuffix(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), "-fm"), "github.com/Azure/ARO-RP/")
 }
 

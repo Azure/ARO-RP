@@ -8,38 +8,38 @@ type Template struct {
 	Schema         string                        `json:"$schema,omitempty"`
 	APIProfile     string                        `json:"apiProfile,omitempty"`
 	ContentVersion string                        `json:"contentVersion,omitempty"`
-	Variables      map[string]interface{}        `json:"variables,omitempty"`
+	Variables      map[string]any                `json:"variables,omitempty"`
 	Parameters     map[string]*TemplateParameter `json:"parameters,omitempty"`
-	Functions      []interface{}                 `json:"functions,omitempty"`
+	Functions      []any                         `json:"functions,omitempty"`
 	Resources      []*Resource                   `json:"resources,omitempty"`
 	Outputs        map[string]*Output            `json:"outputs,omitempty"`
 }
 
 // TemplateParameter represents an ARM template parameter
 type TemplateParameter struct {
-	Type          string                 `json:"type,omitempty"`
-	DefaultValue  interface{}            `json:"defaultValue,omitempty"`
-	AllowedValues []interface{}          `json:"allowedValues,omitempty"`
-	Metadata      map[string]interface{} `json:"metadata,omitempty"`
-	MinValue      int                    `json:"minValue,omitempty"`
-	MaxValue      int                    `json:"maxValue,omitempty"`
-	MinLength     int                    `json:"minLength,omitempty"`
-	MaxLength     int                    `json:"maxLength,omitempty"`
+	Type          string         `json:"type,omitempty"`
+	DefaultValue  any            `json:"defaultValue,omitempty"`
+	AllowedValues []any          `json:"allowedValues,omitempty"`
+	Metadata      map[string]any `json:"metadata,omitempty"`
+	MinValue      int            `json:"minValue,omitempty"`
+	MaxValue      int            `json:"maxValue,omitempty"`
+	MinLength     int            `json:"minLength,omitempty"`
+	MaxLength     int            `json:"maxLength,omitempty"`
 }
 
 // Resource represents an ARM template resource
 type Resource struct {
-	Resource interface{} `json:"-"`
+	Resource any `json:"-"`
 
-	Name       string                 `json:"name,omitempty"`
-	Type       string                 `json:"type,omitempty"`
-	Condition  interface{}            `json:"condition,omitempty"`
-	APIVersion string                 `json:"apiVersion,omitempty"`
-	DependsOn  []string               `json:"dependsOn,omitempty"`
-	Location   string                 `json:"location,omitempty"`
-	Tags       map[string]interface{} `json:"tags,omitempty"`
-	Copy       *Copy                  `json:"copy,omitempty"`
-	Comments   string                 `json:"comments,omitempty"`
+	Name       string         `json:"name,omitempty"`
+	Type       string         `json:"type,omitempty"`
+	Condition  any            `json:"condition,omitempty"`
+	APIVersion string         `json:"apiVersion,omitempty"`
+	DependsOn  []string       `json:"dependsOn,omitempty"`
+	Location   string         `json:"location,omitempty"`
+	Tags       map[string]any `json:"tags,omitempty"`
+	Copy       *Copy          `json:"copy,omitempty"`
+	Comments   string         `json:"comments,omitempty"`
 	// Etag is required to omit Etag member when it's not set.
 	// arm* SDK uses its own MarshalJSON, and empty members are converted to nil,
 	// but Etag: nil fails the ARM template validation.
@@ -53,7 +53,7 @@ type Deployment struct {
 	Location   string                `json:"location,omitempty"`
 	APIVersion string                `json:"apiVersion,omitempty"`
 	DependsOn  []string              `json:"dependsOn,omitempty"`
-	Condition  interface{}           `json:"condition,omitempty"`
+	Condition  any                   `json:"condition,omitempty"`
 	Properties *DeploymentProperties `json:"properties,omitempty"`
 }
 
@@ -62,7 +62,7 @@ type DeploymentProperties struct {
 	Mode                        string                                          `json:"mode,omitempty"`
 	ExpressionEvaluationOptions map[string]*string                              `json:"expressionEvaluationOptions,omitempty"`
 	Parameters                  map[string]*DeploymentTemplateResourceParameter `json:"parameters,omitempty"`
-	Variables                   map[string]interface{}                          `json:"variables,omitempty"`
+	Variables                   map[string]any                                  `json:"variables,omitempty"`
 	Template                    *DeploymentTemplate                             `json:"template,omitempty"`
 }
 
@@ -71,18 +71,18 @@ type DeploymentTemplate struct {
 	Schema         string                        `json:"$schema,omitempty"`
 	APIProfile     string                        `json:"apiProfile,omitempty"`
 	ContentVersion string                        `json:"contentVersion,omitempty"`
-	Variables      map[string]interface{}        `json:"variables,omitempty"`
+	Variables      map[string]any                `json:"variables,omitempty"`
 	Parameters     map[string]*TemplateParameter `json:"parameters,omitempty"`
-	Functions      []interface{}                 `json:"functions,omitempty"`
+	Functions      []any                         `json:"functions,omitempty"`
 	Resources      []*DeploymentTemplateResource `json:"resources,omitempty"`
 }
 
 // DeploymentTemplateResource represents the inner template's resource of a nested ARM deployment
 type DeploymentTemplateResource struct {
-	Name       string      `json:"name,omitempty"`
-	Type       string      `json:"type,omitempty"`
-	APIVersion string      `json:"apiVersion,omitempty"`
-	Properties interface{} `json:"properties,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Type       string `json:"type,omitempty"`
+	APIVersion string `json:"apiVersion,omitempty"`
+	Properties any    `json:"properties,omitempty"`
 }
 
 // DeploymentTemplateResourceParameter represents a nested ARM deployment's resource parameter
@@ -100,9 +100,9 @@ type Copy struct {
 
 // Output represents an ARM template output
 type Output struct {
-	Condition bool        `json:"condition,omitempty"`
-	Type      string      `json:"type,omitempty"`
-	Value     interface{} `json:"value,omitempty"`
+	Condition bool   `json:"condition,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Value     any    `json:"value,omitempty"`
 }
 
 // Parameters represents ARM parameters
@@ -114,7 +114,7 @@ type Parameters struct {
 
 // ParametersParameter represents an ARM parameters parameter
 type ParametersParameter struct {
-	Ref      string                 `json:"$ref,omitempty"`
-	Value    interface{}            `json:"value,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Ref      string         `json:"$ref,omitempty"`
+	Value    any            `json:"value,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 }

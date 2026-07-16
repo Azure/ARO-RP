@@ -9,8 +9,6 @@ import (
 
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	"github.com/vincent-petithory/dataurl"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const restartScriptFileName = "99-dnsmasq-restart"
@@ -30,17 +28,17 @@ func nmDispatcherRestartDnsmasq() ([]byte, error) {
 func restartScriptIgnFile(data []byte) ign3types.File {
 	return ign3types.File{
 		Node: ign3types.Node{
-			Overwrite: pointerutils.ToPtr(true),
+			Overwrite: new(true),
 			Path:      "/etc/NetworkManager/dispatcher.d/" + restartScriptFileName,
 			User: ign3types.NodeUser{
-				Name: pointerutils.ToPtr("root"),
+				Name: new("root"),
 			},
 		},
 		FileEmbedded1: ign3types.FileEmbedded1{
 			Contents: ign3types.Resource{
-				Source: pointerutils.ToPtr(dataurl.EncodeBytes(data)),
+				Source: new(dataurl.EncodeBytes(data)),
 			},
-			Mode: pointerutils.ToPtr(0o744),
+			Mode: new(0o744),
 		},
 	}
 }

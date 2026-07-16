@@ -263,7 +263,7 @@ func TestListDetectors(t *testing.T) {
 		t.Error("Expected detector Name does not match")
 	}
 
-	if detectors.Value[0].Properties.(map[string]interface{})["metadata"].(map[string]interface{})["id"].(string) != testDetectorName {
+	if detectors.Value[0].Properties.(map[string]any)["metadata"].(map[string]any)["id"].(string) != testDetectorName {
 		t.Error("Expected detector properties does not match")
 	}
 }
@@ -329,7 +329,7 @@ func TestListDetectorAroAuthHealth(t *testing.T) {
 		t.Error("Expected type of detector does not match")
 	}
 
-	if detector.Properties.(map[string]interface{})["metadata"].(map[string]interface{})["id"].(string) != testDetectorName {
+	if detector.Properties.(map[string]any)["metadata"].(map[string]any)["id"].(string) != testDetectorName {
 		t.Error("Expected detector properties does not match")
 	}
 }

@@ -201,7 +201,7 @@ func (i *fakeOpenShiftClustersQueueLengthIterator) Next(ctx context.Context, max
 	return nil, cosmosdb.ErrNotImplemented
 }
 
-func (i *fakeOpenShiftClustersQueueLengthIterator) NextRaw(ctx context.Context, continuation int, out interface{}) error {
+func (i *fakeOpenShiftClustersQueueLengthIterator) NextRaw(ctx context.Context, continuation int, out any) error {
 	if i.called {
 		return errors.New("can't call twice")
 	}

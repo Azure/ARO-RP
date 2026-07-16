@@ -145,9 +145,9 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 	}
 
 	cr := u.UnstructuredContent()
-	var status map[string]interface{}
+	var status map[string]any
 	if s, ok := cr["status"]; ok {
-		status = s.(map[string]interface{})
+		status = s.(map[string]any)
 	} else {
 		return false, errors.New("unable to access status of openshift-azure-operator CredentialsRequest")
 	}

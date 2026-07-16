@@ -156,7 +156,7 @@ func deploy(ctx context.Context, _log *logrus.Entry) error {
 	}()
 
 	var errorOccurred bool
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		err = <-errch
 		if err != nil {
 			errorOccurred = true

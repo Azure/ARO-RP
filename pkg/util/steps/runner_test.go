@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -29,8 +28,8 @@ func failingAzureError(context.Context) error {
 
 func failingODataError(context.Context) error {
 	mainError := odataerrors.NewMainError()
-	mainError.SetCode(pointerutils.ToPtr("Authorization_IdentityNotFound"))
-	mainError.SetMessage(pointerutils.ToPtr("The identity of the calling application could not be established."))
+	mainError.SetCode(new("Authorization_IdentityNotFound"))
+	mainError.SetMessage(new("The identity of the calling application could not be established."))
 	e := odataerrors.NewODataError()
 	e.SetErrorEscaped(mainError)
 	return e

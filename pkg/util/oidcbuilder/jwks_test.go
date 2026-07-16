@@ -28,7 +28,7 @@ func TestKeyIDFromPublicKey(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
-		publicKey interface{}
+		publicKey any
 		wantkid   string
 		wantErr   string
 	}{

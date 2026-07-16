@@ -28,7 +28,6 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_privatedns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/privatedns"
 	mock_net "github.com/Azure/ARO-RP/pkg/util/mocks/net"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -116,7 +115,7 @@ func TestUpdateClusterDNSFn(t *testing.T) {
 
 type MatchesNilPrivateZone struct{}
 
-func (MatchesNilPrivateZone) Matches(x interface{}) bool {
+func (MatchesNilPrivateZone) Matches(x any) bool {
 	arg, ok := x.(*configv1.DNS)
 	if !ok {
 		return false
@@ -190,7 +189,7 @@ func TestDeletePrivateDNSVNetLinks(t *testing.T) {
 }
 
 func TestRemovePrivateDNSZone(t *testing.T) {
-	privateZone := []mgmtprivatedns.PrivateZone{{ID: pointerutils.ToPtr(id)}}
+	privateZone := []mgmtprivatedns.PrivateZone{{ID: new(id)}}
 
 	doc := &api.OpenShiftClusterDocument{
 		OpenShiftCluster: &api.OpenShiftCluster{
@@ -244,7 +243,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 			name: "has private zone, dnsmasq config not yet reconciled",
 			doc:  doc,
 			mocks: func(privateZones *mock_privatedns.MockPrivateZonesClient, virtualNetworkLinks *mock_privatedns.MockVirtualNetworkLinksClient) {
-				privateZones.EXPECT().ListByResourceGroup(ctx, "testGroup", nil).Return([]mgmtprivatedns.PrivateZone{{ID: pointerutils.ToPtr(id)}}, nil)
+				privateZones.EXPECT().ListByResourceGroup(ctx, "testGroup", nil).Return([]mgmtprivatedns.PrivateZone{{ID: new(id)}}, nil)
 			},
 			mcocli:    mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{}),
 			configcli: configfake.NewSimpleClientset(),
@@ -274,7 +273,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					List(ctx, "testGroup", "zone1", nil).
 					Return([]mgmtprivatedns.VirtualNetworkLink{
 						{
-							Name: pointerutils.ToPtr("link1"),
+							Name: new("link1"),
 						},
 					}, nil)
 

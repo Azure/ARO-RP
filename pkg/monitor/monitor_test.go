@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -38,12 +37,12 @@ func TestMonitor(t *testing.T) {
 
 	// Create multiple monitors for worker testing
 	workers := make([]Runnable, numWorker)
-	for i := 0; i < numWorker; i++ {
+	for i := range numWorker {
 		mon := env.CreateTestMonitor(fmt.Sprintf("worker-%d", i))
 		workers[i] = mon
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		subDoc := newFakeSubscription()
 		clusterDoc := newFakeCluster(subDoc.ResourceID)
 		_, err := env.OpenShiftClusterDB.Create(context.Background(), clusterDoc)
@@ -56,7 +55,7 @@ func TestMonitor(t *testing.T) {
 			t.Errorf("Couldn't create new test cluster doc: %v", err)
 			t.FailNow()
 		}
-		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
+		fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = new(0)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -65,14 +64,12 @@ func TestMonitor(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	for _, mon := range workers {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			err := mon.Run(ctx)
 			if err != nil && err != context.DeadlineExceeded {
 				t.Logf("Unexpected error: %v", err)
 			}
-			wg.Done()
-		}()
+		})
 	}
 
 	time.Sleep(5 * time.Second)
@@ -90,7 +87,7 @@ func TestMonitor(t *testing.T) {
 		t.Errorf("Couldn't create new test cluster doc: %v", err)
 		t.FailNow()
 	}
-	fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = pointerutils.ToPtr(0)
+	fakeClusterVisitMonitoringAttempts[clusterDoc.ResourceID] = new(0)
 
 	wg.Wait()
 
@@ -110,7 +107,7 @@ func newFakeSubscription() *api.SubscriptionDocument {
 	return &api.SubscriptionDocument{
 		ID:         subID,
 		ResourceID: subID,
-		Metadata:   map[string]interface{}{},
+		Metadata:   map[string]any{},
 		Deleting:   false,
 		Subscription: &api.Subscription{
 			State: api.SubscriptionStateRegistered,
@@ -158,7 +155,7 @@ func newFakeCluster(subscriptionID string) *api.OpenShiftClusterDocument {
 		MissingFields: api.MissingFields{},
 		ID:            uuid.DefaultGenerator.Generate(),
 		ResourceID:    lowercaseResourceID,
-		Metadata:      map[string]interface{}{},
+		Metadata:      map[string]any{},
 		Key:           lowercaseResourceID,
 		Bucket:        bucketNumber,
 		OpenShiftCluster: &api.OpenShiftCluster{

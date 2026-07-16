@@ -25,7 +25,6 @@ import (
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_msidataplane "github.com/Azure/ARO-RP/pkg/util/mocks/msidataplane"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -146,8 +145,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(-1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       new(now().Add(-1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: new(now().Add(1 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -175,8 +174,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       new(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: new(now().Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -226,8 +225,8 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 						Attributes: &azsecrets.SecretAttributes{},
 						Value:      &credString,
 						Tags: map[string]*string{
-							dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now().Add(1 * time.Hour).Format(time.RFC3339)),
-							dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now().Add(2 * time.Hour).Format(time.RFC3339)),
+							dataplane.RenewAfterKeyVaultTag:       new(now().Add(1 * time.Hour).Format(time.RFC3339)),
+							dataplane.CannotRenewAfterKeyVaultTag: new(now().Add(2 * time.Hour).Format(time.RFC3339)),
 						},
 					},
 				}
@@ -290,8 +289,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(renewTime),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+						dataplane.RenewAfterKeyVaultTag:       new(renewTime),
+						dataplane.CannotRenewAfterKeyVaultTag: new(expireTime),
 					},
 				},
 			},
@@ -304,8 +303,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(1 * time.Hour).Format(time.RFC3339)),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(2 * time.Hour).Format(time.RFC3339)),
+						dataplane.RenewAfterKeyVaultTag:       new(now.Add(1 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: new(now.Add(2 * time.Hour).Format(time.RFC3339)),
 					},
 				},
 			},
@@ -318,8 +317,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr(now.Add(-2 * time.Hour).Format(time.RFC3339)),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+						dataplane.RenewAfterKeyVaultTag:       new(now.Add(-2 * time.Hour).Format(time.RFC3339)),
+						dataplane.CannotRenewAfterKeyVaultTag: new(now.Add(-1 * time.Hour).Format(time.RFC3339)),
 					},
 				},
 			},
@@ -340,7 +339,7 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+						dataplane.CannotRenewAfterKeyVaultTag: new(expireTime),
 					},
 				},
 			},
@@ -354,7 +353,7 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag: pointerutils.ToPtr(renewTime),
+						dataplane.RenewAfterKeyVaultTag: new(renewTime),
 					},
 				},
 			},
@@ -368,8 +367,8 @@ func TestNeedsRefresh(t *testing.T) {
 			item: &azsecrets.GetSecretResponse{
 				Secret: azsecrets.Secret{
 					Tags: map[string]*string{
-						dataplane.RenewAfterKeyVaultTag:       pointerutils.ToPtr("not-a-valid-time"),
-						dataplane.CannotRenewAfterKeyVaultTag: pointerutils.ToPtr(expireTime),
+						dataplane.RenewAfterKeyVaultTag:       new("not-a-valid-time"),
+						dataplane.CannotRenewAfterKeyVaultTag: new(expireTime),
 					},
 				},
 			},

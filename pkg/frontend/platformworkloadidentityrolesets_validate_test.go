@@ -49,7 +49,7 @@ func TestValidatePlatformWorkloadIdentities(t *testing.T) {
 				"disk-csi-driver":          {ResourceID: mockMiResourceId},
 				"extra-new-operator":       {ResourceID: mockMiResourceId},
 			},
-			upgradeableTo: pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+			upgradeableTo: new(api.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 		},
 		{
 			test:    "Success - Valid platform workload identities provided with UpgradeableTo smaller than current version",

@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
@@ -47,14 +46,14 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	if d.config.Configuration.AdminAPICABundle != nil {
 		parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
@@ -137,7 +136,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: pointerutils.ToPtr(int64(3600)),
+			TTL: new(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: rpPIP.Properties.IPAddress,
@@ -151,7 +150,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: pointerutils.ToPtr(int64(3600)),
+			TTL: new(int64(3600)),
 			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: portalPIP.Properties.IPAddress,
@@ -172,7 +171,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 
 	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL:       pointerutils.ToPtr(int64(3600)),
+			TTL:       new(int64(3600)),
 			NsRecords: &nsRecords,
 		},
 	}, "", "")
@@ -182,7 +181,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.IPAddressOrRange {
 	ips := []mgmtdocumentdb.IPAddressOrRange{}
 	for _, v := range ipSlice {
-		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: pointerutils.ToPtr(v)})
+		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: new(v)})
 	}
 	return ips
 }

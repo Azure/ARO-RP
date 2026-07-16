@@ -102,14 +102,14 @@ func (client PlatformWorkloadIdentityRoleSetClient) Get(ctx context.Context, loc
 
 // GetPreparer prepares the Get request.
 func (client PlatformWorkloadIdentityRoleSetClient) GetPreparer(ctx context.Context, location string, openShiftMinorVersion string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
+	pathParameters := map[string]any{
 		"location":              autorest.Encode("path", location),
 		"openShiftMinorVersion": autorest.Encode("path", openShiftMinorVersion),
 		"subscriptionId":        autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2025-07-25"
-	queryParameters := map[string]interface{}{
+	queryParameters := map[string]any{
 		"api-version": APIVersion,
 	}
 

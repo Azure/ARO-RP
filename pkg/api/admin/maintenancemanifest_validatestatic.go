@@ -13,7 +13,7 @@ import (
 type maintenanceManifestStaticValidator struct{}
 
 // Validate validates a MaintenanceManifest
-func (sv maintenanceManifestStaticValidator) Static(_new interface{}, _current *api.MaintenanceManifestDocument) error {
+func (sv maintenanceManifestStaticValidator) Static(_new any, _current *api.MaintenanceManifestDocument) error {
 	new := _new.(*MaintenanceManifest)
 
 	var current *MaintenanceManifest

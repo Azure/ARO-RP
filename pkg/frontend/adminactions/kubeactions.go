@@ -25,7 +25,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -178,7 +177,7 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 
 	resourceDeleteOptions := metav1.DeleteOptions{}
 	if force {
-		resourceDeleteOptions.GracePeriodSeconds = pointerutils.ToPtr(int64(0))
+		resourceDeleteOptions.GracePeriodSeconds = new(int64(0))
 	}
 
 	if propagationPolicy != nil {

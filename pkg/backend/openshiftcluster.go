@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -329,9 +328,9 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
 		if backendErr == nil {
-			adminUpdateError = pointerutils.ToPtr("")
+			adminUpdateError = new("")
 		} else {
-			adminUpdateError = pointerutils.ToPtr(backendErr.Error())
+			adminUpdateError = new(backendErr.Error())
 		}
 	}
 

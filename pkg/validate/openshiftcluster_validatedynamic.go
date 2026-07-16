@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
@@ -266,7 +265,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		dv.env.Environment(),
 		dv.subscriptionDoc.ID,
 		dv.fpAuthorizer,
-		pointerutils.ToPtr(dv.env.FPClientID()),
+		new(dv.env.FPClientID()),
 		dynamic.AuthorizerFirstParty,
 		fpClientCred,
 		pdpClient,

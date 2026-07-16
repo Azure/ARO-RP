@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -260,7 +259,7 @@ func getExistingServicePrincipalOpenShiftClusterResponse() *v20240812preview.Ope
 func getExistingWorkloadIdentityOpenShiftClusterResponse() *v20240812preview.OpenShiftCluster {
 	cluster := getNewWorkloadIdentityOpenShiftClusterResponse()
 	// Since it is an existing cluster, populate the values updated by the backend for Workload Identity clusters
-	cluster.Properties.ClusterProfile.OIDCIssuer = (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid))
+	cluster.Properties.ClusterProfile.OIDCIssuer = (*v20240812preview.OIDCIssuer)(new(mockGuid))
 	for roleName, identity := range cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 		identity.ObjectID = mockGuid
 		identity.ClientID = mockGuid
@@ -415,8 +414,8 @@ func getExistingWorkloadIdentityOpenShiftClusterDocument(provisioningState, last
 	doc.ClientIDKey = ""
 	doc.ClusterResourceGroupIDKey = ""
 	// Populate the values updated by the backend for Workload Identity clusters
-	doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = (*api.OIDCIssuer)(pointerutils.ToPtr(mockGuid))
-	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = (*api.SecureString)(pointerutils.ToPtr(mockGuid))
+	doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = (*api.OIDCIssuer)(new(mockGuid))
+	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = (*api.SecureString)(new(mockGuid))
 	for roleName, identity := range doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 		identity.ObjectID = mockGuid
 		identity.ClientID = mockGuid
@@ -1028,7 +1027,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 					},
 				}
 				// Set UpgradeableTo with new identity
-				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
@@ -1046,7 +1045,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 				doc := getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateUpdating, api.ProvisioningStateSucceeded, "")
 				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
 				// Set UpgradeableTo with new identity
-				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = api.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
@@ -1055,7 +1054,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			wantResponse: func() *v20240812preview.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
 				// Set UpgradeableTo with new identity
-				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
@@ -1079,11 +1078,11 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 					},
 				}
 				// Set UpgradeableTo with new identity
-				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				cluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				cluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
-				cluster.Properties.ClusterProfile.OIDCIssuer = (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid))
+				cluster.Properties.ClusterProfile.OIDCIssuer = (*v20240812preview.OIDCIssuer)(new(mockGuid))
 				return cluster
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -1295,7 +1294,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 									ResourceID: mockMiResourceId,
 								},
 							},
-							UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+							UpgradeableTo: new(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 						},
 					},
 				}
@@ -1311,7 +1310,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				doc := getExistingWorkloadIdentityOpenShiftClusterDocument(api.ProvisioningStateUpdating, api.ProvisioningStateSucceeded, "")
 				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
 				// Set UpgradeableTo with new identity
-				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(api.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = api.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
@@ -1322,7 +1321,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			wantResponse: func() *v20240812preview.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
 				// Set UpgradeableTo with new identity
-				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
+				response.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = new(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String()))
 				response.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities["extra-new-operator"] = v20240812preview.PlatformWorkloadIdentity{
 					ResourceID: mockMiResourceId,
 				}
@@ -1379,7 +1378,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				cluster := &v20240812preview.OpenShiftCluster{
 					Properties: v20240812preview.OpenShiftClusterProperties{
 						ClusterProfile: v20240812preview.ClusterProfile{
-							OIDCIssuer: (*v20240812preview.OIDCIssuer)(pointerutils.ToPtr(mockGuid)),
+							OIDCIssuer: (*v20240812preview.OIDCIssuer)(new(mockGuid)),
 						},
 					},
 				}
@@ -1406,7 +1405,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 									ResourceID: mockMiResourceId,
 								},
 							},
-							UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+							UpgradeableTo: new(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 						},
 					},
 				}
@@ -1434,7 +1433,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 									ResourceID: mockMiResourceId,
 								},
 							},
-							UpgradeableTo: pointerutils.ToPtr(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
+							UpgradeableTo: new(v20240812preview.UpgradeableTo(getMIWIUpgradeableToVersion().String())),
 						},
 					},
 				}

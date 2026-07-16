@@ -28,7 +28,7 @@ func TestDeployARMTemplate(t *testing.T) {
 	resourceGroup := "fakeResourceGroup"
 
 	armTemplate := &Template{}
-	params := map[string]interface{}{}
+	params := map[string]any{}
 
 	deployment := mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{

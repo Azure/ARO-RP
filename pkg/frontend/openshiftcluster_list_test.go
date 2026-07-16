@@ -220,7 +220,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 						t.Error(err)
 					}
 
-					var wantResponse interface{}
+					var wantResponse any
 					if tt.wantResponse != nil {
 						wantResponse = tt.wantResponse()
 					}

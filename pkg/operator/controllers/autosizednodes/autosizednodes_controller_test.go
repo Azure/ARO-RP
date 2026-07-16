@@ -24,7 +24,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -84,7 +83,7 @@ func TestAutosizednodesReconciler(t *testing.T) {
 						Name: configName,
 					},
 					Spec: mcv1.KubeletConfigSpec{
-						AutoSizingReserved: pointerutils.ToPtr(false),
+						AutoSizingReserved: new(false),
 						MachineConfigPoolSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{

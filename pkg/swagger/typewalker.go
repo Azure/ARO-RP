@@ -21,7 +21,7 @@ type ModelAsString bool
 
 type typeWalker struct {
 	pkg                *packages.Package
-	enums              map[types.Type][]interface{}
+	enums              map[types.Type][]any
 	xmsEnumList        []string
 	xmsSecretList      []string
 	xmsIdentifiers     []string
@@ -39,7 +39,7 @@ func newTypeWalker(pkgname string, xmsEnumList, xmsSecretList []string, xmsIdent
 
 	tw := &typeWalker{
 		pkg:                pkgs[0],
-		enums:              map[types.Type][]interface{}{},
+		enums:              map[types.Type][]any{},
 		xmsEnumList:        xmsEnumList,
 		xmsSecretList:      xmsSecretList,
 		xmsIdentifiers:     xmsIdentifiers,
@@ -130,8 +130,8 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 
 	case *types.Struct:
 		s.Type = "object"
-		for i := 0; i < t.NumFields(); i++ {
-			field := t.Field(i)
+		for field := range t.Fields() {
+			field := field
 			if field.Exported() {
 				nodes, _ := tw.getNodes(field.Pos())
 				nodeField, ok := getNodeField(nodes)

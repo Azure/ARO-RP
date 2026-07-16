@@ -37,7 +37,7 @@ func TestAdminReply(t *testing.T) {
 		b              []byte
 		err            error
 		wantStatusCode int
-		wantBody       interface{}
+		wantBody       any
 		wantEntries    []testlog.ExpectedLogEntry
 	}{
 		{
@@ -55,8 +55,8 @@ func TestAdminReply(t *testing.T) {
 				},
 			},
 			wantStatusCode: http.StatusNotFound,
-			wantBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			wantBody: map[string]any{
+				"error": map[string]any{
 					"code":    "NotFound",
 					"message": `routes.route.openshift.io "doesntexist" not found`,
 					"target":  "routes.route.openshift.io/doesntexist",
@@ -80,8 +80,8 @@ func TestAdminReply(t *testing.T) {
 				},
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			wantBody: map[string]any{
+				"error": map[string]any{
 					"code":    api.CloudErrorCodeRequestNotAllowed,
 					"message": "You can't do that.",
 					"target":  "thing",
@@ -98,8 +98,8 @@ func TestAdminReply(t *testing.T) {
 			name:           "Autorest error",
 			err:            autorest.NewError("compute.VirtualMachinesClient", "CreateOrUpdate", "Error resizing VM"),
 			wantStatusCode: http.StatusInternalServerError,
-			wantBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			wantBody: map[string]any{
+				"error": map[string]any{
 					"code":    api.CloudErrorCodeInternalServerError,
 					"message": "compute.VirtualMachinesClient#CreateOrUpdate: Error resizing VM: StatusCode=0",
 				},
@@ -120,8 +120,8 @@ func TestAdminReply(t *testing.T) {
 			name:           "other error",
 			err:            errors.New("random error"),
 			wantStatusCode: http.StatusInternalServerError,
-			wantBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			wantBody: map[string]any{
+				"error": map[string]any{
 					"code":    api.CloudErrorCodeInternalServerError,
 					"message": "random error",
 				},
@@ -140,7 +140,7 @@ func TestAdminReply(t *testing.T) {
 			},
 			b:              []byte("{}"),
 			wantStatusCode: http.StatusOK,
-			wantBody:       map[string]interface{}{},
+			wantBody:       map[string]any{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestAdminReply(t *testing.T) {
 			}
 
 			if tt.wantBody != nil {
-				var body interface{}
+				var body any
 				err := json.Unmarshal(w.Body.Bytes(), &body)
 				if err != nil {
 					t.Fatal(err)

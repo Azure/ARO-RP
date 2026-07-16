@@ -5,6 +5,7 @@ package common
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -33,10 +34,8 @@ func shouldRetry(resp *http.Response, err error) bool {
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		return false
 	}
-	for _, sc := range autorest.StatusCodesForRetry {
-		if resp.StatusCode == sc {
-			return true
-		}
+	if slices.Contains(autorest.StatusCodesForRetry, resp.StatusCode) {
+		return true
 	}
 
 	// Check if the body contains the certain strings that can be retried.

@@ -233,7 +233,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 					Return(armnetwork.PublicIPAddressesClientGetResponse{
 						PublicIPAddress: armnetwork.PublicIPAddress{
 							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
-								IPAddress: pointerutils.ToPtr(publicIP),
+								IPAddress: new(publicIP),
 							},
 						},
 					}, nil)
@@ -281,7 +281,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 					Return(armnetwork.SubnetsClientGetResponse{
 						Subnet: armnetwork.Subnet{
 							Properties: &armnetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.0.0/16"),
+								AddressPrefix: new("10.0.0.0/16"),
 							},
 						},
 					}, nil)
@@ -335,7 +335,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 					Return(armnetwork.SubnetsClientGetResponse{
 						Subnet: armnetwork.Subnet{
 							Properties: &armnetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.0.0/16"),
+								AddressPrefix: new("10.0.0.0/16"),
 							},
 						},
 					}, nil)
@@ -437,9 +437,9 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
-										Name: pointerutils.ToPtr("doesntmatter"),
+										Name: new("doesntmatter"),
 										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: pointerutils.ToPtr(privateIP),
+											PrivateIPAddress: new(privateIP),
 										},
 									},
 								},
@@ -479,9 +479,9 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
-										Name: pointerutils.ToPtr("doesntmatter"),
+										Name: new("doesntmatter"),
 										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: pointerutils.ToPtr(privateIP),
+											PrivateIPAddress: new(privateIP),
 										},
 									},
 								},
@@ -521,9 +521,9 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
-										Name: pointerutils.ToPtr("internal-lb-ip-v4"),
+										Name: new("internal-lb-ip-v4"),
 										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: pointerutils.ToPtr(privateIP),
+											PrivateIPAddress: new(privateIP),
 										},
 									},
 								},
@@ -563,11 +563,11 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 							Properties: &armnetwork.LoadBalancerPropertiesFormat{
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
-										Name: pointerutils.ToPtr("internal-lb-ip-v4"),
+										Name: new("internal-lb-ip-v4"),
 										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: pointerutils.ToPtr(privateIP),
+											PrivateIPAddress: new(privateIP),
 										},
-										Zones: []*string{pointerutils.ToPtr("1")},
+										Zones: []*string{new("1")},
 									},
 								},
 							},
@@ -693,7 +693,7 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
 										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: pointerutils.ToPtr(privateIP),
+											PrivateIPAddress: new(privateIP),
 										},
 									},
 								},
@@ -705,7 +705,7 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 					Return(armnetwork.PublicIPAddressesClientGetResponse{
 						PublicIPAddress: armnetwork.PublicIPAddress{
 							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
-								IPAddress: pointerutils.ToPtr(publicIP),
+								IPAddress: new(publicIP),
 							},
 						},
 					}, nil)
@@ -749,7 +749,7 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 									{
 										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: pointerutils.ToPtr(privateIP),
+											PrivateIPAddress: new(privateIP),
 										},
 									},
 								},
@@ -833,7 +833,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 			name: "error: private endpoint connection not found",
 			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
-				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
+				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: new("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
 					PrivateEndpoint: armnetwork.PrivateEndpoint{
 						Properties: &armnetwork.PrivateEndpointProperties{
 							NetworkInterfaces: []*armnetwork.Interface{
@@ -842,7 +842,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 										IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
 											{
 												Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-													PrivateIPAddress: pointerutils.ToPtr(privateIP),
+													PrivateIPAddress: new(privateIP),
 												},
 											},
 										},
@@ -850,7 +850,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 								},
 							},
 						},
-						ID: pointerutils.ToPtr("peID"),
+						ID: new("peID"),
 					},
 				}, nil)
 				rpPrivateLinkServices.EXPECT().Get(ctx, "gatewayResourceGroup", "gateway-pls-001", nil).Return(armnetwork.PrivateLinkServicesClientGetResponse{
@@ -868,7 +868,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 			name: "ok",
 			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
-				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: pointerutils.ToPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
+				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: new("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
 					PrivateEndpoint: armnetwork.PrivateEndpoint{
 						Properties: &armnetwork.PrivateEndpointProperties{
 							NetworkInterfaces: []*armnetwork.Interface{
@@ -877,7 +877,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 										IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
 											{
 												Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-													PrivateIPAddress: pointerutils.ToPtr(privateIP),
+													PrivateIPAddress: new(privateIP),
 												},
 											},
 										},
@@ -885,7 +885,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 								},
 							},
 						},
-						ID: pointerutils.ToPtr("peID"),
+						ID: new("peID"),
 					},
 				}, nil)
 				rpPrivateLinkServices.EXPECT().Get(ctx, "gatewayResourceGroup", "gateway-pls-001", nil).Return(armnetwork.PrivateLinkServicesClientGetResponse{
@@ -895,21 +895,21 @@ func TestEnsureGatewayCreate(t *testing.T) {
 								{
 									Properties: &armnetwork.PrivateEndpointConnectionProperties{
 										PrivateEndpoint: &armnetwork.PrivateEndpoint{
-											ID: pointerutils.ToPtr("otherPeID"),
+											ID: new("otherPeID"),
 										},
 									},
 								},
 								{
 									Properties: &armnetwork.PrivateEndpointConnectionProperties{
 										PrivateEndpoint: &armnetwork.PrivateEndpoint{
-											ID: pointerutils.ToPtr("peID"),
+											ID: new("peID"),
 										},
 										PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
-											Status: pointerutils.ToPtr(""),
+											Status: new(""),
 										},
-										LinkIdentifier: pointerutils.ToPtr("1234"),
+										LinkIdentifier: new("1234"),
 									},
-									Name: pointerutils.ToPtr("conn"),
+									Name: new("conn"),
 								},
 							},
 						},
@@ -918,15 +918,15 @@ func TestEnsureGatewayCreate(t *testing.T) {
 				rpPrivateLinkServices.EXPECT().UpdatePrivateEndpointConnection(ctx, "gatewayResourceGroup", "gateway-pls-001", "conn", armnetwork.PrivateEndpointConnection{
 					Properties: &armnetwork.PrivateEndpointConnectionProperties{
 						PrivateEndpoint: &armnetwork.PrivateEndpoint{
-							ID: pointerutils.ToPtr("peID"),
+							ID: new("peID"),
 						},
 						PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
-							Status:      pointerutils.ToPtr("Approved"),
-							Description: pointerutils.ToPtr("Approved"),
+							Status:      new("Approved"),
+							Description: new("Approved"),
 						},
-						LinkIdentifier: pointerutils.ToPtr("1234"),
+						LinkIdentifier: new("1234"),
 					},
-					Name: pointerutils.ToPtr("conn"),
+					Name: new("conn"),
 				}, nil).Return(armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionResponse{}, nil)
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -1050,7 +1050,7 @@ func TestGetHighestFreeIP(t *testing.T) {
 			subnet: armnetwork.Subnet{
 				ID: pointerutils.ToPtr(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
-					AddressPrefix: pointerutils.ToPtr("10.0.0.0/29"),
+					AddressPrefix: new("10.0.0.0/29"),
 				},
 			},
 			wantIP: "10.0.0.6",
@@ -1060,7 +1060,7 @@ func TestGetHighestFreeIP(t *testing.T) {
 			subnet: armnetwork.Subnet{
 				ID: pointerutils.ToPtr(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
-					AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/29")},
+					AddressPrefixes: []*string{new("10.0.0.0/29")},
 				},
 			},
 			wantIP: "10.0.0.6",
@@ -1070,11 +1070,11 @@ func TestGetHighestFreeIP(t *testing.T) {
 			subnet: armnetwork.Subnet{
 				ID: pointerutils.ToPtr(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
-					AddressPrefix: pointerutils.ToPtr("10.0.0.0/29"),
+					AddressPrefix: new("10.0.0.0/29"),
 					IPConfigurations: []*armnetwork.IPConfiguration{
 						{
 							Properties: &armnetwork.IPConfigurationPropertiesFormat{
-								PrivateIPAddress: pointerutils.ToPtr("10.0.0.6"),
+								PrivateIPAddress: new("10.0.0.6"),
 							},
 						},
 						{
@@ -1090,21 +1090,21 @@ func TestGetHighestFreeIP(t *testing.T) {
 			subnet: armnetwork.Subnet{
 				ID: pointerutils.ToPtr(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
-					AddressPrefix: pointerutils.ToPtr("10.0.0.0/29"),
+					AddressPrefix: new("10.0.0.0/29"),
 					IPConfigurations: []*armnetwork.IPConfiguration{
 						{
 							Properties: &armnetwork.IPConfigurationPropertiesFormat{
-								PrivateIPAddress: pointerutils.ToPtr("10.0.0.4"),
+								PrivateIPAddress: new("10.0.0.4"),
 							},
 						},
 						{
 							Properties: &armnetwork.IPConfigurationPropertiesFormat{
-								PrivateIPAddress: pointerutils.ToPtr("10.0.0.5"),
+								PrivateIPAddress: new("10.0.0.5"),
 							},
 						},
 						{
 							Properties: &armnetwork.IPConfigurationPropertiesFormat{
-								PrivateIPAddress: pointerutils.ToPtr("10.0.0.6"),
+								PrivateIPAddress: new("10.0.0.6"),
 							},
 						},
 					},

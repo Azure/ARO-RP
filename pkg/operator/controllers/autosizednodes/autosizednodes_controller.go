@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type Reconciler struct {
@@ -119,7 +118,7 @@ func makeConfig() mcv1.KubeletConfig {
 			Name: configName,
 		},
 		Spec: mcv1.KubeletConfigSpec{
-			AutoSizingReserved: pointerutils.ToPtr(true),
+			AutoSizingReserved: new(true),
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{

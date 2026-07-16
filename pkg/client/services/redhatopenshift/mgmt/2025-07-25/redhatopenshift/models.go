@@ -45,7 +45,7 @@ type APIServerProfile struct {
 
 // MarshalJSON is the custom marshaler for APIServerProfile.
 func (asp APIServerProfile) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if asp.Visibility != "" {
 		objectMap["visibility"] = asp.Visibility
 	}
@@ -68,7 +68,7 @@ type AzureEntityResource struct {
 
 // MarshalJSON is the custom marshaler for AzureEntityResource.
 func (aer AzureEntityResource) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	return json.Marshal(objectMap)
 }
 
@@ -108,7 +108,7 @@ type ClusterProfile struct {
 
 // MarshalJSON is the custom marshaler for ClusterProfile.
 func (cp ClusterProfile) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if cp.PullSecret != nil {
 		objectMap["pullSecret"] = cp.PullSecret
 	}
@@ -135,7 +135,7 @@ type ConsoleProfile struct {
 
 // MarshalJSON is the custom marshaler for ConsoleProfile.
 func (cp ConsoleProfile) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	return json.Marshal(objectMap)
 }
 
@@ -170,7 +170,7 @@ type IngressProfile struct {
 
 // MarshalJSON is the custom marshaler for IngressProfile.
 func (IP IngressProfile) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if IP.Name != nil {
 		objectMap["name"] = IP.Name
 	}
@@ -190,7 +190,7 @@ type LoadBalancerProfile struct {
 
 // MarshalJSON is the custom marshaler for LoadBalancerProfile.
 func (lbp LoadBalancerProfile) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if lbp.ManagedOutboundIps != nil {
 		objectMap["managedOutboundIps"] = lbp.ManagedOutboundIps
 	}
@@ -218,7 +218,7 @@ type ManagedServiceIdentity struct {
 
 // MarshalJSON is the custom marshaler for ManagedServiceIdentity.
 func (msi ManagedServiceIdentity) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if msi.Type != "" {
 		objectMap["type"] = msi.Type
 	}
@@ -277,7 +277,7 @@ type OpenShiftCluster struct {
 
 // MarshalJSON is the custom marshaler for OpenShiftCluster.
 func (osc OpenShiftCluster) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if osc.OpenShiftClusterProperties != nil {
 		objectMap["properties"] = osc.OpenShiftClusterProperties
 	}
@@ -584,7 +584,7 @@ type OpenShiftClusterProperties struct {
 
 // MarshalJSON is the custom marshaler for OpenShiftClusterProperties.
 func (oscp OpenShiftClusterProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if oscp.ProvisioningState != "" {
 		objectMap["provisioningState"] = oscp.ProvisioningState
 	}
@@ -753,7 +753,7 @@ type OpenShiftClusterUpdate struct {
 
 // MarshalJSON is the custom marshaler for OpenShiftClusterUpdate.
 func (oscu OpenShiftClusterUpdate) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if oscu.Tags != nil {
 		objectMap["tags"] = oscu.Tags
 	}
@@ -825,7 +825,7 @@ type OpenShiftVersion struct {
 
 // MarshalJSON is the custom marshaler for OpenShiftVersion.
 func (osv OpenShiftVersion) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if osv.OpenShiftVersionProperties != nil {
 		objectMap["properties"] = osv.OpenShiftVersionProperties
 	}
@@ -1253,7 +1253,7 @@ type PlatformWorkloadIdentity struct {
 
 // MarshalJSON is the custom marshaler for PlatformWorkloadIdentity.
 func (pwi PlatformWorkloadIdentity) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if pwi.ResourceID != nil {
 		objectMap["resourceId"] = pwi.ResourceID
 	}
@@ -1269,7 +1269,7 @@ type PlatformWorkloadIdentityProfile struct {
 
 // MarshalJSON is the custom marshaler for PlatformWorkloadIdentityProfile.
 func (pwip PlatformWorkloadIdentityProfile) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if pwip.UpgradeableTo != nil {
 		objectMap["upgradeableTo"] = pwip.UpgradeableTo
 	}
@@ -1309,7 +1309,7 @@ type PlatformWorkloadIdentityRoleSet struct {
 
 // MarshalJSON is the custom marshaler for PlatformWorkloadIdentityRoleSet.
 func (pwirs PlatformWorkloadIdentityRoleSet) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if pwirs.PlatformWorkloadIdentityRoleSetProperties != nil {
 		objectMap["properties"] = pwirs.PlatformWorkloadIdentityRoleSetProperties
 	}
@@ -1560,7 +1560,7 @@ type ProxyResource struct {
 
 // MarshalJSON is the custom marshaler for ProxyResource.
 func (pr ProxyResource) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	return json.Marshal(objectMap)
 }
 
@@ -1578,7 +1578,7 @@ type Resource struct {
 
 // MarshalJSON is the custom marshaler for Resource.
 func (r Resource) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	return json.Marshal(objectMap)
 }
 
@@ -1611,7 +1611,7 @@ type ResourceModelWithAllowedPropertySet struct {
 
 // MarshalJSON is the custom marshaler for ResourceModelWithAllowedPropertySet.
 func (rmwaps ResourceModelWithAllowedPropertySet) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if rmwaps.ManagedBy != nil {
 		objectMap["managedBy"] = rmwaps.ManagedBy
 	}
@@ -1693,7 +1693,7 @@ type TrackedResource struct {
 
 // MarshalJSON is the custom marshaler for TrackedResource.
 func (tr TrackedResource) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	if tr.Tags != nil {
 		objectMap["tags"] = tr.Tags
 	}
@@ -1713,7 +1713,7 @@ type UserAssignedIdentity struct {
 
 // MarshalJSON is the custom marshaler for UserAssignedIdentity.
 func (uai UserAssignedIdentity) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
+	objectMap := make(map[string]any)
 	return json.Marshal(objectMap)
 }
 

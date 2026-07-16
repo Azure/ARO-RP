@@ -213,7 +213,7 @@ func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lb
 
 func (m *manager) updateLB(lb *armnetwork.LoadBalancer, lbName string) (changed bool) {
 backendAddressPools:
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		name := fmt.Sprintf("ssh-%d", i)
 		for _, p := range lb.Properties.BackendAddressPools {
 			if strings.EqualFold(*p.Name, name) {
@@ -229,7 +229,7 @@ backendAddressPools:
 	}
 
 loadBalancingRules:
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		name := fmt.Sprintf("ssh-%d", i)
 		for _, r := range lb.Properties.LoadBalancingRules {
 			if strings.EqualFold(*r.Name, name) {
@@ -245,17 +245,17 @@ loadBalancingRules:
 					ID: lb.Properties.FrontendIPConfigurations[0].ID,
 				},
 				BackendAddressPool: &armnetwork.SubResource{
-					ID: pointerutils.ToPtr(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
+					ID: new(fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)),
 				},
 				Probe: &armnetwork.SubResource{
-					ID: pointerutils.ToPtr(*lb.ID + "/probes/ssh"),
+					ID: new(*lb.ID + "/probes/ssh"),
 				},
 				Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 				LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-				FrontendPort:         pointerutils.ToPtr(int32(2200) + int32(i)),
-				BackendPort:          pointerutils.ToPtr(int32(22)),
-				IdleTimeoutInMinutes: pointerutils.ToPtr(int32(30)),
-				DisableOutboundSnat:  pointerutils.ToPtr(true),
+				FrontendPort:         new(int32(2200) + int32(i)),
+				BackendPort:          new(int32(22)),
+				IdleTimeoutInMinutes: new(int32(30)),
+				DisableOutboundSnat:  new(true),
 			},
 			Name: &name,
 		})
@@ -272,11 +272,11 @@ loadBalancingRules:
 	lb.Properties.Probes = append(lb.Properties.Probes, &armnetwork.Probe{
 		Properties: &armnetwork.ProbePropertiesFormat{
 			Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
-			Port:              pointerutils.ToPtr(int32(22)),
-			IntervalInSeconds: pointerutils.ToPtr(int32(5)),
-			NumberOfProbes:    pointerutils.ToPtr(int32(2)),
+			Port:              new(int32(22)),
+			IntervalInSeconds: new(int32(5)),
+			NumberOfProbes:    new(int32(2)),
 		},
-		Name: pointerutils.ToPtr("ssh"),
+		Name: new("ssh"),
 	})
 
 	return changed
@@ -285,9 +285,9 @@ loadBalancingRules:
 func (m *manager) deleteOrphanedNIC(ctx context.Context, nic *armnetwork.Interface, resourceGroup string, masterSubnetID string) error {
 	// Delete any IPConfigurations and update the NIC
 	nic.Properties.IPConfigurations = []*armnetwork.InterfaceIPConfiguration{{
-		Name: pointerutils.ToPtr(*nic.Name),
+		Name: new(*nic.Name),
 		Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-			Subnet: &armnetwork.Subnet{ID: pointerutils.ToPtr(masterSubnetID)},
+			Subnet: &armnetwork.Subnet{ID: new(masterSubnetID)},
 		},
 	}}
 	err := m.armInterfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, *nic, interfacesCreateOrUpdateOpts)

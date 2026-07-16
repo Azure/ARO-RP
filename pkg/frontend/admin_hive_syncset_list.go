@@ -48,9 +48,9 @@ func (f *frontend) _listAdminHiveSyncSet(ctx context.Context, namespace string, 
 	}
 
 	// defaults to listing selectorSyncSets for an AKS instance
-	ssType := reflect.TypeOf(hivev1.SelectorSyncSetList{})
+	ssType := reflect.TypeFor[hivev1.SelectorSyncSetList]()
 	if isSyncSet {
-		ssType = reflect.TypeOf(hivev1.SyncSetList{})
+		ssType = reflect.TypeFor[hivev1.SyncSetList]()
 	}
 	if isSyncSet && namespace == "" {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "namespace cannot be null for listing syncsets")

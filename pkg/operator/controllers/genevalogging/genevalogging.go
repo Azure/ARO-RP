@@ -21,7 +21,6 @@ import (
 
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -169,8 +168,8 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged: pointerutils.ToPtr(true),
-								RunAsUser:  pointerutils.ToPtr(int64(0)),
+								Privileged: new(true),
+								RunAsUser:  new(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -294,8 +293,8 @@ func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet,
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								Privileged: pointerutils.ToPtr(true),
-								RunAsUser:  pointerutils.ToPtr(int64(0)),
+								Privileged: new(true),
+								RunAsUser:  new(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{

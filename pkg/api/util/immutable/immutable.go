@@ -21,7 +21,7 @@ func (e *ValidationError) Error() string {
 // Validate returns nil if v and w are identical, bar any differences on any
 // struct fields explicitly tagged `mutable:"true"`.  Otherwise it returns a
 // CloudError indicating the first difference it finds
-func Validate(path string, v, w interface{}) error {
+func Validate(path string, v, w any) error {
 	return validate(path, reflect.ValueOf(v), reflect.ValueOf(w), false)
 }
 
@@ -96,7 +96,7 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 			}
 		}
 
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		if v.IsNil() != w.IsNil() {
 			return newValidationError(path)
 		}

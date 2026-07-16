@@ -22,7 +22,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -69,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if ingress.Spec.Replicas != nil && *ingress.Spec.Replicas < minimumReplicas {
-		ingress.Spec.Replicas = pointerutils.ToPtr(minimumReplicas)
+		ingress.Spec.Replicas = new(minimumReplicas)
 		err := r.Client.Update(ctx, ingress)
 		if err != nil {
 			r.Log.Error(err)

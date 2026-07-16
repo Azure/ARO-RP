@@ -75,8 +75,8 @@ func (m *manager) createOIDC(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
-		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = pointerutils.ToPtr(api.SecureString(oidcBuilder.GetPrivateKey()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = new(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = new(api.SecureString(oidcBuilder.GetPrivateKey()))
 		return nil
 	})
 
@@ -135,7 +135,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
-		group.Tags["purge"] = pointerutils.ToPtr("true")
+		group.Tags["purge"] = new("true")
 	}
 
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
@@ -408,7 +408,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 				}
 
 				s.Properties.NetworkSecurityGroup = &armnetwork.SecurityGroup{
-					ID: pointerutils.ToPtr(nsgID),
+					ID: new(nsgID),
 				}
 
 				// Because we attempt to attach the NSG immediately after the base resource deployment
@@ -508,7 +508,7 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 		return errors.New("OIDCIssuer is nil")
 	}
 
-	issuer := pointerutils.ToPtr((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
+	issuer := new((string)(*m.doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer))
 
 	platformWIRolesByRoleName := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 	platformWorkloadIdentities := m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -537,9 +537,9 @@ func (m *manager) federateIdentityCredentials(ctx context.Context) error {
 				federatedIdentityCredentialResourceName,
 				armmsi.FederatedIdentityCredential{
 					Properties: &armmsi.FederatedIdentityCredentialProperties{
-						Audiences: []*string{pointerutils.ToPtr("openshift")},
+						Audiences: []*string{new("openshift")},
 						Issuer:    issuer,
-						Subject:   pointerutils.ToPtr(sa),
+						Subject:   new(sa),
 					},
 				},
 				&armmsi.FederatedIdentityCredentialsClientCreateOrUpdateOptions{},

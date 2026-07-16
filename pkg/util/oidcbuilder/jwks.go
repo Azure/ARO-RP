@@ -92,7 +92,7 @@ func BuildJSONWebKeySet(publicKeyContent []byte) ([]byte, error) {
 
 // keyIDFromPublicKey derives a key ID non-reversibly from a public key
 // reference: https://github.com/kubernetes/kubernetes/blob/v1.21.0/pkg/serviceaccount/jwt.go#L89-L111
-func keyIDFromPublicKey(publicKey interface{}) (string, error) {
+func keyIDFromPublicKey(publicKey any) (string, error) {
 	publicKeyDERBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		return "", errors.Wrapf(err, "Failed to serialize public key to DER format")

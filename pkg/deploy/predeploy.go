@@ -29,7 +29,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -177,13 +176,13 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
@@ -197,7 +196,7 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 		Value: d.config.Configuration.TokenContributorRoleID,
 	}
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		d.log.Infof("deploying %s", deploymentName)
 		err = d.globaldeployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
@@ -232,13 +231,13 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["location"] = &arm.ParametersParameter{
 		Value: d.config.Location,
 	}
@@ -261,13 +260,13 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 
 	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
 		Value: d.config.Configuration.TokenContributorRoleID,
@@ -277,7 +276,7 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
 				Template:   template,
@@ -311,7 +310,7 @@ func (d *deployer) deployRPSubscription(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -334,7 +333,7 @@ func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName,
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -357,18 +356,18 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
 		Value: isCreate,
 	}
 	// TODO: ugh
-	if _, ok := template["parameters"].(map[string]interface{})["gatewayResourceGroupName"]; ok {
+	if _, ok := template["parameters"].(map[string]any)["gatewayResourceGroupName"]; ok {
 		parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
 			Value: d.config.GatewayResourceGroupName,
 		}
@@ -496,7 +495,7 @@ func (d *deployer) createSecret(ctx context.Context, kv azsecrets.Client, secret
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(key)),
+		Value: new(base64.StdEncoding.EncodeToString(key)),
 	}, nil)
 	return err
 }
@@ -525,7 +524,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv azsecrets.Client, sec
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
+		Value: new(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	}, nil)
 	return true, err
 }
@@ -567,7 +566,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 	for _, vm := range scalesetVMs {
 		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
-			CommandID: pointerutils.ToPtr("RunShellScript"),
+			CommandID: new("RunShellScript"),
 			Script:    &[]string{rpRestartScript},
 		})
 		if err != nil {

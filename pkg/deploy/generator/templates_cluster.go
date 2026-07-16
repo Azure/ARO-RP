@@ -28,7 +28,7 @@ func (g *generator) clusterPredeploy() *arm.Template {
 			p.DefaultValue = false
 		case "routes":
 			p.Type = "array"
-			p.DefaultValue = []interface{}{}
+			p.DefaultValue = []any{}
 		}
 		t.Parameters[param] = p
 	}

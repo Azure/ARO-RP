@@ -7,6 +7,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -119,12 +120,7 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 }
 
 func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, e)
 }
 
 func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {

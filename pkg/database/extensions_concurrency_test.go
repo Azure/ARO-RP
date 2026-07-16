@@ -74,7 +74,7 @@ func TestExtensionsConcurrency(t *testing.T) {
 	}
 
 	errch := make(chan error, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			errch <- testExtensionsConcurrency(i, h)
 		}(i)
@@ -84,7 +84,7 @@ func TestExtensionsConcurrency(t *testing.T) {
 		atomic.StoreInt32(&done, 1)
 	})
 
-	for i := 0; i < n; i++ {
+	for range n {
 		err = <-errch
 		if err != nil {
 			t.Fatal(err)

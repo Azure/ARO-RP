@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
@@ -55,10 +56,8 @@ func (f *frontend) validateSubscriptionState(ctx context.Context, path string, a
 		return nil, err
 	}
 
-	for _, allowedState := range allowedStates {
-		if doc.Subscription.State == allowedState {
-			return doc, nil
-		}
+	if slices.Contains(allowedStates, doc.Subscription.State) {
+		return doc, nil
 	}
 
 	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", fmt.Sprintf("Request is not allowed in subscription in state '%s'.", doc.Subscription.State))

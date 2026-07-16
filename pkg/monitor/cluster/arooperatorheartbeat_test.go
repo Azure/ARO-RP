@@ -18,7 +18,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -43,7 +42,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 						Generation: 4,
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas: pointerutils.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 					},
 					Status: appsv1.DeploymentStatus{
 						Replicas:            1,
@@ -59,7 +58,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 						Generation: 4,
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas: pointerutils.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 					},
 					Status: appsv1.DeploymentStatus{
 						Replicas:            1,

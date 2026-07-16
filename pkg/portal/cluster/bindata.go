@@ -11,7 +11,8 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"io/fs"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,7 +77,7 @@ func (fi bindataFileInfo) IsDir() bool {
 }
 
 // Sys return file is sys mode
-func (fi bindataFileInfo) Sys() interface{} {
+func (fi bindataFileInfo) Sys() any {
 	return nil
 }
 
@@ -237,8 +238,8 @@ func AssetDir(name string) ([]string, error) {
 	node := _bintree
 	if len(name) != 0 {
 		cannonicalName := strings.Replace(name, "\\", "/", -1)
-		pathList := strings.Split(cannonicalName, "/")
-		for _, p := range pathList {
+		pathList := strings.SplitSeq(cannonicalName, "/")
+		for p := range pathList {
 			node = node.Children[p]
 			if node == nil {
 				return nil, fmt.Errorf("Asset %s not found", name)
@@ -281,7 +282,7 @@ func RestoreAsset(dir, name string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(_filePath(dir, name), data, info.Mode())
+	err = os.WriteFile(_filePath(dir, name), data, info.Mode())
 	if err != nil {
 		return err
 	}

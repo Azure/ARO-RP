@@ -34,33 +34,33 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 	return azcertificates.CreateCertificateParameters{
 		CertificatePolicy: &azcertificates.CertificatePolicy{
 			KeyProperties: &azcertificates.KeyProperties{
-				Exportable: pointerutils.ToPtr(true),
+				Exportable: new(true),
 				KeyType:    pointerutils.ToPtr(azcertificates.KeyTypeRSA),
-				KeySize:    pointerutils.ToPtr(int32(2048)),
+				KeySize:    new(int32(2048)),
 			},
 			SecretProperties: &azcertificates.SecretProperties{
-				ContentType: pointerutils.ToPtr("application/x-pem-file"),
+				ContentType: new("application/x-pem-file"),
 			},
 			X509CertificateProperties: &azcertificates.X509CertificateProperties{
-				Subject: pointerutils.ToPtr(pkix.Name{CommonName: getShortCommonName(commonName)}.String()),
+				Subject: new(pkix.Name{CommonName: getShortCommonName(commonName)}.String()),
 				EnhancedKeyUsage: []*string{
-					pointerutils.ToPtr(string(eku)),
+					new(string(eku)),
 				},
 				SubjectAlternativeNames: &azcertificates.SubjectAlternativeNames{
 					DNSNames: []*string{
-						pointerutils.ToPtr(commonName),
+						new(commonName),
 					},
 				},
 				KeyUsage: []*azcertificates.KeyUsageType{
 					pointerutils.ToPtr(azcertificates.KeyUsageTypeDigitalSignature),
 					pointerutils.ToPtr(azcertificates.KeyUsageTypeKeyEncipherment),
 				},
-				ValidityInMonths: pointerutils.ToPtr(int32(3)),
+				ValidityInMonths: new(int32(3)),
 			},
 			LifetimeActions: []*azcertificates.LifetimeAction{
 				{
 					Trigger: &azcertificates.LifetimeActionTrigger{
-						DaysBeforeExpiry: pointerutils.ToPtr(int32(30)),
+						DaysBeforeExpiry: new(int32(30)),
 					},
 					Action: &azcertificates.LifetimeActionType{
 						ActionType: pointerutils.ToPtr(azcertificates.CertificatePolicyActionAutoRenew),
@@ -68,7 +68,7 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 				},
 			},
 			IssuerParameters: &azcertificates.IssuerParameters{
-				Name: pointerutils.ToPtr(issuer),
+				Name: new(issuer),
 			},
 		},
 	}

@@ -30,11 +30,11 @@ import (
 )
 
 type Deployer interface {
-	CreateOrUpdate(context.Context, *arov1alpha1.Cluster, interface{}) error
-	Remove(context.Context, interface{}) error
+	CreateOrUpdate(context.Context, *arov1alpha1.Cluster, any) error
+	Remove(context.Context, any) error
 	IsReady(context.Context, string, string) (bool, error)
-	Template(interface{}, fs.FS) ([]kruntime.Object, error)
-	IsConstraintTemplateReady(context.Context, interface{}) (bool, error)
+	Template(any, fs.FS) ([]kruntime.Object, error)
+	IsConstraintTemplateReady(context.Context, any) (bool, error)
 }
 
 type deployer struct {
@@ -53,7 +53,7 @@ func NewDeployer(client client.Client, dh dynamichelper.Interface, fs fs.FS, dir
 	}
 }
 
-func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object, error) {
+func (depl *deployer) Template(data any, fsys fs.FS) ([]kruntime.Object, error) {
 	results := make([]kruntime.Object, 0)
 	template, err := template.ParseFS(fsys, filepath.Join(depl.directory, "*"))
 	if err != nil {
@@ -82,7 +82,7 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 	return results, nil
 }
 
-func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.Cluster, config interface{}) error {
+func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.Cluster, config any) error {
 	resources, err := depl.Template(config, depl.fs)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.C
 	return depl.dh.Ensure(ctx, resources...)
 }
 
-func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
+func (depl *deployer) Remove(ctx context.Context, data any) error {
 	resources, err := depl.Template(data, depl.fs)
 	if err != nil {
 		return err
@@ -161,11 +161,11 @@ func (depl *deployer) removeOne(ctx context.Context, obj kruntime.Object) (strin
 	return "", nil
 }
 
-func getField(obj interface{}, fieldName string) (reflect.Value, error) {
+func getField(obj any, fieldName string) (reflect.Value, error) {
 	if fieldName == "" {
 		return reflect.Value{}, errors.New("empty field name")
 	}
-	if reflect.TypeOf(obj).Kind() != reflect.Ptr {
+	if reflect.TypeOf(obj).Kind() != reflect.Pointer {
 		return reflect.Value{}, errors.New("obj not ptr")
 	}
 	elem := reflect.ValueOf(obj).Elem()
@@ -192,7 +192,7 @@ func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName str
 	return ready.DeploymentIsReady(d), nil
 }
 
-func (depl *deployer) IsConstraintTemplateReady(ctx context.Context, config interface{}) (bool, error) {
+func (depl *deployer) IsConstraintTemplateReady(ctx context.Context, config any) (bool, error) {
 	resources, err := depl.Template(config, depl.fs)
 	if err != nil {
 		return false, err

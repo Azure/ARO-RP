@@ -10,7 +10,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -32,7 +31,7 @@ const (
 // type resourceType with name resourceName to spID.  Arguments resourceName and
 // spID must be valid ARM expressions, e.g. "'foo'" or "concat('foo')".  Use
 // this function in new ARM templates.
-func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, condition ...interface{}) *arm.Resource {
+func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, condition ...any) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
 
 	return ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, "concat("+resourceName+", '/Microsoft.Authorization/', guid("+resourceID+", "+spID+", '"+roleID+"'))", condition...)
@@ -43,7 +42,7 @@ func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, con
 // resourceName, spID and name must be valid ARM expressions, e.g. "'foo'" or
 // "concat('foo')".  Use this function in ARM templates which have already been
 // deployed, to preserve the name and avoid a RoleAssignmentExists error.
-func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, name string, condition ...interface{}) *arm.Resource {
+func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, name string, condition ...any) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
 
 	roleDefinitionID := "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"
@@ -52,12 +51,12 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 	}
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: pointerutils.ToPtr("[" + name + "]"),
-			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
+			Name: new("[" + name + "]"),
+			Type: new(resourceType + "/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            pointerutils.ToPtr("[" + resourceID + "]"),
-				RoleDefinitionID: pointerutils.ToPtr(roleDefinitionID),
-				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
+				Scope:            new("[" + resourceID + "]"),
+				RoleDefinitionID: new(roleDefinitionID),
+				PrincipalID:      new("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
@@ -74,15 +73,15 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 	return r
 }
 
-func ResourceRoleAssignmentWithScope(roleID, spID, resourceType string, scope string, names string, condition ...interface{}) *arm.Resource {
+func ResourceRoleAssignmentWithScope(roleID, spID, resourceType string, scope string, names string, condition ...any) *arm.Resource {
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: pointerutils.ToPtr("[" + names + "]"),
-			Type: pointerutils.ToPtr(resourceType + "/providers/roleAssignments"),
+			Name: new("[" + names + "]"),
+			Type: new(resourceType + "/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            pointerutils.ToPtr("[" + scope + "]"),
-				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
-				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
+				Scope:            new("[" + scope + "]"),
+				RoleDefinitionID: new("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
+				PrincipalID:      new("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
@@ -102,23 +101,23 @@ func ResourceRoleAssignmentWithScope(roleID, spID, resourceType string, scope st
 // ResourceGroupRoleAssignment returns a Resource granting roleID on the current
 // resource group to spID.  Argument spID must be a valid ARM expression, e.g.
 // "'foo'" or "concat('foo')".  Use this function in new ARM templates.
-func ResourceGroupRoleAssignment(roleID, spID string, condition ...interface{}) *arm.Resource {
+func ResourceGroupRoleAssignment(roleID, spID string, condition ...any) *arm.Resource {
 	return ResourceGroupRoleAssignmentWithName(roleID, spID, "guid(resourceGroup().id, '"+spID+"', '"+roleID+"')", condition...)
 }
 
-func resourceGroupRoleAssignmentWithDetails(roleID, spID string, name string, dependsOn []string, subscriptionScope bool, condition ...interface{}) *arm.Resource {
+func resourceGroupRoleAssignmentWithDetails(roleID, spID string, name string, dependsOn []string, subscriptionScope bool, condition ...any) *arm.Resource {
 	resourceIDFunction := "resourceId"
 	if subscriptionScope {
 		resourceIDFunction = "subscriptionResourceId"
 	}
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
-			Name: pointerutils.ToPtr("[" + name + "]"),
-			Type: pointerutils.ToPtr("Microsoft.Authorization/roleAssignments"),
+			Name: new("[" + name + "]"),
+			Type: new("Microsoft.Authorization/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            pointerutils.ToPtr("[resourceGroup().id]"),
-				RoleDefinitionID: pointerutils.ToPtr("[" + resourceIDFunction + "('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"),
-				PrincipalID:      pointerutils.ToPtr("[" + spID + "]"),
+				Scope:            new("[resourceGroup().id]"),
+				RoleDefinitionID: new("[" + resourceIDFunction + "('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"),
+				PrincipalID:      new("[" + spID + "]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
@@ -138,6 +137,6 @@ func resourceGroupRoleAssignmentWithDetails(roleID, spID string, name string, de
 // expressions, e.g. "'foo'" or "concat('foo')".  Use this function in ARM
 // templates which have already been deployed, to preserve the name and avoid a
 // RoleAssignmentExists error.
-func ResourceGroupRoleAssignmentWithName(roleID, spID string, name string, condition ...interface{}) *arm.Resource {
+func ResourceGroupRoleAssignmentWithName(roleID, spID string, name string, condition ...any) *arm.Resource {
 	return resourceGroupRoleAssignmentWithDetails("'"+roleID+"'", spID, name, nil, true, condition...)
 }

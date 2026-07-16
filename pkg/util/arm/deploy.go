@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
-func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, parameters map[string]interface{}) error {
+func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, parameters map[string]any) error {
 	log.Printf("deploying %s template", deploymentName)
 	err := deployments.CreateOrUpdateAndWait(ctx, resourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{

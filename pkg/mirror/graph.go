@@ -14,9 +14,9 @@ import (
 )
 
 type Node struct {
-	Version  string                 `json:"version,omitempty"`
-	Payload  string                 `json:"payload,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Version  string         `json:"version,omitempty"`
+	Payload  string         `json:"payload,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
 // AddFromGraph adds all nodes whose version is of the form x.y.z (no suffix)

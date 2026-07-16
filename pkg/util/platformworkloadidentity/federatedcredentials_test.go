@@ -39,7 +39,7 @@ func TestGetPlatformWorkloadIdentityFederatedCredName(t *testing.T) {
 
 	t.Run("generates a consistent result", func(t *testing.T) {
 		prev := GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, saName)
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			next := GetPlatformWorkloadIdentityFederatedCredName(clusterResourceId, identityResourceId, saName)
 
 			if prev != next {

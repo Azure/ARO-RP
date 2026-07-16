@@ -14,7 +14,7 @@ import (
 
 type platformWorkloadIdentityRoleSetStaticValidator struct{}
 
-func (sv platformWorkloadIdentityRoleSetStaticValidator) Static(_new interface{}, _current *api.PlatformWorkloadIdentityRoleSet) error {
+func (sv platformWorkloadIdentityRoleSetStaticValidator) Static(_new any, _current *api.PlatformWorkloadIdentityRoleSet) error {
 	new := _new.(*PlatformWorkloadIdentityRoleSet)
 
 	var current *PlatformWorkloadIdentityRoleSet

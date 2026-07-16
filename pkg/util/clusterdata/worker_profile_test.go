@@ -24,7 +24,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -164,7 +163,7 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 
 		// Specify the desired state for the MachineSet
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: pointerutils.ToPtr(int32(1)),
+			Replicas: new(int32(1)),
 			Template: machinev1beta1.MachineTemplateSpec{
 				// Specify the desired configuration for the machine using ProviderSpec
 				Spec: machinev1beta1.MachineSpec{
@@ -182,7 +181,7 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 func validProvSpec() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{
+			Raw: fmt.Appendf(nil, `{
 	"apiVersion": "machine.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"tags": {
@@ -199,7 +198,7 @@ func validProvSpec() machinev1beta1.ProviderSpec {
 	"zone": "1"
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
-			)),
+			),
 		},
 	}
 }
@@ -207,7 +206,7 @@ func validProvSpec() machinev1beta1.ProviderSpec {
 func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{
+			Raw: fmt.Appendf(nil, `{
 	"apiVersion": "machine.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"tags": {
@@ -224,7 +223,7 @@ func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 	"zone": 1
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
-			)),
+			),
 		},
 	}
 }
@@ -232,7 +231,7 @@ func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 func invalidProvSpecTagsAsInt() machinev1beta1.ProviderSpec {
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
-			Raw: []byte(fmt.Sprintf(`{
+			Raw: fmt.Appendf(nil, `{
 	"apiVersion": "machine.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"tags": {
@@ -249,7 +248,7 @@ func invalidProvSpecTagsAsInt() machinev1beta1.ProviderSpec {
 	"zone": "1"
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
-			)),
+			),
 		},
 	}
 }

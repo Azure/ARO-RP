@@ -28,8 +28,8 @@ type metadata struct {
 
 type clientCertificate struct {
 	Thumbprint  string    `json:"thumbprint,omitempty"`
-	NotBefore   time.Time `json:"notBefore,omitempty"`
-	NotAfter    time.Time `json:"notAfter,omitempty"`
+	NotBefore   time.Time `json:"notBefore"`
+	NotAfter    time.Time `json:"notAfter"`
 	Certificate []byte    `json:"certificate,omitempty"`
 }
 

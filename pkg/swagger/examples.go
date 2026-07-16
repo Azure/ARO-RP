@@ -104,7 +104,7 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 
 				response := resp.(Response)
 
-				var body interface{}
+				var body any
 				if response.Schema != nil {
 					switch response.Schema.Ref {
 					case "#/definitions/OpenShiftCluster":
@@ -141,8 +141,8 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 					// If the response code is 202 Accepted, then it's a long-running operation and must have
 					// a "location" header.
 					example.Responses[statusCode] = struct {
-						Body    interface{} `json:"body,omitempty"`
-						Headers interface{} `json:"headers,omitempty"`
+						Body    any `json:"body,omitempty"`
+						Headers any `json:"headers,omitempty"`
 					}{
 						Body: body,
 						Headers: map[string]string{
@@ -151,7 +151,7 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 					}
 				} else {
 					example.Responses[statusCode] = struct {
-						Body interface{} `json:"body,omitempty"`
+						Body any `json:"body,omitempty"`
 					}{
 						Body: body,
 					}

@@ -69,7 +69,7 @@ func TestHasCapability(t *testing.T) {
 			name: "sku explicitly supports capability",
 			sku: &armcompute.ResourceSKU{
 				Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
-					{Name: &fakeCapabilityName, Value: pointerutils.ToPtr("True")},
+					{Name: &fakeCapabilityName, Value: new("True")},
 				}),
 			},
 			wantResult: true,
@@ -78,7 +78,7 @@ func TestHasCapability(t *testing.T) {
 			name: "sku explicitly does not support capability",
 			sku: &armcompute.ResourceSKU{
 				Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
-					{Name: &fakeCapabilityName, Value: pointerutils.ToPtr("False")},
+					{Name: &fakeCapabilityName, Value: new("False")},
 				}),
 			},
 		},
@@ -125,7 +125,7 @@ func TestFilterVmSizes(t *testing.T) {
 
 			wantResult: map[string]*armcompute.ResourceSKU{
 				"Fake_Sku": {
-					Name: pointerutils.ToPtr("Fake_Sku"),
+					Name: new("Fake_Sku"),
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{{
 						ReasonCode: pointerutils.ToPtr(armcompute.ResourceSKURestrictionsReasonCodeNotAvailableForSubscription),
 					}}),
@@ -135,7 +135,7 @@ func TestFilterVmSizes(t *testing.T) {
 						},
 					}),
 					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{{
-						Name: pointerutils.ToPtr("some-capability"),
+						Name: new("some-capability"),
 					}}),
 				},
 			},
@@ -176,16 +176,16 @@ func TestFilterVmSizes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sku := []*armcompute.ResourceSKU{
 				{
-					Name: pointerutils.ToPtr("Fake_Sku"),
+					Name: new("Fake_Sku"),
 					Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
 						{
-							Name: pointerutils.ToPtr(tt.skuCapabilities),
+							Name: new(tt.skuCapabilities),
 						},
 					}),
 					Locations:    pointerutils.ToSlicePtr(tt.skuLocation),
 					Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{tt.skuRestrictions}),
 					LocationInfo: pointerutils.ToSlicePtr(tt.skuLocationInfo),
-					ResourceType: pointerutils.ToPtr(tt.resourceType),
+					ResourceType: new(tt.resourceType),
 				},
 			}
 
@@ -284,7 +284,7 @@ func TestSupportedOSDisk(t *testing.T) {
 				Name: &tt.vmSku,
 				Capabilities: pointerutils.ToSlicePtr([]armcompute.ResourceSKUCapabilities{
 					{
-						Name:  pointerutils.ToPtr(premiumDiskCapability),
+						Name:  new(premiumDiskCapability),
 						Value: &tt.supportsPremiumDisk,
 					},
 				}),

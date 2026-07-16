@@ -10,8 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -92,7 +90,7 @@ func (d *deployer) rpRemoveOldScaleset(ctx context.Context, vmssName string) err
 	for _, vm := range scalesetVMs {
 		go func(id string) {
 			errors <- d.runCommandWithRetry(ctx, d.config.RPResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
-				CommandID: pointerutils.ToPtr("RunShellScript"),
+				CommandID: new("RunShellScript"),
 				Script:    &[]string{"systemctl stop aro-rp"},
 			})
 		}(*vm.InstanceID) // https://golang.org/doc/faq#closures_and_goroutines

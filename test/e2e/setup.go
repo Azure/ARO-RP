@@ -230,7 +230,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		panic(err)
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://%s:%d/wd/hub", hubAddress, hubPort))
 		if wd != nil {
 			err = nil

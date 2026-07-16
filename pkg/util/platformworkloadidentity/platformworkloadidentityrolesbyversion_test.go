@@ -340,7 +340,7 @@ func TestGetPlatformWorkloadIdentityMismatchError(t *testing.T) {
 						Version: "4.14.40",
 					},
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo(invalidVersion)),
+						UpgradeableTo: new(api.UpgradeableTo(invalidVersion)),
 					},
 				},
 			},

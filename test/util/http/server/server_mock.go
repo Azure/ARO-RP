@@ -190,7 +190,7 @@ func (s *Server) AppendError(err error) {
 
 // RepeatError appends the error n number of times to the end of the response queue.
 func (s *Server) RepeatError(n int, err error) {
-	for i := 0; i < n; i++ {
+	for range n {
 		s.AppendError(err)
 	}
 }
@@ -214,7 +214,7 @@ func (s *Server) AppendResponse(opts ...ResponseOption) {
 // RepeatResponse appends the response n number of times to the end of the response queue.
 // If no options are provided the default response is an http.StatusOK.
 func (s *Server) RepeatResponse(n int, opts ...ResponseOption) {
-	for i := 0; i < n; i++ {
+	for range n {
 		s.AppendResponse(opts...)
 	}
 }

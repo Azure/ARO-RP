@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"maps"
 	"reflect"
 	"testing"
 
@@ -45,17 +46,13 @@ func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[str
 
 func generateDefaultFlags() arov1alpha1.OperatorFlags {
 	df := make(arov1alpha1.OperatorFlags)
-	for k, v := range operator.DefaultOperatorFlags() {
-		df[k] = v
-	}
+	maps.Copy(df, operator.DefaultOperatorFlags())
 	return df
 }
 
 func generateNonStandardFlags(nonDefualtFlagNames []string) arov1alpha1.OperatorFlags {
 	nsf := make(arov1alpha1.OperatorFlags)
-	for k, v := range operator.DefaultOperatorFlags() {
-		nsf[k] = v
-	}
+	maps.Copy(nsf, operator.DefaultOperatorFlags())
 	for _, n := range nonDefualtFlagNames {
 		if nsf[n] == "true" {
 			nsf[n] = "false"
@@ -68,9 +65,7 @@ func generateNonStandardFlags(nonDefualtFlagNames []string) arov1alpha1.Operator
 
 func generateFlagsWithMissingEntries(missingFlagNames []string) arov1alpha1.OperatorFlags {
 	mf := make(arov1alpha1.OperatorFlags)
-	for k, v := range operator.DefaultOperatorFlags() {
-		mf[k] = v
-	}
+	maps.Copy(mf, operator.DefaultOperatorFlags())
 	for _, n := range missingFlagNames {
 		delete(mf, n)
 	}
