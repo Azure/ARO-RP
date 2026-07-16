@@ -10,8 +10,10 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/gorilla/mux"
 	"go.uber.org/mock/gomock"
 
@@ -60,7 +62,7 @@ func TestNew(t *testing.T) {
 			wantHeaders: http.Header{
 				"Content-Disposition": []string{`attachment; filename="cluster.kubeconfig"`},
 			},
-			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"preferences\": {},\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"03030303-0303-0303-0303-030303030001\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
+			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"03030303-0303-0303-0303-030303030001\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
 		},
 		{
 			name:     "success - elevated",
@@ -83,7 +85,7 @@ func TestNew(t *testing.T) {
 			wantHeaders: http.Header{
 				"Content-Disposition": []string{`attachment; filename="cluster-elevated.kubeconfig"`},
 			},
-			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"preferences\": {},\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"03030303-0303-0303-0303-030303030001\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
+			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"03030303-0303-0303-0303-030303030001\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
 		},
 		{
 			name: "bad path",
@@ -192,8 +194,8 @@ func TestNew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(b) != tt.wantBody {
-				t.Errorf("%q", string(b))
+			for _, i := range deep.Equal(strings.Split(string(b), "\n"), strings.Split(tt.wantBody, "\n")) {
+				t.Error(i)
 			}
 		})
 	}
