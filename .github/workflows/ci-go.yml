@@ -80,6 +80,8 @@ jobs:
         run: |
           version="$(awk '/github.com\/golangci\/golangci-lint\/v2/ {print $3}' .bingo/golangci-lint.mod)"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+      - name: Validate custom golangci version sync
+        run: make validate-custom-gcl
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:

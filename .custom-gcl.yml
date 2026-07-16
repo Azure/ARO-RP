@@ -1,0 +1,4 @@
+version: v2.12.2
+plugins:
+  - module: github.com/Azure/ARO-RP/tools/constdup
+    path: ./tools/constdup

@@ -36,6 +36,9 @@ HOLMESGPT_BASE_REGISTRY ?= registry.access.redhat.com
 
 include .bingo/Variables.mk
 
+GOLANGCI_LINT_BINGO_VERSION = $(shell awk '/github.com\/golangci\/golangci-lint\/v2/ {print $$3}' .bingo/golangci-lint.mod)
+CUSTOM_GCL_VERSION = $(shell awk '$$1 == "version:" {print $$2}' .custom-gcl.yml)
+
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
@@ -366,7 +369,7 @@ validate-go: validate-go-action $(GOLANGCI_LINT)
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 .PHONY: validate-go-action
-validate-go-action: validate-imports validate-lint-go-fix validate-gh-actions
+validate-go-action: validate-imports validate-lint-go-fix validate-gh-actions validate-custom-gcl unit-test-constdup
 	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find . -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -382,6 +385,10 @@ validate-fips: $(BINGO)
 unit-test-go: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
+.PHONY: unit-test-constdup
+unit-test-constdup:
+	cd tools/constdup && go test ./...
+
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
@@ -392,13 +399,23 @@ fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (
 	cd pkg/api/ && $(GOLANGCI_LINT) fmt
 
 .PHONY: lint-go
-lint-go: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run --verbose
+lint-go: validate-custom-gcl $(GOLANGCI_LINT)
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	$(GOLANGCI_LINT) custom --name custom-gcl --destination "$$tmpdir"; \
+	"$$tmpdir/custom-gcl" run --verbose
 
 .PHONY: lint-go-fix
-lint-go-fix: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run --verbose --fix
-	cd pkg/api/ && $(GOLANGCI_LINT) run --verbose --fix ./...
+lint-go-fix: validate-custom-gcl $(GOLANGCI_LINT)
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	$(GOLANGCI_LINT) custom --name custom-gcl --destination "$$tmpdir"; \
+	"$$tmpdir/custom-gcl" run --verbose --fix; \
+	cd pkg/api/ && "$$tmpdir/custom-gcl" run --verbose --fix --disable constdup ./...
+
+.PHONY: validate-custom-gcl
+validate-custom-gcl:
+	@[ "$(GOLANGCI_LINT_BINGO_VERSION)" = "$(CUSTOM_GCL_VERSION)" ] || (echo "error: .custom-gcl.yml version ($(CUSTOM_GCL_VERSION)) must match .bingo/golangci-lint.mod ($(GOLANGCI_LINT_BINGO_VERSION))"; exit 1)
 
 .PHONY: validate-lint-go-fix
 validate-lint-go-fix: lint-go-fix

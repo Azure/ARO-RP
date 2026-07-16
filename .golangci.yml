@@ -19,9 +19,15 @@ linters:
     - unused
     - usestdlibvars
     - whitespace
+    - constdup
     - depguard
     - exptostd
   settings:
+    custom:
+      constdup:
+        type: module
+        description: flag raw string literals duplicating registry-worthy version constants
+        original-url: https://github.com/Azure/ARO-RP/tree/master/tools/constdup
     depguard:
       rules:
         deprecatedutillibs:
