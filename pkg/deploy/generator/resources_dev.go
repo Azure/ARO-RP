@@ -354,12 +354,13 @@ func (g *generator) devVPN() *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
-			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+			devVPNVnetResourceID,
 		},
 	}
 }
 
 const (
+	devVPNVnetResourceID                   = "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
 	sharedDiskEncryptionKeyVaultName       = "concat(take(resourceGroup().name,10), '" + SharedDiskEncryptionKeyVaultNameSuffix + "')"
 	sharedDiskEncryptionSetName            = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName            = "concat(resourceGroup().name, '-disk-encryption-key')"

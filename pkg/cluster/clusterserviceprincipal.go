@@ -71,7 +71,7 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 	if !found {
 		m.log.Info("creating cluster service principal role assignment")
 		t := &arm.Template{
-			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+			Schema:         deploymentTemplateSchema,
 			ContentVersion: "1.0.0.0",
 			Resources:      []*arm.Resource{m.clusterServicePrincipalRBAC()},
 		}

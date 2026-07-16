@@ -26,13 +26,15 @@ type clusterOperatorConditionsIgnoreStruct struct {
 	Status configv1.ConditionStatus
 }
 
+const cloudControllerManager = "cloud-controller-manager"
+
 // clusterOperatorConditionsIgnore contains list of statuses that we don't want to scrape
 var clusterOperatorConditionsIgnore = map[clusterOperatorConditionsIgnoreStruct]struct{}{
-	{"cloud-controller-manager", "TrustedCABundleControllerControllerDegraded", configv1.ConditionFalse}: {},
-	{"cloud-controller-manager", "TrustedCABundleControllerControllerAvailable", configv1.ConditionTrue}: {},
-	{"cloud-controller-manager", "CloudConfigControllerDegraded", configv1.ConditionFalse}:               {},
-	{"cloud-controller-manager", "CloudConfigControllerUpgradeable", configv1.ConditionTrue}:             {},
-	{"cloud-controller-manager", "CloudControllerOwner", configv1.ConditionTrue}:                         {},
+	{cloudControllerManager, "TrustedCABundleControllerControllerDegraded", configv1.ConditionFalse}: {},
+	{cloudControllerManager, "TrustedCABundleControllerControllerAvailable", configv1.ConditionTrue}: {},
+	{cloudControllerManager, "CloudConfigControllerDegraded", configv1.ConditionFalse}:               {},
+	{cloudControllerManager, "CloudConfigControllerUpgradeable", configv1.ConditionTrue}:             {},
+	{cloudControllerManager, "CloudControllerOwner", configv1.ConditionTrue}:                         {},
 
 	{"baremetal", "Disabled", configv1.ConditionTrue}:               {},
 	{"network", "ManagementStateDegraded", configv1.ConditionFalse}: {},
