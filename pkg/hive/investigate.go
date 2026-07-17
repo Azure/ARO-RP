@@ -29,6 +29,11 @@ import (
 //go:embed staticresources/holmes-config.yaml
 var holmesConfigYAML string
 
+const (
+	holmesNamespace          = "holmes-system"
+	holmesServiceAccountName = "holmes-investigator"
+)
+
 // InvestigateCluster creates an investigation pod on the Hive cluster, streams its logs, and cleans up.
 // It accepts kubeconfig bytes, creates a temporary secret to hold them, and removes
 // the secret (along with the pod and configmap) when the investigation completes.
@@ -38,14 +43,7 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 	podName := "holmes-investigate-" + id
 	kubeconfigSecretName := "holmes-kubeconfig-" + id
 
-	hr.log.Infof("starting Holmes investigation %s in namespace %s", id, hiveNamespace)
-
-	// Acquire a short-lived Entra ID token for Azure OpenAI before creating
-	// any cluster resources, so a credential failure is surfaced early.
-	azureADToken, err := holmesConfig.AcquireToken(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to acquire Azure AD token for investigation: %w", err)
-	}
+	hr.log.Infof("starting Holmes investigation %s in namespace %s", id, holmesNamespace)
 
 	// Ensure cleanup of the secret, ConfigMap, and pod on exit.
 	defer func() {
@@ -53,55 +51,54 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 		defer cancel()
 
 		hr.log.Infof("cleaning up investigation pod %s", podName)
-		err := hr.kubernetescli.CoreV1().Pods(hiveNamespace).Delete(cleanupCtx, podName, metav1.DeleteOptions{})
+		err := hr.kubernetescli.CoreV1().Pods(holmesNamespace).Delete(cleanupCtx, podName, metav1.DeleteOptions{})
 		if err != nil {
 			hr.log.Warningf("failed to delete investigation pod %s: %v", podName, err)
 		}
 
 		hr.log.Infof("cleaning up investigation configmap %s", configMapName)
-		err = hr.kubernetescli.CoreV1().ConfigMaps(hiveNamespace).Delete(cleanupCtx, configMapName, metav1.DeleteOptions{})
+		err = hr.kubernetescli.CoreV1().ConfigMaps(holmesNamespace).Delete(cleanupCtx, configMapName, metav1.DeleteOptions{})
 		if err != nil {
 			hr.log.Warningf("failed to delete investigation configmap %s: %v", configMapName, err)
 		}
 
 		hr.log.Infof("cleaning up investigation secret %s", kubeconfigSecretName)
-		err = hr.kubernetescli.CoreV1().Secrets(hiveNamespace).Delete(cleanupCtx, kubeconfigSecretName, metav1.DeleteOptions{})
+		err = hr.kubernetescli.CoreV1().Secrets(holmesNamespace).Delete(cleanupCtx, kubeconfigSecretName, metav1.DeleteOptions{})
 		if err != nil {
 			hr.log.Warningf("failed to delete investigation secret %s: %v", kubeconfigSecretName, err)
 		}
 	}()
 
-	// 0. Create the temporary secret holding the kubeconfig.
+	// 0. Create the temporary secret holding the kubeconfig and AOAI config.
 	kubeconfigSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconfigSecretName,
-			Namespace: hiveNamespace,
+			Namespace: holmesNamespace,
 		},
 		Data: map[string][]byte{
 			"config":            kubeconfig,
-			"azure-ad-token":    []byte(azureADToken),
 			"azure-api-base":    []byte(holmesConfig.AzureAPIBase),
 			"azure-api-version": []byte(holmesConfig.AzureAPIVersion),
 		},
 	}
 
-	_, err = hr.kubernetescli.CoreV1().Secrets(hiveNamespace).Create(ctx, kubeconfigSecret, metav1.CreateOptions{})
+	_, err := hr.kubernetescli.CoreV1().Secrets(holmesNamespace).Create(ctx, kubeconfigSecret, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to create investigation kubeconfig secret: %w", err)
+		return fmt.Errorf("failed to create investigation kubeconfig secret in namespace %s: %w", holmesNamespace, err)
 	}
 
 	// 1. Create the ConfigMap with Holmes toolsets config.
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName,
-			Namespace: hiveNamespace,
+			Namespace: holmesNamespace,
 		},
 		Data: map[string]string{
 			"config.yaml": holmesConfigYAML,
 		},
 	}
 
-	_, err = hr.kubernetescli.CoreV1().ConfigMaps(hiveNamespace).Create(ctx, configMap, metav1.CreateOptions{})
+	_, err = hr.kubernetescli.CoreV1().ConfigMaps(holmesNamespace).Create(ctx, configMap, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create investigation configmap: %w", err)
 	}
@@ -118,12 +115,15 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
-			Namespace: hiveNamespace,
+			Namespace: holmesNamespace,
+			Labels: map[string]string{
+				"azure.workload.identity/use": "true",
+			},
 		},
 		Spec: corev1.PodSpec{
-			AutomountServiceAccountToken: pointerutils.ToPtr(false),
-			ActiveDeadlineSeconds:        &activeDeadlineSeconds,
-			RestartPolicy:                corev1.RestartPolicyNever,
+			ServiceAccountName:    holmesServiceAccountName,
+			ActiveDeadlineSeconds: &activeDeadlineSeconds,
+			RestartPolicy:         corev1.RestartPolicyNever,
 			HostAliases: []corev1.HostAlias{
 				{
 					IP:        apiServerIP,
@@ -135,9 +135,6 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 				RunAsGroup: &runAsUser,
 				FSGroup:    &runAsUser,
 			},
-			ImagePullSecrets: []corev1.LocalObjectReference{
-				{Name: "hive-global-pull-secret"},
-			},
 			Containers: []corev1.Container{
 				{
 					Name:            "holmes",
@@ -147,13 +144,8 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 					Args:            []string{"ask", question, "-n", "--model=" + holmesConfig.Model, "--config=/etc/holmes/config.yaml"},
 					Env: []corev1.EnvVar{
 						{
-							Name: "AZURE_API_KEY",
-							ValueFrom: &corev1.EnvVarSource{
-								SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: kubeconfigSecretName},
-									Key:                  "azure-ad-token",
-								},
-							},
+							Name:  "AZURE_AD_TOKEN_AUTH",
+							Value: "true",
 						},
 						{
 							Name: "AZURE_API_BASE",
@@ -259,19 +251,25 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 		},
 	}
 
-	_, err = hr.kubernetescli.CoreV1().Pods(hiveNamespace).Create(ctx, pod, metav1.CreateOptions{})
+	if hr.env.IsLocalDevelopmentMode() {
+		pod.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{Name: "hive-global-pull-secret"},
+		}
+	}
+
+	_, err = hr.kubernetescli.CoreV1().Pods(holmesNamespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to create investigation pod: %w", err)
+		return fmt.Errorf("failed to create investigation pod in namespace %s (serviceAccount %s): %w", holmesNamespace, holmesServiceAccountName, err)
 	}
 
 	// 3. Wait for the pod to be running.
-	err = hr.waitForPodRunning(ctx, hiveNamespace, podName, 60*time.Second)
+	err = hr.waitForPodRunning(ctx, holmesNamespace, podName, 60*time.Second)
 	if err != nil {
 		return fmt.Errorf("failed waiting for investigation pod to start: %w", err)
 	}
 
 	// 4. Stream pod logs.
-	err = hr.streamPodLogs(ctx, hiveNamespace, podName, w)
+	err = hr.streamPodLogs(ctx, holmesNamespace, podName, w)
 	if err != nil {
 		return fmt.Errorf("failed to stream investigation pod logs: %w", err)
 	}
