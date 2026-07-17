@@ -64,7 +64,9 @@ var _ changefeed.ChangefeedConsumer[*api.OpenShiftClusterDocument] = &clusterCha
 // Update the buckets that we want to pay attention to.
 func (c *clusterChangeFeedResponder) UpdateBuckets(buckets []int) {
 	c.workerPool.SetBuckets(buckets)
-	c.lastBucketUpdate.Store(c.now())
+	if len(buckets) > 0 {
+		c.lastBucketUpdate.Store(c.now())
+	}
 }
 
 // we don't use a mutex internally, we use a xsync.Map, so Lock/Unlock are
