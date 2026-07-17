@@ -10,6 +10,7 @@ linters:
   default: none
   enable:
     - ginkgolinter
+    - goconst
     - govet
     - importas
     - musttag
@@ -39,6 +40,12 @@ linters:
           deny:
             - pkg: "sigs.k8s.io/controller-runtime/pkg/client/fake"
               desc: "use test/util/clienthelper's NewAROFakeClientBuilder for new clients to ensure that arov1alpha1.Cluster is registered as having a status subresource"
+    goconst:
+      min-len: 24
+      min-occurrences: 5
+      match-constant: true
+      eval-const-expressions: true
+      ignore-tests: true
     importas:
       alias:
         - pkg: github.com/Azure/ARO-RP/pkg/api/util/uuid
@@ -180,9 +187,11 @@ linters:
       - linters:
           - importas
           - staticcheck
+          - goconst
         path: pkg/client/(.+)\.go
       - linters:
           - importas
+          - goconst
         path: (.+/)?zz_generated_(.+)\.go
       # bindata.go should not be modernized automatically
       - linters:
@@ -191,13 +200,25 @@ linters:
         path: bindata.go
       - linters:
           - importas
+          - goconst
         path: pkg/operator/(clientset|mocks)/(.+)\.go
       - linters:
           - importas
+          - goconst
         path: pkg/util/mocks/(.+)\.go
       - linters:
           - staticcheck
+          - goconst
         path: (.+/)?bindata.go
+      - linters:
+          - goconst
+        path: pkg/util/graph/graphsdk/(.+)\.go
+      - linters:
+          - goconst
+        path: pkg/swagger/(.+)\.go
+      - linters:
+          - goconst
+        path: test/e2e/(.+)\.go
       # Deprecated k8s APIs that need porting to new ones piecemeal
       - linters:
           - staticcheck
