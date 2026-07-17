@@ -28,7 +28,7 @@ func (m *manager) ensureGatewayUpgrade(ctx context.Context) error {
 	}
 
 	t := &arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		Schema:         deploymentTemplateSchema,
 		ContentVersion: "1.0.0.0",
 		Resources:      []*arm.Resource{m.networkPrivateEndpoint()},
 	}
