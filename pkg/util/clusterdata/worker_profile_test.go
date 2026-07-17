@@ -52,6 +52,16 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 	invalidWorkerProfile := []api.WorkerProfile{{Name: "fake-worker-profile-1", Count: 1}}
 	emptyWorkerProfile := []api.WorkerProfile{}
 
+	// Spec-derived fields are populated, but SubnetID is left empty because the provider
+	// spec omits the network fields - the enricher must not assemble a partial SubnetID.
+	noSubnetWorkerProfile := []api.WorkerProfile{{
+		Name:             "fake-worker-profile-1",
+		VMSize:           api.VMSizeStandardD4sV3,
+		DiskSizeGB:       512,
+		EncryptionAtHost: api.EncryptionAtHostDisabled,
+		Count:            1,
+	}}
+
 	testCases := []struct {
 		name    string
 		client  machineclient.Interface
@@ -96,13 +106,23 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			givenOc: getGivenOc(clusterID),
 		},
 		{
-			name: "machine set objects exist - machineset has no ready replicas",
+			// An unhealthy MachineSet (no ready replicas) still has a valid desired
+			// ProviderSpec, so its configured subnet (and other spec fields) must be
+			// reported rather than left blank - otherwise the storage-account firewall
+			// would drop the worker subnet. See migrateStorageAccounts.
+			name: "machine set objects exist - machineset has no ready replicas - still reports configured subnet",
 			client: machinefake.NewSimpleClientset(func() *machinev1beta1.MachineSet {
 				ms := createMachineSet("fake-worker-profile-1", validProvSpec())
 				ms.Status.ReadyReplicas = 0
 				return ms
 			}()),
-			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, validWorkerProfile()[:1]),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:    "machine set objects exist - valid provider spec but no network fields - SubnetID left empty",
+			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", noNetworkProvSpec())),
+			wantOc:  getWantOc(clusterID, noSubnetWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
@@ -223,6 +243,25 @@ func invalidProvSpecZoneAsInt() machinev1beta1.ProviderSpec {
 }`,
 				mockVnetRG, mockVnetName, mockSubnetName,
 			),
+		},
+	}
+}
+
+// noNetworkProvSpec returns a provider spec that is valid JSON and unmarshals cleanly but
+// omits the network fields (networkResourceGroup/vnet/subnet), so the enricher must leave
+// SubnetID empty rather than assembling a partial, malformed ID.
+func noNetworkProvSpec() machinev1beta1.ProviderSpec {
+	return machinev1beta1.ProviderSpec{
+		Value: &kruntime.RawExtension{
+			Raw: []byte(`{
+	"apiVersion": "machine.openshift.io/v1beta1",
+	"kind": "AzureMachineProviderSpec",
+	"osDisk": {
+		"diskSizeGB": 512
+	},
+	"vmSize": "Standard_D4s_v3",
+	"zone": "1"
+}`),
 		},
 	}
 }

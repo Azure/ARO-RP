@@ -13,22 +13,32 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
+
+func (m *manager) ensureServiceEndpointsForCreate(ctx context.Context) error {
+	return m.ensureServiceEndpoints(ctx, false)
+}
+
+func (m *manager) ensureServiceEndpointsForUpdate(ctx context.Context) error {
+	return m.ensureServiceEndpoints(ctx, true)
+}
 
 // ensureServiceEndpoints should enable service endpoints on
 // subnets for storage account access, but only if egress lockdown is
 // not enabled.
-func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
+func (m *manager) ensureServiceEndpoints(ctx context.Context, isUpdate bool) error {
 	// Only add service endpoints to the subnet if egress lockdown is not enabled.
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
 		return nil
 	}
 
-	subnetIds, err := m.getSubnetIds()
+	subnetIds, err := m.getSubnetIds(isUpdate)
 	if err != nil {
 		return err
 	}
 
+	masterSubnetID := m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
 	for _, subnetId := range subnetIds {
 		r, err := armsdk.ParseResourceID(subnetId)
 		if err != nil {
@@ -36,6 +46,14 @@ func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 		}
 		subnet, err := m.armSubnets.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, nil)
 		if err != nil {
+			// A worker subnet reported by the enricher can be stale: an unhealthy
+			// MachineSet's configured subnet may since have been deleted. Skip a worker
+			// subnet that no longer exists rather than failing the update; still fail for
+			// the master subnet and for non-NotFound errors (e.g. lost read permission).
+			if !strings.EqualFold(subnetId, masterSubnetID) && azureerrors.IsStatusNotFoundError(err) {
+				m.log.Infof("skipping subnet %q: not found", subnetId)
+				continue
+			}
 			return err
 		}
 		shouldUpdate := addEndpointsToSubnet(api.SubnetsEndpoints, &subnet.Subnet)
@@ -52,14 +70,17 @@ func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) getSubnetIds() ([]string, error) {
+func (m *manager) getSubnetIds(isUpdate bool) ([]string, error) {
 	subnets := []string{
 		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 	}
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
 
 	for _, wp := range workerProfiles {
-		if len(wp.SubnetID) == 0 {
+		if wp.SubnetID == "" {
+			if isUpdate {
+				continue
+			}
 			return nil, fmt.Errorf("WorkerProfile '%s' has no SubnetID; check that the corresponding MachineSet is valid", wp.Name)
 		}
 		subnets = append(subnets, wp.SubnetID)
