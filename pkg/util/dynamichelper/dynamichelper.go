@@ -180,8 +180,15 @@ func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntim
 // shouldUseServerSideApply returns true for unstructured resources that should
 // be managed via server-side apply rather than the Gatekeeper-specific path.
 func shouldUseServerSideApply(uns *unstructured.Unstructured) bool {
-	group := uns.GroupVersionKind().Group
-	return group == "admissionregistration.k8s.io" || group == "policy.networking.k8s.io"
+	gvk := uns.GroupVersionKind()
+	switch gvk.Group {
+	case "admissionregistration.k8s.io":
+		return gvk.Kind == "ValidatingAdmissionPolicy" || gvk.Kind == "ValidatingAdmissionPolicyBinding"
+	case "policy.networking.k8s.io":
+		return gvk.Kind == "AdminNetworkPolicy"
+	default:
+		return false
+	}
 }
 
 // ensureByServerSideApply creates or updates a single unstructured object
