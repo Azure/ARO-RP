@@ -7,49 +7,38 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 
-	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 )
 
 func TestNewHolmesConfigFromEnv(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-	mockCred := mock_azcore.NewMockTokenCredential(controller)
-
 	tests := []struct {
 		name    string
 		envVars map[string]string
-		cred    azcore.TokenCredential
 		wantErr bool
 	}{
 		{
 			name: "valid config with all required env vars",
 			envVars: map[string]string{
-				"HOLMES_AZURE_API_BASE": "https://test.openai.azure.com",
+				"HOLMES_AZURE_API_BASE":  "https://test.openai.azure.com",
+				"HOLMES_UAMI_CLIENT_ID": "test-client-id",
 			},
-			cred: mockCred,
 		},
 		{
 			name:    "missing API base returns error",
-			envVars: map[string]string{},
-			cred:    mockCred,
+			envVars: map[string]string{"HOLMES_UAMI_CLIENT_ID": "test-client-id"},
 			wantErr: true,
 		},
 		{
-			name: "nil credential returns error",
+			name: "missing UAMI client ID returns error",
 			envVars: map[string]string{
 				"HOLMES_AZURE_API_BASE": "https://test.openai.azure.com",
 			},
-			cred:    nil,
 			wantErr: true,
 		},
 		{
@@ -61,8 +50,8 @@ func TestNewHolmesConfigFromEnv(t *testing.T) {
 				"HOLMES_DEFAULT_TIMEOUT":   "300",
 				"HOLMES_MAX_CONCURRENT":    "5",
 				"HOLMES_AZURE_API_VERSION": "2024-01-01",
+				"HOLMES_UAMI_CLIENT_ID":    "custom-client-id",
 			},
-			cred: mockCred,
 		},
 	}
 
@@ -71,7 +60,7 @@ func TestNewHolmesConfigFromEnv(t *testing.T) {
 			for _, key := range []string{
 				"HOLMES_AZURE_API_BASE", "HOLMES_IMAGE",
 				"HOLMES_MODEL", "HOLMES_DEFAULT_TIMEOUT", "HOLMES_MAX_CONCURRENT",
-				"HOLMES_AZURE_API_VERSION",
+				"HOLMES_AZURE_API_VERSION", "HOLMES_UAMI_CLIENT_ID",
 			} {
 				t.Setenv(key, "")
 			}
@@ -79,7 +68,7 @@ func TestNewHolmesConfigFromEnv(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			cfg, err := NewHolmesConfigFromEnv("arosvc.azurecr.io", tt.cred)
+			cfg, err := NewHolmesConfigFromEnv("arosvc.azurecr.io")
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -134,15 +123,15 @@ func TestNewHolmesConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("HOLMES_UAMI_CLIENT_ID", "test-client-id")
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 			tt.mocks(mockKV)
 
-			mockCred := mock_azcore.NewMockTokenCredential(controller)
-
-			cfg, err := NewHolmesConfig(ctx, "arosvc.azurecr.io", mockKV, mockCred)
+			cfg, err := NewHolmesConfig(ctx, "arosvc.azurecr.io", mockKV)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -151,61 +140,6 @@ func TestNewHolmesConfig(t *testing.T) {
 			require.Equal(t, apiBase, cfg.AzureAPIBase)
 			require.NotEmpty(t, cfg.Image)
 			require.NotEmpty(t, cfg.Model)
-		})
-	}
-}
-
-func TestAcquireToken(t *testing.T) {
-	ctx := context.Background()
-
-	tests := []struct {
-		name      string
-		setupMock func(*mock_azcore.MockTokenCredential)
-		wantToken string
-		wantErr   bool
-	}{
-		{
-			name: "successfully acquires token",
-			setupMock: func(m *mock_azcore.MockTokenCredential) {
-				m.EXPECT().GetToken(ctx, policy.TokenRequestOptions{
-					Scopes: []string{cognitiveServicesScope},
-				}).Return(azcore.AccessToken{
-					Token:     "test-entra-token",
-					ExpiresOn: time.Now().Add(time.Hour),
-				}, nil)
-			},
-			wantToken: "test-entra-token",
-		},
-		{
-			name: "token acquisition failure returns error",
-			setupMock: func(m *mock_azcore.MockTokenCredential) {
-				m.EXPECT().GetToken(ctx, policy.TokenRequestOptions{
-					Scopes: []string{cognitiveServicesScope},
-				}).Return(azcore.AccessToken{}, fmt.Errorf("credential expired"))
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			mockCred := mock_azcore.NewMockTokenCredential(controller)
-			tt.setupMock(mockCred)
-
-			cfg := &HolmesConfig{
-				tokenCredential: mockCred,
-			}
-
-			token, err := cfg.AcquireToken(ctx)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.wantToken, token)
 		})
 	}
 }

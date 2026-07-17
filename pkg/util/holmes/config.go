@@ -10,9 +10,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -23,8 +20,6 @@ var modelPattern = regexp.MustCompile(`^[a-zA-Z0-9/.:_-]+$`)
 
 const (
 	holmesAzureAPIBaseSecretName = "holmes-azure-api-base"
-
-	cognitiveServicesScope = "https://cognitiveservices.azure.com/.default"
 )
 
 // HolmesConfig holds configuration for HolmesGPT investigation pods.
@@ -35,18 +30,17 @@ type HolmesConfig struct {
 	Model                       string
 	DefaultTimeout              int
 	MaxConcurrentInvestigations int
-	tokenCredential             azcore.TokenCredential
+	UAMIClientID                string
 }
 
 // NewHolmesConfigFromEnv loads all config from environment variables.
 // Used in local development mode (RP_MODE=development).
-func NewHolmesConfigFromEnv(acrDomain string, cred azcore.TokenCredential) (*HolmesConfig, error) {
+func NewHolmesConfigFromEnv(acrDomain string) (*HolmesConfig, error) {
 	c, err := newHolmesConfigBase(acrDomain)
 	if err != nil {
 		return nil, err
 	}
 	c.AzureAPIBase = os.Getenv("HOLMES_AZURE_API_BASE")
-	c.tokenCredential = cred
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
@@ -55,7 +49,7 @@ func NewHolmesConfigFromEnv(acrDomain string, cred azcore.TokenCredential) (*Hol
 
 // NewHolmesConfig loads non-secret config from env vars and secrets from Key Vault.
 // Used in production mode.
-func NewHolmesConfig(ctx context.Context, acrDomain string, serviceKeyvault azsecrets.Client, cred azcore.TokenCredential) (*HolmesConfig, error) {
+func NewHolmesConfig(ctx context.Context, acrDomain string, serviceKeyvault azsecrets.Client) (*HolmesConfig, error) {
 	apiBaseResp, err := serviceKeyvault.GetSecret(ctx, holmesAzureAPIBaseSecretName, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s from keyvault: %w", holmesAzureAPIBaseSecretName, err)
@@ -69,24 +63,10 @@ func NewHolmesConfig(ctx context.Context, acrDomain string, serviceKeyvault azse
 		return nil, err
 	}
 	c.AzureAPIBase = *apiBaseResp.Value
-	c.tokenCredential = cred
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
 	return c, nil
-}
-
-// AcquireToken acquires a short-lived Entra ID token scoped to Azure Cognitive
-// Services. The token is valid for ~1 hour, which is sufficient for ephemeral
-// investigation pods that time out at 10 minutes.
-func (c *HolmesConfig) AcquireToken(ctx context.Context) (string, error) {
-	tk, err := c.tokenCredential.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{cognitiveServicesScope},
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to acquire cognitive services token: %w", err)
-	}
-	return tk.Token, nil
 }
 
 // newHolmesConfigBase loads the non-secret configuration from environment variables.
@@ -106,13 +86,14 @@ func newHolmesConfigBase(acrDomain string) (*HolmesConfig, error) {
 		Model:                       envOrDefault("HOLMES_MODEL", "azure/gpt-5.2"),
 		DefaultTimeout:              defaultTimeout,
 		MaxConcurrentInvestigations: maxConcurrent,
+		UAMIClientID:                os.Getenv("HOLMES_UAMI_CLIENT_ID"),
 	}, nil
 }
 
 // Validate checks that required configuration values are set.
 func (c *HolmesConfig) Validate() error {
-	if c.tokenCredential == nil {
-		return fmt.Errorf("holmes token credential is required")
+	if c.UAMIClientID == "" {
+		return fmt.Errorf("holmes UAMI client ID is required (set HOLMES_UAMI_CLIENT_ID)")
 	}
 	if c.AzureAPIBase == "" {
 		return fmt.Errorf("holmes Azure API base is required")
@@ -134,7 +115,7 @@ func (c *HolmesConfig) Validate() error {
 
 // NewHolmesConfigForTest creates a HolmesConfig with all fields set directly,
 // bypassing env vars and Key Vault. Intended for use in tests only.
-func NewHolmesConfigForTest(image, apiBase, apiVersion, model string, timeout, maxConcurrent int, cred azcore.TokenCredential) *HolmesConfig {
+func NewHolmesConfigForTest(image, apiBase, apiVersion, model string, timeout, maxConcurrent int) *HolmesConfig {
 	return &HolmesConfig{
 		Image:                       image,
 		AzureAPIBase:                apiBase,
@@ -142,7 +123,7 @@ func NewHolmesConfigForTest(image, apiBase, apiVersion, model string, timeout, m
 		Model:                       model,
 		DefaultTimeout:              timeout,
 		MaxConcurrentInvestigations: maxConcurrent,
-		tokenCredential:             cred,
+		UAMIClientID:                "test-uami-client-id",
 	}
 }
 
