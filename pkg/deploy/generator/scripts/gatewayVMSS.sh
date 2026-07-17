@@ -92,10 +92,28 @@ main() {
 	Systemd_Filter _COMM=aro
 	DB /var/lib/fluent/journaldb
 
+[INPUT]
+	Name systemd
+	Tag gateway-otel-collector
+	Systemd_Filter _SYSTEMD_UNIT=gateway-otel-collector.service
+	DB /var/lib/fluent/gateway-otel-journaldb
+
 [FILTER]
 	Name modify
 	Match journald
 	Add Environment \${ENVIRONMENT}
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Add Environment \${ENVIRONMENT}
+	Set COMPONENT gateway-otel-collector
+
+[FILTER]
+	Name rewrite_tag
+	Match gateway-otel-collector
+	Rule \$COMPONENT ^gateway-otel-collector$ journald false
+	Emitter_Name re_emitted_gateway_otel
 
 [FILTER]
 	Name modify
