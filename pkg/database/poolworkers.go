@@ -117,7 +117,7 @@ func (c *poolWorkers) update(ctx context.Context, poolWorkerType api.PoolWorkerT
 
 // TryLease attempts to lease the master document if it is available (no lease
 // or the lease has expired). Failing to get the lease returns a `nil` document
-// and error.
+// and nil error.
 func (c *poolWorkers) TryLease(ctx context.Context, workerType api.PoolWorkerType) (*api.PoolWorkerDocument, error) {
 	docs, err := c.c.QueryAll(ctx, string(workerType), &cosmosdb.Query{
 		Query: PoolWorkerGetMasterQuery,
