@@ -215,10 +215,6 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -349,10 +345,6 @@ func TestReconcileVAP(t *testing.T) {
 			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -418,10 +410,6 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 	defer controller.Finish()
 
 	cluster := &arov1alpha1.Cluster{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Cluster",
-			APIVersion: "aro.openshift.io/v1alpha1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
 		},
@@ -624,10 +612,6 @@ func TestReconcileMethodSelection(t *testing.T) {
 			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: tt.flags,
