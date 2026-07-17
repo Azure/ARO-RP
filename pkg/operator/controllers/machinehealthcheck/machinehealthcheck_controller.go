@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -107,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 
 		if mhc, ok := resource.(*machinev1beta1.MachineHealthCheck); ok {
-			isUpgrading, err := r.isClusterUpgrading(ctx)
+			isUpgrading, err := r.IsClusterUpgrading(ctx)
 			if err != nil {
 				r.Log.Error(err)
 				r.SetDegraded(ctx, err)
@@ -148,21 +147,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
-}
-
-func (r *Reconciler) isClusterUpgrading(ctx context.Context) (bool, error) {
-	clusterVersion := &configv1.ClusterVersion{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: "version"}, clusterVersion); err != nil {
-		return false, err
-	}
-
-	for _, cnd := range clusterVersion.Status.Conditions {
-		if cnd.Type == configv1.OperatorProgressing {
-			return cnd.Status == configv1.ConditionTrue, nil
-		}
-	}
-
-	return false, nil
 }
 
 // SetupWithManager will manage only our MHC resource with our specific controller name

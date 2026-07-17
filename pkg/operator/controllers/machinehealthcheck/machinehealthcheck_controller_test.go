@@ -69,7 +69,11 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			Version: "4.18.30",
 		},
 	}
-	clusterversionUpgrading.Status.Conditions = []configv1.ClusterOperatorStatusCondition{
+
+	// ARO-26990: MCO rollout — Progressing=True but no new version in history.
+	// IsClusterUpgrading must return false for this case.
+	clusterversionMCORollout := clusterversionDefault.DeepCopy()
+	clusterversionMCORollout.Status.Conditions = []configv1.ClusterOperatorStatusCondition{
 		{
 			Type:   configv1.OperatorProgressing,
 			Status: configv1.ConditionTrue,
@@ -229,6 +233,28 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
 				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(true)).Return(nil).Times(1)
+			},
+			wantErr: "",
+		},
+		{
+			// ARO-26990: an ARO MCO config rollout sets Progressing=True but does not
+			// push a new version into history. MHC must NOT be paused in this case.
+			name: "ARO-26990: MCO rollout (Progressing=True, history[0]=Completed): does not pause MHC",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			clusterversion: clusterversionMCORollout,
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
+				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(false)).Return(nil).Times(1)
 			},
 			wantErr: "",
 		},

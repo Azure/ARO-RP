@@ -522,12 +522,6 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 								Version: "4.18.30",
 							},
 						},
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorProgressing,
-								Status: configv1.ConditionTrue,
-							},
-						},
 					},
 				}).
 				Build())
