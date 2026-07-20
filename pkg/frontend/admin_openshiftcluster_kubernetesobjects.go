@@ -190,11 +190,7 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	gvk := obj.GroupVersionKind()
-	groupKind := gvk.Kind
-	if gvk.Group != "" {
-		groupKind = gvk.Kind + "." + gvk.Group
-	}
+	groupKind := obj.GroupVersionKind().GroupKind().String()
 
 	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
