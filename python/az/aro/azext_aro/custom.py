@@ -1042,7 +1042,7 @@ def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentSco
             if action.startswith("Microsoft.Compute/diskEncryptionSets/"):
                 scopes.add(RoleAssignmentScope.DISK_ENCRYPTION_SET)
 
-            if action.startswith("Microsoft.Network/virtualNetworks/subnets/") and RoleAssignmentScope.VNET not in scopes:
+            if action.startswith("Microsoft.Network/virtualNetworks/subnets/") and RoleAssignmentScope.VNET not in scopes:  # pylint: disable=line-too-long
                 scopes.add(RoleAssignmentScope.MASTER_SUBNET)
                 scopes.add(RoleAssignmentScope.WORKER_SUBNET)
             elif action.startswith("Microsoft.Network/virtualNetworks/"):
