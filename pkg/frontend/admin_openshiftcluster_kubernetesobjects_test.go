@@ -313,7 +313,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": "ConfigMap",
+					"kind":       "ConfigMap",
 					"apiVersion": "v1",
 					"metadata": map[string]interface{}{
 						"namespace": "openshift-azure-logging",
@@ -333,7 +333,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": "Secret",
+					"kind":       "Secret",
 					"apiVersion": "v1",
 					"metadata": map[string]interface{}{
 						"namespace": "openshift",
@@ -352,7 +352,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": "ConfigMap",
+					"kind":       "ConfigMap",
 					"apiVersion": "v1",
 					"metadata": map[string]interface{}{
 						"namespace": "customer",
@@ -383,6 +383,38 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to cluster-scoped object 'user.openshift.io/, Resource=users' is forbidden.",
+		},
+		{
+			name:       "missing kind",
+			resourceID: resourceID,
+			objInBody: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"metadata": map[string]interface{}{
+						"namespace": "openshift",
+						"name":      "config",
+					},
+				},
+			},
+			mocks:          func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidRequestContent: : The request content was invalid and could not be deserialized: "Object 'Kind' is missing in '{\"apiVersion\":\"v1\",\"metadata\":{\"name\":\"config\",\"namespace\":\"openshift\"}}'".`,
+		},
+		{
+			name:       "missing apiVersion",
+			resourceID: resourceID,
+			objInBody: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "ConfigMap",
+					"metadata": map[string]interface{}{
+						"namespace": "openshift",
+						"name":      "config",
+					},
+				},
+			},
+			mocks:          func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidRequestContent: : The request object must include 'apiVersion'.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
