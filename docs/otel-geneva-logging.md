@@ -29,28 +29,27 @@ The controller always creates the OTEL config ConfigMap first (`config.yaml`, `m
 
 ## Current OTEL log shape
 
-Top-level fields emitted for log source identification:
+All log records include `node`, `source_name`, and `EventName` in `LogsAttributes`. Container log records additionally include `namespace`, `pod`, and `container`.
 
-- `node`
-- `namespace`
-- `pod`
-- `container`
-- `source_name`
-- `EventName`
+### Journald entries
 
-Raw payload retention:
+The OTel journald receiver places all journal fields in the log record body as a map. `transform/log-parity` processes this as follows:
 
-- `raw_json_body` contains the log body after `transform/log-parity` processing.
-- For audit logs, `requestObject` and `responseObject` are removed before `raw_json_body` is set to prevent oversized payload ingestion from `WriteRequestBodies` /
-  `RequestResponse` audit profiles.
+- `Body` is set to the `MESSAGE` string.
+- `LogsAttributes.SYSLOG_IDENTIFIER` is promoted for use by the Kusto ingestion mapping.
+- `LogsAttributes.journald` is a structured map containing the curated journald fields: `PRIORITY`, `MESSAGE`, `SYSLOG_IDENTIFIER`, `UNIT`, structured logging fields (`CODE_FILE`, `CODE_LINE`, `CODE_FUNC`, `TID`), and allowlisted underscore fields (`_PID`, `_SYSTEMD_UNIT`, `_BOOT_ID`). Noisy and low-value fields are pruned.
+- `SeverityText` and `SeverityNumber` are mapped from `PRIORITY` per [OTel log data model Appendix B](https://opentelemetry.io/docs/specs/otel/logs/data-model-appendix/#appendix-b-severitynumber-example-mappings).
 
-Memory limiter behavior:
+### Container and audit entries
 
-- The OTEL `memory_limiter` is configured as a percentage of container memory
-  (`limit_percentage: 80`, `spike_limit_percentage: 15`) so it scales
-  automatically if container memory limits are adjusted.
+- `LogsAttributes.raw_json_body` contains the parsed log body after `transform/log-parity` processing.
+- For audit logs, `requestObject` and `responseObject` are removed before `raw_json_body` is set to prevent oversized payload ingestion from `WriteRequestBodies` / `RequestResponse` audit profiles.
 
-Worker collectors do not include the audit receiver; audit logs are collected on the master/control-plane collector config.
+### Memory limiter
+
+The OTEL `memory_limiter` is configured as a percentage of container memory (`limit_percentage: 80`, `spike_limit_percentage: 15`) so it scales automatically if container memory limits are adjusted.
+
+Worker collectors do not include the audit receiver; audit logs are collected on the master/control-plane collector config only.
 
 ## OTEL operator flags
 

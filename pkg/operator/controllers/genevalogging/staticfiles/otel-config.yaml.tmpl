@@ -403,7 +403,13 @@ not (
   or (IsString(body["SYSLOG_IDENTIFIER"])
       and body["SYSLOG_IDENTIFIER"] == "kubenswrapper"
       and IsString(body["MESSAGE"])
-      and IsMatch(body["MESSAGE"], "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr={{ if .IsControlPlane }}|SyncLoop{{ end }}"))
+      and IsMatch(body["MESSAGE"], "\\b(E|W)[0-9]{4}\\b|ContainerStatus from runtime service failed|\\bFailed\\b|\\bfailed\\b|timed out|timeout|\\berr="))
+  {{ if .IsControlPlane -}}
+  or (IsString(body["SYSLOG_IDENTIFIER"])
+      and body["SYSLOG_IDENTIFIER"] == "kubenswrapper"
+      and IsString(body["MESSAGE"])
+      and IsMatch(body["MESSAGE"], "SyncLoop"))
+  {{- end }}
   or (IsString(body["SYSLOG_IDENTIFIER"])
       and body["SYSLOG_IDENTIFIER"] == "crio"
       and IsString(body["MESSAGE"])

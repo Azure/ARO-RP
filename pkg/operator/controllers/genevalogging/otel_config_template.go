@@ -10,20 +10,21 @@ import (
 	"text/template"
 )
 
-var otelConfigParsedTemplate *template.Template
+var otelConfigParsedTemplate = mustParseOTelConfig()
 
-func init() {
-	otelConfigParsedTemplate = template.New("otel-config").Funcs(template.FuncMap{
+func mustParseOTelConfig() *template.Template {
+	var t *template.Template
+	t = template.New("otel-config").Funcs(template.FuncMap{
 		"include": func(name string, data any) (string, error) {
 			var buf bytes.Buffer
-			err := otelConfigParsedTemplate.ExecuteTemplate(&buf, name, data)
+			err := t.ExecuteTemplate(&buf, name, data)
 			return buf.String(), err
 		},
 		"oneline": func(s string) string {
 			return strings.Join(strings.Fields(s), " ")
 		},
 	})
-	template.Must(otelConfigParsedTemplate.Parse(otelConfigTemplate))
+	return template.Must(t.Parse(otelConfigTemplate))
 }
 
 type otelLogSource struct {
@@ -32,15 +33,7 @@ type otelLogSource struct {
 	EventName string
 }
 
-func renderOTelConfig(profile otelProfile) (string, error) {
-	return renderOTelConfigWithAudit(profile, true)
-}
-
-func renderOTelConfigWithoutAudit(profile otelProfile) (string, error) {
-	return renderOTelConfigWithAudit(profile, false)
-}
-
-func renderOTelConfigWithAudit(profile otelProfile, isControlPlane bool) (string, error) {
+func renderOTelConfig(profile otelProfile, isControlPlane bool) (string, error) {
 	sources := []otelLogSource{
 		{
 			Name:      "journald",
