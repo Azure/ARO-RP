@@ -828,6 +828,7 @@ def aro_identity_get_required(*,
                               disk_encryption_set=None,
                               vnet_resource_group_name=None) -> None:  # pylint: disable=unused-argument
     if vnet is None:
+        validate_subnets(master_subnet, worker_subnet)
         master_parts = parse_resource_id(master_subnet)
         vnet = resource_id(
             subscription=master_parts['subscription'],
@@ -914,6 +915,7 @@ def aro_identity_create_required(*,
     # FIXME:
     # pylint: disable=too-many-locals
     if vnet is None:
+        validate_subnets(master_subnet, worker_subnet)
         master_parts = parse_resource_id(master_subnet)
         vnet = resource_id(
             subscription=master_parts['subscription'],
