@@ -10,10 +10,12 @@ import (
 	"strings"
 	"testing"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -153,6 +155,9 @@ func TestSelectOTelConfig(t *testing.T) {
 	}
 	if !strings.Contains(full, "id: logrus_file_split") {
 		t.Fatal("full config missing logrus file split parser for container logs")
+	}
+	if !strings.Contains(full, "address: 0.0.0.0:8888") {
+		t.Fatal("full config missing telemetry metrics address")
 	}
 
 	reduced, err := selectOTelConfig(otelProfileReducedLogs)
@@ -294,14 +299,39 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 
 	var daemonsetNames []string
 	var foundConfig bool
+	var nsMonitoringLabel string
+	var role *rbacv1.Role
+	var roleBinding *rbacv1.RoleBinding
+	var podMonitor *monitoringv1.PodMonitor
+	var prometheusRule *monitoringv1.PrometheusRule
 	for _, obj := range out {
 		switch typed := obj.(type) {
+		case *corev1.Namespace:
+			if typed.Name == kubeNamespace {
+				nsMonitoringLabel = typed.Labels["openshift.io/cluster-monitoring"]
+			}
 		case *corev1.ConfigMap:
 			if typed.Name == otelConfigMapName {
 				foundConfig = true
 			}
 		case *appsv1.DaemonSet:
 			daemonsetNames = append(daemonsetNames, typed.Name)
+		case *rbacv1.Role:
+			if typed.Name == "prometheus-k8s" {
+				role = typed
+			}
+		case *rbacv1.RoleBinding:
+			if typed.Name == "prometheus-k8s" {
+				roleBinding = typed
+			}
+		case *monitoringv1.PodMonitor:
+			if typed.Name == podMonitorName {
+				podMonitor = typed
+			}
+		case *monitoringv1.PrometheusRule:
+			if typed.Name == prometheusRuleName {
+				prometheusRule = typed
+			}
 		}
 	}
 
@@ -310,6 +340,77 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 	}
 	if !reflect.DeepEqual(daemonsetNames, []string{MasterDaemonsetName, WorkerDaemonsetName}) {
 		t.Fatalf("unexpected daemonsets: %v", daemonsetNames)
+	}
+	if nsMonitoringLabel != "true" {
+		t.Fatalf("namespace missing openshift.io/cluster-monitoring label, got %q", nsMonitoringLabel)
+	}
+	if role == nil {
+		t.Fatal("missing prometheus-k8s Role")
+	} else {
+		if len(role.Rules) != 1 {
+			t.Fatalf("expected 1 role rule, got %d", len(role.Rules))
+		}
+		wantVerbs := []string{"get", "list", "watch"}
+		wantResources := []string{"services", "endpoints", "pods"}
+		if !reflect.DeepEqual(role.Rules[0].Verbs, wantVerbs) {
+			t.Fatalf("unexpected role verbs: got %v, want %v", role.Rules[0].Verbs, wantVerbs)
+		}
+		if !reflect.DeepEqual(role.Rules[0].Resources, wantResources) {
+			t.Fatalf("unexpected role resources: got %v, want %v", role.Rules[0].Resources, wantResources)
+		}
+	}
+	if roleBinding == nil {
+		t.Fatal("missing prometheus-k8s RoleBinding")
+	} else {
+		if len(roleBinding.Subjects) != 1 {
+			t.Fatalf("expected 1 rolebinding subject, got %d", len(roleBinding.Subjects))
+		}
+		if roleBinding.Subjects[0].Name != "prometheus-k8s" || roleBinding.Subjects[0].Namespace != prometheusNamespace {
+			t.Fatalf("unexpected rolebinding subject: got name=%q namespace=%q", roleBinding.Subjects[0].Name, roleBinding.Subjects[0].Namespace)
+		}
+		if roleBinding.RoleRef.Kind != "Role" || roleBinding.RoleRef.Name != "prometheus-k8s" {
+			t.Fatalf("unexpected rolebinding roleref: got kind=%q name=%q", roleBinding.RoleRef.Kind, roleBinding.RoleRef.Name)
+		}
+	}
+	if podMonitor == nil {
+		t.Fatal("missing otel-exporter PodMonitor")
+	} else {
+		if len(podMonitor.Spec.PodMetricsEndpoints) != 1 {
+			t.Fatalf("expected 1 PodMonitor endpoint, got %d", len(podMonitor.Spec.PodMetricsEndpoints))
+		}
+		ep := podMonitor.Spec.PodMetricsEndpoints[0]
+		if ep.Port != "metrics" {
+			t.Fatalf("unexpected PodMonitor endpoint port: %q", ep.Port)
+		}
+		if len(ep.RelabelConfigs) != 1 ||
+			ep.RelabelConfigs[0].SourceLabels[0] != "__meta_kubernetes_pod_node_name" ||
+			ep.RelabelConfigs[0].TargetLabel != "node" {
+			t.Fatalf("unexpected PodMonitor relabel configs: %v", ep.RelabelConfigs)
+		}
+		if len(podMonitor.Spec.Selector.MatchExpressions) != 1 {
+			t.Fatalf("expected 1 match expression, got %d", len(podMonitor.Spec.Selector.MatchExpressions))
+		}
+		me := podMonitor.Spec.Selector.MatchExpressions[0]
+		if me.Key != "app" || me.Operator != metav1.LabelSelectorOpIn {
+			t.Fatalf("unexpected PodMonitor selector: %v", me)
+		}
+		if !reflect.DeepEqual(me.Values, []string{MasterDaemonsetName, WorkerDaemonsetName}) {
+			t.Fatalf("unexpected PodMonitor selector values: got %v", me.Values)
+		}
+	}
+	if prometheusRule == nil {
+		t.Fatal("missing otel-exporter-alerts PrometheusRule")
+	} else {
+		if len(prometheusRule.Spec.Groups) != 1 {
+			t.Fatalf("expected 1 rule group, got %d", len(prometheusRule.Spec.Groups))
+		}
+		rules := prometheusRule.Spec.Groups[0].Rules
+		if len(rules) != 1 || rules[0].Alert != "OTelExporterNoLogsShippedSRE" {
+			t.Fatalf("unexpected PrometheusRule rules: %v", rules)
+		}
+		if rules[0].Labels["severity"] != "critical" {
+			t.Fatalf("unexpected alert severity: %q", rules[0].Labels["severity"])
+		}
 	}
 }
 
@@ -354,6 +455,15 @@ func TestOTelDaemonSets(t *testing.T) {
 			if env.Name == "ENVIRONMENT" {
 				t.Fatalf("unexpected ENVIRONMENT var for %s", ds.Name)
 			}
+		}
+		var foundMetricsPort bool
+		for _, p := range exporter.Ports {
+			if p.Name == "metrics" && p.ContainerPort == 8888 {
+				foundMetricsPort = true
+			}
+		}
+		if !foundMetricsPort {
+			t.Fatalf("missing metrics port 8888 in %s", ds.Name)
 		}
 	}
 }
@@ -473,7 +583,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 	}
 
 	var daemonsetCount int
-	var foundConfig bool
+	var foundConfig, foundRole, foundRoleBinding, foundPodMonitor, foundPrometheusRule bool
 	for _, obj := range out {
 		switch typed := obj.(type) {
 		case *corev1.ConfigMap:
@@ -482,6 +592,22 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 			}
 		case *appsv1.DaemonSet:
 			daemonsetCount++
+		case *rbacv1.Role:
+			if typed.Name == "prometheus-k8s" {
+				foundRole = true
+			}
+		case *rbacv1.RoleBinding:
+			if typed.Name == "prometheus-k8s" {
+				foundRoleBinding = true
+			}
+		case *monitoringv1.PodMonitor:
+			if typed.Name == podMonitorName {
+				foundPodMonitor = true
+			}
+		case *monitoringv1.PrometheusRule:
+			if typed.Name == prometheusRuleName {
+				foundPrometheusRule = true
+			}
 		}
 	}
 
@@ -490,6 +616,18 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 	}
 	if daemonsetCount != 0 {
 		t.Fatalf("expected no daemonsets before gateway endpoint is ready, got %d", daemonsetCount)
+	}
+	if !foundRole {
+		t.Fatal("missing prometheus-k8s Role before gateway endpoint is ready")
+	}
+	if !foundRoleBinding {
+		t.Fatal("missing prometheus-k8s RoleBinding before gateway endpoint is ready")
+	}
+	if !foundPodMonitor {
+		t.Fatal("missing otel-exporter PodMonitor before gateway endpoint is ready")
+	}
+	if !foundPrometheusRule {
+		t.Fatal("missing otel-exporter-alerts PrometheusRule before gateway endpoint is ready")
 	}
 }
 
