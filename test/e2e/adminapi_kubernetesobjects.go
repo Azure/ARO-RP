@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -30,7 +30,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 		const containerName = "e2e-test-container-name"
 
 		It("should be able to create, get, list, update and delete both core and non-core group objects", func(ctx context.Context) {
-			const clusterRoleName = "e2e-test-clusterrole"
+			const leaseName = "e2e-test-lease"
 			defer func() {
 				By("deleting the config map via Kubernetes API")
 				CleanupK8sResource[*corev1.ConfigMap](
@@ -40,9 +40,9 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				CleanupK8sResource[*corev1.Pod](
 					ctx, clients.Kubernetes.CoreV1().Pods(namespace), objName,
 				)
-				By("deleting the ClusterRole via Kubernetes API")
-				CleanupK8sResource[*rbacv1.ClusterRole](
-					ctx, clients.Kubernetes.RbacV1().ClusterRoles(), clusterRoleName,
+				By("deleting the Lease via Kubernetes API")
+				CleanupK8sResource[*coordinationv1.Lease](
+					ctx, clients.Kubernetes.CoordinationV1().Leases(namespace), leaseName,
 				)
 			}()
 
@@ -54,10 +54,10 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 			testConfigMapDeleteOK(ctx, objName, namespace)
 			testPodCreateOK(ctx, containerName, objName, namespace)
 			testPodForceDeleteOK(ctx, objName, namespace)
-			testClusterRoleCreateOK(ctx, clusterRoleName)
-			testClusterRoleGetOK(ctx, clusterRoleName)
-			testClusterRoleUpdateOK(ctx, clusterRoleName)
-			testClusterRoleDeleteOK(ctx, clusterRoleName)
+			testLeaseCreateOK(ctx, leaseName, namespace)
+			testLeaseGetOK(ctx, leaseName, namespace)
+			testLeaseUpdateOK(ctx, leaseName, namespace)
+			testLeaseDeleteOK(ctx, leaseName, namespace)
 		})
 
 		testSecretOperationsForbidden(objName, namespace)
@@ -420,86 +420,75 @@ func mockConfigMap(name, namespace string) corev1.ConfigMap {
 	}
 }
 
-func mockClusterRole(name string) rbacv1.ClusterRole {
-	return rbacv1.ClusterRole{
+func mockLease(name, namespace string) coordinationv1.Lease {
+	return coordinationv1.Lease{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "Lease",
+			APIVersion: "coordination.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				Verbs:     []string{"get"},
-				Resources: []string{"configmaps"},
-				APIGroups: []string{""},
-			},
+			Name:      name,
+			Namespace: namespace,
 		},
 	}
 }
 
-func testClusterRoleCreateOK(ctx context.Context, name string) {
-	By("creating a ClusterRole via RP admin API")
-	obj := mockClusterRole(name)
+func testLeaseCreateOK(ctx context.Context, name, namespace string) {
+	By("creating a Lease via RP admin API")
+	obj := mockLease(name, namespace)
 	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-	By("checking that the ClusterRole was created via Kubernetes API")
-	getFunc := clients.Kubernetes.RbacV1().ClusterRoles().Get
-	cr := GetK8sObjectWithRetry(ctx, getFunc, name, metav1.GetOptions{})
-	Expect(cr.Name).To(Equal(name))
-	Expect(cr.Rules).To(HaveLen(1))
-	Expect(cr.Rules[0].Verbs).To(Equal([]string{"get"}))
+	By("checking that the Lease was created via Kubernetes API")
+	getFunc := clients.Kubernetes.CoordinationV1().Leases(namespace).Get
+	lease := GetK8sObjectWithRetry(ctx, getFunc, name, metav1.GetOptions{})
+	Expect(lease.Name).To(Equal(name))
+	Expect(lease.Namespace).To(Equal(namespace))
 }
 
-func testClusterRoleGetOK(ctx context.Context, name string) {
-	By("getting a ClusterRole via RP admin API")
+func testLeaseGetOK(ctx context.Context, name, namespace string) {
+	By("getting a Lease via RP admin API")
 	params := url.Values{
-		"kind": []string{"ClusterRole.rbac.authorization.k8s.io"},
-		"name": []string{name},
+		"kind":      []string{"Lease.coordination.k8s.io"},
+		"namespace": []string{namespace},
+		"name":      []string{name},
 	}
-	var obj rbacv1.ClusterRole
+	var obj coordinationv1.Lease
 	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &obj)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	Expect(obj.Name).To(Equal(name))
 }
 
-func testClusterRoleUpdateOK(ctx context.Context, name string) {
-	By("updating the ClusterRole via RP admin API")
-	obj := mockClusterRole(name)
-	obj.Rules = []rbacv1.PolicyRule{
-		{
-			Verbs:     []string{"get", "list"},
-			Resources: []string{"configmaps"},
-			APIGroups: []string{""},
-		},
-	}
+func testLeaseUpdateOK(ctx context.Context, name, namespace string) {
+	By("updating the Lease via RP admin API")
+	obj := mockLease(name, namespace)
+	obj.Labels = map[string]string{"updated": "true"}
 	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-	By("checking that the ClusterRole was updated via Kubernetes API")
-	getFunc := clients.Kubernetes.RbacV1().ClusterRoles().Get
-	cr := GetK8sObjectWithRetry(ctx, getFunc, name, metav1.GetOptions{})
-	Expect(cr.Rules[0].Verbs).To(Equal([]string{"get", "list"}))
+	By("checking that the Lease was updated via Kubernetes API")
+	getFunc := clients.Kubernetes.CoordinationV1().Leases(namespace).Get
+	lease := GetK8sObjectWithRetry(ctx, getFunc, name, metav1.GetOptions{})
+	Expect(lease.Labels).To(HaveKeyWithValue("updated", "true"))
 }
 
-func testClusterRoleDeleteOK(ctx context.Context, name string) {
-	By("deleting the ClusterRole via RP admin API")
+func testLeaseDeleteOK(ctx context.Context, name, namespace string) {
+	By("deleting the Lease via RP admin API")
 	params := url.Values{
-		"kind": []string{"ClusterRole.rbac.authorization.k8s.io"},
-		"name": []string{name},
+		"kind":      []string{"Lease.coordination.k8s.io"},
+		"namespace": []string{namespace},
+		"name":      []string{name},
 	}
 	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-	By("waiting for the ClusterRole to be deleted")
+	By("waiting for the Lease to be deleted")
 	Eventually(func(g Gomega, ctx context.Context) {
-		_, err = clients.Kubernetes.RbacV1().ClusterRoles().Get(ctx, name, metav1.GetOptions{})
-		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect ClusterRole to be deleted")
+		_, err = clients.Kubernetes.CoordinationV1().Leases(namespace).Get(ctx, name, metav1.GetOptions{})
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Lease to be deleted")
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
