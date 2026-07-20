@@ -8,11 +8,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"net"
 	"strings"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -28,7 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-var privilegedNamespaceLabels = map[string]string{
+var privilegedPodSecurityLabels = map[string]string{
 	"pod-security.kubernetes.io/enforce": "privileged",
 	"pod-security.kubernetes.io/audit":   "privileged",
 	"pod-security.kubernetes.io/warn":    "privileged",
@@ -38,8 +42,14 @@ const (
 	masterRoleLabel       = "node-role.kubernetes.io/master"
 	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
 
-	MasterDaemonsetName = "otel-exporter-master"
-	WorkerDaemonsetName = "otel-exporter-worker"
+	MasterDaemonsetName    = "otel-exporter-master"
+	WorkerDaemonsetName    = "otel-exporter-worker"
+	podMonitorName         = "otel-exporter"
+	prometheusRuleName     = "otel-exporter-alerts"
+	prometheusNamespace    = "openshift-monitoring"
+	prometheusK8s          = "prometheus-k8s"
+	otelMetricsPort        = 8888
+	clusterMonitoringLabel = "openshift.io/cluster-monitoring"
 )
 
 var (
@@ -62,16 +72,16 @@ func (r *Reconciler) securityContextConstraints(ctx context.Context, name, servi
 	return scc, nil
 }
 
-// namespaceLabels adds proper namespace labels for the privileged geneva logging
-// daemonset on OpenShift 4.11+
-func (r *Reconciler) namespaceLabels(ctx context.Context) (map[string]string, error) {
+// namespaceSecurityLabels returns the pod security admission labels for the
+// privileged geneva logging namespace on OpenShift 4.11+.
+func (r *Reconciler) namespaceSecurityLabels(ctx context.Context) (map[string]string, error) {
 	usePodSecurityAdmission, err := pkgoperator.ShouldUsePodSecurityStandard(ctx, r.Client)
 	if err != nil {
 		return nil, err
 	}
 
 	if usePodSecurityAdmission {
-		return privilegedNamespaceLabels, nil
+		return privilegedPodSecurityLabels, nil
 	}
 
 	return map[string]string{}, nil
@@ -83,10 +93,12 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
-	nsLabels, err := r.namespaceLabels(ctx)
+	podSecurityLabels, err := r.namespaceSecurityLabels(ctx)
 	if err != nil {
 		return nil, err
 	}
+	nsLabels := maps.Clone(podSecurityLabels)
+	nsLabels[clusterMonitoringLabel] = "true"
 
 	resources := []kruntime.Object{
 		&corev1.Namespace{
@@ -103,6 +115,95 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 			},
 		},
 		scc,
+		&rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prometheusK8s,
+				Namespace: kubeNamespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"services", "endpoints", "pods"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prometheusK8s,
+				Namespace: kubeNamespace,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     prometheusK8s,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      prometheusK8s,
+					Namespace: prometheusNamespace,
+				},
+			},
+		},
+		&monitoringv1.PodMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      podMonitorName,
+				Namespace: kubeNamespace,
+			},
+			Spec: monitoringv1.PodMonitorSpec{
+				Selector: metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "app",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{MasterDaemonsetName, WorkerDaemonsetName},
+						},
+					},
+				},
+				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+					{
+						Port: "metrics",
+						RelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []string{"__meta_kubernetes_pod_node_name"},
+								TargetLabel:  "node",
+							},
+						},
+					},
+				},
+			},
+		},
+		&monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      prometheusRuleName,
+				Namespace: kubeNamespace,
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{
+					{
+						Name: "sre-otel-exporter-alerts",
+						Rules: []monitoringv1.Rule{
+							{
+								Alert: "OTelExporterNoLogsShippedSRE",
+								For:   "10m",
+								Expr: intstr.FromString(
+									`kube_pod_info{namespace="` + kubeNamespace + `",created_by_kind="DaemonSet",pod=~"otel-exporter-.*"} unless on(pod) ((up{namespace="` + kubeNamespace + `"} == 1) * on(pod) group_left() (sum by (pod) (rate(otelcol_exporter_sent_log_records{namespace="` + kubeNamespace + `"}[1h])) > 0))`,
+								),
+								Labels: map[string]string{
+									"severity":  "critical",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter on {{ $labels.node }} has not shipped logs`,
+									"description": `OTel exporter pod {{ $labels.pod }} on node {{ $labels.node }} has not exported any log records in the past hour`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	profiles, err := getOTelProfiles(cluster.Spec.OperatorFlags)
@@ -337,6 +438,10 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 									{
 										Name:          "health",
 										ContainerPort: 13133,
+									},
+									{
+										Name:          "metrics",
+										ContainerPort: otelMetricsPort,
 									},
 								},
 								LivenessProbe: &corev1.Probe{
