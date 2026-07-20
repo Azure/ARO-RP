@@ -99,7 +99,7 @@ func (f *frontend) fixEtcd(ctx context.Context, log *logrus.Entry, env env.Inter
 		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	rawEtcd, err := kubeActions.KubeGet(ctx, "Etcd", "", "cluster")
+	rawEtcd, err := kubeActions.KubeGet(ctx, "Etcd.operator.openshift.io", "", "cluster")
 	if err != nil {
 		return allLogs, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
@@ -322,7 +322,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 
 	log.Infof("Deleting %s now", podFixPeers.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	err = kubeActions.KubeDelete(ctx, podFixPeers.GetKind(), namespaceEtcds, podFixPeers.GetName(), true, &propPolicy)
+	err = kubeActions.KubeDelete(ctx, podFixPeers.GroupVersionKind().GroupKind().String(), namespaceEtcds, podFixPeers.GetName(), true, &propPolicy)
 	if err != nil {
 		return containerLogs, err
 	}
@@ -447,16 +447,16 @@ func createPrivilegedServiceAccount(ctx context.Context, log *logrus.Entry, name
 		var errs []error
 
 		log.Infof("Deleting service account %s now", serviceAcc.GetName())
-		errs = append(errs, kubeDeleteIgnoreNotFound(serviceAcc.GetKind(), serviceAcc.GetNamespace(), serviceAcc.GetName()))
+		errs = append(errs, kubeDeleteIgnoreNotFound(serviceAcc.GroupVersionKind().GroupKind().String(), serviceAcc.GetNamespace(), serviceAcc.GetName()))
 
 		log.Infof("Deleting security context constraint %s now", scc.GetName())
-		errs = append(errs, kubeDeleteIgnoreNotFound(scc.GetKind(), scc.GetNamespace(), scc.GetName())) // namespace "" is correct for cluster-scoped SCC
+		errs = append(errs, kubeDeleteIgnoreNotFound(scc.GroupVersionKind().GroupKind().String(), scc.GetNamespace(), scc.GetName()))
 
 		log.Infof("Deleting cluster role %s now", clusterRole.GetName())
-		errs = append(errs, kubeDeleteIgnoreNotFound(clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName()))
+		errs = append(errs, kubeDeleteIgnoreNotFound(clusterRole.GroupVersionKind().GroupKind().String(), clusterRole.GetNamespace(), clusterRole.GetName()))
 
 		log.Infof("Deleting cluster role binding %s now", crb.GetName())
-		errs = append(errs, kubeDeleteIgnoreNotFound(crb.GetKind(), crb.GetNamespace(), crb.GetName()))
+		errs = append(errs, kubeDeleteIgnoreNotFound(crb.GroupVersionKind().GroupKind().String(), crb.GetNamespace(), crb.GetName()))
 
 		return errors.Join(errs...)
 	}
@@ -517,7 +517,7 @@ func backupEtcdData(ctx context.Context, log *logrus.Entry, node string, kubeAct
 
 	log.Infof("Deleting pod %s now", podDataBackup.GetName())
 	propPolicy := metav1.DeletePropagationBackground
-	return containerLogs, kubeActions.KubeDelete(ctx, podDataBackup.GetKind(), namespaceEtcds, podDataBackup.GetName(), true, &propPolicy)
+	return containerLogs, kubeActions.KubeDelete(ctx, podDataBackup.GroupVersionKind().GroupKind().String(), namespaceEtcds, podDataBackup.GetName(), true, &propPolicy)
 }
 
 func waitForPodSucceed(ctx context.Context, log *logrus.Entry, watcher watch.Interface) error {
