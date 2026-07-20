@@ -314,6 +314,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": "ConfigMap",
+					"apiVersion": "v1",
 					"metadata": map[string]interface{}{
 						"namespace": "openshift-azure-logging",
 						"name":      "config",
@@ -333,6 +334,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": "Secret",
+					"apiVersion": "v1",
 					"metadata": map[string]interface{}{
 						"namespace": "openshift",
 						"name":      "secret",
@@ -351,6 +353,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": "ConfigMap",
+					"apiVersion": "v1",
 					"metadata": map[string]interface{}{
 						"namespace": "customer",
 						"name":      "config",
@@ -376,7 +379,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 				},
 			},
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().ResolveGVR(tt.objInBody.GetKind(), "").Return(schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"}, nil)
+				k.EXPECT().ResolveGVR("User.user.openshift.io", "").Return(schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"}, nil)
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to cluster-scoped object 'user.openshift.io/, Resource=users' is forbidden.",
