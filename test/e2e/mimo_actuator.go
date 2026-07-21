@@ -123,7 +123,7 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 
 		flag, ok := co.Spec.OperatorFlags[testflag]
 		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
+		Expect(flag).To(Equal(operator.FlagTrue), "MIMO manifest has not run")
 	})
 
 	It("Syncing the Cluster doc via MIMO should work", func(ctx context.Context) {
@@ -191,7 +191,7 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 
 		flag, ok := co.Spec.OperatorFlags[testflag]
 		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
+		Expect(flag).To(Equal(operator.FlagTrue), "MIMO manifest has not run")
 	})
 
 	It("Should set Geneva logging OTel profiles via MIMO maintenance manifests", func(ctx context.Context) {
