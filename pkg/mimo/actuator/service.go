@@ -130,6 +130,13 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		emitHeartbeat:         true,
 	}
 
+	// In CI/E2E we need to refresh the clusters more often for responsiveness,
+	// since we are going to immediately be creating tasks
+	if env.IsLocalDevelopmentMode() || env.IsCI() {
+		s.changefeedInterval = 1 * time.Minute
+		s.changefeedReadinessInterval = 2 * time.Minute
+	}
+
 	s.b = buckets.NewBucketWorkerPool[*api.OpenShiftClusterDocument](log, s.worker)
 	return s
 }
