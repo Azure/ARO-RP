@@ -6,6 +6,7 @@ package actuator
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 
@@ -22,6 +23,10 @@ var (
 type azClients struct {
 	fpCred azcore.TokenCredential
 
+	// mu guards lazy initialization of the client fields below, which may be
+	// accessed concurrently if a task fans work out across goroutines.
+	mu sync.Mutex
+
 	// Store these as pointers to interfaces so that nil values make sense, as
 	// interfaces with a nil value are a pain to determine
 	interfacesClient          *armnetwork.InterfacesClient
@@ -33,6 +38,9 @@ type azClients struct {
 }
 
 func (t *th) setupAzureClients() error {
+	t.azMu.Lock()
+	defer t.azMu.Unlock()
+
 	if t.az == nil {
 		if t.sub == nil || t.sub.Subscription == nil || t.sub.Subscription.Properties == nil || t.sub.Subscription.Properties.TenantID == "" {
 			return errInvalidSubDoc
@@ -54,6 +62,9 @@ func (t *th) LoadBalancersClient() (armnetwork.LoadBalancersClient, error) {
 		return nil, err
 	}
 
+	t.az.mu.Lock()
+	defer t.az.mu.Unlock()
+
 	if t.az.loadBalancerClient == nil {
 		armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
@@ -71,6 +82,9 @@ func (t *th) ResourceSKUsClient() (armcompute.ResourceSKUsClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	t.az.mu.Lock()
+	defer t.az.mu.Unlock()
 
 	if t.az.resourceSKUsClient == nil {
 		resourceSKUsClient, err := armcompute.NewResourceSKUsClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
@@ -90,6 +104,9 @@ func (t *th) PrivateLinkServicesClient() (armnetwork.PrivateLinkServicesClient, 
 		return nil, err
 	}
 
+	t.az.mu.Lock()
+	defer t.az.mu.Unlock()
+
 	if t.az.privateLinkServicesClient == nil {
 		privateLinkServicesClient, err := armnetwork.NewPrivateLinkServicesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
@@ -107,6 +124,9 @@ func (t *th) InterfacesClient() (armnetwork.InterfacesClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	t.az.mu.Lock()
+	defer t.az.mu.Unlock()
 
 	if t.az.interfacesClient == nil {
 		interfacesClient, err := armnetwork.NewInterfacesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
@@ -126,6 +146,9 @@ func (t *th) TokensClient() (armcontainerregistry.TokensClient, error) {
 		return nil, err
 	}
 
+	t.az.mu.Lock()
+	defer t.az.mu.Unlock()
+
 	if t.az.tokensClient == nil {
 		tokensClient, err := armcontainerregistry.NewTokensClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
 		if err != nil {
@@ -143,6 +166,9 @@ func (t *th) RegistriesClient() (armcontainerregistry.RegistriesClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	t.az.mu.Lock()
+	defer t.az.mu.Unlock()
 
 	if t.az.registriesClient == nil {
 		registriesClient, err := armcontainerregistry.NewRegistriesClient(t.sub.ID, t.az.fpCred, t.env.ArmClientOptions())
