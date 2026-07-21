@@ -160,9 +160,12 @@ func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan erro
 	}
 }
 
-// initializeClients initialize the necassary clients for the specified cluster
-// if some clients fail to be initialized, it also returns the list of enrichers
-// that we should skip because the clients they are using failed to instantiate
+// initializeClients initializes the necessary clients for the specified
+// cluster. The config client remains in the shared enricher interface for
+// compatibility, but it is no longer initialized here because no registered
+// enricher consumes it after the cluster version overlay was removed. It also
+// returns the list of enrichers we should skip because the clients they use
+// failed to instantiate.
 func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) (
 	k8s kubernetes.Interface, machineclient machineclient.Interface, operatorclient operatorclient.Interface, configclient configclient.Interface, unsuccessfulEnrichers map[string]bool,
 ) {
