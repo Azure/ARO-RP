@@ -203,7 +203,7 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		By("checking the flag has been set back in the cluster")
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			g.Expect(err).NotTo(HaveOccurred())
 
 			flag, ok := co.Spec.OperatorFlags[mimoTestFlag2]
 			g.Expect(ok).To(BeTrue())

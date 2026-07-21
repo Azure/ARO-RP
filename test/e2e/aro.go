@@ -68,7 +68,7 @@ var _ = Describe("ARO Cluster", Label(install), func() {
 		// Don't worry about additional flags as those can get set in various
 		// tests and can depend on order.
 		for k, v := range operator.DefaultOperatorFlags() {
-			Expect(actualFlags).To(HaveKeyWithValue(k, v))
+			Expect(co.Spec.OperatorFlags).To(HaveKeyWithValue(k, v))
 		}
 
 		By("verifying InternetChecker exists")
