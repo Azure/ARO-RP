@@ -118,12 +118,11 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("checking the flag has been set back in the cluster")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		flag, ok := co.Spec.OperatorFlags[testflag]
-		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(co.Spec.OperatorFlags).To(HaveKeyWithValue(testflag, operator.FlagTrue), "MIMO manifest has not run")
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("Syncing the Cluster doc via MIMO should work", func(ctx context.Context) {
@@ -186,12 +185,11 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("checking the flag has been set back in the cluster")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		flag, ok := co.Spec.OperatorFlags[testflag]
-		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(co.Spec.OperatorFlags).To(HaveKeyWithValue(testflag, operator.FlagTrue), "MIMO manifest has not run")
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("Should set Geneva logging OTel profiles via MIMO maintenance manifests", func(ctx context.Context) {
