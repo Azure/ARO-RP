@@ -462,10 +462,20 @@ func testLeaseGetOK(ctx context.Context, name, namespace string) {
 }
 
 func testLeaseUpdateOK(ctx context.Context, name, namespace string) {
+	By("getting the existing Lease via RP admin API")
+	params := url.Values{
+		"kind":      []string{"Lease.coordination.k8s.io"},
+		"namespace": []string{namespace},
+		"name":      []string{name},
+	}
+	var obj coordinationv1.Lease
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &obj)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
 	By("updating the Lease via RP admin API")
-	obj := mockLease(name, namespace)
 	obj.Labels = map[string]string{"updated": "true"}
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
+	resp, err = adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
