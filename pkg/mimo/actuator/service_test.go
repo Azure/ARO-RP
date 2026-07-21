@@ -133,6 +133,7 @@ func TestActuatorPolling(t *testing.T) {
 			_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
 				return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 			})
+			_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
 			hook, log := testlog.LogForTesting(t)
 
 			fixtures := testdatabase.NewFixture()
@@ -184,6 +185,7 @@ func TestActuatorPerformsMaintenance(t *testing.T) {
 	_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
 		return time.Unix(120, 0)
 	})
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
 
 	_, log := testlog.LogForTesting(t)
 	ourUUID := uuid.DefaultGenerator.Generate()
@@ -389,6 +391,7 @@ func TestActuatorGoesReadyEvenIfNoWork(t *testing.T) {
 	controller := gomock.NewController(t)
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
 
 	_, log := testlog.LogForTesting(t)
 	fixtures := testdatabase.NewFixture()
@@ -485,6 +488,7 @@ func TestActuatorStopsIfBucketFailureOnStartup(t *testing.T) {
 	controller := gomock.NewController(t)
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
 
 	hook, log := testlog.LogForTesting(t)
 	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
