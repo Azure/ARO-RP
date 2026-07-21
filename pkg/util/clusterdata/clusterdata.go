@@ -52,7 +52,6 @@ type clients struct {
 const (
 	servicePrincipal = "servicePrincipal"
 	ingressProfile   = "ingressProfile"
-	clusterVersion   = "clusterVersion"
 	machineClient    = "machineClient"
 )
 
@@ -62,7 +61,6 @@ func NewParallelEnricher(metricsEmitter metrics.Emitter, dialer proxy.Dialer) Pa
 		enrichers: map[string]ClusterEnricher{
 			servicePrincipal: clusterServicePrincipalEnricher{},
 			ingressProfile:   ingressProfileEnricher{},
-			clusterVersion:   clusterVersionEnricher{},
 			machineClient:    machineClientEnricher{},
 		},
 		dialer: dialer,
@@ -185,11 +183,6 @@ func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Ent
 		unsuccessfulEnrichers[ingressProfile] = true
 		p.taskError(log, err, 1)
 	}
-	configclient, err = p.setupConfigClient(ctx, oc)
-	if err != nil {
-		unsuccessfulEnrichers[clusterVersion] = true
-		p.taskError(log, err, 1)
-	}
 	return k8s, machineclient, operatorclient, configclient, unsuccessfulEnrichers
 }
 
@@ -205,15 +198,6 @@ func (p ParallelEnricher) setupK8sClient(ctx context.Context, oc *api.OpenShiftC
 	}
 
 	return kubernetes.NewForConfig(restConfig)
-}
-
-func (p ParallelEnricher) setupConfigClient(ctx context.Context, oc *api.OpenShiftCluster) (configclient.Interface, error) {
-	restConfig, err := restconfig.RestConfig(p.dialer, oc)
-	if err != nil {
-		return nil, err
-	}
-
-	return configclient.NewForConfig(restConfig)
 }
 
 func (p ParallelEnricher) setupOperatorClient(ctx context.Context, oc *api.OpenShiftCluster) (operatorclient.Interface, error) {
