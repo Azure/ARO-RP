@@ -43,6 +43,17 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 			Eventually(func(g Gomega, ctx context.Context) {
 				oc = adminGetCluster(g, ctx, clusterResourceID)
 				g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+
+				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+
+				actualFlags := make(map[string]string, len(co.Spec.OperatorFlags))
+				for k, v := range co.Spec.OperatorFlags {
+					if k != "aro.environment" {
+						actualFlags[k] = v
+					}
+				}
+				g.Expect(actualFlags).To(BeEquivalentTo(operator.DefaultOperatorFlags()))
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		})
 	})
@@ -62,15 +73,11 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			oc = adminGetCluster(g, ctx, clusterResourceID)
 			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(co.Spec.OperatorFlags).To(HaveKeyWithValue(testflag, operator.FlagTrue))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("check the flag is set in the cluster")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		flag, ok := co.Spec.OperatorFlags[testflag]
-		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"))
 
 		By("change the flag in-cluster to a wrong value")
 		// get the flag we want to check for
@@ -111,10 +118,10 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("checking the flag has been set back in the cluster")
-		co, err = clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		flag, ok = co.Spec.OperatorFlags[testflag]
+		flag, ok := co.Spec.OperatorFlags[testflag]
 		Expect(ok).To(BeTrue())
 		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
 	})
@@ -134,15 +141,11 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			oc = adminGetCluster(g, ctx, clusterResourceID)
 			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(co.Spec.OperatorFlags).To(HaveKeyWithValue(testflag, operator.FlagTrue))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("check the flag is set in the cluster")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		flag, ok := co.Spec.OperatorFlags[testflag]
-		Expect(ok).To(BeTrue())
-		Expect(flag).To(Equal("true"))
 
 		By("change the flag in-cluster to a wrong value")
 		// get the flag we want to check for
@@ -183,10 +186,10 @@ var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("checking the flag has been set back in the cluster")
-		co, err = clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		flag, ok = co.Spec.OperatorFlags[testflag]
+		flag, ok := co.Spec.OperatorFlags[testflag]
 		Expect(ok).To(BeTrue())
 		Expect(flag).To(Equal("true"), "MIMO manifest has not run")
 	})
