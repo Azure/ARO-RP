@@ -11,13 +11,13 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestVMSerialConsole(t *testing.T) {
@@ -46,7 +46,6 @@ func TestVMSerialConsole(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
@@ -54,7 +53,7 @@ func TestVMSerialConsole(t *testing.T) {
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
 
 			tt.mocks(vmClient)
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			a := azureActions{
 				log: log,
 				env: env,

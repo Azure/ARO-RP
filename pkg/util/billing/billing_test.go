@@ -10,13 +10,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDelete(t *testing.T) {
@@ -97,11 +97,7 @@ func TestDelete(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var err error
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			billingDatabase, billingClient := testdatabase.NewFakeBilling()
 			subscriptionsDatabase, _ := testdatabase.NewFakeSubscriptions()
@@ -112,7 +108,7 @@ func TestDelete(t *testing.T) {
 					WithBilling(billingDatabase).
 					WithSubscriptions(subscriptionsDatabase)
 				tt.fixture(fixture)
-				err = fixture.Create()
+				err := fixture.Create()
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -127,7 +123,7 @@ func TestDelete(t *testing.T) {
 				billingDB: billingDatabase,
 			}
 
-			err = m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
+			err := m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantDocuments != nil {
@@ -265,12 +261,11 @@ func TestEnsure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var err error
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
-			log := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			billingDatabase, billingClient := testdatabase.NewFakeBilling()
 			subscriptionsDatabase, _ := testdatabase.NewFakeSubscriptions()

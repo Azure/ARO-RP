@@ -298,7 +298,6 @@ func TestStepRunner(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			h, log := testlog.New()
 			steps := tt.steps(controller)

@@ -9,7 +9,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -24,6 +23,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiljson "github.com/Azure/ARO-RP/test/util/json"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func validListByResourceGroupMock(resources *mock_features.MockResourcesClient) {
@@ -206,8 +206,9 @@ func TestResourcesList(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return("eastus")
@@ -225,7 +226,7 @@ func TestResourcesList(t *testing.T) {
 			tt.mocks(virtualNetworks, routeTables, diskEncryptionSets, networkSecurityGroups)
 
 			a := azureActions{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				env: env,
 				oc: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{

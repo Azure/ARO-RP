@@ -7,17 +7,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitClusterAuthenticationType(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockMetrics := mock_metrics.NewMockEmitter(ctrl)
 
@@ -44,6 +43,8 @@ func TestEmitClusterAuthenticationType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			oc := &api.OpenShiftCluster{}
 
 			if tt.useWorkloadIdentity {
@@ -57,7 +58,7 @@ func TestEmitClusterAuthenticationType(t *testing.T) {
 			mon := &Monitor{
 				oc:  oc,
 				m:   mockMetrics,
-				log: logrus.NewEntry(logrus.New()),
+				log: log,
 			}
 
 			mockMetrics.EXPECT().EmitGauge(authenticationTypeMetricsTopic, int64(1), tt.expectMetric).Times(1)

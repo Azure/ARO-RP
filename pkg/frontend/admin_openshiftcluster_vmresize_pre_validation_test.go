@@ -316,7 +316,6 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 
 	t.Run("propagates Azure SDK error from GetVirtualMachine as 500", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -347,7 +346,6 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 
 	t.Run("propagates Kube API error from getClusterMachines as 500", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -368,7 +366,6 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 
 	t.Run("rejects inconsistent control plane node labels", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -1095,11 +1092,10 @@ func TestValidateResizeControlPlaneInventoryNormalizesJoinedErrorLineEndings(t *
 
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
 
 	k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).
 		Return(masterMachineListJSON(
@@ -1479,7 +1475,6 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			t.Parallel()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			computeUsageClient := mock_compute.NewMockUsageClient(controller)
 			tt.mocks(computeUsageClient)
@@ -1551,7 +1546,6 @@ func TestValidateVMSP(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
@@ -1625,7 +1619,6 @@ func TestValidateAPIServerHealth(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
@@ -1714,7 +1707,6 @@ func TestValidateAPIServerPods(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
@@ -1788,7 +1780,6 @@ func TestValidateEtcdHealth(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)

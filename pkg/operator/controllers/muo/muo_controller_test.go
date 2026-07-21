@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMUOReconciler(t *testing.T) {
@@ -150,9 +150,10 @@ func TestMUOReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			instance := &arov1alpha1.Cluster{
 				TypeMeta: metav1.TypeMeta{
@@ -191,7 +192,7 @@ func TestMUOReconciler(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				deployer:          deployer,
 				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,

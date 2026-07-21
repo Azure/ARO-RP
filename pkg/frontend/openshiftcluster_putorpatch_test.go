@@ -737,7 +737,6 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
@@ -1141,7 +1140,6 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
@@ -1640,7 +1638,6 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()

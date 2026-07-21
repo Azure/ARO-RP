@@ -8,8 +8,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -24,6 +22,7 @@ import (
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEmitHiveRegistrationStatus(t *testing.T) {
@@ -87,8 +86,7 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 			mockHiveClusterManager := mock_hive.NewMockClusterManager(ctrl)
 			mockHiveClusterManager.EXPECT().GetClusterDeployment(ctx, gomock.Any()).Return(tt.cd, tt.getClusterDeploymentError).AnyTimes()
 
-			logger, hook := test.NewNullLogger()
-			log := logrus.NewEntry(logger)
+			hook, log := testlog.LogForTesting(t)
 
 			mon := &Monitor{
 				hiveClusterManager: mockHiveClusterManager,
@@ -205,7 +203,6 @@ func TestEmitFilteredClusterDeploymentMetrics(t *testing.T) {
 	}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	m := mock_metrics.NewMockEmitter(controller)
 	mon := &Monitor{

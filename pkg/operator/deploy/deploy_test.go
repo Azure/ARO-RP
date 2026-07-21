@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -326,9 +325,10 @@ func TestCreateDeploymentData(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().Return(tt.expected.IsLocalDevelopment).AnyTimes()
@@ -354,7 +354,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			o := operator{
 				oc:     oc,
 				env:    env,
-				client: clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), testclienthelper.NewAROFakeClientBuilder(cv).Build()),
+				client: clienthelper.NewWithClient(log, testclienthelper.NewAROFakeClientBuilder(cv).Build()),
 			}
 
 			deploymentData, err := o.createDeploymentData(ctx)
@@ -402,7 +402,6 @@ func TestOperatorVersion(t *testing.T) {
 			oc := tt.oc()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
@@ -772,7 +771,6 @@ func TestEnsureUpgradeAnnotation(t *testing.T) {
 			_, log := testlog.New()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 
@@ -984,7 +982,6 @@ func TestCredentialsRequest(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	env := mock_env.NewMockInterface(controller)
 
@@ -1273,8 +1270,6 @@ func TestClusterObject(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			env := mock_env.NewMockInterface(controller)
 			tt.mockSetup(env)
 

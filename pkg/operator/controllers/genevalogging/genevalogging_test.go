@@ -555,7 +555,6 @@ func TestClearOTelDaemonSetNodeSelectors(t *testing.T) {
 
 func TestCleanupStaleResources(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	mockDh := mock_dynamichelper.NewMockInterface(controller)
 	r := &Reconciler{dh: mockDh}

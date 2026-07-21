@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -48,6 +47,7 @@ import (
 	utilmsi "github.com/Azure/ARO-RP/test/util/azure/msi"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnsureResourceGroup(t *testing.T) {
@@ -221,7 +221,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroupsClient := mock_features.NewMockResourceGroupsClient(controller)
 			env := mock_env.NewMockInterface(controller)
@@ -229,8 +228,9 @@ func TestEnsureResourceGroup(t *testing.T) {
 
 			env.EXPECT().Location().AnyTimes().Return(location)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:            logrus.NewEntry(logrus.StandardLogger()),
+				log:            log,
 				resourceGroups: resourceGroupsClient,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -653,13 +653,13 @@ func TestAttachNSGs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			tt.mocks(armSubnets)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:        logrus.NewEntry(logrus.StandardLogger()),
+				log:        log,
 				doc:        tt.oc,
 				armSubnets: armSubnets,
 			}
@@ -676,7 +676,6 @@ func TestAttachNSGsRetrySuccess(t *testing.T) {
 	ctx := context.Background()
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 
@@ -725,8 +724,9 @@ func TestAttachNSGsRetrySuccess(t *testing.T) {
 		armSubnets.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "worker-vnet", "worker-subnet", workerWithNSG, nil).Return(nil),
 	)
 
+	_, log := testlog.LogForTesting(t)
 	m := &manager{
-		log:        logrus.NewEntry(logrus.StandardLogger()),
+		log:        log,
 		doc:        oc,
 		armSubnets: armSubnets,
 	}
@@ -812,13 +812,13 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			tt.mocks(armSubnets)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -865,15 +865,15 @@ func TestSetMasterSubnetPoliciesRetry(t *testing.T) {
 			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
 			first := armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", subnetMatcher, nil).Return(tt.firstErr)
 			armSubnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-rg", "test-vnet", "test-subnet", subnetMatcher, nil).Return(nil).After(first)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -901,7 +901,6 @@ func TestSetMasterSubnetPoliciesRetryExhausted(t *testing.T) {
 	subnetMatcher := &subnetPoliciesMatcher{}
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 	armSubnets.EXPECT().Get(gomock.Any(), "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{Subnet: sdknetwork.Subnet{}}, nil)
@@ -909,8 +908,9 @@ func TestSetMasterSubnetPoliciesRetryExhausted(t *testing.T) {
 		autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
 	)
 
+	_, log := testlog.LogForTesting(t)
 	m := &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -987,9 +987,6 @@ func TestEnsureInfraID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 
 			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
@@ -1207,7 +1204,6 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			armSubnets := mock_armnetwork.NewMockSubnetsClient(controller)
 			tt.mocks(armSubnets)
@@ -2151,6 +2147,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			// Create the DB to test the cluster
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
@@ -2160,7 +2157,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				t.Fatal(err)
 			}
 			tt.m.db = openShiftClustersDatabase
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			tt.m.log = log
 
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 
@@ -2380,7 +2377,7 @@ func TestCreateOIDC(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.LogForTesting(t)
 
 			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 
@@ -2406,7 +2403,7 @@ func TestCreateOIDC(t *testing.T) {
 
 			m := &manager{
 				db:              dbOpenShiftClusters,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 				rpBlob:          rpBlobManager,
 				doc:             doc,
 				env:             env,
@@ -2644,8 +2641,9 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:                                    logrus.NewEntry(logrus.StandardLogger()),
+				log:                                    log,
 				doc:                                    tt.oc,
 				platformWorkloadIdentityRolesByVersion: pir,
 				clusterMsiFederatedIdentityCredentials: fakeClint,

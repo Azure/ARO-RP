@@ -18,7 +18,6 @@ import (
 
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -41,7 +40,7 @@ var (
 
 func TestSecurity(t *testing.T) {
 	ctx := context.Background()
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	_, portalAccessLog := testlog.New()
 	_, portalLog := testlog.New()
@@ -49,7 +48,6 @@ func TestSecurity(t *testing.T) {
 	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	_env := mock_env.NewMockCore(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)

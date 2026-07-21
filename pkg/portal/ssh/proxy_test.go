@@ -506,8 +506,6 @@ func TestProxy(t *testing.T) {
 			client, client1 := bufferedpipe.New()
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
 			dialer := mock_proxy.NewMockDialer(ctrl)
 
 			if tt.mocks != nil {

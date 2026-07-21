@@ -14,7 +14,6 @@ import (
 
 func TestTracer(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	m := mock_metrics.NewMockEmitter(controller)
 

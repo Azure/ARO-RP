@@ -16,15 +16,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -46,9 +43,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 	var log *logrus.Entry
 	var hook *test.Hook
-	var _env env.Interface
-
-	var controller *gomock.Controller
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	clusterResourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
@@ -57,16 +51,9 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		if cancel != nil {
 			cancel()
 		}
-
-		if controller != nil {
-			controller.Finish()
-		}
 	})
 
 	BeforeAll(func() {
-		controller = gomock.NewController(nil)
-		_env = mock_env.NewMockInterface(controller)
-
 		ctx, cancel = context.WithCancel(context.Background())
 
 		fixtures = testdatabase.NewFixture()
@@ -88,7 +75,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 		a = &actuator{
 			log: log,
-			env: _env,
 			now: now,
 
 			clusterResourceID: strings.ToLower(clusterResourceID),

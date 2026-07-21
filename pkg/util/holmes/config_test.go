@@ -22,7 +22,6 @@ import (
 
 func TestNewHolmesConfigFromEnv(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 	mockCred := mock_azcore.NewMockTokenCredential(controller)
 
 	tests := []struct {
@@ -135,7 +134,6 @@ func TestNewHolmesConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 			tt.mocks(mockKV)
@@ -190,7 +188,6 @@ func TestAcquireToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockCred := mock_azcore.NewMockTokenCredential(controller)
 			tt.setupMock(mockCred)

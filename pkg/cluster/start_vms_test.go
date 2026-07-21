@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -26,6 +25,7 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestStartVMsRetry(t *testing.T) {
@@ -75,7 +75,6 @@ func TestStartVMsRetry(t *testing.T) {
 			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
 			vmClient.EXPECT().List(gomock.Any(), clusterRGName).Return([]mgmtcompute.VirtualMachine{{Name: vm.Name}}, nil)
@@ -83,8 +82,9 @@ func TestStartVMsRetry(t *testing.T) {
 			first := vmClient.EXPECT().StartAndWait(gomock.Any(), clusterRGName, "test-vm").Return(tt.firstErr)
 			vmClient.EXPECT().StartAndWait(gomock.Any(), clusterRGName, "test-vm").Return(nil).After(first)
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 				virtualMachines: vmClient,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -286,7 +286,6 @@ func TestStartVMs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
 

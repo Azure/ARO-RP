@@ -5,11 +5,9 @@ package etchosts
 
 import (
 	"context"
-	"io"
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -20,6 +18,7 @@ import (
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconcileEtcHostsMachineConfig(t *testing.T) {
@@ -155,7 +154,6 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 		},
 	} {
 		controller := gomock.NewController(t)
-		defer controller.Finish()
 
 		mdh := mock_dynamichelper.NewMockInterface(controller)
 
@@ -163,19 +161,14 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 
 		ctx := context.Background()
 
-		logger := &logrus.Logger{
-			Out:       io.Discard,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.TraceLevel,
-		}
-		hook := logtest.NewLocal(logger)
+		hook, log := testlog.LogForTesting(t)
+		log.Logger.SetLevel(logrus.TraceLevel)
 
 		clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
 
 		r := &EtcHostsMachineConfigReconciler{
 			AROController: base.AROController{
-				Log:    logrus.NewEntry(logger),
+				Log:    log,
 				Client: clientBuilder.Build(),
 				Name:   ControllerName,
 			},
@@ -187,7 +180,7 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 
 		result, err := r.Reconcile(ctx, request)
 		if err != nil {
-			logger.Log(logrus.ErrorLevel, err)
+			log.Log(logrus.ErrorLevel, err)
 		}
 
 		if tt.wantRequeue != result.Requeue {
@@ -195,7 +188,6 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 		}
 
 		actualLog := hook.LastEntry()
-		logger.Log(logrus.InfoLevel, actualLog)
 		if actualLog == nil {
 			assert.Equal(t, tt.expectedLog, actualLog)
 		} else {

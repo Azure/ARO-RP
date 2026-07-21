@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -20,6 +19,7 @@ import (
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type fakeTokenCredential struct{}
@@ -35,7 +35,7 @@ func (c fakeTokenCredential) GetToken(ctx context.Context, options policy.TokenR
 
 func TestCheck(t *testing.T) {
 	ctx := context.Background()
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	for _, tt := range []struct {
 		name             string
@@ -66,7 +66,6 @@ func TestCheck(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			var validatorMock dynamic.ServicePrincipalValidator
 			if tt.validator != nil {

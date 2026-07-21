@@ -11,13 +11,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
@@ -295,14 +295,15 @@ func TestDetermineRequiredPlatformWorkloadIdentityScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockRoleDefinitionsClient := mock_authorization.NewMockRoleDefinitionsClient(controller)
 			tt.mockSetup(mockRoleDefinitionsClient)
 
 			c := &Cluster{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				Config: &ClusterConfig{
 					SubscriptionID: "test-subscription-id",
 					ClusterName:    "test-cluster",
@@ -417,14 +418,15 @@ func TestCreateRoleAssignmentWithRetry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockRoleAssignmentsClient := mock_authorization.NewMockRoleAssignmentsClient(controller)
 			tt.mockSetup(mockRoleAssignmentsClient)
 
 			c := &Cluster{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 				roleassignments: mockRoleAssignmentsClient,
 				retryDelay:      0, // Skip sleeps in tests
 			}

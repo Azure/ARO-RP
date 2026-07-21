@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -28,11 +27,13 @@ import (
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDenyAssignment(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
 	m := &manager{
-		log:                  logrus.NewEntry(logrus.StandardLogger()),
+		log:                  log,
 		fpServicePrincipalID: "77777777-7777-7777-7777-777777777777",
 	}
 
@@ -183,7 +184,6 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 
@@ -355,6 +355,7 @@ func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			// Create the DB to test the cluster
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
@@ -364,7 +365,7 @@ func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
 				t.Fatal(err)
 			}
 			tt.m.db = openShiftClustersDatabase
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			tt.m.log = log
 
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 

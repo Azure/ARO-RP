@@ -62,7 +62,6 @@ func TestEmitMaintenanceState(t *testing.T) {
 			ctx := context.Background()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := mock_metrics.NewMockEmitter(controller)
 			oc := &api.OpenShiftCluster{

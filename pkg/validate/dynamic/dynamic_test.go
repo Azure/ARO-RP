@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -27,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 	"github.com/Azure/ARO-RP/test/util/token"
 )
 
@@ -78,9 +78,6 @@ func TestGetRouteTableID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
 				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
@@ -132,9 +129,6 @@ func TestGetNatGatewayID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			vnet := &sdknetwork.VirtualNetwork{
 				ID: &vnetID,
 				Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
@@ -199,8 +193,9 @@ func TestValidateCIDRRanges(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -293,7 +288,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 				}
 
 				dv := &dynamic{
-					log:             logrus.NewEntry(logrus.StandardLogger()),
+					log:             log,
 					virtualNetworks: vnetClient,
 				}
 
@@ -327,8 +322,9 @@ func TestValidateVnetLocation(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vnet := sdknetwork.VirtualNetworksClientGetResponse{
 				VirtualNetwork: sdknetwork.VirtualNetwork{
@@ -343,7 +339,7 @@ func TestValidateVnetLocation(t *testing.T) {
 				Return(vnet, nil)
 
 			dv := &dynamic{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 				virtualNetworks: vnetClient,
 			}
 
@@ -557,8 +553,9 @@ func TestValidateSubnets(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -594,7 +591,7 @@ func TestValidateSubnets(t *testing.T) {
 			}
 			dv := &dynamic{
 				virtualNetworks: vnetClient,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+				log:             log,
 			}
 
 			err := dv.ValidateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
@@ -921,8 +918,9 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -938,7 +936,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 				env:                        env,
 				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
 			}
@@ -1098,8 +1096,9 @@ func TestValidateSubnetPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1115,7 +1114,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 				env:                        env,
 				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
 			}
@@ -1423,8 +1422,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1462,7 +1462,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				checkAccessSubjectInfoCred: tokenCred,
 				pdpClient:                  pdpClient,
 				virtualNetworks:            vnetClient,
@@ -1775,8 +1775,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -1814,7 +1815,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 				checkAccessSubjectInfoCred: tokenCred,
 				pdpClient:                  pdpClient,
 				virtualNetworks:            vnetClient,
@@ -1887,8 +1888,10 @@ func TestCheckPreconfiguredNSG(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			dv := &dynamic{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 			}
 			err := dv.checkPreconfiguredNSG(tt.subnetByID)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
@@ -2168,8 +2171,9 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -2234,7 +2238,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 				virtualNetworks:            vnetClient,
 				pdpClient:                  pdpClient,
 				checkAccessSubjectInfoCred: tokenCred,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				log:                        log,
 			}
 
 			if tt.validatingFpsp {
