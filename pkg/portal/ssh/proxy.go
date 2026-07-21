@@ -4,11 +4,13 @@ package ssh
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -145,7 +147,8 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 		return err
 	}
 
-	address := fmt.Sprintf("%s:%d", openShiftDoc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP, 2200+portalDoc.Portal.SSH.Master)
+	masterNum := portalDoc.Portal.SSH.Master
+	address := fmt.Sprintf("%s:%d", openShiftDoc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP, 2200+masterNum)
 
 	c2, err := s.dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
@@ -164,13 +167,25 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 		return err
 	}
 
+	// Build the host key callback.  The master node generates its SSH host key
+	// at first boot (via sshd_keygen); the key is not embedded in the ignition
+	// config and is never transmitted to the RP, so we cannot know it in
+	// advance.  We implement persistent TOFU: on the first portal SSH session
+	// to a given master node the presented host key is accepted and stored in
+	// CosmosDB; all subsequent sessions verify against the stored key.
+	masterKey := strconv.Itoa(masterNum)
+	hostKeyCallback, capturedHostKey, err := s.buildHostKeyCallback(openShiftDoc, masterKey)
+	if err != nil {
+		return err
+	}
+
 	// Connect the second connection leg (portal->cluster).
 	downstreamConn, downstreamNewChannels, downstreamRequests, err := cryptossh.NewClientConn(c2, "", &cryptossh.ClientConfig{
 		User: "core",
 		Auth: []cryptossh.AuthMethod{
 			cryptossh.PublicKeys(signer),
 		},
-		HostKeyCallback: cryptossh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
 		Config: cryptossh.Config{
 			KeyExchanges: utilssh.KexAlgorithms(),
 			Ciphers:      utilssh.Ciphers(),
@@ -180,6 +195,38 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	// Persist the host key captured during TOFU (first connection to this master).
+	// The patch mutator is a compare-and-set: it writes the key only when absent,
+	// and returns an error (aborting the patch) if a different key is already stored.
+	// This prevents a concurrent TOFU session from silently overwriting a key that
+	// was already persisted by a racing first session.
+	//
+	// If persistence fails for any reason (including a key conflict detected by a
+	// racing session) we return the error and terminate the SSH session.  Continuing
+	// with an unpersisted key would leave subsequent connections unprotected against
+	// MITM, defeating the purpose of TOFU.
+	if *capturedHostKey != nil {
+		newKeyBytes := (*capturedHostKey).Marshal()
+		_, patchErr := s.dbOpenShiftClusters.Patch(ctx, strings.ToLower(portalDoc.Portal.ID), func(doc *api.OpenShiftClusterDocument) error {
+			existing := doc.OpenShiftCluster.Properties.SSHHostPublicKeys[masterKey]
+			if len(existing) > 0 {
+				if !bytes.Equal(existing, newKeyBytes) {
+					return fmt.Errorf("SSH host public key already stored for master-%s and differs from presented key", masterKey)
+				}
+				return nil
+			}
+			if doc.OpenShiftCluster.Properties.SSHHostPublicKeys == nil {
+				doc.OpenShiftCluster.Properties.SSHHostPublicKeys = map[string]api.SecureBytes{}
+			}
+			doc.OpenShiftCluster.Properties.SSHHostPublicKeys[masterKey] = newKeyBytes
+			return nil
+		})
+		if patchErr != nil {
+			accessLog.WithError(patchErr).Warnf("failed to persist SSH host public key for master-%d", masterNum)
+			return fmt.Errorf("failed to persist SSH host public key for master-%d: %w", masterNum, patchErr)
+		}
 	}
 
 	t := time.Now()
@@ -387,6 +434,47 @@ func (s *SSH) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptoss
 	})
 
 	return g.Wait()
+}
+
+// buildHostKeyCallback returns an SSH HostKeyCallback for the portal->cluster
+// leg together with a pointer that is populated with the captured key when TOFU
+// is in effect (i.e. no stored key was found for masterKey).
+//
+// When a stored host public key exists for masterKey the callback strictly
+// verifies the presented key against it.  When no stored key exists the
+// callback accepts the first key it sees and writes it into *captured so the
+// caller can persist it.
+func (s *SSH) buildHostKeyCallback(doc *api.OpenShiftClusterDocument, masterKey string) (cryptossh.HostKeyCallback, *cryptossh.PublicKey, error) {
+	var captured cryptossh.PublicKey
+
+	if storedBytes := doc.OpenShiftCluster.Properties.SSHHostPublicKeys[masterKey]; len(storedBytes) > 0 {
+		knownKey, err := cryptossh.ParsePublicKey(storedBytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parsing stored SSH host key for master-%s: %w", masterKey, err)
+		}
+		// Strict verification: reject any key that differs from the stored one.
+		cb := func(_ string, _ net.Addr, presented cryptossh.PublicKey) error {
+			if !bytes.Equal(knownKey.Marshal(), presented.Marshal()) {
+				return fmt.Errorf("SSH host key mismatch for master-%s: expected %s %s, got %s %s",
+					masterKey,
+					knownKey.Type(), cryptossh.FingerprintSHA256(knownKey),
+					presented.Type(), cryptossh.FingerprintSHA256(presented))
+			}
+			return nil
+		}
+		return cb, &captured, nil
+	}
+
+	// No stored key — TOFU: capture the first presented key for the caller to persist.
+	// Guard against the callback being invoked more than once by only recording
+	// the first key seen.
+	cb := func(_ string, _ net.Addr, key cryptossh.PublicKey) error {
+		if captured == nil {
+			captured = key
+		}
+		return nil
+	}
+	return cb, &captured, nil
 }
 
 func (s *SSH) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
