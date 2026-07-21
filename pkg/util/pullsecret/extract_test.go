@@ -46,7 +46,7 @@ var _ = Describe("Extract()", func() {
 		pullSecret := "{\"auths\": {\"example.com\": {\"auth\": \"c29tZXRoaW5nZWxzZQ==\"}}}"
 
 		_, err := Extract(pullSecret)
-		Expect(err).To(MatchError("malformed auth token for key example.com: not in format of username:password"))
+		Expect(err).To(MatchError("malformed auth token for key example.com: not in expected user and secret format"))
 	})
 
 	It("errors if pullsecret has no auth key for domain", func() {

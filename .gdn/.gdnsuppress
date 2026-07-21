@@ -52,7 +52,7 @@
       "signature": "775141e92fe2259e553aa812e28afcf5071ebf559e75db0c9f265009ce42724e",
       "target": "vendor/github.com/docker/docker/api/swagger.yaml",
       "tool": "credscan",
-      "ruleId": "GENERAL0060",
+      "ruleId": "CSCAN-GENERAL0060",
       "alternativeSignatures": [],
       "memberOf": [
         "default"
