@@ -13,7 +13,7 @@ import typing
 
 from base64 import b64decode
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2025_07_25.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.models as openshiftcluster
 
 from azure.cli.command_modules.role import GraphError
 from azure.cli.core.commands import LongRunningOperation

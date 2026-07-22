@@ -5,11 +5,15 @@
     "@azure-tools/typespec-azure-resource-manager": "^0.65.0",
     "@azure-tools/typespec-azure-rulesets": "0.65.0",
     "@azure-tools/typespec-client-generator-core": "^0.65.0",
+    "@azure-tools/typespec-go": "^0.14.0",
+    "@azure-tools/typespec-python": "^0.63.0",
     "@typespec/http": "~1.9.0",
     "@typespec/openapi": "~1.9.0",
     "@typespec/openapi3": "~1.9.0",
     "@typespec/rest": "~0.79.0",
+    "@typespec/streams": "~0.79.0",
     "@typespec/versioning": "~0.79.0",
+    "@typespec/xml": "~0.79.0",
     "oav": "^4.0.2"
   },
   "engines": {
@@ -18,7 +22,8 @@
   "scripts": {
     "format": "tsp format \"**/*.tsp\"",
     "format-check": "tsp format --check \"**/*.tsp\"",
-    "compile": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error",
+    "swagger": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error --emit @azure-tools/typespec-autorest",
+    "python": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error --emit @azure-tools/typespec-python",
     "examples": "oav generate-examples"
   },
   "devDependencies": {

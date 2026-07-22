@@ -33,7 +33,7 @@ jobs:
           cache-dependency-path: api/package-lock.json
 
       - name: Generate from TypeSpec
-        run: hack/api/swagger-from-typespec.sh
+        run: hack/api/generate-from-typespec.sh swagger
 
       - name: Verify no diffs in api or swagger
         run: hack/ci-utils/isClean.sh

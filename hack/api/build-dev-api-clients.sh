@@ -5,7 +5,6 @@ function make_folders() {
   local FOLDER=$2
 
   mkdir -p pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"
-  mkdir -p python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"
 }
 
 function generate_golang() {
@@ -44,43 +43,11 @@ function generate_golang() {
   goimports -w -local=github.com/Azure/ARO-RP pkg/client
 }
 
-function generate_python() {
-  local AUTOREST_IMAGE=$1
-  local API_VERSION=$2
-  local FOLDER=$3
-
-  # Generating Track 2 Python SDK
-  docker run \
-    --platform=${PLATFORM:-linux/$(go env GOARCH)} \
-    --rm \
-    -v $PWD/python/client:/python/client:z \
-    -v $PWD/swagger:/swagger:z \
-    "${AUTOREST_IMAGE}" \
-    --use=@autorest/python@~6.19.0 \
-    --use=@autorest/modelerfour@~4.27.0 \
-    --version=3.10.2 \
-    --modelerfour.lenient-model-deduplication=true \
-    --python \
-    --combine-operation-files=true \
-    --version-tolerant=false \
-    --no-async=true \
-    --azure-arm \
-    --models-mode=msrest \
-    --license-header=MICROSOFT_APACHE_NO_VERSION \
-    --namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
-    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/openshiftclusters/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-    --output-folder=/python/client
-
-  >python/client/__init__.py
-}
-
 AUTOREST_IMAGE=$1
 
 printf "CLEANING OLD API GENERATED FILES...\n"
 # Remove golang clients
 rm -rf pkg/client/services/redhatopenshift/mgmt
-# Remove Python clients
-rm -rf python/client/azure/mgmt/redhatopenshift/v*
 printf "[\u2714] SUCCESS\n\n"
 
 for API_VERSION in "${@:2}"; do
@@ -96,12 +63,6 @@ for API_VERSION in "${@:2}"; do
   printf "GENERATING GOLANG SDK...\n"
   generate_golang "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
   printf "[\u2714] SUCCESS\n\n"
-
-  printf "GENERATING PYTHON SDK...\n"
-  generate_python "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
-  printf "[\u2714] SUCCESS\n\n"
-  printf "%*s\n" "${COLUMNS:-$(tput cols)}" "" | tr " " -
-  printf "\n"
 done
 
 printf "[\u2714] CLIENT GENERATION COMPLETED SUCCESSFULLY\n"

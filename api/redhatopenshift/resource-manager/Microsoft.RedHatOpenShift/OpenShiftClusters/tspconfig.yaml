@@ -3,6 +3,7 @@ parameters:
     default: "sdk/redhatopenshift"
 emit:
   - "@azure-tools/typespec-autorest"
+  - "@azure-tools/typespec-python"
 options:
   "@azure-tools/typespec-autorest":
     omit-unreachable-types: true
@@ -13,10 +14,11 @@ options:
     # examples-dir: "{project-root}/examples"
   "@azure-tools/typespec-python":
     service-dir: "sdk/redhatopenshift"
-    emitter-output-dir: "{output-dir}/{service-dir}/azure-mgmt-redhatopenshift"
+    emitter-output-dir: "{project-root}/../../../../../python/client"
     namespace: "azure.mgmt.redhatopenshift"
-    generate-test: true
-    generate-sample: true
+    generate-test: false
+    generate-sample: false
+    generate-packaging-files: false
     flavor: "azure"
   "@azure-tools/typespec-java":
     emitter-output-dir: "{output-dir}/{service-dir}/azure-resourcemanager-redhatopenshift"
