@@ -147,7 +147,11 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 					Args:            []string{"ask", question, "-n", "--model=" + holmesConfig.Model, "--config=/etc/holmes/config.yaml"},
 					Env: []corev1.EnvVar{
 						{
-							Name: "AZURE_API_KEY",
+							Name:  "AZURE_AD_TOKEN_AUTH",
+							Value: "true",
+						},
+						{
+							Name: "AZURE_AD_TOKEN",
 							ValueFrom: &corev1.EnvVarSource{
 								SecretKeyRef: &corev1.SecretKeySelector{
 									LocalObjectReference: corev1.LocalObjectReference{Name: kubeconfigSecretName},
