@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from .. import models as _models
 
 
-class APIServerProfile(_Model):
+class APIServerProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """APIServerProfile represents an API server profile.
 
     :ivar visibility: API server visibility. Known values are: "Private" and "Public".
@@ -55,7 +55,7 @@ class APIServerProfile(_Model):
         super().__init__(*args, **kwargs)
 
 
-class CloudError(_Model):
+class CloudError(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """CloudError represents a cloud error.
 
     :ivar error: An error response from the service.
@@ -83,7 +83,7 @@ class CloudError(_Model):
         super().__init__(*args, **kwargs)
 
 
-class CloudErrorBody(_Model):
+class CloudErrorBody(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """CloudErrorBody represents the body of a cloud error.
 
     :ivar code: An identifier for the error. Codes are invariant and are intended to be consumed
@@ -132,7 +132,7 @@ class CloudErrorBody(_Model):
         super().__init__(*args, **kwargs)
 
 
-class ClusterProfile(_Model):
+class ClusterProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """ClusterProfile represents a cluster profile.
 
     :ivar pull_secret: The pull secret for the cluster.
@@ -202,7 +202,7 @@ class ConsoleProfile(_Model):
     """The URL to access the cluster console."""
 
 
-class Display(_Model):
+class Display(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """Display represents the display details of an operation.
 
     :ivar provider: Friendly name of the resource provider.
@@ -245,7 +245,7 @@ class Display(_Model):
         super().__init__(*args, **kwargs)
 
 
-class EffectiveOutboundIP(_Model):
+class EffectiveOutboundIP(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """EffectiveOutboundIP represents an effective outbound IP resource of the cluster public load
     balancer.
 
@@ -274,7 +274,7 @@ class EffectiveOutboundIP(_Model):
         super().__init__(*args, **kwargs)
 
 
-class IngressProfile(_Model):
+class IngressProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """IngressProfile represents an ingress profile.
 
     :ivar name: The ingress profile name.
@@ -313,7 +313,7 @@ class IngressProfile(_Model):
         super().__init__(*args, **kwargs)
 
 
-class LoadBalancerProfile(_Model):
+class LoadBalancerProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """LoadBalancerProfile represents the profile of the cluster public load balancer.
 
     :ivar managed_outbound_ips: The desired managed outbound IPs for the cluster public load
@@ -351,7 +351,7 @@ class LoadBalancerProfile(_Model):
         super().__init__(*args, **kwargs)
 
 
-class ManagedOutboundIPs(_Model):
+class ManagedOutboundIPs(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """ManagedOutboundIPs represents the desired managed outbound IPs for the cluster public load
     balancer.
 
@@ -384,7 +384,7 @@ class ManagedOutboundIPs(_Model):
         super().__init__(*args, **kwargs)
 
 
-class ManagedServiceIdentity(_Model):
+class ManagedServiceIdentity(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """Managed service identity (system assigned and/or user assigned identities).
 
     :ivar principal_id: The service principal ID of the system assigned identity. This property
@@ -436,7 +436,7 @@ class ManagedServiceIdentity(_Model):
         super().__init__(*args, **kwargs)
 
 
-class MasterProfile(_Model):
+class MasterProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """MasterProfile represents a master profile.
 
     :ivar vm_size: The size of the master VMs.
@@ -486,7 +486,7 @@ class MasterProfile(_Model):
         super().__init__(*args, **kwargs)
 
 
-class NetworkProfile(_Model):
+class NetworkProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """NetworkProfile represents a network profile.
 
     :ivar pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
@@ -574,7 +574,7 @@ class Resource(_Model):
     """Azure Resource Manager metadata containing createdBy and modifiedBy information."""
 
 
-class TrackedResource(Resource):
+class TrackedResource(Resource):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """Tracked Resource.
 
     :ivar id: Fully qualified resource ID for the resource. Ex -
@@ -618,7 +618,7 @@ class TrackedResource(Resource):
         super().__init__(*args, **kwargs)
 
 
-class OpenShiftCluster(TrackedResource):
+class OpenShiftCluster(TrackedResource):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
     :ivar id: Fully qualified resource ID for the resource. Ex -
@@ -704,7 +704,7 @@ class OpenShiftCluster(TrackedResource):
             super().__setattr__(key, value)
 
 
-class OpenShiftClusterAdminKubeconfig(_Model):
+class OpenShiftClusterAdminKubeconfig(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """OpenShiftClusterAdminKubeconfig represents an OpenShift cluster's admin kubeconfig.
 
     :ivar kubeconfig: The base64-encoded kubeconfig file.
@@ -732,7 +732,7 @@ class OpenShiftClusterAdminKubeconfig(_Model):
         super().__init__(*args, **kwargs)
 
 
-class OpenShiftClusterCredentials(_Model):
+class OpenShiftClusterCredentials(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """OpenShiftClusterCredentials represents an OpenShift cluster's credentials.
 
     :ivar kubeadmin_username: The username for the kubeadmin user.
@@ -769,7 +769,7 @@ class OpenShiftClusterCredentials(_Model):
         super().__init__(*args, **kwargs)
 
 
-class OpenShiftClusterProperties(_Model):
+class OpenShiftClusterProperties(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """OpenShiftClusterProperties represents an OpenShift cluster's properties.
 
     :ivar provisioning_state: The cluster provisioning state. Known values are: "AdminUpdating",
@@ -871,7 +871,7 @@ class OpenShiftClusterProperties(_Model):
         super().__init__(*args, **kwargs)
 
 
-class OpenShiftClusterUpdate(_Model):
+class OpenShiftClusterUpdate(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
     :ivar tags: The resource tags.
@@ -963,7 +963,7 @@ class ProxyResource(Resource):
     """
 
 
-class OpenShiftVersion(ProxyResource):
+class OpenShiftVersion(ProxyResource):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """OpenShiftVersion represents an OpenShift version that can be installed.
 
     :ivar id: Fully qualified resource ID for the resource. Ex -
@@ -1024,7 +1024,7 @@ class OpenShiftVersion(ProxyResource):
             super().__setattr__(key, value)
 
 
-class OpenShiftVersionProperties(_Model):
+class OpenShiftVersionProperties(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """OpenShiftVersionProperties represents the properties of an OpenShiftVersion.
 
     :ivar version: Version represents the version to create the cluster at.
@@ -1052,7 +1052,7 @@ class OpenShiftVersionProperties(_Model):
         super().__init__(*args, **kwargs)
 
 
-class Operation(_Model):
+class Operation(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """Operation represents an RP operation.
 
     :ivar name: Operation name: {provider}/{resource}/{operation}.
@@ -1092,7 +1092,7 @@ class Operation(_Model):
         super().__init__(*args, **kwargs)
 
 
-class PlatformWorkloadIdentity(_Model):
+class PlatformWorkloadIdentity(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """PlatformWorkloadIdentity stores information representing a single workload identity.
 
     :ivar resource_id: The resource ID of the PlatformWorkloadIdentity resource.
@@ -1130,7 +1130,7 @@ class PlatformWorkloadIdentity(_Model):
         super().__init__(*args, **kwargs)
 
 
-class PlatformWorkloadIdentityProfile(_Model):
+class PlatformWorkloadIdentityProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload
     identity clusters.
 
@@ -1170,7 +1170,7 @@ class PlatformWorkloadIdentityProfile(_Model):
         super().__init__(*args, **kwargs)
 
 
-class PlatformWorkloadIdentityRole(_Model):
+class PlatformWorkloadIdentityRole(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """PlatformWorkloadIdentityRole represents a mapping from a particular OCP operator to the
     built-in role that should be assigned to that operator's corresponding managed identity.
 
@@ -1215,7 +1215,7 @@ class PlatformWorkloadIdentityRole(_Model):
         super().__init__(*args, **kwargs)
 
 
-class PlatformWorkloadIdentityRoleSet(ProxyResource):
+class PlatformWorkloadIdentityRoleSet(ProxyResource):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the
     built-in roles that should be assigned to those operator's corresponding managed identities for
     a particular OCP version.
@@ -1279,7 +1279,9 @@ class PlatformWorkloadIdentityRoleSet(ProxyResource):
             super().__setattr__(key, value)
 
 
-class PlatformWorkloadIdentityRoleSetProperties(_Model):  # pylint: disable=name-too-long
+class PlatformWorkloadIdentityRoleSetProperties(
+    _Model
+):  # pylint: disable=name-too-long,docstring-keyword-should-match-keyword-only
     """PlatformWorkloadIdentityRoleSetProperties represents the properties of a
     PlatformWorkloadIdentityRoleSet resource.
 
@@ -1320,7 +1322,7 @@ class PlatformWorkloadIdentityRoleSetProperties(_Model):  # pylint: disable=name
         super().__init__(*args, **kwargs)
 
 
-class ServicePrincipalProfile(_Model):
+class ServicePrincipalProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """ServicePrincipalProfile represents a service principal profile.
 
     :ivar client_id: The client ID used for the cluster.
@@ -1355,7 +1357,7 @@ class ServicePrincipalProfile(_Model):
         super().__init__(*args, **kwargs)
 
 
-class SystemData(_Model):
+class SystemData(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """Metadata pertaining to creation and last modification of the resource.
 
     :ivar created_by: The identity that created the resource.
@@ -1437,7 +1439,7 @@ class UserAssignedIdentity(_Model):
     """The client ID of the assigned identity."""
 
 
-class WorkerProfile(_Model):
+class WorkerProfile(_Model):  # pylint: disable=docstring-keyword-should-match-keyword-only
     """WorkerProfile represents a worker profile.
 
     :ivar name: The worker profile name.
