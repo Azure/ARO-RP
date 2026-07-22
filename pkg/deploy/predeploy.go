@@ -170,10 +170,6 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 		return err
 	}
 
-	if d.forceNSGs {
-		d.log.Info("forceNSGs set, skipping secret configuration and VMSS restart")
-		return nil
-	}
 	return d.configureServiceSecrets(ctx, lbHealthcheckWaitTimeSec)
 }
 
