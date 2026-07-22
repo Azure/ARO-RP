@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
@@ -159,7 +160,15 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 	}
 
-	var ext any
+	// If Put or Patch is executed we will enrich document with cluster data.
+	if !isCreate {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
+	}
+
+	var ext interface{}
 	switch putOrPatchClusterParameters.method {
 	// In case of PUT we will take customer request payload and store into database
 	// Our base structure for unmarshal is skeleton document with values we
@@ -186,8 +195,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 		ext = putOrPatchClusterParameters.converter.ToExternal(document)
 
-	// In case of PATCH we take current cluster document and use it as base
-	// for unmarshal. So customer can
+	// In case of PATCH we take current cluster document, which is enriched
+	// from the cluster and use it as base for unmarshal. So customer can
 	// provide single field json to be updated in the database.
 	// Patch should be used for updating individual fields of the document.
 	case http.MethodPatch:
@@ -435,7 +444,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 	return nil
 }
 
-func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext any, path string) error {
+func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error {
 	err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sWorkers), version.InstallArchitectureVersion, path)
 	if err != nil {
 		return err
