@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"reflect"
 	"time"
@@ -29,7 +30,6 @@ const (
 	collAsyncOperations                 = "AsyncOperations"
 	collBilling                         = "Billing"
 	collGateway                         = "Gateway"
-	collMonitors                        = "Monitors"
 	collOpenShiftClusters               = "OpenShiftClusters"
 	collOpenShiftVersion                = "OpenShiftVersions"
 	collPlatformWorkloadIdentityRoleSet = "PlatformWorkloadIdentityRoleSets"
@@ -37,10 +37,13 @@ const (
 	collSubscriptions                   = "Subscriptions"
 	collMaintenanceManifests            = "MaintenanceManifests"
 	collMaintenanceSchedules            = "MaintenanceSchedules"
+	collPoolWorkers                     = "PoolWorkers"
 )
 
-type IDable interface {
-	GetID() string
+var ErrLostLease = errors.New("lost lease")
+
+type Keyable interface {
+	GetKey() string
 }
 
 // Generic interface of document iterators from pkg/database/cosmosdb/, used in

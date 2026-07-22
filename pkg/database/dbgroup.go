@@ -13,10 +13,6 @@ type DatabaseGroupWithSubscriptions interface {
 	Subscriptions() (Subscriptions, error)
 }
 
-type DatabaseGroupWithMonitors interface {
-	Monitors() (Monitors, error)
-}
-
 type DatabaseGroupWithOpenShiftVersions interface {
 	OpenShiftVersions() (OpenShiftVersions, error)
 }
@@ -45,10 +41,13 @@ type DatabaseGroupWithMaintenanceSchedules interface {
 	MaintenanceSchedules() (MaintenanceSchedules, error)
 }
 
+type DatabaseGroupWithPoolWorkers interface {
+	PoolWorkers() (PoolWorkers, error)
+}
+
 type DatabaseGroup interface {
 	DatabaseGroupWithOpenShiftClusters
 	DatabaseGroupWithSubscriptions
-	DatabaseGroupWithMonitors
 	DatabaseGroupWithOpenShiftVersions
 	DatabaseGroupWithPlatformWorkloadIdentityRoleSets
 	DatabaseGroupWithAsyncOperations
@@ -56,10 +55,10 @@ type DatabaseGroup interface {
 	DatabaseGroupWithPortal
 	DatabaseGroupWithMaintenanceManifests
 	DatabaseGroupWithMaintenanceSchedules
+	DatabaseGroupWithPoolWorkers
 
 	WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup
 	WithSubscriptions(db Subscriptions) DatabaseGroup
-	WithMonitors(db Monitors) DatabaseGroup
 	WithOpenShiftVersions(db OpenShiftVersions) DatabaseGroup
 	WithPlatformWorkloadIdentityRoleSets(db PlatformWorkloadIdentityRoleSets) DatabaseGroup
 	WithAsyncOperations(db AsyncOperations) DatabaseGroup
@@ -67,12 +66,12 @@ type DatabaseGroup interface {
 	WithPortal(db Portal) DatabaseGroup
 	WithMaintenanceManifests(db MaintenanceManifests) DatabaseGroup
 	WithMaintenanceSchedules(db MaintenanceSchedules) DatabaseGroup
+	WithPoolWorkers(db PoolWorkers) DatabaseGroup
 }
 
 type dbGroup struct {
 	openShiftClusters                OpenShiftClusters
 	subscriptions                    Subscriptions
-	monitors                         Monitors
 	platformWorkloadIdentityRoleSets PlatformWorkloadIdentityRoleSets
 	openShiftVersions                OpenShiftVersions
 	asyncOperations                  AsyncOperations
@@ -80,6 +79,7 @@ type dbGroup struct {
 	portal                           Portal
 	maintenanceManifests             MaintenanceManifests
 	maintenanceSchedules             MaintenanceSchedules
+	poolWorkers                      PoolWorkers
 }
 
 func (d *dbGroup) OpenShiftClusters() (OpenShiftClusters, error) {
@@ -103,18 +103,6 @@ func (d *dbGroup) Subscriptions() (Subscriptions, error) {
 
 func (d *dbGroup) WithSubscriptions(db Subscriptions) DatabaseGroup {
 	d.subscriptions = db
-	return d
-}
-
-func (d *dbGroup) Monitors() (Monitors, error) {
-	if d.monitors == nil {
-		return nil, errors.New("no Monitors database client set")
-	}
-	return d.monitors, nil
-}
-
-func (d *dbGroup) WithMonitors(db Monitors) DatabaseGroup {
-	d.monitors = db
 	return d
 }
 
@@ -199,6 +187,18 @@ func (d *dbGroup) MaintenanceSchedules() (MaintenanceSchedules, error) {
 
 func (d *dbGroup) WithMaintenanceSchedules(db MaintenanceSchedules) DatabaseGroup {
 	d.maintenanceSchedules = db
+	return d
+}
+
+func (d *dbGroup) PoolWorkers() (PoolWorkers, error) {
+	if d.poolWorkers == nil {
+		return nil, errors.New("no PoolWorkers database client set")
+	}
+	return d.poolWorkers, nil
+}
+
+func (d *dbGroup) WithPoolWorkers(db PoolWorkers) DatabaseGroup {
+	d.poolWorkers = db
 	return d
 }
 

@@ -19,9 +19,9 @@ type fakeMetricsEmitter struct {
 	t testing.TB
 
 	gauges           *xsync.Map[string, int64]
-	assertedOnGauges bool
+	assertedOnGauges bool // Have we asserted on the values of all gauges?
 	floats           *xsync.Map[string, float64]
-	assertedOnFloats bool
+	assertedOnFloats bool // Have we asserted on the values of all floats?
 
 	testOutput *bytes.Buffer
 }
@@ -155,4 +155,23 @@ func (e *fakeMetricsEmitter) AssertGauges(assertions ...MetricsAssertion[int64])
 	}
 
 	e.assertedOnGauges = true
+}
+
+// Assert the value of a single gauge at a point in time. This is used for when
+// we are inside an operation (e.g. running a worker) and want to spot-check
+// that a metric was emitted before we got here (e.g. that the worker count was
+// incremented). This method should not set assertedOnGauges as then a spot
+// check of a single metric might hide that the values of other metrics have not
+// been asserted upon.
+func (e *fakeMetricsEmitter) AssertSingleGauge(assertion MetricsAssertion[int64]) {
+	seekingKey := getKey(assertion.MetricName, assertion.Dimensions)
+
+	val, ok := e.gauges.Load(seekingKey)
+	if !ok {
+		e.errorf("gauge metric '%s' with dims '%v' was not emitted", assertion.MetricName, assertion.Dimensions)
+	} else {
+		if val != assertion.Value {
+			e.errorf("gauge metric '%s' with dims '%v' had incorrect emitted value %d, wanted %d", assertion.MetricName, assertion.Dimensions, val, assertion.Value)
+		}
+	}
 }

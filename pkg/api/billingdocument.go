@@ -40,6 +40,6 @@ func (c *BillingDocument) String() string {
 	return encodeJSON(c)
 }
 
-func (c *BillingDocument) GetID() string {
+func (c *BillingDocument) GetKey() string {
 	return c.ID
 }

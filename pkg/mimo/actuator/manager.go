@@ -5,6 +5,7 @@ package actuator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"sort"
@@ -21,6 +22,8 @@ import (
 	utilmimo "github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
+var errFailedFetchingSubscriptionDocument = errors.New("failed fetching subscription document")
+
 const maxDequeueCount = 5
 
 type Actuator interface {
@@ -28,10 +31,17 @@ type Actuator interface {
 	AddMaintenanceTasks(map[api.MIMOTaskID]tasks.MaintenanceTask)
 }
 
+type newActuatorInstance = func(
+	ctx context.Context,
+	_env env.Interface,
+	log *logrus.Entry,
+	clusterResourceID string,
+	dbs actuatorDBs,
+) (Actuator, error)
+
 type actuator struct {
 	env                      env.Interface
 	log                      *logrus.Entry
-	now                      func() time.Time
 	taskRunTimeout           time.Duration
 	manifestQueryBatchLength int
 
@@ -50,7 +60,6 @@ func NewActuator(
 	log *logrus.Entry,
 	clusterResourceID string,
 	dbs actuatorDBs,
-	now func() time.Time,
 ) (Actuator, error) {
 	a := &actuator{
 		env:                      _env,
@@ -60,8 +69,6 @@ func NewActuator(
 		tasks:                    make(map[api.MIMOTaskID]tasks.MaintenanceTask),
 		taskRunTimeout:           time.Minute * 60,
 		manifestQueryBatchLength: 50,
-
-		now: now,
 	}
 
 	return a, nil
@@ -128,7 +135,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return docList[i].MaintenanceManifest.RunAfter < docList[j].MaintenanceManifest.RunAfter
 	})
 
-	evaluationTime := a.now()
+	evaluationTime := a.env.Now()
 
 	// Check for manifests that have timed out first
 	for _, doc := range docList {
@@ -164,7 +171,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// We need to fetch the subscription for the cluster to get the TenantID
 	subDoc, err := subDb.Get(ctx, strings.ToLower(r.SubscriptionID))
 	if err != nil {
-		err = fmt.Errorf("failed fetching subscription document: %w", err)
+		err = fmt.Errorf("%w: %w", errFailedFetchingSubscriptionDocument, err)
 		a.log.Error(err)
 		return false, err
 	}

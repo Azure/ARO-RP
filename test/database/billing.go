@@ -27,6 +27,6 @@ func injectBilling(c *cosmosdb.FakeBillingDocumentClient) {
 	c.SetTriggerHandler("setDeletionBillingTimeStamp", fakeBillingDeletionTimestampTrigger)
 
 	c.SetSorter(func(in []*api.BillingDocument) {
-		slices.SortFunc(in, func(a, b *api.BillingDocument) int { return CompareIDable(a, b) })
+		slices.SortFunc(in, func(a, b *api.BillingDocument) int { return CompareKeyable(a, b) })
 	})
 }

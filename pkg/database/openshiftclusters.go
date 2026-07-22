@@ -207,7 +207,7 @@ func (c *openShiftClusters) PatchWithLease(ctx context.Context, key string, f Op
 func (c *openShiftClusters) patchWithLease(ctx context.Context, key string, f OpenShiftClusterDocumentMutator, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(ctx, key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.LeaseOwner != c.uuid {
-			return fmt.Errorf("lost lease")
+			return ErrLostLease
 		}
 
 		return f(doc)

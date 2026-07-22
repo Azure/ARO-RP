@@ -177,7 +177,7 @@ func (c *maintenanceManifests) PatchWithLease(ctx context.Context, clusterResour
 func (c *maintenanceManifests) patchWithLease(ctx context.Context, clusterResourceID string, id string, f MaintenanceManifestDocumentMutator, options *cosmosdb.Options) (*api.MaintenanceManifestDocument, error) {
 	return c.patch(ctx, clusterResourceID, id, func(doc *api.MaintenanceManifestDocument) error {
 		if doc.LeaseOwner != c.uuid {
-			return fmt.Errorf("lost lease")
+			return ErrLostLease
 		}
 
 		return f(doc)
