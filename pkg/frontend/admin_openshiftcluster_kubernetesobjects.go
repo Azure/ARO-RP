@@ -185,12 +185,18 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request content was invalid and could not be deserialized: %q.", err))
 	}
 
+	if obj.GetAPIVersion() == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request object must include 'apiVersion'.")
+	}
+
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
 
-	gvr, err := k.ResolveGVR(obj.GetKind(), "")
+	groupKind := obj.GroupVersionKind().GroupKind().String()
+
+	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return err
 	}
