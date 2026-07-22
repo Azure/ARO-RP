@@ -121,6 +121,7 @@ receivers:
       - type: json_parser
         parse_from: body
         parse_to: body
+        on_error: send_quiet
         timestamp:
           parse_from: body.stageTimestamp
           layout_type: strptime
