@@ -15,7 +15,7 @@
     "@typespec/xml": "~0.84.0"
   },
   "engines": {
-    "node": ">=20.12.0"
+    "node": ">=24.18.0"
   },
   "scripts": {
     "format": "tsp format \"**/*.tsp\"",
