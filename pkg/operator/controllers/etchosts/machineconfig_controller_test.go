@@ -190,8 +190,8 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 			logger.Log(logrus.ErrorLevel, err)
 		}
 
-		if tt.wantRequeue != result.Requeue {
-			t.Errorf("Test %v | wanted to requeue %v but was set to %v", tt.name, tt.wantRequeue, result.Requeue)
+		if tt.wantRequeue != (result.RequeueAfter > 0) {
+			t.Errorf("Test %v | wanted to requeue %v but was set to %v", tt.name, tt.wantRequeue, (result.RequeueAfter > 0))
 		}
 
 		actualLog := hook.LastEntry()

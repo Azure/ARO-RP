@@ -155,10 +155,6 @@ func TestMUOReconciler(t *testing.T) {
 			defer controller.Finish()
 
 			instance := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},

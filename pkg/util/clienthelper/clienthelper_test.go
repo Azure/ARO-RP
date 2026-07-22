@@ -118,7 +118,7 @@ func TestMerge(t *testing.T) {
 
 	mhcWithStatus := mhc.DeepCopy()
 	mhcWithStatus.Status = machinev1beta1.MachineHealthCheckStatus{
-		Conditions: machinev1beta1.Conditions{
+		Conditions: []machinev1beta1.Condition{
 			{
 				Type:               machinev1beta1.RemediationAllowedCondition,
 				Status:             corev1.ConditionTrue,
@@ -1651,10 +1651,6 @@ func TestGetOne(t *testing.T) {
 					Name:            "funobj",
 					Namespace:       "somewhere",
 					ResourceVersion: "1",
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
 				},
 				StringData: map[string]string{
 					"secret": "squirrels",

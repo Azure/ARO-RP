@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -30,13 +31,12 @@ import (
 // this hook.
 func TallyCounts(tally map[string]int) hookFunc {
 	return func(obj client.Object) error {
-		m := meta.NewAccessor()
-		kind, err := m.Kind(obj)
+		vers, _, err := scheme.Scheme.ObjectKinds(obj)
 		if err != nil {
-			return err
+			return nil
 		}
 
-		tally[kind] += 1
+		tally[vers[0].Kind] += 1
 		return nil
 	}
 }
@@ -45,13 +45,12 @@ func TallyCounts(tally map[string]int) hookFunc {
 // namespace, and object name (separated by '/') that pass through this hook.
 func TallyCountsAndKey(tally map[string]int) hookFunc {
 	return func(obj client.Object) error {
-		m := meta.NewAccessor()
-		kind, err := m.Kind(obj)
+		vers, _, err := scheme.Scheme.ObjectKinds(obj)
 		if err != nil {
-			return err
+			return nil
 		}
 
-		key := kind + "/" + types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}.String()
+		key := vers[0].Kind + "/" + types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}.String()
 		tally[key] += 1
 		return nil
 	}
@@ -73,7 +72,7 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 		actual = map[string]int{}
 	}
 
-	diff := cmp.Diff(actual, expected, cmpopts.EquateEmpty())
+	diff := cmp.Diff(expected, actual, cmpopts.EquateEmpty())
 	if diff == "" {
 		return nil, nil
 	}

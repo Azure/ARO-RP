@@ -141,10 +141,6 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeDelete(gomock.Any(), clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).Times(1).Return(nil)
 				k.EXPECT().KubeDelete(gomock.Any(), crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).Times(1).Return(nil)
 
-				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1fake.FakeEtcds{})
-				if err != nil {
-					t.Fatal(err)
-				}
 				k.EXPECT().KubeGet(ctx, "Etcd", "", doc.OpenShiftCluster.Name).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// delete secrets
@@ -211,10 +207,6 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeDelete(gomock.Any(), clusterRole.GetKind(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(gomock.Any(), crb.GetKind(), crb.GetNamespace(), crb.GetName(), true, nil).MaxTimes(1).Return(nil)
 
-				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1fake.FakeEtcds{})
-				if err != nil {
-					t.Fatal(err)
-				}
 				k.EXPECT().KubeGet(ctx, "Etcd", "", doc.OpenShiftCluster.Name).MaxTimes(1).Return(buf.Bytes(), nil)
 
 				// delete secrets
@@ -607,11 +599,10 @@ func TestFixEtcd(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			containerLogs, err := f.fixEtcd(ctx, ti.log, ti.env, doc, k, &operatorv1fake.FakeEtcds{
-				Fake: &operatorv1fake.FakeOperatorV1{
-					Fake: &ktesting.Fake{},
-				},
-			})
+			fake := &operatorv1fake.FakeOperatorV1{
+				Fake: &ktesting.Fake{},
+			}
+			containerLogs, err := f.fixEtcd(ctx, ti.log, ti.env, doc, k, fake.Etcds())
 			ti.log.Infof("Container logs: \n%s", containerLogs)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {

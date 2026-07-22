@@ -15,9 +15,10 @@ import (
 )
 
 type (
-	getFunc  func(key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
-	listFunc func(obj client.ObjectList, opts *client.ListOptions) error
-	hookFunc func(obj client.Object) error
+	getFunc   func(key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
+	applyFunc func(obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error
+	listFunc  func(obj client.ObjectList, opts *client.ListOptions) error
+	hookFunc  func(obj client.Object) error
 )
 
 type HookingClient struct {
@@ -29,6 +30,7 @@ type HookingClient struct {
 	preCreateHook []hookFunc
 	preUpdateHook []hookFunc
 	prePatchHook  []hookFunc
+	preApplyHook  []applyFunc
 
 	postGetHook    []getFunc
 	postListHook   []listFunc
@@ -36,6 +38,7 @@ type HookingClient struct {
 	postCreateHook []hookFunc
 	postUpdateHook []hookFunc
 	postPatchHook  []hookFunc
+	postApplyHook  []applyFunc
 }
 
 var _ client.Client = &HookingClient{}
@@ -270,6 +273,29 @@ func (c *HookingClient) Patch(ctx context.Context, obj client.Object, patch clie
 
 	for _, h := range c.postPatchHook {
 		err := h(obj)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Apply]
+func (c *HookingClient) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+	for _, h := range c.preApplyHook {
+		err := h(obj, opts...)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := c.f.Apply(ctx, obj, opts...)
+	if err != nil {
+		return err
+	}
+
+	for _, h := range c.postApplyHook {
+		err := h(obj, opts...)
 		if err != nil {
 			return err
 		}
