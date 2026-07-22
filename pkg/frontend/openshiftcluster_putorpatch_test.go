@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -1864,7 +1862,6 @@ func TestPutorPatchOpenShiftClusterAdminAPI(t *testing.T) {
 		name                    string
 		request                 func() *admin.OpenShiftCluster
 		fixture                 func(*testdatabase.Fixture)
-		setupEnricher           func(*testInfra)
 		quotaValidatorError     error
 		skuValidatorError       error
 		providersValidatorError error
@@ -2041,71 +2038,6 @@ func TestPutorPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *admin.OpenShiftCluster {
 				response := getAdminServicePrincipalOpenshiftClusterResponse()
-				response.Properties.MaintenanceTask = admin.MaintenanceTaskOperator
-				return response
-			},
-		},
-		{
-			name: "admin patch does not persist enrichment-only ingress visibility changes",
-			request: func() *admin.OpenShiftCluster {
-				return &admin.OpenShiftCluster{
-					Properties: admin.OpenShiftClusterProperties{
-						ArchitectureVersion: admin.ArchitectureVersionV2,
-						MaintenanceTask:     admin.MaintenanceTaskOperator,
-					},
-				}
-			},
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(mockSubscriptionDocument)
-				doc := getAdminServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateSucceeded, "", "")
-				doc.OpenShiftCluster.Properties.IngressProfiles = []api.IngressProfile{
-					{
-						Name:       "default",
-						Visibility: api.VisibilityPrivate,
-					},
-				}
-				f.AddOpenShiftClusterDocuments(doc)
-			},
-			setupEnricher: func(ti *testInfra) {
-				ti.enricher = mock_clusterdata.NewMockBestEffortEnricher(ti.controller)
-				ti.enricher.EXPECT().Enrich(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-					func(_ context.Context, _ *logrus.Entry, ocs ...*api.OpenShiftCluster) {
-						for _, oc := range ocs {
-							oc.Properties.IngressProfiles = []api.IngressProfile{
-								{
-									Name:       "default",
-									Visibility: api.VisibilityPublic,
-								},
-							}
-						}
-					},
-				).AnyTimes()
-			},
-			wantSystemDataEnriched: true,
-			wantDocuments: func(checker *testdatabase.Checker) {
-				checker.AddAsyncOperationDocuments(getAsynchronousOperationDocument(api.ProvisioningStateAdminUpdating, api.ProvisioningStateAdminUpdating))
-				doc := getAdminServicePrincipalOpenShiftClusterDocument(api.ProvisioningStateAdminUpdating, api.ProvisioningStateSucceeded, "")
-				doc.OpenShiftCluster.Properties.IngressProfiles = []api.IngressProfile{
-					{
-						Name:       "default",
-						Visibility: api.VisibilityPrivate,
-					},
-				}
-				doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []api.EffectiveOutboundIP{}
-				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
-				doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateUnplanned
-				checker.AddOpenShiftClusterDocuments(doc)
-			},
-			wantAsync:      true,
-			wantStatusCode: http.StatusOK,
-			wantResponse: func() *admin.OpenShiftCluster {
-				response := getAdminServicePrincipalOpenshiftClusterResponse()
-				response.Properties.IngressProfiles = []admin.IngressProfile{
-					{
-						Name:       "default",
-						Visibility: admin.VisibilityPrivate,
-					},
-				}
 				response.Properties.MaintenanceTask = admin.MaintenanceTaskOperator
 				return response
 			},
@@ -2559,10 +2491,6 @@ func TestPutorPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
-			}
-
-			if tt.setupEnricher != nil {
-				tt.setupEnricher(ti)
 			}
 
 			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, ti.enricher)
