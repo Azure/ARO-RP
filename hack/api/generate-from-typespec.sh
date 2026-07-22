@@ -19,7 +19,7 @@ find "$SPEC_BASE_DIR" -mindepth 2 -maxdepth 2 -type d ! -name examples | sort | 
     )
 done
 
-npm ci --legacy-peer-deps
+npm ci
 npm run format
 
 if [[ "$target" == "swagger" || "$target" == "examples" ]]; then
