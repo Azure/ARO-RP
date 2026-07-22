@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from azure.core.credentials_async import AsyncTokenCredential
 
 
-class RedHatOpenShiftClient:
+class RedHatOpenShiftClient:  # pylint: disable=docstring-keyword-should-match-keyword-only
     """Rest API for Azure Red Hat OpenShift 4.
 
     :ivar operations: Operations operations

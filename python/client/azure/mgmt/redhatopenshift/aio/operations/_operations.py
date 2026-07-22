@@ -33,7 +33,7 @@ from azure.core.utils import case_insensitive_dict
 from azure.mgmt.core.exceptions import ARMErrorFormat
 from azure.mgmt.core.polling.async_arm_polling import AsyncARMPolling
 
-from ... import models as _models
+from ... import models as _models, types as _types
 from ..._utils.model_base import SdkJSONEncoder, _deserialize, _failsafe_deserialize
 from ..._utils.serialization import Deserializer, Serializer
 from ...operations._operations import (
@@ -55,11 +55,10 @@ from .._configuration import RedHatOpenShiftClientConfiguration
 
 T = TypeVar("T")
 ClsType = Optional[Callable[[PipelineResponse[HttpRequest, AsyncHttpResponse], T, dict[str, Any]], Any]]
-JSON = MutableMapping[str, Any]
 List = list
 
 
-class Operations:
+class Operations:  # pylint: disable=docstring-missing-param
     """
     .. warning::
         **DO NOT** instantiate this class directly.
@@ -169,7 +168,7 @@ class Operations:
         return AsyncItemPaged(get_next, extract_data)
 
 
-class OpenShiftVersionsOperations:
+class OpenShiftVersionsOperations:  # pylint: disable=docstring-missing-param
     """
     .. warning::
         **DO NOT** instantiate this class directly.
@@ -358,7 +357,7 @@ class OpenShiftVersionsOperations:
         return AsyncItemPaged(get_next, extract_data)
 
 
-class PlatformWorkloadIdentityRoleSetsOperations:  # pylint: disable=name-too-long
+class PlatformWorkloadIdentityRoleSetsOperations:  # pylint: disable=docstring-missing-param,name-too-long
     """
     .. warning::
         **DO NOT** instantiate this class directly.
@@ -476,7 +475,7 @@ class PlatformWorkloadIdentityRoleSetsOperations:  # pylint: disable=name-too-lo
         return AsyncItemPaged(get_next, extract_data)
 
 
-class OpenShiftClustersOperations:
+class OpenShiftClustersOperations:  # pylint: disable=docstring-missing-param
     """
     .. warning::
         **DO NOT** instantiate this class directly.
@@ -569,7 +568,7 @@ class OpenShiftClustersOperations:
         self,
         resource_group_name: str,
         resource_name: str,
-        parameters: Union[_models.OpenShiftCluster, JSON, IO[bytes]],
+        parameters: Union[_models.OpenShiftCluster, _types.OpenShiftCluster, IO[bytes]],
         **kwargs: Any
     ) -> AsyncIterator[bytes]:
         error_map: MutableMapping = {
@@ -678,7 +677,7 @@ class OpenShiftClustersOperations:
         self,
         resource_group_name: str,
         resource_name: str,
-        parameters: JSON,
+        parameters: _types.OpenShiftCluster,
         *,
         content_type: str = "application/json",
         **kwargs: Any
@@ -694,7 +693,7 @@ class OpenShiftClustersOperations:
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
         :param parameters: The OpenShift cluster resource. Required.
-        :type parameters: JSON
+        :type parameters: ~azure.mgmt.redhatopenshift.types.OpenShiftCluster
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -740,7 +739,7 @@ class OpenShiftClustersOperations:
         self,
         resource_group_name: str,
         resource_name: str,
-        parameters: Union[_models.OpenShiftCluster, JSON, IO[bytes]],
+        parameters: Union[_models.OpenShiftCluster, _types.OpenShiftCluster, IO[bytes]],
         **kwargs: Any
     ) -> AsyncLROPoller[_models.OpenShiftCluster]:
         """Creates or updates a OpenShift cluster with the specified subscription, resource group and
@@ -753,9 +752,10 @@ class OpenShiftClustersOperations:
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
-        :param parameters: The OpenShift cluster resource. Is one of the following types:
-         OpenShiftCluster, JSON, IO[bytes] Required.
-        :type parameters: ~azure.mgmt.redhatopenshift.models.OpenShiftCluster or JSON or IO[bytes]
+        :param parameters: The OpenShift cluster resource. Is either a OpenShiftCluster type or a
+         IO[bytes] type. Required.
+        :type parameters: ~azure.mgmt.redhatopenshift.models.OpenShiftCluster or
+         ~azure.mgmt.redhatopenshift.types.OpenShiftCluster or IO[bytes]
         :return: An instance of AsyncLROPoller that returns OpenShiftCluster. The OpenShiftCluster is
          compatible with MutableMapping
         :rtype: ~azure.core.polling.AsyncLROPoller[~azure.mgmt.redhatopenshift.models.OpenShiftCluster]
@@ -817,7 +817,7 @@ class OpenShiftClustersOperations:
         self,
         resource_group_name: str,
         resource_name: str,
-        parameters: Union[_models.OpenShiftClusterUpdate, JSON, IO[bytes]],
+        parameters: Union[_models.OpenShiftClusterUpdate, _types.OpenShiftClusterUpdate, IO[bytes]],
         **kwargs: Any
     ) -> AsyncIterator[bytes]:
         error_map: MutableMapping = {
@@ -925,7 +925,7 @@ class OpenShiftClustersOperations:
         self,
         resource_group_name: str,
         resource_name: str,
-        parameters: JSON,
+        parameters: _types.OpenShiftClusterUpdate,
         *,
         content_type: str = "application/json",
         **kwargs: Any
@@ -940,7 +940,7 @@ class OpenShiftClustersOperations:
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
         :param parameters: The OpenShift cluster resource. Required.
-        :type parameters: JSON
+        :type parameters: ~azure.mgmt.redhatopenshift.types.OpenShiftClusterUpdate
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -985,7 +985,7 @@ class OpenShiftClustersOperations:
         self,
         resource_group_name: str,
         resource_name: str,
-        parameters: Union[_models.OpenShiftClusterUpdate, JSON, IO[bytes]],
+        parameters: Union[_models.OpenShiftClusterUpdate, _types.OpenShiftClusterUpdate, IO[bytes]],
         **kwargs: Any
     ) -> AsyncLROPoller[_models.OpenShiftCluster]:
         """Updates a OpenShift cluster with the specified subscription, resource group and resource name.
@@ -997,10 +997,10 @@ class OpenShiftClustersOperations:
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource. Required.
         :type resource_name: str
-        :param parameters: The OpenShift cluster resource. Is one of the following types:
-         OpenShiftClusterUpdate, JSON, IO[bytes] Required.
-        :type parameters: ~azure.mgmt.redhatopenshift.models.OpenShiftClusterUpdate or JSON or
-         IO[bytes]
+        :param parameters: The OpenShift cluster resource. Is either a OpenShiftClusterUpdate type or a
+         IO[bytes] type. Required.
+        :type parameters: ~azure.mgmt.redhatopenshift.models.OpenShiftClusterUpdate or
+         ~azure.mgmt.redhatopenshift.types.OpenShiftClusterUpdate or IO[bytes]
         :return: An instance of AsyncLROPoller that returns OpenShiftCluster. The OpenShiftCluster is
          compatible with MutableMapping
         :rtype: ~azure.core.polling.AsyncLROPoller[~azure.mgmt.redhatopenshift.models.OpenShiftCluster]
@@ -1529,7 +1529,7 @@ class OpenShiftClustersOperations:
         return deserialized  # type: ignore
 
 
-class PlatformWorkloadIdentityRoleSetOperations:  # pylint: disable=name-too-long
+class PlatformWorkloadIdentityRoleSetOperations:  # pylint: disable=docstring-missing-param,name-too-long
     """
     .. warning::
         **DO NOT** instantiate this class directly.
