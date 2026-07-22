@@ -121,10 +121,14 @@ clean: ## Remove build artifacts
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
-client: generate generate-swagger-typespec client-generate lint-go-fix lint-go
+client: generate generate-swagger-typespec client-generate client-generate-legacy lint-go-fix lint-go
 
 .PHONY: client-generate
-client-generate: ## Fix stale client library
+client-generate:
+	hack/api/generate-from-typespec.sh python
+
+.PHONY: client-generate-legacy
+client-generate-legacy: ## Fix stale client library
 # Only generate the clients we use in our dev Python extension or in e2e clients
 	hack/api/build-dev-api-clients.sh "${AUTOREST_IMAGE}" 2024-08-12-preview 2025-07-25
 
@@ -156,7 +160,12 @@ generate-swagger-legacy:
 
 .PHONY: generate-swagger-typespec
 generate-swagger-typespec:
-	hack/api/swagger-from-typespec.sh
+	hack/api/generate-from-typespec.sh swagger
+	$(MAKE) swagger-checksums
+
+.PHONY: generate-api-examples
+generate-api-examples:
+	hack/api/generate-from-typespec.sh examples
 	$(MAKE) swagger-checksums
 
 .PHONY: swagger-checksums

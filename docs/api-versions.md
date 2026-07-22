@@ -4,15 +4,19 @@ See [agent-guides/api-type-system.md](agent-guides/api-type-system.md)'s "Swagge
 
 ## Generate Swagger for API versions >= v20250725 (`api` TypeSpec source of truth)
 
-1. Run `make generate-swagger-typespec`
-2. (Optional; see explanation below) `git restore api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/examples`
-    - `make generate-swagger-typespec` includes the generation of some API example files, e.g. `api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/examples`. Each time you run this `make` target, some of the randomly generated values in the examples will be regenerated, resulting in changes that `git` will pick up on. This is due to the behavior of the `oav` utility used to generate the examples. **Please avoid committing the example files unless you meant to change them**; in more general terms, please avoid using `git add *` and instead ensure you commit only the files you need to change.
+`make generate-swagger-typespec`
+
+## Generate API examples from Swagger
+
+`make generate-api-examples`
+
+We've decoupled example generation from Swagger generation because the `oav` utility used to generate the examples updates some GUIDs, etc. anytime you generate the examples even if the TypeSpec and Swagger haven't changed. The pro of this approach is that when you only want to regenerate Swagger, you don't end up with extraneous git diffs that don't reflect meaningful changes that you'll want to commit. The con of this approach (it's really a result of using `oav` to generate the examples) is that CI doesn't check whether examples need updates; if you're updating the TypeSpec/Swagger, you should make sure to regenerate the examples.
 
 ## Generate Swagger for API versions <= v20240812preview (`pkg/api` Go struct source of truth)
 
-We've kept around the `make` target for the older API versions from back when the Go structs in `pkg/api` were the source of truth for the API specifications. A bespoke solution in `pkg/swagger` converts the Go structs to Swagger. It's unlikely we will ever need it, but it's still here just in case.
+`make generate-swagger-legacy`
 
-There is only one step: `make generate-swagger-legacy`
+We've kept around the `make` target for the older API versions from back when the Go structs in `pkg/api` were the source of truth for the API specifications. A bespoke solution in `pkg/swagger` converts the Go structs to Swagger. It's unlikely we will ever need it, but it's still here just in case.
 
 ## Notes about some design choices made during the migration to TypeSpec
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -xe
-IGNORED_PATH="api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/examples/"
+IGNORED_PATH=""
 CHANGES=$(git status --short | grep -F -v "$IGNORED_PATH" || true)
 
 if [[ -n "$CHANGES" ]]
