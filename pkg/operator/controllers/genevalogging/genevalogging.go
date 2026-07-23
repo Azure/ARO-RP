@@ -428,7 +428,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	}
 
 	return []*appsv1.DaemonSet{
-		newDaemonSet(MasterDaemonsetName, "400m", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
+		newDaemonSet(MasterDaemonsetName, "2", []corev1.NodeSelectorTerm{isMasterTerm, isControlPlaneTerm}, otelMasterConfigKey, masterConfigHash),
 		newDaemonSet(WorkerDaemonsetName, "200m", []corev1.NodeSelectorTerm{notMasterOrControlPlaneTerm}, otelWorkerConfigKey, workerConfigHash),
 	}, nil
 }
