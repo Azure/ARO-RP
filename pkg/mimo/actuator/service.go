@@ -62,18 +62,23 @@ type service struct {
 	changefeedInterval             time.Duration
 	changefeedReadinessInterval    time.Duration
 	taskPollTime                   time.Duration
+	taskPollReadinessInterval      time.Duration
 	bucketRefreshInterval          time.Duration
 	bucketRefreshTTL               time.Duration
 	bucketRefreshReadinessInterval time.Duration
 	workerMaxStartupDelay          time.Duration
 	readinessDelay                 time.Duration
 
-	lastChangefeed   atomic.Value // time.Time
-	lastBucketUpdate atomic.Value // time.Time
-	startTime        time.Time
+	lastChangefeed          atomic.Value // time.Time
+	lastBucketUpdate        atomic.Value // time.Time
+	lastRunnableTasksUpdate atomic.Value // time.Time
+	startTime               time.Time
 
 	newActuatorInstance newActuatorInstance
 	tasks               map[api.MIMOTaskID]tasks.MaintenanceTask
+
+	clusterHasRunnableTasks     map[string]bool
+	clusterHasRunnableTasksLock *sync.RWMutex
 
 	serveHealthz  bool
 	emitHeartbeat bool
@@ -117,7 +122,8 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 
 		// The polling time for MaintenanceManifests is kept lower because we
 		// prioritise responsiveness
-		taskPollTime: 90 * time.Second,
+		taskPollTime:              90 * time.Second,
+		taskPollReadinessInterval: 180 * time.Second,
 
 		// Bucket timing is set lower to prioritise responsiveness to VM changes
 		bucketRefreshInterval:          defaultBucketRefreshInterval,
@@ -128,6 +134,9 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbg a
 		readinessDelay:        time.Minute * 2,
 		serveHealthz:          true,
 		emitHeartbeat:         true,
+
+		clusterHasRunnableTasks:     map[string]bool{},
+		clusterHasRunnableTasksLock: &sync.RWMutex{},
 	}
 
 	// In CI/E2E we need to refresh the clusters more often for responsiveness,
@@ -150,7 +159,7 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	defer close(done)
 
 	// Verify our databases are correct before starting, just in case
-	_, err := s.dbGroup.MaintenanceManifests()
+	mm, err := s.dbGroup.MaintenanceManifests()
 	if err != nil {
 		return fmt.Errorf("not all databases provided to dbGroup: %w", err)
 	}
@@ -231,7 +240,7 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	waitForFirstBucketUpdate.Add(1)
 
 	// Start the bucket worker update loop which will coordinate buckets between
-	// the MIMO instances
+	// the MIMO Scheduler instances
 	go buckets.StartBucketRefreshLoop(
 		_ctx, s.baseLog, api.PoolWorkerTypeMIMOActuator,
 		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
@@ -248,6 +257,9 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 		s.baseLog.Errorf("bucket worker startup failed, exiting: %s", context.Cause(ctx))
 		return context.Cause(ctx)
 	}
+
+	// Poll for if any tasks are available to be run
+	go s.pollRunnableTasks(ctx, mm)
 
 	t := time.NewTicker(s.changefeedInterval)
 
@@ -335,6 +347,38 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 	return docMap, nil
 }
 
+func (s *service) pollRunnableTasks(ctx context.Context, m database.MaintenanceManifests) {
+	t := time.NewTicker(s.taskPollTime)
+
+	for !s.stopping.Load() {
+		clusters, err := m.GetClustersWithRunnableTasks(ctx)
+		if err != nil {
+			s.baseLog.Errorf("error getting runnable tasks, continuing: %s", err)
+		} else {
+			func() {
+				s.clusterHasRunnableTasksLock.Lock()
+				defer s.clusterHasRunnableTasksLock.Unlock()
+
+				// If a cluster has runnable tasks, mark it so that the next loop
+				// will cause the cluster's worker to run. We don't care if the
+				// cluster is not owned by us here, as a worker for a bucket we do
+				// not own will not be run and not pick up the state.
+				s.clusterHasRunnableTasks = map[string]bool{}
+				for _, cluster := range clusters {
+					s.clusterHasRunnableTasks[cluster] = true
+				}
+
+				s.lastRunnableTasksUpdate.Store(s.env.Now())
+			}()
+		}
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+			s.baseLog.Warnf("context closed, stopping MaintenanceManifest poll loop: %s", context.Cause(ctx))
+		}
+	}
+}
+
 func (s *service) checkReady() bool {
 	lastBucketUpdate, ok := s.lastBucketUpdate.Load().(time.Time)
 	if !ok {
@@ -344,9 +388,14 @@ func (s *service) checkReady() bool {
 	if !ok {
 		return false
 	}
+	lastRunnableTasksUpdate, ok := s.lastRunnableTasksUpdate.Load().(time.Time)
+	if !ok {
+		return false
+	}
 
 	return (time.Since(lastBucketUpdate) < s.bucketRefreshReadinessInterval) && // did we list buckets successfully recently?
 		(time.Since(lastChangefeedTime) < s.changefeedReadinessInterval) && // did we update our list of clusters recently?
+		(time.Since(lastRunnableTasksUpdate) < s.taskPollReadinessInterval) && // did we update the list of available tasks recently?
 		(time.Since(s.startTime) > s.readinessDelay) // are we running for at least (the default) 2 minutes?
 }
 
@@ -374,6 +423,20 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 out:
 	for !s.stopping.Load() {
 		func() {
+			// Check if we have work available this cycle.
+			hasWork := func() bool {
+				s.clusterHasRunnableTasksLock.RLock()
+				defer s.clusterHasRunnableTasksLock.RUnlock()
+
+				got := s.clusterHasRunnableTasks[id]
+				return got
+			}()
+
+			if !hasWork {
+				log.Debugf("cluster %s has no work", id)
+				return
+			}
+
 			s.workerCount.Add(1)
 			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workerCount.Load()), nil)
 
