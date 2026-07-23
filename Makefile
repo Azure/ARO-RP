@@ -7,6 +7,12 @@ E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2
 E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
+SHELLCHECK ?= shellcheck
+
+# Keep Go-templated dnsmasq hooks out of the raw shellcheck list; the
+# surrounding gotmpl wrappers are not valid shellcheck input.
+BASH_LINT_FILES := $(wildcard pkg/deploy/generator/scripts/*.sh) pkg/frontend/scripts/backupandfixetcd.sh
+BASH_LINT_FILES_ABS := $(abspath $(BASH_LINT_FILES))
 
 # When Go is not installed on the host (e.g., CI Docker-only jobs), provide
 # safe fallback values. Without this guard, every $(shell go ...) call —
@@ -385,6 +391,10 @@ unit-test-go: $(GOTESTSUM)
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+
+.PHONY: lint-bash
+lint-bash: ## Lint first-wave bash scripts using shellcheck and .shellcheckrc
+	$(SHELLCHECK) $(BASH_LINT_FILES_ABS)
 
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (gci, gofumpt)
