@@ -6,10 +6,26 @@ package genevalogging
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 )
 
-var otelConfigParsedTemplate = template.Must(template.New("otel-config").Parse(otelConfigTemplate))
+var otelConfigParsedTemplate = mustParseOTelConfig()
+
+func mustParseOTelConfig() *template.Template {
+	var t *template.Template
+	t = template.New("otel-config").Funcs(template.FuncMap{
+		"include": func(name string, data any) (string, error) {
+			var buf bytes.Buffer
+			err := t.ExecuteTemplate(&buf, name, data)
+			return buf.String(), err
+		},
+		"oneline": func(s string) string {
+			return strings.Join(strings.Fields(s), " ")
+		},
+	})
+	return template.Must(t.Parse(otelConfigTemplate))
+}
 
 type otelLogSource struct {
 	Name      string
@@ -17,15 +33,7 @@ type otelLogSource struct {
 	EventName string
 }
 
-func renderOTelConfig(profile otelProfile) (string, error) {
-	return renderOTelConfigWithAudit(profile, true)
-}
-
-func renderOTelConfigWithoutAudit(profile otelProfile) (string, error) {
-	return renderOTelConfigWithAudit(profile, false)
-}
-
-func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, error) {
+func renderOTelConfig(profile otelProfile, isControlPlane bool) (string, error) {
 	sources := []otelLogSource{
 		{
 			Name:      "journald",
@@ -38,7 +46,7 @@ func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, 
 			EventName: "containers",
 		},
 	}
-	if includeAudit {
+	if isControlPlane {
 		sources = append(sources, otelLogSource{
 			Name:      "audit",
 			Receiver:  "file_log/audit",
@@ -50,12 +58,12 @@ func renderOTelConfigWithAudit(profile otelProfile, includeAudit bool) (string, 
 	err := otelConfigParsedTemplate.Execute(&rendered, struct {
 		Profile           otelProfile
 		GatewayExporterID string
-		IncludeAudit      bool
+		IsControlPlane    bool
 		Sources           []otelLogSource
 	}{
 		Profile:           profile,
 		GatewayExporterID: "otlp_grpc/gateway",
-		IncludeAudit:      includeAudit,
+		IsControlPlane:    isControlPlane,
 		Sources:           sources,
 	})
 	if err != nil {

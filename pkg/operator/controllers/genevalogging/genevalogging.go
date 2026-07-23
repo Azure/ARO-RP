@@ -42,10 +42,7 @@ const (
 	WorkerDaemonsetName = "otel-exporter-worker"
 )
 
-var (
-	renderOTelConfigFn             = renderOTelConfig
-	renderOTelConfigWithoutAuditFn = renderOTelConfigWithoutAudit
-)
+var renderOTelConfigFn func(otelProfile, bool) (string, error) = renderOTelConfig
 
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc := &securityv1.SecurityContextConstraints{}
@@ -111,12 +108,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 	}
 
 	renderProfileConfig := func(nodeRole string, profile otelProfile) (string, error) {
-		selectConfig := selectOTelConfig
-		if nodeRole == "worker" {
-			selectConfig = selectOTelConfigWithoutAudit
-		}
-
-		cfg, err := selectConfig(profile)
+		cfg, err := selectOTelConfig(profile, nodeRole != "worker")
 		if err != nil {
 			return "", fmt.Errorf("rendering %s otel config: %w", nodeRole, err)
 		}
@@ -182,18 +174,10 @@ func otelConfigSHA256(config string) string {
 
 // selectOTelConfig renders the requested profile and falls back to minimal logs if needed.
 // If both renders fail, return an error so reconciliation fails fast instead of writing an empty config.
-func selectOTelConfig(profile otelProfile) (string, error) {
-	return selectOTelConfigWithRenderer(profile, renderOTelConfigFn)
-}
-
-func selectOTelConfigWithoutAudit(profile otelProfile) (string, error) {
-	return selectOTelConfigWithRenderer(profile, renderOTelConfigWithoutAuditFn)
-}
-
-func selectOTelConfigWithRenderer(profile otelProfile, renderFn func(otelProfile) (string, error)) (string, error) {
-	cfg, err := renderFn(profile)
+func selectOTelConfig(profile otelProfile, isControlPlane bool) (string, error) {
+	cfg, err := renderOTelConfigFn(profile, isControlPlane)
 	if err != nil {
-		cfg, minimalErr := renderFn(otelProfileMinimalLogs)
+		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs, isControlPlane)
 		if minimalErr != nil {
 			return "", fmt.Errorf("failed to render otel config for profile %q (%v) and fallback profile %q (%v)", profile, err, otelProfileMinimalLogs, minimalErr)
 		}

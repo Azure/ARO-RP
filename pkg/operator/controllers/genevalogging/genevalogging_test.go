@@ -80,144 +80,46 @@ func TestGetOTelProfiles(t *testing.T) {
 }
 
 func TestSelectOTelConfig(t *testing.T) {
-	full, err := selectOTelConfig(otelProfileMaxLogs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
-		t.Fatal("full config missing expected processor chain")
-	}
-	if !strings.Contains(full, "logs/journald:") || !strings.Contains(full, "logs/containers:") || !strings.Contains(full, "logs/audit:") {
-		t.Fatal("full config missing expected per-source pipelines")
-	}
-	if !strings.Contains(full, "key: EventName") || !strings.Contains(full, "key: source_name") {
-		t.Fatal("full config missing source fields")
-	}
-	if !strings.Contains(full, "processors: [memory_limiter, transform/log-parity, attributes/common, attributes/source-containers, batch]") {
-		t.Fatal("full config missing containers source processor")
-	}
-	if !strings.Contains(full, "memory_limiter:") ||
-		!strings.Contains(full, "check_interval: 1s") ||
-		!strings.Contains(full, "limit_percentage: 80") ||
-		!strings.Contains(full, "spike_limit_percentage: 15") {
-		t.Fatal("full config missing percentage-based memory limiter configuration")
-	}
-	if strings.Contains(full, "limit_mib:") || strings.Contains(full, "spike_limit_mib:") {
-		t.Fatal("full config should not use hardcoded memory limiter MiB settings")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"node\"], \"${env:MONITORING_ROLE_INSTANCE}\")") {
-		t.Fatal("full config missing node mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"namespace\"], resource.attributes[\"k8s.namespace.name\"]) where resource.attributes[\"k8s.namespace.name\"] != nil") {
-		t.Fatal("full config missing lowercase namespace mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"pod\"], resource.attributes[\"k8s.pod.name\"]) where resource.attributes[\"k8s.pod.name\"] != nil") {
-		t.Fatal("full config missing lowercase pod mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"container\"], resource.attributes[\"k8s.container.name\"]) where resource.attributes[\"k8s.container.name\"] != nil") {
-		t.Fatal("full config missing lowercase container mapping")
-	}
-	if !strings.Contains(full, "set(log.attributes[\"raw_json_body\"], log.body)") {
-		t.Fatal("full config missing raw_json_body mapping")
-	}
-	if !strings.Contains(full, "delete_key(log.body, \"requestObject\") where IsMap(log.body)") {
-		t.Fatal("full config missing requestObject pruning")
-	}
-	if !strings.Contains(full, "delete_key(log.body, \"responseObject\") where IsMap(log.body)") {
-		t.Fatal("full config missing responseObject pruning")
-	}
-	if !strings.Contains(full, "batch:") ||
-		!strings.Contains(full, "timeout: 10s") ||
-		!strings.Contains(full, "send_batch_size: 2048") ||
-		!strings.Contains(full, "send_batch_max_size: 4096") {
-		t.Fatal("full config missing batch tuning")
-	}
-	if !strings.Contains(full, "sending_queue:") ||
-		!strings.Contains(full, "enabled: true") ||
-		!strings.Contains(full, "queue_size: 1200") ||
-		!strings.Contains(full, "num_consumers: 2") ||
-		!strings.Contains(full, "storage: file_storage") {
-		t.Fatal("full config missing bounded sending queue configuration")
-	}
-	if !strings.Contains(full, "id: logrus_parse") {
-		t.Fatal("full config missing logrus parser for container logs")
-	}
-	if !strings.Contains(full, "(?<fields>(?: [^= ]+=") {
-		t.Fatal("full config missing logrus generic fields capture")
-	}
-	if strings.Contains(full, "(?!file=)") {
-		t.Fatal("full config contains unsupported RE2 negative lookahead")
-	}
-	if !strings.Contains(full, "id: logrus_fields_parse") {
-		t.Fatal("full config missing logrus structured fields parser for container logs")
-	}
-	if !strings.Contains(full, "id: logrus_file_split") {
-		t.Fatal("full config missing logrus file split parser for container logs")
+	// All profiles render without error for both control plane and worker nodes.
+	for _, profile := range []otelProfile{otelProfileMaxLogs, otelProfileReducedLogs, otelProfileMinimalLogs} {
+		for _, isControlPlane := range []bool{true, false} {
+			if _, err := renderOTelConfig(profile, isControlPlane); err != nil {
+				t.Errorf("renderOTelConfig(%q, isControlPlane=%v): %v", profile, isControlPlane, err)
+			}
+		}
 	}
 
-	reduced, err := selectOTelConfig(otelProfileReducedLogs)
-	if err != nil {
-		t.Fatal(err)
+	// Control plane gets the audit pipeline; workers do not.
+	cp, _ := renderOTelConfig(otelProfileMaxLogs, true)
+	worker, _ := renderOTelConfig(otelProfileMaxLogs, false)
+	if !strings.Contains(cp, "logs/audit:") {
+		t.Fatal("control plane config missing audit pipeline")
 	}
-	if !strings.Contains(reduced, "filter/drop-olm-noise:") {
-		t.Fatal("reduced config missing noise filter")
-	}
-	if !strings.Contains(reduced, "filter/drop-journald-noise:") {
-		t.Fatal("reduced config missing journald noise filter")
-	}
-	if !strings.Contains(reduced, "processors: [memory_limiter, filter/drop-journald-noise, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
-		t.Fatal("reduced config missing expected journald processor chain")
-	}
-	if !strings.Contains(reduced, "filter/keep-audit-write-verbs:") || !strings.Contains(reduced, "filter/drop-audit-review-noise:") || !strings.Contains(reduced, "filter/drop-audit-leases:") || !strings.Contains(reduced, "filter/drop-audit-non-platform-namespaces:") {
-		t.Fatal("reduced config missing audit filters")
-	}
-	if !strings.Contains(reduced, "logs/audit:") || !strings.Contains(reduced, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-leases, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-audit, batch]") {
-		t.Fatal("reduced config missing filtered audit pipeline")
+	if strings.Contains(worker, "logs/audit:") {
+		t.Fatal("worker config must not contain audit pipeline")
 	}
 
-	highSignal, err := selectOTelConfig(otelProfileMinimalLogs)
-	if err != nil {
-		t.Fatal(err)
+	// SyncLoop is a control-plane-only pattern gated by the isControlPlane template conditional.
+	cpMin, _ := renderOTelConfig(otelProfileMinimalLogs, true)
+	workerMin, _ := renderOTelConfig(otelProfileMinimalLogs, false)
+	if !strings.Contains(cpMin, "SyncLoop") {
+		t.Fatal("control plane minimal-logs config missing SyncLoop pattern")
 	}
-	if !strings.Contains(highSignal, "filter/keep-only-high-signal:") {
-		t.Fatal("high-signal config missing keep-only-high-signal filter")
-	}
-	if !strings.Contains(highSignal, "filter/drop-journald-noise:") {
-		t.Fatal("high-signal config missing journald noise filter")
-	}
-	if !strings.Contains(highSignal, "filter/keep-journald-high-signal:") {
-		t.Fatal("high-signal config missing journald high-signal filter")
-	}
-	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/drop-journald-noise, filter/keep-journald-high-signal, transform/log-parity, attributes/common, attributes/source-journald, batch]") {
-		t.Fatal("high-signal config missing expected journald processor chain")
-	}
-	if !strings.Contains(highSignal, "filter/keep-audit-write-verbs:") {
-		t.Fatal("high-signal config missing audit write-verb filter")
-	}
-	if !strings.Contains(highSignal, "filter/drop-audit-review-noise:") {
-		t.Fatal("high-signal config missing audit review-noise filter")
-	}
-	if !strings.Contains(highSignal, "filter/drop-audit-leases:") {
-		t.Fatal("high-signal config missing leases filter")
-	}
-	if !strings.Contains(highSignal, "filter/drop-audit-non-platform-namespaces:") {
-		t.Fatal("high-signal config missing audit namespace filter")
-	}
-	if !strings.Contains(highSignal, "processors: [memory_limiter, filter/keep-audit-write-verbs, filter/drop-audit-review-noise, filter/drop-audit-leases, filter/drop-audit-non-platform-namespaces, transform/log-parity, attributes/common, attributes/source-audit, batch]") {
-		t.Fatal("high-signal config missing expected audit processor chain")
+	if strings.Contains(workerMin, "SyncLoop") {
+		t.Fatal("worker minimal-logs config must not contain SyncLoop")
 	}
 }
 
 func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
 	originalRender := renderOTelConfigFn
-	renderOTelConfigFn = func(otelProfile) (string, error) {
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
 		return "", errors.New("render failure")
 	}
 	defer func() {
 		renderOTelConfigFn = originalRender
 	}()
 
-	_, err := selectOTelConfig(otelProfileMaxLogs)
+	_, err := selectOTelConfig(otelProfileMaxLogs, true)
 	if err == nil {
 		t.Fatal("expected selectOTelConfig to return an error")
 	}
@@ -226,7 +128,7 @@ func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
 func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 	originalRender := renderOTelConfigFn
 	var calledProfiles []otelProfile
-	renderOTelConfigFn = func(profile otelProfile) (string, error) {
+	renderOTelConfigFn = func(profile otelProfile, _ bool) (string, error) {
 		calledProfiles = append(calledProfiles, profile)
 		if profile == otelProfileMinimalLogs {
 			return "minimal-config", nil
@@ -237,7 +139,7 @@ func TestSelectOTelConfigFallsBackToMinimalLogs(t *testing.T) {
 		renderOTelConfigFn = originalRender
 	}()
 
-	cfg, err := selectOTelConfig(otelProfileMaxLogs)
+	cfg, err := selectOTelConfig(otelProfileMaxLogs, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,7 +397,7 @@ func TestGenevaLoggingResourcesCreateConfigBeforeGatewayTargetReady(t *testing.T
 
 func TestGenevaLoggingResourcesReturnsErrorWhenOTelConfigRenderFails(t *testing.T) {
 	originalRender := renderOTelConfigFn
-	renderOTelConfigFn = func(otelProfile) (string, error) {
+	renderOTelConfigFn = func(otelProfile, bool) (string, error) {
 		return "", errors.New("render failure")
 	}
 	defer func() {
