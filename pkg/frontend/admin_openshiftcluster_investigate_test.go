@@ -18,9 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -34,14 +31,6 @@ const (
 	mockInvestigateTenantID = "00000000-0000-0000-0000-000000000002"
 )
 
-// fakeTokenCredential implements azcore.TokenCredential for tests that don't
-// exercise AcquireToken (handler pre-condition tests).
-type fakeTokenCredential struct{}
-
-func (fakeTokenCredential) GetToken(_ context.Context, _ policy.TokenRequestOptions) (azcore.AccessToken, error) {
-	return azcore.AccessToken{Token: "fake-token"}, nil
-}
-
 func newTestHolmesConfig() *holmes.HolmesConfig {
 	return holmes.NewHolmesConfigForTest(
 		"quay.io/test/holmesgpt:latest",
@@ -50,7 +39,6 @@ func newTestHolmesConfig() *holmes.HolmesConfig {
 		"azure/gpt-4o",
 		600,
 		20,
-		fakeTokenCredential{},
 	)
 }
 

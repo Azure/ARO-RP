@@ -17,33 +17,34 @@ The Holmes investigation API is an admin endpoint that runs [HolmesGPT](https://
 
 ## Authentication
 
-Holmes uses **Entra ID token authentication** for Azure OpenAI (`disableLocalAuth=true` on the AOAI resource). No API keys are stored or used.
+Holmes uses **Azure Workload Identity** for Azure OpenAI authentication (`disableLocalAuth=true` on the AOAI resource). No API keys or pre-acquired tokens are used.
 
-At RP startup, the RP obtains its managed identity credential (prod) or dev service principal credential (dev). At investigation request time, `HolmesConfig.AcquireToken()` acquires a short-lived (~1 hour) token scoped to `https://cognitiveservices.azure.com/.default`. The token is injected into the investigation pod.
+Investigation pods run in a dedicated `holmes-system` namespace on the Hive AKS cluster with a ServiceAccount annotated for workload identity. The AKS workload identity webhook injects the federated token credentials, and `DefaultAzureCredential` acquires tokens automatically at runtime.
 
 **Requirements:**
+- The Hive AKS cluster must have **OIDC issuer** and **workload identity** enabled
+- A **User-Assigned Managed Identity** (UAMI) with the **Cognitive Services OpenAI User** role on the AOAI resource
+- A **federated identity credential** linking the UAMI to `system:serviceaccount:holmes-system:holmes-investigator` via the Hive AKS OIDC issuer
 - The Azure OpenAI resource must have a **custom subdomain** endpoint (e.g., `https://<name>.openai.azure.com/`)
-- The RP identity must have the **Cognitive Services OpenAI User** role on the AOAI resource
 
 ## Config Loading
 
 Configuration is loaded once at RP startup in `NewFrontend` (`pkg/frontend/frontend.go`).
 
-**Development mode** (`RP_MODE=development`): The API base URL is read from the `HOLMES_AZURE_API_BASE` environment variable. The MSI credential is obtained via `NewMSITokenCredential()` (uses `AZURE_RP_CLIENT_ID`/`AZURE_RP_CLIENT_SECRET` in dev). This uses `NewHolmesConfigFromEnv(acrDomain, credential)`.
+**Development mode** (`RP_MODE=development`): The API base URL is read from the `HOLMES_AZURE_API_BASE` environment variable. This uses `NewHolmesConfigFromEnv(acrDomain)`.
 
-**Production mode**: The API base URL is read from the service Key Vault (`{KEYVAULT_PREFIX}-svc`). The MSI credential is the RP's managed identity. Non-secret values (image, model, timeout, concurrency) use code defaults from `pkg/util/version/const.go` and `pkg/util/holmes/config.go`, with env var overrides. This uses `NewHolmesConfig(ctx, acrDomain, serviceKeyvault, credential)`.
+**Production mode**: The API base URL is read from the service Key Vault (`{KEYVAULT_PREFIX}-svc`). The UAMI client ID and non-secret values (image, model, timeout, concurrency) use code defaults from `pkg/util/version/const.go` and `pkg/util/holmes/config.go`, with env var overrides. This uses `NewHolmesConfig(ctx, acrDomain, serviceKeyvault)`.
 
-**Soft-load behavior**: If loading fails (e.g., MSI credential unavailable or Key Vault secrets not provisioned), the RP logs a warning and starts normally. Only the investigate endpoint returns an error ("Holmes investigation is not configured"). This allows the RP to operate without Holmes configured.
+**Soft-load behavior**: If loading fails (e.g., Key Vault secrets not provisioned or UAMI client ID not set), the RP logs a warning and starts normally. Only the investigate endpoint returns an error ("Holmes investigation is not configured"). This allows the RP to operate without Holmes configured.
 
 The loaded config is stored on the `frontend` struct as `holmesConfig *holmes.HolmesConfig` and reused for all investigation requests.
 
 ## How Config Reaches the Pod
 
-When an investigation request arrives, the RP creates three Kubernetes resources in the cluster's Hive namespace:
+When an investigation request arrives, the RP ensures the `holmes-system` namespace and `holmes-investigator` ServiceAccount exist (race-safe create-or-update), then creates three Kubernetes resources in that namespace:
 
 1. **Secret** (`holmes-kubeconfig-{id}`) — Contains:
    - `config`: Short-lived (1h) kubeconfig for `system:aro-diagnostics` identity
-   - `azure-ad-token`: Short-lived Entra ID token acquired per-request via `HolmesConfig.AcquireToken()`
    - `azure-api-base`: From `holmesConfig.AzureAPIBase`
    - `azure-api-version`: From `holmesConfig.AzureAPIVersion`
 
@@ -55,12 +56,14 @@ When an investigation request arrives, the RP creates three Kubernetes resources
    ```
    - Image from `holmesConfig.Image` (default: `version.HolmesImage(acrDomain)`)
    - `ActiveDeadlineSeconds` from `holmesConfig.DefaultTimeout`
-   - Azure credentials injected as environment variables from the Secret
+   - `ServiceAccountName: holmes-investigator` with label `azure.workload.identity/use: "true"`
+   - `AZURE_AD_TOKEN_AUTH=true` env var tells HolmesGPT to use `DefaultAzureCredential`
+   - Workload identity webhook injects `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_FEDERATED_TOKEN_FILE`
    - Kubeconfig mounted at `/etc/kubeconfig/config` (Secret Items filter)
    - `HostAliases` maps `api-int.*` hostname to the cluster's `APIServerPrivateEndpointIP`
-   - `imagePullSecrets` references `hive-global-pull-secret` for ACR authentication
+   - In development mode, `imagePullSecrets` references `hive-global-pull-secret` for ACR authentication. In production, the AKS kubelet identity pulls from ACR directly.
 
-All three resources are cleaned up after the investigation completes (or fails).
+All three resources (secret, configmap, pod) are cleaned up after the investigation completes (or fails). The namespace and ServiceAccount persist.
 
 ## Development Setup
 
@@ -91,7 +94,9 @@ All three resources are cleaned up after the investigation completes (or fails).
 |-------------|-------|
 | `holmes-azure-api-base` | Azure OpenAI endpoint URL (must use custom subdomain, e.g., `https://<name>.openai.azure.com`) |
 
-**RBAC:** Assign the **Cognitive Services OpenAI User** role to the RP's managed identity on the Azure OpenAI resource.
+**UAMI:** Create a User-Assigned Managed Identity and assign the **Cognitive Services OpenAI User** role on the AOAI resource. Create a federated identity credential linking it to `system:serviceaccount:holmes-system:holmes-investigator` via the Hive AKS OIDC issuer.
+
+**Hive AKS:** Enable OIDC issuer and workload identity on the Hive AKS cluster. Create the `holmes-system` namespace, `holmes-investigator` ServiceAccount (with the workload identity annotation), and copy `hive-global-pull-secret` into the namespace. In dev, `deploy-holmes-aoai.sh` handles this; in production, use the deployment pipeline.
 
 **Azure OpenAI resource:** Must have `disableLocalAuth=true` and a custom subdomain configured.
 
@@ -100,7 +105,7 @@ Non-secret config uses code defaults defined in `pkg/util/version/const.go` (ima
 ## Security
 
 - **Cluster access**: Investigation pods use a `system:aro-diagnostics` identity with read-only RBAC (get/list/watch only). The kubeconfig certificate expires after 1 hour.
-- **Pod security**: Runs as non-root (UID 1000), no privilege escalation, all capabilities dropped, service account token not mounted, FSGroup set for writable emptyDir volumes.
+- **Pod security**: Runs as non-root (UID 1000), no privilege escalation, all capabilities dropped, FSGroup set for writable emptyDir volumes. SA token is mounted for workload identity only.
 - **DNS resolution**: Pod uses `HostAliases` to map `api-int.*` to the cluster's private endpoint IP, bypassing DNS and preserving TLS certificate validation.
 - **Toolset restrictions**: Destructive commands (`kubectl delete`, `kubectl apply`, `kubectl exec`, `rm`) are blocked in the Holmes toolset config.
 - **Rate limiting**: Per-RP-instance CAS-based atomic counter limits concurrent investigations (default 20).
