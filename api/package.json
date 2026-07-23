@@ -20,8 +20,8 @@
   "scripts": {
     "format": "tsp format \"**/*.tsp\"",
     "format-check": "tsp format --check \"**/*.tsp\"",
-    "swagger": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error --emit @azure-tools/typespec-autorest",
-    "python": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error --emit @azure-tools/typespec-python",
+    "swagger": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/main.tsp --warn-as-error --emit @azure-tools/typespec-autorest",
+    "python": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp --warn-as-error --emit @azure-tools/typespec-python",
     "examples": "oav generate-examples"
   },
   "devDependencies": {
