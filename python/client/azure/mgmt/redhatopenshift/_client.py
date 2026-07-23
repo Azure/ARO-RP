@@ -17,7 +17,7 @@ from azure.mgmt.core import ARMPipelineClient
 from azure.mgmt.core.policies import ARMAutoResourceProviderRegistrationPolicy
 from azure.mgmt.core.tools import get_arm_endpoints
 
-from ._configuration import RedHatOpenShiftClientConfiguration
+from ._configuration import AzureRedHatOpenShiftClientConfiguration
 from ._utils.serialization import Deserializer, Serializer
 from .operations import (
     OpenShiftClustersOperations,
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from azure.core.credentials import TokenCredential
 
 
-class RedHatOpenShiftClient:  # pylint: disable=docstring-keyword-should-match-keyword-only
+class AzureRedHatOpenShiftClient:  # pylint: disable=docstring-keyword-should-match-keyword-only
     """Rest API for Azure Red Hat OpenShift 4.
 
     :ivar operations: Operations operations
@@ -85,7 +85,7 @@ class RedHatOpenShiftClient:  # pylint: disable=docstring-keyword-should-match-k
         if not base_url:
             base_url = _endpoints["resource_manager"]
         credential_scopes = kwargs.pop("credential_scopes", _endpoints["credential_scopes"])
-        self._config = RedHatOpenShiftClientConfiguration(
+        self._config = AzureRedHatOpenShiftClientConfiguration(
             credential=credential,
             subscription_id=subscription_id,
             base_url=cast(str, base_url),
