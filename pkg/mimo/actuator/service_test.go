@@ -308,7 +308,7 @@ func TestActuatorPerformsMaintenance(t *testing.T) {
 		"0000-0000-0001": func(th mimo.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) error {
 			// Only the ClusterResourceID is available to the bucket
 			// worker, so make sure this is the full document
-			r.Equal(oscd.OpenShiftCluster.Properties.NetworkProfile.PodCIDR, "0.0.0.0/32")
+			r.Equal("0.0.0.0/32", oscd.OpenShiftCluster.Properties.NetworkProfile.PodCIDR)
 
 			// once we've run this task, stop the worker
 			svc.stopping.Store(true)
@@ -363,7 +363,7 @@ func TestActuatorPerformsMaintenance(t *testing.T) {
 	)
 
 	errs := checker.CheckMaintenanceManifests(manifestsClient)
-	r.Nil(errs, fmt.Sprintf("%v", errs))
+	r.Nil(errs, "%v", errs)
 
 	m.AssertFloats()
 	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{

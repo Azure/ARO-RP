@@ -428,7 +428,7 @@ out:
 				s.clusterHasRunnableTasksLock.RLock()
 				defer s.clusterHasRunnableTasksLock.RUnlock()
 
-				got, _ := s.clusterHasRunnableTasks[id]
+				got := s.clusterHasRunnableTasks[id]
 				return got
 			}()
 
