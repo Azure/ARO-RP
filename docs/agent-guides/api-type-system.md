@@ -79,10 +79,10 @@ Plus parallel files for: `openshiftclustercredentials`, `openshiftclusteradminku
 The source of truth is now the Typespec contained in `api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp` rather than the Go types defined in `pkg/api/$VERSION`. Currently the Go types for v20250725 are maintained separately from the TypeSpec, but we aim to generate the Go types from the TypeSpec soon.
 
 ```
-api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp -> hack/api/swagger-from-typespec.sh
+api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp -> hack/api/generate-from-typespec.sh swagger
 ```
 
-- Generator: `hack/api/swagger-from-typespec.sh` wraps invocations of the `npm` scripts from `api/package.json`
+- Generator: `hack/api/generate-from-typespec.sh swagger` wraps invocations of the `npm` scripts from `api/package.json`
 - Target: `make generate-swagger-typespec`
 
 ### For v20240812preview and preceding API versions

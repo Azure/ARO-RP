@@ -1,29 +1,31 @@
 {
   "dependencies": {
-    "@azure-tools/typespec-autorest": "^0.65.0",
-    "@azure-tools/typespec-azure-core": "^0.65.0",
-    "@azure-tools/typespec-azure-resource-manager": "^0.65.0",
-    "@azure-tools/typespec-azure-rulesets": "0.65.0",
-    "@azure-tools/typespec-client-generator-core": "^0.65.0",
-    "@typespec/http": "~1.9.0",
-    "@typespec/openapi": "~1.9.0",
-    "@typespec/openapi3": "~1.9.0",
-    "@typespec/rest": "~0.79.0",
-    "@typespec/versioning": "~0.79.0",
-    "oav": "^4.0.2"
+    "@azure-tools/typespec-autorest": "^0.70.1",
+	"@azure-tools/typespec-azure-core": "^0.70.0",
+	"@azure-tools/typespec-azure-resource-manager": "^0.70.0",
+	"@azure-tools/typespec-azure-rulesets": "^0.70.0",
+	"@azure-tools/typespec-client-generator-core": "^0.70.0",
+	"@azure-tools/typespec-go": "^0.15.0",
+    "@azure-tools/typespec-python": "^0.63.0",
+	"@typespec/http": "~1.14.0",
+    "@typespec/openapi": "~1.14.0",
+    "@typespec/rest": "~0.84.0",
+    "@typespec/streams": "~0.84.0",
+    "@typespec/versioning": "~0.84.0",
+    "@typespec/xml": "~0.84.0"
   },
   "engines": {
-    "node": ">=20.12.0"
+    "node": ">=24.18.0"
   },
   "scripts": {
     "format": "tsp format \"**/*.tsp\"",
     "format-check": "tsp format --check \"**/*.tsp\"",
-    "compile": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters --warn-as-error",
+    "swagger": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/main.tsp --warn-as-error --emit @azure-tools/typespec-autorest",
+    "python": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp --warn-as-error --emit @azure-tools/typespec-python",
     "examples": "oav generate-examples"
   },
   "devDependencies": {
-    "@microsoft.azure/openapi-validator": "^2.2.4",
-    "@microsoft.azure/openapi-validator-rulesets": "^2.0.4",
-    "@typespec/compiler": "^1.11.0"
+	"@typespec/compiler": "^1.14.0",
+	"oav": "^4.0.4"
   }
 }

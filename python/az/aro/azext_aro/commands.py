@@ -13,7 +13,7 @@ from azext_aro._help import helps  # pylint: disable=unused-import
 
 def load_command_table(loader, _):
     aro_sdk = CliCommandType(
-        operations_tmpl='azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2025_07_25.operations#OpenShiftClustersOperations.{}',  # pylint: disable=line-too-long
+        operations_tmpl='azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.operations#OpenShiftClustersOperations.{}',  # pylint: disable=line-too-long
         client_factory=cf_aro)
 
     with loader.command_group('aro', aro_sdk, client_factory=cf_aro) as g:
