@@ -1,0 +1,47 @@
+---
+description: Pre-push quality gates to avoid avoidable PR mistakes
+alwaysApply: true
+---
+
+# Pre-Push Gates
+
+Run this checklist before every `git push` that updates a PR.
+
+## 1) Branch / Worktree Safety
+
+- Confirm you are in the intended worktree and branch: `git branch --show-current`
+- Confirm branch tracks the expected remote: `git rev-parse --abbrev-ref --symbolic-full-name @{u}`
+- Confirm PR head branch matches local branch:
+  - `gh pr view <number> --json headRefName --jq .headRefName`
+- Push with `git push -u origin HEAD` to avoid pushing to the wrong branch name.
+
+## 2) Scope and History Hygiene
+
+- No merge/WIP/fixup commits (see `clean-history` rule).
+- Diff only includes task-related files.
+- PR description and code must describe the same behavior.
+
+## 3) Type Safety and API Contracts
+
+- Prefer typed Kubernetes objects (`corev1`, `metav1`, typed clients) over map/stringly-typed payloads.
+- Use existing project/domain types before introducing new ad-hoc structs.
+- Avoid unchecked type assertions unless guaranteed by interface contracts.
+
+## 4) Error Handling and Response Semantics
+
+- Do not lose concrete error types needed by callers (`adminReply`, `errors.Is/As`).
+- Never leak raw internal `err.Error()` messages in 5xx responses.
+- Add nil guards in error-path parsing to prevent panic in failure handling.
+- If response streaming has started, do not append structured JSON errors afterward.
+
+## 5) Logging Consistency and Data Hygiene
+
+- Use the package-standard logger API consistently (avoid mixed logger styles in same flow).
+- Avoid logging sensitive/raw user input; log identifiers, counts, or lengths instead.
+- Ensure log messages match behavior (message, function name, and called action agree).
+
+## 6) Reliability and Tests
+
+- Add timeouts for cleanup/external calls (`context.WithTimeout`) where hangs are possible.
+- Cover both success and failure paths, including side effects (streaming, cleanup, retries).
+- For middleware/body-consuming code, verify the response/request body remains reusable when required.
