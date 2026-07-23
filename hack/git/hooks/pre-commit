@@ -21,7 +21,7 @@ Once set, try committing again."
 fi
 
 # e.g. "USERNAME/ARO-1234", "USERNAME/hotfix-v20240321.00", "USERNAME/gh-issue-123" and appended descriptions: "USERNAME/ARO-1234/description-here"
-valid_branch_regex="^${git_username_lower}\/(ARO-[0-9]{4,}|hotfix-v[0-9]{8}(\.[0-9]+)*|gh-issue-[0-9]{1,})(\/[a-zA-Z0-9][a-zA-Z0-9.-]*)?$"
+valid_branch_regex="^${git_username_lower}\/(ARO-[0-9]{6,}|hotfix-v[0-9]{8}(\.[0-9]+)*|gh-issue-[0-9]{1,})(\/[a-zA-Z0-9][a-zA-Z0-9.-]*)?$"
 local_branch="$(git rev-parse --abbrev-ref HEAD)"
 
 if [[ ! $local_branch =~ $valid_branch_regex ]]; then
