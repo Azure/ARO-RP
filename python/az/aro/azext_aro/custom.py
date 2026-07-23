@@ -824,9 +824,20 @@ def aro_identity_get_required(*,
                               version,
                               master_subnet,
                               worker_subnet,
-                              vnet,
+                              vnet=None,
                               disk_encryption_set=None,
                               vnet_resource_group_name=None) -> None:  # pylint: disable=unused-argument
+    if vnet is None:
+        validate_subnets(master_subnet, worker_subnet)
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
     _validate_version(client, version, location)
     role_set = _get_pwi_role_set(client, version, location)
 
@@ -892,7 +903,7 @@ def aro_identity_create_required(*,
                                  version,
                                  master_subnet,
                                  worker_subnet,
-                                 vnet,
+                                 vnet=None,
                                  disk_encryption_set=None,
                                  vnet_resource_group_name=None) -> list[dict[str, typing.Any]]:  # pylint: disable=unused-argument
     """
@@ -903,6 +914,17 @@ def aro_identity_create_required(*,
     """
     # FIXME:
     # pylint: disable=too-many-locals
+    if vnet is None:
+        validate_subnets(master_subnet, worker_subnet)
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
     identities = []
     progress = cmd.cli_ctx.get_progress_controller()
 
@@ -955,6 +977,10 @@ def aro_identity_create_required(*,
         create_role_assignment(cmd.cli_ctx, firstparty_principal, des_defn, disk_encryption_set)
 
     progress.end()
+
+    logger.warning("\nManaged identities and role assignments were created. "
+                   "Please note 'id' or 'name' for assigning the identities with the az aro create command.")
+
     return identities
 
 
@@ -1018,11 +1044,13 @@ def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentSco
             if action.startswith("Microsoft.Compute/diskEncryptionSets/"):
                 scopes.add(RoleAssignmentScope.DISK_ENCRYPTION_SET)
 
-            if action.startswith("Microsoft.Network/virtualNetworks/subnets/"):
+            if action.startswith("Microsoft.Network/virtualNetworks/subnets/") and RoleAssignmentScope.VNET not in scopes:  # pylint: disable=line-too-long
                 scopes.add(RoleAssignmentScope.MASTER_SUBNET)
                 scopes.add(RoleAssignmentScope.WORKER_SUBNET)
             elif action.startswith("Microsoft.Network/virtualNetworks/"):
                 scopes.add(RoleAssignmentScope.VNET)
+                scopes.discard(RoleAssignmentScope.MASTER_SUBNET)
+                scopes.discard(RoleAssignmentScope.WORKER_SUBNET)
 
             if action.startswith("Microsoft.Network/natGateways/"):
                 scopes.add(RoleAssignmentScope.NAT_GATEWAY)
