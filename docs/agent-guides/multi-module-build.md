@@ -37,6 +37,18 @@ The `fmt` target runs `$(GOLANGCI_LINT) fmt` which uses **gci** (import ordering
 
 The pre-commit hook (`.git/hooks/pre-commit`) calls `make fmt` and `make lint-go` on staged Go files.
 
+## Conservative Linter Rollouts
+
+When enabling or tightening a linter in `.golangci.yml`, keep the rollout small and measurable:
+
+1. Change one linter at a time.
+2. Run `make lint-go` first to see the real findings set before touching product code.
+3. For threshold-based linters such as `goconst`, sweep candidate settings and choose the lowest threshold that keeps the fallout reviewable.
+4. Exclude generated or generated-like paths before cleanup work if they dominate the findings and are not the target of the rollout.
+5. Keep workflow or plugin changes separate from linter-fallout cleanup when they can be reviewed independently.
+
+The goal is to start enforcing the rule with obvious, high-value findings without turning the rollout into a broad refactor.
+
 ## Import Ordering (enforced by gci)
 
 Nine tiers, configured in `.golangci.yml`:
