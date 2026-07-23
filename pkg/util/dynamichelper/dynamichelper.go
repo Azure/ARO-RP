@@ -109,7 +109,7 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 			// correctly reconciled. The Gatekeeper-specific path only
 			// compares enforcementAction and would silently skip updates
 			// to other resource types.
-			if isAdmissionRegistrationResource(un) {
+			if shouldUseServerSideApply(un) {
 				if err := dh.ensureByServerSideApply(ctx, un); err != nil {
 					return err
 				}
@@ -177,10 +177,18 @@ func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntim
 	return clienthelper.Merge(old.(client.Object), new.(client.Object))
 }
 
-// isAdmissionRegistrationResource returns true for admissionregistration resources
-// that should be managed via server-side apply rather than the Gatekeeper-specific path.
-func isAdmissionRegistrationResource(uns *unstructured.Unstructured) bool {
-	return uns.GroupVersionKind().Group == "admissionregistration.k8s.io"
+// shouldUseServerSideApply returns true for unstructured resources that should
+// be managed via server-side apply rather than the Gatekeeper-specific path.
+func shouldUseServerSideApply(uns *unstructured.Unstructured) bool {
+	gvk := uns.GroupVersionKind()
+	switch gvk.Group {
+	case "admissionregistration.k8s.io":
+		return gvk.Kind == "ValidatingAdmissionPolicy" || gvk.Kind == "ValidatingAdmissionPolicyBinding"
+	case "policy.networking.k8s.io":
+		return gvk.Kind == "AdminNetworkPolicy"
+	default:
+		return false
+	}
 }
 
 // ensureByServerSideApply creates or updates a single unstructured object

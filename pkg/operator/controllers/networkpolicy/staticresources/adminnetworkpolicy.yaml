@@ -1,0 +1,19 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: aro-cco-deny-pprof
+spec:
+  priority: 50
+  subject:
+    namespaces:
+      matchLabels:
+        kubernetes.io/metadata.name: openshift-cloud-credential-operator
+  ingress:
+    - name: deny-pprof
+      action: Deny
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 6060
+      from:
+        - namespaces: {}
