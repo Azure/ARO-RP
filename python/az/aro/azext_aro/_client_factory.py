@@ -4,7 +4,7 @@
 import urllib3
 
 from azext_aro.custom import rp_mode_development
-from azext_aro.vendored_sdks.azure.mgmt.redhatopenshift import RedHatOpenShiftClient
+from azext_aro.vendored_sdks.azure.mgmt.redhatopenshift import AzureRedHatOpenShiftClient
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 
 
@@ -20,6 +20,6 @@ def cf_aro(cli_ctx, *_):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     client = get_mgmt_service_client(
-        cli_ctx, RedHatOpenShiftClient, base_url_bound=False, **opt_args)
+        cli_ctx, AzureRedHatOpenShiftClient, base_url_bound=False, **opt_args)
 
     return client
