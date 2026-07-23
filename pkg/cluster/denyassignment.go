@@ -45,7 +45,7 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	t := &arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		Schema:         deploymentTemplateSchema,
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
 			m.denyAssignment(),

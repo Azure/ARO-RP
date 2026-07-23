@@ -27,7 +27,7 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	registryStorageAccountName := m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName
 
 	t := &arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		Schema:         deploymentTemplateSchema,
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
 			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false, true),

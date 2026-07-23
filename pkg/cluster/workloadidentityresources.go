@@ -257,7 +257,7 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 	if len(toAdd) > 0 {
 		m.log.Infof("creating new role assignments for updated platform workload identities")
 		t := &arm.Template{
-			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+			Schema:         deploymentTemplateSchema,
 			ContentVersion: "1.0.0.0",
 			Resources:      toAdd,
 		}
