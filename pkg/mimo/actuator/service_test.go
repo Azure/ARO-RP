@@ -540,6 +540,7 @@ func TestActuatorLogsIfRunnableTasksFails(t *testing.T) {
 	controller := gomock.NewController(t)
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
 
 	hook, log := testlog.LogForTesting(t)
 	manifests, manifestsClient := testdatabase.NewFakeMaintenanceManifests(_env.Now)
