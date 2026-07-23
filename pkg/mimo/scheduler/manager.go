@@ -227,7 +227,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		}
 
 		// Cancel the manifests which are not required which this
-		for _, notNeededManifest := range foundPeriods {
+		for notNeededTime, notNeededManifest := range foundPeriods {
 			_, err = manifestsDB.Patch(ctx, clusterID, notNeededManifest, func(mmd *api.MaintenanceManifestDocument) error {
 				mmd.MaintenanceManifest.State = api.MaintenanceManifestStateCancelled
 				mmd.MaintenanceManifest.StatusText = "Cancelled by Scheduler as did not match current schedule settings"
@@ -237,7 +237,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 				clusterLog.Errorf("error cancelling unneeded manifest: %s", err.Error())
 			} else {
 				manifestsCancelled += 1
-				clusterLog.Debugf("cancelled unneeded manifest %s", notNeededManifest)
+				clusterLog.Infof("cancelled unneeded manifest id=%s (%s)", notNeededManifest, time.Unix(notNeededTime, 0).UTC().Format(time.RFC3339))
 			}
 		}
 
