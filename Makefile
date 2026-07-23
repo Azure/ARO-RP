@@ -7,6 +7,12 @@ E2E_FLAGS ?= -test.v --ginkgo.vv --ginkgo.timeout 180m --ginkgo.flake-attempts=2
 E2E_LABEL ?= !smoke&&!regressiontest
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 OC ?= oc
+SHFMT ?= shfmt
+
+# Keep Go-templated dnsmasq hooks out of the raw shfmt list; the surrounding
+# gotmpl wrappers are not valid shfmt input.
+BASH_FMT_FILES := hack/unit-test-bash.sh $(wildcard test/bash/spec/*.sh test/bash/spec/support/*.sh)
+BASH_FMT_FILES_ABS := $(abspath $(BASH_FMT_FILES))
 
 # When Go is not installed on the host (e.g., CI Docker-only jobs), provide
 # safe fallback values. Without this guard, every $(shell go ...) call —
@@ -385,6 +391,24 @@ unit-test-go: $(GOTESTSUM)
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg: $(GOTESTSUM)
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+
+.PHONY: unit-test-bash
+unit-test-bash:
+	bash ./hack/unit-test-bash.sh
+
+.PHONY: fmt-bash
+fmt-bash: ## Format bash framework files using shfmt and .editorconfig
+	$(SHFMT) -w $(BASH_FMT_FILES_ABS)
+
+.PHONY: validate-fmt-bash
+validate-fmt-bash: ## Verify bash framework files are formatted
+	if ! $(SHFMT) -d $(BASH_FMT_FILES_ABS); then \
+		echo "You need to run 'make fmt-bash' to update bash formatting and commit the changes"; \
+		exit 1; \
+	fi
+
+.PHONY: validate-bash
+validate-bash: validate-fmt-bash unit-test-bash ## Validate bash formatting and unit tests
 
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format Go source files using golangci-lint formatters (gci, gofumpt)
