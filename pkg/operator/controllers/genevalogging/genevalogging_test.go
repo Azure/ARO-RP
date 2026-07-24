@@ -127,7 +127,12 @@ func TestOTelConfigOTTLExpressionsAreBalanced(t *testing.T) {
 					t.Fatalf("rendered config is not valid YAML: %v", err)
 				}
 
-				processors, _ := cfg["processors"].(map[string]any)
+				processors, ok := cfg["processors"].(map[string]any)
+				if !ok {
+					t.Fatal("rendered config missing top-level 'processors' map")
+				}
+
+				var checked int
 				for name, proc := range processors {
 					procMap, ok := proc.(map[string]any)
 					if !ok {
@@ -146,10 +151,15 @@ func TestOTelConfigOTTLExpressionsAreBalanced(t *testing.T) {
 						if !ok {
 							continue
 						}
+						checked++
 						if err := checkOTTLParenBalance(s); err != nil {
 							t.Errorf("processor %q log_record[%d]: %v\n  expr: %s", name, i, err, s)
 						}
 					}
+				}
+
+				if profile == otelProfileMinimalLogs && checked == 0 {
+					t.Fatal("minimal-logs profile should have filter processors with log_record expressions, but none were found")
 				}
 			})
 		}
@@ -167,6 +177,9 @@ func TestKeepOnlyHighSignalExprParensBalanced(t *testing.T) {
 			expr := strings.TrimSpace(buf.String())
 			if err := checkOTTLParenBalance(expr); err != nil {
 				t.Fatalf("keep-only-high-signal-expr (cp=%v): %v\n  rendered: %s", isControlPlane, err, expr)
+			}
+			if !strings.Contains(expr, `\\terror\\t|\\twarn\\t`) {
+				t.Fatalf("keep-only-high-signal-expr missing zap tab-separated error/warn pattern\n  rendered: %s", expr)
 			}
 		})
 	}
@@ -216,6 +229,9 @@ func checkOTTLParenBalance(expr string) error {
 				return fmt.Errorf("unexpected ')' at position %d (depth went negative)", i)
 			}
 		}
+	}
+	if inString {
+		return fmt.Errorf("unterminated string literal (unclosed double quote)")
 	}
 	if depth != 0 {
 		return fmt.Errorf("unbalanced parentheses: %d unclosed '('", depth)
