@@ -24,7 +24,7 @@ endif
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-AZURELINUX_VERSION = 3.0.20250910
+AZURELINUX_VERSION = 3.0.20260519
 FLUENTBIT_VERSION = 5.0.0
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(AZURELINUX_VERSION)
 AUTOREST_VERSION = 3.7.2
