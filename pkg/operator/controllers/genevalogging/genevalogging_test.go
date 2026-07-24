@@ -4,13 +4,16 @@ package genevalogging
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
 	"go.uber.org/mock/gomock"
+	"gopkg.in/yaml.v3"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -108,6 +111,116 @@ func TestSelectOTelConfig(t *testing.T) {
 	if strings.Contains(workerMin, "SyncLoop") {
 		t.Fatal("worker minimal-logs config must not contain SyncLoop")
 	}
+}
+
+func TestOTelConfigOTTLExpressionsAreBalanced(t *testing.T) {
+	for _, profile := range []otelProfile{otelProfileMaxLogs, otelProfileReducedLogs, otelProfileMinimalLogs} {
+		for _, isControlPlane := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/cp=%v", profile, isControlPlane), func(t *testing.T) {
+				rendered, err := renderOTelConfig(profile, isControlPlane)
+				if err != nil {
+					t.Fatalf("renderOTelConfig(%q, %v): %v", profile, isControlPlane, err)
+				}
+
+				var cfg map[string]any
+				if err := yaml.Unmarshal([]byte(rendered), &cfg); err != nil {
+					t.Fatalf("rendered config is not valid YAML: %v", err)
+				}
+
+				processors, _ := cfg["processors"].(map[string]any)
+				for name, proc := range processors {
+					procMap, ok := proc.(map[string]any)
+					if !ok {
+						continue
+					}
+					logs, ok := procMap["logs"].(map[string]any)
+					if !ok {
+						continue
+					}
+					logRecord, ok := logs["log_record"].([]any)
+					if !ok {
+						continue
+					}
+					for i, expr := range logRecord {
+						s, ok := expr.(string)
+						if !ok {
+							continue
+						}
+						if err := checkOTTLParenBalance(s); err != nil {
+							t.Errorf("processor %q log_record[%d]: %v\n  expr: %s", name, i, err, s)
+						}
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestKeepOnlyHighSignalExprParensBalanced(t *testing.T) {
+	for _, isControlPlane := range []bool{true, false} {
+		t.Run(fmt.Sprintf("cp=%v", isControlPlane), func(t *testing.T) {
+			var buf bytes.Buffer
+			err := otelConfigParsedTemplate.ExecuteTemplate(&buf, "keep-only-high-signal-expr", struct{ IsControlPlane bool }{isControlPlane})
+			if err != nil {
+				t.Fatalf("failed to render keep-only-high-signal-expr: %v", err)
+			}
+			expr := strings.TrimSpace(buf.String())
+			if err := checkOTTLParenBalance(expr); err != nil {
+				t.Fatalf("keep-only-high-signal-expr (cp=%v): %v\n  rendered: %s", isControlPlane, err, expr)
+			}
+		})
+	}
+}
+
+func TestKeepJournaldHighSignalExprParensBalanced(t *testing.T) {
+	for _, isControlPlane := range []bool{true, false} {
+		t.Run(fmt.Sprintf("cp=%v", isControlPlane), func(t *testing.T) {
+			var buf bytes.Buffer
+			err := otelConfigParsedTemplate.ExecuteTemplate(&buf, "keep-journald-high-signal-expr", struct{ IsControlPlane bool }{isControlPlane})
+			if err != nil {
+				t.Fatalf("failed to render keep-journald-high-signal-expr: %v", err)
+			}
+			expr := strings.TrimSpace(buf.String())
+			if err := checkOTTLParenBalance(expr); err != nil {
+				t.Fatalf("keep-journald-high-signal-expr (cp=%v): %v\n  rendered: %s", isControlPlane, err, expr)
+			}
+		})
+	}
+}
+
+// checkOTTLParenBalance verifies that parentheses in an OTTL expression are
+// balanced, skipping parens inside double-quoted string literals.
+func checkOTTLParenBalance(expr string) error {
+	depth := 0
+	inString := false
+	escaped := false
+	for i, ch := range expr {
+		if escaped {
+			escaped = false
+			continue
+		}
+		if ch == '\\' && inString {
+			escaped = true
+			continue
+		}
+		switch {
+		case ch == '"':
+			inString = !inString
+		case inString:
+			// ignore characters inside string literals
+		case ch == '(':
+			depth++
+		case ch == ')':
+			depth--
+			if depth < 0 {
+				return fmt.Errorf("unexpected ')' at position %d (depth went negative)", i)
+			}
+		}
+	}
+	if depth != 0 {
+		return fmt.Errorf("unbalanced parentheses: %d unclosed '('", depth)
+	}
+	return nil
 }
 
 func TestSelectOTelConfigFailsIfPrimaryAndFallbackRenderFail(t *testing.T) {
