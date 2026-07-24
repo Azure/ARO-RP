@@ -385,6 +385,7 @@ not ((IsString(body) and (
     IsMatch(body, "level=(error|warn|warning)")
     or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
     or IsMatch(body, "Update error .*: ClusterOperatorDegraded")))
+    or IsMatch(body, "\\terror\\t|\\twarn\\t")))
   or (IsMap(body) and (
     (IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$"))
     or (IsString(body["message"]) and (
