@@ -52,7 +52,6 @@ type clients struct {
 const (
 	servicePrincipal = "servicePrincipal"
 	ingressProfile   = "ingressProfile"
-	clusterVersion   = "clusterVersion"
 	machineClient    = "machineClient"
 )
 
@@ -62,7 +61,6 @@ func NewParallelEnricher(metricsEmitter metrics.Emitter, dialer proxy.Dialer) Pa
 		enrichers: map[string]ClusterEnricher{
 			servicePrincipal: clusterServicePrincipalEnricher{},
 			ingressProfile:   ingressProfileEnricher{},
-			clusterVersion:   clusterVersionEnricher{},
 			machineClient:    machineClientEnricher{},
 		},
 		dialer: dialer,
@@ -162,9 +160,12 @@ func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan erro
 	}
 }
 
-// initializeClients initialize the necassary clients for the specified cluster
-// if some clients fail to be initialized, it also returns the list of enrichers
-// that we should skip because the clients they are using failed to instantiate
+// initializeClients initializes the necessary clients for the specified
+// cluster. The config client remains in the shared enricher interface for
+// compatibility, but it is no longer initialized here because no registered
+// enricher consumes it after the cluster version overlay was removed. It also
+// returns the list of enrichers we should skip because the clients they use
+// failed to instantiate.
 func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) (
 	k8s kubernetes.Interface, machineclient machineclient.Interface, operatorclient operatorclient.Interface, configclient configclient.Interface, unsuccessfulEnrichers map[string]bool,
 ) {
@@ -185,11 +186,6 @@ func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Ent
 		unsuccessfulEnrichers[ingressProfile] = true
 		p.taskError(log, err, 1)
 	}
-	configclient, err = p.setupConfigClient(ctx, oc)
-	if err != nil {
-		unsuccessfulEnrichers[clusterVersion] = true
-		p.taskError(log, err, 1)
-	}
 	return k8s, machineclient, operatorclient, configclient, unsuccessfulEnrichers
 }
 
@@ -205,15 +201,6 @@ func (p ParallelEnricher) setupK8sClient(ctx context.Context, oc *api.OpenShiftC
 	}
 
 	return kubernetes.NewForConfig(restConfig)
-}
-
-func (p ParallelEnricher) setupConfigClient(ctx context.Context, oc *api.OpenShiftCluster) (configclient.Interface, error) {
-	restConfig, err := restconfig.RestConfig(p.dialer, oc)
-	if err != nil {
-		return nil, err
-	}
-
-	return configclient.NewForConfig(restConfig)
 }
 
 func (p ParallelEnricher) setupOperatorClient(ctx context.Context, oc *api.OpenShiftCluster) (operatorclient.Interface, error) {
