@@ -1,13 +1,13 @@
 {
   "dependencies": {
     "@azure-tools/typespec-autorest": "^0.70.1",
-	"@azure-tools/typespec-azure-core": "^0.70.0",
-	"@azure-tools/typespec-azure-resource-manager": "^0.70.0",
-	"@azure-tools/typespec-azure-rulesets": "^0.70.0",
-	"@azure-tools/typespec-client-generator-core": "^0.70.0",
-	"@azure-tools/typespec-go": "^0.15.0",
+    "@azure-tools/typespec-azure-core": "^0.70.0",
+    "@azure-tools/typespec-azure-resource-manager": "^0.70.0",
+    "@azure-tools/typespec-azure-rulesets": "^0.70.0",
+    "@azure-tools/typespec-client-generator-core": "^0.70.0",
+    "@azure-tools/typespec-go": "^0.15.0",
     "@azure-tools/typespec-python": "^0.63.0",
-	"@typespec/http": "~1.14.0",
+    "@typespec/http": "~1.14.0",
     "@typespec/openapi": "~1.14.0",
     "@typespec/rest": "~0.84.0",
     "@typespec/streams": "~0.84.0",
@@ -25,7 +25,7 @@
     "examples": "oav generate-examples"
   },
   "devDependencies": {
-	"@typespec/compiler": "^1.14.0",
-	"oav": "^4.0.4"
+    "@typespec/compiler": "^1.14.0",
+    "oav": "^4.0.4"
   }
 }
