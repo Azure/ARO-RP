@@ -1,4 +1,4 @@
-import { Component } from "react"
+import { Component, type JSX } from "react"
 import {
   Nav,
   INavLinkGroup,
