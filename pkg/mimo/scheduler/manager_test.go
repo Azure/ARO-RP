@@ -957,7 +957,8 @@ func TestProcessLoop(t *testing.T) {
 						MaintenanceTaskID: "0",
 						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
-						// starts the next day
+						// schedule that just passed + the scheduleAcross window
+						// for this cluster
 						RunAfter:  time.Date(2026, 1, 1, 0, 51, 15, 0, time.UTC).Unix(),
 						RunBefore: time.Date(2026, 1, 1, 1, 51, 15, 0, time.UTC).Unix(),
 					},
@@ -972,7 +973,8 @@ func TestProcessLoop(t *testing.T) {
 						MaintenanceTaskID: "0",
 						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
-						// starts in the past 30s
+						// schedule that just passed + the scheduleAcross window
+						// for this cluster
 						RunAfter:  time.Date(2026, 1, 1, 0, 51, 15, 0, time.UTC).Unix(),
 						RunBefore: time.Date(2026, 1, 1, 1, 51, 15, 0, time.UTC).Unix(),
 					},
@@ -1070,6 +1072,8 @@ func TestProcessLoop(t *testing.T) {
 			},
 			existingManifests: []*api.MaintenanceManifestDocument{},
 			desiredManifests: []*api.MaintenanceManifestDocument{
+				// No manifest for today's schedule + scheduleAcross window
+				// created
 				{
 					ID:                manifestIDs[0],
 					ClusterResourceID: strings.ToLower(clusterResourceID),
@@ -1091,8 +1095,9 @@ func TestProcessLoop(t *testing.T) {
 						MaintenanceTaskID: "0",
 						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
 						Priority:          0,
-						RunAfter:          time.Date(2026, 1, 3, 0, 51, 15, 0, time.UTC).Unix(),
-						RunBefore:         time.Date(2026, 1, 3, 1, 51, 15, 0, time.UTC).Unix(),
+						// starts in 2 days
+						RunAfter:  time.Date(2026, 1, 3, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 3, 1, 51, 15, 0, time.UTC).Unix(),
 					},
 				},
 			},
