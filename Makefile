@@ -125,6 +125,7 @@ client: generate generate-swagger-typespec client-generate client-generate-legac
 
 .PHONY: client-generate
 client-generate:
+	hack/api/generate-from-typespec.sh go
 	hack/api/generate-from-typespec.sh python
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
