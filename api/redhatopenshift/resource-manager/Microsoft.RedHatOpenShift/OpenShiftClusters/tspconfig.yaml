@@ -13,7 +13,6 @@ options:
     arm-types-dir: "{project-root}/../../../../common-types/resource-management"
     # examples-dir: "{project-root}/examples"
   "@azure-tools/typespec-python":
-    service-dir: "sdk/redhatopenshift"
     emitter-output-dir: "{project-root}/../../../../../python/client"
     namespace: "azure.mgmt.redhatopenshift"
     generate-test: false
