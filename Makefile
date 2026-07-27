@@ -127,11 +127,6 @@ client: generate generate-swagger-typespec client-generate client-generate-legac
 client-generate:
 	hack/api/generate-from-typespec.sh python
 
-.PHONY: client-generate-legacy
-client-generate-legacy: ## Fix stale client library
-# Only generate the clients we use in our dev Python extension or in e2e clients
-	hack/api/build-dev-api-clients.sh "${AUTOREST_IMAGE}" 2024-08-12-preview 2025-07-25
-
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
