@@ -26,21 +26,43 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func TestValidateZoneDistribution(t *testing.T) {
+func TestClassifyZoneTopology(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		items   map[string]string
-		getZone func(string) string
-		wantErr string
+		name         string
+		items        map[string]string
+		getZone      func(string) string
+		wantTopology zoneTopology
+		wantErr      string
 	}{
 		{
-			name: "valid - 3 items in 3 different zones",
+			name: "valid - three zones",
 			items: map[string]string{
 				"item1": "1",
 				"item2": "2",
 				"item3": "3",
 			},
-			getZone: func(s string) string { return s },
+			getZone:      func(s string) string { return s },
+			wantTopology: zoneTopologyThreeZone,
+		},
+		{
+			name: "valid - single zone",
+			items: map[string]string{
+				"item1": "1",
+				"item2": "1",
+				"item3": "1",
+			},
+			getZone:      func(s string) string { return s },
+			wantTopology: zoneTopologySingleZone,
+		},
+		{
+			name: "valid - regional",
+			items: map[string]string{
+				"item1": "",
+				"item2": "",
+				"item3": "",
+			},
+			getZone:      func(s string) string { return s },
+			wantTopology: zoneTopologyRegional,
 		},
 		{
 			name: "invalid - only 2 items",
@@ -70,17 +92,17 @@ func TestValidateZoneDistribution(t *testing.T) {
 				"item3": "2",
 			},
 			getZone: func(s string) string { return s },
-			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
+			wantErr: `items have unsupported mixed zone topology: zones ["1" "2"]`,
 		},
 		{
-			name: "invalid - 3 items but all in same zone",
+			name: "invalid - zonal and regional items",
 			items: map[string]string{
 				"item1": "1",
-				"item2": "1",
-				"item3": "1",
+				"item2": "",
+				"item3": "",
 			},
 			getZone: func(s string) string { return s },
-			wantErr: "items must be spread across 3 different zones, found 1 zone(s)",
+			wantErr: `items have unsupported mixed zone topology: zones ["" "1"]`,
 		},
 		{
 			name:    "invalid - empty map",
@@ -90,8 +112,11 @@ func TestValidateZoneDistribution(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateZoneDistribution(tt.items, tt.getZone)
+			topology, err := classifyZoneTopology(tt.items, tt.getZone)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if topology != tt.wantTopology {
+				t.Errorf("expected topology %q, got %q", tt.wantTopology, topology)
+			}
 		})
 	}
 }
@@ -117,6 +142,39 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 				"master-1": {zone: "2", vmSize: "Standard_D8s_v3"},
 				"master-2": {zone: "3", vmSize: "Standard_D8s_v3"},
 			},
+		},
+		{
+			name: "valid - regional machines match regional Azure VMs",
+			ocMachines: map[string]machineValidationData{
+				"master-0": {size: "Standard_D8s_v3"},
+				"master-1": {size: "Standard_D8s_v3"},
+				"master-2": {size: "Standard_D8s_v3"},
+			},
+			azureVMs: map[string]azureVMValidationData{
+				"master-0": {vmSize: "Standard_D8s_v3"},
+				"master-1": {vmSize: "Standard_D8s_v3"},
+				"master-2": {vmSize: "Standard_D8s_v3"},
+			},
+		},
+		{
+			name: "invalid - zonal machine and regional Azure VM",
+			ocMachines: map[string]machineValidationData{
+				"master-0": {specZone: "1", size: "Standard_D8s_v3"},
+			},
+			azureVMs: map[string]azureVMValidationData{
+				"master-0": {vmSize: "Standard_D8s_v3"},
+			},
+			wantErrStrings: []string{"machine master-0 has zone 1 in its spec, however Azure VM is running in zone "},
+		},
+		{
+			name: "invalid - regional machine and zonal Azure VM",
+			ocMachines: map[string]machineValidationData{
+				"master-0": {size: "Standard_D8s_v3"},
+			},
+			azureVMs: map[string]azureVMValidationData{
+				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
+			},
+			wantErrStrings: []string{"machine master-0 has zone  in its spec, however Azure VM is running in zone 1"},
 		},
 		{
 			name: "invalid - machine not found in Azure",
@@ -429,6 +487,24 @@ func TestValidateClusterMachines(t *testing.T) {
 			wantCount: 3,
 		},
 		{
+			name: "success - 3 machines in one zone",
+			machines: map[string]machineValidationData{
+				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantCount: 3,
+		},
+		{
+			name: "success - 3 regional machines",
+			machines: map[string]machineValidationData{
+				"master-0": {size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantCount: 3,
+		},
+		{
 			name: "failure - not 3 machines",
 			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
@@ -461,7 +537,7 @@ func TestValidateClusterMachines(t *testing.T) {
 				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 			},
-			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
+			wantErr: `items have unsupported mixed zone topology: zones ["1" "2"]`,
 		},
 		{
 			name: "failure - machine with nil phase",
@@ -602,14 +678,14 @@ func TestValidateVMPowerState(t *testing.T) {
 			wantErr: "expected 2 statuses for VM master-0, but found 1: PowerState/running",
 		},
 		{
-			name: "failure - 3 statuses",
+			name: "failure - unexpected extra status",
 			vmStatuses: []string{
 				"ProvisioningState/succeeded",
 				"PowerState/running",
 				"ExtraStatus/unexpected",
 			},
 			vmName:  "master-0",
-			wantErr: "expected 2 statuses for VM master-0, but found 3: ProvisioningState/succeeded, PowerState/running, ExtraStatus/unexpected",
+			wantErr: "found unexpected statuses for VM master-0: ExtraStatus/unexpected",
 		},
 		{
 			name:       "failure - empty statuses",
@@ -698,6 +774,22 @@ func TestGetAzureVMs(t *testing.T) {
 		}
 		return machines
 	}
+	createAzureVM := func(zones []string) mgmtcompute.VirtualMachine {
+		return mgmtcompute.VirtualMachine{
+			VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+				HardwareProfile: &mgmtcompute.HardwareProfile{
+					VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
+				},
+				InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+					Statuses: &[]mgmtcompute.InstanceViewStatus{
+						{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+						{Code: pointerutils.ToPtr("PowerState/running")},
+					},
+				},
+			},
+			Zones: &zones,
+		}
+	}
 
 	for _, tt := range []struct {
 		name      string
@@ -728,7 +820,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones0,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -744,7 +837,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones1,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -760,63 +854,52 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones2,
-					}, nil)
+					}, nil,
+				)
 			},
 			wantCount: 3, // All 3 master VMs
+		},
+		{
+			name:     "success - 3 master VMs in one zone",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
+			mocks: func(a *mock_adminactions.MockAzureActions) {
+				for _, name := range []string{"master-0", "master-1", "master-2"} {
+					a.EXPECT().GetVirtualMachine(ctx, "test-cluster", name, mgmtcompute.InstanceView).Return(createAzureVM([]string{"1"}), nil)
+				}
+			},
+			wantCount: 3,
+		},
+		{
+			name:     "success - 3 regional master VMs with empty zones",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
+			mocks: func(a *mock_adminactions.MockAzureActions) {
+				for _, name := range []string{"master-0", "master-1", "master-2"} {
+					a.EXPECT().GetVirtualMachine(ctx, "test-cluster", name, mgmtcompute.InstanceView).Return(createAzureVM([]string{}), nil)
+				}
+			},
+			wantCount: 3,
+		},
+		{
+			name:     "success - 3 regional master VMs with nil zones",
+			machines: createMachinesMap("master-0", "master-1", "master-2"),
+			mocks: func(a *mock_adminactions.MockAzureActions) {
+				for _, name := range []string{"master-0", "master-1", "master-2"} {
+					vm := createAzureVM(nil)
+					vm.Zones = nil
+					a.EXPECT().GetVirtualMachine(ctx, "test-cluster", name, mgmtcompute.InstanceView).Return(vm, nil)
+				}
+			},
+			wantCount: 3,
 		},
 		{
 			name:     "failure - VM not found in Azure",
 			machines: createMachinesMap("master-0"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
-					mgmtcompute.VirtualMachine{}, fmt.Errorf("VM not found"))
+					mgmtcompute.VirtualMachine{}, fmt.Errorf("VM not found"),
+				)
 			},
 			wantErr: "500: InternalServerError: controlPlaneVM/master-0: failed to get Azure VM master-0: VM not found",
-		},
-		{
-			name:     "failure - VM with no zones",
-			machines: createMachinesMap("master-0"),
-			mocks: func(a *mock_adminactions.MockAzureActions) {
-				emptyZones := []string{}
-				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
-					mgmtcompute.VirtualMachine{
-						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-							HardwareProfile: &mgmtcompute.HardwareProfile{
-								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
-							},
-							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
-								},
-							},
-						},
-						Zones: &emptyZones,
-					}, nil)
-			},
-			wantErr: "azure VM master-0 has no availability zone configured",
-		},
-		{
-			name:     "failure - VM with nil zones",
-			machines: createMachinesMap("master-0"),
-			mocks: func(a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-0", mgmtcompute.InstanceView).Return(
-					mgmtcompute.VirtualMachine{
-						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-							HardwareProfile: &mgmtcompute.HardwareProfile{
-								VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
-							},
-							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-								Statuses: &[]mgmtcompute.InstanceViewStatus{
-									{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-									{Code: pointerutils.ToPtr("PowerState/running")},
-								},
-							},
-						},
-						Zones: nil,
-					}, nil)
-			},
-			wantErr: "azure VM master-0 has no availability zone configured",
 		},
 		{
 			name:     "failure - wrong zone distribution (only 2 zones)",
@@ -840,7 +923,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones0,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -856,7 +940,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones1,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -872,9 +957,10 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones2,
-					}, nil)
+					}, nil,
+				)
 			},
-			wantErr: "items must be spread across 3 different zones, found 2 zone(s)",
+			wantErr: `items have unsupported mixed zone topology: zones ["1" "2"]`,
 		},
 		{
 			name:     "handles nil InstanceView gracefully",
@@ -894,7 +980,8 @@ func TestGetAzureVMs(t *testing.T) {
 							InstanceView: nil, // nil InstanceView
 						},
 						Zones: &zones0,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -910,7 +997,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones1,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -926,7 +1014,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones2,
-					}, nil)
+					}, nil,
+				)
 			},
 			wantErr: "expected 2 statuses for VM master-0, but found 0: ",
 		},
@@ -950,7 +1039,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones0,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -966,7 +1056,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones1,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -982,7 +1073,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones2,
-					}, nil)
+					}, nil,
+				)
 			},
 			wantErr: "expected 2 statuses for VM master-0, but found 0: ",
 		},
@@ -1007,7 +1099,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones0,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-1", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -1023,7 +1116,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones1,
-					}, nil)
+					}, nil,
+				)
 
 				a.EXPECT().GetVirtualMachine(ctx, "test-cluster", "master-2", mgmtcompute.InstanceView).Return(
 					mgmtcompute.VirtualMachine{
@@ -1039,7 +1133,8 @@ func TestGetAzureVMs(t *testing.T) {
 							},
 						},
 						Zones: &zones2,
-					}, nil)
+					}, nil,
+				)
 			},
 			wantCount: 3, // All 3 VMs are added, but master-0 will have empty vmSize
 		},
