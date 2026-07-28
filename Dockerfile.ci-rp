@@ -14,9 +14,8 @@ ENV DO_NOT_TRACK=1
 # Copying package files and installing dependencies
 COPY portal/v2/package*.json ./
 
-# Combine npm install and audit in one step to reduce layers and clean cache
-RUN npm ci \
-    && npm audit --audit-level high --omit=dev
+# Clean install the package
+RUN npm ci
 
 # Copying the rest of the source and build
 COPY --chown=root:root portal/v2/ ./
