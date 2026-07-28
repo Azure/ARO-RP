@@ -123,12 +123,10 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 
 	// We may be within a scheduleAcross window of the previous schedule run,
 	// add that to the expected periods so we don't cancel them
-	scheduleAtStartOfScheduleAcross, hasFutureTime := Next(now.Add(-1*scheduleAcross), calDef)
-	if hasFutureTime {
-		if next.Unix() != scheduleAtStartOfScheduleAcross.Unix() {
-			periods_friendly = append(periods_friendly, fmt.Sprintf("%s (within scheduleAcross)", scheduleAtStartOfScheduleAcross.Format(friendlyDateFormat)))
-			periods = append(periods, scheduleAtStartOfScheduleAcross)
-		}
+	scheduleAtStartOfScheduleAcross, hasFutureTime := Next(now.Add(-scheduleAcross), calDef)
+	if hasFutureTime && !next.Equal(scheduleAtStartOfScheduleAcross) {
+		periods_friendly = append(periods_friendly, fmt.Sprintf("%s (within scheduleAcross)", scheduleAtStartOfScheduleAcross.Format(friendlyDateFormat)))
+		periods = append(periods, scheduleAtStartOfScheduleAcross)
 	}
 
 	periods_friendly = append(periods_friendly, next.Format(friendlyDateFormat))
