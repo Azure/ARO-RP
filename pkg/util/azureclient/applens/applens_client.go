@@ -181,7 +181,7 @@ func (c *Client) createRequest(
 ) (*policy.Request, error) {
 	if requestOptions != nil {
 		header := requestOptions.toHeader()
-		ctx = runtime.WithHTTPHeader(ctx, header)
+		ctx = policy.WithHTTPHeader(ctx, header)
 	}
 
 	req, err := runtime.NewRequest(ctx, method, c.endpoint)

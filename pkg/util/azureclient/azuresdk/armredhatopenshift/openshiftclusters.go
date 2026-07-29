@@ -61,8 +61,8 @@ func configureDevMode(options *arm.ClientOptions) *arm.ClientOptions {
 		return req.Next()
 	})
 
-	options.ClientOptions.Transport = &insecureTransport{}
-	options.ClientOptions.PerCallPolicies = append([]policy.Policy{endpointOverridePolicy}, options.ClientOptions.PerCallPolicies...)
+	options.Transport = &insecureTransport{}
+	options.PerCallPolicies = append([]policy.Policy{endpointOverridePolicy}, options.PerCallPolicies...)
 
 	return options
 }

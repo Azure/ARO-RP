@@ -26,8 +26,8 @@ linters:
       rules:
         deprecatedutillibs:
           files:
-            # Allow autorest client generation to use autorest/to
-            - "!${config-path}/pkg/client/services/redhatopenshift/mgmt/*/redhatopenshift/*.go"
+            # Allow client generation to use autorest/to
+            - "!${config-path}/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift/*.go"
           deny:
             - pkg: "github.com/Azure/go-autorest/autorest/to"
               desc: use github.com/Azure/ARO-RP/pkg/util/pointerutils
@@ -137,8 +137,6 @@ linters:
           alias: apisubnet
         - pkg: ^github\.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$
           alias: $1
-        - pkg: ^github\.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$
-          alias: mgmtredhatopenshift$1$2$3$4
         - pkg: ^github\.com/Azure/ARO-RP/pkg/(deploy|gateway|mirror|monitor|operator|portal)$
           alias: pkg$1
         - pkg: ^github\.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$
@@ -180,6 +178,7 @@ linters:
       - linters:
           - importas
           - staticcheck
+          - unconvert
         path: pkg/client/(.+)\.go
       - linters:
           - importas
