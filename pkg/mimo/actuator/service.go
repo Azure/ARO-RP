@@ -365,7 +365,7 @@ func (s *service) pollRunnableTasks(ctx context.Context, m database.MaintenanceM
 				// not own will not be run and not pick up the state.
 				s.clusterHasRunnableTasks = map[string]bool{}
 				for _, cluster := range clusters {
-					s.clusterHasRunnableTasks[cluster] = true
+					s.clusterHasRunnableTasks[strings.ToLower(cluster)] = true
 				}
 
 				s.lastRunnableTasksUpdate.Store(s.env.Now())

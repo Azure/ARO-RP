@@ -281,14 +281,20 @@ func (c *maintenanceManifests) GetClustersWithRunnableTasks(ctx context.Context)
 			PartitionKeyRangeID: r.ID,
 		})
 
-		// Because we're using an aggregation we shouldn't need to poll Next()
-		docs, err := result.Next(ctx, -1)
-		if err != nil {
-			return []string{}, err
-		}
+		for {
+			// Because we're using an aggregation we shouldn't need to poll
+			// Next(), but do it anyway
+			docs, err := result.Next(ctx, -1)
+			if err != nil {
+				return []string{}, err
+			}
+			if docs == nil {
+				break
+			}
 
-		for _, cl := range docs.Docs() {
-			clusters = append(clusters, cl.ClusterResourceID)
+			for _, cl := range docs.Docs() {
+				clusters = append(clusters, cl.ClusterResourceID)
+			}
 		}
 	}
 
