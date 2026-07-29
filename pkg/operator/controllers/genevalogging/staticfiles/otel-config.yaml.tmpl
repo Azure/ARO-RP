@@ -93,6 +93,20 @@ receivers:
         parse_from: body.fields
         parse_to: body.fields
         on_error: send_quiet
+      - id: zap_parse
+        type: regex_parser
+        parse_from: body
+        parse_to: body
+        regex: '^(?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\t(?<severity>[a-z]+)\t(?<src_file>[^\t]+)\t(?<message>[^\t]+)(?:\t(?<fields>.*))?$'
+        severity:
+          parse_from: body.severity
+          mapping:
+            warn: warn
+            error: error
+            fatal: fatal
+            info: info
+            debug: debug
+        on_error: send_quiet
       - id: logrus_file_split
         type: regex_parser
         if: 'type(body) == "map" and type(body.fields) == "map" and body.fields.file != nil'
@@ -387,7 +401,7 @@ not ((IsString(body) and (
     or IsMatch(body, "Update error .*: ClusterOperatorDegraded")
     or IsMatch(body, "\\terror\\t|\\twarn\\t")))
   or (IsMap(body) and (
-    (IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$"))
+    (IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$|^(error|warn|warning|fatal)$"))
     or (IsString(body["message"]) and (
       IsMatch(body["message"], "level=(error|warn|warning)")
       or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
