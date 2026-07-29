@@ -154,6 +154,8 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 		// https://catalog.redhat.com/software/containers/ubi9/nodejs-18/62e8e7ed22d1d3c2dfe2ca01
 		"registry.access.redhat.com/ubi9/nodejs-18:latest",
+		// https://catalog.redhat.com/software/containers/ubi9/nodejs-22/
+		"registry.access.redhat.com/ubi9/nodejs-22:latest",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
