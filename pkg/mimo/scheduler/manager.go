@@ -166,7 +166,9 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		clusterLog.Debugf("cluster matches selectors")
 
 		// this is the amount of time we will be offset inside the
-		// 'scheduleAcross' window.
+		// 'scheduleAcross' window. This time is inclusive of the initial start
+		// time -- i.e. a schedule across 60s will spread clusters out from
+		// :00-:59, not :00 to +1:00.
 		offsetWithinScheduleAcross := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(clusterID), scheduleAcross)
 
 		clusterLog.Debugf("Calculated scheduleAcross offset is %s", offsetWithinScheduleAcross.String())
@@ -296,6 +298,9 @@ func ClusterResourceIDHashToScheduleWithinPercent(resourceID string) float64 {
 // Given a period and a float from 0.0-1.0, calculate the target time within
 // that duration rounded to the second.
 func PercentWithinPeriod(percent float64, scheduleWithin time.Duration) time.Duration {
-	percentIn := time.Duration(int64(float64(int64(scheduleWithin)) * percent))
-	return percentIn.Round(time.Second)
+	if scheduleWithin > time.Second {
+		percentIn := time.Duration(int64((float64(int64(scheduleWithin)) - float64(time.Second)) * percent))
+		return percentIn.Round(time.Second)
+	}
+	return 0
 }
