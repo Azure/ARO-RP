@@ -27,8 +27,6 @@ export GOFLAGS=$(GO_FLAGS)
 MARINER_VERSION = 20260102
 FLUENTBIT_VERSION = 4.2.2
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
-AUTOREST_VERSION = 3.7.2
-AUTOREST_IMAGE = arointsvc.azurecr.io/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.19.2
 HOLMESGPT_VERSION ?= 0.36.0
 HOLMESGPT_REF ?= $(HOLMESGPT_VERSION)
@@ -218,10 +216,6 @@ image-telemetrycollector:
 image-telemetryexporter:
 	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg VERSION="${VERSION}" -f Dockerfile.telemetryexporter -t $(TELEMETRY_EXPORTER_IMAGE) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) .
 
-.PHONY: image-autorest
-image-autorest:
-	docker build --platform=$(PLATFORM) --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
-
 .PHONY: image-fluentbit
 image-fluentbit:
 	docker build --platform=$(PLATFORM) --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
@@ -246,10 +240,6 @@ ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
 		docker push arointsvc.azurecr.io/aro:latest
 endif
-
-.PHONY: publish-image-autorest
-publish-image-autorest: image-autorest
-	docker push ${AUTOREST_IMAGE}
 
 .PHONY: publish-image-fluentbit
 publish-image-fluentbit: image-fluentbit
