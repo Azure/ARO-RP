@@ -9,6 +9,7 @@ FROM ${REGISTRY}/ubi9/nodejs-22  AS portal-build
 LABEL aro-portal-build=true
 WORKDIR /build/portal/v2
 USER root
+ENV DO_NOT_TRACK=1
 
 # Copying package files and installing dependencies
 COPY portal/v2/package*.json ./
