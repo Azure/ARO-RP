@@ -9,13 +9,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
-	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
-	redhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2025-07-25/redhatopenshift"
+	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
 )
 
 type InternalClient interface {
@@ -25,7 +26,7 @@ type InternalClient interface {
 }
 
 type clientCluster interface {
-	mgmtredhatopenshift20250725.OpenShiftCluster
+	armredhatopenshift.OpenShiftCluster
 }
 
 type apiCluster interface {
@@ -33,7 +34,7 @@ type apiCluster interface {
 }
 
 type externalClient[ClientCluster clientCluster] interface {
-	Get(ctx context.Context, resourceGroupName string, resourceName string) (ClientCluster, error)
+	Get(ctx context.Context, resourceGroupName string, resourceName string, options *armredhatopenshift.OpenShiftClustersClientGetOptions) (armredhatopenshift.OpenShiftClustersClientGetResponse, error)
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters ClientCluster) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error
 }
@@ -43,21 +44,33 @@ type internalClient[ClientCluster clientCluster, ApiCluster apiCluster] struct {
 	converter      api.OpenShiftClusterConverter
 }
 
-func NewInternalClient(log *logrus.Entry, environment env.Core, authorizer autorest.Authorizer) InternalClient {
+func NewInternalClient(log *logrus.Entry, environment env.Core, authorizer autorest.Authorizer) (InternalClient, error) {
 	log.Infof("Using ARO API version [%s]", v20250725.APIVersion)
-	return &internalClient[mgmtredhatopenshift20250725.OpenShiftCluster, v20250725.OpenShiftCluster]{
-		externalClient: redhatopenshift20250725.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		converter:      api.APIs[v20250725.APIVersion].OpenShiftClusterConverter,
-	}
-}
-
-func (c *internalClient[ClientCluster, ApiCluster]) Get(ctx context.Context, resourceGroupName string, resourceName string) (*api.OpenShiftCluster, error) {
-	ocExt, err := c.externalClient.Get(ctx, resourceGroupName, resourceName)
+	options := environment.Environment().EnvironmentCredentialOptions()
+	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.toInternal(&ocExt)
+	externalClient, err := utilarmredhatopenshift.NewOpenShiftClustersClient(environment.SubscriptionID(), spTokenCredential, environment.ArmClientOptions())
+	if err != nil {
+		return nil, err
+	}
+
+	return &internalClient[armredhatopenshift.OpenShiftCluster, v20250725.OpenShiftCluster]{
+		externalClient: externalClient,
+		converter:      api.APIs[v20250725.APIVersion].OpenShiftClusterConverter,
+	}, nil
+}
+
+func (c *internalClient[ClientCluster, ApiCluster]) Get(ctx context.Context, resourceGroupName string, resourceName string) (*api.OpenShiftCluster, error) {
+	ocExt, err := c.externalClient.Get(ctx, resourceGroupName, resourceName, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	found := ClientCluster(ocExt.OpenShiftCluster)
+	return c.toInternal(&found)
 }
 
 func (c *internalClient[ClientCluster, ApiCluster]) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters *api.OpenShiftCluster) error {

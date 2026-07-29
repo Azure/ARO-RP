@@ -36,7 +36,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
-	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -44,10 +44,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	redhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2025-07-25/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -273,8 +273,13 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		return nil, err
 	}
 
-	clusterClient := &internalClient[mgmtredhatopenshift20250725.OpenShiftCluster, v20250725.OpenShiftCluster]{
-		externalClient: redhatopenshift20250725.NewOpenShiftClustersClient(&azEnvironment, conf.SubscriptionID, authorizer),
+	externalClient, err := utilarmredhatopenshift.NewOpenShiftClustersClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	clusterClient := &internalClient[armredhatopenshift.OpenShiftCluster, v20250725.OpenShiftCluster]{
+		externalClient: externalClient,
 		converter:      api.APIs[v20250725.APIVersion].OpenShiftClusterConverter,
 	}
 

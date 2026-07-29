@@ -72,10 +72,10 @@ var _ = Describe("ARO cluster DNS", Label(regressiontest), func() {
 		}
 
 		By("getting each worker node's private IP address")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')
 		for wn := range workerNodes {
 			resp, err := clients.Interfaces.Get(ctx, clusterResourceGroup, nicName(wn), nil)
 			Expect(err).NotTo(HaveOccurred())

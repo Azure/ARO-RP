@@ -19,7 +19,7 @@ var _ = Describe("FIPS Mode", Label(install), func() {
 		expectedFIPSMachineConfigs := []string{"99-worker-fips", "99-master-fips"}
 
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("listing machine configs")
@@ -31,7 +31,7 @@ var _ = Describe("FIPS Mode", Label(install), func() {
 		}
 
 		By("checking if FipsValidatedModules is enabled or disabled")
-		if string(oc.ClusterProfile.FipsValidatedModules) == string(api.FipsValidatedModulesEnabled) {
+		if string(*oc.Properties.ClusterProfile.FipsValidatedModules) == string(api.FipsValidatedModulesEnabled) {
 			By("checking FIPS machine configs exist on master and worker")
 			Expect(actualMachineConfigNames).To(ContainElements(expectedFIPSMachineConfigs))
 		} else {

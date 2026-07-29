@@ -22,7 +22,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
-	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
+	armredhatopenshift "github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -56,8 +56,8 @@ var _ = Describe("Cluster", Serial, func() {
 	Context("can run a stateful set", func() {
 		It("which is using Azure Disk storage", func(ctx context.Context) {
 			By("creating stateful set")
-			oc, _ := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
-			installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
+			oc, _ := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
+			installVersion, _ := version.ParseVersion(*oc.Properties.ClusterProfile.Version)
 
 			storageClass := "managed-csi"
 
@@ -83,9 +83,9 @@ var _ = Describe("Cluster", Serial, func() {
 		It("which is using the default Azure File storage class backed by the cluster storage account", Pending, func(ctx context.Context) {
 			By("adding the Microsoft.Storage service endpoint to each cluster subnet (if needed)")
 
-			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 			Expect(err).NotTo(HaveOccurred())
-			ocpSubnets := clusterSubnets(oc)
+			ocpSubnets := clusterSubnets(oc.OpenShiftCluster)
 			subnetAlreadyHasStorageEndpoint := false
 
 			for _, s := range ocpSubnets {
@@ -258,12 +258,12 @@ var _ = Describe("Cluster", Serial, func() {
 })
 
 // clusterSubnets returns a slice containing all of the cluster subnets' resource IDs
-func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
+func clusterSubnets(oc armredhatopenshift.OpenShiftCluster) []string {
 	subnetMap := map[string]struct{}{}
-	subnetMap[*oc.MasterProfile.SubnetID] = struct{}{}
+	subnetMap[*oc.Properties.MasterProfile.SubnetID] = struct{}{}
 
 	// TODO: change to workerProfileStatuses when we bump the API to 20230904 stable
-	for _, p := range *oc.WorkerProfiles {
+	for _, p := range oc.Properties.WorkerProfiles {
 		s := strings.ToLower(*p.SubnetID)
 		subnetMap[s] = struct{}{}
 	}

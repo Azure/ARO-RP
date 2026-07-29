@@ -34,24 +34,24 @@ import (
 var _ = Describe("Encryption at host", Label(install), func() {
 	It("must be enabled on the test cluster and each VM must have encryption at host enabled", func(ctx context.Context) {
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that encryption at host is enabled for masters")
-		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
-		Expect(oc.OpenShiftClusterProperties.MasterProfile).To(Not(BeNil()))
-		Expect((*oc.OpenShiftClusterProperties.MasterProfile).EncryptionAtHost).To(BeEquivalentTo("Enabled"))
+		Expect(oc.Properties).To(Not(BeNil()))
+		Expect(oc.Properties.MasterProfile).To(Not(BeNil()))
+		Expect((*oc.Properties.MasterProfile).EncryptionAtHost).To(HaveValue(BeEquivalentTo("Enabled")))
 
 		By("checking that encryption at host is enabled for workers")
-		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
-		Expect(oc.OpenShiftClusterProperties.WorkerProfiles).To(Not(BeNil()))
-		Expect(*oc.OpenShiftClusterProperties.WorkerProfiles).NotTo(BeEmpty())
-		for _, profile := range *oc.WorkerProfiles {
-			Expect(profile.EncryptionAtHost).To(BeEquivalentTo("Enabled"))
+		Expect(oc.Properties).To(Not(BeNil()))
+		Expect(oc.Properties.WorkerProfiles).To(Not(BeNil()))
+		Expect(oc.Properties.WorkerProfiles).NotTo(BeEmpty())
+		for _, profile := range oc.Properties.WorkerProfiles {
+			Expect(profile.EncryptionAtHost).To(HaveValue(BeEquivalentTo("Enabled")))
 		}
 
 		By("getting the resource group where the VM instances live in")
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
 		By("listing all VMs for the test cluster")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
@@ -70,32 +70,32 @@ var _ = Describe("Encryption at host", Label(install), func() {
 var _ = Describe("Disk encryption at rest", Label(install), func() {
 	It("must be enabled with customer managed key for the cluster and each disk must have it enabled", func(ctx context.Context) {
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
+		installVersion, _ := version.ParseVersion(*oc.Properties.ClusterProfile.Version)
 		defaultStorageClass := "managed-csi-encrypted-cmk"
 		if installVersion.Lt(version.NewVersion(4, 11)) {
 			defaultStorageClass = "managed-premium-encrypted-cmk"
 		}
 
 		By("checking that disk encryption at rest is enabled for masters")
-		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
-		Expect(oc.OpenShiftClusterProperties.MasterProfile).To(Not(BeNil()))
-		Expect(oc.OpenShiftClusterProperties.MasterProfile.DiskEncryptionSetID).NotTo(BeNil())
-		Expect(*oc.OpenShiftClusterProperties.MasterProfile.DiskEncryptionSetID).NotTo(BeEmpty())
+		Expect(oc.Properties).To(Not(BeNil()))
+		Expect(oc.Properties.MasterProfile).To(Not(BeNil()))
+		Expect(oc.Properties.MasterProfile.DiskEncryptionSetID).NotTo(BeNil())
+		Expect(*oc.Properties.MasterProfile.DiskEncryptionSetID).NotTo(BeEmpty())
 
 		By("checking that disk encryption at rest is enabled for workers")
-		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
-		Expect(oc.OpenShiftClusterProperties.WorkerProfiles).To(Not(BeNil()))
-		Expect(*oc.OpenShiftClusterProperties.WorkerProfiles).NotTo(BeEmpty())
-		for _, profile := range *oc.WorkerProfiles {
+		Expect(oc.Properties).To(Not(BeNil()))
+		Expect(oc.Properties.WorkerProfiles).To(Not(BeNil()))
+		Expect(oc.Properties.WorkerProfiles).NotTo(BeEmpty())
+		for _, profile := range oc.Properties.WorkerProfiles {
 			Expect(profile.DiskEncryptionSetID).NotTo(BeNil())
 			Expect(*profile.DiskEncryptionSetID).NotTo(BeEmpty())
 		}
 
 		By("getting the resource group where the VM instances live in")
-		clusterResourceGroup := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		clusterResourceGroup := stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
 		By("listing all VMs")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
@@ -121,7 +121,7 @@ var _ = Describe("Disk encryption at rest", Label(install), func() {
 		Expect(sc.Annotations["storageclass.kubernetes.io/is-default-class"]).To(Equal("true"))
 
 		By("making sure the encrypted storage class uses worker disk encryption set")
-		expectedDiskEncryptionSetID := *((*oc.OpenShiftClusterProperties.WorkerProfiles)[0].DiskEncryptionSetID)
+		expectedDiskEncryptionSetID := *((oc.Properties.WorkerProfiles)[0].DiskEncryptionSetID)
 		Expect(sc.Parameters).NotTo(BeNil())
 		Expect(sc.Parameters["diskEncryptionSetID"]).To(Equal(expectedDiskEncryptionSetID))
 	})
