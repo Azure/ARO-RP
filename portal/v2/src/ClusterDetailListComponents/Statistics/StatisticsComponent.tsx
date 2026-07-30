@@ -22,10 +22,13 @@ export function StatisticsComponent(props: {
   endDate: Date
   fetchStatus: string
 }) {
+  const emptyChartData: IChartProps = {
+    lineChartData: [],
+  }
   const width = props.width
   const height = props.height
   const [points, setPoints] = useState<ILineChartPoints[]>([])
-  const [data, setData] = useState<IChartProps>({})
+  const [data, setData] = useState<IChartProps>(emptyChartData)
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(true)
   const timeFormat = "%H:%M"
 
@@ -127,7 +130,7 @@ export function StatisticsComponent(props: {
       allowFocusOnLegends: true,
     }
     let lineChartProps: ILineChartProps = {
-      data: data,
+      data: data.lineChartData ? data : emptyChartData,
       strokeWidth: 2,
       tickFormat: timeFormat,
       height: height,
