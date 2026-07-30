@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -594,4 +595,66 @@ func TestActuatorLogsIfRunnableTasksFails(t *testing.T) {
 			Value: 0,
 		},
 	}...)
+}
+
+func TestActuatorPollingRunnableTasksStopsWhenContextCancelled(t *testing.T) {
+	r := require.New(t)
+
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
+
+	_, log := testlog.LogForTesting(t)
+	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+
+	svc := NewService(_env, log, nil, nil, nil)
+	svc.taskPollTime = time.Millisecond
+
+	pollCtx, cancel := context.WithCancel(t.Context())
+
+	var wg sync.WaitGroup
+	wg.Go(func() { svc.pollRunnableTasks(pollCtx, manifests) })
+
+	// Check for the loop to have run
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		r2 := require.New(collect)
+		r2.NotNil(svc.lastRunnableTasksUpdate.Load())
+	}, time.Second, time.Millisecond)
+
+	// Cancel the context
+	cancel()
+
+	// The loop should break and we shouldn't time out :)
+	wg.Wait()
+}
+
+func TestActuatorPollingRunnableTasksStopsWhenStoppingSet(t *testing.T) {
+	r := require.New(t)
+
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
+
+	_, log := testlog.LogForTesting(t)
+	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+
+	svc := NewService(_env, log, nil, nil, nil)
+	svc.taskPollTime = time.Millisecond
+
+	var wg sync.WaitGroup
+	wg.Go(func() { svc.pollRunnableTasks(t.Context(), manifests) })
+
+	// Check for the loop to have run
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		r2 := require.New(collect)
+		r2.NotNil(svc.lastRunnableTasksUpdate.Load())
+	}, time.Second, time.Millisecond)
+
+	// Set stopping
+	svc.stopping.Store(true)
+
+	// The loop should break and we shouldn't time out :)
+	wg.Wait()
 }

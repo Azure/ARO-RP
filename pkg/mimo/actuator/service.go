@@ -375,6 +375,7 @@ func (s *service) pollRunnableTasks(ctx context.Context, m database.MaintenanceM
 		case <-t.C:
 		case <-ctx.Done():
 			s.baseLog.Warnf("context closed, stopping MaintenanceManifest poll loop: %s", context.Cause(ctx))
+			return
 		}
 	}
 }
