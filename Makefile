@@ -119,7 +119,7 @@ clean: ## Remove build artifacts
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 .PHONY: client
-client: generate generate-swagger-typespec client-generate client-generate-legacy lint-go-fix lint-go
+client: generate generate-swagger-typespec client-generate lint-go-fix lint-go
 
 .PHONY: client-generate
 client-generate:
