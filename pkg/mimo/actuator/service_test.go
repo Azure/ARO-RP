@@ -453,6 +453,7 @@ func TestActuatorGoesReadyEvenIfNoWork(t *testing.T) {
 
 	r.EventuallyWithT(func(collect *assert.CollectT) {
 		require.True(collect, svc.checkReady())
+		require.True(collect, act.hasRan)
 	}, time.Second, time.Millisecond)
 
 	// Once it goes ready, stop the service
