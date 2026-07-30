@@ -67,11 +67,16 @@ export function StatisticsWrapper(props: {
   // can be used if we want a refresh button.
   // api/clusterdetail returns a single item.
   const updateData = (newData: any) => {
+    if (!Array.isArray(newData)) {
+      setMetrics([])
+      return
+    }
+
     const metrics: IMetrics[] = []
-    newData.forEach((element: { metricname: any; metricvalue: IMetricValue[] }) => {
+    newData.forEach((element: { metricname: any; metricvalue?: IMetricValue[] }) => {
       const metric: IMetrics = {
         Name: element.metricname,
-        MetricValue: element.metricvalue,
+        MetricValue: Array.isArray(element.metricvalue) ? element.metricvalue : [],
       }
       metrics.push(metric)
     })
