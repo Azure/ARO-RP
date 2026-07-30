@@ -104,11 +104,11 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
 		if un, ok := o.(*unstructured.Unstructured); ok {
-			// ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding
-			// are handled via server-side apply so that all fields are
-			// correctly reconciled. The Gatekeeper-specific path only
-			// compares enforcementAction and would silently skip updates
-			// to other resource types.
+			// ValidatingAdmissionPolicy, ValidatingAdmissionPolicyBinding,
+			// and AdminNetworkPolicy are handled via server-side apply so
+			// that all fields are correctly reconciled. The
+			// Gatekeeper-specific path only compares spec.enforcementAction
+			// and would silently skip updates to other resource types.
 			if shouldUseServerSideApply(un) {
 				if err := dh.ensureByServerSideApply(ctx, un); err != nil {
 					return err
