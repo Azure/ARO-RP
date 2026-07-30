@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -123,12 +124,12 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 		return err
 	}
 
-	clientCertificate, err := secretsClient.GetSecret(ctx, env.PortalServerClientSecretName, "", nil)
+	clientCertPEM, err := os.ReadFile("portal-client.pem")
 	if err != nil {
-		return fmt.Errorf("cannot get client certificate secret: %w", err)
+		return fmt.Errorf("cannot read portal-client.pem: %w", err)
 	}
 
-	clientKey, clientCerts, err := azsecrets.ParseSecretAsCertificate(clientCertificate)
+	clientKey, clientCerts, err := utilpem.Parse(clientCertPEM)
 	if err != nil {
 		return err
 	}
