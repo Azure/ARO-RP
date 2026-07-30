@@ -26,6 +26,7 @@ receivers:
       - /var/log/containers/*_openshift-network-operator_*.log
       - /var/log/containers/*_openshift-machine-config-operator_*.log
       - /var/log/containers/*_openshift-machine-api_*.log
+      - /var/log/containers/*_openshift-cloud-controller-manager_*.log
 {{- else }}
       - /var/log/containers/*_default_*.log
       - /var/log/containers/*_kube-*_*.log
