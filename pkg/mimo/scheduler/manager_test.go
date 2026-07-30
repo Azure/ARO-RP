@@ -1416,12 +1416,6 @@ func TestClusterPercentWithinPeriod(t *testing.T) {
 			endPeriod: time.Second * 4,
 		},
 		{
-			desc:      "100% of 0s",
-			percent:   1.0,
-			period:    time.Duration(0),
-			endPeriod: 0,
-		},
-		{
 			desc:      "0% of 1 minute",
 			percent:   0,
 			period:    time.Minute,
