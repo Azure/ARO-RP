@@ -45,14 +45,14 @@ func TestClassifyZoneTopology(t *testing.T) {
 			wantTopology: zoneTopologyThreeZone,
 		},
 		{
-			name: "valid - single zone",
+			name: "invalid - single zone",
 			items: map[string]string{
 				"item1": "1",
 				"item2": "1",
 				"item3": "1",
 			},
-			getZone:      func(s string) string { return s },
-			wantTopology: zoneTopologySingleZone,
+			getZone: func(s string) string { return s },
+			wantErr: `single-zone control plane topology is unsupported for resize validation: zones ["1"]`,
 		},
 		{
 			name: "valid - regional",
@@ -487,13 +487,13 @@ func TestValidateClusterMachines(t *testing.T) {
 			wantCount: 3,
 		},
 		{
-			name: "success - 3 machines in one zone",
+			name: "failure - 3 machines in one zone",
 			machines: map[string]machineValidationData{
 				"master-0": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-1": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 				"master-2": {labelZone: "1", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 			},
-			wantCount: 3,
+			wantErr: `single-zone control plane topology is unsupported for resize validation: zones ["1"]`,
 		},
 		{
 			name: "success - 3 regional machines",
@@ -860,14 +860,14 @@ func TestGetAzureVMs(t *testing.T) {
 			wantCount: 3, // All 3 master VMs
 		},
 		{
-			name:     "success - 3 master VMs in one zone",
+			name:     "failure - 3 master VMs in one zone",
 			machines: createMachinesMap("master-0", "master-1", "master-2"),
 			mocks: func(a *mock_adminactions.MockAzureActions) {
 				for _, name := range []string{"master-0", "master-1", "master-2"} {
 					a.EXPECT().GetVirtualMachine(ctx, "test-cluster", name, mgmtcompute.InstanceView).Return(createAzureVM([]string{"1"}), nil)
 				}
 			},
-			wantCount: 3,
+			wantErr: `single-zone control plane topology is unsupported for resize validation: zones ["1"]`,
 		},
 		{
 			name:     "success - 3 regional master VMs with empty zones",

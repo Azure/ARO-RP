@@ -41,9 +41,8 @@ const (
 	nodeLabelInstanceType     = "node.kubernetes.io/instance-type"
 	nodeLabelBetaInstanceType = "beta.kubernetes.io/instance-type"
 
-	zoneTopologyRegional   zoneTopology = "regional"
-	zoneTopologySingleZone zoneTopology = "single-zone"
-	zoneTopologyThreeZone  zoneTopology = "three-zone"
+	zoneTopologyRegional  zoneTopology = "regional"
+	zoneTopologyThreeZone zoneTopology = "three-zone"
 )
 
 type machineValidationData struct {
@@ -317,7 +316,7 @@ func validateClusterMachinesAndNodes(log *logrus.Entry, ocMachines map[string]ma
 	return errors.Join(validationErrs...)
 }
 
-// classifyZoneTopology validates the supported control-plane placement shapes.
+// classifyZoneTopology validates the recognized control-plane placement shapes.
 // It is generic so the same rules can be applied to Machines, VMs, and capacity
 // reservations without translating them into a resize-specific data structure.
 func classifyZoneTopology[T any](items map[string]T, getZone func(T) string) (zoneTopology, error) {
@@ -326,16 +325,20 @@ func classifyZoneTopology[T any](items map[string]T, getZone func(T) string) (zo
 	}
 
 	zones := make(map[string]bool, controlPlaneReplicaCount)
+	var soleZone string
 	for _, item := range items {
-		zones[getZone(item)] = true
+		soleZone = getZone(item)
+		zones[soleZone] = true
 	}
 
 	if len(zones) == 1 {
-		// One empty zone is regional; one explicit zone is single-zone.
-		if zones[""] {
+		// One empty zone is regional; one explicit zone is a single-zone layout,
+		// which resizecontrolplane must reject explicitly instead of treating as
+		// a mixed or regional topology.
+		if soleZone == "" {
 			return zoneTopologyRegional, nil
 		}
-		return zoneTopologySingleZone, nil
+		return "", fmt.Errorf("single-zone control plane topology is unsupported for resize validation: zones [%q]", soleZone)
 	}
 
 	if len(zones) == controlPlaneReplicaCount && !zones[""] {
