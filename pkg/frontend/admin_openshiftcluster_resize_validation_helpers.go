@@ -41,6 +41,9 @@ const (
 	nodeLabelInstanceType     = "node.kubernetes.io/instance-type"
 	nodeLabelBetaInstanceType = "beta.kubernetes.io/instance-type"
 
+	// SRE-facing label for the raw empty-zone sentinel; not a zoneTopology value.
+	zoneDisplayRegionalNoZone = "regional/no-zone"
+
 	zoneTopologyRegional  zoneTopology = "regional"
 	zoneTopologyThreeZone zoneTopology = "three-zone"
 )
@@ -62,6 +65,21 @@ type azureVMValidationData struct {
 type nodeValidationData struct {
 	nodeInstanceType string
 	betaInstanceType string
+}
+
+func describeZone(zone string) string {
+	if zone == "" {
+		return zoneDisplayRegionalNoZone
+	}
+	return zone
+}
+
+func describeZones(zones []string) []string {
+	displayZones := make([]string, 0, len(zones))
+	for _, zone := range zones {
+		displayZones = append(displayZones, describeZone(zone))
+	}
+	return displayZones
 }
 
 func unmarshalAzureMachineProviderSpec(machine *machinev1beta1.Machine) (*machinev1beta1.AzureMachineProviderSpec, error) {
@@ -154,7 +172,7 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 		}
 
 		if machine.labelZone != machine.specZone {
-			err := fmt.Errorf("machine %s has a mismatch between label zone %s and spec zone %s. These values should match", name, machine.labelZone, machine.specZone)
+			err := fmt.Errorf("machine %s has a mismatch between label zone %s and spec zone %s. These values should match", name, describeZone(machine.labelZone), describeZone(machine.specZone))
 			log.Info(err)
 			validationErrs = append(validationErrs, err)
 			continue
@@ -279,7 +297,7 @@ func validateClusterMachinesAndVMs(log *logrus.Entry, ocMachines map[string]mach
 		}
 
 		if machineSpec.specZone != azureVMs[name].zone {
-			err := fmt.Errorf("machine %s has zone %s in its spec, however Azure VM is running in zone %s", name, machineSpec.specZone, azureVMs[name].zone)
+			err := fmt.Errorf("machine %s has zone %s in its spec, however Azure VM is running in zone %s", name, describeZone(machineSpec.specZone), describeZone(azureVMs[name].zone))
 			log.Info(err)
 			validationErrs = append(validationErrs, err)
 		}
@@ -352,7 +370,7 @@ func classifyZoneTopology[T any](items map[string]T, getZone func(T) string) (zo
 	}
 	// Sort zones to keep validation errors deterministic across map iterations.
 	sort.Strings(zoneNames)
-	return "", fmt.Errorf("items have unsupported mixed zone topology: zones %q", zoneNames)
+	return "", fmt.Errorf("items have unsupported mixed zone topology: zones %q", describeZones(zoneNames))
 }
 
 func validateVMPowerState(log *logrus.Entry, vmStatuses []string, vmName string) error {

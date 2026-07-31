@@ -102,7 +102,7 @@ func TestClassifyZoneTopology(t *testing.T) {
 				"item3": "",
 			},
 			getZone: func(s string) string { return s },
-			wantErr: `items have unsupported mixed zone topology: zones ["" "1"]`,
+			wantErr: `items have unsupported mixed zone topology: zones ["regional/no-zone" "1"]`,
 		},
 		{
 			name:    "invalid - empty map",
@@ -164,7 +164,7 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 			azureVMs: map[string]azureVMValidationData{
 				"master-0": {vmSize: "Standard_D8s_v3"},
 			},
-			wantErrStrings: []string{"machine master-0 has zone 1 in its spec, however Azure VM is running in zone "},
+			wantErrStrings: []string{"machine master-0 has zone 1 in its spec, however Azure VM is running in zone regional/no-zone"},
 		},
 		{
 			name: "invalid - regional machine and zonal Azure VM",
@@ -174,7 +174,7 @@ func TestValidateClusterMachinesAndVMs(t *testing.T) {
 			azureVMs: map[string]azureVMValidationData{
 				"master-0": {zone: "1", vmSize: "Standard_D8s_v3"},
 			},
-			wantErrStrings: []string{"machine master-0 has zone  in its spec, however Azure VM is running in zone 1"},
+			wantErrStrings: []string{"machine master-0 has zone regional/no-zone in its spec, however Azure VM is running in zone 1"},
 		},
 		{
 			name: "invalid - machine not found in Azure",
@@ -520,6 +520,15 @@ func TestValidateClusterMachines(t *testing.T) {
 				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
 			},
 			wantErr: "machine master-0 has a mismatch between label zone 1 and spec zone 2",
+		},
+		{
+			name: "failure - zone mismatch between regional label and zonal spec",
+			machines: map[string]machineValidationData{
+				"master-0": {labelZone: "", specZone: "1", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-1": {labelZone: "2", specZone: "2", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+				"master-2": {labelZone: "3", specZone: "3", size: "Standard_D8s_v3", phase: "Running", labelInstanceType: "Standard_D8s_v3"},
+			},
+			wantErr: "machine master-0 has a mismatch between label zone regional/no-zone and spec zone 1",
 		},
 		{
 			name: "failure - multiple zone mismatches",
