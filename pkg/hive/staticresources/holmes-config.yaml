@@ -124,5 +124,7 @@ toolsets:
     enabled: false
   inspektor-gadget/tcpdump:
     enabled: false
+  crossplane/core:
+    enabled: false
   kubevela/core:
     enabled: false
