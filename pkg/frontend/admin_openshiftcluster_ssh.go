@@ -35,8 +35,10 @@ import (
 const adminSSHTTL = time.Minute
 
 // rxSSHUsername bounds the identity local-part embedded into the returned ssh
-// command to a conservative, shell-safe character set.
-var rxSSHUsername = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+$`)
+// command to a conservative, shell-safe character set. A leading dash is
+// disallowed so the command's "<user>@<host>" argument can't be parsed by ssh
+// as a CLI option.
+var rxSSHUsername = regexp.MustCompile(`^[a-zA-Z0-9._%+][a-zA-Z0-9._%+-]*$`)
 
 type adminSSHRequest struct {
 	Master int `json:"master"`
