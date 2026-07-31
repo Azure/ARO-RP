@@ -9,6 +9,7 @@ const (
 	AzureSubnetsNsgManaged              = "aro.azuresubnets.nsg.managed"
 	AzureSubnetsServiceEndpointManaged  = "aro.azuresubnets.serviceendpoint.managed"
 	BannerEnabled                       = "aro.banner.enabled"
+	CCOPprofNetworkPolicyEnabled        = "aro.ccopprof.enabled"
 	CheckerEnabled                      = "aro.checker.enabled"
 	CPMSEnabled                         = "aro.cpms.enabled"
 	DnsmasqEnabled                      = "aro.dnsmasq.enabled"
@@ -84,6 +85,7 @@ func DefaultOperatorFlags() map[string]string {
 		AzureSubnetsNsgManaged:             FlagTrue,
 		AzureSubnetsServiceEndpointManaged: FlagTrue,
 		BannerEnabled:                      FlagFalse,
+		CCOPprofNetworkPolicyEnabled:       FlagTrue,
 		CheckerEnabled:                     FlagTrue,
 		CPMSEnabled:                        FlagFalse,
 		DnsmasqEnabled:                     FlagTrue,

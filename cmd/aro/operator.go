@@ -41,6 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/networkpolicy"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
@@ -207,6 +208,11 @@ func operator(log *logrus.Entry) error {
 			log.WithField("controller", machinehealthcheck.ControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
+		}
+		if err = (networkpolicy.NewReconciler(
+			log.WithField("controller", networkpolicy.ControllerName),
+			client, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", networkpolicy.ControllerName, err)
 		}
 		if err = (ingress.NewReconciler(
 			log.WithField("controller", ingress.ControllerName),
