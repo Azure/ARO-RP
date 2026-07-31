@@ -6,6 +6,7 @@ package dnsmasq
 import (
 	"context"
 	"fmt"
+	"net/netip"
 
 	"github.com/sirupsen/logrus"
 
@@ -84,6 +85,13 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
+	err = validateDnsmasqProperties(instance)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
 	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, restartDnsmasq, mcps.Items...)
 	if err != nil {
 		r.Log.Error(err)
@@ -110,6 +118,28 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(clusterVersionPredicate),
 		).
 		Complete(r)
+}
+
+func validateDnsmasqProperties(instance *arov1alpha1.Cluster) error {
+	validateIP := func(name, value string) error {
+		if _, err := netip.ParseAddr(value); err != nil {
+			return fmt.Errorf("invalid %s %q", name, value)
+		}
+		return nil
+	}
+
+	if err := validateIP("apiIntIP", instance.Spec.APIIntIP); err != nil {
+		return err
+	}
+	if err := validateIP("ingressIP", instance.Spec.IngressIP); err != nil {
+		return err
+	}
+	if len(instance.Spec.GatewayDomains) > 0 {
+		if err := validateIP("gatewayPrivateEndpointIP", instance.Spec.GatewayPrivateEndpointIP); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, ch clienthelper.Interface, c client.Client, allowReconcile bool, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
