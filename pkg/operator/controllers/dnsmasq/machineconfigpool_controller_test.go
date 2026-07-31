@@ -138,12 +138,12 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					Name: "custom",
 				},
 			},
-			wantErrMsg: `invalid ingressIP ""`,
+			wantErrMsg: `invalid ingressIP: ParseAddr(""): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               MachineConfigPoolControllerName + "ControllerDegraded",
 					Status:             "True",
-					Message:            `invalid ingressIP ""`,
+					Message:            `invalid ingressIP: ParseAddr(""): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},

@@ -128,12 +128,12 @@ func TestMachineConfigReconciler(t *testing.T) {
 					Name: "99-custom-aro-dns",
 				},
 			},
-			wantErrMsg: `invalid ingressIP ""`,
+			wantErrMsg: `invalid ingressIP: ParseAddr(""): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               MachineConfigControllerName + "ControllerDegraded",
 					Status:             "True",
-					Message:            `invalid ingressIP ""`,
+					Message:            `invalid ingressIP: ParseAddr(""): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},

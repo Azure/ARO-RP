@@ -458,12 +458,12 @@ func TestClusterReconciler(t *testing.T) {
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{},
 			request:     ctrl.Request{},
-			wantErrMsg:  `invalid apiIntIP ""`,
+			wantErrMsg:  `invalid apiIntIP: ParseAddr(""): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               "DnsmasqClusterControllerDegraded",
 					Status:             "True",
-					Message:            `invalid apiIntIP ""`,
+					Message:            `invalid apiIntIP: ParseAddr(""): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},
@@ -496,12 +496,12 @@ func TestClusterReconciler(t *testing.T) {
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{},
 			request:     ctrl.Request{},
-			wantErrMsg:  `invalid ingressIP ""`,
+			wantErrMsg:  `invalid ingressIP: ParseAddr(""): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               "DnsmasqClusterControllerDegraded",
 					Status:             "True",
-					Message:            `invalid ingressIP ""`,
+					Message:            `invalid ingressIP: ParseAddr(""): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},
@@ -534,12 +534,12 @@ func TestClusterReconciler(t *testing.T) {
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{},
 			request:     ctrl.Request{},
-			wantErrMsg:  `invalid gatewayPrivateEndpointIP ""`,
+			wantErrMsg:  `invalid gatewayPrivateEndpointIP: ParseAddr(""): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               "DnsmasqClusterControllerDegraded",
 					Status:             "True",
-					Message:            `invalid gatewayPrivateEndpointIP ""`,
+					Message:            `invalid gatewayPrivateEndpointIP: ParseAddr(""): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},
@@ -573,12 +573,12 @@ func TestClusterReconciler(t *testing.T) {
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{},
 			request:     ctrl.Request{},
-			wantErrMsg:  `invalid apiIntIP "not-an-ip"`,
+			wantErrMsg:  `invalid apiIntIP: ParseAddr("not-an-ip"): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               "DnsmasqClusterControllerDegraded",
 					Status:             "True",
-					Message:            `invalid apiIntIP "not-an-ip"`,
+					Message:            `invalid apiIntIP: ParseAddr("not-an-ip"): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},
@@ -612,12 +612,12 @@ func TestClusterReconciler(t *testing.T) {
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{},
 			request:     ctrl.Request{},
-			wantErrMsg:  `invalid ingressIP "not-an-ip"`,
+			wantErrMsg:  `invalid ingressIP: ParseAddr("not-an-ip"): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               "DnsmasqClusterControllerDegraded",
 					Status:             "True",
-					Message:            `invalid ingressIP "not-an-ip"`,
+					Message:            `invalid ingressIP: ParseAddr("not-an-ip"): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},
@@ -651,12 +651,12 @@ func TestClusterReconciler(t *testing.T) {
 			wantCreated: map[string]int{},
 			wantUpdated: map[string]int{},
 			request:     ctrl.Request{},
-			wantErrMsg:  `invalid gatewayPrivateEndpointIP "not-an-ip"`,
+			wantErrMsg:  `invalid gatewayPrivateEndpointIP: ParseAddr("not-an-ip"): unable to parse IP`,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable, defaultProgressing, {
 					Type:               "DnsmasqClusterControllerDegraded",
 					Status:             "True",
-					Message:            `invalid gatewayPrivateEndpointIP "not-an-ip"`,
+					Message:            `invalid gatewayPrivateEndpointIP: ParseAddr("not-an-ip"): unable to parse IP`,
 					LastTransitionTime: transitionTime,
 				},
 			},

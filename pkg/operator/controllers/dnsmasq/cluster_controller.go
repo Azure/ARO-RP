@@ -116,7 +116,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func validateDnsmasqProperties(instance *arov1alpha1.Cluster) error {
 	validateIP := func(name, value string) error {
 		if _, err := netip.ParseAddr(value); err != nil {
-			return fmt.Errorf("invalid %s %q", name, value)
+			return fmt.Errorf("invalid %s: %w", name, err)
 		}
 		return nil
 	}
