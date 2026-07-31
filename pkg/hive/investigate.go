@@ -141,7 +141,19 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 					Image:           holmesConfig.Image,
 					ImagePullPolicy: corev1.PullAlways,
 					Command:         []string{"python", "holmes_cli.py"},
-					Args:            []string{"ask", question, "-n", "--model=" + holmesConfig.Model, "--config=/etc/holmes/config.yaml"},
+					Args: []string{
+						"ask", question, "-n",
+						"--model=" + holmesConfig.Model,
+						"--config=/etc/holmes/config.yaml",
+						"--system-prompt-additions",
+						"You are an automated SRE diagnostic tool investigating an OpenShift cluster. " +
+							"You MUST NOT ask the user any questions — the user cannot respond. " +
+							"If the question is vague or unclear, treat it as: check overall cluster health including nodes, pods, events, and resource utilization across all platform namespaces. " +
+							"To find platform namespaces, first run: kubectl get namespaces -o name | grep openshift- — then check pods and events in those namespaces. " +
+							"Never use -A or --all-namespaces flags as they cause out-of-memory on large clusters. Always use -n <namespace> for specific namespaces. " +
+							"Do not inspect non-openshift namespaces unless the user explicitly names one. " +
+							"Provide concrete findings with evidence, never ask for more information.",
+					},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "AZURE_AD_TOKEN_AUTH",

@@ -52,7 +52,7 @@ When an investigation request arrives, the RP ensures the `holmes-system` namesp
 
 3. **Pod** (`holmes-investigate-{id}`) — Runs:
    ```
-   python holmes_cli.py ask "<question>" -n --model=<Model> --config=/etc/holmes/config.yaml
+   python holmes_cli.py ask "<question>" -n --model=<Model> --config=/etc/holmes/config.yaml --system-prompt-additions "<instructions>"
    ```
    - Image from `holmesConfig.Image` (default: `version.HolmesImage(acrDomain)`)
    - `ActiveDeadlineSeconds` from `holmesConfig.DefaultTimeout`
