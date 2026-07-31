@@ -98,6 +98,46 @@ func TestMachineConfigReconciler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "missing IngressIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "custom"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			request: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name: "99-custom-aro-dns",
+				},
+			},
+			wantErrMsg: `invalid ingressIP ""`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               MachineConfigControllerName + "ControllerDegraded",
+					Status:             "True",
+					Message:            `invalid ingressIP ""`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -167,6 +207,11 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -200,6 +245,11 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -235,6 +285,11 @@ func TestMachineConfigReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
@@ -355,6 +410,11 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 						},
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -381,6 +441,11 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -414,6 +479,11 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -451,6 +521,11 @@ func TestMachineConfigReconcilerClusterUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},

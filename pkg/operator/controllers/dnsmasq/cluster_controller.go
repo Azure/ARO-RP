@@ -85,13 +85,6 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	err = validateDnsmasqProperties(instance)
-	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
-		return reconcile.Result{}, err
-	}
-
 	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, restartDnsmasq, mcps.Items...)
 	if err != nil {
 		r.Log.Error(err)
@@ -143,6 +136,10 @@ func validateDnsmasqProperties(instance *arov1alpha1.Cluster) error {
 }
 
 func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, ch clienthelper.Interface, c client.Client, allowReconcile bool, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
+	err := validateDnsmasqProperties(instance)
+	if err != nil {
+		return err
+	}
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
 		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, restartDnsmasq)
@@ -158,7 +155,7 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 		resources = append(resources, resource)
 	}
 
-	err := dynamichelper.Prepare(resources)
+	err = dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}

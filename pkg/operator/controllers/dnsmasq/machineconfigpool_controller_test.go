@@ -105,6 +105,49 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "missing IngressIP returns error",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							operator.DnsmasqEnabled:      operator.FlagTrue,
+							operator.ForceReconciliation: operator.FlagTrue,
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "custom",
+						Finalizers: []string{MachineConfigPoolControllerName},
+					},
+					Status: mcv1.MachineConfigPoolStatus{},
+					Spec:   mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			request: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name: "custom",
+				},
+			},
+			wantErrMsg: `invalid ingressIP ""`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               MachineConfigPoolControllerName + "ControllerDegraded",
+					Status:             "True",
+					Message:            `invalid ingressIP ""`,
+					LastTransitionTime: transitionTime,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -245,6 +288,11 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -281,6 +329,11 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -319,6 +372,11 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled:      operator.FlagTrue,
 							operator.ForceReconciliation: operator.FlagTrue,
@@ -432,6 +490,11 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
@@ -468,6 +531,11 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 						Conditions: defaultConditions,
 					},
 					Spec: arov1alpha1.ClusterSpec{
+						Domain:                   "cluster.location.aroapp.io",
+						APIIntIP:                 "10.0.0.1",
+						IngressIP:                "10.0.0.2",
+						GatewayDomains:           []string{"example.com"},
+						GatewayPrivateEndpointIP: "10.0.1.0",
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
