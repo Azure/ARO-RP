@@ -16,6 +16,7 @@ import (
 	"text/template"
 	"time"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
@@ -28,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 const adminSSHTTL = time.Minute
@@ -104,7 +106,8 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
-	if _, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID)); err != nil {
+	doc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
+	if err != nil {
 		if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 			return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 				fmt.Sprintf("The Resource '%s/%s' under resource group '%s' was not found.",
@@ -131,6 +134,14 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 	sshUser := strings.SplitN(username, "@", 2)[0]
 	if !rxSSHUsername.MatchString(sshUser) {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The caller identity contains unsupported characters.")
+	}
+
+	// Best-effort: if the requested master is powered off in Azure, reject now
+	// with a clear message rather than mint a token that dies on a dial timeout
+	// at connect. A transient Azure lookup failure must not block SSH access, so
+	// anything short of a definitive "not running" is allowed through.
+	if err := f.checkSSHMasterPowered(ctx, log, doc, req.Master); err != nil {
+		return nil, err
 	}
 
 	dbPortal, err := f.dbGroup.Portal()
@@ -174,6 +185,49 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 	}
 
 	return &adminSSHResponse{Command: command, Password: password}, nil
+}
+
+// checkSSHMasterPowered rejects the request when the target master VM is not
+// running in Azure, so the SRE gets a clear error instead of a dial timeout at
+// connect. It is best-effort: subscription/client/lookup failures are logged
+// and allowed through so a transient Azure blip can't break SSH access.
+func (f *frontend) checkSSHMasterPowered(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, master int) error {
+	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
+	if err != nil {
+		log.Warnf("admin ssh: skipping master power-state check, cannot load subscription: %v", err)
+		return nil
+	}
+	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	if err != nil {
+		log.Warnf("admin ssh: skipping master power-state check, cannot build azure client: %v", err)
+		return nil
+	}
+	clusterRGName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	vmName := fmt.Sprintf("%s-master-%d", doc.OpenShiftCluster.Properties.InfraID, master)
+	vm, err := a.GetVirtualMachine(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
+	if err != nil {
+		log.Warnf("admin ssh: skipping master power-state check, cannot get VM %s: %v", vmName, err)
+		return nil
+	}
+	if ps := masterPowerStateCode(vm); ps != "" && ps != "PowerState/running" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "master",
+			fmt.Sprintf("master-%d is not running (%s); power it on or choose a running master.", master, ps))
+	}
+	return nil
+}
+
+// masterPowerStateCode returns the "PowerState/*" status code from a VM instance
+// view, or "" if none is present.
+func masterPowerStateCode(vm mgmtcompute.VirtualMachine) string {
+	if vm.InstanceView == nil || vm.InstanceView.Statuses == nil {
+		return ""
+	}
+	for _, status := range *vm.InstanceView.Statuses {
+		if status.Code != nil && strings.HasPrefix(*status.Code, "PowerState/") {
+			return *status.Code
+		}
+	}
+	return ""
 }
 
 // adminSSHCommand mirrors pkg/portal/ssh.sshCommand but hard-codes the

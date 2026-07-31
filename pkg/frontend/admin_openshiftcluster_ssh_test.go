@@ -13,11 +13,18 @@ import (
 	"strings"
 	"testing"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/sirupsen/logrus"
+	"go.uber.org/mock/gomock"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -47,6 +54,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		contentType       string // "" => header omitted
 		omitHostKey       bool
 		omitClusterDoc    bool
+		azureMock         func(*mock_adminactions.MockAzureActions)
 		injectPortalError error
 		wantStatusCode    int
 		wantError         string
@@ -60,27 +68,36 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
 			body:             &adminSSHRequest{Master: 0},
 			contentType:      "application/json",
-			wantStatusCode:   http.StatusOK,
-			wantUsername:     "sre@redhat.com",
-			wantMaster:       0,
+			azureMock: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-0", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
+			},
+			wantStatusCode: http.StatusOK,
+			wantUsername:   "sre@redhat.com",
+			wantMaster:     0,
 		},
 		{
 			name:             "master 2 issued by SRE",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
 			body:             &adminSSHRequest{Master: 2},
 			contentType:      "application/json",
-			wantStatusCode:   http.StatusOK,
-			wantUsername:     "sre@redhat.com",
-			wantMaster:       2,
+			azureMock: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-2", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
+			},
+			wantStatusCode: http.StatusOK,
+			wantUsername:   "sre@redhat.com",
+			wantMaster:     2,
 		},
 		{
 			name:             "falls back to createdBy when lastModifiedBy is empty",
 			systemDataHeader: `{"createdBy":"creator@redhat.com"}`,
 			body:             &adminSSHRequest{Master: 1},
 			contentType:      "application/json",
-			wantStatusCode:   http.StatusOK,
-			wantUsername:     "creator@redhat.com",
-			wantMaster:       1,
+			azureMock: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-1", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
+			},
+			wantStatusCode: http.StatusOK,
+			wantUsername:   "creator@redhat.com",
+			wantMaster:     1,
 		},
 		{
 			name:             "missing SystemData header returns 400",
@@ -116,10 +133,13 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 			wantError:        "400: InvalidParameter: master: master must be 0, 1, or 2.",
 		},
 		{
-			name:              "cosmos create failure surfaces 500",
-			systemDataHeader:  `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:              &adminSSHRequest{Master: 0},
-			contentType:       "application/json",
+			name:             "cosmos create failure surfaces 500",
+			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
+			body:             &adminSSHRequest{Master: 0},
+			contentType:      "application/json",
+			azureMock: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-0", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
+			},
 			injectPortalError: errors.New("simulated cosmos write failure"),
 			wantStatusCode:    http.StatusInternalServerError,
 			wantError:         "500: InternalServerError: : simulated cosmos write failure",
@@ -149,10 +169,41 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 			wantStatusCode:   http.StatusBadRequest,
 			wantError:        "400: InvalidParameter: : The caller identity contains unsupported characters.",
 		},
+		{
+			name:             "deallocated master returns 400",
+			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
+			body:             &adminSSHRequest{Master: 1},
+			contentType:      "application/json",
+			azureMock: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-1", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/deallocated"), nil)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidParameter: master: master-1 is not running (PowerState/deallocated); power it on or choose a running master.",
+		},
+		{
+			name:             "azure power-state lookup error is non-fatal",
+			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
+			body:             &adminSSHRequest{Master: 0},
+			contentType:      "application/json",
+			azureMock: func(a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-0", mgmtcompute.InstanceView).Return(mgmtcompute.VirtualMachine{}, errors.New("azure boom"))
+			},
+			wantStatusCode: http.StatusOK,
+			wantUsername:   "sre@redhat.com",
+			wantMaster:     0,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti := newTestInfra(t).WithPortal().WithOpenShiftClusters()
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			ti := newTestInfra(t).WithPortal().WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
+
+			azureActions := mock_adminactions.NewMockAzureActions(controller)
+			if tt.azureMock != nil {
+				tt.azureMock(azureActions)
+			}
 
 			if !tt.omitClusterDoc {
 				ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -161,6 +212,21 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 						ID:   resourcePath,
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							InfraID: "aro-infra",
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: "/subscriptions/" + mockSubID + "/resourceGroups/test-cluster",
+							},
+						},
+					},
+				})
+				ti.fixture.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockSubID,
+						},
 					},
 				})
 				if err := ti.buildFixtures(nil); err != nil {
@@ -168,7 +234,10 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 				}
 			}
 
-			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.auditLog, ti.log, ti.otelAudit, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil,
+				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+					return azureActions, nil
+				}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -273,5 +342,19 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 				t.Errorf("portal doc TTL: got %d seconds, want 60 (1m)", doc.TTL)
 			}
 		})
+	}
+}
+
+func sshMasterVM(powerCode string) mgmtcompute.VirtualMachine {
+	statuses := []mgmtcompute.InstanceViewStatus{
+		{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
+		{Code: pointerutils.ToPtr(powerCode)},
+	}
+	return mgmtcompute.VirtualMachine{
+		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+			InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+				Statuses: &statuses,
+			},
+		},
 	}
 }
