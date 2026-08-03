@@ -58,16 +58,18 @@ tdnf_install_pkgs() {
 
 # tdnf_update_pkgs
 #
+# Update all installed packages, optionally excluding specific ones.
+#
 # args:
-#   1) excludes - nameref, string array, optional
+#   1) excludes - nameref, string array
 #       * Packages to exclude from updating
-#       * Each index must be prefixed with -x 
+#       * Each index must be prefixed with -x
 #   2) wait_time - nameref, integer
 #       * Time to wait before retrying command
 #   3) retries - integer, optional
 #       * Amount of times to retry command, defaults to 5
 tdnf_update_pkgs() {
-    local -n excludes="${1:-empty_str}"
+    local -n excludes="$1"
     log "starting"
 
     local -a cmd=(
