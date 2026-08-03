@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -22,10 +23,15 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/util/azurezones"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+type zoneTopology string
+
 const (
+	controlPlaneReplicaCount = azurezones.CONTROL_PLANE_MACHINE_COUNT
+
 	machineNamespace           = "openshift-machine-api"
 	machineLabelClusterAPIRole = "machine.openshift.io/cluster-api-machine-role"
 	machineLabelZone           = "machine.openshift.io/zone"
@@ -34,6 +40,12 @@ const (
 
 	nodeLabelInstanceType     = "node.kubernetes.io/instance-type"
 	nodeLabelBetaInstanceType = "beta.kubernetes.io/instance-type"
+
+	// SRE-facing label for the raw empty-zone sentinel; not a zoneTopology value.
+	zoneDisplayRegionalNoZone = "regional/no-zone"
+
+	zoneTopologyRegional  zoneTopology = "regional"
+	zoneTopologyThreeZone zoneTopology = "three-zone"
 )
 
 type machineValidationData struct {
@@ -53,6 +65,21 @@ type azureVMValidationData struct {
 type nodeValidationData struct {
 	nodeInstanceType string
 	betaInstanceType string
+}
+
+func describeZone(zone string) string {
+	if zone == "" {
+		return zoneDisplayRegionalNoZone
+	}
+	return zone
+}
+
+func describeZones(zones []string) []string {
+	displayZones := make([]string, 0, len(zones))
+	for _, zone := range zones {
+		displayZones = append(displayZones, describeZone(zone))
+	}
+	return displayZones
 }
 
 func unmarshalAzureMachineProviderSpec(machine *machinev1beta1.Machine) (*machinev1beta1.AzureMachineProviderSpec, error) {
@@ -125,8 +152,8 @@ func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeAction
 }
 
 func validateClusterMachines(log *logrus.Entry, machines map[string]machineValidationData) (map[string]machineValidationData, error) {
-	if len(machines) != 3 {
-		return nil, fmt.Errorf("expected 3 machines, got %d", len(machines))
+	if len(machines) != controlPlaneReplicaCount {
+		return nil, fmt.Errorf("expected %d machines, got %d", controlPlaneReplicaCount, len(machines))
 	}
 
 	var validationErrs []error
@@ -145,7 +172,7 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 		}
 
 		if machine.labelZone != machine.specZone {
-			err := fmt.Errorf("machine %v has a mismatch between label zone %v and spec zone %v. These values should match", name, machine.labelZone, machine.specZone)
+			err := fmt.Errorf("machine %s has a mismatch between label zone %s and spec zone %s. These values should match", name, describeZone(machine.labelZone), describeZone(machine.specZone))
 			log.Info(err)
 			validationErrs = append(validationErrs, err)
 			continue
@@ -178,7 +205,7 @@ func validateClusterMachines(log *logrus.Entry, machines map[string]machineValid
 		return nil, err
 	}
 
-	err := validateZoneDistribution(filteredMachines, func(m machineValidationData) string { return m.specZone })
+	_, err := classifyZoneTopology(filteredMachines, func(m machineValidationData) string { return m.specZone })
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +223,10 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 
 		vm, err := azureAction.GetVirtualMachine(ctx, clusterRGName, machineName, mgmtcompute.InstanceView)
 		if err != nil {
+			// A VM lookup failure means we could not inspect that machine at all, so
+			// fail fast instead of returning a partial validation result. In contrast,
+			// power-state mismatches are aggregated below because the VM was fetched
+			// successfully and we can still report all unhealthy instances together.
 			return nil, api.NewCloudError(
 				http.StatusInternalServerError,
 				api.CloudErrorCodeInternalServerError,
@@ -217,13 +248,6 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 			vmZones = *vm.Zones
 		}
 
-		if len(vmZones) == 0 {
-			err := fmt.Errorf("azure VM %v has no availability zone configured", machineName)
-			log.Info(err)
-			validationErrs = append(validationErrs, err)
-			continue
-		}
-
 		err = validateVMPowerState(log, vmStatuses, machineName)
 		if err != nil {
 			validationErrs = append(validationErrs, err)
@@ -234,10 +258,16 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 			vmSize = string(vm.HardwareProfile.VMSize)
 		}
 
+		zone := ""
+		if len(vmZones) > 0 {
+			zone = vmZones[0]
+		}
+		// An absent Azure zone intentionally represents a regional VM.
+
 		masterVM := azureVMValidationData{
 			vmSize: vmSize,
 			status: vmStatuses,
-			zone:   vmZones[0],
+			zone:   zone,
 		}
 
 		masterVMs[machineName] = masterVM
@@ -247,7 +277,7 @@ func getAzureVMs(log *logrus.Entry, ctx context.Context, azureAction adminaction
 		return nil, err
 	}
 
-	err := validateZoneDistribution(masterVMs, func(m azureVMValidationData) string { return m.zone })
+	_, err := classifyZoneTopology(masterVMs, func(m azureVMValidationData) string { return m.zone })
 	if err != nil {
 		return nil, err
 	}
@@ -260,20 +290,20 @@ func validateClusterMachinesAndVMs(log *logrus.Entry, ocMachines map[string]mach
 
 	for name, machineSpec := range ocMachines {
 		if _, ok := azureVMs[name]; !ok {
-			err := fmt.Errorf("machine %v not found in Azure resources", name)
+			err := fmt.Errorf("machine %s not found in Azure resources", name)
 			log.Info(err)
 			validationErrs = append(validationErrs, err)
 			continue
 		}
 
 		if machineSpec.specZone != azureVMs[name].zone {
-			err := fmt.Errorf("machine %v has zone %v in its spec, however Azure VM is running in zone %v", name, machineSpec.specZone, azureVMs[name].zone)
+			err := fmt.Errorf("machine %s has zone %s in its spec, however Azure VM is running in zone %s", name, describeZone(machineSpec.specZone), describeZone(azureVMs[name].zone))
 			log.Info(err)
 			validationErrs = append(validationErrs, err)
 		}
 
 		if machineSpec.size != azureVMs[name].vmSize {
-			err := fmt.Errorf("machine %v has size %v in its spec, however Azure VM is running a %v VM", name, machineSpec.size, azureVMs[name].vmSize)
+			err := fmt.Errorf("machine %s has size %s in its spec, however Azure VM is running a %s VM", name, machineSpec.size, azureVMs[name].vmSize)
 			log.Info(err)
 			validationErrs = append(validationErrs, err)
 		}
@@ -304,25 +334,49 @@ func validateClusterMachinesAndNodes(log *logrus.Entry, ocMachines map[string]ma
 	return errors.Join(validationErrs...)
 }
 
-func validateZoneDistribution[T any](items map[string]T, getZone func(T) string) error {
-	if len(items) != 3 {
-		return fmt.Errorf("expected 3 items, got %d", len(items))
+// classifyZoneTopology validates the recognized control-plane placement shapes.
+// It is generic so the same rules can be applied to Machines, VMs, and capacity
+// reservations without translating them into a resize-specific data structure.
+func classifyZoneTopology[T any](items map[string]T, getZone func(T) string) (zoneTopology, error) {
+	if len(items) != controlPlaneReplicaCount {
+		return "", fmt.Errorf("expected %d items, got %d", controlPlaneReplicaCount, len(items))
 	}
 
-	zones := make(map[string]bool, 3)
+	zones := make(map[string]bool, controlPlaneReplicaCount)
+	var soleZone string
 	for _, item := range items {
-		zones[getZone(item)] = true
+		soleZone = getZone(item)
+		zones[soleZone] = true
 	}
 
-	if len(zones) != 3 {
-		return fmt.Errorf("items must be spread across 3 different zones, found %d zone(s)", len(zones))
+	if len(zones) == 1 {
+		// One empty zone is regional; one explicit zone is a single-zone layout,
+		// which resizecontrolplane must reject explicitly instead of treating as
+		// a mixed or regional topology.
+		if soleZone == "" {
+			return zoneTopologyRegional, nil
+		}
+		return "", fmt.Errorf("single-zone control plane topology is unsupported for resize validation: zones [%q]", soleZone)
 	}
 
-	return nil
+	if len(zones) == controlPlaneReplicaCount && !zones[""] {
+		// Three-zone placement requires every replica to have a distinct explicit zone.
+		return zoneTopologyThreeZone, nil
+	}
+
+	zoneNames := make([]string, 0, len(zones))
+	for zone := range zones {
+		zoneNames = append(zoneNames, zone)
+	}
+	// Sort zones to keep validation errors deterministic across map iterations.
+	sort.Strings(zoneNames)
+	return "", fmt.Errorf("items have unsupported mixed zone topology: zones %q", describeZones(zoneNames))
 }
 
 func validateVMPowerState(log *logrus.Entry, vmStatuses []string, vmName string) error {
-	if len(vmStatuses) != 2 { // We only expect 2 power states: ProvisioningState and PowerState ... if we have more or less statuses than that, the VM is not valid
+	// We require at least the provisioning and power states; any additional
+	// statuses are validated below and rejected if unexpected.
+	if len(vmStatuses) < 2 {
 		err := fmt.Errorf("expected 2 statuses for VM %s, but found %d: %s", vmName, len(vmStatuses), strings.Join(vmStatuses, ", "))
 		log.Info(err)
 		return err
@@ -398,12 +452,14 @@ func validateClusterNodes(log *logrus.Entry, ctx context.Context, kubeActions ad
 		}
 	}
 
-	if len(controlPlaneNodesFound) != 3 {
+	if len(controlPlaneNodesFound) != controlPlaneReplicaCount {
 		nodeNames := make([]string, 0, len(controlPlaneNodesFound))
 		for name := range controlPlaneNodesFound {
 			nodeNames = append(nodeNames, name)
 		}
-		err := fmt.Errorf("expected 3 control plane nodes, found %d: [%s]", len(controlPlaneNodesFound), strings.Join(nodeNames, ", "))
+		// Sort node names so count-mismatch errors stay deterministic.
+		sort.Strings(nodeNames)
+		err := fmt.Errorf("expected %d control plane nodes, found %d: [%s]", controlPlaneReplicaCount, len(controlPlaneNodesFound), strings.Join(nodeNames, ", "))
 		log.Info(err)
 		validationErrs = append(validationErrs, err)
 	}
