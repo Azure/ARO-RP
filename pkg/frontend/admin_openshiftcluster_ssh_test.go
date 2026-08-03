@@ -13,11 +13,12 @@ import (
 	"strings"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"

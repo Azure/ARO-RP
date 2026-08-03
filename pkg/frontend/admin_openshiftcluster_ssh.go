@@ -16,11 +16,12 @@ import (
 	"text/template"
 	"time"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
