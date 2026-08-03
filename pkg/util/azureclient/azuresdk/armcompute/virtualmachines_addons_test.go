@@ -122,6 +122,60 @@ func Test_virtualMachinesClient_CreateOrUpdateAndWait_error(t *testing.T) {
 	}
 }
 
+// Test_virtualMachinesClient_CreateOrUpdateAndWait_asyncOperation covers the
+// representative ARM async-LRO path for CreateOrUpdateAndWait, matching the
+// pattern already exercised for CapacityReservations: a 2xx response carrying
+// an Azure-AsyncOperation header, a poll of that URL until status=Succeeded,
+// and — because this is a PUT — a final GET on the resource URL (azcore's
+// async poller issues that final GET for PATCH/PUT regardless of status code
+// or FinalStateVia; see internal/pollers/async.Poller.Result()).
+//
+// Unlike the CapacityReservations async tests, this one is not independently
+// validated against live ARM traffic — it models the documented azcore
+// poller-selection behavior (any 2xx + Azure-AsyncOperation header triggers
+// the async poller) rather than an observed response. A VM resize PUT targets
+// an existing resource, so 200 OK is used here rather than CR's 201 Created.
+func Test_virtualMachinesClient_CreateOrUpdateAndWait_asyncOperation(t *testing.T) {
+	const asyncURL = "https://management.azure.com/subscriptions/sub-id/providers/Microsoft.Compute/locations/eastus/operations/op1?api-version=2024-07-01"
+
+	var putCount, pollCount, finalGetCount int
+	transport := transportFunc(func(req *http.Request) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPut:
+			putCount++
+			resp := httpResponse(req, http.StatusOK, `{"name":"vm1","properties":{"provisioningState":"Updating"}}`)
+			resp.Header.Set("Azure-AsyncOperation", asyncURL)
+			return resp, nil
+		case req.Method == http.MethodGet && req.URL.String() == asyncURL:
+			pollCount++
+			return httpResponse(req, http.StatusOK, `{"status":"Succeeded"}`), nil
+		case req.Method == http.MethodGet:
+			finalGetCount++
+			return httpResponse(req, http.StatusOK, `{"name":"vm1","properties":{"provisioningState":"Succeeded"}}`), nil
+		default:
+			t.Fatalf("unexpected request %s %s", req.Method, req.URL.String())
+			return nil, nil
+		}
+	})
+
+	c := newTestVMClient(t, transport)
+	err := c.CreateOrUpdateAndWait(context.Background(), "rg", "vm1", armcompute.VirtualMachine{
+		Location: pointerutils.ToPtr("eastus"),
+	})
+	if err != nil {
+		t.Fatalf("CreateOrUpdateAndWait() unexpected error: %v", err)
+	}
+	if putCount != 1 {
+		t.Errorf("expected 1 PUT, got %d", putCount)
+	}
+	if pollCount != 1 {
+		t.Errorf("expected 1 poll of the Azure-AsyncOperation URL, got %d", pollCount)
+	}
+	if finalGetCount != 1 {
+		t.Errorf("expected 1 final GET on the resource URL, got %d", finalGetCount)
+	}
+}
+
 func Test_virtualMachinesClient_UpdateAndWait_success(t *testing.T) {
 	transport := transportFunc(func(req *http.Request) (*http.Response, error) {
 		return httpResponse(req, http.StatusOK, `{"name":"vm1","location":"eastus"}`), nil
