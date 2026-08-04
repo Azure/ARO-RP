@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -53,6 +54,7 @@ func TestProcessLoop(t *testing.T) {
 
 	testCases := []struct {
 		desc              string
+		date              *time.Time
 		schedule          *api.MaintenanceScheduleDocument
 		desiredSchedule   *api.MaintenanceScheduleDocument
 		existingManifests []*api.MaintenanceManifestDocument
@@ -443,6 +445,11 @@ func TestProcessLoop(t *testing.T) {
 				},
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("cancelled unneeded manifest id=07070707-0707-0707-0707-070707070001 (2026-01-06T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("created=1, found valid=0, cancelled=1"),
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
@@ -546,6 +553,11 @@ func TestProcessLoop(t *testing.T) {
 				{
 					"level":       gomega.Equal(logrus.InfoLevel),
 					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-05T00:00Z window (2026-01-05T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("cancelled unneeded manifest id=07070707-0707-0707-0707-070707070001 (2026-01-06T00:51:15Z)"),
 					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
 				},
 				{
@@ -914,6 +926,320 @@ func TestProcessLoop(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "valid daily schedule, already-scheduled manifests that are valid and not run inside the schedule smearing window are kept",
+			date: pointerutils.ToPtr(time.Date(2026, 1, 1, 0, 0, 1, 0, time.UTC)),
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "*-*-* 00:00:00",
+					LookForwardCount: 2,
+					ScheduleAcross:   "1h",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{
+				{
+					ID:                "0-i-already-exist",
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						// schedule that just passed + the scheduleAcross window
+						// for this cluster
+						RunAfter:  time.Date(2026, 1, 1, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 1, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+			desiredManifests: []*api.MaintenanceManifestDocument{
+				{
+					ID:                "0-i-already-exist",
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						// schedule that just passed + the scheduleAcross window
+						// for this cluster
+						RunAfter:  time.Date(2026, 1, 1, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 1, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[0],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						// starts the next day
+						RunAfter:  time.Date(2026, 1, 2, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 2, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[1],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						RunAfter:          time.Date(2026, 1, 3, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore:         time.Date(2026, 1, 3, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-01T00:00Z (within scheduleAcross), 2026-01-02T00:00Z, 2026-01-03T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070001 for 2026-01-02T00:00Z window (2026-01-02T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-03T00:00Z window (2026-01-03T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=2, found valid=1, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      2,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
+			},
+		},
+		{
+			desc: "valid daily schedule, does not create manifests for clusters that are technically within the scheduleAcross window",
+			date: pointerutils.ToPtr(time.Date(2026, 1, 1, 0, 0, 1, 0, time.UTC)),
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "*-*-* 00:00:00",
+					LookForwardCount: 2,
+					ScheduleAcross:   "1h",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{},
+			desiredManifests: []*api.MaintenanceManifestDocument{
+				// No manifest for today's schedule + scheduleAcross window
+				// created
+				{
+					ID:                manifestIDs[0],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						// starts the next day
+						RunAfter:  time.Date(2026, 1, 2, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 2, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[1],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						// starts in 2 days
+						RunAfter:  time.Date(2026, 1, 3, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 3, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-01T00:00Z (within scheduleAcross), 2026-01-02T00:00Z, 2026-01-03T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070001 for 2026-01-02T00:00Z window (2026-01-02T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-03T00:00Z window (2026-01-03T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=2, found valid=0, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      2,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
+			},
+		},
+		{
+			desc: "valid daily schedule, does not create manifests for clusters that are technically within the scheduleAcross window (at the very end of the window)",
+			date: pointerutils.ToPtr(time.Date(2026, 1, 1, 0, 59, 59, 0, time.UTC)),
+			schedule: &api.MaintenanceScheduleDocument{
+				ID: manifestScheduleID,
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State:             api.MaintenanceScheduleStateEnabled,
+					MaintenanceTaskID: api.MIMOTaskID("0"),
+
+					Schedule:         "*-*-* 00:00:00",
+					LookForwardCount: 2,
+					ScheduleAcross:   "1h",
+
+					Selectors: []*api.MaintenanceScheduleSelector{
+						{
+							Key:      string(SelectorDataKeySubscriptionState),
+							Operator: "in",
+							Values:   []string{string(api.SubscriptionStateRegistered)},
+						},
+					},
+				},
+			},
+			existingManifests: []*api.MaintenanceManifestDocument{},
+			desiredManifests: []*api.MaintenanceManifestDocument{
+				// No manifest for today's schedule + scheduleAcross window
+				// created
+				{
+					ID:                manifestIDs[0],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						// starts the next day
+						RunAfter:  time.Date(2026, 1, 2, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 2, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+				{
+					ID:                manifestIDs[1],
+					ClusterResourceID: strings.ToLower(clusterResourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						State:             api.MaintenanceManifestStatePending,
+						MaintenanceTaskID: "0",
+						CreatedBySchedule: api.MIMOScheduleID(manifestScheduleID),
+						Priority:          0,
+						// starts in 2 days
+						RunAfter:  time.Date(2026, 1, 3, 0, 51, 15, 0, time.UTC).Unix(),
+						RunBefore: time.Date(2026, 1, 3, 1, 51, 15, 0, time.UTC).Unix(),
+					},
+				},
+			},
+			expectedLogs: append(base_logs, []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("next valid scheduled times: 2026-01-01T00:00Z (within scheduleAcross), 2026-01-02T00:00Z, 2026-01-03T00:00Z"),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070001 for 2026-01-02T00:00Z window (2026-01-02T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created new manifest id=07070707-0707-0707-0707-070707070002 for 2026-01-03T00:00Z window (2026-01-03T00:51:15Z)"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("created=2, found valid=0, cancelled=0"),
+					"resource_id": gomega.Equal(strings.ToLower(clusterResourceID)),
+				},
+			}...),
+			expectedMetrics: []testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "mimo.scheduler.manifests.created",
+					Dimensions: metric_dims,
+					Value:      2,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "SubscriptionDocument",
+					},
+					Value: 1,
+				},
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "OpenShiftClusterDocument",
+					},
+					Value: 1,
+				},
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.desc, func(t *testing.T) {
@@ -922,7 +1248,11 @@ func TestProcessLoop(t *testing.T) {
 
 			controller := gomock.NewController(nil)
 			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().Now().AnyTimes().Return(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+			if tt.date != nil {
+				_env.EXPECT().Now().AnyTimes().Return(*tt.date)
+			} else {
+				_env.EXPECT().Now().AnyTimes().Return(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+			}
 
 			hook, log := testlog.LogForTesting(t)
 			metrics := testmetrics.NewFakeMetricsEmitter(t)
@@ -1062,16 +1392,54 @@ func TestClusterPercentWithinPeriod(t *testing.T) {
 		endPeriod time.Duration
 	}{
 		{
+			desc:      "0% of 0s",
+			percent:   0,
+			period:    time.Duration(0),
+			endPeriod: 0,
+		},
+		{
+			desc:      "100% of 0s",
+			percent:   1.0,
+			period:    time.Duration(0),
+			endPeriod: 0,
+		},
+		{
+			desc:      "0% of 5s",
+			percent:   0,
+			period:    time.Second * 5,
+			endPeriod: 0,
+		},
+		{
+			desc:      "100% of 5s",
+			percent:   1.0,
+			period:    time.Second * 5,
+			endPeriod: time.Second * 4,
+		},
+		{
+			desc:      "0% of 1 minute",
+			percent:   0,
+			period:    time.Minute,
+			endPeriod: 0,
+		},
+		{
 			desc:      "10% of 1 minute",
 			percent:   0.1,
 			period:    time.Minute,
 			endPeriod: time.Second * 6,
 		},
 		{
-			desc:      "100% of 1 minute",
-			percent:   1.0,
-			period:    time.Minute,
-			endPeriod: time.Second * 60,
+			desc:      "10% of 1 hour",
+			percent:   0.1,
+			period:    time.Hour,
+			endPeriod: time.Second * 60 * 6,
+		},
+		{
+			desc:    "100% of 1 minute",
+			percent: 1.0,
+			period:  time.Minute,
+			// Ensure that time + 1 min does not fall on the next minute, but
+			// within the same minute
+			endPeriod: time.Second * 59,
 		},
 	}
 	for _, tC := range testCases {

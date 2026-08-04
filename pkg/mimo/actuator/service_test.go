@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -430,7 +431,9 @@ func TestActuatorGoesReadyEvenIfNoWork(t *testing.T) {
 		Create()
 	r.NoError(err)
 
-	act := &fakeActuator{}
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	act := &fakeActuator{waitOnProcess: wg}
 	svc := NewService(_env, log, nil, dbs, m)
 	svc.workerMaxStartupDelay = 0
 	svc.taskPollTime = time.Millisecond
@@ -454,6 +457,9 @@ func TestActuatorGoesReadyEvenIfNoWork(t *testing.T) {
 	r.EventuallyWithT(func(collect *assert.CollectT) {
 		require.True(collect, svc.checkReady())
 	}, time.Second, time.Millisecond)
+
+	// Let the Actuator poll process run once
+	act.waitOnProcess.Wait()
 
 	// Once it goes ready, stop the service
 	close(stop)

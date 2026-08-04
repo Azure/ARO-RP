@@ -100,7 +100,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 
 	a.log.Infof("processing schedule %s (task ID=%s)", doc.ID, doc.MaintenanceSchedule.MaintenanceTaskID)
 
-	scheduleWithin, err := time.ParseDuration(doc.MaintenanceSchedule.ScheduleAcross)
+	scheduleAcross, err := time.ParseDuration(doc.MaintenanceSchedule.ScheduleAcross)
 	if err != nil {
 		a.log.Errorf("unrecognised scheduleacross: %s", err.Error())
 		return false, err
@@ -117,8 +117,20 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		a.log.Warnf("schedule '%s' will never trigger again, skipping", doc.MaintenanceSchedule.Schedule)
 		return true, nil
 	}
-	periods_friendly := []string{next.Format(friendlyDateFormat)}
-	periods := []time.Time{next}
+
+	periods_friendly := []string{}
+	periods := []time.Time{}
+
+	// We may be within a scheduleAcross window of the previous schedule run,
+	// add that to the expected periods so we don't cancel them
+	scheduleAtStartOfScheduleAcross, hasFutureTime := Next(now.Add(-scheduleAcross), calDef)
+	if hasFutureTime && !next.Equal(scheduleAtStartOfScheduleAcross) {
+		periods_friendly = append(periods_friendly, fmt.Sprintf("%s (within scheduleAcross)", scheduleAtStartOfScheduleAcross.Format(friendlyDateFormat)))
+		periods = append(periods, scheduleAtStartOfScheduleAcross)
+	}
+
+	periods_friendly = append(periods_friendly, next.Format(friendlyDateFormat))
+	periods = append(periods, next)
 
 	if doc.MaintenanceSchedule.LookForwardCount > 1 {
 		for i := range doc.MaintenanceSchedule.LookForwardCount - 1 {
@@ -154,8 +166,10 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 		clusterLog.Debugf("cluster matches selectors")
 
 		// this is the amount of time we will be offset inside the
-		// 'scheduleAcross' window.
-		offsetWithinScheduleAcross := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(clusterID), scheduleWithin)
+		// 'scheduleAcross' window. This time is inclusive of the initial start
+		// time -- i.e. a schedule across 60s will spread clusters out from
+		// :00-:59, not :00 to +1:00.
+		offsetWithinScheduleAcross := PercentWithinPeriod(ClusterResourceIDHashToScheduleWithinPercent(clusterID), scheduleAcross)
 
 		clusterLog.Debugf("Calculated scheduleAcross offset is %s", offsetWithinScheduleAcross.String())
 
@@ -188,7 +202,6 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			// we errored, so exit out
 			continue
 		}
-
 		manifestsFound := 0
 		manifestsCreated := 0
 		manifestsCancelled := 0
@@ -196,6 +209,11 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			targetWithOffset := target.Add(offsetWithinScheduleAcross)
 			scheduleMatch, found := foundPeriods[targetWithOffset.Unix()]
 			if !found {
+				if target.Before(now) {
+					// Don't create manifests if the specified schedule start time is within the past
+					clusterLog.Debugf("skipping manifest creation for %s window (%s)", target, targetWithOffset)
+					continue
+				}
 				clusterLog.Debugf("creating manifest for %s window (%s)", target, targetWithOffset)
 
 				newManifest, err := manifestsDB.Create(ctx, &api.MaintenanceManifestDocument{
@@ -226,8 +244,8 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 			}
 		}
 
-		// Cancel the manifests which are not required which this
-		for _, notNeededManifest := range foundPeriods {
+		// Cancel the manifests which are not required by this schedule
+		for notNeededTime, notNeededManifest := range foundPeriods {
 			_, err = manifestsDB.Patch(ctx, clusterID, notNeededManifest, func(mmd *api.MaintenanceManifestDocument) error {
 				mmd.MaintenanceManifest.State = api.MaintenanceManifestStateCancelled
 				mmd.MaintenanceManifest.StatusText = "Cancelled by Scheduler as did not match current schedule settings"
@@ -237,7 +255,7 @@ func (a *scheduler) Process(ctx context.Context) (bool, error) {
 				clusterLog.Errorf("error cancelling unneeded manifest: %s", err.Error())
 			} else {
 				manifestsCancelled += 1
-				clusterLog.Debugf("cancelled unneeded manifest %s", notNeededManifest)
+				clusterLog.Infof("cancelled unneeded manifest id=%s (%s)", notNeededManifest, time.Unix(notNeededTime, 0).UTC().Format(time.RFC3339))
 			}
 		}
 
@@ -280,6 +298,9 @@ func ClusterResourceIDHashToScheduleWithinPercent(resourceID string) float64 {
 // Given a period and a float from 0.0-1.0, calculate the target time within
 // that duration rounded to the second.
 func PercentWithinPeriod(percent float64, scheduleWithin time.Duration) time.Duration {
-	percentIn := time.Duration(int64(float64(int64(scheduleWithin)) * percent))
-	return percentIn.Round(time.Second)
+	if scheduleWithin > time.Second {
+		percentIn := time.Duration(int64((float64(int64(scheduleWithin)) - float64(time.Second)) * percent))
+		return percentIn.Round(time.Second)
+	}
+	return 0
 }
