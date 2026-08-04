@@ -123,8 +123,8 @@ client: generate generate-swagger-typespec client-generate lint-go-fix lint-go
 
 .PHONY: client-generate
 client-generate:
-	hack/api/generate-from-typespec.sh go
-	hack/api/generate-from-typespec.sh python
+	hack/api/generate-from-typespec.sh go-testsdk
+	hack/api/generate-from-typespec.sh python-testsdk
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -156,6 +156,10 @@ generate-swagger-legacy:
 generate-swagger-typespec:
 	hack/api/generate-from-typespec.sh swagger
 	$(MAKE) swagger-checksums
+
+.PHONY: generate-api-models
+generate-api-models:
+	hack/api/generate-from-typespec.sh go-api-models
 
 .PHONY: generate-api-examples
 generate-api-examples:

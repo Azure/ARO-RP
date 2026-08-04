@@ -1,9 +1,17 @@
 #!/bin/bash -e
 
+# VERSION determines which API version to generate.
+# The default value for VERSION should be the latest API version.
+# Note: typespec-go can only generate for the latest API version defined in
+# the TypeSpec source. Older versions' generated code is stable and stays
+# committed as-is. To regenerate older versions, use a git checkout of the
+# code from when that version was the latest.
+VERSION="v20250725"
+
 cd api
 
 target="${1:-}"
-if [[ "$target" != "swagger" && "$target" != "go" && "$target" != "python" && "$target" != "examples" ]]; then
+if [[ "$target" != "swagger" && "$target" != "go-api-models" && "$target" != "go-testsdk" && "$target" != "python-testsdk" && "$target" != "examples" ]]; then
     echo "Usage: $0 <swagger|go|python|examples>" >&2
     exit 1
 fi
@@ -38,14 +46,34 @@ if [[ "$target" == "swagger" || "$target" == "examples" ]]; then
             rm -rf "$api_version_dir/examples"
         )
     done
-elif [[ "$target" == "go" ]]; then
-    npm run go
+elif [[ "$target" == "go-api-models" ]]; then
+    TSP_OUTPUT_DIR="pkg/api/${VERSION}/generated"
+    npm run go -- \
+        --option "@azure-tools/typespec-go.emitter-output-dir={cwd}/../${TSP_OUTPUT_DIR}" \
+        --option "@azure-tools/typespec-go.module=github.com/Azure/ARO-RP/${TSP_OUTPUT_DIR}"
+
+    # Delete everything except for the models
+    rm -f ../${TSP_OUTPUT_DIR}/go.mod
+    rm -f ../${TSP_OUTPUT_DIR}/go.sum
+    rm -f ../${TSP_OUTPUT_DIR}/LICENSE.txt
+    rm -f ../${TSP_OUTPUT_DIR}/client_factory.go
+    rm -f ../${TSP_OUTPUT_DIR}/*_client.go
+    rm -f ../${TSP_OUTPUT_DIR}/options.go
+    rm -f ../${TSP_OUTPUT_DIR}/responses.go
+    rm -f ../${TSP_OUTPUT_DIR}/version.go
+    rm -rf ../${TSP_OUTPUT_DIR}/testdata
+elif [[ "$target" == "go-testsdk" ]]; then
+    TSP_OUTPUT_DIR="pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
+    npm run go -- \
+        --option "@azure-tools/typespec-go.emitter-output-dir={cwd}/../${TSP_OUTPUT_DIR}" \
+        --option "@azure-tools/typespec-go.module=github.com/Azure/ARO-RP/${TSP_OUTPUT_DIR}"
 
     # The TypeSpec Go emitter generates a few files we don't need, and there's no option to
     # disable generation of these files.
-    GENERATED_GO_CLIENT_DIR="../pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
-    rm -f "$GENERATED_GO_CLIENT_DIR/go.mod" "$GENERATED_GO_CLIENT_DIR/go.sum" "$GENERATED_GO_CLIENT_DIR/LICENSE.txt"
-elif [[ "$target" == "python" ]]; then
+    rm -f ../${TSP_OUTPUT_DIR}/go.mod
+    rm -f ../${TSP_OUTPUT_DIR}/go.sum
+    rm -f ../${TSP_OUTPUT_DIR}/LICENSE.txt
+elif [[ "$target" == "python-testsdk" ]]; then
     npm run python
 fi
 
