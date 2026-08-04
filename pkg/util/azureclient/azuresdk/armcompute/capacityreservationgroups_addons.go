@@ -50,10 +50,9 @@ func (c *capacityReservationGroupsClient) Delete(ctx context.Context, resourceGr
 
 var (
 	crgDeletePollInterval = 5 * time.Second
-	// crgDeleteTimeout bounds pollCRGDeleted independently of the caller's context,
-	// so a caller-supplied context with no deadline cannot leave this polling
-	// indefinitely. Mirrors the same safety-net pattern used by
-	// azcertificates.WaitForCertificateOperation.
+	// crgDeleteTimeout ensures pollCRGDeleted does not poll indefinitely when
+	// the caller's context has no deadline. If the parent context has an earlier
+	// deadline or is cancelled, that still takes effect.
 	crgDeleteTimeout = 15 * time.Minute
 )
 
