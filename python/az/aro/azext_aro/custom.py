@@ -641,10 +641,6 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
     subnet_resources = {}
     subnets_with_no_nsg_attached = set()
 
-    preconfigured_nsg_enabled = False
-    if oc:
-        preconfigured_nsg_enabled = oc.network_profile.preconfigured_nsg == "Enabled"
-
     for sn in subnets:
         sid = parse_resource_id(sn)
 
@@ -669,17 +665,17 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
         if subnet.get("natGateway", None):
             subnet_resources["natGateway"] = subnet['natGateway']['id']
 
-        nsg = subnet.get("networkSecurityGroup", None)
+        if oc and oc.network_profile.preconfigured_nsg == "Enabled":
+            if subnet.get("networkSecurityGroup", None):
+                subnet_resources["networkSecurityGroup"] = subnet["networkSecurityGroup"]["id"]
+            else:
+                subnets_with_no_nsg_attached.add(sn)
 
-        if nsg:
-            subnet_resources["networkSecurityGroup"] = nsg["id"]
-        elif preconfigured_nsg_enabled and not nsg:
-            subnets_with_no_nsg_attached.add(sn)
-
-    nonattached_nsgs = len(subnets_with_no_nsg_attached) > 0 and \
-        len(subnets_with_no_nsg_attached) != len(subnets)
-
-    if preconfigured_nsg_enabled and nonattached_nsgs:
+    # when preconfiguredNSG is Enabled we either have all subnets NSG attached
+    # or none.
+    if oc and oc.network_profile.preconfigured_nsg == "Enabled" and \
+        len(subnets_with_no_nsg_attached) != 0 and \
+            len(subnets_with_no_nsg_attached) != len(subnets):
         raise ValidationError("(ValidationError) preconfiguredNSG feature is enabled but an NSG is "
                               "not attached for all required subnets. Please make sure all the following "
                               "subnets have a network security groups attached and retry. "
