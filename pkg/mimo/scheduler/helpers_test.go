@@ -15,10 +15,12 @@ type fakeScheduler struct {
 	hasRan        bool
 	whileRunning  func()
 	waitOnProcess *sync.WaitGroup
+	calls         int
 }
 
 func (f *fakeScheduler) AddMaintenanceTasks(_ map[api.MIMOTaskID]tasks.MaintenanceTask) {}
 func (f *fakeScheduler) Process(_ context.Context) (bool, error) {
+	f.calls++
 	if f.hasRan {
 		return false, nil
 	}
@@ -26,6 +28,8 @@ func (f *fakeScheduler) Process(_ context.Context) (bool, error) {
 		f.whileRunning()
 	}
 	f.hasRan = true
-	f.waitOnProcess.Done()
+	if f.waitOnProcess != nil {
+		f.waitOnProcess.Done()
+	}
 	return true, nil
 }
