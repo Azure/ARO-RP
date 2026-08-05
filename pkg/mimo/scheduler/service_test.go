@@ -824,7 +824,7 @@ func TestSchedulerServesBucketWhenChanges(t *testing.T) {
 	}...)
 }
 
-func TestSchedulerDoesNotProcessIfNoUpdates(t *testing.T) {
+func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 	r := require.New(t)
 	ctx := t.Context()
 
@@ -864,6 +864,7 @@ func TestSchedulerDoesNotProcessIfNoUpdates(t *testing.T) {
 	svc := NewService(_env, log, dbs, m)
 	svc.workerMaxStartupDelay = 0
 	svc.interval = time.Millisecond
+	svc.scheduleUnconditionalReconcileInterval = 250 * time.Millisecond
 	svc.schedulePollInterval = 1 * time.Millisecond
 	svc.changefeedInterval = time.Millisecond
 	svc.readinessDelay = time.Millisecond
@@ -881,10 +882,14 @@ func TestSchedulerDoesNotProcessIfNoUpdates(t *testing.T) {
 		require.Equal(collect, 1, sched.calls)
 	}, time.Second, time.Millisecond)
 
+	// Sleep for a second so that the loop will trigger the unconditional
+	// reevaluate condition
 	time.Sleep(time.Second)
 
-	// The scheduler should only be called once because nothing has changed
-	r.Equal(1, sched.calls)
+	// The scheduler should be called up to 4 additional times (due to the
+	// unconditional reconcile interval) because nothing has changed, add one to
+	// make it potentially less flaky -- as long as it's not hundreds
+	r.LessOrEqual(sched.calls, 6)
 
 	close(stop)
 
@@ -908,4 +913,54 @@ func TestSchedulerDoesNotProcessIfNoUpdates(t *testing.T) {
 			Value:      0,
 		},
 	}...)
+}
+
+func TestShouldReevaluateUnconditionally(t *testing.T) {
+	testCases := []struct {
+		desc          string
+		now           time.Time
+		lastRan       time.Time
+		interval      time.Duration
+		delayFraction float64
+		expectedValue bool
+	}{
+		{
+			desc:          "every 60 mins, it's been 60 mins, no delay",
+			now:           time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 0.0,
+			expectedValue: true,
+		},
+		{
+			desc:          "every 60 mins, it's been 59:59 mins, no delay",
+			now:           time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 59, 59, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 0.0,
+			expectedValue: false,
+		},
+		{
+			desc:          "every 60 mins, it's been 60 mins, 100% delay",
+			now:           time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 1.0,
+			expectedValue: false,
+		},
+		{
+			desc:          "every 60 mins, it's been 120 mins, 100% delay",
+			now:           time.Date(2026, 1, 1, 2, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 1.0,
+			expectedValue: true,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			got := shouldReevaluateUnconditionally(tC.now, tC.lastRan, tC.interval, tC.delayFraction)
+			require.Equal(t, tC.expectedValue, got)
+		})
+	}
 }
