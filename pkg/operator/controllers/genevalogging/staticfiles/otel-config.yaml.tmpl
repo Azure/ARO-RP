@@ -60,6 +60,7 @@ receivers:
       - type: container
       - id: klog_parse
         type: regex_parser
+        if: 'type(body) == "string"'
         parse_from: body
         parse_to: body
         regex: ^(?<severity>[IWECF])(?:\d{4} \d{2}:\d{2}:\d{2}\.\d{6}) +(?:\d+) (?<src_file>[^:]+):(?<src_line>\d+)\] (?<message>(?:.|\n)*)
@@ -74,6 +75,7 @@ receivers:
         on_error: send_quiet
       - id: logrus_parse
         type: regex_parser
+        if: 'type(body) == "string"'
         parse_from: body
         parse_to: body
         regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?<fields>(?: [^= ]+=(?:"(?:[^"\\\\]|\\\\.)*"|[^ ]+))*).*$'
@@ -95,6 +97,7 @@ receivers:
         on_error: send_quiet
       - id: zap_parse
         type: regex_parser
+        if: 'type(body) == "string"'
         parse_from: body
         parse_to: body
         regex: '^(?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\t(?<severity>[a-z]+)\t(?<src_file>[^\t]+)\t(?<message>[^\t]+)(?:\t(?<fields>.*))?$'
@@ -401,7 +404,9 @@ not ((IsString(body) and (
     or IsMatch(body, "Update error .*: ClusterOperatorDegraded")
     or IsMatch(body, "\\terror\\t|\\twarn\\t")))
   or (IsMap(body) and (
-    (IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$|^(error|warn|warning|fatal)$"))
+    (IsString(body["severity"]) and (
+      IsMatch(body["severity"], "^[EWF]$")
+      or IsMatch(body["severity"], "^(error|warn|warning|fatal)$")))
     or (IsString(body["message"]) and (
       IsMatch(body["message"], "level=(error|warn|warning)")
       or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
