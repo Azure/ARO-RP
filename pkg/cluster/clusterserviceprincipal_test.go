@@ -14,6 +14,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -475,13 +476,15 @@ func TestUpdateAROSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			secret, _ := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-cloud-provider", metav1.GetOptions{})
+			secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-cloud-provider", metav1.GetOptions{})
 
-			if secret != nil {
+			if err == nil {
 				expect := tt.expect()
 				if !reflect.DeepEqual(secret.Data, expect.Data) {
 					t.Errorf("\n%+v \n!= \n%+v", string(secret.Data["cloud-config"]), string(expect.Data["cloud-config"]))
 				}
+			} else if !kerrors.IsNotFound(err) {
+				t.Fatal(err)
 			}
 		})
 	}
