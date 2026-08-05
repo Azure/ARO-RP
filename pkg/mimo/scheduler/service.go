@@ -465,18 +465,19 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 out:
 	for !s.stopping.Load() {
 		func() {
+			// Store the run time as we want to start at the same time every
+			// interval, not interval+eval time
+			now := s.env.Now()
+
 			// Check if this schedule has updated or if we should run it again
 			// unconditionally. Missing the marker (e.g. when buckets update)
 			// means it should be run.
-			shouldReevaluateSchedule, hasMarker := s.scheduleShouldBeReevaluated.LoadAndStore(id, false)
-
+			shouldReevaluateSchedule, hasMarker := s.scheduleShouldBeReevaluated.Load(id)
 			reevalulateUnconditionally := false
-			// Store the run time as we want to start at the same time every
-			// interval, not interval+eval time
-			lastRunTime, hasRun := s.scheduleLastRunTime.LoadAndStore(id, s.env.Now())
+			lastRunTime, hasRun := s.scheduleLastRunTime.Load(id)
 			if hasRun {
 				reevalulateUnconditionally = shouldReevaluateUnconditionally(
-					s.env.Now(), lastRunTime, s.scheduleUnconditionalReconcileInterval, delayFraction)
+					now, lastRunTime, s.scheduleUnconditionalReconcileInterval, delayFraction)
 			}
 
 			// If we don't need to reevaluate it because the schedule/buckets
@@ -499,6 +500,9 @@ out:
 			if err != nil {
 				log.Error(err)
 			}
+
+			s.scheduleLastRunTime.Store(id, now)
+			s.scheduleShouldBeReevaluated.Store(id, false)
 		}()
 
 		select {
