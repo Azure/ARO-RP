@@ -823,3 +823,89 @@ func TestSchedulerServesBucketWhenChanges(t *testing.T) {
 		},
 	}...)
 }
+
+func TestSchedulerDoesNotProcessIfNoUpdates(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+
+	_, log := testlog.LogForTesting(t)
+	fixtures := testdatabase.NewFixture()
+	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
+	dbs := database.NewDBGroup().
+		WithMaintenanceSchedules(schedules).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers)
+
+	fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
+		ID: "00000000-0000-0000-0000-000000000000",
+		MaintenanceSchedule: api.MaintenanceSchedule{
+			State: api.MaintenanceScheduleStateEnabled,
+		},
+	})
+
+	// Apply the fixture
+	err := fixtures.WithMaintenanceSchedules(schedules).
+		WithOpenShiftClusters(clusters).
+		WithSubscriptions(subscriptions).
+		Create()
+	r.NoError(err)
+
+	sched := &fakeScheduler{}
+
+	svc := NewService(_env, log, dbs, m)
+	svc.workerMaxStartupDelay = 0
+	svc.interval = time.Millisecond
+	svc.schedulePollInterval = 1 * time.Millisecond
+	svc.changefeedInterval = time.Millisecond
+	svc.readinessDelay = time.Millisecond
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+	svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs) (Scheduler, error) {
+		return sched, nil
+	}
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go svc.Run(ctx, stop, done)
+
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.Equal(collect, 1, sched.calls)
+	}, time.Second, time.Millisecond)
+
+	time.Sleep(time.Second)
+
+	// The scheduler should only be called once because nothing has changed
+	r.Equal(1, sched.calls)
+
+	close(stop)
+
+	// Then wait for the worker to stop
+	<-done
+	r.Equal(int32(0), svc.workerCount.Load())
+
+	m.AssertFloats()
+	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "MaintenanceScheduleDocument",
+			},
+			Value: 1,
+		},
+		// No running workers
+		{
+			MetricName: "mimo.scheduler.workers.active.count",
+			Dimensions: map[string]string{},
+			Value:      0,
+		},
+	}...)
+}
