@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -604,6 +605,213 @@ func TestSchedulerServesBucket(t *testing.T) {
 				"resourceId":     strings.ToLower(api.ExampleOpenShiftClusterDocument().OpenShiftCluster.ID),
 				"subscriptionId": api.ExampleSubscriptionDocument().ID,
 				"resourceName":   "resourcename",
+			},
+			Value: 1,
+		},
+		// No running workers
+		{
+			MetricName: "mimo.scheduler.workers.active.count",
+			Dimensions: map[string]string{},
+			Value:      0,
+		},
+	}...)
+}
+
+func TestSchedulerServesBucketWhenChanges(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	ourUUID := uuid.DefaultGenerator.Generate()
+
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
+		now = now.Add(time.Millisecond)
+		return now
+	})
+
+	_, log := testlog.LogForTesting(t)
+	fixtures := testdatabase.NewFixture()
+	checker := testdatabase.NewChecker()
+	manifests, manifestsClient := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now, ourUUID)
+	dbs := database.NewDBGroup().
+		WithMaintenanceSchedules(schedules).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers).
+		WithMaintenanceManifests(manifests)
+
+	ownedCluster := api.ExampleOpenShiftClusterDocument()
+	ownedCluster.Bucket = 1
+
+	notInInitialBucketCluster := api.ExampleOpenShiftClusterDocument()
+	notInInitialBucketCluster.Bucket = 0
+	notInInitialBucketCluster.ID = "00000000-1111-0000-0000-000000000002"
+	notInInitialBucketCluster.Key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup2/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
+	notInInitialBucketCluster.OpenShiftCluster.ID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup2/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
+	notInInitialBucketCluster.ClusterResourceGroupIDKey = "/subscriptions/00000000-1111-0000-0000-000000000000/resourcegroups/clusterresourcegroup2"
+	notInInitialBucketCluster.ClientIDKey = "2"
+
+	poolWorkerMasterDoc := &api.PoolWorkerDocument{
+		ID:         string(api.PoolWorkerTypeMIMOScheduler),
+		WorkerType: api.PoolWorkerTypeMIMOScheduler,
+		PoolWorker: &api.PoolWorker{
+			// We only have bucket 1, the unowned cluster will not be served
+			Buckets: []string{"other", ourUUID, "other", "other"},
+		},
+		LeaseOwner:   "other",
+		LeaseExpires: 9999999999999,
+	}
+
+	fixtures.AddSubscriptionDocuments(api.ExampleSubscriptionDocument())
+	fixtures.AddOpenShiftClusterDocuments(ownedCluster, notInInitialBucketCluster)
+	fixtures.AddPoolWorkerDocuments(poolWorkerMasterDoc)
+
+	fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
+		ID: "00000000-0000-0000-0000-000000000001",
+		MaintenanceSchedule: api.MaintenanceSchedule{
+			State:             api.MaintenanceScheduleStateEnabled,
+			MaintenanceTaskID: api.MIMOTaskID("0"),
+
+			Schedule:         "*-*-* *:15",
+			ScheduleAcross:   "0s",
+			LookForwardCount: 1,
+
+			Selectors: []*api.MaintenanceScheduleSelector{
+				{
+					Key:      string(SelectorDataKeySubscriptionState),
+					Operator: api.MaintenanceScheduleSelectorOperatorEq,
+					Value:    "Registered",
+				},
+			},
+		},
+	})
+
+	checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+		ID:                "07070707-0707-0707-0707-070707070001",
+		ClusterResourceID: strings.ToLower(api.ExampleOpenShiftClusterDocument().OpenShiftCluster.ID),
+		MaintenanceManifest: api.MaintenanceManifest{
+			State:             api.MaintenanceManifestStatePending,
+			MaintenanceTaskID: "0",
+			CreatedBySchedule: "00000000-0000-0000-0000-000000000001",
+			RunAfter:          time.Date(2026, 1, 1, 0, 15, 0, 0, time.UTC).Unix(),
+			RunBefore:         time.Date(2026, 1, 1, 1, 15, 0, 0, time.UTC).Unix(),
+		},
+	})
+
+	// Apply the fixture
+	err := fixtures.WithMaintenanceSchedules(schedules).
+		WithOpenShiftClusters(clusters).
+		WithSubscriptions(subscriptions).
+		WithPoolWorkers(poolWorkers).
+		Create()
+	r.NoError(err)
+
+	svc := NewService(_env, log, dbs, m)
+	svc.workerMaxStartupDelay = 0
+	svc.interval = 10 * time.Millisecond
+	svc.bucketRefreshInterval = 1 * time.Millisecond
+	svc.schedulePollInterval = 1 * time.Millisecond
+	svc.changefeedInterval = time.Millisecond
+	svc.readinessDelay = time.Millisecond
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go svc.Run(ctx, stop, done)
+
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.True(collect, svc.checkReady())
+	}, time.Second, time.Millisecond)
+
+	// Wait for our created manifest
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.Empty(collect, checker.CheckMaintenanceManifests(manifestsClient))
+	}, time.Second, time.Millisecond*10)
+
+	// Update the buckets so that the unowned cluster becomes owned
+	_, err = poolWorkersClient.Replace(ctx, string(api.PoolWorkerTypeMIMOScheduler), &api.PoolWorkerDocument{
+		ID:         string(api.PoolWorkerTypeMIMOScheduler),
+		WorkerType: api.PoolWorkerTypeMIMOScheduler,
+		PoolWorker: &api.PoolWorker{
+			// Now we own buckets 0 and 1
+			Buckets: []string{ourUUID, ourUUID, "other", "other"},
+		},
+		LeaseOwner:   "other",
+		LeaseExpires: 9999999999999,
+	}, &cosmosdb.Options{NoETag: true})
+	r.NoError(err)
+
+	checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+		ID:                "07070707-0707-0707-0707-070707070002",
+		ClusterResourceID: strings.ToLower(notInInitialBucketCluster.OpenShiftCluster.ID),
+		MaintenanceManifest: api.MaintenanceManifest{
+			State:             api.MaintenanceManifestStatePending,
+			MaintenanceTaskID: "0",
+			CreatedBySchedule: "00000000-0000-0000-0000-000000000001",
+			RunAfter:          time.Date(2026, 1, 1, 0, 15, 0, 0, time.UTC).Unix(),
+			RunBefore:         time.Date(2026, 1, 1, 1, 15, 0, 0, time.UTC).Unix(),
+		},
+	})
+
+	// Wait for our second created manifest
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.Empty(collect, checker.CheckMaintenanceManifests(manifestsClient))
+	}, time.Second, time.Millisecond*10)
+
+	// Close it after
+	close(stop)
+	<-done
+	r.Equal(int32(0), svc.workerCount.Load())
+
+	m.AssertFloats()
+	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "MaintenanceScheduleDocument",
+			},
+			Value: 1,
+		},
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "OpenShiftClusterDocument",
+			},
+			Value: 2,
+		},
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "SubscriptionDocument",
+			},
+			Value: 1,
+		},
+		{
+			MetricName: "mimo.scheduler.manifests.created",
+			Dimensions: map[string]string{
+				"resourceGroup":  "resourcegroup",
+				"resourceId":     strings.ToLower(api.ExampleOpenShiftClusterDocument().OpenShiftCluster.ID),
+				"subscriptionId": api.ExampleSubscriptionDocument().ID,
+				"resourceName":   "resourcename",
+			},
+			Value: 1,
+		},
+		{
+			MetricName: "mimo.scheduler.manifests.created",
+			Dimensions: map[string]string{
+				"resourceGroup":  "resourcegroup2",
+				"resourceId":     strings.ToLower(notInInitialBucketCluster.OpenShiftCluster.ID),
+				"subscriptionId": api.ExampleSubscriptionDocument().ID,
+				"resourceName":   "resourcename2",
 			},
 			Value: 1,
 		},
