@@ -60,6 +60,7 @@ receivers:
       - type: container
       - id: klog_parse
         type: regex_parser
+        if: 'type(body) == "string"'
         parse_from: body
         parse_to: body
         regex: ^(?<severity>[IWECF])(?:\d{4} \d{2}:\d{2}:\d{2}\.\d{6}) +(?:\d+) (?<src_file>[^:]+):(?<src_line>\d+)\] (?<message>(?:.|\n)*)
@@ -74,6 +75,7 @@ receivers:
         on_error: send_quiet
       - id: logrus_parse
         type: regex_parser
+        if: 'type(body) == "string"'
         parse_from: body
         parse_to: body
         regex: '^time="[^"]+" level=(?<severity>[a-zA-Z]+) msg="(?<message>(?:[^"\\\\]|\\\\.)*)"(?<fields>(?: [^= ]+=(?:"(?:[^"\\\\]|\\\\.)*"|[^ ]+))*).*$'
@@ -92,6 +94,21 @@ receivers:
         if: 'type(body) == "map" and body.fields != nil'
         parse_from: body.fields
         parse_to: body.fields
+        on_error: send_quiet
+      - id: zap_parse
+        type: regex_parser
+        if: 'type(body) == "string"'
+        parse_from: body
+        parse_to: body
+        regex: '^(?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\t(?<severity>[a-z]+)\t(?<src_file>[^\t]+)\t(?<message>[^\t]+)(?:\t(?<fields>.*))?$'
+        severity:
+          parse_from: body.severity
+          mapping:
+            warn: warn
+            error: error
+            fatal: fatal
+            info: info
+            debug: debug
         on_error: send_quiet
       - id: logrus_file_split
         type: regex_parser
@@ -384,9 +401,12 @@ service:
 not ((IsString(body) and (
     IsMatch(body, "level=(error|warn|warning)")
     or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
-    or IsMatch(body, "Update error .*: ClusterOperatorDegraded")))
+    or IsMatch(body, "Update error .*: ClusterOperatorDegraded")
+    or IsMatch(body, "\\terror\\t|\\twarn\\t")))
   or (IsMap(body) and (
-    (IsString(body["severity"]) and IsMatch(body["severity"], "^[EWF]$"))
+    (IsString(body["severity"]) and (
+      IsMatch(body["severity"], "^[EWF]$")
+      or IsMatch(body["severity"], "^(error|warn|warning|fatal)$")))
     or (IsString(body["message"]) and (
       IsMatch(body["message"], "level=(error|warn|warning)")
       or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
