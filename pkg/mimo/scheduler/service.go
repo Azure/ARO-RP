@@ -40,7 +40,7 @@ type Runnable interface {
 
 var (
 	defaultWorkerMaxStartupDelay                  = 60 * time.Second
-	defaultServiceInterval                        = 180 * time.Second
+	defaultServiceInterval                        = 15 * time.Second
 	defaultReadinessDelay                         = 2 * time.Minute
 	defaultSchedulePollInterval                   = 30 * time.Second
 	defaultSchedulePollReadinessInterval          = 90 * time.Second
