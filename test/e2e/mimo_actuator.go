@@ -30,7 +30,7 @@ var (
 var _ = Describe("MIMO Actuator E2E Testing", Serial, func() {
 	BeforeEach(func() {
 		skipIfNotInDevelopmentEnv()
-		skipIfMIMOActuatorNotEnabled()
+		skipIfMIMONotEnabled()
 
 		DeferCleanup(func(ctx context.Context) {
 			// reset feature flags to their default values
