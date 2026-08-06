@@ -6,6 +6,8 @@ package v20250725
 import (
 	"fmt"
 	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
 func TestIsWorkloadIdentity(t *testing.T) {
@@ -17,40 +19,40 @@ func TestIsWorkloadIdentity(t *testing.T) {
 		{
 			name: "Cluster is Workload Identity",
 			oc: OpenShiftCluster{
-				Properties: OpenShiftClusterProperties{
-					PlatformWorkloadIdentityProfile: &PlatformWorkloadIdentityProfile{},
+				OpenShiftCluster: generated.OpenShiftCluster{Properties: &generated.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &generated.PlatformWorkloadIdentityProfile{},
 					ServicePrincipalProfile:         nil,
-				},
+				}},
 			},
 			want: true,
 		},
 		{
 			name: "Cluster is Service Principal",
 			oc: OpenShiftCluster{
-				Properties: OpenShiftClusterProperties{
+				OpenShiftCluster: generated.OpenShiftCluster{Properties: &generated.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: nil,
-					ServicePrincipalProfile:         &ServicePrincipalProfile{},
-				},
+					ServicePrincipalProfile:         &generated.ServicePrincipalProfile{},
+				}},
 			},
 			want: false,
 		},
 		{
 			name: "Cluster is Service Principal",
 			oc: OpenShiftCluster{
-				Properties: OpenShiftClusterProperties{
+				OpenShiftCluster: generated.OpenShiftCluster{Properties: &generated.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: nil,
 					ServicePrincipalProfile:         nil,
-				},
+				}},
 			},
 			want: false,
 		},
 		{
 			name: "Cluster is Service Principal",
 			oc: OpenShiftCluster{
-				Properties: OpenShiftClusterProperties{
-					PlatformWorkloadIdentityProfile: &PlatformWorkloadIdentityProfile{},
-					ServicePrincipalProfile:         &ServicePrincipalProfile{},
-				},
+				OpenShiftCluster: generated.OpenShiftCluster{Properties: &generated.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &generated.PlatformWorkloadIdentityProfile{},
+					ServicePrincipalProfile:         &generated.ServicePrincipalProfile{},
+				}},
 			},
 			want: false,
 		},
