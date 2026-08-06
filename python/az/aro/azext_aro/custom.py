@@ -665,10 +665,9 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
         if subnet.get("natGateway", None):
             subnet_resources["natGateway"] = subnet['natGateway']['id']
 
-        preconfigured_nsg_enabled = bool(
-            oc and getattr(getattr(oc, "network_profile", None), "preconfigured_nsg", None) == "Enabled"
-        )
+        preconfigured_nsg_enabled = oc and oc.network_profile.preconfigured_nsg == "Enabled"
         nsg = subnet.get("networkSecurityGroup", None)
+
         if nsg and (not oc or preconfigured_nsg_enabled):
             subnet_resources["networkSecurityGroup"] = nsg["id"]
         elif preconfigured_nsg_enabled and not nsg:
