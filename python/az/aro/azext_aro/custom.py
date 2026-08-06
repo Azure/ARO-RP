@@ -665,11 +665,14 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
         if subnet.get("natGateway", None):
             subnet_resources["natGateway"] = subnet['natGateway']['id']
 
-        if oc and oc.network_profile.preconfigured_nsg == "Enabled":
-            if subnet.get("networkSecurityGroup", None):
-                subnet_resources["networkSecurityGroup"] = subnet["networkSecurityGroup"]["id"]
-            else:
-                subnets_with_no_nsg_attached.add(sn)
+        preconfigured_nsg_enabled = bool(
+            oc and getattr(getattr(oc, "network_profile", None), "preconfigured_nsg", None) == "Enabled"
+        )
+        nsg = subnet.get("networkSecurityGroup", None)
+        if nsg and (not oc or preconfigured_nsg_enabled):
+            subnet_resources["networkSecurityGroup"] = nsg["id"]
+        elif preconfigured_nsg_enabled and not nsg:
+            subnets_with_no_nsg_attached.add(sn)
 
     # when preconfiguredNSG is Enabled we either have all subnets NSG attached
     # or none.
