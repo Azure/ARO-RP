@@ -31,6 +31,9 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetQueryHandler(database.MaintenanceManifestGetFutureForScheduleID, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsForScheduleID(client, query, options, now)
 	})
+	c.SetQueryHandler(database.MaintenanceManifestClustersWithRunnableTasksQuery, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsClustersWithRunnableTasks(client, query, options, now)
+	})
 
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
 		return fakeMaintenanceManifestsRenewLeaseTrigger(ctx, doc, now)
@@ -62,7 +65,7 @@ func fakeMaintenanceManifestsDequeueForCluster(client cosmosdb.MaintenanceManife
 		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
 			continue
 		}
-		if r.LeaseExpires > 0 && int64(r.LeaseExpires) < now().Unix() {
+		if r.LeaseExpires > 0 && int64(r.LeaseExpires) >= now().Unix() {
 			continue
 		}
 		// only include manifests that have a runAfter in the past
@@ -178,12 +181,7 @@ func fakeMaintenanceManifestsForScheduleID(client cosmosdb.MaintenanceManifestDo
 	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
 }
 
-func fakeMaintenanceManifestsQueuedAll(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
-	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
-	if err != nil {
-		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
-	}
-
+func fakeMaintenanceManifestsQueuedList(client cosmosdb.MaintenanceManifestDocumentClient, now func() time.Time) []*api.MaintenanceManifestDocument {
 	input, err := client.ListAll(context.Background(), nil)
 	if err != nil {
 		// TODO: should this never happen?
@@ -195,7 +193,7 @@ func fakeMaintenanceManifestsQueuedAll(client cosmosdb.MaintenanceManifestDocume
 		if r.MaintenanceManifest.State != api.MaintenanceManifestStatePending {
 			continue
 		}
-		if r.LeaseExpires > 0 && int64(r.LeaseExpires) < now().Unix() {
+		if r.LeaseExpires > 0 && int64(r.LeaseExpires) >= now().Unix() {
 			continue
 		}
 
@@ -204,6 +202,40 @@ func fakeMaintenanceManifestsQueuedAll(client cosmosdb.MaintenanceManifestDocume
 
 	slices.SortFunc(results, func(a, b *api.MaintenanceManifestDocument) int {
 		return cmp.Compare(a.ID, b.ID)
+	})
+	return results
+}
+
+func fakeMaintenanceManifestsQueuedAll(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
+	}
+
+	results := fakeMaintenanceManifestsQueuedList(client, now)
+	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
+}
+
+func fakeMaintenanceManifestsClustersWithRunnableTasks(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
+	}
+
+	allQueued := fakeMaintenanceManifestsQueuedList(client, now)
+
+	clusters := make(map[string]bool)
+	for _, r := range allQueued {
+		clusters[r.ClusterResourceID] = true
+	}
+
+	var results []*api.MaintenanceManifestDocument
+	for cluster := range clusters {
+		results = append(results, &api.MaintenanceManifestDocument{ClusterResourceID: cluster})
+	}
+
+	slices.SortFunc(results, func(a, b *api.MaintenanceManifestDocument) int {
+		return cmp.Compare(a.ClusterResourceID, b.ClusterResourceID)
 	})
 
 	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)

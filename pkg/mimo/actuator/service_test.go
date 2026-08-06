@@ -477,12 +477,6 @@ func TestActuatorGoesReadyEvenIfNoWork(t *testing.T) {
 			},
 			Value: 1,
 		},
-		// No running workers
-		{
-			MetricName: "mimo.actuator.workers.active.count",
-			Dimensions: map[string]string{},
-			Value:      0,
-		},
 	}...)
 }
 
@@ -542,4 +536,130 @@ func TestActuatorStopsIfBucketFailureOnStartup(t *testing.T) {
 		},
 	})
 	r.NoError(err)
+}
+
+func TestActuatorLogsIfRunnableTasksFails(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
+
+	hook, log := testlog.LogForTesting(t)
+	manifests, manifestsClient := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
+	dbs := database.NewDBGroup().
+		WithMaintenanceManifests(manifests).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers)
+
+	// Error when it tries to get the master document
+	manifestsClient.SetError(errors.New("boom"))
+
+	svc := NewService(_env, log, nil, dbs, m)
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go svc.Run(ctx, stop, done)
+
+	// Check for the log that happens when it cannot poll the runnable tasks
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		found := false
+		for _, l := range hook.Entries {
+			if l.Message == "error getting runnable tasks, continuing: boom" && l.Level == logrus.ErrorLevel {
+				found = true
+			}
+		}
+
+		assert.True(collect, found, "never got matching log")
+	}, time.Second, time.Millisecond)
+
+	// Wait for the process to stop
+	close(stop)
+	<-done
+
+	// We will have no running workers
+	r.Equal(int32(0), svc.workerCount.Load())
+
+	m.AssertFloats()
+	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "OpenShiftClusterDocument",
+			},
+			Value: 0,
+		},
+	}...)
+}
+
+func TestActuatorPollingRunnableTasksStopsWhenContextCancelled(t *testing.T) {
+	r := require.New(t)
+
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
+
+	_, log := testlog.LogForTesting(t)
+	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+
+	svc := NewService(_env, log, nil, nil, nil)
+	svc.taskPollTime = time.Millisecond
+
+	pollCtx, cancel := context.WithCancel(t.Context())
+
+	var wg sync.WaitGroup
+	wg.Go(func() { svc.pollRunnableTasks(pollCtx, manifests) })
+
+	// Check for the loop to have run
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		r2 := require.New(collect)
+		r2.NotNil(svc.lastRunnableTasksUpdate.Load())
+	}, time.Second, time.Millisecond)
+
+	// Cancel the context
+	cancel()
+
+	// The loop should break and we shouldn't time out :)
+	wg.Wait()
+}
+
+func TestActuatorPollingRunnableTasksStopsWhenStoppingSet(t *testing.T) {
+	r := require.New(t)
+
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+	_env.EXPECT().IsLocalDevelopmentMode().Return(true).AnyTimes()
+
+	_, log := testlog.LogForTesting(t)
+	manifests, _ := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+
+	svc := NewService(_env, log, nil, nil, nil)
+	svc.taskPollTime = time.Millisecond
+
+	var wg sync.WaitGroup
+	wg.Go(func() { svc.pollRunnableTasks(t.Context(), manifests) })
+
+	// Check for the loop to have run
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		r2 := require.New(collect)
+		r2.NotNil(svc.lastRunnableTasksUpdate.Load())
+	}, time.Second, time.Millisecond)
+
+	// Set stopping
+	svc.stopping.Store(true)
+
+	// The loop should break and we shouldn't time out :)
+	wg.Wait()
 }
