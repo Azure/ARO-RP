@@ -153,7 +153,7 @@ func skipIfSeleniumNotEnabled() {
 	}
 }
 
-func skipIfMIMOActuatorNotEnabled() {
+func skipIfMIMONotEnabled() {
 	if os.Getenv("ARO_E2E_MIMO") == "" {
 		Skip("ARO_E2E_MIMO not set, skipping MIMO e2e")
 	}
