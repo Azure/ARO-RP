@@ -887,8 +887,10 @@ func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// The scheduler should be called up to 4 additional times (due to the
-	// unconditional reconcile interval) because nothing has changed, add one to
-	// make it potentially less flaky -- as long as it's not hundreds
+	// unconditional reconcile interval) because nothing has changed. Allow 4-6
+	// total calls to make timer delays in the goroutine or this test less
+	// likely to flake -- as long as it's not hundreds or remains at 1
+	r.GreaterOrEqual(sched.calls, 4)
 	r.LessOrEqual(sched.calls, 6)
 
 	close(stop)
