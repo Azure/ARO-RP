@@ -45,7 +45,7 @@ var (
 	defaultSchedulePollInterval                   = 30 * time.Second
 	defaultSchedulePollReadinessInterval          = 90 * time.Second
 	defaultScheduleUnconditionalReconcileInterval = 60 * time.Minute
-	defaultChangefeedInteval                      = 10 * time.Second
+	defaultChangefeedInterval                     = 10 * time.Second
 	defaultChangefeedReadinessInterval            = time.Minute
 	defaultBucketRefreshInterval                  = 10 * time.Second
 	defaultBucketRefreshTTL                       = 60 * time.Second
@@ -125,7 +125,7 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 
 		changefeedBatchSize:                    50,
 		interval:                               defaultServiceInterval,
-		changefeedInterval:                     defaultChangefeedInteval,
+		changefeedInterval:                     defaultChangefeedInterval,
 		changefeedReadinessInterval:            defaultChangefeedReadinessInterval,
 		bucketRefreshInterval:                  defaultBucketRefreshInterval,
 		bucketRefreshTTL:                       defaultBucketRefreshTTL,
