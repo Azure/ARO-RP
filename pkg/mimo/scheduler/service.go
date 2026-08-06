@@ -473,17 +473,17 @@ out:
 			// unconditionally. Missing the marker (e.g. when buckets update)
 			// means it should be run.
 			shouldReevaluateSchedule, hasMarker := s.scheduleShouldBeReevaluated.Load(id)
-			reevalulateUnconditionally := false
+			reevaluateUnconditionally := false
 			lastRunTime, hasRun := s.scheduleLastRunTime.Load(id)
 			if hasRun {
-				reevalulateUnconditionally = shouldReevaluateUnconditionally(
+				reevaluateUnconditionally = shouldReevaluateUnconditionally(
 					now, lastRunTime, s.scheduleUnconditionalReconcileInterval, delayFraction)
 			}
 
 			// If we don't need to reevaluate it because the schedule/buckets
 			// updated, and we aren't due to unconditionally reevaluate it, skip
 			// this time.
-			if (!shouldReevaluateSchedule && hasMarker) && !reevalulateUnconditionally {
+			if (!shouldReevaluateSchedule && hasMarker) && !reevaluateUnconditionally {
 				return
 			}
 
