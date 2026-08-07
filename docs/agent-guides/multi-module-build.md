@@ -84,7 +84,7 @@ When modifying API types (`pkg/api/v*`):
 2. `make unit-test-go`
 3. `cd pkg/api && go test ./...`
 4. If swagger-facing types changed: `make generate-swagger`
-5. If clients need regeneration: `make image-autorest && make client`
+5. If clients need regeneration: `make client`
 
 ## CI Workflows
 

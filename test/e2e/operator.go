@@ -295,14 +295,14 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 	gatherNetworkInfo := func(ctx context.Context) {
 		By("gathering vnet name, resource group, location, and adds master/worker subnets to list to reconcile")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split((*oc.MasterProfile.SubnetID))
+		vnet, masterSubnet, err := apisubnet.Split((*oc.Properties.MasterProfile.SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
-		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
+		_, workerSubnet, err := apisubnet.Split((*oc.Properties.WorkerProfiles[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{

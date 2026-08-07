@@ -22,7 +22,7 @@ import (
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
-	mgmtredhatopenshift20250725 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2025-07-25/redhatopenshift"
+	armredhatopenshift "github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -47,7 +47,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20250725.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the CredentialsRequest has been recreated")
@@ -70,7 +70,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20250725.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the aro-operator-master Deployment was restarted")
@@ -92,14 +92,14 @@ var _ = Describe("Update clusters", func() {
 		federatedCredentialRoleDefinitionID := "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole
 
 		By("getting the current cluster to read existing platform workload identities")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(oc.PlatformWorkloadIdentityProfile).NotTo(BeNil())
-		Expect(oc.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities).NotTo(BeEmpty())
+		Expect(oc.Properties.PlatformWorkloadIdentityProfile).NotTo(BeNil())
+		Expect(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities).NotTo(BeEmpty())
 
 		By("picking an operator identity to replace")
 		var operatorName string
-		for name := range oc.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		for name := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			operatorName = name
 			break
 		}
@@ -107,27 +107,32 @@ var _ = Describe("Update clusters", func() {
 		By(fmt.Sprintf("targeting operator %q for identity replacement", operatorName))
 
 		By("looking up the operator's role definition from platform workload identity role sets")
-		clusterVersion := *oc.ClusterProfile.Version
+		clusterVersion := *oc.Properties.ClusterProfile.Version
 		lastDot := strings.LastIndex(clusterVersion, ".")
 		Expect(lastDot).To(BeNumerically(">", 0), "cluster version %q is not in x.y.z format", clusterVersion)
 		clusterMinorVersion := clusterVersion[:lastDot]
 
 		var operatorRoleDefinitionID string
-		roleSetsIter, err := clients.PlatformWorkloadIdentityRoleSets.ListComplete(ctx, *oc.Location)
-		Expect(err).NotTo(HaveOccurred())
-		for roleSetsIter.NotDone() {
-			roleSet := roleSetsIter.Value()
-			if roleSet.PlatformWorkloadIdentityRoleSetProperties != nil && *roleSet.OpenShiftVersion == clusterMinorVersion {
-				for _, role := range *roleSet.PlatformWorkloadIdentityRoles {
-					if *role.OperatorName == operatorName {
-						operatorRoleDefinitionID = *role.RoleDefinitionID
-						break
+		roleSetsPager := clients.PlatformWorkloadIdentityRoleSets.NewListPager(*oc.Location, nil)
+		for roleSetsPager.More() {
+			roleSetsPage, err := roleSetsPager.NextPage(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			for _, roleSet := range roleSetsPage.Value {
+				if roleSet.Properties != nil && roleSet.Properties.OpenShiftVersion != nil && *roleSet.Properties.OpenShiftVersion == clusterMinorVersion {
+					for _, role := range roleSet.Properties.PlatformWorkloadIdentityRoles {
+						if role.OperatorName != nil && *role.OperatorName == operatorName {
+							operatorRoleDefinitionID = *role.RoleDefinitionID
+							break
+						}
 					}
 				}
+				if operatorRoleDefinitionID != "" {
+					break
+				}
+			}
+			if operatorRoleDefinitionID != "" {
 				break
 			}
-			err = roleSetsIter.NextWithContext(ctx)
-			Expect(err).NotTo(HaveOccurred())
 		}
 		Expect(operatorRoleDefinitionID).NotTo(BeEmpty(), "could not find role definition for operator %s", operatorName)
 
@@ -135,7 +140,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(oc.Identity).NotTo(BeNil())
 		var clusterIdentityPrincipalID string
 		for _, identity := range oc.Identity.UserAssignedIdentities {
-			clusterIdentityPrincipalID = identity.PrincipalID.String()
+			clusterIdentityPrincipalID = *identity.PrincipalID
 			break
 		}
 		Expect(clusterIdentityPrincipalID).NotTo(BeEmpty())
@@ -161,7 +166,7 @@ var _ = Describe("Update clusters", func() {
 		}
 
 		By("deriving the VNet scope from the master subnet")
-		masterSubnetID := *oc.MasterProfile.SubnetID
+		masterSubnetID := *oc.Properties.MasterProfile.SubnetID
 		subnetsIdx := strings.LastIndex(masterSubnetID, "/subnets/")
 		Expect(subnetsIdx).To(BeNumerically(">", 0), "master subnet ID %q does not contain /subnets/ segment", masterSubnetID)
 		vnetScope := masterSubnetID[:subnetsIdx]
@@ -206,9 +211,9 @@ var _ = Describe("Update clusters", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		if requiresDESPermission && oc.MasterProfile.DiskEncryptionSetID != nil && *oc.MasterProfile.DiskEncryptionSetID != "" {
+		if requiresDESPermission && oc.Properties.MasterProfile.DiskEncryptionSetID != nil && *oc.Properties.MasterProfile.DiskEncryptionSetID != "" {
 			By("assigning the operator's role to the replacement identity at DiskEncryptionSet scope")
-			_, err = clients.RoleAssignments.Create(ctx, *oc.MasterProfile.DiskEncryptionSetID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+			_, err = clients.RoleAssignments.Create(ctx, *oc.Properties.MasterProfile.DiskEncryptionSetID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
 				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 					RoleDefinitionID: &operatorRoleDefinitionID,
 					PrincipalID:      &replacementPrincipalID,
@@ -222,9 +227,9 @@ var _ = Describe("Update clusters", func() {
 			By("looking up route tables from the cluster subnets")
 
 			vnetName := stringutils.LastTokenByte(vnetScope, '/')
-			subnetIDs := []string{*oc.MasterProfile.SubnetID}
-			if oc.WorkerProfiles != nil {
-				for _, wp := range *oc.WorkerProfiles {
+			subnetIDs := []string{*oc.Properties.MasterProfile.SubnetID}
+			if oc.Properties.WorkerProfiles != nil {
+				for _, wp := range oc.Properties.WorkerProfiles {
 					subnetIDs = append(subnetIDs, *wp.SubnetID)
 				}
 			}
@@ -264,10 +269,10 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to replace the operator identity")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20250725.OpenShiftClusterUpdate{
-			OpenShiftClusterProperties: &mgmtredhatopenshift20250725.OpenShiftClusterProperties{
-				PlatformWorkloadIdentityProfile: &mgmtredhatopenshift20250725.PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]*mgmtredhatopenshift20250725.PlatformWorkloadIdentity{
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{
+			Properties: &armredhatopenshift.OpenShiftClusterProperties{
+				PlatformWorkloadIdentityProfile: &armredhatopenshift.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*armredhatopenshift.PlatformWorkloadIdentity{
 						operatorName: {
 							ResourceID: &replacementResourceID,
 						},
@@ -278,9 +283,9 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the identity was replaced")
-		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(*oc.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[operatorName].ResourceID).To(Equal(replacementResourceID))
+		Expect(*oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[operatorName].ResourceID).To(Equal(replacementResourceID))
 	})
 
 	// This tests the API which is most commonly generated by
@@ -289,7 +294,7 @@ var _ = Describe("Update clusters", func() {
 		value := strconv.Itoa(rand.Int())
 
 		By("getting cluster resource")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(oc.Tags).NotTo(HaveKeyWithValue("key", &value))
 
@@ -300,11 +305,11 @@ var _ = Describe("Update clusters", func() {
 		oc.Tags["key"] = &value
 
 		By("sending the PUT request to update the resource")
-		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
+		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc.OpenShiftCluster)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
-		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the tag has expected value")
@@ -318,13 +323,13 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 
 	_ = BeforeEach(func(ctx context.Context) {
 		By("ensuring the public loadbalancer starts with one outbound IP")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		lbName, err = getInfraID(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
-		rgName = stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		rgName = stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')
 		resp, err := clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -341,11 +346,11 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
-		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(5))
+		Expect(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs).To(HaveLen(5))
 
 		By("checking outbound-rule-4 has required number IPs")
 		resp, err := clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
@@ -353,16 +358,16 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(getOutboundIPsCount(resp.LoadBalancer)).To(Equal(5))
 
 		By("sending the PUT request to decrease Managed Outbound IPs")
-		oc.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = pointerutils.ToPtr(int32(1))
-		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
+		oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count = pointerutils.ToPtr(int32(1))
+		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc.OpenShiftCluster)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
-		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
-		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(1))
+		Expect(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs).To(HaveLen(1))
 
 		By("checking outbound-rule-4 has required number of IPs")
 		resp, err = clients.LoadBalancers.Get(ctx, rgName, lbName, nil)
@@ -379,12 +384,12 @@ func getInfraID(ctx context.Context) (string, error) {
 	return co.Spec.InfraID, err
 }
 
-func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20250725.OpenShiftClusterUpdate {
-	return mgmtredhatopenshift20250725.OpenShiftClusterUpdate{
-		OpenShiftClusterProperties: &mgmtredhatopenshift20250725.OpenShiftClusterProperties{
-			NetworkProfile: &mgmtredhatopenshift20250725.NetworkProfile{
-				LoadBalancerProfile: &mgmtredhatopenshift20250725.LoadBalancerProfile{
-					ManagedOutboundIps: &mgmtredhatopenshift20250725.ManagedOutboundIPs{
+func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) armredhatopenshift.OpenShiftClusterUpdate {
+	return armredhatopenshift.OpenShiftClusterUpdate{
+		Properties: &armredhatopenshift.OpenShiftClusterProperties{
+			NetworkProfile: &armredhatopenshift.NetworkProfile{
+				LoadBalancerProfile: &armredhatopenshift.LoadBalancerProfile{
+					ManagedOutboundIPs: &armredhatopenshift.ManagedOutboundIPs{
 						Count: pointerutils.ToPtr(managedOutboundIPCount),
 					},
 				},

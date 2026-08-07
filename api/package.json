@@ -21,6 +21,7 @@
     "format": "tsp format \"**/*.tsp\"",
     "format-check": "tsp format --check \"**/*.tsp\"",
     "swagger": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/main.tsp --warn-as-error --emit @azure-tools/typespec-autorest",
+    "go": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp --warn-as-error --emit @azure-tools/typespec-go",
     "python": "tsp compile redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp --warn-as-error --emit @azure-tools/typespec-python",
     "examples": "oav generate-examples"
   },

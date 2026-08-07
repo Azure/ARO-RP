@@ -3,8 +3,8 @@
 cd api
 
 target="${1:-}"
-if [[ "$target" != "swagger" && "$target" != "python" && "$target" != "examples" ]]; then
-    echo "Usage: $0 <swagger|python|examples>" >&2
+if [[ "$target" != "swagger" && "$target" != "go" && "$target" != "python" && "$target" != "examples" ]]; then
+    echo "Usage: $0 <swagger|go|python|examples>" >&2
     exit 1
 fi
 
@@ -38,6 +38,13 @@ if [[ "$target" == "swagger" || "$target" == "examples" ]]; then
             rm -rf "$api_version_dir/examples"
         )
     done
+elif [[ "$target" == "go" ]]; then
+    npm run go
+
+    # The TypeSpec Go emitter generates a few files we don't need, and there's no option to
+    # disable generation of these files.
+    GENERATED_GO_CLIENT_DIR="../pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
+    rm -f "$GENERATED_GO_CLIENT_DIR/go.mod" "$GENERATED_GO_CLIENT_DIR/go.sum" "$GENERATED_GO_CLIENT_DIR/LICENSE.txt"
 elif [[ "$target" == "python" ]]; then
     npm run python
 fi
