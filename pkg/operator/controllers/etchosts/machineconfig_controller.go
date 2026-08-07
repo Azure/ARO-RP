@@ -73,33 +73,8 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 		return reconcile.Result{}, err
 	}
 
-	// EtchostsManaged = false, remove machine configs
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) && allowReconcile {
-		r.Log.Debug("etchosts managed is false, removing machine configs")
-		err = r.removeMachineConfig(ctx, etchostsMasterMCMetadata)
-		if kerrors.IsNotFound(err) {
-			r.ClearDegraded(ctx)
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
-
-		err = r.removeMachineConfig(ctx, etchostsWorkerMCMetadata)
-		if kerrors.IsNotFound(err) {
-			r.ClearDegraded(ctx)
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
-
+	if !allowReconcile {
 		r.ClearConditions(ctx)
-		r.Log.Debug("etchosts managed is false, machine configs removed")
 		return reconcile.Result{}, nil
 	}
 
@@ -143,17 +118,8 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 func (r *EtcHostsMachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("starting etchosts-machine-config controller")
 
-	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(mgr).
 		For(&mcv1.MachineConfig{}).
-		Watches(&mcv1.MachineConfigPool{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&arov1alpha1.Cluster{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{})))
-
-	return etcHostsBuilder.
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ControllerName).
 		Complete(r)
 }
