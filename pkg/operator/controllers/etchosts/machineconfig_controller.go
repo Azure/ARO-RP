@@ -14,10 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
@@ -25,7 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	"github.com/Azure/ARO-RP/pkg/operator/predicates"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -36,19 +33,19 @@ const (
 type EtcHostsMachineConfigReconciler struct {
 	base.AROController
 
-	dh dynamichelper.Interface
+	ch clienthelper.Interface
 }
 
 var etcHostsRegex = regexp.MustCompile("^99-(.*)-aro-etc-hosts-gateway-domains$")
 
-func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *EtcHostsMachineConfigReconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *EtcHostsMachineConfigReconciler {
 	return &EtcHostsMachineConfigReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   ControllerName,
 		},
-		dh: dh,
+		ch: ch,
 	}
 }
 
@@ -63,6 +60,11 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsEnabled) {
 		r.Log.Debug("controller is disabled")
+		return reconcile.Result{}, nil
+	}
+
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) {
+		r.Log.Debug("etchosts are not managed by this controller")
 		return reconcile.Result{}, nil
 	}
 
@@ -103,7 +105,7 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 		return reconcile.Result{}, nil
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, role, r.dh, allowReconcile, *mcp)
+	err = reconcileMachineConfigs(ctx, instance, role, r.ch, allowReconcile, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -124,7 +126,7 @@ func (r *EtcHostsMachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, role string, dh dynamichelper.Interface, allowReconcile bool, mcps ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, role string, ch clienthelper.Interface, allowReconcile bool, mcps ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
 		resource, err := EtcHostsMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, role)
@@ -149,14 +151,8 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 	// create or update. If we are not allowed to reconcile, we do not want to
 	// perform any updates.
 	if allowReconcile {
-		return dh.Ensure(ctx, resources...)
+		return ch.Ensure(ctx, resources...)
 	}
 
 	return nil
-}
-
-func (r *EtcHostsMachineConfigReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
-	r.Log.Debugf("removing machine config %s", mc.Name)
-	err := r.Client.Delete(ctx, mc)
-	return err
 }

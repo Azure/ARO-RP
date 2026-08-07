@@ -25,7 +25,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
 
 const (
@@ -53,17 +53,17 @@ var (
 
 type EtcHostsClusterReconciler struct {
 	base.AROController
-	dh dynamichelper.Interface
+	ch clienthelper.Interface
 }
 
-func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *EtcHostsClusterReconciler {
+func NewClusterReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *EtcHostsClusterReconciler {
 	return &EtcHostsClusterReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   ClusterControllerName,
 		},
-		dh: dh,
+		ch: ch,
 	}
 }
 
@@ -87,8 +87,22 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		return reconcile.Result{}, err
 	}
 
+	// If we do not allow reconciliation right now, return.
+	//
+	// NOTE: Generally we would want to unconditionally create the
+	// MachineConfigs if they are missing, but since the etchosts functionality
+	// was rolled out when there are a substantial number of clusters, we don't
+	// want the flicking of this switch on older clusters to cause instant
+	// reboots. Hence, wait until we are allowed to reboot (mostly, before
+	// upgrades) if this is changed.
+	if !allowReconcile {
+		r.Log.Debug("reboot-causing reconciliation not allowed right now")
+		r.ClearConditions(ctx)
+		return reconcile.Result{}, nil
+	}
+
 	// EtchostsManaged = false, remove machine configs
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) && allowReconcile {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) {
 		r.Log.Debug("etchosts managed is false, removing machine configs")
 		err = r.removeMachineConfig(ctx, etchostsMasterMCMetadata)
 		if kerrors.IsNotFound(err) {
@@ -126,67 +140,59 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	err = r.Client.Get(ctx, types.NamespacedName{Name: "master"}, mcp)
 	if kerrors.IsNotFound(err) {
 		r.Log.Debug(err)
-		r.ClearDegraded(ctx)
-		return reconcile.Result{}, nil
-	}
-	if err != nil {
+	} else if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
-	}
-	if mcp.GetDeletionTimestamp() != nil {
-		return reconcile.Result{}, nil
-	}
+	} else {
+		if mcp.GetDeletionTimestamp() != nil {
+			return reconcile.Result{}, nil
+		}
 
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "99-master-aro-etc-hosts-gateway-domains"}, mc)
-	if kerrors.IsNotFound(err) {
-		r.Log.Debug("99-master-aro-etc-hosts-gateway-domains not found, creating it")
-		err = reconcileMachineConfigs(ctx, instance, "master", r.dh, allowReconcile, *mcp)
+		err = r.Client.Get(ctx, types.NamespacedName{Name: "99-master-aro-etc-hosts-gateway-domains"}, mc)
+		if kerrors.IsNotFound(err) {
+			err = reconcileMachineConfigs(ctx, instance, "master", r.ch, allowReconcile, *mcp)
+			if err != nil {
+				r.Log.Error(err)
+				r.SetDegraded(ctx, err)
+				return reconcile.Result{}, err
+			}
+		}
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
 			return reconcile.Result{}, err
 		}
-		r.ClearDegraded(ctx)
-		return reconcile.Result{Requeue: true}, nil
-	}
-	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
-		return reconcile.Result{}, err
 	}
 
 	// If 99-worker-aro-etc-hosts-gateway-domains doesn't exist, create it
 	err = r.Client.Get(ctx, types.NamespacedName{Name: "worker"}, mcp)
 	if kerrors.IsNotFound(err) {
-		r.ClearDegraded(ctx)
-		return reconcile.Result{}, nil
-	}
-	if err != nil {
+		r.Log.Debug(err)
+	} else if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
-	}
-	if mcp.GetDeletionTimestamp() != nil {
-		return reconcile.Result{}, nil
-	}
+	} else {
+		if mcp.GetDeletionTimestamp() != nil {
+			return reconcile.Result{}, nil
+		}
 
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "99-worker-aro-etc-hosts-gateway-domains"}, mc)
-	if kerrors.IsNotFound(err) {
-		r.Log.Debug("99-worker-aro-etc-hosts-gateway-domains not found, creating it")
-		r.ClearDegraded(ctx)
-		err = reconcileMachineConfigs(ctx, instance, "worker", r.dh, allowReconcile, *mcp)
+		err = r.Client.Get(ctx, types.NamespacedName{Name: "99-worker-aro-etc-hosts-gateway-domains"}, mc)
+		if kerrors.IsNotFound(err) {
+			r.ClearDegraded(ctx)
+			err = reconcileMachineConfigs(ctx, instance, "worker", r.ch, allowReconcile, *mcp)
+			if err != nil {
+				r.Log.Error(err)
+				r.SetDegraded(ctx, err)
+				return reconcile.Result{}, err
+			}
+		}
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
 			return reconcile.Result{}, err
 		}
-		return reconcile.Result{Requeue: true}, nil
-	}
-	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
-		return reconcile.Result{}, err
 	}
 
 	r.ClearConditions(ctx)
