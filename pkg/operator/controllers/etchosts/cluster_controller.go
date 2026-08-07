@@ -201,9 +201,6 @@ func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Watches(&mcv1.MachineConfigPool{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&mcv1.MachineConfig{},
-			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
 	return etcHostsBuilder.
