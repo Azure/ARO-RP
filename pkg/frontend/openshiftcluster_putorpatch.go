@@ -284,7 +284,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	if isCreate {
-		err = f.validateInstallVersion(ctx, doc.OpenShiftCluster)
+		err = f.validateInstallVersion(ctx, doc.OpenShiftCluster, subscription)
 		if err != nil {
 			return nil, err
 		}
