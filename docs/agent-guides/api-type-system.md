@@ -94,17 +94,14 @@ pkg/api/v*/openshiftcluster.go  →  hack/swagger-legacy/swagger.go  →  swagge
 - Generator: `hack/swagger-legacy/swagger.go` wraps `pkg/swagger/swagger.go`
 - Target: `make generate-swagger-legacy`
 
-## Client Generation (destructive)
+## Client Generation
 
 ```
-swagger/{version}/redhatopenshift.json  →  AutoRest (Docker)  →  pkg/client/services/redhatopenshift/mgmt/{version}/
-```
+api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp  →  TypeSpec (invoked via npm scripts in api/package.json)  →  pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift
 
-- Script: `hack/apiclients/build-dev-api-clients.sh`
-- Requires: Docker image `arointsvc.azurecr.io/autorest:3.7.2` (build with `make image-autorest`)
-- **WARNING**: Deletes `pkg/client/services/redhatopenshift/mgmt/` before regenerating. If it fails, restore: `git checkout -- pkg/client/ python/client/`
-- Generates both Go SDK and Python SDK
-- Only generates for versions in the `client-generate` Makefile target (currently `2024-08-12-preview` and `2025-07-25`)
+- Make target: `make client-generate`
+- Generates both Go SDK and Python SDK clients
+- Generates based on the latest API version in the TypeSpec (currently `2025-07-25`)
 
 ## Adding New VM Sizes Checklist
 

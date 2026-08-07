@@ -6,6 +6,15 @@ See [agent-guides/api-type-system.md](agent-guides/api-type-system.md)'s "Swagge
 
 `make generate-swagger-typespec`
 
+## Generate dev/test SDK clients from TypeSpec
+
+`make client-generate`
+
+A few notes about client generation:
+
+- You should regenerate the clients whenever you make changes to the API spec (to add a new feature, etc.)
+- The clients will be generated based on the latest API version specified in the TypeSpec
+
 ## Generate API examples from Swagger
 
 `make generate-api-examples`
