@@ -129,17 +129,6 @@
             "apiVersion": "2018-09-01-preview"
         },
         {
-            "name": "[guid(resourceGroup().id, 'FP / Network Contributor')]",
-            "type": "Microsoft.Authorization/roleAssignments",
-            "properties": {
-                "scope": "[resourceGroup().id]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
-                "principalId": "[parameters('fpServicePrincipalId')]",
-                "principalType": "ServicePrincipal"
-            },
-            "apiVersion": "2018-09-01-preview"
-        },
-        {
             "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
             "properties": {
@@ -151,20 +140,6 @@
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
-        },
-        {
-            "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))]",
-            "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
-            "properties": {
-                "scope": "[resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
-                "principalId": "[parameters('fpServicePrincipalId')]",
-                "principalType": "ServicePrincipal"
-            },
-            "apiVersion": "2018-09-01-preview",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')))]"
             ]
         }
     ]
