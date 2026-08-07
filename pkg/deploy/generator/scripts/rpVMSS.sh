@@ -5,6 +5,9 @@ set -o errexit \
     -o nounset
 
 main() {
+     # check we are FIPS enabled
+    fips_verify
+
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
@@ -14,16 +17,17 @@ main() {
     configure_sshd
 
     local -ri pkg_retry_count=60
+    local -ri repo_retry_count=5
     configure_rpm_repos retry_wait_time \
-                        "$pkg_retry_count"
+                        "$repo_retry_count"
 
     # shellcheck disable=SC2034
     local -ar exclude_pkgs=(
-        "-x WALinuxAgent"
-        "-x WALinuxAgent-udev"
+        "-x"
+        "WALinuxAgent"
     )
 
-    dnf_update_pkgs exclude_pkgs \
+    tdnf_update_pkgs exclude_pkgs \
                     retry_wait_time \
                     "$pkg_retry_count"
 
@@ -31,6 +35,8 @@ main() {
     local -ra install_pkgs=(
         azure-cli
         azure-mdsd
+        crun
+        netavark
         podman
         podman-docker
         openssl-perl
@@ -38,16 +44,11 @@ main() {
         python3
         # required for podman networking
         firewalld
-        # Required to enable fips
-        grubby
-        dracut-fips
     )
 
-    dnf_install_pkgs install_pkgs \
+    tdnf_install_pkgs install_pkgs \
                       retry_wait_time \
                       "$pkg_retry_count"
-
-    fips_configure
 
     # shellcheck disable=SC2119
     configure_logrotate
