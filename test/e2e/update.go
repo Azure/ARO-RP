@@ -92,10 +92,26 @@ var _ = Describe("Update clusters", func() {
 		federatedCredentialRoleDefinitionID := "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole
 
 		By("getting the current cluster to read existing platform workload identities")
-		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(oc.Properties.PlatformWorkloadIdentityProfile).NotTo(BeNil())
-		Expect(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities).NotTo(BeEmpty())
+		var oc armredhatopenshift.OpenShiftClustersClientGetResponse
+		Eventually(func(g Gomega, ctx context.Context) {
+			var err error
+			oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(oc.Properties).NotTo(BeNil())
+			g.Expect(oc.Properties.PlatformWorkloadIdentityProfile).NotTo(BeNil())
+			g.Expect(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities).NotTo(BeEmpty())
+			g.Expect(oc.Properties.ClusterProfile).NotTo(BeNil())
+			g.Expect(oc.Properties.ClusterProfile.Version).NotTo(BeNil())
+			g.Expect(oc.Location).NotTo(BeNil())
+			g.Expect(oc.Properties.MasterProfile).NotTo(BeNil())
+			g.Expect(oc.Properties.MasterProfile.SubnetID).NotTo(BeNil())
+			g.Expect(oc.Identity).NotTo(BeNil())
+			g.Expect(oc.Identity.UserAssignedIdentities).NotTo(BeEmpty())
+			for _, identity := range oc.Identity.UserAssignedIdentities {
+				g.Expect(identity).NotTo(BeNil())
+				g.Expect(identity.PrincipalID).NotTo(BeNil())
+			}
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("picking an operator identity to replace")
 		var operatorName string
@@ -113,41 +129,47 @@ var _ = Describe("Update clusters", func() {
 		clusterMinorVersion := clusterVersion[:lastDot]
 
 		var operatorRoleDefinitionID string
-		roleSetsPager := clients.PlatformWorkloadIdentityRoleSets.NewListPager(*oc.Location, nil)
-		for roleSetsPager.More() {
-			roleSetsPage, err := roleSetsPager.NextPage(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			for _, roleSet := range roleSetsPage.Value {
-				if roleSet.Properties != nil && roleSet.Properties.OpenShiftVersion != nil && *roleSet.Properties.OpenShiftVersion == clusterMinorVersion {
-					for _, role := range roleSet.Properties.PlatformWorkloadIdentityRoles {
-						if role.OperatorName != nil && *role.OperatorName == operatorName {
-							operatorRoleDefinitionID = *role.RoleDefinitionID
-							break
+		Eventually(func(g Gomega, ctx context.Context) {
+			operatorRoleDefinitionID = ""
+			roleSetsPager := clients.PlatformWorkloadIdentityRoleSets.NewListPager(*oc.Location, nil)
+			for roleSetsPager.More() {
+				roleSetsPage, err := roleSetsPager.NextPage(ctx)
+				g.Expect(err).NotTo(HaveOccurred())
+				for _, roleSet := range roleSetsPage.Value {
+					if roleSet.Properties != nil && roleSet.Properties.OpenShiftVersion != nil && *roleSet.Properties.OpenShiftVersion == clusterMinorVersion {
+						for _, role := range roleSet.Properties.PlatformWorkloadIdentityRoles {
+							if role.OperatorName != nil && *role.OperatorName == operatorName {
+								operatorRoleDefinitionID = *role.RoleDefinitionID
+								break
+							}
 						}
+						break
 					}
 				}
 				if operatorRoleDefinitionID != "" {
 					break
 				}
 			}
-			if operatorRoleDefinitionID != "" {
-				break
-			}
-		}
-		Expect(operatorRoleDefinitionID).NotTo(BeEmpty(), "could not find role definition for operator %s", operatorName)
+			g.Expect(operatorRoleDefinitionID).NotTo(BeEmpty(), "could not find role definition for operator %s", operatorName)
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("reading the cluster identity principal ID for federated credential role assignment")
-		Expect(oc.Identity).NotTo(BeNil())
 		var clusterIdentityPrincipalID string
 		for _, identity := range oc.Identity.UserAssignedIdentities {
-			clusterIdentityPrincipalID = *identity.PrincipalID
-			break
+			if identity != nil && identity.PrincipalID != nil {
+				clusterIdentityPrincipalID = *identity.PrincipalID
+				break
+			}
 		}
 		Expect(clusterIdentityPrincipalID).NotTo(BeEmpty())
 
 		By("checking the operator's role definition for additional scope requirements")
-		roleDef, err := clients.RoleDefinitions.GetByID(ctx, operatorRoleDefinitionID)
-		Expect(err).NotTo(HaveOccurred())
+		var roleDef mgmtauthorization.RoleDefinition
+		Eventually(func(g Gomega, ctx context.Context) {
+			var err error
+			roleDef, err = clients.RoleDefinitions.GetByID(ctx, operatorRoleDefinitionID)
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		var requiresDESPermission, requiresRouteTablePermission bool
 		if roleDef.RoleDefinitionProperties != nil && roleDef.Permissions != nil {
 			for _, perm := range *roleDef.Permissions {
@@ -172,13 +194,17 @@ var _ = Describe("Update clusters", func() {
 		vnetScope := masterSubnetID[:subnetsIdx]
 
 		By("creating a replacement managed identity")
-		msiResp, err := clients.UserAssignedIdentities.CreateOrUpdate(ctx, vnetResourceGroup, replacementIdentityName, armmsi.Identity{
-			Location: oc.Location,
-		}, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(msiResp.ID).NotTo(BeNil())
-		Expect(msiResp.Properties).NotTo(BeNil())
-		Expect(msiResp.Properties.PrincipalID).NotTo(BeNil())
+		var msiResp armmsi.UserAssignedIdentitiesClientCreateOrUpdateResponse
+		Eventually(func(g Gomega, ctx context.Context) {
+			var err error
+			msiResp, err = clients.UserAssignedIdentities.CreateOrUpdate(ctx, vnetResourceGroup, replacementIdentityName, armmsi.Identity{
+				Location: oc.Location,
+			}, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(msiResp.ID).NotTo(BeNil())
+			g.Expect(msiResp.Properties).NotTo(BeNil())
+			g.Expect(msiResp.Properties.PrincipalID).NotTo(BeNil())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		replacementResourceID := *msiResp.ID
 		replacementPrincipalID := *msiResp.Properties.PrincipalID
 
@@ -202,25 +228,31 @@ var _ = Describe("Update clusters", func() {
 		})
 
 		By("assigning the operator's role to the replacement identity at VNet scope")
-		_, err = clients.RoleAssignments.Create(ctx, vnetScope, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
-			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: &operatorRoleDefinitionID,
-				PrincipalID:      &replacementPrincipalID,
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		if requiresDESPermission && oc.Properties.MasterProfile.DiskEncryptionSetID != nil && *oc.Properties.MasterProfile.DiskEncryptionSetID != "" {
-			By("assigning the operator's role to the replacement identity at DiskEncryptionSet scope")
-			_, err = clients.RoleAssignments.Create(ctx, *oc.Properties.MasterProfile.DiskEncryptionSetID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
+		vnetRoleAssignmentName := uuid.DefaultGenerator.Generate()
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := clients.RoleAssignments.Create(ctx, vnetScope, vnetRoleAssignmentName, mgmtauthorization.RoleAssignmentCreateParameters{
 				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 					RoleDefinitionID: &operatorRoleDefinitionID,
 					PrincipalID:      &replacementPrincipalID,
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			})
-			Expect(err).NotTo(HaveOccurred())
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		if requiresDESPermission && oc.Properties.MasterProfile.DiskEncryptionSetID != nil && *oc.Properties.MasterProfile.DiskEncryptionSetID != "" {
+			By("assigning the operator's role to the replacement identity at DiskEncryptionSet scope")
+			desRoleAssignmentName := uuid.DefaultGenerator.Generate()
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := clients.RoleAssignments.Create(ctx, *oc.Properties.MasterProfile.DiskEncryptionSetID, desRoleAssignmentName, mgmtauthorization.RoleAssignmentCreateParameters{
+					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+						RoleDefinitionID: &operatorRoleDefinitionID,
+						PrincipalID:      &replacementPrincipalID,
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				})
+				g.Expect(err).NotTo(HaveOccurred())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}
 
 		if requiresRouteTablePermission {
@@ -237,8 +269,12 @@ var _ = Describe("Update clusters", func() {
 			routeTableIDs := map[string]struct{}{}
 			for _, subnetID := range subnetIDs {
 				subnetName := stringutils.LastTokenByte(subnetID, '/')
-				subnetResp, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetName, subnetName, nil)
-				Expect(err).NotTo(HaveOccurred())
+				var subnetResp armnetwork.SubnetsClientGetResponse
+				Eventually(func(g Gomega, ctx context.Context) {
+					var err error
+					subnetResp, err = clients.Subnet.Get(ctx, vnetResourceGroup, vnetName, subnetName, nil)
+					g.Expect(err).NotTo(HaveOccurred())
+				}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 				if subnetResp.Properties != nil && subnetResp.Properties.RouteTable != nil && subnetResp.Properties.RouteTable.ID != nil {
 					routeTableIDs[*subnetResp.Properties.RouteTable.ID] = struct{}{}
 				}
@@ -247,29 +283,35 @@ var _ = Describe("Update clusters", func() {
 
 			for routeTableID := range routeTableIDs {
 				By("assigning the operator's role to the replacement identity at route table scope")
-				_, err = clients.RoleAssignments.Create(ctx, routeTableID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
-					RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-						RoleDefinitionID: &operatorRoleDefinitionID,
-						PrincipalID:      &replacementPrincipalID,
-						PrincipalType:    mgmtauthorization.ServicePrincipal,
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
+				rtRoleAssignmentName := uuid.DefaultGenerator.Generate()
+				Eventually(func(g Gomega, ctx context.Context) {
+					_, err := clients.RoleAssignments.Create(ctx, routeTableID, rtRoleAssignmentName, mgmtauthorization.RoleAssignmentCreateParameters{
+						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+							RoleDefinitionID: &operatorRoleDefinitionID,
+							PrincipalID:      &replacementPrincipalID,
+							PrincipalType:    mgmtauthorization.ServicePrincipal,
+						},
+					})
+					g.Expect(err).NotTo(HaveOccurred())
+				}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 			}
 		}
 
 		By("assigning the federated credential role to the cluster identity at the scope of the replacement identity")
-		_, err = clients.RoleAssignments.Create(ctx, replacementResourceID, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
-			RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-				RoleDefinitionID: &federatedCredentialRoleDefinitionID,
-				PrincipalID:      &clusterIdentityPrincipalID,
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		})
-		Expect(err).NotTo(HaveOccurred())
+		fedCredRoleAssignmentName := uuid.DefaultGenerator.Generate()
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := clients.RoleAssignments.Create(ctx, replacementResourceID, fedCredRoleAssignmentName, mgmtauthorization.RoleAssignmentCreateParameters{
+				RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+					RoleDefinitionID: &federatedCredentialRoleDefinitionID,
+					PrincipalID:      &clusterIdentityPrincipalID,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("sending the PATCH request to replace the operator identity")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{
+		err := clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{
 			Properties: &armredhatopenshift.OpenShiftClusterProperties{
 				PlatformWorkloadIdentityProfile: &armredhatopenshift.PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: map[string]*armredhatopenshift.PlatformWorkloadIdentity{
@@ -283,9 +325,17 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the identity was replaced")
-		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(*oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[operatorName].ResourceID).To(Equal(replacementResourceID))
+		Eventually(func(g Gomega, ctx context.Context) {
+			oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(oc.Properties).NotTo(BeNil())
+			g.Expect(oc.Properties.PlatformWorkloadIdentityProfile).NotTo(BeNil())
+			g.Expect(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities).To(HaveKey(operatorName))
+			identity := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[operatorName]
+			g.Expect(identity).NotTo(BeNil())
+			g.Expect(identity.ResourceID).NotTo(BeNil())
+			g.Expect(*identity.ResourceID).To(Equal(replacementResourceID))
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	// This tests the API which is most commonly generated by
