@@ -15,8 +15,6 @@ options:
   "@azure-tools/typespec-python":
     emitter-output-dir: "{project-root}/../../../../../python/client"
     namespace: "azure.mgmt.redhatopenshift"
-    generate-test: false
-    generate-sample: false
     generate-packaging-files: false
     flavor: "azure"
   "@azure-tools/typespec-java":
@@ -39,11 +37,7 @@ options:
     service-dir: "sdk/resourcemanager/redhatopenshift"
     emitter-output-dir: "{project-root}/../../../../../pkg/client/{service-dir}/armredhatopenshift"
     module: "github.com/Azure/azure-sdk-for-go/{service-dir}/armredhatopenshift"
-    fix-const-stuttering: false
     flavor: "azure"
-    generate-samples: false
-    generate-fakes: false
-    head-as-boolean: false
     inject-spans: true
 linter:
   extends:
