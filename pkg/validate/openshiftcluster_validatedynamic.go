@@ -126,6 +126,9 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	workerProfiles, propertyName := api.GetEnrichedWorkerProfiles(dv.oc.Properties)
 	for i, wp := range workerProfiles {
+		if wp.SubnetID == "" {
+			continue
+		}
 		subnets = append(subnets, dynamic.Subnet{
 			ID:   wp.SubnetID,
 			Path: fmt.Sprintf("properties.%s[%d].subnetId", propertyName, i),

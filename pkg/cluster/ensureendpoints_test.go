@@ -45,6 +45,7 @@ var (
 func TestEnsureServiceEndpoints(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
+		isUpdate    bool
 		oc          *api.OpenShiftCluster
 		mock        func(subnets *mock_armnetwork.MockSubnetsClient)
 		expectedErr string
@@ -117,7 +118,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "It should return error when subnet ID is empty",
+			name: "It should return error when subnet ID is empty on create",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -134,6 +135,31 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			expectedErr: "WorkerProfile 'workerProfile' has no SubnetID; check that the corresponding MachineSet is valid",
+		},
+		{
+			name:     "It should skip empty subnet ID on update",
+			isUpdate: true,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							Name:     "emptyWorker",
+							SubnetID: "",
+						},
+					},
+				},
+			},
+			mock: func(subnets *mock_armnetwork.MockSubnetsClient) {
+				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: armnetwork.Subnet{
+					ID: pointerutils.ToPtr(subnetIdMaster),
+					Properties: &armnetwork.SubnetPropertiesFormat{
+						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
+					},
+				}}, nil)
+				subnets.EXPECT().CreateOrUpdateAndWait(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, gomock.Any(), nil).Times(1)
+			},
 		},
 		{
 			name: "It should not update subnet when subnet already have service endpoints",
@@ -261,7 +287,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				},
 			}
 
-			err := m.ensureServiceEndpoints(ctx)
+			err := m.ensureServiceEndpoints(ctx, tt.isUpdate)
 			if tt.expectedErr != "" {
 				assert.EqualError(t, err, tt.expectedErr)
 			} else {
