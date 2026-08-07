@@ -225,6 +225,8 @@ stages:
           # Checkout the code
           - template: ./templates/template-checkout.yml
 
+          - template: ./templates/template-install-go.yml
+
           # Install Docker, Docker Compose, and dependencies
           - bash: |
               . ./hack/e2e/utils.sh
@@ -336,6 +338,8 @@ stages:
         steps:
           # Checkout the code
           - template: ./templates/template-checkout.yml
+
+          - template: ./templates/template-install-go.yml
 
           # Install Docker, Docker Compose, and dependencies
           - bash: |
