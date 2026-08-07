@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/sirupsen/logrus"
 
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -38,16 +39,17 @@ type Runnable interface {
 }
 
 var (
-	defaultWorkerMaxStartupDelay          = 60 * time.Second
-	defaultServiceInterval                = 180 * time.Second
-	defaultReadinessDelay                 = 2 * time.Minute
-	defaultSchedulePollInterval           = 30 * time.Second
-	defaultSchedulePollReadinessInterval  = 90 * time.Second
-	defaultChangefeedInteval              = 10 * time.Second
-	defaultChangefeedReadinessInterval    = time.Minute
-	defaultBucketRefreshInterval          = 10 * time.Second
-	defaultBucketRefreshTTL               = 60 * time.Second
-	defaultBucketRefreshReadinessInterval = defaultBucketRefreshTTL
+	defaultWorkerMaxStartupDelay                  = 60 * time.Second
+	defaultServiceInterval                        = 15 * time.Second
+	defaultReadinessDelay                         = 2 * time.Minute
+	defaultSchedulePollInterval                   = 30 * time.Second
+	defaultSchedulePollReadinessInterval          = 90 * time.Second
+	defaultScheduleUnconditionalReconcileInterval = 60 * time.Minute
+	defaultChangefeedInteval                      = 10 * time.Second
+	defaultChangefeedReadinessInterval            = time.Minute
+	defaultBucketRefreshInterval                  = 10 * time.Second
+	defaultBucketRefreshTTL                       = 60 * time.Second
+	defaultBucketRefreshReadinessInterval         = defaultBucketRefreshTTL
 )
 
 type service struct {
@@ -74,18 +76,22 @@ type service struct {
 	lastBucketUpdate   atomic.Value // time.Time
 	startTime          time.Time
 
-	workerMaxStartupDelay          time.Duration // Maximum interval before a worker starts
-	interval                       time.Duration // Interval between service runs
-	schedulePollInterval           time.Duration // Interval between updates to Schedules
-	schedulePollReadinessInterval  time.Duration // Time that the Schedules should have been updated within to be ready
-	changefeedInterval             time.Duration // Interval between changefeed runs (updates to cluster docs + subscriptions)
-	bucketRefreshInterval          time.Duration
-	bucketRefreshTTL               time.Duration // TTL for worker PoolWorker documents
-	bucketRefreshReadinessInterval time.Duration
-	changefeedReadinessInterval    time.Duration // Time that the changefeed should have been changed within to be healthy
-	readinessDelay                 time.Duration // Minimal time until the service will allow itself to be marked ready
+	workerMaxStartupDelay                  time.Duration // Maximum interval before a worker starts
+	interval                               time.Duration // Interval between service runs
+	schedulePollInterval                   time.Duration // Interval between updates to Schedules
+	schedulePollReadinessInterval          time.Duration // Time that the Schedules should have been updated within to be ready
+	scheduleUnconditionalReconcileInterval time.Duration // Interval between times that a Schedule is reconciled unconditionally
+	changefeedInterval                     time.Duration // Interval between changefeed runs (updates to cluster docs + subscriptions)
+	bucketRefreshInterval                  time.Duration
+	bucketRefreshTTL                       time.Duration // TTL for worker PoolWorker documents
+	bucketRefreshReadinessInterval         time.Duration
+	changefeedReadinessInterval            time.Duration // Time that the changefeed should have been changed within to be healthy
+	readinessDelay                         time.Duration // Minimal time until the service will allow itself to be marked ready
 
 	tasks map[api.MIMOTaskID]tasks.MaintenanceTask
+
+	scheduleShouldBeReevaluated *xsync.Map[string, bool]
+	scheduleLastRunTime         *xsync.Map[string, time.Time]
 
 	serveHealthz  bool
 	emitHeartbeat bool
@@ -117,18 +123,22 @@ func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metric
 		workerMaxStartupDelay: defaultWorkerMaxStartupDelay,
 		newScheduler:          NewSchedulerForSchedule,
 
-		changefeedBatchSize:            50,
-		interval:                       defaultServiceInterval,
-		changefeedInterval:             defaultChangefeedInteval,
-		changefeedReadinessInterval:    defaultChangefeedReadinessInterval,
-		bucketRefreshInterval:          defaultBucketRefreshInterval,
-		bucketRefreshTTL:               defaultBucketRefreshTTL,
-		bucketRefreshReadinessInterval: defaultBucketRefreshReadinessInterval,
-		readinessDelay:                 defaultReadinessDelay,
-		schedulePollInterval:           defaultSchedulePollInterval,
-		schedulePollReadinessInterval:  defaultSchedulePollReadinessInterval,
+		changefeedBatchSize:                    50,
+		interval:                               defaultServiceInterval,
+		changefeedInterval:                     defaultChangefeedInteval,
+		changefeedReadinessInterval:            defaultChangefeedReadinessInterval,
+		bucketRefreshInterval:                  defaultBucketRefreshInterval,
+		bucketRefreshTTL:                       defaultBucketRefreshTTL,
+		bucketRefreshReadinessInterval:         defaultBucketRefreshReadinessInterval,
+		readinessDelay:                         defaultReadinessDelay,
+		schedulePollInterval:                   defaultSchedulePollInterval,
+		schedulePollReadinessInterval:          defaultSchedulePollReadinessInterval,
+		scheduleUnconditionalReconcileInterval: defaultScheduleUnconditionalReconcileInterval,
 
 		subs: changefeed.NewSubscriptionsChangefeedCache(m, false),
+
+		scheduleShouldBeReevaluated: xsync.NewMap[string, bool](),
+		scheduleLastRunTime:         xsync.NewMap[string, time.Time](),
 
 		serveHealthz:  true,
 		emitHeartbeat: true,
@@ -221,6 +231,9 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 			if len(i) > 0 {
 				s.lastBucketUpdate.Store(s.env.Now())
 			}
+			// If we have a bucket update, mark all schedules as needing to be
+			// reevaluated by deleting the markers
+			s.scheduleShouldBeReevaluated.Clear()
 		}, stop, cancel, waitForFirstBucketUpdate,
 	)
 
@@ -339,8 +352,17 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.MaintenanceS
 
 	s.baseLog.Debugf("updating %d schedules", len(docMap))
 
-	for _, cluster := range docMap {
-		s.b.UpsertDoc(cluster)
+	for _, schedule := range docMap {
+		oldDoc, docExists := s.b.Doc(strings.ToLower(schedule.ID))
+		if !docExists {
+			// If this schedule is new, reevaluate it
+			s.scheduleShouldBeReevaluated.Store(strings.ToLower(schedule.ID), true)
+		} else if schedule.Timestamp != oldDoc.Timestamp {
+			// If the changed timestamp is different, reevaluate the schedule
+			s.scheduleShouldBeReevaluated.Store(strings.ToLower(schedule.ID), true)
+		}
+
+		s.b.UpsertDoc(schedule)
 	}
 
 	// Store when we last fetched the schedules
@@ -387,7 +409,11 @@ func (s *service) checkReady() bool {
 func (s *service) worker(stop <-chan struct{}, id string) {
 	defer recover.Panic(s.baseLog)
 
-	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*rand.Float64())
+	// This determines how far offset into the startup delay as well as the
+	// unconditional reconcile interval this worker will run
+	delayFraction := rand.Float64()
+
+	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*delayFraction)
 	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})
 	log.Debugf("starting worker for %s in %s...", id, delay.String())
 
@@ -439,6 +465,28 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 out:
 	for !s.stopping.Load() {
 		func() {
+			// Store the run time as we want to start at the same time every
+			// interval, not interval+eval time
+			now := s.env.Now()
+
+			// Check if this schedule has updated or if we should run it again
+			// unconditionally. Missing the marker (e.g. when buckets update)
+			// means it should be run.
+			shouldReevaluateSchedule, hasMarker := s.scheduleShouldBeReevaluated.Load(id)
+			reevaluateUnconditionally := false
+			lastRunTime, hasRun := s.scheduleLastRunTime.Load(id)
+			if hasRun {
+				reevaluateUnconditionally = shouldReevaluateUnconditionally(
+					now, lastRunTime, s.scheduleUnconditionalReconcileInterval, delayFraction)
+			}
+
+			// If we don't need to reevaluate it because the schedule/buckets
+			// updated, and we aren't due to unconditionally reevaluate it, skip
+			// this time.
+			if (!shouldReevaluateSchedule && hasMarker) && !reevaluateUnconditionally {
+				return
+			}
+
 			s.workerCount.Add(1)
 			s.m.EmitGauge("mimo.scheduler.workers.active.count", int64(s.workerCount.Load()), nil)
 			defer func() {
@@ -452,6 +500,9 @@ out:
 			if err != nil {
 				log.Error(err)
 			}
+
+			s.scheduleLastRunTime.Store(id, now)
+			s.scheduleShouldBeReevaluated.Store(id, false)
 		}()
 
 		select {
@@ -461,4 +512,18 @@ out:
 		}
 	}
 	log.Debugf("worker for %s finished", id)
+}
+
+func shouldReevaluateUnconditionally(now time.Time, lastRunTime time.Time, interval time.Duration, delayFraction float64) bool {
+	return now.After(lastRunTime.
+		// Add the interval (e.g. the default 60 minutes)
+		Add(interval).
+		// Offset this schedule delayFraction amount into the interval (e.g. so
+		// a 60 minute interval and a schedule with a 0.5 delayFraction will run
+		// at startup and then 90 minutes later, then every 60 minutes
+		// thereafter). The microsecond is removed to make it inclusive (e.g. 00:00
+		// to 59:59 for the 1hr example)
+		Add((interval - time.Microsecond) * time.Duration(delayFraction)).
+		// Make it now >= by removing a microsecond
+		Add(-time.Microsecond))
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -614,4 +615,354 @@ func TestSchedulerServesBucket(t *testing.T) {
 			Value:      0,
 		},
 	}...)
+}
+
+func TestSchedulerServesBucketWhenChanges(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	ourUUID := uuid.DefaultGenerator.Generate()
+
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time {
+		now = now.Add(time.Millisecond)
+		return now
+	})
+
+	_, log := testlog.LogForTesting(t)
+	fixtures := testdatabase.NewFixture()
+	checker := testdatabase.NewChecker()
+	manifests, manifestsClient := testdatabase.NewFakeMaintenanceManifests(_env.Now)
+	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, poolWorkersClient := testdatabase.NewFakePoolWorkers(_env.Now, ourUUID)
+	dbs := database.NewDBGroup().
+		WithMaintenanceSchedules(schedules).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers).
+		WithMaintenanceManifests(manifests)
+
+	ownedCluster := api.ExampleOpenShiftClusterDocument()
+	ownedCluster.Bucket = 1
+
+	notInInitialBucketCluster := api.ExampleOpenShiftClusterDocument()
+	notInInitialBucketCluster.Bucket = 0
+	notInInitialBucketCluster.ID = "00000000-1111-0000-0000-000000000002"
+	notInInitialBucketCluster.Key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup2/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
+	notInInitialBucketCluster.OpenShiftCluster.ID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup2/providers/microsoft.redhatopenshift/openshiftclusters/resourcename2"
+	notInInitialBucketCluster.ClusterResourceGroupIDKey = "/subscriptions/00000000-1111-0000-0000-000000000000/resourcegroups/clusterresourcegroup2"
+	notInInitialBucketCluster.ClientIDKey = "2"
+
+	poolWorkerMasterDoc := &api.PoolWorkerDocument{
+		ID:         string(api.PoolWorkerTypeMIMOScheduler),
+		WorkerType: api.PoolWorkerTypeMIMOScheduler,
+		PoolWorker: &api.PoolWorker{
+			// We only have bucket 1, the unowned cluster will not be served
+			Buckets: []string{"other", ourUUID, "other", "other"},
+		},
+		LeaseOwner:   "other",
+		LeaseExpires: 9999999999999,
+	}
+
+	fixtures.AddSubscriptionDocuments(api.ExampleSubscriptionDocument())
+	fixtures.AddOpenShiftClusterDocuments(ownedCluster, notInInitialBucketCluster)
+	fixtures.AddPoolWorkerDocuments(poolWorkerMasterDoc)
+
+	fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
+		ID: "00000000-0000-0000-0000-000000000001",
+		MaintenanceSchedule: api.MaintenanceSchedule{
+			State:             api.MaintenanceScheduleStateEnabled,
+			MaintenanceTaskID: api.MIMOTaskID("0"),
+
+			Schedule:         "*-*-* *:15",
+			ScheduleAcross:   "0s",
+			LookForwardCount: 1,
+
+			Selectors: []*api.MaintenanceScheduleSelector{
+				{
+					Key:      string(SelectorDataKeySubscriptionState),
+					Operator: api.MaintenanceScheduleSelectorOperatorEq,
+					Value:    "Registered",
+				},
+			},
+		},
+	})
+
+	checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+		ID:                "07070707-0707-0707-0707-070707070001",
+		ClusterResourceID: strings.ToLower(api.ExampleOpenShiftClusterDocument().OpenShiftCluster.ID),
+		MaintenanceManifest: api.MaintenanceManifest{
+			State:             api.MaintenanceManifestStatePending,
+			MaintenanceTaskID: "0",
+			CreatedBySchedule: "00000000-0000-0000-0000-000000000001",
+			RunAfter:          time.Date(2026, 1, 1, 0, 15, 0, 0, time.UTC).Unix(),
+			RunBefore:         time.Date(2026, 1, 1, 1, 15, 0, 0, time.UTC).Unix(),
+		},
+	})
+
+	// Apply the fixture
+	err := fixtures.WithMaintenanceSchedules(schedules).
+		WithOpenShiftClusters(clusters).
+		WithSubscriptions(subscriptions).
+		WithPoolWorkers(poolWorkers).
+		Create()
+	r.NoError(err)
+
+	svc := NewService(_env, log, dbs, m)
+	svc.workerMaxStartupDelay = 0
+	svc.interval = 10 * time.Millisecond
+	svc.bucketRefreshInterval = 1 * time.Millisecond
+	svc.schedulePollInterval = 1 * time.Millisecond
+	svc.changefeedInterval = time.Millisecond
+	svc.readinessDelay = time.Millisecond
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go svc.Run(ctx, stop, done)
+
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.True(collect, svc.checkReady())
+	}, time.Second, time.Millisecond)
+
+	// Wait for our created manifest
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.Empty(collect, checker.CheckMaintenanceManifests(manifestsClient))
+	}, time.Second, time.Millisecond*10)
+
+	// Update the buckets so that the unowned cluster becomes owned
+	_, err = poolWorkersClient.Replace(ctx, string(api.PoolWorkerTypeMIMOScheduler), &api.PoolWorkerDocument{
+		ID:         string(api.PoolWorkerTypeMIMOScheduler),
+		WorkerType: api.PoolWorkerTypeMIMOScheduler,
+		PoolWorker: &api.PoolWorker{
+			// Now we own buckets 0 and 1
+			Buckets: []string{ourUUID, ourUUID, "other", "other"},
+		},
+		LeaseOwner:   "other",
+		LeaseExpires: 9999999999999,
+	}, &cosmosdb.Options{NoETag: true})
+	r.NoError(err)
+
+	checker.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+		ID:                "07070707-0707-0707-0707-070707070002",
+		ClusterResourceID: strings.ToLower(notInInitialBucketCluster.OpenShiftCluster.ID),
+		MaintenanceManifest: api.MaintenanceManifest{
+			State:             api.MaintenanceManifestStatePending,
+			MaintenanceTaskID: "0",
+			CreatedBySchedule: "00000000-0000-0000-0000-000000000001",
+			RunAfter:          time.Date(2026, 1, 1, 0, 15, 0, 0, time.UTC).Unix(),
+			RunBefore:         time.Date(2026, 1, 1, 1, 15, 0, 0, time.UTC).Unix(),
+		},
+	})
+
+	// Wait for our second created manifest
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.Empty(collect, checker.CheckMaintenanceManifests(manifestsClient))
+	}, time.Second, time.Millisecond*10)
+
+	// Close it after
+	close(stop)
+	<-done
+	r.Equal(int32(0), svc.workerCount.Load())
+
+	m.AssertFloats()
+	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "MaintenanceScheduleDocument",
+			},
+			Value: 1,
+		},
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "OpenShiftClusterDocument",
+			},
+			Value: 2,
+		},
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "SubscriptionDocument",
+			},
+			Value: 1,
+		},
+		{
+			MetricName: "mimo.scheduler.manifests.created",
+			Dimensions: map[string]string{
+				"resourceGroup":  "resourcegroup",
+				"resourceId":     strings.ToLower(api.ExampleOpenShiftClusterDocument().OpenShiftCluster.ID),
+				"subscriptionId": api.ExampleSubscriptionDocument().ID,
+				"resourceName":   "resourcename",
+			},
+			Value: 1,
+		},
+		{
+			MetricName: "mimo.scheduler.manifests.created",
+			Dimensions: map[string]string{
+				"resourceGroup":  "resourcegroup2",
+				"resourceId":     strings.ToLower(notInInitialBucketCluster.OpenShiftCluster.ID),
+				"subscriptionId": api.ExampleSubscriptionDocument().ID,
+				"resourceName":   "resourcename2",
+			},
+			Value: 1,
+		},
+		// No running workers
+		{
+			MetricName: "mimo.scheduler.workers.active.count",
+			Dimensions: map[string]string{},
+			Value:      0,
+		},
+	}...)
+}
+
+func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
+	r := require.New(t)
+	ctx := t.Context()
+
+	m := testmetrics.NewFakeMetricsEmitter(t)
+	controller := gomock.NewController(t)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+
+	_, log := testlog.LogForTesting(t)
+	fixtures := testdatabase.NewFixture()
+	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+	subscriptions, _ := testdatabase.NewFakeSubscriptions()
+	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
+	dbs := database.NewDBGroup().
+		WithMaintenanceSchedules(schedules).
+		WithSubscriptions(subscriptions).
+		WithOpenShiftClusters(clusters).
+		WithPoolWorkers(poolWorkers)
+
+	fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
+		ID: "00000000-0000-0000-0000-000000000000",
+		MaintenanceSchedule: api.MaintenanceSchedule{
+			State: api.MaintenanceScheduleStateEnabled,
+		},
+	})
+
+	// Apply the fixture
+	err := fixtures.WithMaintenanceSchedules(schedules).
+		WithOpenShiftClusters(clusters).
+		WithSubscriptions(subscriptions).
+		Create()
+	r.NoError(err)
+
+	sched := &fakeScheduler{}
+
+	svc := NewService(_env, log, dbs, m)
+	svc.workerMaxStartupDelay = 0
+	svc.interval = time.Millisecond
+	svc.scheduleUnconditionalReconcileInterval = 250 * time.Millisecond
+	svc.schedulePollInterval = 1 * time.Millisecond
+	svc.changefeedInterval = time.Millisecond
+	svc.readinessDelay = time.Millisecond
+	svc.serveHealthz = false
+	svc.emitHeartbeat = false
+	svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs) (Scheduler, error) {
+		return sched, nil
+	}
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	go svc.Run(ctx, stop, done)
+
+	r.EventuallyWithT(func(collect *assert.CollectT) {
+		require.Equal(collect, 1, sched.calls)
+	}, time.Second, time.Millisecond)
+
+	// Sleep for a second so that the loop will trigger the unconditional
+	// reevaluate condition
+	time.Sleep(time.Second)
+
+	// The scheduler should be called up to 4 additional times (due to the
+	// unconditional reconcile interval) because nothing has changed. Allow 4-6
+	// total calls to make timer delays in the goroutine or this test less
+	// likely to flake -- as long as it's not hundreds or remains at 1
+	r.GreaterOrEqual(sched.calls, 4)
+	r.LessOrEqual(sched.calls, 6)
+
+	close(stop)
+
+	// Then wait for the worker to stop
+	<-done
+	r.Equal(int32(0), svc.workerCount.Load())
+
+	m.AssertFloats()
+	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+		{
+			MetricName: "changefeed.caches.size",
+			Dimensions: map[string]string{
+				"name": "MaintenanceScheduleDocument",
+			},
+			Value: 1,
+		},
+		// No running workers
+		{
+			MetricName: "mimo.scheduler.workers.active.count",
+			Dimensions: map[string]string{},
+			Value:      0,
+		},
+	}...)
+}
+
+func TestShouldReevaluateUnconditionally(t *testing.T) {
+	testCases := []struct {
+		desc          string
+		now           time.Time
+		lastRan       time.Time
+		interval      time.Duration
+		delayFraction float64
+		expectedValue bool
+	}{
+		{
+			desc:          "every 60 mins, it's been 60 mins, no delay",
+			now:           time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 0.0,
+			expectedValue: true,
+		},
+		{
+			desc:          "every 60 mins, it's been 59:59 mins, no delay",
+			now:           time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 59, 59, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 0.0,
+			expectedValue: false,
+		},
+		{
+			desc:          "every 60 mins, it's been 60 mins, 100% delay",
+			now:           time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 1.0,
+			expectedValue: false,
+		},
+		{
+			desc:          "every 60 mins, it's been 120 mins, 100% delay",
+			now:           time.Date(2026, 1, 1, 2, 0, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 1.0,
+			expectedValue: true,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			got := shouldReevaluateUnconditionally(tC.now, tC.lastRan, tC.interval, tC.delayFraction)
+			require.Equal(t, tC.expectedValue, got)
+		})
+	}
 }
