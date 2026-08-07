@@ -113,11 +113,11 @@ $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@echo "(re)installing $(GOBIN)/mockgen-v0.6.0"
 	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.6.0 "go.uber.org/mock/mockgen"
 
-OTELCOLLECTORBUILDER := $(GOBIN)/otelcollectorbuilder-v0.153.0
+OTELCOLLECTORBUILDER := $(GOBIN)/otelcollectorbuilder-v0.158.0
 $(OTELCOLLECTORBUILDER): $(BINGO_DIR)/otelcollectorbuilder.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/otelcollectorbuilder-v0.153.0"
-	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=otelcollectorbuilder.mod -o=$(GOBIN)/otelcollectorbuilder-v0.153.0 "go.opentelemetry.io/collector/cmd/builder"
+	@echo "(re)installing $(GOBIN)/otelcollectorbuilder-v0.158.0"
+	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=otelcollectorbuilder.mod -o=$(GOBIN)/otelcollectorbuilder-v0.158.0 "go.opentelemetry.io/collector/cmd/builder"
 
 PINACT := $(GOBIN)/pinact-v1.6.0
 $(PINACT): $(BINGO_DIR)/pinact.mod

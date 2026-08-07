@@ -13,4 +13,4 @@ retract (
 	v0.57.0
 )
 
-require go.opentelemetry.io/collector/cmd/builder v0.153.0
+require go.opentelemetry.io/collector/cmd/builder v0.158.0
