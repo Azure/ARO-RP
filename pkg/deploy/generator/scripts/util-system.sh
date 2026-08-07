@@ -181,7 +181,7 @@ pull_container_images() {
     # exported here as it's used by podman login and subsequent podman pull
     export REGISTRY_AUTH_FILE="/root/.docker/config.json"
 
-   # shellcheck disable=SC2329
+   # shellcheck disable=SC2329,SC2317
    _() {
         local -r acr="$1"
         local -r registry="$2"
