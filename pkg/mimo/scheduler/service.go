@@ -469,10 +469,11 @@ out:
 			// interval, not interval+eval time
 			now := s.env.Now()
 
-			// Check if this schedule has updated or if we should run it again
-			// unconditionally. Missing the marker (e.g. when buckets update)
-			// means it should be run.
-			shouldReevaluateSchedule, hasMarker := s.scheduleShouldBeReevaluated.Load(id)
+			// Check if this schedule has updated. Missing the marker (e.g. when
+			// buckets update) means it should be run. Replace it as false, we
+			// will reset any true value on failure.
+			shouldReevaluateSchedule, hasMarker := s.scheduleShouldBeReevaluated.LoadAndStore(id, false)
+			// Check if it's been long enough that we should run it unconditionally anyway.
 			reevaluateUnconditionally := false
 			lastRunTime, hasRun := s.scheduleLastRunTime.Load(id)
 			if hasRun {
@@ -499,10 +500,15 @@ out:
 			_, err := a.Process(context.Background())
 			if err != nil {
 				log.Error(err)
+				// On error, reset the previous reevaluation marker if it was true
+				if shouldReevaluateSchedule {
+					s.scheduleShouldBeReevaluated.Store(id, shouldReevaluateSchedule)
+				}
+			} else {
+				// Update the last scheduled run time if we succeeded, so
+				// failures will retry next loop.
+				s.scheduleLastRunTime.Store(id, now)
 			}
-
-			s.scheduleLastRunTime.Store(id, now)
-			s.scheduleShouldBeReevaluated.Store(id, false)
 		}()
 
 		select {
