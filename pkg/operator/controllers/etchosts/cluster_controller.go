@@ -10,8 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,25 +29,6 @@ import (
 
 const (
 	ClusterControllerName = "EtcHostsCluster"
-)
-
-var (
-	etchostsMasterMCMetadata = &mcv1.MachineConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "99-master-aro-etc-hosts-gateway-domains",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind: "MachineConfig",
-		},
-	}
-	etchostsWorkerMCMetadata = &mcv1.MachineConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "99-worker-aro-etc-hosts-gateway-domains",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind: "MachineConfig",
-		},
-	}
 )
 
 type EtcHostsClusterReconciler struct {

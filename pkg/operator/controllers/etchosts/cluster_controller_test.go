@@ -27,6 +27,22 @@ import (
 )
 
 var (
+	etchostsMasterMCMetadata = &mcv1.MachineConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "99-master-aro-etc-hosts-gateway-domains",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "MachineConfig",
+		},
+	}
+	etchostsWorkerMCMetadata = &mcv1.MachineConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "99-worker-aro-etc-hosts-gateway-domains",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "MachineConfig",
+		},
+	}
 	clusterEtcHostsControllerDisabled = &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
