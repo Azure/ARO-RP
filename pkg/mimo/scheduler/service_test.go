@@ -864,6 +864,7 @@ func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 	svc := NewService(_env, log, dbs, m)
 	svc.workerMaxStartupDelay = 0
 	svc.interval = time.Millisecond
+	svc.bucketRefreshInterval = time.Millisecond
 	svc.scheduleUnconditionalReconcileInterval = 250 * time.Millisecond
 	svc.schedulePollInterval = 1 * time.Millisecond
 	svc.changefeedInterval = time.Millisecond
