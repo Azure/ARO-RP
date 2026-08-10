@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -227,13 +228,16 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	go buckets.StartBucketRefreshLoop(
 		_ctx, s.baseLog, api.PoolWorkerTypeMIMOScheduler,
 		s.bucketCount, s.bucketRefreshInterval, s.bucketRefreshTTL, dbPoolWorkers, func(i []int) {
-			s.buckets.Store(i)
+			old, ok := s.buckets.Load().([]int)
+			if !ok || !slices.Equal(old, i) {
+				s.buckets.Store(i)
+				// If we have a bucket update, mark all schedules as needing to be
+				// reevaluated by deleting the markers
+				s.scheduleShouldBeReevaluated.Clear()
+			}
 			if len(i) > 0 {
 				s.lastBucketUpdate.Store(s.env.Now())
 			}
-			// If we have a bucket update, mark all schedules as needing to be
-			// reevaluated by deleting the markers
-			s.scheduleShouldBeReevaluated.Clear()
 		}, stop, cancel, waitForFirstBucketUpdate,
 	)
 
