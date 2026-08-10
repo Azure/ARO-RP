@@ -10,7 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configv1 "github.com/openshift/api/config/v1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -109,7 +109,6 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		for {
 			mcs := &mcv1.MachineConfigList{}
 			err := r.ch.List(ctx, mcs, client.Continue(continueToken))
-
 			if err != nil {
 				r.Log.Error(err)
 				r.SetDegraded(ctx, err)
