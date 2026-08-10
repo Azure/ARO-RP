@@ -154,6 +154,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 		name           string
 		objects        []client.Object
 		createdObjects map[string]int
+		updatedObjects map[string]int
 		deletedObjects map[string]int
 		expectedLog    []testlog.ExpectedLogEntry
 	}
@@ -191,14 +192,6 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("removing machine config 99-master-aro-etc-hosts-gateway-domains"),
-				},
-				{
-					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("removing machine config 99-worker-aro-etc-hosts-gateway-domains"),
-				},
-				{
-					"level": gomega.Equal(logrus.DebugLevel),
 					"msg":   gomega.Equal("etchosts managed is false, machine configs removed"),
 				},
 			},
@@ -207,6 +200,10 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			name: "etchosts controller enabled, managed true, mc exist",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
 			expectedLog: []testlog.ExpectedLogEntry{
 				{
@@ -217,12 +214,23 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 					"level": gomega.Equal(logrus.DebugLevel),
 					"msg":   gomega.Equal("running"),
 				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
+				},
 			},
 		},
 		{
 			name: "etchosts controller enabled, managed true, only master mc exist",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata,
+			},
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
 			},
 			createdObjects: map[string]int{
 				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
@@ -238,6 +246,10 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains"),
 				},
 			},
@@ -246,6 +258,9 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			name: "etchosts controller enabled, managed true, only worker mc exist",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsWorkerMCMetadata,
+			},
+			updatedObjects: map[string]int{
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
 			createdObjects: map[string]int{
 				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
@@ -262,6 +277,10 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
 				},
 			},
 		},
@@ -321,14 +340,6 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("removing machine config 99-master-aro-etc-hosts-gateway-domains"),
-				},
-				{
-					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("removing machine config 99-worker-aro-etc-hosts-gateway-domains"),
-				},
-				{
-					"level": gomega.Equal(logrus.DebugLevel),
 					"msg":   gomega.Equal("etchosts managed is false, machine configs removed"),
 				},
 			},
@@ -346,14 +357,26 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, mc exist, no action",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, mc exist, MCs updated",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+			},
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
 			expectedLog: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
 					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
 				},
 			},
 		},
@@ -370,9 +393,12 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, only master mc exist, ensure worker mc",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, only master mc exist, worker mc created",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata,
+			},
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
 			},
 			createdObjects: map[string]int{
 				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
@@ -381,6 +407,10 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
 					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -401,9 +431,12 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, only worker mc exist, ensure master mc",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, only worker mc exist, master mc created",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsWorkerMCMetadata,
+			},
+			updatedObjects: map[string]int{
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
 			createdObjects: map[string]int{
 				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
@@ -416,6 +449,10 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
 				},
 			},
 		},
@@ -487,15 +524,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				logger.Log(logrus.ErrorLevel, err)
 			}
 
-			logs := []testlog.ExpectedLogEntry{
-				{
-					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/cluster"),
-				},
-			}
-			logs = append(logs, tt.expectedLog...)
-
-			err = testlog.AssertLoggingOutput(hook, logs)
+			err = testlog.AssertLoggingOutput(hook, tt.expectedLog)
 			if err != nil {
 				t.Error(err)
 			}
@@ -516,8 +545,12 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				}
 			}
 
-			if len(updatedObjects) != 0 {
-				t.Error("no objects should be updated", updatedObjects)
+			errs, err = testclienthelper.CompareTally(tt.updatedObjects, updatedObjects)
+			if err != nil {
+				t.Error(err, "on updated objects")
+				for _, l := range errs {
+					t.Error(l)
+				}
 			}
 		})
 	}

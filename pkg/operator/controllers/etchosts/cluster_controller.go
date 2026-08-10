@@ -4,13 +4,14 @@ package etchosts
 // Licensed under the Apache License 2.0.
 
 import (
+	"cmp"
 	"context"
+	"slices"
 
 	"github.com/sirupsen/logrus"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -69,7 +70,6 @@ func NewClusterReconciler(log *logrus.Entry, client client.Client, ch clienthelp
 
 // Reconcile watches ARO EtcHosts MachineConfig objects, and if any changes, reconciles it
 func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	r.Log.Debugf("reconcile MachineConfig openshift-machine-api/%s", request.Name)
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -104,26 +104,34 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	// EtchostsManaged = false, remove machine configs
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) {
 		r.Log.Debug("etchosts managed is false, removing machine configs")
-		err = r.removeMachineConfig(ctx, etchostsMasterMCMetadata)
-		if kerrors.IsNotFound(err) {
-			r.ClearDegraded(ctx)
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
 
-		err = r.removeMachineConfig(ctx, etchostsWorkerMCMetadata)
-		if kerrors.IsNotFound(err) {
-			r.ClearDegraded(ctx)
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
+		continueToken := ""
+		for {
+			mcs := &mcv1.MachineConfigList{}
+			err := r.ch.List(ctx, mcs, client.Continue(continueToken))
+
+			if err != nil {
+				r.Log.Error(err)
+				r.SetDegraded(ctx, err)
+				return reconcile.Result{}, err
+			}
+
+			for _, mc := range mcs.Items {
+				// Filter down to our named etchosts machineconfigs
+				if etcHostsRegex.FindStringSubmatch(mc.Name) != nil {
+					err = r.ch.Delete(ctx, &mc)
+					if err != nil {
+						r.Log.Error(err)
+						r.SetDegraded(ctx, err)
+						return reconcile.Result{}, err
+					}
+				}
+			}
+
+			continueToken = mcs.Continue
+			if continueToken == "" {
+				break
+			}
 		}
 
 		r.ClearConditions(ctx)
@@ -131,68 +139,26 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	// EtchostsManaged = true, create machine configs if missing
+	// EtchostsManaged = true, create machine configs for all MCPs if missing
 	r.Log.Debug("running")
-	// If 99-master-aro-etc-hosts-gateway-domains doesn't exist, create it
-	mcp := &mcv1.MachineConfigPool{}
-	mc := &mcv1.MachineConfig{}
 
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "master"}, mcp)
-	if kerrors.IsNotFound(err) {
-		r.Log.Debug(err)
-	} else if err != nil {
+	pools := &mcv1.MachineConfigPoolList{}
+	err = r.ch.List(ctx, pools)
+	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
-	} else {
-		if mcp.GetDeletionTimestamp() != nil {
-			return reconcile.Result{}, nil
-		}
-
-		err = r.Client.Get(ctx, types.NamespacedName{Name: "99-master-aro-etc-hosts-gateway-domains"}, mc)
-		if kerrors.IsNotFound(err) {
-			err = reconcileMachineConfigs(ctx, instance, "master", r.ch, allowReconcile, *mcp)
-			if err != nil {
-				r.Log.Error(err)
-				r.SetDegraded(ctx, err)
-				return reconcile.Result{}, err
-			}
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
 	}
 
-	// If 99-worker-aro-etc-hosts-gateway-domains doesn't exist, create it
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "worker"}, mcp)
-	if kerrors.IsNotFound(err) {
-		r.Log.Debug(err)
-	} else if err != nil {
+	// Sort for test
+	slices.SortStableFunc(pools.Items, func(a, b mcv1.MachineConfigPool) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+	err = reconcileMachineConfigs(ctx, instance, r.ch, allowReconcile, pools.Items...)
+	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
-	} else {
-		if mcp.GetDeletionTimestamp() != nil {
-			return reconcile.Result{}, nil
-		}
-
-		err = r.Client.Get(ctx, types.NamespacedName{Name: "99-worker-aro-etc-hosts-gateway-domains"}, mc)
-		if kerrors.IsNotFound(err) {
-			r.ClearDegraded(ctx)
-			err = reconcileMachineConfigs(ctx, instance, "worker", r.ch, allowReconcile, *mcp)
-			if err != nil {
-				r.Log.Error(err)
-				r.SetDegraded(ctx, err)
-				return reconcile.Result{}, err
-			}
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
 	}
 
 	r.ClearConditions(ctx)
@@ -203,20 +169,17 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("starting etchosts-cluster controller")
 
-	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
+	clusterVersionPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == "version"
+	})
+
+	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Watches(&mcv1.MachineConfigPool{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
-
-	return etcHostsBuilder.
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ClusterControllerName).
+		Watches(
+			&configv1.ClusterVersion{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(clusterVersionPredicate),
+		).
 		Complete(r)
-}
-
-func (r *EtcHostsClusterReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
-	r.Log.Debugf("removing machine config %s", mc.Name)
-	err := r.Client.Delete(ctx, mc)
-	return err
 }
