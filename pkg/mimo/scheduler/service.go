@@ -527,15 +527,15 @@ out:
 }
 
 func shouldReevaluateUnconditionally(now time.Time, lastRunTime time.Time, interval time.Duration, delayFraction float64) bool {
-	return now.After(lastRunTime.
-		// Add the interval (e.g. the default 60 minutes)
-		Add(interval).
+	// Add the interval (e.g. the default 60 minutes)
+	shiftInterval := interval +
 		// Offset this schedule delayFraction amount into the interval (e.g. so
 		// a 60 minute interval and a schedule with a 0.5 delayFraction will run
 		// at startup and then 90 minutes later, then every 60 minutes
 		// thereafter). The microsecond is removed to make it inclusive (e.g. 00:00
 		// to 59:59 for the 1hr example)
-		Add((interval - time.Microsecond) * time.Duration(delayFraction)).
+		time.Duration(float64(interval-time.Microsecond)*delayFraction) -
 		// Make it now >= by removing a microsecond
-		Add(-time.Microsecond))
+		time.Microsecond
+	return now.After(lastRunTime.Add(shiftInterval))
 }
