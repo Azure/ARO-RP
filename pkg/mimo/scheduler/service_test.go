@@ -825,97 +825,135 @@ func TestSchedulerServesBucketWhenChanges(t *testing.T) {
 }
 
 func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
-	r := require.New(t)
-	ctx := t.Context()
-
-	m := testmetrics.NewFakeMetricsEmitter(t)
-	controller := gomock.NewController(t)
-	_env := mock_env.NewMockInterface(controller)
-	_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
-
-	_, log := testlog.LogForTesting(t)
-	fixtures := testdatabase.NewFixture()
-	schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
-	clusters, _ := testdatabase.NewFakeOpenShiftClusters()
-	subscriptions, _ := testdatabase.NewFakeSubscriptions()
-	poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
-	dbs := database.NewDBGroup().
-		WithMaintenanceSchedules(schedules).
-		WithSubscriptions(subscriptions).
-		WithOpenShiftClusters(clusters).
-		WithPoolWorkers(poolWorkers)
-
-	fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
-		ID: "00000000-0000-0000-0000-000000000000",
-		MaintenanceSchedule: api.MaintenanceSchedule{
-			State: api.MaintenanceScheduleStateEnabled,
+	testCases := []struct {
+		desc               string
+		delayFraction      float64
+		expectedLowerBound int
+		expectedUpperBound int
+	}{
+		{
+			// The delay fraction at 0.0 should have unconditional reconciles
+			// around 250ms, 500ms, 750ms, and 1s
+			desc:               "delay fraction at 0.0",
+			delayFraction:      0.0,
+			expectedLowerBound: 4,
+			expectedUpperBound: 6,
 		},
-	})
-
-	// Apply the fixture
-	err := fixtures.WithMaintenanceSchedules(schedules).
-		WithOpenShiftClusters(clusters).
-		WithSubscriptions(subscriptions).
-		Create()
-	r.NoError(err)
-
-	sched := &fakeScheduler{}
-
-	svc := NewService(_env, log, dbs, m)
-	svc.workerMaxStartupDelay = 0
-	svc.interval = time.Millisecond
-	svc.bucketRefreshInterval = time.Millisecond
-	svc.scheduleUnconditionalReconcileInterval = 250 * time.Millisecond
-	svc.schedulePollInterval = 1 * time.Millisecond
-	svc.changefeedInterval = time.Millisecond
-	svc.readinessDelay = time.Millisecond
-	svc.serveHealthz = false
-	svc.emitHeartbeat = false
-	svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs) (Scheduler, error) {
-		return sched, nil
+		{
+			desc:          "delay fraction at 1.0",
+			delayFraction: 1.0,
+			// The delay fraction at 1.0 should have unconditional reconciles
+			// around 500ms, 750ms, and 1s
+			expectedLowerBound: 3,
+			expectedUpperBound: 5,
+		},
+		{
+			desc:          "delay fraction at 0.5",
+			delayFraction: 0.5,
+			// The delay fraction at 0.5 should have unconditional reconciles
+			// around 375, 625ms, 875ms, and one we won't run at 1125ms
+			expectedLowerBound: 3,
+			expectedUpperBound: 5,
+		},
 	}
-	stop := make(chan struct{})
-	done := make(chan struct{})
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			r := require.New(t)
+			ctx := t.Context()
 
-	go svc.Run(ctx, stop, done)
+			m := testmetrics.NewFakeMetricsEmitter(t)
+			controller := gomock.NewController(t)
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
 
-	r.EventuallyWithT(func(collect *assert.CollectT) {
-		require.Equal(collect, 1, sched.calls)
-	}, time.Second, time.Millisecond)
+			_, log := testlog.LogForTesting(t)
+			fixtures := testdatabase.NewFixture()
+			schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+			subscriptions, _ := testdatabase.NewFakeSubscriptions()
+			poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
+			dbs := database.NewDBGroup().
+				WithMaintenanceSchedules(schedules).
+				WithSubscriptions(subscriptions).
+				WithOpenShiftClusters(clusters).
+				WithPoolWorkers(poolWorkers)
 
-	// Sleep for a second so that the loop will trigger the unconditional
-	// reevaluate condition
-	time.Sleep(time.Second)
+			fixtures.AddMaintenanceScheduleDocuments(&api.MaintenanceScheduleDocument{
+				ID: "00000000-0000-0000-0000-000000000000",
+				MaintenanceSchedule: api.MaintenanceSchedule{
+					State: api.MaintenanceScheduleStateEnabled,
+				},
+			})
 
-	// The scheduler should be called up to 4 additional times (due to the
-	// unconditional reconcile interval) because nothing has changed. Allow 4-6
-	// total calls to make timer delays in the goroutine or this test less
-	// likely to flake -- as long as it's not hundreds or remains at 1
-	r.GreaterOrEqual(sched.calls, 4)
-	r.LessOrEqual(sched.calls, 6)
+			// Apply the fixture
+			err := fixtures.WithMaintenanceSchedules(schedules).
+				WithOpenShiftClusters(clusters).
+				WithSubscriptions(subscriptions).
+				Create()
+			r.NoError(err)
 
-	close(stop)
+			sched := &fakeScheduler{}
 
-	// Then wait for the worker to stop
-	<-done
-	r.Equal(int32(0), svc.workerCount.Load())
+			svc := NewService(_env, log, dbs, m)
+			svc.workerMaxStartupDelay = 0
+			svc.interval = time.Millisecond
+			svc.bucketRefreshInterval = time.Millisecond
+			svc.scheduleUnconditionalReconcileInterval = 250 * time.Millisecond
+			svc.schedulePollInterval = 1 * time.Millisecond
+			svc.changefeedInterval = time.Millisecond
+			svc.readinessDelay = time.Millisecond
+			svc.serveHealthz = false
+			svc.emitHeartbeat = false
+			// This is called to get the random delay fraction
+			svc.randfloat64 = func() float64 { return tC.delayFraction }
+			svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs) (Scheduler, error) {
+				return sched, nil
+			}
+			stop := make(chan struct{})
+			done := make(chan struct{})
 
-	m.AssertFloats()
-	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
-		{
-			MetricName: "changefeed.caches.size",
-			Dimensions: map[string]string{
-				"name": "MaintenanceScheduleDocument",
-			},
-			Value: 1,
-		},
-		// No running workers
-		{
-			MetricName: "mimo.scheduler.workers.active.count",
-			Dimensions: map[string]string{},
-			Value:      0,
-		},
-	}...)
+			go svc.Run(ctx, stop, done)
+
+			r.EventuallyWithT(func(collect *assert.CollectT) {
+				require.Equal(collect, 1, sched.calls)
+			}, time.Second, time.Millisecond)
+
+			// Sleep for a second so that the loop will trigger the unconditional
+			// reevaluate condition
+			time.Sleep(time.Second)
+
+			// The scheduler should be called according to the unconditional
+			// reconcile interval because nothing has changed. Allow a range of
+			// total calls to make timer delays in the goroutine or this test
+			// less likely to flake -- as long as it's not hundreds or remains
+			// at 1
+			r.GreaterOrEqual(sched.calls, tC.expectedLowerBound)
+			r.LessOrEqual(sched.calls, tC.expectedUpperBound)
+
+			close(stop)
+
+			// Then wait for the worker to stop
+			<-done
+			r.Equal(int32(0), svc.workerCount.Load())
+
+			m.AssertFloats()
+			m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+				{
+					MetricName: "changefeed.caches.size",
+					Dimensions: map[string]string{
+						"name": "MaintenanceScheduleDocument",
+					},
+					Value: 1,
+				},
+				// No running workers
+				{
+					MetricName: "mimo.scheduler.workers.active.count",
+					Dimensions: map[string]string{},
+					Value:      0,
+				},
+			}...)
+		})
+	}
 }
 
 func TestShouldReevaluateUnconditionally(t *testing.T) {
@@ -937,10 +975,26 @@ func TestShouldReevaluateUnconditionally(t *testing.T) {
 		},
 		{
 			desc:          "every 60 mins, it's been 59:59 mins, no delay",
-			now:           time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC),
-			lastRan:       time.Date(2026, 1, 1, 0, 59, 59, 0, time.UTC),
+			now:           time.Date(2026, 1, 1, 0, 59, 59, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 			interval:      time.Hour,
 			delayFraction: 0.0,
+			expectedValue: false,
+		},
+		{
+			desc:          "every 60 mins, it's been 90 mins, 50% delay",
+			now:           time.Date(2026, 1, 1, 1, 30, 0, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 0.5,
+			expectedValue: true,
+		},
+		{
+			desc:          "every 60 mins, it's been 89:59 mins, 50% delay",
+			now:           time.Date(2026, 1, 1, 1, 29, 59, 0, time.UTC),
+			lastRan:       time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			interval:      time.Hour,
+			delayFraction: 0.5,
 			expectedValue: false,
 		},
 		{
