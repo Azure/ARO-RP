@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"iter"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"slices"
@@ -54,8 +54,9 @@ var (
 )
 
 type service struct {
-	baseLog *logrus.Entry
-	env     env.Interface
+	baseLog     *logrus.Entry
+	env         env.Interface
+	randFloat64 func() float64
 
 	dbGroup schedulerDBs
 
@@ -110,8 +111,9 @@ type schedulerDBs interface {
 
 func NewService(env env.Interface, log *logrus.Entry, dbg schedulerDBs, m metrics.Emitter) *service {
 	s := &service{
-		env:     env,
-		baseLog: log,
+		env:         env,
+		baseLog:     log,
+		randFloat64: rand.Float64,
 
 		dbGroup: dbg,
 
@@ -415,7 +417,7 @@ func (s *service) worker(stop <-chan struct{}, id string) {
 
 	// This determines how far offset into the startup delay as well as the
 	// unconditional reconcile interval this worker will run
-	delayFraction := rand.Float64()
+	delayFraction := s.randFloat64()
 
 	delay := time.Second * time.Duration(s.workerMaxStartupDelay.Seconds()*delayFraction)
 	log := s.baseLog.WithFields(logrus.Fields{"scheduleID": id})

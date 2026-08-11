@@ -905,7 +905,7 @@ func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 			svc.serveHealthz = false
 			svc.emitHeartbeat = false
 			// This is called to get the random delay fraction
-			svc.randfloat64 = func() float64 { return tC.delayFraction }
+			svc.randFloat64 = func() float64 { return tC.delayFraction }
 			svc.newScheduler = func(_ env.Interface, _ *logrus.Entry, _ metrics.Emitter, _ getCachedScheduleDocFunc, _ getClustersFunc, _ schedulerDBs) (Scheduler, error) {
 				return sched, nil
 			}
