@@ -461,7 +461,7 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 }
 
 func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
-	err := immutable.Validate("", newOpenShiftClusterDelta(oc), newOpenShiftClusterDelta(current))
+	err := immutable.ValidateWithPolicy("", oc, current, openShiftClusterUpdatePolicy)
 	if err != nil {
 		err := err.(*immutable.ValidationError)
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
