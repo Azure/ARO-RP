@@ -9,15 +9,19 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	azruntime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utilarm "github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_armmsi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmsi"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -65,6 +69,16 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 	}
 
 	ctx := context.Background()
+
+	savedBackoff := utilarm.TransientBackoff
+	utilarm.TransientBackoff = wait.Backoff{
+		Steps:    4,
+		Duration: 1 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.0,
+	}
+	defer func() { utilarm.TransientBackoff = savedBackoff }()
+
 	for _, tt := range []struct {
 		name                              string
 		doc                               *api.OpenShiftClusterDocument
@@ -221,6 +235,110 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, tooManyRequestsErr)
 			},
 			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, tooManyRequestsErr.Error()).Error(),
+		},
+		{
+			name: "success - transient forbidden error retried then succeeds",
+			doc:  validWIClusterDoc,
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				gomock.InOrder(
+					mock.EXPECT().Get(gomock.Any(), gomock.Eq(clusterRG), gomock.Eq(identityFooName), gomock.Any()).
+						Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, forbiddenErr),
+					mock.EXPECT().Get(gomock.Any(), gomock.Eq(clusterRG), gomock.Eq(identityFooName), gomock.Any()).
+						Return(armmsi.UserAssignedIdentitiesClientGetResponse{
+							Identity: armmsi.Identity{
+								Properties: &armmsi.UserAssignedIdentityProperties{
+									ClientID:    &identityFooClientId,
+									PrincipalID: &identityFooObjectId,
+								},
+							},
+						}, nil),
+				)
+
+				mock.EXPECT().Get(gomock.Any(), gomock.Eq(clusterRG), gomock.Eq(identityBarName), gomock.Any()).Times(1).
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{
+						Identity: armmsi.Identity{
+							Properties: &armmsi.UserAssignedIdentityProperties{
+								ClientID:    &identityBarClientId,
+								PrincipalID: &identityBarObjectId,
+							},
+						},
+					}, nil)
+			},
+			wantIdentities: &map[string]api.PlatformWorkloadIdentity{
+				identityFooName: {
+					ResourceID: identityFooResourceId,
+					ClientID:   identityFooClientId,
+					ObjectID:   identityFooObjectId,
+				},
+				identityBarName: {
+					ResourceID: identityBarResourceId,
+					ClientID:   identityBarClientId,
+					ObjectID:   identityBarObjectId,
+				},
+			},
+		},
+		{
+			name: "success - transient too many requests error retried then succeeds",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {
+									ResourceID: identityFooResourceId,
+								},
+							},
+						},
+					},
+				},
+			},
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				gomock.InOrder(
+					mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, tooManyRequestsErr),
+					mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(armmsi.UserAssignedIdentitiesClientGetResponse{
+							Identity: armmsi.Identity{
+								Properties: &armmsi.UserAssignedIdentityProperties{
+									ClientID:    &identityFooClientId,
+									PrincipalID: &identityFooObjectId,
+								},
+							},
+						}, nil),
+				)
+			},
+			wantIdentities: &map[string]api.PlatformWorkloadIdentity{
+				identityFooName: {
+					ResourceID: identityFooResourceId,
+					ClientID:   identityFooClientId,
+					ObjectID:   identityFooObjectId,
+				},
+			},
+		},
+		{
+			name: "error - forbidden exhausts all retries",
+			doc: &api.OpenShiftClusterDocument{
+				ID:  clusterId,
+				Key: clusterId,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
+								identityFooName: {
+									ResourceID: identityFooResourceId,
+								},
+							},
+						},
+					},
+				},
+			},
+			userAssignedIdentitiesClientMocks: func(mock *mock_armmsi.MockUserAssignedIdentitiesClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
+					Return(armmsi.UserAssignedIdentitiesClientGetResponse{}, forbiddenErr)
+			},
+			wantErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fooTarget, forbiddenErr.Error()).Error(),
 		},
 		{
 			name: "success - all clientIDs and objectIDs updated in clusterdoc",
