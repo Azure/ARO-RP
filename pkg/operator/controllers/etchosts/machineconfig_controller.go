@@ -116,7 +116,7 @@ func (r *EtcHostsMachineConfigReconciler) Reconcile(ctx context.Context, request
 	return reconcile.Result{}, nil
 }
 
-// SetupWithManager setup our mananger to watch for changes to MCP and ARO Cluster obj
+// SetupWithManager setup our manager to watch for changes to MachineConfig objects
 func (r *EtcHostsMachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("starting etchosts-machine-config controller")
 

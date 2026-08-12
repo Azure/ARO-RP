@@ -10,6 +10,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,7 +100,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 				// Filter down to our named etchosts machineconfigs
 				if etcHostsRegex.FindStringSubmatch(mc.Name) != nil {
 					err = r.ch.Delete(ctx, &mc)
-					if err != nil {
+					if err != nil && !kerrors.IsNotFound(err) {
 						r.Log.Error(err)
 						r.SetDegraded(ctx, err)
 						return reconcile.Result{}, err
@@ -128,7 +130,7 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// Sort for test
+	// Sort so we reconcile in a deterministic order
 	slices.SortStableFunc(pools.Items, func(a, b mcv1.MachineConfigPool) int {
 		return cmp.Compare(a.Name, b.Name)
 	})
@@ -143,7 +145,13 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	return reconcile.Result{}, nil
 }
 
-// SetupWithManager setup our mananger to watch for changes to MCP and ARO Cluster obj
+// SetupWithManager setup our manager to watch for changes to the ARO Cluster
+// (for feature flag updates) and ClusterVersion (to perform changes on upgrade)
+// objects. We don't track MachineConfigPool creations because we cannot easily
+// tell if this is a newly created MCP (which we should make a MC for) or an
+// existing one that simply doesn't have an MC (e.g. we just enabled this
+// controller). Since there are generally only a few MCPs, we simply defer
+// creating these MCs to before an upgrade occurs.
 func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("starting etchosts-cluster controller")
 

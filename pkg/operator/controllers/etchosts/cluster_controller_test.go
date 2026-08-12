@@ -200,7 +200,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			expectedLog: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("allowing reconciliation of EtcHostsMachineConfig because reconciliation forced"),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
 				},
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
@@ -224,7 +224,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			expectedLog: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("allowing reconciliation of EtcHostsMachineConfig because reconciliation forced"),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
 				},
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
@@ -254,7 +254,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			expectedLog: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("allowing reconciliation of EtcHostsMachineConfig because reconciliation forced"),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
 				},
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
@@ -284,7 +284,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			expectedLog: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("allowing reconciliation of EtcHostsMachineConfig because reconciliation forced"),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
 				},
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
@@ -312,7 +312,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			expectedLog: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
-					"msg":   gomega.Equal("allowing reconciliation of EtcHostsMachineConfig because reconciliation forced"),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
 				},
 				{
 					"level": gomega.Equal(logrus.DebugLevel),
@@ -527,7 +527,7 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 				AROController: base.AROController{
 					Log:    logger,
 					Client: ch,
-					Name:   ControllerName,
+					Name:   ClusterControllerName,
 				},
 				ch: clienthelper.NewWithClient(logger, ch),
 			}

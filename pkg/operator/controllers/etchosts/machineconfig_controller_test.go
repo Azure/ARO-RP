@@ -48,7 +48,7 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 			requestName: "cluster",
 		},
 		{
-			name: "etchosts controller disabled",
+			name: "etchosts controller enabled, managed=false, deletions not handled in this controller",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabledManagedFalse,
 			},
