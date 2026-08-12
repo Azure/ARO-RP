@@ -12,7 +12,7 @@ import (
 // VirtualMachinesClientAddons is a convenience interface that wraps the SDK VirtualMachinesClient
 // with simplified method signatures (blocking pollers, no options parameters).
 type VirtualMachinesClientAddons interface {
-	Get(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error)
+	GetDefault(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error)
 	// GetWithInstanceView returns the VM with the InstanceView expansion populated,
 	// allowing callers to inspect the VM's power state (e.g. PowerState/running).
 	GetWithInstanceView(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error)
@@ -24,7 +24,7 @@ type VirtualMachinesClientAddons interface {
 	StartAndWait(ctx context.Context, resourceGroupName, vmName string) error
 }
 
-func (c *virtualMachinesClient) Get(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error) {
+func (c *virtualMachinesClient) GetDefault(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error) {
 	resp, err := c.VirtualMachinesClient.Get(ctx, resourceGroupName, vmName, nil)
 	if err != nil {
 		return armcompute.VirtualMachine{}, err

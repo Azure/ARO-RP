@@ -8,10 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-
-	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // transportFunc adapts a function to policy.Transporter so tests can return canned
@@ -29,12 +25,5 @@ func httpResponse(req *http.Request, status int, body string) *http.Response {
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Request:    req,
-	}
-}
-
-func defaultCapacityReservation() armcompute.CapacityReservation {
-	return armcompute.CapacityReservation{
-		Location: pointerutils.ToPtr("eastus"),
-		SKU:      &armcompute.SKU{Name: pointerutils.ToPtr("Standard_D2s_v3"), Capacity: pointerutils.ToPtr[int64](1)},
 	}
 }
