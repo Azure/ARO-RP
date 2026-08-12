@@ -81,6 +81,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		if timeoutCtx.Err() == nil && err != nil &&
 			(azureerrors.IsUnauthorizedClientError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) ||
+				azureerrors.HasLinkedAuthorizationFailedError(err) ||
 				azureerrors.IsInvalidSecretError(err) ||
 				azureerrors.IsDeploymentMissingPermissionsError(err) ||
 				err == ErrWantRefresh) {
