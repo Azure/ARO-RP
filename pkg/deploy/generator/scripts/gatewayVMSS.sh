@@ -21,10 +21,10 @@ main() {
                     "$repo_retry_count"
 
     # shellcheck disable=SC2034
-    local -ar exclude_pkgs=(
-        "-x"
-        "WALinuxAgent"
-    )
+    local -a exclude_pkgs=()
+    if rpm -q WALinuxAgent &>/dev/null; then
+        exclude_pkgs+=("-x" "WALinuxAgent")
+    fi
 
     tdnf_update_pkgs exclude_pkgs \
                     retry_wait_time \

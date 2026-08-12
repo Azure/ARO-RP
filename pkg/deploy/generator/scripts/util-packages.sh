@@ -62,8 +62,8 @@ tdnf_install_pkgs() {
 #
 # args:
 #   1) excludes - nameref, string array
-#       * Packages to exclude from updating
-#       * Each index must be prefixed with -x
+#       * Exclude flags passed as argv-style elements,
+#         e.g. ("-x" "pkg1" "-x" "pkg2")
 #   2) wait_time - nameref, integer
 #       * Time to wait before retrying command
 #   3) retries - integer, optional
