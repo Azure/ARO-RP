@@ -4,6 +4,7 @@ package v20250725
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -27,19 +28,45 @@ func TestOpenShiftClusterConverterToExternal(t *testing.T) {
 func TestOpenShiftClusterConverterToExternalSparse(t *testing.T) {
 	got := (openShiftClusterConverter{}).ToExternal(&api.OpenShiftCluster{}).(*OpenShiftCluster)
 
-	if got.Properties == nil || got.Properties.ClusterProfile == nil || got.Properties.ConsoleProfile == nil ||
+	if got.Properties == nil || got.Properties.ClusterProfile == nil ||
 		got.Properties.NetworkProfile == nil || got.Properties.MasterProfile == nil || got.Properties.ApiserverProfile == nil {
 		t.Fatal("value-based profiles must remain represented by non-nil generated model pointers")
 	}
-	if got.Properties.ServicePrincipalProfile != nil || got.Properties.PlatformWorkloadIdentityProfile != nil ||
+	if got.Properties.ConsoleProfile != nil || got.Properties.ServicePrincipalProfile != nil || got.Properties.PlatformWorkloadIdentityProfile != nil ||
 		got.Properties.NetworkProfile.LoadBalancerProfile != nil || got.Identity != nil {
-		t.Fatal("optional profiles must remain nil")
+		t.Fatal("empty or optional profiles must remain nil")
 	}
 	if got.Tags != nil || got.Properties.WorkerProfiles != nil || got.Properties.WorkerProfilesStatus != nil || got.Properties.IngressProfiles != nil {
 		t.Fatal("nil collections must remain nil")
 	}
 	if got.Properties.ClusterProfile.PullSecret != nil {
 		t.Fatal("empty pull secret must remain nil")
+	}
+}
+
+func TestOpenShiftClusterConverterToExternalPreservesEmptyServiceManagedCollections(t *testing.T) {
+	internal := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{
+			NetworkProfile: api.NetworkProfile{
+				LoadBalancerProfile: &api.LoadBalancerProfile{
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{},
+				},
+			},
+			WorkerProfilesStatus: []api.WorkerProfile{},
+		},
+	}
+
+	got := (openShiftClusterConverter{}).ToExternal(internal).(*OpenShiftCluster)
+	if got.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs == nil || got.Properties.WorkerProfilesStatus == nil {
+		t.Fatal("non-nil empty service-managed collections must remain non-nil")
+	}
+
+	payload, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(payload, []byte(`"effectiveOutboundIps":[]`)) || !bytes.Contains(payload, []byte(`"workerProfilesStatus":[]`)) {
+		t.Fatalf("empty service-managed collections must be serialized: %s", payload)
 	}
 }
 
@@ -143,7 +170,6 @@ func TestOpenShiftClusterConverterToInternalPreservesExistingValues(t *testing.T
 	external := &OpenShiftCluster{OpenShiftCluster: generated.OpenShiftCluster{
 		Properties: &generated.OpenShiftClusterProperties{
 			ClusterProfile: &generated.ClusterProfile{},
-			ConsoleProfile: &generated.ConsoleProfile{},
 			PlatformWorkloadIdentityProfile: &generated.PlatformWorkloadIdentityProfile{
 				PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 					"same":    {ResourceID: pointerutils.ToPtr("same-resource")},
@@ -261,7 +287,7 @@ func TestOpenShiftClusterConverterJSONCompatibility(t *testing.T) {
 		{
 			name:     "sparse response matches value-model omission",
 			internal: &api.OpenShiftCluster{},
-			wantJSON: `{"properties":{"apiserverProfile":{},"clusterProfile":{},"consoleProfile":{},"masterProfile":{},"networkProfile":{}},"systemData":{}}`,
+			wantJSON: `{"properties":{"apiserverProfile":{},"clusterProfile":{},"masterProfile":{},"networkProfile":{}},"systemData":{}}`,
 		},
 		{
 			name: "zero-valued optional structures match omitempty",
@@ -285,7 +311,7 @@ func TestOpenShiftClusterConverterJSONCompatibility(t *testing.T) {
 			wantJSON: `{
 				"identity":{},
 				"properties":{
-					"apiserverProfile":{},"clusterProfile":{},"consoleProfile":{},"masterProfile":{},
+					"apiserverProfile":{},"clusterProfile":{},"masterProfile":{},
 					"networkProfile":{"loadBalancerProfile":{"managedOutboundIps":{},"effectiveOutboundIps":[{}]}},
 					"servicePrincipalProfile":{},"platformWorkloadIdentityProfile":{},
 					"workerProfiles":[{}],"workerProfilesStatus":[{}],"ingressProfiles":[{}]

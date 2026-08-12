@@ -42,9 +42,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 					ResourceGroupID:      toPtrIfNonZero(oc.Properties.ClusterProfile.ResourceGroupID),
 					FipsValidatedModules: toPtrIfNonZero(generated.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)),
 				},
-				ConsoleProfile: &generated.ConsoleProfile{
-					URL: toPtrIfNonZero(oc.Properties.ConsoleProfile.URL),
-				},
 				NetworkProfile: &generated.NetworkProfile{
 					PodCidr:          toPtrIfNonZero(oc.Properties.NetworkProfile.PodCIDR),
 					ServiceCidr:      toPtrIfNonZero(oc.Properties.NetworkProfile.ServiceCIDR),
@@ -64,6 +61,12 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				},
 			},
 		},
+	}
+
+	if oc.Properties.ConsoleProfile.URL != "" {
+		out.Properties.ConsoleProfile = &generated.ConsoleProfile{
+			URL: pointerutils.ToPtr(oc.Properties.ConsoleProfile.URL),
+		}
 	}
 
 	if oc.Properties.ClusterProfile.PullSecret != "" {
@@ -260,7 +263,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ClusterProfile.Domain = value(oc.Properties.ClusterProfile.Domain)
 	out.Properties.ClusterProfile.Version = value(oc.Properties.ClusterProfile.Version)
 	out.Properties.ClusterProfile.ResourceGroupID = value(oc.Properties.ClusterProfile.ResourceGroupID)
-	if value(oc.Properties.ConsoleProfile.URL) != "" {
+	if oc.Properties.ConsoleProfile != nil && value(oc.Properties.ConsoleProfile.URL) != "" {
 		out.Properties.ConsoleProfile.URL = value(oc.Properties.ConsoleProfile.URL)
 	}
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(value(oc.Properties.ClusterProfile.FipsValidatedModules))
@@ -413,7 +416,9 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
 	}
 	oc.SystemData = nil
-	oc.Properties.ConsoleProfile.URL = nil
+	if oc.Properties.ConsoleProfile != nil {
+		oc.Properties.ConsoleProfile.URL = nil
+	}
 	oc.Properties.ApiserverProfile.URL = nil
 	oc.Properties.ApiserverProfile.IP = nil
 	for i := range oc.Properties.IngressProfiles {

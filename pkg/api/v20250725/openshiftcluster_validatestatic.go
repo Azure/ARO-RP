@@ -193,6 +193,10 @@ func (sv openShiftClusterStaticValidator) validateClusterProfile(path string, cp
 }
 
 func (sv openShiftClusterStaticValidator) validateConsoleProfile(path string, cp *generated.ConsoleProfile) error {
+	if cp == nil {
+		return nil
+	}
+
 	if value(cp.URL) != "" {
 		if _, err := url.Parse(value(cp.URL)); err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".url", fmt.Sprintf("The provided console URL '%s' is invalid.", value(cp.URL)))
