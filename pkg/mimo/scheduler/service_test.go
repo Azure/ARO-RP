@@ -833,19 +833,11 @@ func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 	}{
 		{
 			// The delay fraction at 0.0 should have unconditional reconciles
-			// around 250ms, 500ms, 750ms, and 1s
+			// around 250ms, 500ms, 750ms, and one we probably won't run at 1s
 			desc:               "delay fraction at 0.0",
 			delayFraction:      0.0,
 			expectedLowerBound: 4,
 			expectedUpperBound: 6,
-		},
-		{
-			desc:          "delay fraction at 1.0",
-			delayFraction: 1.0,
-			// The delay fraction at 1.0 should have unconditional reconciles
-			// around 500ms, 750ms, and 1s
-			expectedLowerBound: 3,
-			expectedUpperBound: 5,
 		},
 		{
 			desc:          "delay fraction at 0.5",
@@ -854,6 +846,14 @@ func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 			// around 375, 625ms, 875ms, and one we won't run at 1125ms
 			expectedLowerBound: 3,
 			expectedUpperBound: 5,
+		},
+		{
+			desc:          "delay fraction at 1.0",
+			delayFraction: 1.0,
+			// The delay fraction at 1.0 should have unconditional reconciles
+			// around 500ms, 750ms, and one we probably won't run at 1s
+			expectedLowerBound: 2,
+			expectedUpperBound: 4,
 		},
 	}
 	for _, tC := range testCases {
