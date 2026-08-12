@@ -25,7 +25,7 @@ type VirtualMachinesClientAddons interface {
 }
 
 func (c *virtualMachinesClient) GetDefault(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error) {
-	resp, err := c.VirtualMachinesClient.Get(ctx, resourceGroupName, vmName, nil)
+	resp, err := c.Get(ctx, resourceGroupName, vmName, nil)
 	if err != nil {
 		return armcompute.VirtualMachine{}, err
 	}
@@ -34,7 +34,7 @@ func (c *virtualMachinesClient) GetDefault(ctx context.Context, resourceGroupNam
 
 func (c *virtualMachinesClient) GetWithInstanceView(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error) {
 	expand := armcompute.InstanceViewTypesInstanceView
-	resp, err := c.VirtualMachinesClient.Get(ctx, resourceGroupName, vmName, &armcompute.VirtualMachinesClientGetOptions{
+	resp, err := c.Get(ctx, resourceGroupName, vmName, &armcompute.VirtualMachinesClientGetOptions{
 		Expand: &expand,
 	})
 	if err != nil {
