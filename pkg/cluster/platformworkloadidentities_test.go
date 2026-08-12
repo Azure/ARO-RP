@@ -70,6 +70,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 
 	ctx := context.Background()
 
+	// Must not call t.Parallel(); mutates package-level utilarm.TransientBackoff.
 	savedBackoff := utilarm.TransientBackoff
 	utilarm.TransientBackoff = wait.Backoff{
 		Steps:    4,

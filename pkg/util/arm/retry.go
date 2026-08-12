@@ -62,6 +62,37 @@ func Retryable(ctx context.Context, f func() error, log *logrus.Entry, desc stri
 	return lastErr
 }
 
+// RetryableWith wraps f with transient ARM retry using a caller-supplied predicate
+// to decide which errors are retryable. Otherwise identical to Retryable.
+func RetryableWith(ctx context.Context, isRetryable func(error) bool, f func() error, log *logrus.Entry, desc string) error {
+	b := TransientBackoff
+	steps := b.Steps
+	var lastErr error
+	for i := 0; i < steps; i++ {
+		lastErr = f()
+		if lastErr == nil {
+			return nil
+		}
+		if !isRetryable(lastErr) {
+			return lastErr
+		}
+		if i == steps-1 {
+			break
+		}
+		sleep := b.Step()
+		if d := retryAfterDuration(lastErr); d > 0 {
+			sleep = d
+		}
+		log.WithField("retry_after", sleep.Seconds()).Warnf("error on %s, retrying: %v", desc, lastErr)
+		select {
+		case <-time.After(sleep):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return lastErr
+}
+
 // RetryableDelete wraps f with transient ARM retry and logs each attempt, treating 404 as success.
 func RetryableDelete(ctx context.Context, f func() error, log *logrus.Entry, desc string) error {
 	return Retryable(ctx, func() error {

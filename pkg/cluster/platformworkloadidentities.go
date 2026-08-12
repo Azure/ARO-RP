@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 
@@ -46,28 +44,14 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 		}
 
 		var identityDetails armmsi.UserAssignedIdentitiesClientGetResponse
-		var lastGetErr error
-		retryErr := wait.ExponentialBackoffWithContext(ctx, utilarm.TransientBackoff, func(ctx context.Context) (bool, error) {
+		err = utilarm.RetryableWith(ctx, func(err error) bool {
+			return azureerrors.IsStatusForbiddenError(err) || azureerrors.IsRetryableError(err)
+		}, func() error {
 			var getErr error
 			identityDetails, getErr = m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
-			if getErr == nil {
-				return true, nil
-			}
-
-			lastGetErr = getErr
-
-			if azureerrors.IsStatusForbiddenError(getErr) || azureerrors.IsRetryableError(getErr) {
-				m.log.Warnf("transient error fetching platform workload identity '%s', will retry: %v", operatorName, getErr)
-				return false, nil
-			}
-
-			return false, getErr
-		})
-		if retryErr != nil {
-			err = lastGetErr
-			if err == nil {
-				err = retryErr
-			}
+			return getErr
+		}, m.log, fmt.Sprintf("fetching platform workload identity '%s'", operatorName))
+		if err != nil {
 			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsStatusForbiddenError(err) || azureerrors.IsStatusNotFoundError(err) || azureerrors.IsRetryableError(err) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fmt.Sprintf(`.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["%s"]`, operatorName), err.Error())
 			}
