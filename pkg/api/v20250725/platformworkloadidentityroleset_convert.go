@@ -5,6 +5,8 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
 type platformWorkloadIdentityRoleSetConverter struct{}
@@ -16,21 +18,36 @@ type platformWorkloadIdentityRoleSetConverter struct{}
 // returned objects.
 func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWorkloadIdentityRoleSet) interface{} {
 	out := &PlatformWorkloadIdentityRoleSet{
-		ID:            s.ID,
-		proxyResource: true,
-		Properties: PlatformWorkloadIdentityRoleSetProperties{
-			OpenShiftVersion:              s.Properties.OpenShiftVersion,
-			PlatformWorkloadIdentityRoles: make([]PlatformWorkloadIdentityRole, 0, len(s.Properties.PlatformWorkloadIdentityRoles)),
+		PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
+			Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{},
 		},
-		Name: s.Name,
-		Type: s.Type,
+	}
+	if s.ID != "" {
+		out.ID = pointerutils.ToPtr(s.ID)
+	}
+	if s.Name != "" {
+		out.Name = pointerutils.ToPtr(s.Name)
+	}
+	if s.Type != "" {
+		out.Type = pointerutils.ToPtr(s.Type)
+	}
+	if s.Properties.OpenShiftVersion != "" {
+		out.Properties.OpenShiftVersion = pointerutils.ToPtr(s.Properties.OpenShiftVersion)
+	}
+	if len(s.Properties.PlatformWorkloadIdentityRoles) > 0 {
+		out.Properties.PlatformWorkloadIdentityRoles = make([]*generated.PlatformWorkloadIdentityRole, 0, len(s.Properties.PlatformWorkloadIdentityRoles))
 	}
 
 	for _, r := range s.Properties.PlatformWorkloadIdentityRoles {
-		role := PlatformWorkloadIdentityRole{
-			OperatorName:       r.OperatorName,
-			RoleDefinitionName: r.RoleDefinitionName,
-			RoleDefinitionID:   r.RoleDefinitionID,
+		role := &generated.PlatformWorkloadIdentityRole{}
+		if r.OperatorName != "" {
+			role.OperatorName = pointerutils.ToPtr(r.OperatorName)
+		}
+		if r.RoleDefinitionName != "" {
+			role.RoleDefinitionName = pointerutils.ToPtr(r.RoleDefinitionName)
+		}
+		if r.RoleDefinitionID != "" {
+			role.RoleDefinitionID = pointerutils.ToPtr(r.RoleDefinitionID)
 		}
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
@@ -59,17 +76,20 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternalList(sets []*api.Pla
 func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, out *api.PlatformWorkloadIdentityRoleSet) {
 	new := _new.(*PlatformWorkloadIdentityRoleSet)
 
-	out.Properties.OpenShiftVersion = new.Properties.OpenShiftVersion
+	out.Properties.OpenShiftVersion = value(new.Properties.OpenShiftVersion)
 	out.Properties.PlatformWorkloadIdentityRoles = make([]api.PlatformWorkloadIdentityRole, 0, len(new.Properties.PlatformWorkloadIdentityRoles))
 
 	for _, r := range new.Properties.PlatformWorkloadIdentityRoles {
+		if r == nil {
+			continue
+		}
 		role := api.PlatformWorkloadIdentityRole{
-			OperatorName:       r.OperatorName,
-			RoleDefinitionName: r.RoleDefinitionName,
-			RoleDefinitionID:   r.RoleDefinitionID,
+			OperatorName:       value(r.OperatorName),
+			RoleDefinitionName: value(r.RoleDefinitionName),
+			RoleDefinitionID:   value(r.RoleDefinitionID),
 		}
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
-	out.Name = new.Properties.OpenShiftVersion
+	out.Name = value(new.Properties.OpenShiftVersion)
 	out.Type = api.PlatformWorkloadIdentityRoleSetsType
 }
