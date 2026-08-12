@@ -214,19 +214,19 @@ func (mr *MockVirtualMachinesClientMockRecorder) DeallocateAndWait(ctx, resource
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeallocateAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).DeallocateAndWait), ctx, resourceGroupName, vmName)
 }
 
-// Get mocks base method.
-func (m *MockVirtualMachinesClient) Get(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error) {
+// GetDefault mocks base method.
+func (m *MockVirtualMachinesClient) GetDefault(ctx context.Context, resourceGroupName, vmName string) (armcompute.VirtualMachine, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, vmName)
+	ret := m.ctrl.Call(m, "GetDefault", ctx, resourceGroupName, vmName)
 	ret0, _ := ret[0].(armcompute.VirtualMachine)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get.
-func (mr *MockVirtualMachinesClientMockRecorder) Get(ctx, resourceGroupName, vmName any) *gomock.Call {
+// GetDefault indicates an expected call of GetDefault.
+func (mr *MockVirtualMachinesClientMockRecorder) GetDefault(ctx, resourceGroupName, vmName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualMachinesClient)(nil).Get), ctx, resourceGroupName, vmName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefault", reflect.TypeOf((*MockVirtualMachinesClient)(nil).GetDefault), ctx, resourceGroupName, vmName)
 }
 
 // GetWithInstanceView mocks base method.
