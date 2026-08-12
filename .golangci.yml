@@ -171,6 +171,8 @@ linters:
         - github.com/onsi/gomega
   exclusions:
     generated: disable
+    paths:
+      - (^|/)v20250725/generated($|/)
     rules:
       - linters:
           - staticcheck
@@ -235,3 +237,4 @@ formatters:
       - builtin$
       - examples$
       - pkg/client
+      - (^|/)v20250725/generated($|/)
