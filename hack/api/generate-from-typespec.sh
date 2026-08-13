@@ -1,20 +1,17 @@
 #!/bin/bash -e
 
-# VERSION determines which API version to generate.
-# The default value for VERSION should be the latest API version.
 # Note: typespec-go can only generate for the latest API version defined in
 # the TypeSpec source. Older versions' generated code is stable and stays
 # committed as-is. To regenerate older versions, use a git checkout of the
 # code from when that version was the latest.
-VERSION="v20250725"
-
-cd api
-
 target="${1:-}"
-if [[ "$target" != "swagger" && "$target" != "go-api-models" && "$target" != "go-testsdk" && "$target" != "python-testsdk" && "$target" != "examples" ]]; then
-    echo "Usage: $0 <swagger|go-api-models|go-testsdk|python-testsdk|examples>" >&2
+VERSION="${2:-}"
+if [[ ( "$target" != "swagger" && "$target" != "go-api-models" && "$target" != "go-testsdk" && "$target" != "python-testsdk" && "$target" != "examples" ) || -z "$VERSION" ]]; then
+    echo "Usage: $0 <swagger|go-api-models|go-testsdk|python-testsdk|examples> <version>" >&2
     exit 1
 fi
+
+cd api
 
 # Before generating anything, clear out existing examples to keep TypeSpec from
 # complaining about conflicts
