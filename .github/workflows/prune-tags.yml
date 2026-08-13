@@ -22,8 +22,10 @@ jobs:
           fetch-depth: 0
 
       - name: Prune non-production tags
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          tags=( $(.github/list-prune-tags.sh -n ${{ github.ref_name }}) )
+          tags=( $(.github/list-prune-tags.sh -n "$REF_NAME") )
 
           # we'll stop early if we don't find any tags to prune
           if [ ${#tags[*]} -eq 0 ]; then
