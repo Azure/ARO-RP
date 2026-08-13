@@ -89,6 +89,22 @@ func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreat
 }
 
 func (sv openShiftClusterStaticValidator) validateProperties(path string, p *generated.OpenShiftClusterProperties, isCreate bool, architectureVersion api.ArchitectureVersion) error {
+	if p == nil {
+		return missingRequiredFieldError(path)
+	}
+	if p.ClusterProfile == nil {
+		return missingRequiredFieldError(path + ".clusterProfile")
+	}
+	if p.NetworkProfile == nil {
+		return missingRequiredFieldError(path + ".networkProfile")
+	}
+	if p.MasterProfile == nil {
+		return missingRequiredFieldError(path + ".masterProfile")
+	}
+	if p.ApiserverProfile == nil {
+		return missingRequiredFieldError(path + ".apiserverProfile")
+	}
+
 	switch value(p.ProvisioningState) {
 	case generated.ProvisioningStateCreating, generated.ProvisioningStateUpdating,
 		generated.ProvisioningStateAdminUpdating, generated.ProvisioningStateDeleting,
@@ -106,6 +122,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *gen
 		return err
 	}
 	if len(p.IngressProfiles) > 0 {
+		if p.IngressProfiles[0] == nil {
+			return missingRequiredFieldError(path + ".ingressProfiles[0]")
+		}
 		if err := sv.validateNetworkProfile(path+".networkProfile", p.NetworkProfile, value(p.ApiserverProfile.Visibility), value(p.IngressProfiles[0].Visibility), isCreate); err != nil {
 			return err
 		}
@@ -131,12 +150,18 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *gen
 		if len(p.WorkerProfiles) != 1 {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
 		}
+		if p.WorkerProfiles[0] == nil {
+			return missingRequiredFieldError(path + ".workerProfiles[0]")
+		}
 		if err := sv.validateWorkerProfile(path+".workerProfiles['"+value(p.WorkerProfiles[0].Name)+"']", p.WorkerProfiles[0], p.MasterProfile, value(p.ClusterProfile.Version)); err != nil {
 			return err
 		}
 
 		if len(p.IngressProfiles) != 1 {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ingressProfiles", "There should be exactly one ingress profile.")
+		}
+		if p.IngressProfiles[0] == nil {
+			return missingRequiredFieldError(path + ".ingressProfiles[0]")
 		}
 		if err := sv.validateIngressProfile(path+".ingressProfiles['"+value(p.IngressProfiles[0].Name)+"']", p.IngressProfiles[0]); err != nil {
 			return err
@@ -146,7 +171,15 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *gen
 	return nil
 }
 
+func missingRequiredFieldError(path string) error {
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The field '%s' is required.", path))
+}
+
 func (sv openShiftClusterStaticValidator) validateClusterProfile(path string, cp *generated.ClusterProfile, isCreate bool) error {
+	if cp == nil {
+		return missingRequiredFieldError(path)
+	}
+
 	if pullsecret.Validate(value(cp.PullSecret)) != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".pullSecret", "The provided pull secret is invalid.")
 	}
@@ -163,7 +196,8 @@ func (sv openShiftClusterStaticValidator) validateClusterProfile(path string, cp
 		}
 	}
 	// domain ends .aroapp.io, but doesn't end .<rp-location>.aroapp.io
-	if strings.HasSuffix(value(cp.Domain), "."+strings.SplitN(sv.domain, ".", 2)[1]) &&
+	_, domainSuffix, hasDomainSuffix := strings.Cut(sv.domain, ".")
+	if hasDomainSuffix && strings.HasSuffix(value(cp.Domain), "."+domainSuffix) &&
 		!strings.HasSuffix(value(cp.Domain), "."+sv.domain) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", fmt.Sprintf("The provided domain '%s' is invalid.", value(cp.Domain)))
 	}
@@ -223,6 +257,10 @@ func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path s
 }
 
 func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *generated.NetworkProfile, apiServerVisibility generated.Visibility, ingressVisibility generated.Visibility, isCreate bool) error {
+	if np == nil {
+		return missingRequiredFieldError(path)
+	}
+
 	podCIDR := value(np.PodCidr)
 	serviceCIDR := value(np.ServiceCidr)
 	outboundType := value(np.OutboundType)
@@ -336,6 +374,10 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs generated.Manage
 }
 
 func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *generated.MasterProfile, version string) error {
+	if mp == nil {
+		return missingRequiredFieldError(path)
+	}
+
 	switch validate.VMSizeIsValidForVersion(api.VMSize(value(mp.VMSize)), sv.requireD2sWorkers, true, version) {
 	case validate.VMValidityNotSupportedForRole:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", fmt.Sprintf("The provided VM size '%s' is invalid for the 'master' role.", value(mp.VMSize)))
@@ -374,6 +416,13 @@ func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp 
 }
 
 func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp *generated.WorkerProfile, mp *generated.MasterProfile, version string) error {
+	if wp == nil {
+		return missingRequiredFieldError(path)
+	}
+	if mp == nil {
+		return missingRequiredFieldError("properties.masterProfile")
+	}
+
 	if value(wp.Name) != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", fmt.Sprintf("The provided worker name '%s' is invalid.", value(wp.Name)))
 	}
@@ -419,6 +468,10 @@ func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp 
 }
 
 func (sv openShiftClusterStaticValidator) validateAPIServerProfile(path string, ap *generated.APIServerProfile) error {
+	if ap == nil {
+		return missingRequiredFieldError(path)
+	}
+
 	switch value(ap.Visibility) {
 	case generated.VisibilityPublic, generated.VisibilityPrivate:
 	default:
@@ -443,6 +496,10 @@ func (sv openShiftClusterStaticValidator) validateAPIServerProfile(path string, 
 }
 
 func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p *generated.IngressProfile) error {
+	if p == nil {
+		return missingRequiredFieldError(path)
+	}
+
 	if value(p.Name) != "default" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", fmt.Sprintf("The provided ingress name '%s' is invalid.", value(p.Name)))
 	}
@@ -465,6 +522,13 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 }
 
 func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
+	if oc == nil {
+		return missingRequiredFieldError("body")
+	}
+	if current == nil {
+		return missingRequiredFieldError("current")
+	}
+
 	err := immutable.ValidateWithPolicy("", oc, current, openShiftClusterUpdatePolicy)
 	if err != nil {
 		err := err.(*immutable.ValidationError)
@@ -472,6 +536,9 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 	}
 
 	if current.UsesWorkloadIdentity() {
+		if oc.Properties == nil || oc.Properties.PlatformWorkloadIdentityProfile == nil {
+			return missingRequiredFieldError("properties.platformWorkloadIdentityProfile")
+		}
 		for name := range current.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			_, present := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[name]
 			// this also validates that existing identities' names haven't changed
@@ -494,6 +561,9 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 	foundIdentityResourceIDs := map[string]string{}
 
 	for name, p := range pwip.PlatformWorkloadIdentities {
+		if p == nil {
+			return missingRequiredFieldError(fmt.Sprintf("%s.PlatformWorkloadIdentities[%s]", path, name))
+		}
 		resourceID := value(p.ResourceID)
 		if _, present := foundIdentityResourceIDs[strings.ToLower(resourceID)]; present {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities", path), fmt.Sprintf("ResourceID %s used by multiple identities.", strings.ToLower(resourceID)))
@@ -525,6 +595,10 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 }
 
 func (sv openShiftClusterStaticValidator) validatePlatformIdentities(oc *OpenShiftCluster) error {
+	if oc.Properties == nil {
+		return missingRequiredFieldError("properties")
+	}
+
 	pwip := oc.Properties.PlatformWorkloadIdentityProfile
 	spp := oc.Properties.ServicePrincipalProfile
 

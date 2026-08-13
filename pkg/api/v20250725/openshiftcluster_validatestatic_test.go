@@ -272,6 +272,117 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 	runTests(t, testModeUpdate, commonTests)
 }
 
+func TestOpenShiftClusterStaticValidateNilInputs(t *testing.T) {
+	validator := &openShiftClusterStaticValidator{
+		location:   "location",
+		domain:     "location.aroapp.io",
+		resourceID: getResourceID("resourceName"),
+		r: azure.Resource{
+			SubscriptionID: subscriptionID,
+			ResourceGroup:  "resourceGroup",
+			Provider:       "Microsoft.RedHatOpenShift",
+			ResourceType:   "openshiftClusters",
+			ResourceName:   "resourceName",
+		},
+	}
+
+	tests := []struct {
+		name       string
+		validate   func() error
+		wantTarget string
+	}{
+		{
+			name: "nil properties",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties = nil
+				return validator.validate(oc, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties",
+		},
+		{
+			name: "nil cluster profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.ClusterProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.clusterProfile",
+		},
+		{
+			name: "nil network profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.NetworkProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.networkProfile",
+		},
+		{
+			name: "nil master profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.MasterProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.masterProfile",
+		},
+		{
+			name: "nil API server profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.ApiserverProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.apiserverProfile",
+		},
+		{
+			name: "nil worker profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.WorkerProfiles[0] = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.workerProfiles[0]",
+		},
+		{
+			name: "nil ingress profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.IngressProfiles[0] = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.ingressProfiles[0]",
+		},
+		{
+			name: "nil platform workload identity",
+			validate: func() error {
+				return validator.validatePlatformWorkloadIdentityProfile("properties.platformWorkloadIdentityProfile", &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{"operator": nil},
+				})
+			},
+			wantTarget: "properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[operator]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.validate()
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+
+			cloudErr, ok := err.(*api.CloudError)
+			if !ok {
+				t.Fatalf("expected *api.CloudError, got %T", err)
+			}
+			if cloudErr.Target != tt.wantTarget {
+				t.Errorf("got target %q, want %q", cloudErr.Target, tt.wantTarget)
+			}
+		})
+	}
+}
+
 func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 	commonTests := []*validateTest{
 		{
