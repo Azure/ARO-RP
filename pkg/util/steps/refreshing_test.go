@@ -4,11 +4,15 @@ package steps
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -175,6 +179,118 @@ func TestCreateActionableError(t *testing.T) {
 				}
 			} else {
 				assert.Equal(t, err, tt.rawErr)
+			}
+		})
+	}
+}
+
+type fakeRefreshableAuthorizer struct {
+	rebuildCalled int
+	rebuildErr    error
+}
+
+func (f *fakeRefreshableAuthorizer) Rebuild() error {
+	f.rebuildCalled++
+	return f.rebuildErr
+}
+
+func (f *fakeRefreshableAuthorizer) WithAuthorization() autorest.PrepareDecorator {
+	return func(p autorest.Preparer) autorest.Preparer { return p }
+}
+
+func TestAuthorizationRefreshingActionRetries(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		errors         []error
+		expectRetries  bool
+		expectFinalErr string
+	}{
+		{
+			name:           "AuthorizationFailed is retried then succeeds",
+			errors:         []error{autorest.DetailedError{Original: &azure.ServiceError{Code: "AuthorizationFailed"}}, nil},
+			expectRetries:  true,
+			expectFinalErr: "",
+		},
+		{
+			name:           "LinkedAuthorizationFailed is retried then succeeds",
+			errors:         []error{autorest.DetailedError{Original: &azure.ServiceError{Code: "LinkedAuthorizationFailed"}}, nil},
+			expectRetries:  true,
+			expectFinalErr: "",
+		},
+		{
+			name:           "UnauthorizedClient (AADSTS700016) is retried then succeeds",
+			errors:         []error{fmt.Errorf("AADSTS700016: application not found"), nil},
+			expectRetries:  true,
+			expectFinalErr: "",
+		},
+		{
+			name:           "InvalidSecret (AADSTS7000215) is retried then succeeds",
+			errors:         []error{fmt.Errorf("AADSTS7000215: invalid client secret"), nil},
+			expectRetries:  true,
+			expectFinalErr: "",
+		},
+		{
+			name: "DeploymentMissingPermissions is retried then succeeds",
+			errors: []error{
+				autorest.DetailedError{Original: &azure.ServiceError{Code: "InvalidTemplateDeployment", Message: "Authorization failed for template resource 'foo'"}},
+				nil,
+			},
+			expectRetries:  true,
+			expectFinalErr: "",
+		},
+		{
+			name:           "ErrWantRefresh is retried then succeeds",
+			errors:         []error{ErrWantRefresh, nil},
+			expectRetries:  true,
+			expectFinalErr: "",
+		},
+		{
+			name:           "non-auth error is not retried",
+			errors:         []error{fmt.Errorf("some other error")},
+			expectRetries:  false,
+			expectFinalErr: "some other error",
+		},
+		{
+			name:           "nil error succeeds immediately",
+			errors:         []error{nil},
+			expectRetries:  false,
+			expectFinalErr: "",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			callCount := 0
+			action := func(ctx context.Context) error {
+				idx := callCount
+				callCount++
+				if idx < len(tt.errors) {
+					return tt.errors[idx]
+				}
+				return nil
+			}
+
+			auth := &fakeRefreshableAuthorizer{}
+			s := &authorizationRefreshingActionStep{
+				f:             action,
+				auth:          auth,
+				retryTimeout:  30 * time.Second,
+				pollInterval:  1 * time.Millisecond,
+				managedRGName: "",
+			}
+
+			err := s.run(context.Background(), logrus.NewEntry(logrus.StandardLogger()))
+
+			if tt.expectRetries {
+				assert.Greater(t, callCount, 1, "action should have been called more than once")
+				assert.Positive(t, auth.rebuildCalled, "Rebuild should have been called")
+			} else {
+				assert.Equal(t, 1, callCount, "action should have been called exactly once")
+				assert.Equal(t, 0, auth.rebuildCalled, "Rebuild should not have been called")
+			}
+
+			if tt.expectFinalErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.expectFinalErr)
 			}
 		})
 	}
