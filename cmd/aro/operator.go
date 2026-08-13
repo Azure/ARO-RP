@@ -246,12 +246,12 @@ func operator(log *logrus.Entry) error {
 		}
 		if err = (etchosts.NewReconciler(
 			log.WithField("controller", etchosts.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client, ch)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", etchosts.ControllerName, err)
 		}
 		if err = (etchosts.NewClusterReconciler(
 			log.WithField("controller", etchosts.ClusterControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client, ch)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", etchosts.ClusterControllerName, err)
 		}
 

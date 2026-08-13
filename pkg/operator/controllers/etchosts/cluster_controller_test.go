@@ -4,14 +4,10 @@ package etchosts
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"io"
 	"testing"
 
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -24,12 +20,29 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
+	etchostsMasterMCMetadata = &mcv1.MachineConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "99-master-aro-etc-hosts-gateway-domains",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "MachineConfig",
+		},
+	}
+	etchostsWorkerMCMetadata = &mcv1.MachineConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "99-worker-aro-etc-hosts-gateway-domains",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "MachineConfig",
+		},
+	}
 	clusterEtcHostsControllerDisabled = &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
@@ -77,7 +90,7 @@ var (
 			GatewayPrivateEndpointIP: "20.20.20.20",
 		},
 	}
-	clusterEtcHostsControllerEnabledReconcileFalse = &arov1alpha1.Cluster{
+	clusterEtcHostsControllerEnabledForceReconcileFalse = &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
 		},
@@ -93,7 +106,7 @@ var (
 			GatewayPrivateEndpointIP: "20.20.20.20",
 		},
 	}
-	clusterEtcHostsControllerEnabledManagedFalseReconcileFalse = &arov1alpha1.Cluster{
+	clusterEtcHostsControllerEnabledManagedFalseForceReconcileFalse = &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
 		},
@@ -154,11 +167,12 @@ var (
 
 func TestReconcileEtcHostsCluster(t *testing.T) {
 	type test struct {
-		name        string
-		objects     []client.Object
-		mocks       func(mdh *mock_dynamichelper.MockInterface)
-		expectedLog *logrus.Entry
-		wantRequeue bool
+		name           string
+		objects        []client.Object
+		createdObjects map[string]int
+		updatedObjects map[string]int
+		deletedObjects map[string]int
+		expectedLog    []testlog.ExpectedLogEntry
 	}
 
 	for _, tt := range []*test{
@@ -167,225 +181,393 @@ func TestReconcileEtcHostsCluster(t *testing.T) {
 			objects: []client.Object{
 				clusterEtcHostsControllerDisabled,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("controller is disabled"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "controller is disabled"},
-			wantRequeue: false,
 		},
 		{
 			name: "etchosts controller enabled, managed false",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabledManagedFalse, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			deletedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "etchosts managed is false, machine configs removed"},
-			wantRequeue: false,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("etchosts managed is false, removing machine configs"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("etchosts managed is false, machine configs removed"),
+				},
+			},
 		},
 		{
 			name: "etchosts controller enabled, managed true, mc exist",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
+				},
+			},
 		},
 		{
 			name: "etchosts controller enabled, managed true, only master mc exist",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-worker-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
+			createdObjects: map[string]int{
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
+			},
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains"),
+				},
+			},
 		},
 		{
 			name: "etchosts controller enabled, managed true, only worker mc exist",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-master-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
+			createdObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+			},
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
+				},
+			},
 		},
 		{
 			name: "etchosts controller enabled, managed true, no mc exist",
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			createdObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-master-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsCluster because reconciliation forced"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains"),
+				},
+			},
 		},
 		{
-			name: "etchosts controller enabled, managed false, reconcile false, cluster not updating, no action",
+			name: "etchosts controller enabled, managed false, force reconcile false, cluster not updating, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledManagedFalseReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledManagedFalseForceReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reboot-causing reconciliation not allowed right now"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
 		},
 		{
-			name: "etchosts controller enabled, managed false, reconcile false, cluster updating, mc removed",
+			name: "etchosts controller enabled, managed false, force reconcile false, cluster updating, mc removed",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledManagedFalseReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledManagedFalseForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			deletedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "etchosts managed is false, machine configs removed"},
-			wantRequeue: false,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("etchosts managed is false, removing machine configs"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("etchosts managed is false, machine configs removed"),
+				},
+			},
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster not updating, mc exist, no action",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster not updating, mc exist, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reboot-causing reconciliation not allowed right now"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster updating, mc exist, no action",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, mc exist, MCs updated",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
+				},
+			},
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster not updating, only master mc exist, no action",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster not updating, only master mc exist, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reboot-causing reconciliation not allowed right now"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-worker-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster updating, only master mc exist, ensure worker mc",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, only master mc exist, worker mc created",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-worker-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
+			createdObjects: map[string]int{
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
+			},
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains:"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains"),
+				},
+			},
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster not updating, only worker mc exist, no action",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster not updating, only worker mc exist, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reboot-causing reconciliation not allowed right now"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-master-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster updating, only worker mc exist, ensure master mc",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, only worker mc exist, master mc created",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-master-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
+			createdObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+			},
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains:"),
+				},
+			},
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster not updating, no mc exist, no action",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster not updating, no mc exist, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reboot-causing reconciliation not allowed right now"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-master-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
 		},
 		{
-			name: "etchosts controller enabled, managed true, reconcile false, cluster updating, no mc exist, ensure master mc",
+			name: "etchosts controller enabled, managed true, force reconcile false, cluster updating, no mc exist, ensure master and worker mc",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			createdObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
+				"MachineConfig//99-worker-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "99-master-aro-etc-hosts-gateway-domains not found, creating it"},
-			wantRequeue: true,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Create MachineConfig.machineconfiguration.openshift.io/99-worker-aro-etc-hosts-gateway-domains"),
+				},
+			},
 		},
 	} {
-		controller := gomock.NewController(t)
-		defer controller.Finish()
+		t.Run(tt.name, func(t *testing.T) {
+			hook, logger := testlog.LogForTesting(t)
+			logger.Logger.SetLevel(logrus.TraceLevel)
 
-		mdh := mock_dynamichelper.NewMockInterface(controller)
+			createdObjects := map[string]int{}
+			updatedObjects := map[string]int{}
+			deletedObjects := map[string]int{}
 
-		tt.mocks(mdh)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
+			ch := testclienthelper.NewHookingClient(clientBuilder.Build())
+			ch.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createdObjects))
+			ch.WithPostDeleteHook(testclienthelper.TallyCountsAndKey(deletedObjects))
+			ch.WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updatedObjects))
 
-		ctx := context.Background()
+			r := &EtcHostsClusterReconciler{
+				AROController: base.AROController{
+					Log:    logger,
+					Client: ch,
+					Name:   ClusterControllerName,
+				},
+				ch: clienthelper.NewWithClient(logger, ch),
+			}
 
-		logger := &logrus.Logger{
-			Out:       io.Discard,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.TraceLevel,
-		}
-		hook := logtest.NewLocal(logger)
+			request := ctrl.Request{}
+			request.Name = "cluster"
 
-		clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
+			_, err := r.Reconcile(t.Context(), request)
+			if err != nil {
+				logger.Log(logrus.ErrorLevel, err)
+			}
 
-		r := &EtcHostsClusterReconciler{
-			AROController: base.AROController{
-				Log:    logrus.NewEntry(logger),
-				Client: clientBuilder.Build(),
-				Name:   ControllerName,
-			},
-			dh: mdh,
-		}
+			err = testlog.AssertLoggingOutput(hook, tt.expectedLog)
+			if err != nil {
+				t.Error(err)
+			}
 
-		request := ctrl.Request{}
-		request.Name = "cluster"
+			errs, err := testclienthelper.CompareTally(tt.createdObjects, createdObjects)
+			if err != nil {
+				t.Error(err, "on created objects")
+				for _, l := range errs {
+					t.Error(l)
+				}
+			}
 
-		result, err := r.Reconcile(ctx, request)
-		if err != nil {
-			logger.Log(logrus.ErrorLevel, err)
-		}
+			errs, err = testclienthelper.CompareTally(tt.deletedObjects, deletedObjects)
+			if err != nil {
+				t.Error(err, "on deleted objects")
+				for _, l := range errs {
+					t.Error(l)
+				}
+			}
 
-		if tt.wantRequeue != result.Requeue {
-			t.Errorf("Test %v | wanted to requeue %v but was set to %v", tt.name, tt.wantRequeue, result.Requeue)
-		}
-
-		actualLog := hook.LastEntry()
-		logger.Log(logrus.InfoLevel, actualLog)
-		if actualLog == nil {
-			assert.Equal(t, tt.expectedLog, actualLog)
-		} else {
-			assert.Equal(t, tt.expectedLog.Level.String(), actualLog.Level.String())
-			assert.Equal(t, tt.expectedLog.Message, actualLog.Message)
-		}
+			errs, err = testclienthelper.CompareTally(tt.updatedObjects, updatedObjects)
+			if err != nil {
+				t.Error(err, "on updated objects")
+				for _, l := range errs {
+					t.Error(l)
+				}
+			}
+		})
 	}
 }

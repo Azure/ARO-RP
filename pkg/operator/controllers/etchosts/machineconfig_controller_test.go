@@ -4,32 +4,29 @@ package etchosts
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"io"
 	"testing"
 
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 	type test struct {
-		name        string
-		objects     []client.Object
-		mocks       func(mdh *mock_dynamichelper.MockInterface)
-		expectedLog *logrus.Entry
-		wantRequeue bool
-		requestName string
+		name           string
+		objects        []client.Object
+		createdObjects map[string]int
+		updatedObjects map[string]int
+		expectedLog    []testlog.ExpectedLogEntry
+		requestName    string
 	}
 
 	for _, tt := range []*test{
@@ -38,23 +35,33 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 			objects: []client.Object{
 				clusterEtcHostsControllerDisabled,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("controller is disabled"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "controller is disabled"},
-			wantRequeue: false,
 			requestName: "cluster",
 		},
 		{
-			name: "etchosts controller enabled, managed false",
+			name: "etchosts controller enabled, managed=false, deletions not handled in this controller",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledManagedFalse, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledManagedFalse,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("etchosts are not managed by this controller"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "etchosts managed is false, machine configs removed"},
-			wantRequeue: false,
 			requestName: "cluster",
 		},
 		{
@@ -62,11 +69,20 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsMachineConfig because reconciliation forced"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
 			requestName: "cluster",
 		},
 		{
@@ -74,133 +90,177 @@ func TestReconcileEtcHostsMachineConfig(t *testing.T) {
 			objects: []client.Object{
 				clusterEtcHostsControllerEnabled, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"},
-			wantRequeue: false,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("allowing reconciliation of EtcHostsMachineConfig because reconciliation forced"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains: "),
+				},
+			},
 			requestName: "99-master-aro-etc-hosts-gateway-domains",
 		},
 		{
 			name: "etchosts controller enabled, managed false, cluster not updating, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledManagedFalseReconcileFalse, clusterVersionNotUpdating, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledManagedFalseForceReconcileFalse, clusterVersionNotUpdating, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("etchosts are not managed by this controller"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
-			requestName: "cluster",
-		},
-		{
-			name: "etchosts controller enabled, managed false, cluster updating, no action",
-			objects: []client.Object{
-				clusterEtcHostsControllerEnabledManagedFalseReconcileFalse, clusterVersionUpdating, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
-			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
-			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "etchosts managed is false, machine configs removed"},
-			wantRequeue: false,
 			requestName: "cluster",
 		},
 		{
 			name: "etchosts controller enabled, managed true, cluster not updating, regex not match, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/cluster"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
 			requestName: "cluster",
 		},
 		{
 			name: "etchosts controller enabled, managed true, cluster updating, regex not match, no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "running"},
-			wantRequeue: false,
 			requestName: "cluster",
 		},
 		{
-			name: "etchosts controller enabled, managed true, cluster not updating, regex match, reconcile - no action",
+			name: "etchosts controller enabled, managed true, cluster not updating, regex match, reconcile not forced - no action",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionNotUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"),
+				},
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"},
-			wantRequeue: false,
 			requestName: "99-master-aro-etc-hosts-gateway-domains",
 		},
 		{
-			name: "etchosts controller enabled, managed true, cluster updating, regex match, reconcile - ensure machine config",
+			name: "etchosts controller enabled, managed true, cluster updating, regex match, reconcile not forced - ensure machine config",
 			objects: []client.Object{
-				clusterEtcHostsControllerEnabledReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
+				clusterEtcHostsControllerEnabledForceReconcileFalse, clusterVersionUpdating, machinePoolMaster, machinePoolWorker, etchostsMasterMCMetadata, etchostsWorkerMCMetadata,
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			updatedObjects: map[string]int{
+				"MachineConfig//99-master-aro-etc-hosts-gateway-domains": 1,
 			},
-			expectedLog: &logrus.Entry{Level: logrus.DebugLevel, Message: "reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"},
-			wantRequeue: false,
+			expectedLog: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile MachineConfig openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("running"),
+				},
+				{
+					"level": gomega.Equal(logrus.DebugLevel),
+					"msg":   gomega.Equal("reconcile object openshift-machine-api/99-master-aro-etc-hosts-gateway-domains"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.HavePrefix("Update MachineConfig.machineconfiguration.openshift.io/99-master-aro-etc-hosts-gateway-domains: "),
+				},
+			},
 			requestName: "99-master-aro-etc-hosts-gateway-domains",
 		},
 	} {
-		controller := gomock.NewController(t)
-		defer controller.Finish()
+		t.Run(tt.name, func(t *testing.T) {
+			hook, logger := testlog.LogForTesting(t)
+			logger.Logger.SetLevel(logrus.TraceLevel)
 
-		mdh := mock_dynamichelper.NewMockInterface(controller)
+			createdObjects := map[string]int{}
+			updatedObjects := map[string]int{}
+			deletedObjects := map[string]int{}
 
-		tt.mocks(mdh)
+			clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
+			ch := testclienthelper.NewHookingClient(clientBuilder.Build())
+			ch.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createdObjects))
+			ch.WithPostDeleteHook(testclienthelper.TallyCountsAndKey(deletedObjects))
+			ch.WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updatedObjects))
 
-		ctx := context.Background()
+			r := &EtcHostsMachineConfigReconciler{
+				AROController: base.AROController{
+					Log:    logger,
+					Client: ch,
+					Name:   ControllerName,
+				},
+				ch: clienthelper.NewWithClient(logger, ch),
+			}
 
-		logger := &logrus.Logger{
-			Out:       io.Discard,
-			Formatter: new(logrus.TextFormatter),
-			Hooks:     make(logrus.LevelHooks),
-			Level:     logrus.TraceLevel,
-		}
-		hook := logtest.NewLocal(logger)
+			request := ctrl.Request{}
+			request.Name = tt.requestName
 
-		clientBuilder := testclienthelper.NewAROFakeClientBuilder(tt.objects...)
+			_, err := r.Reconcile(t.Context(), request)
+			if err != nil {
+				logger.Log(logrus.ErrorLevel, err)
+			}
 
-		r := &EtcHostsMachineConfigReconciler{
-			AROController: base.AROController{
-				Log:    logrus.NewEntry(logger),
-				Client: clientBuilder.Build(),
-				Name:   ControllerName,
-			},
-			dh: mdh,
-		}
+			err = testlog.AssertLoggingOutput(hook, tt.expectedLog)
+			if err != nil {
+				t.Error(err)
+			}
 
-		request := ctrl.Request{}
-		request.Name = tt.requestName
+			errs, err := testclienthelper.CompareTally(tt.createdObjects, createdObjects)
+			if err != nil {
+				t.Error(err, "on created objects")
+				for _, l := range errs {
+					t.Error(l)
+				}
+			}
 
-		result, err := r.Reconcile(ctx, request)
-		if err != nil {
-			logger.Log(logrus.ErrorLevel, err)
-		}
+			errs, err = testclienthelper.CompareTally(tt.updatedObjects, updatedObjects)
+			if err != nil {
+				t.Error(err, "on updated objects")
+				for _, l := range errs {
+					t.Error(l)
+				}
+			}
 
-		if tt.wantRequeue != result.Requeue {
-			t.Errorf("Test %v | wanted to requeue %v but was set to %v", tt.name, tt.wantRequeue, result.Requeue)
-		}
-
-		actualLog := hook.LastEntry()
-		logger.Log(logrus.InfoLevel, actualLog)
-		if actualLog == nil {
-			assert.Equal(t, tt.expectedLog, actualLog)
-		} else {
-			assert.Equal(t, tt.expectedLog.Level.String(), actualLog.Level.String())
-			assert.Equal(t, tt.expectedLog.Message, actualLog.Message)
-		}
+			if len(deletedObjects) != 0 {
+				t.Error("should not have deleted objects", deletedObjects)
+			}
+		})
 	}
 }

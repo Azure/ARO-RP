@@ -4,13 +4,13 @@ package etchosts
 // Licensed under the Apache License 2.0.
 
 import (
+	"cmp"
 	"context"
+	"slices"
 
 	"github.com/sirupsen/logrus"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -19,57 +19,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configv1 "github.com/openshift/api/config/v1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
 
 const (
 	ClusterControllerName = "EtcHostsCluster"
 )
 
-var (
-	etchostsMasterMCMetadata = &mcv1.MachineConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "99-master-aro-etc-hosts-gateway-domains",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind: "MachineConfig",
-		},
-	}
-	etchostsWorkerMCMetadata = &mcv1.MachineConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "99-worker-aro-etc-hosts-gateway-domains",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind: "MachineConfig",
-		},
-	}
-)
-
 type EtcHostsClusterReconciler struct {
 	base.AROController
-	dh dynamichelper.Interface
+	ch clienthelper.Interface
 }
 
-func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *EtcHostsClusterReconciler {
+func NewClusterReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *EtcHostsClusterReconciler {
 	return &EtcHostsClusterReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   ClusterControllerName,
 		},
-		dh: dh,
+		ch: ch,
 	}
 }
 
 // Reconcile watches ARO EtcHosts MachineConfig objects, and if any changes, reconciles it
 func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	r.Log.Debugf("reconcile MachineConfig openshift-machine-api/%s", request.Name)
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -87,29 +68,50 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// EtchostsManaged = false, remove machine configs
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) && allowReconcile {
-		r.Log.Debug("etchosts managed is false, removing machine configs")
-		err = r.removeMachineConfig(ctx, etchostsMasterMCMetadata)
-		if kerrors.IsNotFound(err) {
-			r.ClearDegraded(ctx)
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
+	// If we do not allow reconciliation right now, return.
+	//
+	// NOTE: Generally we would want to unconditionally create the
+	// MachineConfigs if they are missing, but since the etchosts functionality
+	// was rolled out when there are a substantial number of clusters, we don't
+	// want the flicking of this switch on older clusters to cause instant
+	// reboots. Hence, wait until we are allowed to reboot (mostly, before
+	// upgrades) if this is changed.
+	if !allowReconcile {
+		r.Log.Debug("reboot-causing reconciliation not allowed right now")
+		r.ClearConditions(ctx)
+		return reconcile.Result{}, nil
+	}
 
-		err = r.removeMachineConfig(ctx, etchostsWorkerMCMetadata)
-		if kerrors.IsNotFound(err) {
-			r.ClearDegraded(ctx)
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
+	// EtchostsManaged = false, remove machine configs
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.EtcHostsManaged) {
+		r.Log.Debug("etchosts managed is false, removing machine configs")
+
+		continueToken := ""
+		for {
+			mcs := &mcv1.MachineConfigList{}
+			err := r.ch.List(ctx, mcs, client.Continue(continueToken))
+			if err != nil {
+				r.Log.Error(err)
+				r.SetDegraded(ctx, err)
+				return reconcile.Result{}, err
+			}
+
+			for _, mc := range mcs.Items {
+				// Filter down to our named etchosts machineconfigs
+				if etcHostsRegex.FindStringSubmatch(mc.Name) != nil {
+					err = r.ch.Delete(ctx, &mc)
+					if err != nil && !kerrors.IsNotFound(err) {
+						r.Log.Error(err)
+						r.SetDegraded(ctx, err)
+						return reconcile.Result{}, err
+					}
+				}
+			}
+
+			continueToken = mcs.Continue
+			if continueToken == "" {
+				break
+			}
 		}
 
 		r.ClearConditions(ctx)
@@ -117,72 +119,22 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	// EtchostsManaged = true, create machine configs if missing
+	// EtchostsManaged = true, create machine configs for all MCPs if missing
 	r.Log.Debug("running")
-	// If 99-master-aro-etc-hosts-gateway-domains doesn't exist, create it
-	mcp := &mcv1.MachineConfigPool{}
-	mc := &mcv1.MachineConfig{}
 
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "master"}, mcp)
-	if kerrors.IsNotFound(err) {
-		r.Log.Debug(err)
-		r.ClearDegraded(ctx)
-		return reconcile.Result{}, nil
-	}
-	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
-		return reconcile.Result{}, err
-	}
-	if mcp.GetDeletionTimestamp() != nil {
-		return reconcile.Result{}, nil
-	}
-
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "99-master-aro-etc-hosts-gateway-domains"}, mc)
-	if kerrors.IsNotFound(err) {
-		r.Log.Debug("99-master-aro-etc-hosts-gateway-domains not found, creating it")
-		err = reconcileMachineConfigs(ctx, instance, "master", r.dh, allowReconcile, *mcp)
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
-		r.ClearDegraded(ctx)
-		return reconcile.Result{Requeue: true}, nil
-	}
+	pools := &mcv1.MachineConfigPoolList{}
+	err = r.ch.List(ctx, pools)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
-	// If 99-worker-aro-etc-hosts-gateway-domains doesn't exist, create it
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "worker"}, mcp)
-	if kerrors.IsNotFound(err) {
-		r.ClearDegraded(ctx)
-		return reconcile.Result{}, nil
-	}
-	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
-		return reconcile.Result{}, err
-	}
-	if mcp.GetDeletionTimestamp() != nil {
-		return reconcile.Result{}, nil
-	}
-
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "99-worker-aro-etc-hosts-gateway-domains"}, mc)
-	if kerrors.IsNotFound(err) {
-		r.Log.Debug("99-worker-aro-etc-hosts-gateway-domains not found, creating it")
-		r.ClearDegraded(ctx)
-		err = reconcileMachineConfigs(ctx, instance, "worker", r.dh, allowReconcile, *mcp)
-		if err != nil {
-			r.Log.Error(err)
-			r.SetDegraded(ctx, err)
-			return reconcile.Result{}, err
-		}
-		return reconcile.Result{Requeue: true}, nil
-	}
+	// Sort so we reconcile in a deterministic order
+	slices.SortStableFunc(pools.Items, func(a, b mcv1.MachineConfigPool) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+	err = reconcileMachineConfigs(ctx, instance, r.ch, allowReconcile, pools.Items...)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -193,27 +145,27 @@ func (r *EtcHostsClusterReconciler) Reconcile(ctx context.Context, request ctrl.
 	return reconcile.Result{}, nil
 }
 
-// SetupWithManager setup our mananger to watch for changes to MCP and ARO Cluster obj
+// SetupWithManager setup our manager to watch for changes to the ARO Cluster
+// (for feature flag updates) and ClusterVersion (to perform changes on upgrade)
+// objects. We don't track MachineConfigPool creations because we cannot easily
+// tell if this is a newly created MCP (which we should make a MC for) or an
+// existing one that simply doesn't have an MC (e.g. we just enabled this
+// controller). Since there are generally only a few MCPs, we simply defer
+// creating these MCs to before an upgrade occurs.
 func (r *EtcHostsClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("starting etchosts-cluster controller")
 
-	etcHostsBuilder := ctrl.NewControllerManagedBy(mgr).
+	clusterVersionPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == "version"
+	})
+
+	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Watches(&mcv1.MachineConfigPool{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&mcv1.MachineConfig{},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
-
-	return etcHostsBuilder.
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ClusterControllerName).
+		Watches(
+			&configv1.ClusterVersion{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(clusterVersionPredicate),
+		).
 		Complete(r)
-}
-
-func (r *EtcHostsClusterReconciler) removeMachineConfig(ctx context.Context, mc *mcv1.MachineConfig) error {
-	r.Log.Debugf("removing machine config %s", mc.Name)
-	err := r.Client.Delete(ctx, mc)
-	return err
 }
