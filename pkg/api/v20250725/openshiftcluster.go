@@ -4,6 +4,9 @@ package v20250725
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -26,6 +29,19 @@ type OpenShiftClusterList struct {
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
 	generated.OpenShiftCluster
+}
+
+// UnmarshalJSON ensures that PATCH replaces tags when the field is present.
+func (oc *OpenShiftCluster) UnmarshalJSON(data []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return fmt.Errorf("unmarshalling type %T: %s", oc, err.Error())
+	}
+	if _, present := fields["tags"]; present {
+		oc.Tags = nil
+	}
+
+	return json.Unmarshal(data, &oc.OpenShiftCluster)
 }
 
 // UsesWorkloadIdentity checks whether a cluster is a Workload Identity cluster or a Service Principal cluster
