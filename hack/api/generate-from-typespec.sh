@@ -12,7 +12,7 @@ cd api
 
 target="${1:-}"
 if [[ "$target" != "swagger" && "$target" != "go-api-models" && "$target" != "go-testsdk" && "$target" != "python-testsdk" && "$target" != "examples" ]]; then
-    echo "Usage: $0 <swagger|go|python|examples>" >&2
+    echo "Usage: $0 <swagger|go-api-models|go-testsdk|python-testsdk|examples>" >&2
     exit 1
 fi
 
