@@ -804,6 +804,57 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 	// --- 4.17+ VAP tests ---
 
+	Context("Mandatory OpenShift major-version VAP (v4.17+)", func() {
+		const (
+			policyName  = "aro-cluster-version-major-upgrade-deny"
+			bindingName = "aro-cluster-version-major-upgrade-deny-binding"
+		)
+
+		BeforeEach(func(ctx context.Context) {
+			if !clusterIsAtLeast417(ctx) {
+				Skip("Cluster is pre-4.17 and does not support VAP")
+			}
+		})
+
+		It("must deny an OpenShift 4 to OpenShift 5 upgrade", func(ctx context.Context) {
+			vapObj := &unstructured.Unstructured{}
+			vapObj.SetAPIVersion("admissionregistration.k8s.io/v1")
+			vapObj.SetKind("ValidatingAdmissionPolicy")
+			vapClient, err := clients.Dynamic.GetClient(vapObj)
+			Expect(err).NotTo(HaveOccurred())
+
+			bindingObj := &unstructured.Unstructured{}
+			bindingObj.SetAPIVersion("admissionregistration.k8s.io/v1")
+			bindingObj.SetKind("ValidatingAdmissionPolicyBinding")
+			bindingClient, err := clients.Dynamic.GetClient(bindingObj)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("waiting for the mandatory policy and binding")
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := vapClient.Get(ctx, policyName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+
+				_, err = bindingClient.Get(ctx, bindingName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("attempting a dry-run update to OpenShift 5")
+			Eventually(func(g Gomega, ctx context.Context) {
+				cv, err := clients.ConfigClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(cv.Status.Desired.Version).To(HavePrefix("4."))
+
+				cv.Spec.DesiredUpdate = &configv1.Update{Version: "5.0.0"}
+				_, err = clients.ConfigClient.ConfigV1().ClusterVersions().Update(ctx, cv, metav1.UpdateOptions{
+					DryRun: []string{metav1.DryRunAll},
+				})
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(policyName))
+				g.Expect(err.Error()).To(ContainSubstring("Upgrading from OpenShift 4 to OpenShift 5 is not allowed"))
+			}).WithContext(ctx).WithTimeout(1 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
+		})
+	})
+
 	Context("ValidatingAdmissionPolicy (v4.17+)", func() {
 		var vapClient func(ctx context.Context, name string, options metav1.GetOptions) (*unstructured.Unstructured, error)
 		var vapBindingClient func(ctx context.Context, name string, options metav1.GetOptions) (*unstructured.Unstructured, error)
@@ -833,6 +884,8 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 		It("should have all expected VAP policies created", func(ctx context.Context) {
 			expectedPolicies := []string{
+				"aro-cluster-version-major-upgrade-deny",
+				"aro-cluster-version-major-upgrade-protection",
 				"aro-machines-deny",
 				"aro-machine-config-deny",
 				"aro-privileged-namespace-deny",
@@ -850,6 +903,8 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 		It("should have all expected VAP bindings created", func(ctx context.Context) {
 			expectedBindings := []string{
+				"aro-cluster-version-major-upgrade-deny-binding",
+				"aro-cluster-version-major-upgrade-protection-binding",
 				"aro-machines-deny-binding",
 				"aro-machine-config-deny-binding",
 				"aro-privileged-namespace-deny-binding",
