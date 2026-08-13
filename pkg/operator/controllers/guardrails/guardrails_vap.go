@@ -21,6 +21,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
+const (
+	majorUpgradeDenyPolicyName       = "aro-cluster-version-major-upgrade-deny"
+	majorUpgradeProtectionPolicyName = "aro-cluster-version-major-upgrade-protection"
+)
+
+var mandatoryVAPPolicyNames = map[string]struct{}{
+	majorUpgradeDenyPolicyName:       {},
+	majorUpgradeProtectionPolicyName: {},
+}
+
 // vapValidationAction maps a Gatekeeper-style enforcement action to the
 // equivalent VAP validationAction.
 func vapValidationAction(gkEnforcement string) string {
@@ -57,6 +67,9 @@ func (r *Reconciler) deployVAP(ctx context.Context) error {
 			continue
 		}
 		policyName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		if isMandatoryVAPPolicy(policyName) {
+			continue
+		}
 
 		managed, enforcement, err := r.getPolicyConfig(ctx, instance, entry.Name())
 		if err != nil {
@@ -80,6 +93,29 @@ func (r *Reconciler) deployVAP(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+func isMandatoryVAPPolicy(policyName string) bool {
+	_, ok := mandatoryVAPPolicyNames[policyName]
+	return ok
+}
+
+// ensureMandatoryVAP installs the major-version upgrade guard independently of
+// all optional guardrails flags. The protection policy is installed first so
+// subsequent mutation or deletion attempts are denied.
+func (r *Reconciler) ensureMandatoryVAP(ctx context.Context) error {
+	for _, policyName := range []string{
+		majorUpgradeProtectionPolicyName,
+		majorUpgradeDenyPolicyName,
+	} {
+		if err := r.ensureVAPPolicy(ctx, policyName+".yaml"); err != nil {
+			return fmt.Errorf("ensuring mandatory VAP policy %s: %w", policyName, err)
+		}
+		if err := r.ensureVAPBinding(ctx, policyName, "Deny"); err != nil {
+			return fmt.Errorf("ensuring mandatory VAP binding for %s: %w", policyName, err)
+		}
+	}
 	return nil
 }
 
@@ -154,6 +190,9 @@ func (r *Reconciler) removeAllVAP(ctx context.Context) error {
 			continue
 		}
 		policyName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		if isMandatoryVAPPolicy(policyName) {
+			continue
+		}
 		if err := r.removeVAPPolicy(ctx, policyName); err != nil {
 			r.log.Warnf("failed to remove VAP policy %s: %s", policyName, err.Error())
 		}

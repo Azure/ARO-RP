@@ -17,6 +17,38 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+const openShift5VersionsMetricName = "cluster.openshift5.versions"
+
+func (mon *Monitor) emitOpenShift5Versions(context.Context) error {
+	dimensions := map[string]string{
+		"actualVersion":  "",
+		"desiredVersion": "",
+	}
+
+	if isOpenShift5(mon.clusterActualVersion) {
+		dimensions["actualVersion"] = mon.clusterActualVersion.String()
+	}
+
+	if isOpenShift5(mon.clusterDesiredVersion) {
+		dimensions["desiredVersion"] = mon.clusterDesiredVersion.String()
+	}
+
+	if dimensions["actualVersion"] != "" || dimensions["desiredVersion"] != "" {
+		mon.emitGauge(openShift5VersionsMetricName, 1, dimensions)
+	}
+
+	return nil
+}
+
+func isOpenShift5(v version.Version) bool {
+	if v == nil {
+		return false
+	}
+
+	components, _ := v.Components()
+	return components[0] == 5
+}
+
 func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 	aroMasterDeployment := &appsv1.Deployment{}
 	err := mon.ocpclientset.Get(ctx, types.NamespacedName{Namespace: pkgoperator.Namespace, Name: "aro-operator-master"}, aroMasterDeployment)

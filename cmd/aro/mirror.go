@@ -224,6 +224,12 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 	}
 
 	for _, release := range releases {
+		if err := pkgmirror.ValidateReleaseVersion(release.Version); err != nil {
+			return err
+		}
+	}
+
+	for _, release := range releases {
 		l := mirrorLog.WithFields(logrus.Fields{"release": release.Version, "payload": release.Payload})
 		if _, ok := doNotMirrorTags[release.Version]; ok {
 			l.Printf("skipping mirror due to hard-coded deny list")

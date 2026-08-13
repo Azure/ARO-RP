@@ -14,6 +14,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -276,6 +277,9 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsEnabled:       operator.FlagFalse,
 				operator.GuardrailsDeployManaged: operator.FlagTrue,
 			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
+			},
 		},
 		{
 			name: "VAP: managed=true, deploys VAP policies",
@@ -293,8 +297,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 4 policies + 4 bindings = 8 Ensure calls (server-side apply)
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(8)
+				// 2 mandatory and 4 optional policies, each with one binding.
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(12)
 			},
 		},
 		{
@@ -318,9 +322,9 @@ func TestReconcileVAP(t *testing.T) {
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// cleanupGatekeeper: removePolicy calls EnsureDeletedGVR for GK constraints
-				// then deployVAP: 4 Ensure (policy) + 4 EnsureDeletedGVR (binding delete) + 4 Ensure (binding recreate)
+				// then deployVAP: 2 mandatory and 4 optional policies and bindings
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(8)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(12)
 			},
 		},
 		{
@@ -331,7 +335,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsMethod:        operator.GuardrailsMethodAuto,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 4 policies x (binding delete + policy delete) = 8 deletions
+				// Mandatory policies remain; 4 optional policies and bindings are removed.
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(8)
 			},
 		},
@@ -340,6 +345,9 @@ func TestReconcileVAP(t *testing.T) {
 			flags: arov1alpha1.OperatorFlags{
 				operator.GuardrailsEnabled:       operator.FlagTrue,
 				operator.GuardrailsDeployManaged: "",
+			},
+			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
 			},
 		},
 	}
@@ -410,6 +418,54 @@ func TestVapValidationAction(t *testing.T) {
 				t.Errorf("vapValidationAction(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestEnsureMandatoryVAP(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	ensured := map[string]*unstructured.Unstructured{}
+	dh := mock_dynamichelper.NewMockInterface(controller)
+	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, objs ...any) error {
+		for _, obj := range objs {
+			uns, ok := obj.(*unstructured.Unstructured)
+			if !ok {
+				t.Fatalf("expected unstructured object, got %T", obj)
+			}
+			ensured[uns.GetKind()+"/"+uns.GetName()] = uns
+		}
+		return nil
+	}).Times(4)
+
+	r := &Reconciler{dh: dh}
+	if err := r.ensureMandatoryVAP(context.Background()); err != nil {
+		t.Fatalf("ensureMandatoryVAP() returned error: %v", err)
+	}
+
+	for _, policyName := range []string{
+		majorUpgradeProtectionPolicyName,
+		majorUpgradeDenyPolicyName,
+	} {
+		policyKey := "ValidatingAdmissionPolicy/" + policyName
+		policy := ensured[policyKey]
+		if policy == nil {
+			t.Fatalf("mandatory policy %s was not ensured", policyName)
+		}
+		failurePolicy, found, err := unstructured.NestedString(policy.Object, "spec", "failurePolicy")
+		if err != nil || !found || failurePolicy != "Fail" {
+			t.Fatalf("mandatory policy %s failurePolicy = %q, found = %t, err = %v", policyName, failurePolicy, found, err)
+		}
+
+		bindingKey := "ValidatingAdmissionPolicyBinding/" + policyName + "-binding"
+		binding := ensured[bindingKey]
+		if binding == nil {
+			t.Fatalf("mandatory binding %s was not ensured", policyName)
+		}
+		actions, found, err := unstructured.NestedStringSlice(binding.Object, "spec", "validationActions")
+		if err != nil || !found || !slices.Equal(actions, []string{"Deny"}) {
+			t.Fatalf("mandatory binding %s validationActions = %v, found = %t, err = %v", policyName, actions, found, err)
+		}
 	}
 }
 
@@ -579,6 +635,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// stopVAPTicker + best-effort removeAllVAP (no policies managed).
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 		},
@@ -595,6 +652,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), "gatekeeper-controller-manager").Return(true, nil)
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 		},
@@ -614,7 +672,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(8)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(12)
 			},
 		},
 	}

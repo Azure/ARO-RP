@@ -1,0 +1,33 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: aro-cluster-version-major-upgrade-protection
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["admissionregistration.k8s.io"]
+      apiVersions: ["v1"]
+      operations: ["UPDATE", "DELETE"]
+      resources: ["validatingadmissionpolicies", "validatingadmissionpolicybindings"]
+  variables:
+  - name: targetName
+    expression: |
+      request.operation == "DELETE" ? oldObject.metadata.name : object.metadata.name
+  - name: protectedNames
+    expression: |
+      [
+        "aro-cluster-version-major-upgrade-deny",
+        "aro-cluster-version-major-upgrade-deny-binding",
+        "aro-cluster-version-major-upgrade-protection",
+        "aro-cluster-version-major-upgrade-protection-binding"
+      ]
+  - name: isAROOperator
+    expression: |
+      has(request.userInfo) &&
+      has(request.userInfo.username) &&
+      request.userInfo.username == "system:serviceaccount:openshift-azure-operator:aro-operator-master"
+  validations:
+  - expression: |
+      !(variables.targetName in variables.protectedNames) || variables.isAROOperator
+    message: "ARO major-version upgrade protection resources cannot be modified or deleted"

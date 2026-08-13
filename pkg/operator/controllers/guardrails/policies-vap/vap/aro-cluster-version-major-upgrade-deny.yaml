@@ -1,0 +1,36 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: aro-cluster-version-major-upgrade-deny
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["config.openshift.io"]
+      apiVersions: ["*"]
+      operations: ["UPDATE"]
+      resources: ["clusterversions"]
+  matchConditions:
+  - name: cluster-version
+    expression: |
+      object.metadata.name == "version"
+  variables:
+  - name: currentVersion
+    expression: |
+      has(oldObject.status) &&
+      has(oldObject.status.desired) &&
+      has(oldObject.status.desired.version)
+        ? oldObject.status.desired.version
+        : ""
+  - name: targetVersion
+    expression: |
+      has(object.spec) &&
+      has(object.spec.desiredUpdate) &&
+      has(object.spec.desiredUpdate.version)
+        ? object.spec.desiredUpdate.version
+        : ""
+  validations:
+  - expression: |
+      !variables.currentVersion.startsWith("4.") ||
+      !variables.targetVersion.startsWith("5.")
+    message: "Upgrading from OpenShift 4 to OpenShift 5 is not allowed"

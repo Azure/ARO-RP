@@ -218,6 +218,66 @@ func TestEmitClusterVersion(t *testing.T) {
 	}
 }
 
+func TestEmitOpenShift5Versions(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		actualVersion  version.Version
+		desiredVersion version.Version
+		wantDimensions map[string]string
+	}{
+		{
+			name:           "OpenShift 4 versions",
+			actualVersion:  version.NewVersion(4, 19, 1),
+			desiredVersion: version.NewVersion(4, 20, 0),
+		},
+		{
+			name:           "desired OpenShift 5 version",
+			actualVersion:  version.NewVersion(4, 19, 1),
+			desiredVersion: version.NewVersion(5, 0, 0),
+			wantDimensions: map[string]string{
+				"actualVersion":  "",
+				"desiredVersion": "5.0.0",
+			},
+		},
+		{
+			name:           "actual OpenShift 5 version",
+			actualVersion:  version.NewVersion(5, 0, 1),
+			desiredVersion: version.NewVersion(4, 19, 1),
+			wantDimensions: map[string]string{
+				"actualVersion":  "5.0.1",
+				"desiredVersion": "",
+			},
+		},
+		{
+			name:           "actual and desired OpenShift 5 versions",
+			actualVersion:  version.NewVersion(5, 0, 1),
+			desiredVersion: version.NewVersion(5, 1, 0),
+			wantDimensions: map[string]string{
+				"actualVersion":  "5.0.1",
+				"desiredVersion": "5.1.0",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			m := mock_metrics.NewMockEmitter(controller)
+			mon := &Monitor{
+				m:                     m,
+				clusterActualVersion:  tt.actualVersion,
+				clusterDesiredVersion: tt.desiredVersion,
+			}
+
+			if tt.wantDimensions != nil {
+				m.EXPECT().EmitGauge(openShift5VersionsMetricName, int64(1), tt.wantDimensions)
+			}
+
+			if err := mon.emitOpenShift5Versions(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestPrefetchClusterVersion(t *testing.T) {
 	ctx := context.Background()
 

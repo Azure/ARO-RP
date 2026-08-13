@@ -71,6 +71,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	lt417, err := r.VersionLT417(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !lt417 {
+		if err := r.ensureMandatoryVAP(ctx); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.GuardrailsEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
@@ -85,11 +96,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// preserves their current behaviour. New clusters get "auto" via
 	// DefaultOperatorFlags.
 	method := instance.Spec.OperatorFlags.GetWithDefault(operator.GuardrailsMethod, operator.GuardrailsMethodGatekeeper)
-
-	lt417, err := r.VersionLT417(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 
 	useGatekeeper := r.resolveGuardrailsMethod(method, lt417)
 
