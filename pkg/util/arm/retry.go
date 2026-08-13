@@ -30,40 +30,15 @@ var TransientBackoff = wait.Backoff{
 	Cap:      60 * time.Second,
 }
 
-// Retryable wraps f with transient ARM retry and logs each retry attempt.
+// Retryable wraps f with transient ARM retry and logs each attempt.
 // If the error carries a Retry-After header, that duration is used as the sleep;
-// otherwise TransientBackoff governs the schedule.
+// otherwise, TransientBackoff governs the schedule.
+
 func Retryable(ctx context.Context, f func() error, log *logrus.Entry, desc string) error {
-	b := TransientBackoff
-	steps := b.Steps
-	var lastErr error
-	for i := 0; i < steps; i++ {
-		lastErr = f()
-		if lastErr == nil {
-			return nil
-		}
-		if !azureerrors.IsRetryableError(lastErr) {
-			return lastErr
-		}
-		if i == steps-1 {
-			break
-		}
-		sleep := b.Step()
-		if d := retryAfterDuration(lastErr); d > 0 {
-			sleep = d
-		}
-		log.WithField("retry_after", sleep.Seconds()).Warnf("error on %s, retrying: %v", desc, lastErr)
-		select {
-		case <-time.After(sleep):
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-	return lastErr
+	return RetryableWith(ctx, azureerrors.IsRetryableError, f, log, desc)
 }
 
-// RetryableWith wraps f with transient ARM retry using a caller-supplied predicate
-// to decide which errors are retryable. Otherwise identical to Retryable.
+// RetryableWith is like Retryable but with a custom error predicate.
 func RetryableWith(ctx context.Context, isRetryable func(error) bool, f func() error, log *logrus.Entry, desc string) error {
 	b := TransientBackoff
 	steps := b.Steps
