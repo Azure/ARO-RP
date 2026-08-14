@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utilarm "github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
@@ -42,13 +43,19 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 			return fmt.Errorf("platform workload identity '%s' invalid: %w", operatorName, err)
 		}
 
-		identityDetails, err := m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
+		var identityDetails armmsi.UserAssignedIdentitiesClientGetResponse
+		err = utilarm.RetryableWith(ctx, func(err error) bool {
+			return azureerrors.IsStatusForbiddenError(err) || azureerrors.IsRetryableError(err)
+		}, func() error {
+			var getErr error
+			identityDetails, getErr = m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
+			return getErr
+		}, m.log, fmt.Sprintf("fetching platform workload identity '%s'", operatorName))
 		if err != nil {
 			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsStatusForbiddenError(err) || azureerrors.IsStatusNotFoundError(err) || azureerrors.IsRetryableError(err) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fmt.Sprintf(`.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["%s"]`, operatorName), err.Error())
-			} else {
-				return fmt.Errorf("error occurred when retrieving platform workload identity '%s' details: %w", operatorName, err)
 			}
+			return fmt.Errorf("error occurred when retrieving platform workload identity '%s' details: %w", operatorName, err)
 		}
 
 		updatedIdentities[operatorName] = api.PlatformWorkloadIdentity{
