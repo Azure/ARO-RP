@@ -5,6 +5,9 @@ package genevalogging
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
@@ -35,6 +38,15 @@ const (
 
 	// full pullspec of otel exporter image
 	controllerOTelPullSpec = "aro.genevalogging.otel.pullSpec"
+
+	// otelHealthRequeue is how often the controller re-checks otel-exporter pod
+	// health after detecting an unhealthy pod, so a restart loop is caught even
+	// without a DaemonSet watch event.
+	otelHealthRequeue = 5 * time.Minute
+
+	// otelPodRestartThreshold is the per-pod container restart count above which
+	// an otel-exporter pod is treated as restart-looping.
+	otelPodRestartThreshold = 5
 )
 
 // Reconciler reconciles a Cluster object
@@ -136,6 +148,44 @@ func (r *Reconciler) cleanupStaleResources(ctx context.Context) error {
 	return nil
 }
 
+// checkOTelHealth inspects the otel-exporter DaemonSet pods and returns a
+// non-nil error describing any that are crash-looping or restart-looping. The
+// kubelet already restarts a failing container; this surfaces a sustained
+// restart loop — which the DaemonSet available/unavailable count can miss when
+// pods briefly become ready between crashes — as a controller Degraded state.
+func (r *Reconciler) checkOTelHealth(ctx context.Context) error {
+	pods := &corev1.PodList{}
+	if err := r.Client.List(ctx, pods, client.InNamespace(kubeNamespace)); err != nil {
+		return err
+	}
+
+	dsNames := map[string]struct{}{MasterDaemonsetName: {}, WorkerDaemonsetName: {}}
+
+	var unhealthy []string
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if _, ok := dsNames[pod.Labels["app"]]; !ok {
+			continue
+		}
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.Name != "otel-exporter" {
+				continue
+			}
+			switch {
+			case cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff":
+				unhealthy = append(unhealthy, fmt.Sprintf("%s (CrashLoopBackOff, %d restarts)", pod.Name, cs.RestartCount))
+			case cs.RestartCount >= otelPodRestartThreshold:
+				unhealthy = append(unhealthy, fmt.Sprintf("%s (%d restarts)", pod.Name, cs.RestartCount))
+			}
+		}
+	}
+
+	if len(unhealthy) > 0 {
+		return fmt.Errorf("otel-exporter pods restarting: %s", strings.Join(unhealthy, ", "))
+	}
+	return nil
+}
+
 // Reconcile the genevalogging deployment.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
@@ -155,6 +205,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
+	}
+
+	if healthErr := r.checkOTelHealth(ctx); healthErr != nil {
+		r.Log.Warn(healthErr)
+		r.SetDegraded(ctx, healthErr)
+		return reconcile.Result{RequeueAfter: otelHealthRequeue}, nil
 	}
 
 	r.ClearConditions(ctx)
