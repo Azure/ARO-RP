@@ -67,7 +67,7 @@ ARO_FEDERATED_CREDENTIAL_ROLE = "ef318e2a-8334-4a05-9e4a-295a196c6a6e"
 FP_SERVICE_PRINCIPAL_ROLE = "42f3c60f-e7b1-46d7-ba56-6de681664342"
 
 
-class RoleAssignmentScope(enum.Enum):
+class RoleAssignmentScope(enum.IntEnum):
     """Role Assignment Scope"""
     DISK_ENCRYPTION_SET = enum.auto()
     MASTER_SUBNET = enum.auto()
@@ -641,9 +641,7 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
     subnet_resources = {}
     subnets_with_no_nsg_attached = set()
 
-    preconfigured_nsg_enabled = False
-    if oc:
-        preconfigured_nsg_enabled = oc.network_profile.preconfigured_nsg == "Enabled"
+    preconfigured_nsg_enabled = oc and oc.network_profile.preconfigured_nsg == "Enabled"
 
     for sn in subnets:
         sid = parse_resource_id(sn)
@@ -671,15 +669,16 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail: bool = False, oc=
 
         nsg = subnet.get("networkSecurityGroup", None)
 
-        if nsg:
+        if nsg and preconfigured_nsg_enabled:
             subnet_resources["networkSecurityGroup"] = nsg["id"]
         elif preconfigured_nsg_enabled and not nsg:
             subnets_with_no_nsg_attached.add(sn)
 
-    nonattached_nsgs = len(subnets_with_no_nsg_attached) > 0 and \
-        len(subnets_with_no_nsg_attached) != len(subnets)
-
-    if preconfigured_nsg_enabled and nonattached_nsgs:
+    # when preconfiguredNSG is Enabled we either have all subnets NSG attached
+    # or none.
+    if preconfigured_nsg_enabled and \
+        len(subnets_with_no_nsg_attached) != 0 and \
+            len(subnets_with_no_nsg_attached) != len(subnets):
         raise ValidationError("(ValidationError) preconfiguredNSG feature is enabled but an NSG is "
                               "not attached for all required subnets. Please make sure all the following "
                               "subnets have a network security groups attached and retry. "
@@ -1034,10 +1033,12 @@ def _validate_version(client, version, location) -> None:
         raise InvalidArgumentValueError("--version invalid")
 
 
-def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentScope]:
+def _determine_required_scopes_from_role_set(cmd, role) -> list[RoleAssignmentScope]:
     auth_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     definition = auth_client.role_definitions.get_by_id(role.role_definition_id)
 
+    # We're using a set because sets guarantee uniqueness of elements. We don't
+    # want to accidentally double up on scopes.
     scopes: set[RoleAssignmentScope] = set()
     for permissions in definition.permissions:
         for action in permissions.actions:
@@ -1061,7 +1062,11 @@ def _determine_required_scopes_from_role_set(cmd, role) -> set[RoleAssignmentSco
             if action.startswith("Microsoft.Network/routeTable/"):
                 scopes.add(RoleAssignmentScope.ROUTE_TABLE)
 
-    return scopes
+    # We're converting the set to a list to maintain a deterministic order.
+    # `azdev test` dislikes nondeterminism.
+    l = list(scopes)
+    l.sort()
+    return l
 
 
 def _determine_required_scopes_from_network_resources(cmd,
