@@ -196,6 +196,51 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 									"description": `OTel exporter pod {{ $labels.pod }} on node {{ $labels.node }} has not exported any log records in the past hour`,
 								},
 							},
+							{
+								Alert: "OTelExporterSendFailingSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`sum by (pod) (rate(otelcol_exporter_send_failed_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} failing to send logs`,
+									"description": `OTel exporter pod {{ $labels.pod }} has been failing to send log records to the gateway for 15m`,
+								},
+							},
+							{
+								Alert: "OTelExporterQueueSaturatedSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`(otelcol_exporter_queue_size{namespace="` + kubeNamespace + `"} / otelcol_exporter_queue_capacity{namespace="` + kubeNamespace + `"}) > 0.9`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} sending queue near capacity`,
+									"description": `OTel exporter pod {{ $labels.pod }} sending queue has been over 90% full for 15m; sustained backpressure risks dropping logs`,
+								},
+							},
+							{
+								Alert: "OTelExporterLogsRefusedSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`sum by (pod) (rate(otelcol_receiver_refused_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} refusing logs at ingestion`,
+									"description": `OTel exporter pod {{ $labels.pod }} has been refusing log records at ingestion for 15m; a receiver or parse failure may be dropping a log stream (for example audit)`,
+								},
+							},
 						},
 					},
 				},

@@ -436,14 +436,42 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 			t.Fatalf("expected 1 rule group, got %d", len(prometheusRule.Spec.Groups))
 		}
 		rules := prometheusRule.Spec.Groups[0].Rules
-		if len(rules) != 1 || rules[0].Alert != "OTelExporterNoLogsShippedSRE" {
-			t.Fatalf("unexpected PrometheusRule rules: %v", rules)
+		wantAlerts := []string{
+			"OTelExporterNoLogsShippedSRE",
+			"OTelExporterSendFailingSRE",
+			"OTelExporterQueueSaturatedSRE",
+			"OTelExporterLogsRefusedSRE",
+		}
+		if len(rules) != len(wantAlerts) {
+			t.Fatalf("expected %d rules, got %d: %v", len(wantAlerts), len(rules), rules)
+		}
+		for i, want := range wantAlerts {
+			if rules[i].Alert != want {
+				t.Fatalf("rule %d: got alert %q, want %q", i, rules[i].Alert, want)
+			}
 		}
 		if rules[0].Labels["severity"] != "critical" {
 			t.Fatalf("unexpected alert severity: %q", rules[0].Labels["severity"])
 		}
 		if rules[0].For != "10m" {
 			t.Fatalf("unexpected alert For duration: %q", rules[0].For)
+		}
+		// The collector exposes these counters without a _total suffix (verified
+		// on a live cluster), so the alert expressions use the bare names.
+		for _, want := range []string{
+			"otelcol_exporter_sent_log_records",
+			"otelcol_exporter_send_failed_log_records",
+			"otelcol_receiver_refused_log_records",
+		} {
+			found := false
+			for _, r := range rules {
+				if strings.Contains(r.Expr.String(), want) {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("no rule references %q", want)
+			}
 		}
 	}
 }
