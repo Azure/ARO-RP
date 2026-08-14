@@ -806,3 +806,45 @@ func TestCheckOTelHealth(t *testing.T) {
 		})
 	}
 }
+
+func TestOTelDaemonSetsComponentHealthFlag(t *testing.T) {
+	const gate = "--feature-gates=+extension.healthcheck.useComponentStatus"
+	r := &Reconciler{}
+
+	for _, tt := range []struct {
+		name  string
+		flags arov1alpha1.OperatorFlags
+		want  bool
+	}{
+		{name: "disabled by default", flags: arov1alpha1.OperatorFlags{}, want: false},
+		{name: "enabled via flag", flags: arov1alpha1.OperatorFlags{operator.GenevaLoggingOTelComponentHealth: operator.FlagTrue}, want: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			daemonsets, err := r.otelDaemonSets(&arov1alpha1.Cluster{
+				Spec: arov1alpha1.ClusterSpec{
+					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+					ACRDomain:     "acrDomain",
+					OperatorFlags: tt.flags,
+				},
+			}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, ds := range daemonsets {
+				exporter, ok := getContainer(ds, "otel-exporter")
+				if !ok {
+					t.Fatalf("missing otel-exporter container in %s", ds.Name)
+				}
+				hasGate := false
+				for _, a := range exporter.Args {
+					if a == gate {
+						hasGate = true
+					}
+				}
+				if hasGate != tt.want {
+					t.Fatalf("%s: feature-gate present=%v, want %v (args=%v)", ds.Name, hasGate, tt.want, exporter.Args)
+				}
+			}
+		})
+	}
+}

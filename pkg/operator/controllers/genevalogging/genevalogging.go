@@ -323,7 +323,16 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 		otelPullspec = version.TelemetryExporterImage(cluster.Spec.ACRDomain)
 	}
 
+	// When enabled (opt-in), make the healthcheck extension report status from
+	// collector component events so a failed export pipeline — not just a dead
+	// process — fails the /healthz liveness probe and the pod is restarted.
+	componentHealth := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelComponentHealth)
+
 	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey, configHash string) *appsv1.DaemonSet {
+		args := []string{"--config", "/etc/otel/" + configKey}
+		if componentHealth {
+			args = append(args, "--feature-gates=+extension.healthcheck.useComponentStatus")
+		}
 		return &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -402,7 +411,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 							{
 								Name:  "otel-exporter",
 								Image: otelPullspec,
-								Args:  []string{"--config", "/etc/otel/" + configKey},
+								Args:  args,
 								Env: []corev1.EnvVar{
 									{
 										Name:  "GENEVA_GATEWAY_ENDPOINT",
