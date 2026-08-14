@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -20,7 +21,7 @@ import (
 func TestPreflightValidation(t *testing.T) {
 	ctx := context.Background()
 	mockSubID := "00000000-0000-0000-0000-000000000000"
-	apiVersion := "2024-08-12-preview"
+	apiVersion := v20250725.APIVersion
 	clusterId := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
 	location := "eastus"
 	defaultProfile := "default"
@@ -669,8 +670,40 @@ func TestPreflightValidation(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
-								Domain: "different",
+								Domain:               "different",
+								FipsValidatedModules: api.FipsValidatedModulesEnabled,
+								ResourceGroupID:      resourceGroup,
+								Version:              version.DefaultInstallStream.Version.String(),
 							},
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
+								ClientID:     mockSubID,
+								ClientSecret: api.SecureString(mockSubID),
+							},
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:     netProfile,
+								ServiceCIDR: netProfile,
+							},
+							MasterProfile: api.MasterProfile{
+								VMSize:              api.VMSizeStandardD32sV3,
+								SubnetID:            masterSub,
+								DiskEncryptionSetID: encryptionSet,
+								EncryptionAtHost:    api.EncryptionAtHostEnabled,
+							},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									Name:                api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Name,
+									VMSize:              api.VMSizeStandardD32sV3,
+									DiskSizeGB:          api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
+									EncryptionAtHost:    api.EncryptionAtHostEnabled,
+									SubnetID:            workerSub,
+									Count:               api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
+									DiskEncryptionSetID: encryptionSet,
+								},
+							},
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							IngressProfiles: api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.IngressProfiles,
 						},
 					},
 				})
@@ -966,7 +999,7 @@ func TestPreflightValidation(t *testing.T) {
 			}
 
 			resp, b, err := ti.request(http.MethodPost,
-				"https://server"+testdatabase.GetPreflightPath(api.ExampleOpenShiftClusterDocument().ID, "deploymentName")+"?api-version=2024-08-12-preview",
+				"https://server"+testdatabase.GetPreflightPath(api.ExampleOpenShiftClusterDocument().ID, "deploymentName")+"?api-version="+v20250725.APIVersion,
 				headers, oc)
 			if err != nil {
 				t.Error(err)

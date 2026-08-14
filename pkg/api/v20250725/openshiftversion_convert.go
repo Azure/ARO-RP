@@ -5,6 +5,8 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
 type openShiftVersionConverter struct{}
@@ -16,21 +18,24 @@ type openShiftVersionConverter struct{}
 // returned objects.
 func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{} {
 	out := &OpenShiftVersion{
-		ID:            v.ID,
-		proxyResource: true,
-		Properties: OpenShiftVersionProperties{
-			Version: v.Properties.Version,
+		OpenShiftVersion: generated.OpenShiftVersion{
+			Properties: &generated.OpenShiftVersionProperties{
+				Version: pointerutils.ToPtr(v.Properties.Version),
+			},
+			Name: pointerutils.ToPtr(v.Name),
+			Type: pointerutils.ToPtr(v.Type),
 		},
-		Name: v.Name,
-		Type: v.Type,
+	}
+	if v.ID != "" {
+		out.ID = pointerutils.ToPtr(v.ID)
 	}
 
-	if out.Name == "" {
-		out.Name = v.Properties.Version
+	if value(out.Name) == "" {
+		out.Name = pointerutils.ToPtr(v.Properties.Version)
 	}
 
-	if out.Type == "" {
-		out.Type = api.OpenShiftVersionsType
+	if value(out.Type) == "" {
+		out.Type = pointerutils.ToPtr(api.OpenShiftVersionsType)
 	}
 
 	return out
@@ -56,7 +61,7 @@ func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) 
 // objects
 func (c openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShiftVersion) {
 	new := _new.(*OpenShiftVersion)
-	out.Properties.Version = new.Properties.Version
-	out.Name = new.Properties.Version
+	out.Properties.Version = value(new.Properties.Version)
+	out.Name = value(new.Properties.Version)
 	out.Type = api.OpenShiftVersionsType
 }

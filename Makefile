@@ -32,6 +32,9 @@ HOLMESGPT_VERSION ?= 0.36.0
 HOLMESGPT_REF ?= $(HOLMESGPT_VERSION)
 HOLMESGPT_BASE_REGISTRY ?= registry.access.redhat.com
 
+# Set this to the latest/current API version. TypeSpec only generates based on the latest API version.
+TYPESPEC_API_VERSION = v20250725
+
 include .bingo/Variables.mk
 
 ifneq ($(shell uname -s),Darwin)
@@ -123,8 +126,8 @@ client: generate generate-swagger-typespec client-generate lint-go-fix lint-go
 
 .PHONY: client-generate
 client-generate:
-	hack/api/generate-from-typespec.sh go
-	hack/api/generate-from-typespec.sh python
+	hack/api/generate-from-typespec.sh go-testsdk $(TYPESPEC_API_VERSION)
+	hack/api/generate-from-typespec.sh python-testsdk $(TYPESPEC_API_VERSION)
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -154,12 +157,16 @@ generate-swagger-legacy:
 
 .PHONY: generate-swagger-typespec
 generate-swagger-typespec:
-	hack/api/generate-from-typespec.sh swagger
+	hack/api/generate-from-typespec.sh swagger $(TYPESPEC_API_VERSION)
 	$(MAKE) swagger-checksums
+
+.PHONY: generate-api-models
+generate-api-models:
+	hack/api/generate-from-typespec.sh go-api-models $(TYPESPEC_API_VERSION)
 
 .PHONY: generate-api-examples
 generate-api-examples:
-	hack/api/generate-from-typespec.sh examples
+	hack/api/generate-from-typespec.sh examples $(TYPESPEC_API_VERSION)
 	$(MAKE) swagger-checksums
 
 .PHONY: swagger-checksums
