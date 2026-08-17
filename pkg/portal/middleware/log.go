@@ -66,13 +66,14 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, outelAuditClient audit.C
 			log = utillog.EnrichWithPath(log, r.URL.Path)
 
 			username, _ := r.Context().Value(ContextKeyUsername).(string)
+			username = utillog.Sanitize(username)
 
 			log = log.WithFields(logrus.Fields{
-				"request_method":      r.Method,
-				"request_path":        r.URL.Path,
-				"request_proto":       r.Proto,
-				"request_remote_addr": r.RemoteAddr,
-				"request_user_agent":  r.UserAgent(),
+				"request_method":      utillog.Sanitize(r.Method),
+				"request_path":        utillog.Sanitize(r.URL.Path),
+				"request_proto":       utillog.Sanitize(r.Proto),
+				"request_remote_addr": utillog.Sanitize(r.RemoteAddr),
+				"request_user_agent":  utillog.Sanitize(r.UserAgent()),
 				"username":            username,
 			})
 			log.Print("read request")
@@ -88,17 +89,17 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, outelAuditClient audit.C
 				audit.EnvKeyHostname:          env.Hostname(),
 				audit.EnvKeyLocation:          env.Location(),
 				audit.PayloadKeyCategory:      audit.CategoryResourceManagement,
-				audit.PayloadKeyOperationName: fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+				audit.PayloadKeyOperationName: fmt.Sprintf("%s %s", utillog.Sanitize(r.Method), utillog.Sanitize(r.URL.Path)),
 				audit.PayloadKeyCallerIdentities: []audit.CallerIdentity{
 					{
 						CallerIdentityType:  audit.CallerIdentityTypeUsername,
 						CallerIdentityValue: username,
-						CallerIPAddress:     r.RemoteAddr,
+						CallerIPAddress:     utillog.Sanitize(r.RemoteAddr),
 					},
 				},
 				audit.PayloadKeyTargetResources: []audit.TargetResource{
 					{
-						TargetResourceName: r.URL.Path,
+						TargetResourceName: utillog.Sanitize(r.URL.Path),
 						TargetResourceType: auditTargetResourceType(r),
 					},
 				},

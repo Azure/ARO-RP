@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 // TransientBackoff is the retry schedule for ARM write operations when no Retry-After
@@ -58,7 +59,7 @@ func RetryableWith(ctx context.Context, isRetryable func(error) bool, f func() e
 		if d := retryAfterDuration(lastErr); d > 0 {
 			sleep = d
 		}
-		log.WithField("retry_after", sleep.Seconds()).Warnf("error on %s, retrying: %v", desc, lastErr)
+		log.WithField("retry_after", sleep.Seconds()).Warnf("error on %s, retrying: %v", utillog.Sanitize(desc), utillog.Sanitize(lastErr.Error()))
 		select {
 		case <-time.After(sleep):
 		case <-ctx.Done():

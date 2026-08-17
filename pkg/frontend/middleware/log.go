@@ -70,7 +70,7 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 		correlationData.RequestTime = t
 
 		if r.URL.Query().Get(api.APIVersionKey) == admin.APIVersion || isAdminOp(r) {
-			correlationData.ClientPrincipalName = r.Header.Get("X-Ms-Client-Principal-Name")
+			correlationData.ClientPrincipalName = utillog.Sanitize(r.Header.Get("X-Ms-Client-Principal-Name"))
 		}
 
 		w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
@@ -90,16 +90,16 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 		r = r.WithContext(ctx)
 
 		log = log.WithFields(logrus.Fields{
-			"request_method":      r.Method,
-			"request_path":        r.URL.Path,
-			"request_proto":       r.Proto,
-			"request_remote_addr": r.RemoteAddr,
-			"request_user_agent":  r.UserAgent(),
+			"request_method":      utillog.Sanitize(r.Method),
+			"request_path":        utillog.Sanitize(r.URL.Path),
+			"request_proto":       utillog.Sanitize(r.Proto),
+			"request_remote_addr": utillog.Sanitize(r.RemoteAddr),
+			"request_user_agent":  utillog.Sanitize(r.UserAgent()),
 		})
 		log.Print("read request")
 
 		var (
-			auditCallerIdentity = r.UserAgent()
+			auditCallerIdentity = utillog.Sanitize(r.UserAgent())
 			auditCallerType     = audit.CallerIdentityTypeApplicationID
 		)
 
@@ -111,7 +111,7 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 		var (
 			adminOp       = isAdminOp(r)
 			logTime       = time.Now().UTC().Format(time.RFC3339)
-			operationName = fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			operationName = fmt.Sprintf("%s %s", utillog.Sanitize(r.Method), utillog.Sanitize(r.URL.Path))
 		)
 
 		auditEntry := l.AuditLog.WithFields(logrus.Fields{
@@ -121,7 +121,7 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 			audit.MetadataAdminOperation:  adminOp,
 			audit.EnvKeyAppID:             audit.SourceRP,
 			audit.EnvKeyCloudRole:         audit.CloudRoleRP,
-			audit.EnvKeyCorrelationID:     correlationData.CorrelationID,
+			audit.EnvKeyCorrelationID:     utillog.Sanitize(correlationData.CorrelationID),
 			audit.EnvKeyEnvironment:       l.EnvironmentName,
 			audit.EnvKeyHostname:          l.Hostname,
 			audit.EnvKeyLocation:          l.Location,
@@ -132,12 +132,12 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 				{
 					CallerIdentityType:  auditCallerType,
 					CallerIdentityValue: auditCallerIdentity,
-					CallerIPAddress:     r.RemoteAddr,
+					CallerIPAddress:     utillog.Sanitize(r.RemoteAddr),
 				},
 			},
 			audit.PayloadKeyTargetResources: []audit.TargetResource{
 				{
-					TargetResourceName: r.URL.Path,
+					TargetResourceName: utillog.Sanitize(r.URL.Path),
 					TargetResourceType: auditTargetResourceType(r),
 				},
 			},
