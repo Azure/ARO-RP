@@ -16,9 +16,6 @@ Notes:
 
 ## Deployment logical order:
 
-* Deploy global subscription-level resources
-  `rp-production-global-subscription.json`.
-
 * Deploy managed identity `rp-production-managed-identity.json`. This will
   produce `rpServicePrincipalId` required by next deployments.
 
