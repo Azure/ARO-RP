@@ -62,6 +62,11 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry, outelAuditClient audit.C
 			r.Body = &logReadCloser{ReadCloser: r.Body}
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
+			// Prevent browsers from MIME-sniffing responses into HTML,
+			// mitigating reflected XSS if any user-controlled content is echoed
+			// back.
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+
 			log := baseLog
 			log = utillog.EnrichWithPath(log, r.URL.Path)
 
