@@ -1190,32 +1190,6 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 	}
 }
 
-func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtauthorization.RoleDefinition{
-			Name: pointerutils.ToPtr("[parameters('tokenContributorRoleID')]"),
-			Type: pointerutils.ToPtr("Microsoft.Authorization/roleDefinitions"),
-			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-				RoleName:         pointerutils.ToPtr("[parameters('tokenContributorRoleName')]"),
-				AssignableScopes: &[]string{"[subscription().id]"},
-				Permissions: &[]mgmtauthorization.Permission{
-					{
-						Actions: &[]string{
-							"Microsoft.ContainerRegistry/registries/generateCredentials/action",
-							"Microsoft.ContainerRegistry/registries/scopeMaps/read",
-							"Microsoft.ContainerRegistry/registries/tokens/delete",
-							"Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
-							"Microsoft.ContainerRegistry/registries/tokens/read",
-							"Microsoft.ContainerRegistry/registries/tokens/write",
-						},
-					},
-				},
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Authorization/roleDefinitions"),
-	}
-}
-
 func (g *generator) rpRBAC() []*arm.Resource {
 	return []*arm.Resource{
 		rbac.ResourceGroupRoleAssignmentWithName(

@@ -42,14 +42,8 @@ const (
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
 func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
-	// deploy global rbac
-	err := d.deployRPGlobalSubscription(ctx)
-	if err != nil {
-		return err
-	}
-
 	d.log.Infof("deploying rg %s in %s", *d.config.Configuration.SubscriptionResourceGroupName, *d.config.Configuration.SubscriptionResourceGroupLocation)
-	_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+	_, err := d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: d.config.Configuration.SubscriptionResourceGroupLocation,
 	})
 	if err != nil {
@@ -251,56 +245,6 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 			Parameters: parameters.Parameters,
 		},
 	})
-}
-
-func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
-	deploymentName := "rp-global-subscription-" + d.config.Location
-
-	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(asset, &template)
-	if err != nil {
-		return err
-	}
-
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-
-	parameters.Parameters["tokenContributorRoleID"] = &arm.ParametersParameter{
-		Value: d.config.Configuration.TokenContributorRoleID,
-	}
-	parameters.Parameters["tokenContributorRoleName"] = &arm.ParametersParameter{
-		Value: d.config.Configuration.TokenContributorRoleName,
-	}
-
-	d.log.Infof("deploying %s", deploymentName)
-	for i := 0; i < 5; i++ {
-		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
-			Properties: &mgmtfeatures.DeploymentProperties{
-				Template:   template,
-				Mode:       mgmtfeatures.Incremental,
-				Parameters: parameters.Parameters,
-			},
-			Location: d.config.Configuration.GlobalResourceGroupLocation,
-		})
-		if serviceErr, ok := err.(*azure.ServiceError); ok &&
-			serviceErr.Code == "DeploymentFailed" &&
-			i < 4 {
-			// Sometimes we see RoleDefinitionUpdateConflict when multiple RPs
-			// are deploying at once.  Retry a few times.
-			d.log.Print(err)
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		break
-	}
-	return nil
 }
 
 func (d *deployer) deployRPSubscription(ctx context.Context) error {
