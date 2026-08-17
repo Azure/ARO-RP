@@ -39,9 +39,10 @@ const (
 	// full pullspec of otel exporter image
 	controllerOTelPullSpec = "aro.genevalogging.otel.pullSpec"
 
-	// otelHealthRequeue is how often the controller re-checks otel-exporter pod
-	// health after detecting an unhealthy pod, so a restart loop is caught even
-	// without a DaemonSet watch event.
+	// otelHealthRequeue is how often Reconcile re-checks otel-exporter pod health.
+	// It requeues on this interval in both the healthy and unhealthy paths so a
+	// steady-state CrashLoopBackOff (which produces no further DaemonSet status
+	// events) is still caught.
 	otelHealthRequeue = 5 * time.Minute
 
 	// otelPodRestartThreshold is the per-pod container restart count above which
@@ -214,7 +215,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.ClearConditions(ctx)
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: otelHealthRequeue}, nil
 }
 
 // SetupWithManager setup our manager
