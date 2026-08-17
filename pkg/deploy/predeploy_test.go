@@ -139,11 +139,6 @@ func TestPreDeploy(t *testing.T) {
 		acrReplicaDisabled          bool
 	}
 	type mock func(*mock_features.MockDeploymentsClient, *mock_features.MockResourceGroupsClient, *mock_msi.MockUserAssignedIdentitiesClient, *mock_azsecrets.MockClient, *mock_compute.MockVirtualMachineScaleSetsClient, *mock_compute.MockVirtualMachineScaleSetVMsClient, testParams)
-	createOrUpdateAtSubscriptionScopeAndWaitMock := func(returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-			d.EXPECT().CreateOrUpdateAtSubscriptionScopeAndWait(ctx, "rp-global-subscription-"+tp.location, gomock.Any()).Return(returnError)
-		}
-	}
 	createOrUpdateAndWaitMock := func(resourceGroup string, returnError error) mock {
 		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			d.EXPECT().CreateOrUpdateAndWait(ctx, resourceGroup, gomock.Any(), gomock.Any()).Return(returnError)
@@ -199,18 +194,7 @@ func TestPreDeploy(t *testing.T) {
 		wantErr            string
 	}{
 		{
-			name: "don't continue if Global Subscription RBAC DeploymentFailed",
-			testParams: testParams{
-				location:                    location,
-				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
-			},
-			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(errGeneric),
-			},
-			wantErr: "generic error",
-		},
-		{
-			name: "don't continue if Global Subscription RBAC Deployment is Successful but SubscriptionResourceGroup creation fails",
+			name: "don't continue if SubscriptionResourceGroup creation fails",
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
@@ -219,7 +203,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -234,7 +218,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -250,7 +234,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -267,7 +251,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -284,7 +268,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -301,7 +285,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -318,7 +302,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -335,7 +319,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -352,7 +336,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -369,7 +353,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, deploymentFailedError), createOrUpdateAndWaitMock(globalRGName, deploymentFailedError),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, deploymentFailedError), createOrUpdateAndWaitMock(globalRGName, deploymentFailedError),
 			},
 			wantErr: `Code="DeploymentFailed" Message="" Details=[{}]`,
 		},
@@ -387,7 +371,7 @@ func TestPreDeploy(t *testing.T) {
 				overrideLocation:            overrideLocation,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -404,7 +388,7 @@ func TestPreDeploy(t *testing.T) {
 				globalDevopsManagedIdentity: globalDevopsManagedIdentity,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -422,7 +406,7 @@ func TestPreDeploy(t *testing.T) {
 				overrideLocation:            location,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -441,7 +425,7 @@ func TestPreDeploy(t *testing.T) {
 				acrReplicaDisabled:          true,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -460,7 +444,7 @@ func TestPreDeploy(t *testing.T) {
 				acrReplicaDisabled:          true,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -479,7 +463,7 @@ func TestPreDeploy(t *testing.T) {
 				acrReplicaDisabled:          true,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, errGeneric),
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -501,7 +485,7 @@ func TestPreDeploy(t *testing.T) {
 				restartScript:               rpRestartScript,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock,
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock,
 			},
 		},
 	} {
@@ -549,70 +533,6 @@ func TestPreDeploy(t *testing.T) {
 			}
 
 			err := d.PreDeploy(ctx, 0)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestDeployRPGlobalSubscription(t *testing.T) {
-	ctx := context.Background()
-
-	type testParams struct {
-		location string
-	}
-	type mock func(*mock_features.MockDeploymentsClient, testParams)
-	createOrUpdateAtSubscriptionScopeAndWaitMock := func(returnError error) mock {
-		return func(d *mock_features.MockDeploymentsClient, tp testParams) {
-			d.EXPECT().CreateOrUpdateAtSubscriptionScopeAndWait(ctx, "rp-global-subscription-"+tp.location, gomock.Any()).Return(returnError)
-		}
-	}
-
-	for _, tt := range []struct {
-		name       string
-		testParams testParams
-		mocks      []mock
-		wantErr    string
-	}{
-		{
-			name:       "Don't continue if deployment fails with error other than DeploymentFailed",
-			testParams: testParams{location: location},
-			mocks:      []mock{createOrUpdateAtSubscriptionScopeAndWaitMock(errGeneric)},
-			wantErr:    "generic error",
-		},
-		{
-			name:       "Don't continue if deployment fails with error DeploymentFailed five times",
-			testParams: testParams{location: location},
-			mocks:      []mock{createOrUpdateAtSubscriptionScopeAndWaitMock(deploymentFailedError), createOrUpdateAtSubscriptionScopeAndWaitMock(deploymentFailedError), createOrUpdateAtSubscriptionScopeAndWaitMock(deploymentFailedError), createOrUpdateAtSubscriptionScopeAndWaitMock(deploymentFailedError), createOrUpdateAtSubscriptionScopeAndWaitMock(deploymentFailedError)},
-			wantErr:    `Code="DeploymentFailed" Message="" Details=[{}]`,
-		},
-		{
-			name:       "Pass successfully when deployment is successfulin second attempt",
-			testParams: testParams{location: location},
-			mocks:      []mock{createOrUpdateAtSubscriptionScopeAndWaitMock(deploymentFailedError), createOrUpdateAtSubscriptionScopeAndWaitMock(nil)},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
-
-			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				config: &RPConfig{
-					Configuration: &Configuration{
-						GlobalResourceGroupLocation: &tt.testParams.location,
-					},
-					Location: tt.testParams.location,
-				},
-				globaldeployments: mockDeployments,
-			}
-
-			for _, m := range tt.mocks {
-				m(mockDeployments, tt.testParams)
-			}
-
-			err := d.deployRPGlobalSubscription(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

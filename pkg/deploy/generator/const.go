@@ -11,7 +11,6 @@ const (
 	FileRPProduction                         = "rp-production.json"
 	FileRPProductionGlobal                   = "rp-production-global.json"
 	FileRPProductionGlobalACRReplication     = "rp-production-global-acr-replication.json"
-	FileRPProductionGlobalSubscription       = "rp-production-global-subscription.json"
 	FileRPProductionParameters               = "rp-production-parameters.json"
 	FileRPProductionSubscription             = "rp-production-subscription.json"
 	FileGatewayProductionManagedIdentity     = "gateway-production-managed-identity.json"

@@ -265,23 +265,6 @@ func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
 	return t
 }
 
-func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
-	t := templateStanza()
-
-	params := []string{
-		"tokenContributorRoleID",
-		"tokenContributorRoleName",
-	}
-
-	t.Resources = append(t.Resources,
-		g.rpRoleDefinitionTokenContributor(),
-	)
-	for _, param := range params {
-		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
-	}
-	return t
-}
-
 func (g *generator) rpSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
