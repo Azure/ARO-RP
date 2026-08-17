@@ -48,6 +48,13 @@ const (
 	// otelPodRestartThreshold is the per-pod container restart count above which
 	// an otel-exporter pod is treated as restart-looping.
 	otelPodRestartThreshold = 5
+
+	// otelRestartRecency bounds how recently the container must have last
+	// terminated for its cumulative RestartCount to still count as an active
+	// restart loop. RestartCount never decreases, so without this bound a pod
+	// that flapped once during a rollout would keep the controller Degraded
+	// forever.
+	otelRestartRecency = 15 * time.Minute
 )
 
 // Reconciler reconciles a Cluster object
@@ -175,7 +182,7 @@ func (r *Reconciler) checkOTelHealth(ctx context.Context) error {
 			switch {
 			case cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff":
 				unhealthy = append(unhealthy, fmt.Sprintf("%s (CrashLoopBackOff, %d restarts)", pod.Name, cs.RestartCount))
-			case cs.RestartCount >= otelPodRestartThreshold:
+			case cs.RestartCount >= otelPodRestartThreshold && otelRecentlyTerminated(cs):
 				unhealthy = append(unhealthy, fmt.Sprintf("%s (%d restarts)", pod.Name, cs.RestartCount))
 			}
 		}
@@ -185,6 +192,13 @@ func (r *Reconciler) checkOTelHealth(ctx context.Context) error {
 		return fmt.Errorf("otel-exporter pods restarting: %s", strings.Join(unhealthy, ", "))
 	}
 	return nil
+}
+
+// otelRecentlyTerminated reports whether the container's most recent
+// termination is recent enough to still count as an active restart loop.
+func otelRecentlyTerminated(cs corev1.ContainerStatus) bool {
+	t := cs.LastTerminationState.Terminated
+	return t != nil && time.Since(t.FinishedAt.Time) < otelRestartRecency
 }
 
 // Reconcile the genevalogging deployment.

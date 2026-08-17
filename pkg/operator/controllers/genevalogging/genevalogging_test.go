@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
@@ -445,16 +446,17 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 		if len(rules) != len(wantAlerts) {
 			t.Fatalf("expected %d rules, got %d: %v", len(wantAlerts), len(rules), rules)
 		}
-		for i, want := range wantAlerts {
-			if rules[i].Alert != want {
-				t.Fatalf("rule %d: got alert %q, want %q", i, rules[i].Alert, want)
+		byAlert := make(map[string]monitoringv1.Rule, len(rules))
+		for _, r := range rules {
+			byAlert[r.Alert] = r
+		}
+		for _, want := range wantAlerts {
+			if _, ok := byAlert[want]; !ok {
+				t.Fatalf("missing alert %q; got rules %v", want, rules)
 			}
 		}
-		if rules[0].Labels["severity"] != "critical" {
-			t.Fatalf("unexpected alert severity: %q", rules[0].Labels["severity"])
-		}
-		if rules[0].For != "10m" {
-			t.Fatalf("unexpected alert For duration: %q", rules[0].For)
+		if noLogs := byAlert["OTelExporterNoLogsShippedSRE"]; noLogs.Labels["severity"] != "critical" || noLogs.For != "10m" {
+			t.Fatalf("NoLogsShipped alert: severity=%q For=%q", noLogs.Labels["severity"], noLogs.For)
 		}
 		// The collector exposes these counters without a _total suffix (verified
 		// on a live cluster), so the alert expressions use the bare names.
@@ -783,7 +785,8 @@ func TestCheckOTelHealth(t *testing.T) {
 	}
 	running := corev1.ContainerStatus{Name: "otel-exporter", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}
 	crashLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: 3, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
-	restartLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}
+	restartLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-1 * time.Minute))}}}
+	stableAfterRestarts := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold + 3, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-2 * time.Hour))}}}
 
 	for _, tt := range []struct {
 		name    string
@@ -806,6 +809,10 @@ func TestCheckOTelHealth(t *testing.T) {
 			name:    "restart-looping pod is unhealthy",
 			pods:    []*corev1.Pod{otelPod("otel-exporter-master-a", MasterDaemonsetName, restartLoop)},
 			wantErr: fmt.Sprintf("otel-exporter pods restarting: otel-exporter-master-a (%d restarts)", otelPodRestartThreshold),
+		},
+		{
+			name: "pod stable after old restarts is healthy",
+			pods: []*corev1.Pod{otelPod("otel-exporter-master-a", MasterDaemonsetName, stableAfterRestarts)},
 		},
 		{
 			name: "unrelated pod is ignored",
