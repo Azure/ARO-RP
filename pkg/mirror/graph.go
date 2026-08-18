@@ -86,8 +86,9 @@ func AddFromGraph(min version.Version) ([]Node, error) {
 			continue
 		}
 
-		if err := ValidateReleaseVersion(node.Version); err != nil {
-			return nil, err
+		components, _ := vsn.Components()
+		if components[0] != supportedOpenShiftMajorVersion {
+			continue
 		}
 
 		node.Payload = strings.Replace(node.Payload, "registry.ci.openshift.org/ocp/release", "quay.io/openshift-release-dev/ocp-release", 1)
