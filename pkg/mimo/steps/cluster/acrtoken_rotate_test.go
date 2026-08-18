@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,13 +95,13 @@ func TestRotateACRToken(t *testing.T) {
 			},
 			objects: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cluster",
 						Namespace: "openshift-azure-operator",
 					},
 				},
 				&corev1.Secret{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "pull-secret",
 						Namespace: "openshift-config",
 					},
@@ -132,7 +132,7 @@ func TestRotateACRToken(t *testing.T) {
 				b64pwpair := base64.StdEncoding.EncodeToString([]byte(user + ":" + generated[0]))
 				objs := []runtime.Object{
 					&corev1.Secret{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "pull-secret",
 							Namespace: "openshift-config",
 						},
@@ -143,7 +143,7 @@ func TestRotateACRToken(t *testing.T) {
 						},
 					},
 					&corev1.Secret{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cluster",
 							Namespace: "openshift-azure-operator",
 						},
