@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -278,22 +279,24 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Version: "v1",
 		Kind:    "ValidatingAdmissionPolicyBinding",
 	})
-		lt417, err := r.VersionLT417(context.Background())
-		if err != nil {
-			r.log.Warnf("skipping mandatory VAP watches: %v", err)
-		} else if !lt417 {
-			grBuilder.
-				Watches(
-					vap,
-					&handler.EnqueueRequestForObject{},
-					builder.WithPredicates(mandatoryVAPResource),
-				).
-				Watches(
-					vapBinding,
-					&handler.EnqueueRequestForObject{},
-					builder.WithPredicates(mandatoryVAPResource),
-				)
-		}
+	_, err := mgr.GetRESTMapper().RESTMapping(vap.GroupVersionKind().GroupKind(), vap.GroupVersionKind().Version)
+	if meta.IsNoMatchError(err) {
+		r.log.Info("skipping mandatory VAP watches because the API is unavailable")
+	} else if err != nil {
+		return fmt.Errorf("mapping ValidatingAdmissionPolicy API: %w", err)
+	} else {
+		grBuilder.
+			Watches(
+				vap,
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(mandatoryVAPResource),
+			).
+			Watches(
+				vapBinding,
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(mandatoryVAPResource),
+			)
+	}
 
 	resources, err := r.deployer.Template(&config.GuardRailsDeploymentConfig{}, staticFiles)
 	if err != nil {
