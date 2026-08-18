@@ -50,7 +50,7 @@ docker build --no-cache \
 docker push "${OTEL_IMG}"
 ```
 
-## 3. Build and push operator image (local binary + minimal Dockerfile)
+## 3. Build and push operator image (local binary + UBI minimal)
 
 Build binary:
 
@@ -64,7 +64,7 @@ Build/push image:
 OP_IMG="${REGISTRY_HOST}/openshift-azure-operator/aro-operator-local:${VERSION}"
 
 cat > /tmp/Dockerfile.aro-operator-local <<'EOF'
-FROM scratch
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 COPY --chmod=0755 aro-operator /usr/local/bin/aro
 USER 1000
 ENV PATH=/usr/local/bin
@@ -73,9 +73,12 @@ EOF
 
 docker build -f /tmp/Dockerfile.aro-operator-local -t "${OP_IMG}" _out
 docker push "${OP_IMG}"
+```
 
 **Note**: Upon retry, use `--no-cache` with the `docker build` command, to ensure that all latest dependencies are pulled.
-```
+
+The UBI base supplies the CA trust bundle required by operator controllers that
+connect to Azure services. A scratch image does not include these certificates.
 
 ## 4. Set minimal-logs as baseline feature flags
 

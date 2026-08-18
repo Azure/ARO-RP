@@ -278,7 +278,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsDeployManaged: operator.FlagTrue,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 		},
 		{
@@ -297,8 +298,9 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// 2 mandatory and 4 optional policies, each with one binding.
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(12)
+				// 1 mandatory and 4 optional policies, each with one binding.
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(10)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 		},
 		{
@@ -322,9 +324,9 @@ func TestReconcileVAP(t *testing.T) {
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// cleanupGatekeeper: removePolicy calls EnsureDeletedGVR for GK constraints
-				// then deployVAP: 2 mandatory and 4 optional policies and bindings
+				// then deployVAP: 1 mandatory and 4 optional policies and bindings
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(12)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(10)
 			},
 		},
 		{
@@ -335,9 +337,9 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsMethod:        operator.GuardrailsMethodAuto,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				// Mandatory policies remain; 4 optional policies and bindings are removed.
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
-				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(8)
+				// The mandatory policy remains; 4 optional and 1 deprecated policy and binding are removed.
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(10)
 			},
 		},
 		{
@@ -347,7 +349,8 @@ func TestReconcileVAP(t *testing.T) {
 				operator.GuardrailsDeployManaged: "",
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 		},
 	}
@@ -421,6 +424,27 @@ func TestVapValidationAction(t *testing.T) {
 	}
 }
 
+func TestIsMandatoryVAPResource(t *testing.T) {
+	for _, name := range []string{
+		majorUpgradeDenyPolicyName,
+		majorUpgradeDenyPolicyName + "-binding",
+	} {
+		if !isMandatoryVAPResource(name) {
+			t.Errorf("isMandatoryVAPResource(%q) = false, want true", name)
+		}
+	}
+
+	for _, name := range []string{
+		"aro-machines-deny",
+		deprecatedMajorUpgradeProtectionPolicyName,
+		deprecatedMajorUpgradeProtectionPolicyName + "-binding",
+	} {
+		if isMandatoryVAPResource(name) {
+			t.Errorf("isMandatoryVAPResource(%q) = true, want false", name)
+		}
+	}
+}
+
 func TestEnsureMandatoryVAP(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -436,17 +460,15 @@ func TestEnsureMandatoryVAP(t *testing.T) {
 			ensured[uns.GetKind()+"/"+uns.GetName()] = uns
 		}
 		return nil
-	}).Times(4)
+	}).Times(2)
+	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
 	r := &Reconciler{dh: dh}
 	if err := r.ensureMandatoryVAP(context.Background()); err != nil {
 		t.Fatalf("ensureMandatoryVAP() returned error: %v", err)
 	}
 
-	for _, policyName := range []string{
-		majorUpgradeProtectionPolicyName,
-		majorUpgradeDenyPolicyName,
-	} {
+	for _, policyName := range []string{majorUpgradeDenyPolicyName} {
 		policyKey := "ValidatingAdmissionPolicy/" + policyName
 		policy := ensured[policyKey]
 		if policy == nil {
@@ -635,7 +657,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
 				// stopVAPTicker + best-effort removeAllVAP (no policies managed).
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 		},
@@ -652,7 +674,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), "gatekeeper-controller-manager").Return(true, nil)
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(4)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 		},
@@ -672,7 +694,8 @@ func TestReconcileMethodSelection(t *testing.T) {
 				operator.GuardrailsPolicyPrivNamespaceDenyEnforcement: operator.GuardrailsPolicyWarn,
 			},
 			dhMocks: func(dh *mock_dynamichelper.MockInterface) {
-				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(12)
+				dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(10)
+				dh.EXPECT().EnsureDeletedGVR(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 		},
 	}
