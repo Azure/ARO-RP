@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -192,7 +193,7 @@ func (o *resizeControlPlaneOperation) captureNodeSnapshot(ctx context.Context, m
 	o.log.WithFields(logrus.Fields{
 		"node":           machineName,
 		"originalVMSize": actualVMSize,
-		"targetVMSize":   o.desiredVMSize,
+		"targetVMSize":   utillog.Sanitize(o.desiredVMSize),
 	}).Info("captured node snapshot for resize operation")
 
 	return snapshot, nil

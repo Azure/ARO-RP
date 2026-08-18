@@ -16,6 +16,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/go-autorest/autorest"
+
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 const (
@@ -141,7 +143,7 @@ func (p *firstFailPolicy) Do(req *policy.Request) (*http.Response, error) {
 	p.injected[key] = struct{}{}
 	p.sceneIdx++
 	p.mu.Unlock()
-	logrus.Warnf("fault injected: %s (%d) on %s %s", sc.name, sc.status, req.Raw().Method, req.Raw().URL)
+	logrus.Warnf("fault injected: %s (%d) on %s %s", sc.name, sc.status, utillog.Sanitize(req.Raw().Method), utillog.Sanitize(req.Raw().URL.String()))
 	resp := scenarioResponse(sc)
 	resp.Request = req.Raw() // preserve request context for downstream handlers
 	return resp, nil
@@ -184,7 +186,7 @@ func NewFirstFailSendDecorator() autorest.SendDecorator {
 			injected[key] = struct{}{}
 			sceneIdx++
 			mu.Unlock()
-			logrus.Warnf("fault injected: %s (%d) on %s %s", sc.name, sc.status, r.Method, r.URL)
+			logrus.Warnf("fault injected: %s (%d) on %s %s", sc.name, sc.status, utillog.Sanitize(r.Method), utillog.Sanitize(r.URL.String()))
 			resp := scenarioResponse(sc)
 			resp.Request = r // createPollingTracker dispatches on resp.Request.Method; nil → panic
 			return resp, nil

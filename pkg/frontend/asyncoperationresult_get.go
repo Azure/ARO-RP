@@ -66,7 +66,9 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 	// don't give away the final operation status until it's committed to the
 	// database
 	if doc != nil && doc.AsyncOperationID == operationId {
-		header["Location"] = r.Header["Referer"]
+		if referer := r.Header.Get("Referer"); referer != "" {
+			header.Set("Location", referer)
+		}
 		return nil, statusCodeError(http.StatusAccepted)
 	}
 

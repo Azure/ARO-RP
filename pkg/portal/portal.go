@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
@@ -428,11 +429,11 @@ func (p *portal) getResourceID(subscriptionID, resourceGroup, clusterName string
 }
 
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {
-	p.log.Warn(err)
+	p.log.Warn(utillog.Sanitize(err.Error()))
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
 func (p *portal) badRequest(w http.ResponseWriter, err error) {
-	p.log.Debug(err)
+	p.log.Debug(utillog.Sanitize(err.Error()))
 	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }

@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 type StreamResponder interface {
@@ -31,13 +32,13 @@ func (d defaultResponder) ReplyStream(log *logrus.Entry, w http.ResponseWriter, 
 	if err != nil {
 		switch err := err.(type) {
 		case *api.CloudError:
-			log.Info(err)
+			log.Info(utillog.Sanitize(err.Error()))
 			api.WriteCloudError(w, err)
 			return
 		case statusCodeError:
 			w.WriteHeader(int(err))
 		default:
-			log.Error(err)
+			log.Error(utillog.Sanitize(err.Error()))
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}

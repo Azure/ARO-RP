@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -103,7 +104,7 @@ func (f *frontend) _postAdminOpenShiftClusterExec(ctx context.Context, r *http.R
 		return err
 	}
 
-	log = log.WithField("resourceID", resourceID)
+	log = log.WithField("resourceID", utillog.Sanitize(resourceID))
 	opCtx, opCancel := context.WithTimeout(ctx, adminActionStreamTimeout)
 	// panic recovery is in execContainerStream
 	go func() {
@@ -120,7 +121,7 @@ func execContainerStream(ctx context.Context, log *logrus.Entry, k adminactions.
 	defer utilrecover.Panic(log)
 	defer w.Close()
 
-	log = log.WithFields(logrus.Fields{"namespace": namespace, "podName": podName, "container": container})
+	log = log.WithFields(logrus.Fields{"namespace": utillog.Sanitize(namespace), "podName": utillog.Sanitize(podName), "container": utillog.Sanitize(container)})
 	// write errors ignored; pipe reader may close early on client disconnect
 	fmt.Fprintf(w, "Executing in %s/%s/%s...\n", namespace, podName, container)
 

@@ -33,6 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -212,7 +213,7 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 
 		machine := machines[name]
 		if machine.size == desiredVMSize {
-			log.Infof("%s is already running %s, skipping", name, desiredVMSize)
+			log.Infof("%s is already running %s, skipping", name, utillog.Sanitize(desiredVMSize))
 			continue
 		}
 
@@ -226,11 +227,11 @@ func resizeControlPlane(ctx context.Context, log *logrus.Entry, k adminactions.K
 		nodeState := &controlPlaneNodeProgress{snapshot: snapshot}
 		operation.nodes = append(operation.nodes, nodeState)
 
-		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, desiredVMSize)
+		log.Infof("Resizing control plane node %s from %s to %s", name, machine.size, utillog.Sanitize(desiredVMSize))
 		if err := operation.resizeNode(ctx, nodeState); err != nil {
 			return triggerRollback(fmt.Errorf("failed to resize node %s: %w", name, err))
 		}
-		log.Infof("Successfully resized node %s to %s", name, desiredVMSize)
+		log.Infof("Successfully resized node %s to %s", name, utillog.Sanitize(desiredVMSize))
 	}
 
 	return nil

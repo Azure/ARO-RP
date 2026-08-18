@@ -9,6 +9,8 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
+
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 func (f *frontend) postAdminOpenShiftClusterEtcdKeyCount(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +28,7 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdKeyCount(ctx context.Context, r
 		return err
 	}
 
-	log = log.WithFields(logrus.Fields{"resourceID": resourceID, "vmName": vmName})
+	log = log.WithFields(logrus.Fields{"resourceID": utillog.Sanitize(resourceID), "vmName": utillog.Sanitize(vmName)})
 	podName := "etcd-" + vmName
 	opCtx, opCancel := context.WithTimeout(ctx, adminActionStreamTimeout)
 	// panic recovery is in execContainerStream

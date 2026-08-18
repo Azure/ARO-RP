@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
@@ -175,7 +176,7 @@ func walk(n *html.Node, f func(*html.Node)) {
 
 func (p *Prometheus) error(r *http.Request, statusCode int, err error) {
 	if err != nil {
-		p.log.Print(err)
+		p.log.Print(utillog.Sanitize(err.Error()))
 	}
 
 	w := responsewriter.New(r)
