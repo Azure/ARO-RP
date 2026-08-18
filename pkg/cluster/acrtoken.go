@@ -158,7 +158,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		return err
 	}
 
-	doc, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
+	_, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.PutRegistryProfile(registryProfile)
 		return nil
 	})
