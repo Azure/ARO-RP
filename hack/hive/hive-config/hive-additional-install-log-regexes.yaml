@@ -31,6 +31,5 @@ data:
       - '"code\W*:\W*"OSProvisioningTimedOut\W*"'
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   name: additional-install-log-regexes
   namespace: hive
