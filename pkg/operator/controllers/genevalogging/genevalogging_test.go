@@ -467,7 +467,11 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 		} {
 			found := false
 			for _, r := range rules {
-				if strings.Contains(r.Expr.String(), want) {
+				expr := r.Expr.String()
+				if strings.Contains(expr, want+"_total") {
+					t.Fatalf("rule references suffixed %q; collector exposes the bare name", want+"_total")
+				}
+				if strings.Contains(expr, want) {
 					found = true
 				}
 			}
