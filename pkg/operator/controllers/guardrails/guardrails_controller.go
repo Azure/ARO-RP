@@ -278,17 +278,22 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Version: "v1",
 		Kind:    "ValidatingAdmissionPolicyBinding",
 	})
-	grBuilder.
-		Watches(
-			vap,
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(mandatoryVAPResource),
-		).
-		Watches(
-			vapBinding,
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(mandatoryVAPResource),
-		)
+		lt417, err := r.VersionLT417(context.Background())
+		if err != nil {
+			r.log.Warnf("skipping mandatory VAP watches: %v", err)
+		} else if !lt417 {
+			grBuilder.
+				Watches(
+					vap,
+					&handler.EnqueueRequestForObject{},
+					builder.WithPredicates(mandatoryVAPResource),
+				).
+				Watches(
+					vapBinding,
+					&handler.EnqueueRequestForObject{},
+					builder.WithPredicates(mandatoryVAPResource),
+				)
+		}
 
 	resources, err := r.deployer.Template(&config.GuardRailsDeploymentConfig{}, staticFiles)
 	if err != nil {
