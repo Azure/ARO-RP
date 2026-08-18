@@ -29,8 +29,11 @@ spec:
       has(object.spec.desiredUpdate.version)
         ? object.spec.desiredUpdate.version
         : ""
+  - name: targetChannel
+    expression: |
+      has(object.spec) && has(object.spec.channel) ? object.spec.channel : ""
   validations:
   - expression: |
       !variables.currentVersion.startsWith("4.") ||
-      !variables.targetVersion.startsWith("5.")
+      !(variables.targetVersion.startsWith("5.") || variables.targetChannel.contains("-5."))
     message: "Upgrading from OpenShift 4 to OpenShift 5 is not allowed"
