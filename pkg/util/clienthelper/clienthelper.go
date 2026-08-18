@@ -144,6 +144,16 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 	})
 }
 
+// Wrappers for regular APIs to log similar to Ensure/EnsureDeleted
+func (ch *clientHelper) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	gvk, err := apiutil.GVKForObject(obj, scheme.Scheme)
+	if err != nil {
+		return err
+	}
+	ch.log.Infof("Patch %s", keyFunc(gvk.GroupKind(), obj.GetNamespace(), obj.GetName()))
+	return ch.Client.Patch(ctx, obj, patch, opts...)
+}
+
 // merge takes the existing (old) and desired (new) objects.  It compares them
 // to see if an update is necessary, fixes up the new object if needed, and
 // returns the difference for debugging purposes.
