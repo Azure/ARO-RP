@@ -297,18 +297,17 @@ func TestPutRegistryProfile(t *testing.T) {
 	// Check that it has been replaced
 	aLongTimeAgo := time.UnixMilli(1000)
 
-	a.Equal(ocWithProfile.Properties.RegistryProfiles,
-		[]*RegistryProfile{
-			{
-				Name:      "arointsvc.example.com",
-				Username:  "token-22222222-2222-2222-2222-222222220001",
-				IssueDate: &aLongTimeAgo,
-			},
-			{
-				Name:     "notwanted.example.com",
-				Username: "other",
-			},
-		})
+	a.Equal([]*RegistryProfile{
+		{
+			Name:      "arointsvc.example.com",
+			Username:  "token-22222222-2222-2222-2222-222222220001",
+			IssueDate: &aLongTimeAgo,
+		},
+		{
+			Name:     "notwanted.example.com",
+			Username: "other",
+		},
+	}, ocWithProfile.Properties.RegistryProfiles)
 }
 
 func TestGetRegistryProfiles(t *testing.T) {
