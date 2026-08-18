@@ -5,6 +5,7 @@ package genevalogging
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -157,14 +158,16 @@ func (r *Reconciler) cleanupStaleResources(ctx context.Context) error {
 }
 
 // checkOTelHealth inspects the otel-exporter DaemonSet pods and returns a
-// non-nil error describing any that are crash-looping or restart-looping. The
+// message describing any that are crash-looping or restart-looping (empty when
+// healthy). A non-nil error means the pods could not be listed (retry, not a
+// health verdict). The
 // kubelet already restarts a failing container; this surfaces a sustained
 // restart loop — which the DaemonSet available/unavailable count can miss when
 // pods briefly become ready between crashes — as a controller Degraded state.
-func (r *Reconciler) checkOTelHealth(ctx context.Context) error {
+func (r *Reconciler) checkOTelHealth(ctx context.Context) (string, error) {
 	pods := &corev1.PodList{}
 	if err := r.Client.List(ctx, pods, client.InNamespace(kubeNamespace)); err != nil {
-		return err
+		return "", err
 	}
 
 	dsNames := map[string]struct{}{MasterDaemonsetName: {}, WorkerDaemonsetName: {}}
@@ -180,7 +183,7 @@ func (r *Reconciler) checkOTelHealth(ctx context.Context) error {
 				continue
 			}
 			switch {
-			case cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff":
+			case cs.RestartCount >= otelPodRestartThreshold && cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff":
 				unhealthy = append(unhealthy, fmt.Sprintf("%s (CrashLoopBackOff, %d restarts)", pod.Name, cs.RestartCount))
 			case cs.RestartCount >= otelPodRestartThreshold && otelRecentlyTerminated(cs):
 				unhealthy = append(unhealthy, fmt.Sprintf("%s (%d restarts)", pod.Name, cs.RestartCount))
@@ -189,9 +192,9 @@ func (r *Reconciler) checkOTelHealth(ctx context.Context) error {
 	}
 
 	if len(unhealthy) > 0 {
-		return fmt.Errorf("otel-exporter pods restarting: %s", strings.Join(unhealthy, ", "))
+		return fmt.Sprintf("otel-exporter pods restarting: %s", strings.Join(unhealthy, ", ")), nil
 	}
-	return nil
+	return "", nil
 }
 
 // otelRecentlyTerminated reports whether the container's most recent
@@ -222,9 +225,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if healthErr := r.checkOTelHealth(ctx); healthErr != nil {
-		r.Log.Warn(healthErr)
-		r.SetDegraded(ctx, healthErr)
+	unhealthy, healthErr := r.checkOTelHealth(ctx)
+	if healthErr != nil {
+		r.Log.Error(healthErr)
+		return reconcile.Result{}, healthErr
+	}
+	if unhealthy != "" {
+		r.Log.Warn(unhealthy)
+		r.SetDegraded(ctx, errors.New(unhealthy))
 		return reconcile.Result{RequeueAfter: otelHealthRequeue}, nil
 	}
 

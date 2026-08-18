@@ -371,6 +371,9 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	// When enabled (opt-in), make the healthcheck extension report status from
 	// collector component events so a failed export pipeline — not just a dead
 	// process — fails the /healthz liveness probe and the pod is restarted.
+	// Requires a collector image that supports the gate; an image that rejects
+	// the unknown gate fails to start (surfaced by checkOTelHealth), so this
+	// defaults off and rolls out per-fleet after validation.
 	componentHealth := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelComponentHealth)
 
 	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey, configHash string) *appsv1.DaemonSet {

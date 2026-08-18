@@ -784,7 +784,8 @@ func TestCheckOTelHealth(t *testing.T) {
 		}
 	}
 	running := corev1.ContainerStatus{Name: "otel-exporter", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}
-	crashLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: 3, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
+	crashLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
+	crashLoopBelowThreshold := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: 3, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
 	restartLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-1 * time.Minute))}}}
 	stableAfterRestarts := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold + 3, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-2 * time.Hour))}}}
 
@@ -801,9 +802,13 @@ func TestCheckOTelHealth(t *testing.T) {
 			},
 		},
 		{
-			name:    "crash-looping pod is unhealthy",
+			name:    "crash-looping pod at threshold is unhealthy",
 			pods:    []*corev1.Pod{otelPod("otel-exporter-worker-b", WorkerDaemonsetName, crashLoop)},
-			wantErr: "otel-exporter pods restarting: otel-exporter-worker-b (CrashLoopBackOff, 3 restarts)",
+			wantErr: fmt.Sprintf("otel-exporter pods restarting: otel-exporter-worker-b (CrashLoopBackOff, %d restarts)", otelPodRestartThreshold),
+		},
+		{
+			name: "crash-looping below threshold is healthy",
+			pods: []*corev1.Pod{otelPod("otel-exporter-worker-b", WorkerDaemonsetName, crashLoopBelowThreshold)},
 		},
 		{
 			name:    "restart-looping pod is unhealthy",
@@ -828,15 +833,12 @@ func TestCheckOTelHealth(t *testing.T) {
 				Client: testclienthelper.NewAROFakeClientBuilder(objs...).Build(),
 			}}
 
-			err := r.checkOTelHealth(context.Background())
-			if tt.wantErr == "" {
-				if err != nil {
-					t.Fatalf("expected no error, got %v", err)
-				}
-				return
+			msg, err := r.checkOTelHealth(context.Background())
+			if err != nil {
+				t.Fatalf("unexpected list error: %v", err)
 			}
-			if err == nil || err.Error() != tt.wantErr {
-				t.Fatalf("got %v, want %q", err, tt.wantErr)
+			if msg != tt.wantErr {
+				t.Fatalf("got %q, want %q", msg, tt.wantErr)
 			}
 		})
 	}
