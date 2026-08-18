@@ -272,6 +272,11 @@ func (mon *Monitor) Monitor(ctx context.Context) (_err error) {
 		return errors.Join(errs...)
 	}
 
+	err = mon.timeCall(ctx, mon.emitOpenShift5Versions)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	// Run up to mon.parallelism (default: MONITOR_GOROUTINES_PER_CLUSTER)
 	// goroutines for collecting metrics
 	wg := new(errgroup.Group)

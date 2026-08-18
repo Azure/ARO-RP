@@ -97,6 +97,13 @@ func TestMonitor(t *testing.T) {
 						"collector": "prefetchClusterVersion",
 					},
 				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "emitOpenShift5Versions",
+					},
+				},
 			},
 		},
 		{
@@ -147,6 +154,13 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "emitOpenShift5Versions",
 					},
 				},
 			},
@@ -220,6 +234,13 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "emitOpenShift5Versions",
 					},
 				},
 				{
@@ -363,6 +384,13 @@ func TestMonitor(t *testing.T) {
 					Value:      1.0,
 					Dimensions: map[string]string{
 						"collector": "prefetchClusterVersion",
+					},
+				},
+				{
+					MetricName: "monitor.cluster.collector.duration",
+					Value:      1.0,
+					Dimensions: map[string]string{
+						"collector": "emitOpenShift5Versions",
 					},
 				},
 				{

@@ -19,6 +19,24 @@ type Node struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
+const supportedOpenShiftMajorVersion = 4
+
+// ValidateReleaseVersion prevents unsupported OpenShift release payloads from
+// entering ARO registries.
+func ValidateReleaseVersion(releaseVersion string) error {
+	parsedVersion, err := version.ParseVersion(releaseVersion)
+	if err != nil {
+		return err
+	}
+
+	components, _ := parsedVersion.Components()
+	if components[0] != supportedOpenShiftMajorVersion {
+		return fmt.Errorf("refusing to mirror unsupported OpenShift major version %s", releaseVersion)
+	}
+
+	return nil
+}
+
 // AddFromGraph adds all nodes whose version is of the form x.y.z (no suffix)
 // and >= min
 func AddFromGraph(min version.Version) ([]Node, error) {
@@ -65,6 +83,11 @@ func AddFromGraph(min version.Version) ([]Node, error) {
 
 		// if incoming version < min - skip
 		if vsn.Lt(min) || vsn.Suffix != "" {
+			continue
+		}
+
+		components, _ := vsn.Components()
+		if components[0] != supportedOpenShiftMajorVersion {
 			continue
 		}
 

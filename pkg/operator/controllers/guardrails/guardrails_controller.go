@@ -12,6 +12,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -19,6 +22,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -71,6 +75,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	lt417, err := r.VersionLT417(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !lt417 {
+		if err := r.ensureMandatoryVAP(ctx); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.GuardrailsEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
@@ -85,11 +100,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// preserves their current behaviour. New clusters get "auto" via
 	// DefaultOperatorFlags.
 	method := instance.Spec.OperatorFlags.GetWithDefault(operator.GuardrailsMethod, operator.GuardrailsMethodGatekeeper)
-
-	lt417, err := r.VersionLT417(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 
 	useGatekeeper := r.resolveGuardrailsMethod(method, lt417)
 
@@ -254,6 +264,40 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	grBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{})))
 
+	mandatoryVAPResource := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return isMandatoryVAPResource(o.GetName())
+	})
+	vap := &unstructured.Unstructured{}
+	vap.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "admissionregistration.k8s.io",
+		Version: "v1",
+		Kind:    "ValidatingAdmissionPolicy",
+	})
+	vapBinding := &unstructured.Unstructured{}
+	vapBinding.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "admissionregistration.k8s.io",
+		Version: "v1",
+		Kind:    "ValidatingAdmissionPolicyBinding",
+	})
+	_, err := mgr.GetRESTMapper().RESTMapping(vap.GroupVersionKind().GroupKind(), vap.GroupVersionKind().Version)
+	if meta.IsNoMatchError(err) {
+		r.log.Info("skipping mandatory VAP watches because the API is unavailable")
+	} else if err != nil {
+		return fmt.Errorf("mapping ValidatingAdmissionPolicy API: %w", err)
+	} else {
+		grBuilder.
+			Watches(
+				vap,
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(mandatoryVAPResource),
+			).
+			Watches(
+				vapBinding,
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(mandatoryVAPResource),
+			)
+	}
+
 	resources, err := r.deployer.Template(&config.GuardRailsDeploymentConfig{}, staticFiles)
 	if err != nil {
 		return err
@@ -266,7 +310,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 	}
 
-	// we won't listen for changes on policies, since we only want to reconcile on a timer anyway
 	return grBuilder.
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ControllerName).

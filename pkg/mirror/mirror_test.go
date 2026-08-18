@@ -8,6 +8,39 @@ import (
 	"testing"
 )
 
+func TestValidateReleaseVersion(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		releaseVersion string
+		wantErr        bool
+	}{
+		{
+			name:           "OpenShift 4 release",
+			releaseVersion: "4.21.7",
+		},
+		{
+			name:           "OpenShift 5 release",
+			releaseVersion: "5.0.0",
+			wantErr:        true,
+		},
+		{
+			name:           "invalid release",
+			releaseVersion: "latest",
+			wantErr:        true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateReleaseVersion(tt.releaseVersion)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected an error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 func TestDestLastIndex(t *testing.T) {
 	tests := []struct {
 		name                string
