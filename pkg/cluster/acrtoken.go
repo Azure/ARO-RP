@@ -193,13 +193,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 }
 
 func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clienthelper.Interface, encodedDockerConfigJson []byte) error {
-	openshiftConfigSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pullSecretName.Name,
-			Namespace: pullSecretName.Namespace,
-		},
-	}
-
+	openshiftConfigSecret := &corev1.Secret{}
 	err := ch.GetOne(ctx, pullSecretName, openshiftConfigSecret)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return fmt.Errorf("unable to fetch %s: %w", pullSecretName, err)

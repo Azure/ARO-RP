@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	"encoding/base64"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -47,7 +50,7 @@ func TestRotateACRToken(t *testing.T) {
 		objects  []client.Object
 
 		fake   func(*testacrtoken.FakeACRToken)
-		verify func(*require.Assertions, *testacrtoken.FakeACRToken) api.OpenShiftClusterProperties
+		verify func(*require.Assertions, *testacrtoken.FakeACRToken) (api.OpenShiftClusterProperties, []runtime.Object)
 
 		wantErr      error
 		expectedLogs []testlog.ExpectedLogEntry
@@ -76,7 +79,7 @@ func TestRotateACRToken(t *testing.T) {
 			},
 		},
 		{
-			name:     "token is expired",
+			name:     "token is expired, is rotated",
 			isDev:    false,
 			azureEnv: azureclient.PublicCloud,
 			oc: func() api.OpenShiftClusterProperties {
@@ -102,16 +105,19 @@ func TestRotateACRToken(t *testing.T) {
 						Name:      "pull-secret",
 						Namespace: "openshift-config",
 					},
+					Type: corev1.SecretTypeDockerConfigJson,
+					Data: map[string][]byte{
+						"somethingElse": {},
+					},
 				},
 			},
-
 			fake: func(*testacrtoken.FakeACRToken) {
 			},
-			verify: func(r *require.Assertions, t *testacrtoken.FakeACRToken) api.OpenShiftClusterProperties {
+			verify: func(r *require.Assertions, t *testacrtoken.FakeACRToken) (api.OpenShiftClusterProperties, []runtime.Object) {
 				generated := t.GetGeneratedPasswords()
 				r.Len(generated, 1, "wrong number of passwords requested")
 
-				return api.OpenShiftClusterProperties{
+				props := api.OpenShiftClusterProperties{
 					RegistryProfiles: []*api.RegistryProfile{
 						{
 							Name:      publicACR,
@@ -121,12 +127,47 @@ func TestRotateACRToken(t *testing.T) {
 						},
 					},
 				}
+
+				// The two secrets are laid down with the correct content
+				b64pwpair := base64.StdEncoding.EncodeToString([]byte(user + ":" + generated[0]))
+				objs := []runtime.Object{
+					&corev1.Secret{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "pull-secret",
+							Namespace: "openshift-config",
+						},
+						Type: corev1.SecretTypeDockerConfigJson,
+						Data: map[string][]byte{
+							"somethingElse":     {},
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+					&corev1.Secret{
+						ObjectMeta: v1.ObjectMeta{
+							Name:      "cluster",
+							Namespace: "openshift-azure-operator",
+						},
+						Data: map[string][]byte{
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+				}
+
+				return props, objs
 			},
 			wantErr: nil,
 			expectedLogs: []testlog.ExpectedLogEntry{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("token has 0s validity remaining, should rotate in -5400h0m0s"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("rotating ACR token"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Patch Secret/openshift-config/pull-secret"),
 				},
 			},
 		},
@@ -209,7 +250,7 @@ func TestRotateACRToken(t *testing.T) {
 			}
 
 			if tt.verify != nil {
-				afterProps := tt.verify(r, acrManager)
+				afterProps, afterObjects := tt.verify(r, acrManager)
 				afterDoc := &api.OpenShiftClusterDocument{
 					Key: strings.ToLower(key),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -221,6 +262,17 @@ func TestRotateACRToken(t *testing.T) {
 				checker := testdatabase.NewChecker()
 				checker.AddOpenShiftClusterDocuments(afterDoc)
 				r.Empty(checker.CheckOpenShiftClusters(openShiftClustersClient))
+
+				if afterObjects != nil {
+					objs := []runtime.Object{}
+					for _, i := range afterObjects {
+						f := reflect.New(reflect.TypeOf(i).Elem()).Interface().(runtime.Object)
+						err := ch.GetOne(t.Context(), client.ObjectKeyFromObject(i.(client.Object)), f)
+						r.NoError(err)
+						objs = append(objs, f)
+					}
+					testclienthelper.CompareObjectList(t, objs, afterObjects)
+				}
 			}
 
 			err := testlog.AssertLoggingOutput(hook, tt.expectedLogs)
