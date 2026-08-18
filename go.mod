@@ -403,20 +403,16 @@ exclude (
 	// Remove unneeded go-restful v2
 	github.com/emicklei/go-restful v2.15.0+incompatible
 	github.com/go-logr/logr v1.2.2
-	github.com/golang/protobuf v1.3.2
-	github.com/golang/protobuf v1.3.4
-	github.com/golang/protobuf v1.4.0-rc.1
-	github.com/golang/protobuf v1.4.0-rc.1.0.20200221234624-67d41d38c208
-	github.com/golang/protobuf v1.4.0-rc.2
-	github.com/golang/protobuf v1.4.0-rc.4.0.20200313231945-b860323f09d0
-	github.com/golang/protobuf v1.4.0
-	github.com/golang/protobuf v1.4.1
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/moby/spdystream v0.2.0
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742
 	github.com/modern-go/reflect2 v1.0.1
 	github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
-	// exclude old openshift library-go
+	github.com/onsi/gomega v1.7.1
+	github.com/onsi/gomega v1.10.1
+	github.com/onsi/gomega v1.17.0
+	github.com/onsi/gomega v1.18.1
 	github.com/pkg/errors v0.8.1
 	github.com/pkg/sftp v1.10.1
 	github.com/pkg/sftp v1.13.1
@@ -430,6 +426,7 @@ exclude (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/pflag v1.0.6
+	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/objx v0.1.0
 	github.com/stretchr/objx v0.2.0
 	github.com/stretchr/objx v0.4.0
@@ -444,6 +441,7 @@ exclude (
 	github.com/stretchr/testify v1.8.0
 	github.com/stretchr/testify v1.8.1
 	github.com/stretchr/testify v1.8.2
+	go.yaml.in/yaml/v3 v3.0.4
 	gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
@@ -454,12 +452,14 @@ exclude (
 	gopkg.in/yaml.v2 v2.2.5
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
 // trim old golang.org/x/ and github.com/golang/ items
 exclude (
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 	// exclude github.com/golang/protobuf < 1.3.2 https://nvd.nist.gov/vuln/detail/CVE-2021-3121
 	github.com/golang/protobuf v1.0.0
@@ -492,6 +492,7 @@ exclude (
 	golang.org/x/crypto v0.19.0
 	golang.org/x/crypto v0.23.0
 	golang.org/x/crypto v0.31.0
+	golang.org/x/crypto v0.33.0
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
@@ -541,6 +542,7 @@ exclude (
 	golang.org/x/net v0.9.0
 	golang.org/x/net v0.10.0
 	golang.org/x/net v0.17.0
+	golang.org/x/net v0.21.0
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
@@ -656,6 +658,9 @@ exclude (
 	golang.org/x/sys v0.7.0
 	golang.org/x/sys v0.8.0
 	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.17.0
+	golang.org/x/sys v0.28.0
+	golang.org/x/sys v0.30.0
 	golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
@@ -667,6 +672,8 @@ exclude (
 	golang.org/x/term v0.7.0
 	golang.org/x/term v0.8.0
 	golang.org/x/term v0.13.0
+	golang.org/x/term v0.17.0
+	golang.org/x/term v0.29.0
 	golang.org/x/text v0.3.0
 	golang.org/x/text v0.3.2
 	golang.org/x/text v0.3.3
@@ -681,6 +688,9 @@ exclude (
 	golang.org/x/text v0.8.0
 	golang.org/x/text v0.9.0
 	golang.org/x/text v0.13.0
+	golang.org/x/text v0.14.0
+	golang.org/x/text v0.15.0
+	golang.org/x/text v0.22.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
