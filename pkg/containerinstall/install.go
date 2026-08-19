@@ -22,9 +22,8 @@ import (
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"sigs.k8s.io/yaml"
-
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/kubeserializer"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -186,6 +185,8 @@ func (m *manager) containerFinished(context.Context) (bool, error) {
 }
 
 func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, customManifests map[string]kruntime.Object) error {
+	serializer := kubeserializer.NewYamlSerializer()
+
 	encCluster, err := json.Marshal(doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -221,7 +222,7 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 	}
 
 	for key, manifest := range customManifests {
-		b, err := yaml.Marshal(manifest)
+		b, err := serializer.ToYAML(manifest)
 		if err != nil {
 			return err
 		}

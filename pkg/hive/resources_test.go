@@ -49,7 +49,10 @@ func TestClusterManifestsSecret(t *testing.T) {
 		},
 	}
 
-	r, _ := clusterManifestsSecret("testNamespace", customManifests)
+	r, err := clusterManifestsSecret("testNamespace", customManifests)
+	if err != nil {
+		t.Error(err)
+	}
 
 	for _, err := range deep.Equal(r.StringData, expected) {
 		t.Error(err)
