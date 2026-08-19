@@ -36,12 +36,20 @@ var TransientBackoff = wait.Backoff{
 // otherwise, TransientBackoff governs the schedule.
 
 func Retryable(ctx context.Context, f func() error, log *logrus.Entry, desc string) error {
-	return RetryableWith(ctx, azureerrors.IsRetryableError, f, log, desc)
+	return RetryableWith(ctx, azureerrors.IsRetryableError, f, log, desc, nil)
+}
+
+// RetryOptions configures optional behavior for RetryableWith.
+type RetryOptions struct {
+	Steps int
 }
 
 // RetryableWith is like Retryable but with a custom error predicate.
-func RetryableWith(ctx context.Context, isRetryable func(error) bool, f func() error, log *logrus.Entry, desc string) error {
+func RetryableWith(ctx context.Context, isRetryable func(error) bool, f func() error, log *logrus.Entry, desc string, opts *RetryOptions) error {
 	b := TransientBackoff
+	if opts != nil && opts.Steps > 0 {
+		b.Steps = opts.Steps
+	}
 	steps := b.Steps
 	var lastErr error
 	for i := 0; i < steps; i++ {

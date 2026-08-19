@@ -50,7 +50,7 @@ func (m *manager) platformWorkloadIdentityIDs(ctx context.Context) error {
 			var getErr error
 			identityDetails, getErr = m.userAssignedIdentities.Get(ctx, resourceId.ResourceGroupName, resourceId.Name, &armmsi.UserAssignedIdentitiesClientGetOptions{})
 			return getErr
-		}, m.log, fmt.Sprintf("fetching platform workload identity '%s'", operatorName))
+		}, m.log, fmt.Sprintf("fetching platform workload identity '%s'", operatorName), &utilarm.RetryOptions{Steps: 12})
 		if err != nil {
 			if azureerrors.IsStatusUnauthorizedError(err) || azureerrors.IsStatusForbiddenError(err) || azureerrors.IsStatusNotFoundError(err) || azureerrors.IsRetryableError(err) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidPlatformWorkloadIdentity, fmt.Sprintf(`.properties.platformWorkloadIdentityProfile.platformWorkloadIdentities["%s"]`, operatorName), err.Error())
