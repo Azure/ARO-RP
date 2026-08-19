@@ -20,6 +20,8 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
+const RBACPropagationRetrySteps = 12
+
 // TransientBackoff is the retry schedule for ARM write operations when no Retry-After
 // header is present. It is a var so tests can override it; tests that mutate it must
 // not call t.Parallel().
