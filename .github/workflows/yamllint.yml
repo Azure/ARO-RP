@@ -18,4 +18,4 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: yamllint
-      uses: oxsecurity/megalinter/flavors/ci_light@ef3e84b8b836d76db562d0f3ed7da61e8fd538bc # v9.6.0
+      uses: oxsecurity/megalinter/flavors/ci_light@15e5b45552097e318c93de385779ce3b1084052c # v10.0.0
