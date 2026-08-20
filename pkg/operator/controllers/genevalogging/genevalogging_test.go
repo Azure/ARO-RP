@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
@@ -21,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -435,14 +437,47 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 			t.Fatalf("expected 1 rule group, got %d", len(prometheusRule.Spec.Groups))
 		}
 		rules := prometheusRule.Spec.Groups[0].Rules
-		if len(rules) != 1 || rules[0].Alert != "OTelExporterNoLogsShippedSRE" {
-			t.Fatalf("unexpected PrometheusRule rules: %v", rules)
+		wantAlerts := []string{
+			"OTelExporterNoLogsShippedSRE",
+			"OTelExporterSendFailingSRE",
+			"OTelExporterQueueSaturatedSRE",
+			"OTelExporterLogsRefusedSRE",
 		}
-		if rules[0].Labels["severity"] != "critical" {
-			t.Fatalf("unexpected alert severity: %q", rules[0].Labels["severity"])
+		if len(rules) != len(wantAlerts) {
+			t.Fatalf("expected %d rules, got %d: %v", len(wantAlerts), len(rules), rules)
 		}
-		if rules[0].For != "10m" {
-			t.Fatalf("unexpected alert For duration: %q", rules[0].For)
+		byAlert := make(map[string]monitoringv1.Rule, len(rules))
+		for _, r := range rules {
+			byAlert[r.Alert] = r
+		}
+		for _, want := range wantAlerts {
+			if _, ok := byAlert[want]; !ok {
+				t.Fatalf("missing alert %q; got rules %v", want, rules)
+			}
+		}
+		if noLogs := byAlert["OTelExporterNoLogsShippedSRE"]; noLogs.Labels["severity"] != "critical" || noLogs.For != "10m" {
+			t.Fatalf("NoLogsShipped alert: severity=%q For=%q", noLogs.Labels["severity"], noLogs.For)
+		}
+		// The collector exposes these counters without a _total suffix (verified
+		// on a live cluster), so the alert expressions use the bare names.
+		for _, want := range []string{
+			"otelcol_exporter_sent_log_records",
+			"otelcol_exporter_send_failed_log_records",
+			"otelcol_receiver_refused_log_records",
+		} {
+			found := false
+			for _, r := range rules {
+				expr := r.Expr.String()
+				if strings.Contains(expr, want+"_total") {
+					t.Fatalf("rule references suffixed %q; collector exposes the bare name", want+"_total")
+				}
+				if strings.Contains(expr, want) {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("no rule references %q", want)
+			}
 		}
 	}
 }
@@ -738,5 +773,119 @@ func TestCleanupStaleResources(t *testing.T) {
 
 	if err := r.cleanupStaleResources(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCheckOTelHealth(t *testing.T) {
+	otelPod := func(name, app string, cs corev1.ContainerStatus) *corev1.Pod {
+		return &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: kubeNamespace,
+				Labels:    map[string]string{"app": app},
+			},
+			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{cs}},
+		}
+	}
+	running := corev1.ContainerStatus{Name: "otel-exporter", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}
+	crashLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
+	crashLoopBelowThreshold := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: 3, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
+	restartLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-1 * time.Minute))}}}
+	stableAfterRestarts := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold + 3, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-2 * time.Hour))}}}
+
+	for _, tt := range []struct {
+		name    string
+		pods    []*corev1.Pod
+		wantErr string
+	}{
+		{
+			name: "all healthy",
+			pods: []*corev1.Pod{
+				otelPod("otel-exporter-master-a", MasterDaemonsetName, running),
+				otelPod("otel-exporter-worker-b", WorkerDaemonsetName, running),
+			},
+		},
+		{
+			name:    "crash-looping pod at threshold is unhealthy",
+			pods:    []*corev1.Pod{otelPod("otel-exporter-worker-b", WorkerDaemonsetName, crashLoop)},
+			wantErr: fmt.Sprintf("otel-exporter pods restarting: otel-exporter-worker-b (CrashLoopBackOff, %d restarts)", otelPodRestartThreshold),
+		},
+		{
+			name: "crash-looping below threshold is healthy",
+			pods: []*corev1.Pod{otelPod("otel-exporter-worker-b", WorkerDaemonsetName, crashLoopBelowThreshold)},
+		},
+		{
+			name:    "restart-looping pod is unhealthy",
+			pods:    []*corev1.Pod{otelPod("otel-exporter-master-a", MasterDaemonsetName, restartLoop)},
+			wantErr: fmt.Sprintf("otel-exporter pods restarting: otel-exporter-master-a (%d restarts)", otelPodRestartThreshold),
+		},
+		{
+			name: "pod stable after old restarts is healthy",
+			pods: []*corev1.Pod{otelPod("otel-exporter-master-a", MasterDaemonsetName, stableAfterRestarts)},
+		},
+		{
+			name: "unrelated pod is ignored",
+			pods: []*corev1.Pod{otelPod("some-other-pod", "not-otel", crashLoop)},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			objs := make([]client.Object, 0, len(tt.pods))
+			for _, p := range tt.pods {
+				objs = append(objs, p)
+			}
+			r := &Reconciler{AROController: base.AROController{
+				Client: testclienthelper.NewAROFakeClientBuilder(objs...).Build(),
+			}}
+
+			msg, err := r.checkOTelHealth(context.Background())
+			if err != nil {
+				t.Fatalf("unexpected list error: %v", err)
+			}
+			if msg != tt.wantErr {
+				t.Fatalf("got %q, want %q", msg, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestOTelDaemonSetsComponentHealthFlag(t *testing.T) {
+	const gate = "--feature-gates=+extension.healthcheck.useComponentStatus"
+	r := &Reconciler{}
+
+	for _, tt := range []struct {
+		name  string
+		flags arov1alpha1.OperatorFlags
+		want  bool
+	}{
+		{name: "disabled by default", flags: arov1alpha1.OperatorFlags{}, want: false},
+		{name: "enabled via flag", flags: arov1alpha1.OperatorFlags{operator.GenevaLoggingOTelComponentHealth: operator.FlagTrue}, want: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			daemonsets, err := r.otelDaemonSets(&arov1alpha1.Cluster{
+				Spec: arov1alpha1.ClusterSpec{
+					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+					ACRDomain:     "acrDomain",
+					OperatorFlags: tt.flags,
+				},
+			}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, ds := range daemonsets {
+				exporter, ok := getContainer(ds, "otel-exporter")
+				if !ok {
+					t.Fatalf("missing otel-exporter container in %s", ds.Name)
+				}
+				hasGate := false
+				for _, a := range exporter.Args {
+					if a == gate {
+						hasGate = true
+					}
+				}
+				if hasGate != tt.want {
+					t.Fatalf("%s: feature-gate present=%v, want %v (args=%v)", ds.Name, hasGate, tt.want, exporter.Args)
+				}
+			}
+		})
 	}
 }
