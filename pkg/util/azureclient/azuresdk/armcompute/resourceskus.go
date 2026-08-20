@@ -11,12 +11,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
+// moduleName/moduleVersion identify this client to ARM telemetry.
+const (
+	moduleName    = "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
+	moduleVersion = "v1.0.0"
+)
+
 type ResourceSKUsClient interface {
 	ResourceSKUsClientAddons
 }
 
 type resourceSKUsClient struct {
 	*armcompute.ResourceSKUsClient
+
+	// armClient and subscriptionID back List() in resourceskus_addons.go.
+	armClient      *arm.Client
+	subscriptionID string
 }
 
 var _ ResourceSKUsClient = &resourceSKUsClient{}
@@ -41,7 +51,14 @@ func NewResourceSKUsClient(subscriptionId string, credential azcore.TokenCredent
 
 	client := clientFactory.NewResourceSKUsClient()
 
+	armClient, err := arm.NewClient(moduleName, moduleVersion, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &resourceSKUsClient{
 		ResourceSKUsClient: client,
+		armClient:          armClient,
+		subscriptionID:     subscriptionId,
 	}, nil
 }
