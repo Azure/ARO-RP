@@ -128,3 +128,11 @@ func TestEnrichOne(t *testing.T) {
 		})
 	}
 }
+
+func TestNewParallelEnricherDoesNotRegisterClusterVersion(t *testing.T) {
+	e := NewParallelEnricher(nil, nil)
+
+	if _, ok := e.enrichers["clusterVersion"]; ok {
+		t.Fatal("cluster version enricher should not be registered")
+	}
+}
