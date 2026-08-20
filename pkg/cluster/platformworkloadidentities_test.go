@@ -73,7 +73,7 @@ func TestPlatformWorkloadIdentityIDs(t *testing.T) {
 	// Must not call t.Parallel(); mutates package-level utilarm.TransientBackoff.
 	savedBackoff := utilarm.TransientBackoff
 	utilarm.TransientBackoff = wait.Backoff{
-		Steps:    12,
+		Steps:    utilarm.RBACPropagationRetrySteps,
 		Duration: 1 * time.Millisecond,
 		Factor:   1.0,
 		Jitter:   0.0,
