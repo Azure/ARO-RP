@@ -60,6 +60,10 @@ type azureActions struct {
 	storageAccounts    storage.AccountsClient
 	virtualMachines    compute.VirtualMachinesClient
 	virtualNetworks    armnetwork.VirtualNetworksClient
+
+	armVirtualMachines           armcompute.VirtualMachinesClient
+	armCapacityReservationGroups armcompute.CapacityReservationGroupsClient
+	armCapacityReservations      armcompute.CapacityReservationsClient
 }
 
 // NewAzureActions returns an azureActions
@@ -109,6 +113,21 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	armVirtualMachines, err := armcompute.NewVirtualMachinesClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
+	armCapacityReservationGroups, err := armcompute.NewCapacityReservationGroupsClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
+	armCapacityReservations, err := armcompute.NewCapacityReservationsClient(subscriptionDoc.ID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -124,6 +143,10 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualNetworks:    virtualNetworks,
+
+		armVirtualMachines:           armVirtualMachines,
+		armCapacityReservationGroups: armCapacityReservationGroups,
+		armCapacityReservations:      armCapacityReservations,
 	}, nil
 }
 
@@ -188,13 +211,11 @@ func (a *azureActions) ResourceGroupHasVM(ctx context.Context, vmName string) (b
 func (a *azureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	// Call GetEffectiveRouteTableAndWait using the ARO-RP utility pattern
 	result, err := a.networkInterfaces.GetEffectiveRouteTableAndWait(ctx, clusterRGName, nicName, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Marshal the result to JSON
 	jsonData, err := result.MarshalJSON()
 	if err != nil {
 		return nil, err
