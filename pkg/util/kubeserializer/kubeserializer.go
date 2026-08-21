@@ -20,7 +20,7 @@ type serializer struct {
 	codec kruntime.Codec
 }
 
-func NewYamlSerializer() *serializer {
+func NewYamlSerializer() Serializer {
 	kserializer := kjson.NewSerializerWithOptions(
 		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
 		kjson.SerializerOptions{Yaml: true},
