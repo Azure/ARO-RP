@@ -592,6 +592,15 @@ func setupE2EInfrastructure(ctx context.Context) error {
 		return err
 	}
 
+	if os.Getenv("AZURE_TOKEN_CREDENTIALS") == "" {
+		if err := env.ValidateVars(
+			"AZURE_TENANT_ID",
+			"AZURE_CLIENT_ID",
+			"AZURE_CLIENT_SECRET"); err != nil {
+			return fmt.Errorf("AZURE_TOKEN_CREDENTIALS not set, and one or more of AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET is missing: %w", err)
+		}
+	}
+
 	// Core ARO env
 	var err error
 	_env, err = env.NewCoreForCI(ctx, log, env.SERVICE_E2E)
