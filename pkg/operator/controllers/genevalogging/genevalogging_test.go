@@ -441,8 +441,8 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 		if rules[0].Labels["severity"] != "critical" {
 			t.Fatalf("unexpected alert severity: %q", rules[0].Labels["severity"])
 		}
-		if rules[0].For != "10m" {
-			t.Fatalf("unexpected alert For duration: %q", rules[0].For)
+		if *rules[0].For != monitoringv1.Duration("10m") {
+			t.Fatalf("unexpected alert For duration: %q", *rules[0].For)
 		}
 	}
 }

@@ -102,10 +102,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 			},
 			want: map[string]kruntime.Object{
 				"openshift-foo-azure-cloud-credentials-credentials.yaml": &corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-foo",
 						Name:      "azure-cloud-credentials",
@@ -120,10 +116,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 				"openshift-bar-azure-cloud-credentials-credentials.yaml": &corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-bar",
 						Name:      "azure-cloud-credentials",
@@ -138,10 +130,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 				ccoSecretFilename: &corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ccoSecretNamespace,
 						Name:      ccoSecretName,
@@ -152,10 +140,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 				authenticationConfigFilename: &configv1.Authentication{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "config.openshift.io/v1",
-						Kind:       "Authentication",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: authenticationConfigName,
 					},
@@ -266,10 +250,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			want: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "openshift-foo",
 						Name:            "azure-cloud-credentials",
@@ -285,10 +265,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "openshift-bar",
 						Name:            "azure-cloud-credentials",
@@ -304,10 +280,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "openshift-azure-operator",
 						Name:            "azure-cloud-credentials",
@@ -429,10 +401,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-foo",
 						Name:      "azure-cloud-credentials",
@@ -447,10 +415,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-bar",
 						Name:      "azure-cloud-credentials",
@@ -467,19 +431,11 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantNamespaces: []*corev1.Namespace{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openshift-foo",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openshift-bar",
 					},
@@ -530,10 +486,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-foo",
 						Name:      "azure-cloud-credentials",
@@ -550,10 +502,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantNamespaces: []*corev1.Namespace{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openshift-foo",
 					},
@@ -615,10 +563,6 @@ func TestGenerateCloudCredentialOperatorSecret(t *testing.T) {
 			name:                 "generates static CCO secret",
 			usesWorkloadIdentity: true,
 			want: &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ccoSecretNamespace,
 					Name:      ccoSecretName,
@@ -681,10 +625,6 @@ func TestGenerateAuthenticationConfig(t *testing.T) {
 			usesWorkloadIdentity: true,
 			oidcIssuer:           (*api.OIDCIssuer)(&oidcIssuer),
 			want: &configv1.Authentication{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "config.openshift.io/v1",
-					Kind:       "Authentication",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: authenticationConfigName,
 				},

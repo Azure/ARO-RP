@@ -161,9 +161,9 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
 					{
 						Port: "metrics",
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
-								SourceLabels: []string{"__meta_kubernetes_pod_node_name"},
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
 								TargetLabel:  "node",
 							},
 						},
@@ -183,7 +183,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 						Rules: []monitoringv1.Rule{
 							{
 								Alert: "OTelExporterNoLogsShippedSRE",
-								For:   "10m",
+								For:   pointerutils.ToPtr(monitoringv1.Duration("10m")),
 								Expr: intstr.FromString(
 									`kube_pod_info{namespace="` + kubeNamespace + `",created_by_kind="DaemonSet",pod=~"otel-exporter-.*"} unless on(pod) ((up{namespace="` + kubeNamespace + `"} == 1) * on(pod) group_left() (sum by (pod) (rate(otelcol_exporter_sent_log_records{namespace="` + kubeNamespace + `"}[1h])) > 0))`,
 								),
