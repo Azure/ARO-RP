@@ -57,6 +57,7 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 		preCreateHook: []hookFunc{},
 		preUpdateHook: []hookFunc{},
 		prePatchHook:  []hookFunc{},
+		preApplyHook:  []applyFunc{},
 
 		postGetHook:    []getFunc{},
 		postListHook:   []listFunc{},
@@ -64,6 +65,7 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 		postCreateHook: []hookFunc{},
 		postUpdateHook: []hookFunc{},
 		postPatchHook:  []hookFunc{},
+		postApplyHook:  []applyFunc{},
 	}
 }
 
@@ -97,6 +99,11 @@ func (c *HookingClient) WithPostPatchHook(f hookFunc) *HookingClient {
 	return c
 }
 
+func (c *HookingClient) WithPostApplyHook(f applyFunc) *HookingClient {
+	c.postApplyHook = append(c.postApplyHook, f)
+	return c
+}
+
 func (c *HookingClient) WithPreGetHook(f getFunc) *HookingClient {
 	c.preGetHook = append(c.preGetHook, f)
 	return c
@@ -124,6 +131,11 @@ func (c *HookingClient) WithPreUpdateHook(f hookFunc) *HookingClient {
 
 func (c *HookingClient) WithPrePatchHook(f hookFunc) *HookingClient {
 	c.prePatchHook = append(c.prePatchHook, f)
+	return c
+}
+
+func (c *HookingClient) WithPreApplyHook(f applyFunc) *HookingClient {
+	c.preApplyHook = append(c.preApplyHook, f)
 	return c
 }
 

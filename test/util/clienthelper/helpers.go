@@ -25,21 +25,8 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme" // ensure the init() which registers all of the OpenShift objects runs
 )
-
-// TallyCounts will update tally with the Kubernetes Kinds that pass through
-// this hook.
-func TallyCounts(tally map[string]int) hookFunc {
-	return func(obj client.Object) error {
-		vers, _, err := scheme.Scheme.ObjectKinds(obj)
-		if err != nil {
-			return nil
-		}
-
-		tally[vers[0].Kind] += 1
-		return nil
-	}
-}
 
 // TallyCountsAndKey will update tally with the Kubernetes Kind, object
 // namespace, and object name (separated by '/') that pass through this hook.
@@ -47,7 +34,7 @@ func TallyCountsAndKey(tally map[string]int) hookFunc {
 	return func(obj client.Object) error {
 		vers, _, err := scheme.Scheme.ObjectKinds(obj)
 		if err != nil {
-			return nil
+			return fmt.Errorf("when looking up objectkinds: %w", err)
 		}
 
 		key := vers[0].Kind + "/" + types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}.String()
