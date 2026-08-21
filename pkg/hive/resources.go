@@ -12,12 +12,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"sigs.k8s.io/yaml"
-
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/kubeserializer"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
@@ -143,8 +142,10 @@ func clusterManifestsSecret(namespace string, customManifests map[string]kruntim
 		Type:       corev1.SecretTypeOpaque,
 	}
 
+	serializer := kubeserializer.NewYamlSerializer()
+
 	for key, manifest := range customManifests {
-		b, err := yaml.Marshal(manifest)
+		b, err := serializer.ToYAML(manifest)
 		if err != nil {
 			return nil, err
 		}

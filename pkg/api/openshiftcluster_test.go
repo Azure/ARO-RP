@@ -6,10 +6,13 @@ package api
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	apitesterror "github.com/Azure/ARO-RP/pkg/api/test/error"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 )
 
 func TestIsTerminal(t *testing.T) {
@@ -247,4 +250,101 @@ func TestHasUserAssignedIdentities(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPutRegistryProfile(t *testing.T) {
+	a := require.New(t)
+
+	newProfile := &RegistryProfile{
+		Name:      "arointsvc.example.com",
+		Username:  "token-22222222-2222-2222-2222-222222220001",
+		IssueDate: pointerutils.ToPtr(time.Unix(1, 0)),
+	}
+
+	ocWithProfile := &OpenShiftCluster{
+		Properties: OpenShiftClusterProperties{
+			RegistryProfiles: []*RegistryProfile{
+				{
+					Name:     "arointsvc.example.com",
+					Username: "foo",
+				},
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+			},
+		},
+	}
+	ocWithoutProfile := &OpenShiftCluster{
+		Properties: OpenShiftClusterProperties{
+			RegistryProfiles: []*RegistryProfile{
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+			},
+		},
+	}
+
+	// If it doesn't exist, it appends it
+	ocWithoutProfile.PutRegistryProfile(newProfile)
+	a.Len(ocWithoutProfile.Properties.RegistryProfiles, 2)
+
+	// If it does exist, it replaces it
+	ocWithProfile.PutRegistryProfile(newProfile)
+	a.Len(ocWithProfile.Properties.RegistryProfiles, 2)
+
+	// Check that it has been replaced
+	aLongTimeAgo := time.UnixMilli(1000)
+
+	a.Equal([]*RegistryProfile{
+		{
+			Name:      "arointsvc.example.com",
+			Username:  "token-22222222-2222-2222-2222-222222220001",
+			IssueDate: &aLongTimeAgo,
+		},
+		{
+			Name:     "notwanted.example.com",
+			Username: "other",
+		},
+	}, ocWithProfile.Properties.RegistryProfiles)
+}
+
+func TestGetRegistryProfiles(t *testing.T) {
+	a := require.New(t)
+
+	ocWithProfile := &OpenShiftCluster{
+		Properties: OpenShiftClusterProperties{
+			RegistryProfiles: []*RegistryProfile{
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+				{
+					Name:     "arointsvc.example.com",
+					Username: "foo",
+				},
+			},
+		},
+	}
+	ocWithoutProfile := &OpenShiftCluster{
+		Properties: OpenShiftClusterProperties{
+			RegistryProfiles: []*RegistryProfile{
+				{
+					Name:     "notwanted.example.com",
+					Username: "other",
+				},
+			},
+		},
+	}
+
+	// GetRegistryProfile finds it successfully
+	r := ocWithProfile.GetRegistryProfile("arointsvc.example.com")
+	a.NotNil(r)
+	a.Equal("arointsvc.example.com", r.Name)
+	a.Equal("foo", r.Username)
+
+	// GetRegistryProfile can't find it as it doesn't exist
+	r = ocWithoutProfile.GetRegistryProfile("arointsvc.example.com")
+	a.Nil(r)
 }
