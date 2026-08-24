@@ -215,7 +215,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 								Alert: "OTelExporterQueueSaturatedSRE",
 								For:   "15m",
 								Expr: intstr.FromString(
-									`(otelcol_exporter_queue_size{namespace="` + kubeNamespace + `"} / otelcol_exporter_queue_capacity{namespace="` + kubeNamespace + `"}) > 0.9`,
+									`max by (pod) (otelcol_exporter_queue_size{namespace="` + kubeNamespace + `"} / otelcol_exporter_queue_capacity{namespace="` + kubeNamespace + `"}) > 0.9`,
 								),
 								Labels: map[string]string{
 									"severity":  "warning",
