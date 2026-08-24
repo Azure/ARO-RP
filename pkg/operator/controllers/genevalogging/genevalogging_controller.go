@@ -5,10 +5,6 @@ package genevalogging
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"strings"
-	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
@@ -39,23 +35,6 @@ const (
 
 	// full pullspec of otel exporter image
 	controllerOTelPullSpec = "aro.genevalogging.otel.pullSpec"
-
-	// otelHealthRequeue is how often Reconcile re-checks otel-exporter pod health.
-	// It requeues on this interval in both the healthy and unhealthy paths so a
-	// steady-state CrashLoopBackOff (which produces no further DaemonSet status
-	// events) is still caught.
-	otelHealthRequeue = 5 * time.Minute
-
-	// otelPodRestartThreshold is the per-pod container restart count above which
-	// an otel-exporter pod is treated as restart-looping.
-	otelPodRestartThreshold = 5
-
-	// otelRestartRecency bounds how recently the container must have last
-	// terminated for its cumulative RestartCount to still count as an active
-	// restart loop. RestartCount never decreases, so without this bound a pod
-	// that flapped once during a rollout would keep the controller Degraded
-	// forever.
-	otelRestartRecency = 15 * time.Minute
 )
 
 // Reconciler reconciles a Cluster object
@@ -157,53 +136,6 @@ func (r *Reconciler) cleanupStaleResources(ctx context.Context) error {
 	return nil
 }
 
-// checkOTelHealth inspects the otel-exporter DaemonSet pods and returns a
-// message describing any that are crash-looping or restart-looping (empty when
-// healthy). A non-nil error means the pods could not be listed (retry, not a
-// health verdict). The
-// kubelet already restarts a failing container; this surfaces a sustained
-// restart loop — which the DaemonSet available/unavailable count can miss when
-// pods briefly become ready between crashes — as a controller Degraded state.
-func (r *Reconciler) checkOTelHealth(ctx context.Context) (string, error) {
-	pods := &corev1.PodList{}
-	if err := r.Client.List(ctx, pods, client.InNamespace(kubeNamespace)); err != nil {
-		return "", err
-	}
-
-	dsNames := map[string]struct{}{MasterDaemonsetName: {}, WorkerDaemonsetName: {}}
-
-	var unhealthy []string
-	for i := range pods.Items {
-		pod := &pods.Items[i]
-		if _, ok := dsNames[pod.Labels["app"]]; !ok {
-			continue
-		}
-		for _, cs := range pod.Status.ContainerStatuses {
-			if cs.Name != "otel-exporter" {
-				continue
-			}
-			switch {
-			case cs.RestartCount >= otelPodRestartThreshold && cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff":
-				unhealthy = append(unhealthy, fmt.Sprintf("%s (CrashLoopBackOff, %d restarts)", pod.Name, cs.RestartCount))
-			case cs.RestartCount >= otelPodRestartThreshold && otelRecentlyTerminated(cs):
-				unhealthy = append(unhealthy, fmt.Sprintf("%s (%d restarts)", pod.Name, cs.RestartCount))
-			}
-		}
-	}
-
-	if len(unhealthy) > 0 {
-		return fmt.Sprintf("otel-exporter pods restarting: %s", strings.Join(unhealthy, ", ")), nil
-	}
-	return "", nil
-}
-
-// otelRecentlyTerminated reports whether the container's most recent
-// termination is recent enough to still count as an active restart loop.
-func otelRecentlyTerminated(cs corev1.ContainerStatus) bool {
-	t := cs.LastTerminationState.Terminated
-	return t != nil && time.Since(t.FinishedAt.Time) < otelRestartRecency
-}
-
 // Reconcile the genevalogging deployment.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
@@ -225,19 +157,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	unhealthy, healthErr := r.checkOTelHealth(ctx)
-	if healthErr != nil {
-		r.Log.Error(healthErr)
-		return reconcile.Result{}, healthErr
-	}
-	if unhealthy != "" {
-		r.Log.Warn(unhealthy)
-		r.SetDegraded(ctx, errors.New(unhealthy))
-		return reconcile.Result{RequeueAfter: otelHealthRequeue}, nil
-	}
-
 	r.ClearConditions(ctx)
-	return reconcile.Result{RequeueAfter: otelHealthRequeue}, nil
+	return reconcile.Result{}, nil
 }
 
 // SetupWithManager setup our manager

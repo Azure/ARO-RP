@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
@@ -22,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -442,6 +440,7 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 			"OTelExporterSendFailingSRE",
 			"OTelExporterQueueSaturatedSRE",
 			"OTelExporterLogsRefusedSRE",
+			"OTelExporterRestartLoopingSRE",
 		}
 		if len(rules) != len(wantAlerts) {
 			t.Fatalf("expected %d rules, got %d: %v", len(wantAlerts), len(rules), rules)
@@ -773,78 +772,6 @@ func TestCleanupStaleResources(t *testing.T) {
 
 	if err := r.cleanupStaleResources(context.Background()); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestCheckOTelHealth(t *testing.T) {
-	otelPod := func(name, app string, cs corev1.ContainerStatus) *corev1.Pod {
-		return &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: kubeNamespace,
-				Labels:    map[string]string{"app": app},
-			},
-			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{cs}},
-		}
-	}
-	running := corev1.ContainerStatus{Name: "otel-exporter", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}
-	crashLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
-	crashLoopBelowThreshold := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: 3, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}}}
-	restartLoop := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-1 * time.Minute))}}}
-	stableAfterRestarts := corev1.ContainerStatus{Name: "otel-exporter", RestartCount: otelPodRestartThreshold + 3, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}, LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{FinishedAt: metav1.NewTime(time.Now().Add(-2 * time.Hour))}}}
-
-	for _, tt := range []struct {
-		name    string
-		pods    []*corev1.Pod
-		wantErr string
-	}{
-		{
-			name: "all healthy",
-			pods: []*corev1.Pod{
-				otelPod("otel-exporter-master-a", MasterDaemonsetName, running),
-				otelPod("otel-exporter-worker-b", WorkerDaemonsetName, running),
-			},
-		},
-		{
-			name:    "crash-looping pod at threshold is unhealthy",
-			pods:    []*corev1.Pod{otelPod("otel-exporter-worker-b", WorkerDaemonsetName, crashLoop)},
-			wantErr: fmt.Sprintf("otel-exporter pods restarting: otel-exporter-worker-b (CrashLoopBackOff, %d restarts)", otelPodRestartThreshold),
-		},
-		{
-			name: "crash-looping below threshold is healthy",
-			pods: []*corev1.Pod{otelPod("otel-exporter-worker-b", WorkerDaemonsetName, crashLoopBelowThreshold)},
-		},
-		{
-			name:    "restart-looping pod is unhealthy",
-			pods:    []*corev1.Pod{otelPod("otel-exporter-master-a", MasterDaemonsetName, restartLoop)},
-			wantErr: fmt.Sprintf("otel-exporter pods restarting: otel-exporter-master-a (%d restarts)", otelPodRestartThreshold),
-		},
-		{
-			name: "pod stable after old restarts is healthy",
-			pods: []*corev1.Pod{otelPod("otel-exporter-master-a", MasterDaemonsetName, stableAfterRestarts)},
-		},
-		{
-			name: "unrelated pod is ignored",
-			pods: []*corev1.Pod{otelPod("some-other-pod", "not-otel", crashLoop)},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			objs := make([]client.Object, 0, len(tt.pods))
-			for _, p := range tt.pods {
-				objs = append(objs, p)
-			}
-			r := &Reconciler{AROController: base.AROController{
-				Client: testclienthelper.NewAROFakeClientBuilder(objs...).Build(),
-			}}
-
-			msg, err := r.checkOTelHealth(context.Background())
-			if err != nil {
-				t.Fatalf("unexpected list error: %v", err)
-			}
-			if msg != tt.wantErr {
-				t.Fatalf("got %q, want %q", msg, tt.wantErr)
-			}
-		})
 	}
 }
 

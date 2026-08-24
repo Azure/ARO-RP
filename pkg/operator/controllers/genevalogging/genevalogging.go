@@ -241,6 +241,21 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 									"description": `OTel exporter pod {{ $labels.pod }} has been refusing log records at ingestion for 15m; a receiver or parse failure may be dropping a log stream (for example audit)`,
 								},
 							},
+							{
+								Alert: "OTelExporterRestartLoopingSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`increase(kube_pod_container_status_restarts_total{namespace="` + kubeNamespace + `",container="otel-exporter"}[1h]) >= 5`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} restart-looping`,
+									"description": `OTel exporter pod {{ $labels.pod }} has restarted 5 or more times in the past hour; the collector is crash/restart-looping`,
+								},
+							},
 						},
 					},
 				},
@@ -372,8 +387,9 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 	// collector component events so a failed export pipeline — not just a dead
 	// process — fails the /healthz liveness probe and the pod is restarted.
 	// Requires a collector image that supports the gate; an image that rejects
-	// the unknown gate fails to start (surfaced by checkOTelHealth), so this
-	// defaults off and rolls out per-fleet after validation.
+	// the unknown gate fails to start (a crash loop caught by the
+	// OTelExporterRestartLooping alert), so this defaults off and rolls out
+	// per-fleet after validation.
 	componentHealth := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelComponentHealth)
 
 	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey, configHash string) *appsv1.DaemonSet {
