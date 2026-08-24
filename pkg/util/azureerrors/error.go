@@ -20,6 +20,9 @@ import (
 // transientConflictBody is the ARM body text for transient 409s; undocumented, observed in production.
 const transientConflictBody = "Please retry later"
 
+// federatedIdentityCredentialWrite is the ARM action for writing federated identity credentials.
+const federatedIdentityCredentialWrite = "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write"
+
 const (
 	CODE_AUTHFAILED       = "AuthorizationFailed"
 	CODE_DEPLOYACTIVE     = "DeploymentActive"
@@ -205,6 +208,12 @@ func IsUnauthorizedClientError(err error) bool {
 // See https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes#aadsts-error-codes
 func IsClientSecretKeysExpired(err error) bool {
 	return strings.Contains(err.Error(), "AADSTS7000222")
+}
+
+// IsFederatedIdentityCredentialWriteForbiddenError returns true if the error is a 403 Forbidden error
+// that occurred during an attempt to write a federated identity credential.
+func IsFederatedIdentityCredentialWriteForbiddenError(err error) bool {
+	return strings.Contains(err.Error(), "does not have authorization to perform action '"+federatedIdentityCredentialWrite+"'")
 }
 
 // ResourceGroupNotFound returns true if the error is an ResourceGroupNotFound error

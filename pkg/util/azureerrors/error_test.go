@@ -524,6 +524,35 @@ func TestIsStatusForbiddenError(t *testing.T) {
 	}
 }
 
+func TestIsFederatedIdentityCredentialWriteForbiddenError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "federated identity credential write is forbidden",
+			err:  errors.New("the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope"),
+			want: true,
+		},
+		{
+			name: "different action is forbidden",
+			err:  errors.New("the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/read' over the requested scope"),
+		},
+		{
+			name: "unrelated error",
+			err:  errors.New("something happened"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsFederatedIdentityCredentialWriteForbiddenError(tt.err)
+			if got != tt.want {
+				t.Errorf("IsFederatedIdentityCredentialWriteForbiddenError() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsRetryableError(t *testing.T) {
 	for _, tt := range []struct {
 		name string

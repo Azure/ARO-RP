@@ -73,6 +73,17 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 					api.CloudErrorCodeInternalServerError,
 					"encountered error",
 					err.Error())
+			} else if azureerrors.IsFederatedIdentityCredentialWriteForbiddenError(err) {
+				// Dynamic validation should theoretically catch this before we get here. In practice we found
+				// it didn't. Federated identity credential write calls are currently the only post-validation
+				// API calls that use the cluster MSI - if there are ever more, this branch needs to be extended
+				// to handle them. If we were to fail to extend this check, the customer would end up seeing an
+				// "InvalidServicePrincipalCredentials" error instead (see next branch below), which would be incorrect.
+				err = api.NewCloudError(
+					http.StatusBadRequest,
+					api.CloudErrorCodeInvalidClusterMSIPermissions,
+					"encountered error",
+					err.Error())
 			} else if azureerrors.IsUnauthorizedClientError(err) ||
 				azureerrors.IsInvalidSecretError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) {

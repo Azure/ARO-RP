@@ -28,6 +28,10 @@ func failingAzureError(context.Context) error {
 	return errors.New("Status=403 Code=\"AuthorizationFailed\"")
 }
 
+func failingFederatedIdentityCredentialWrite(context.Context) error {
+	return errors.New("the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope")
+}
+
 func failingODataError(context.Context) error {
 	mainError := odataerrors.NewMainError()
 	mainError.SetCode(pointerutils.ToPtr("Authorization_IdentityNotFound"))
@@ -106,6 +110,25 @@ func TestStepRunner(t *testing.T) {
 				},
 			},
 			wantErr: "Status=403 Code=\"AuthorizationFailed\"",
+		},
+		{
+			name: "A forbidden federated identity credential write returns a cluster MSI permissions error",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(failingFederatedIdentityCredentialWrite),
+				}
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.failingFederatedIdentityCredentialWrite]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action pkg/util/steps.failingFederatedIdentityCredentialWrite] encountered error: 400: InvalidClusterMSIPermissions: encountered error: the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope"),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+			wantErr: "400: InvalidClusterMSIPermissions: encountered error: the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope",
 		},
 		{
 			name: "An odata error will fail the run",
