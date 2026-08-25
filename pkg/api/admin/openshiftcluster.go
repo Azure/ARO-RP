@@ -38,6 +38,7 @@ type OpenShiftClusterProperties struct {
 	MaintenanceTask                 MaintenanceTask                  `json:"maintenanceTask,omitempty" mutable:"true"`
 	OperatorFlags                   OperatorFlags                    `json:"operatorFlags,omitempty" mutable:"true"`
 	OperatorVersion                 string                           `json:"operatorVersion,omitempty" mutable:"true"`
+	Zones                           []string                         `json:"zones,omitempty"`
 	CreatedAt                       time.Time                        `json:"createdAt,omitempty"`
 	CreatedBy                       string                           `json:"createdBy,omitempty"`
 	ProvisionedBy                   string                           `json:"provisionedBy,omitempty"`
