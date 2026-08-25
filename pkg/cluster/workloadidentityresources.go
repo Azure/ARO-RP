@@ -202,7 +202,7 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 
 	toDelete := map[string]mgmtauthorization.RoleAssignment{}
 	var toAdd []*arm.Resource
-	currentClusterIdentities := map[string]interface{}{strings.ToLower(m.fpServicePrincipalID): struct{}{}}
+	currentClusterIdentities := map[string]struct{}{strings.ToLower(m.fpServicePrincipalID): {}}
 
 	m.log.Infof("retrieving existing role assignments")
 	allExistingRoleAssignments, err := m.roleAssignments.ListForResourceGroup(ctx, resourceGroup, "atScope()")

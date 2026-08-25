@@ -337,7 +337,7 @@ var _ = Describe("Update clusters", func() {
 			g.Expect(*identity.ResourceID).To(Equal(replacementResourceID))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
-		By("verifying the old identity no longer has any roleassignments at managed resource group scope")
+		By("verifying the old identity no longer has any role assignments at managed resource group scope")
 		Eventually(func(g Gomega, ctx context.Context) {
 			originalMsi, err := clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
 			g.Expect(err).NotTo(HaveOccurred())
