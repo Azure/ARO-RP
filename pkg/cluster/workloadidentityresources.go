@@ -200,8 +200,9 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 	resourceGroup := stringutils.LastTokenByte(resourceGroupID, '/')
 
-	var toDelete []mgmtauthorization.RoleAssignment
+	toDelete := map[string]mgmtauthorization.RoleAssignment{}
 	var toAdd []*arm.Resource
+	currentClusterIdentities := map[string]struct{}{strings.ToLower(m.fpServicePrincipalID): {}}
 
 	m.log.Infof("retrieving existing role assignments")
 	allExistingRoleAssignments, err := m.roleAssignments.ListForResourceGroup(ctx, resourceGroup, "atScope()")
@@ -222,33 +223,43 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 	platformWorkloadIdentityRoles := m.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRolesByRoleName()
 
 	for roleName, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		identityObjectId := strings.ToLower(identity.ObjectID)
+		currentClusterIdentities[identityObjectId] = struct{}{}
 		roles, ok := platformWorkloadIdentityRoles[roleName]
 		if !ok {
 			return fmt.Errorf("role not found for identity %s", roleName)
 		}
 
 		for _, role := range roles {
-			if existingRoleAssignment, ok := roleAssignmentsForManagedResourceGroupByPrincipalID[strings.ToLower(identity.ObjectID)]; ok {
+			if existingRoleAssignment, ok := roleAssignmentsForManagedResourceGroupByPrincipalID[identityObjectId]; ok {
 				roleDefinitionId := fmt.Sprintf("/subscriptions/%s%s", m.subscriptionDoc.ID, role.RoleDefinitionID)
 				if _, ok := existingRoleAssignment[strings.ToLower(roleDefinitionId)]; ok {
-					delete(roleAssignmentsForManagedResourceGroupByPrincipalID[strings.ToLower(identity.ObjectID)], strings.ToLower(roleDefinitionId))
+					delete(roleAssignmentsForManagedResourceGroupByPrincipalID[identityObjectId], strings.ToLower(roleDefinitionId))
 					continue
 				}
 			}
 			toAdd = append(toAdd, m.workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(role.RoleDefinitionID, '/'), identity.ObjectID))
 		}
 
-		for _, existingRoleAssignment := range roleAssignmentsForManagedResourceGroupByPrincipalID[strings.ToLower(identity.ObjectID)] {
-			toDelete = append(toDelete, existingRoleAssignment)
+		for _, existingRoleAssignment := range roleAssignmentsForManagedResourceGroupByPrincipalID[identityObjectId] {
+			toDelete[*existingRoleAssignment.Name] = existingRoleAssignment
 		}
 	}
 
-	for _, assignment := range toDelete {
-		m.log.Infof("deleting role assignment %s", *assignment.Name)
+	for _, roleAssignment := range allExistingRoleAssignments {
+		if strings.EqualFold(*roleAssignment.Scope, resourceGroupID) {
+			if _, ok := currentClusterIdentities[strings.ToLower(*roleAssignment.PrincipalID)]; !ok {
+				toDelete[*roleAssignment.Name] = roleAssignment
+			}
+		}
+	}
+
+	for name, assignment := range toDelete {
+		m.log.Infof("deleting role assignment %s", name)
 		err := arm.RetryableDelete(ctx, func() error {
-			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
+			_, e := m.roleAssignments.Delete(ctx, *assignment.Scope, name)
 			return e
-		}, m.log, "deleting role assignment "+*assignment.Name)
+		}, m.log, "deleting role assignment "+name)
 		if err != nil {
 			return err
 		}

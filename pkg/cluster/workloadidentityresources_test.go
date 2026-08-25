@@ -812,6 +812,8 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 	roleDefinitionId1 := fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", "00000000-00000001-00000000-00000000")
 	roleDefinitionId2 := fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", "00000000-00000002-00000000-00000000")
 
+	fpspPrincipalId := "ffffffff-ffff-ffff-ffff-ffffffffffff"
+
 	for _, tt := range []struct {
 		name                    string
 		oc                      *api.OpenShiftCluster
@@ -981,7 +983,32 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 			},
 		},
 		{
-			name: "identity object id replaced - doesn't delete old roleassignment as old object id is lost and creates new",
+			name: "preserves any role assignments for the first-party service principal",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &fpspPrincipalId,
+					},
+				},
+			},
+			wantDeleted: []mgmtauthorization.RoleAssignment{},
+		},
+		{
+			name: "identity object id replaced - deletes old roleassignment as old object id is lost and creates new",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
@@ -1016,6 +1043,16 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 			},
 			wantAdded: []*arm.Resource{
 				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+			},
+			wantDeleted: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
 			},
 		},
 		{
@@ -1274,6 +1311,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 				roleAssignments:                        roleAssignments,
 				deployments:                            deployments,
 				platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
+				fpServicePrincipalID:                   fpspPrincipalId,
 			}
 
 			err := m.ensurePlatformWorkloadIdentityRBAC(ctx)
