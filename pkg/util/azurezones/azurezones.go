@@ -40,6 +40,20 @@ func (m *availabilityZoneManager) FilterZones(zones []string) []string {
 	return zones
 }
 
+// Determine if the zones specified are available on both the worker and control
+// plane SKU.
+func (m *availabilityZoneManager) DesiredZonesAvailable(controlPlaneSKU, workerSKU *armcompute.ResourceSKU, desiredZones []string) bool {
+	controlPlaneZones := m.FilterZones(computeskus.Zones(controlPlaneSKU))
+	workerZones := m.FilterZones(computeskus.Zones(workerSKU))
+
+	for _, zone := range desiredZones {
+		if !slices.Contains(workerZones, zone) || !slices.Contains(controlPlaneZones, zone) {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *availabilityZoneManager) DetermineAvailabilityZones(controlPlaneSKU, workerSKU *armcompute.ResourceSKU) ([]string, []string, []string, error) {
 	controlPlaneZones := computeskus.Zones(controlPlaneSKU)
 	workerZones := computeskus.Zones(workerSKU)
