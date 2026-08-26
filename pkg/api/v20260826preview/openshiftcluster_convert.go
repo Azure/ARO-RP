@@ -63,6 +63,13 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		},
 	}
 
+	if oc.Properties.Zones != nil {
+		out.Properties.Zones = []*string{}
+		for _, z := range oc.Properties.Zones {
+			out.Properties.Zones = append(out.Properties.Zones, toPtrIfNonZero(z))
+		}
+	}
+
 	if oc.Properties.ConsoleProfile.URL != "" {
 		out.Properties.ConsoleProfile = &generated.ConsoleProfile{
 			URL: pointerutils.ToPtr(oc.Properties.ConsoleProfile.URL),
@@ -255,6 +262,13 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 				temp.PrincipalID = value(oc.Identity.UserAssignedIdentities[k].PrincipalID)
 			}
 			out.Identity.UserAssignedIdentities[k] = temp
+		}
+	}
+
+	if oc.Properties.Zones != nil {
+		out.Properties.Zones = []string{}
+		for _, z := range oc.Properties.Zones {
+			out.Properties.Zones = append(out.Properties.Zones, *z)
 		}
 	}
 

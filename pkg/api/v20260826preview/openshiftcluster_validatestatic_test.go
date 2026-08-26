@@ -85,6 +85,7 @@ func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
 				"key": pointerutils.ToPtr("value"),
 			},
 			Properties: &generated.OpenShiftClusterProperties{
+				Zones:             []*string{},
 				ProvisioningState: pointerutils.ToPtr(generated.ProvisioningStateSucceeded),
 				ClusterProfile: &generated.ClusterProfile{
 					PullSecret:           pointerutils.ToPtr(`{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`),
@@ -299,6 +300,15 @@ func TestOpenShiftClusterStaticValidateNilInputs(t *testing.T) {
 				return validator.validate(oc, true, api.ArchitectureVersionV2)
 			},
 			wantTarget: "properties",
+		},
+		{
+			name: "nil zones",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.Zones = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.zones",
 		},
 		{
 			name: "nil cluster profile",

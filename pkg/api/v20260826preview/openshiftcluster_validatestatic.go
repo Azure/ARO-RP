@@ -92,6 +92,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *gen
 	if p == nil {
 		return missingRequiredFieldError(path)
 	}
+	if p.Zones == nil {
+		return missingRequiredFieldError(path + ".zones")
+	}
 	if p.ClusterProfile == nil {
 		return missingRequiredFieldError(path + ".clusterProfile")
 	}
