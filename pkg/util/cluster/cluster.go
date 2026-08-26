@@ -36,7 +36,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20260826preview "github.com/Azure/ARO-RP/pkg/api/v20260826preview"
 	"github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -62,6 +62,7 @@ type ClusterConfig struct {
 	SubscriptionID        string `mapstructure:"AZURE_SUBSCRIPTION_ID"`
 	TenantID              string `mapstructure:"AZURE_TENANT_ID"`
 	Location              string `mapstructure:"LOCATION"`
+	Zones                 string `mapstructure:"ZONES"`
 	AzureEnvironment      string `mapstructure:"AZURE_ENVIRONMENT"`
 	UseWorkloadIdentity   bool   `mapstructure:"USE_WI"`
 	WorkloadIdentityRoles string `mapstructure:"PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS"`
@@ -150,6 +151,15 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	err := viper.Unmarshal(&conf)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing env vars: %w", err)
+	}
+
+	switch conf.Zones {
+	// Catch if the zones are empty, we have an explicit value for non-zonal
+	case "":
+		return nil, fmt.Errorf("zones must be set (use 'non-zonal' for non-zonal)")
+	case "non-zonal":
+		// No zones
+		conf.Zones = ""
 	}
 
 	if conf.ClusterName == "" {
@@ -291,9 +301,9 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		return nil, err
 	}
 
-	clusterClient := &internalClient[armredhatopenshift.OpenShiftCluster, v20250725.OpenShiftCluster]{
+	clusterClient := &internalClient[armredhatopenshift.OpenShiftCluster, v20260826preview.OpenShiftCluster]{
 		externalClient: externalClient,
-		converter:      api.APIs[v20250725.APIVersion].OpenShiftClusterConverter,
+		converter:      api.APIs[v20260826preview.APIVersion].OpenShiftClusterConverter,
 	}
 
 	c := &Cluster{
@@ -838,12 +848,15 @@ func (c *Cluster) Create(ctx context.Context) error {
 		}
 	}
 
-	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
+	// split the zones
+	zones := strings.Split(c.Config.Zones, ",")
 
 	// Don't install with FIPS in a local dev, non-CI environment
+	fipsMode := c.Config.IsCI || !c.Config.IsLocalDevelopmentMode()
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode)
+	c.log.Infof("zones: %s", zones)
+	err = c.createCluster(ctx, c.Config.VnetResourceGroup, c.Config.ClusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, c.Config.OSClusterVersion, fipsMode, zones)
 	if err != nil {
 		return err
 	}
@@ -1084,7 +1097,13 @@ func (c *Cluster) deleteWI(ctx context.Context, resourceGroup string) error {
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string, fipsEnabled bool) error {
+func (c *Cluster) createCluster(
+	ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string,
+	visibility api.Visibility,
+	osClusterVersion string,
+	fipsEnabled bool,
+	zones []string,
+) error {
 	fipsMode := api.FipsValidatedModulesDisabled
 	if fipsEnabled {
 		fipsMode = api.FipsValidatedModulesEnabled
@@ -1093,6 +1112,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
+			Zones: zones,
 			ClusterProfile: api.ClusterProfile{
 				Domain:               strings.ToLower(clusterName),
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.Config.SubscriptionID, "aro-"+clusterName),

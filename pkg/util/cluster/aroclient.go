@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20260826preview "github.com/Azure/ARO-RP/pkg/api/v20260826preview"
 	"github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
@@ -30,7 +30,7 @@ type clientCluster interface {
 }
 
 type apiCluster interface {
-	v20250725.OpenShiftCluster
+	v20260826preview.OpenShiftCluster
 }
 
 type externalClient[ClientCluster clientCluster] interface {
@@ -45,7 +45,7 @@ type internalClient[ClientCluster clientCluster, ApiCluster apiCluster] struct {
 }
 
 func NewInternalClient(log *logrus.Entry, environment env.Core, authorizer autorest.Authorizer) (InternalClient, error) {
-	log.Infof("Using ARO API version [%s]", v20250725.APIVersion)
+	log.Infof("Using ARO API version [%s]", v20260826preview.APIVersion)
 	options := environment.Environment().EnvironmentCredentialOptions()
 	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
@@ -57,9 +57,9 @@ func NewInternalClient(log *logrus.Entry, environment env.Core, authorizer autor
 		return nil, err
 	}
 
-	return &internalClient[armredhatopenshift.OpenShiftCluster, v20250725.OpenShiftCluster]{
+	return &internalClient[armredhatopenshift.OpenShiftCluster, v20260826preview.OpenShiftCluster]{
 		externalClient: externalClient,
-		converter:      api.APIs[v20250725.APIVersion].OpenShiftClusterConverter,
+		converter:      api.APIs[v20260826preview.APIVersion].OpenShiftClusterConverter,
 	}, nil
 }
 
