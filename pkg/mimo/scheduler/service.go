@@ -293,14 +293,16 @@ func (s *service) startChangefeeds(ctx context.Context, stop <-chan struct{}) er
 
 	// start subscription changefeed
 	go changefeed.RunChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), dbSubscriptions.ChangeFeed(),
+		ctx, s.baseLog.WithField("component", "changefeed"), s.m, "SubscriptionDocument",
+		dbSubscriptions.ChangeFeed(),
 		s.changefeedInterval,
 		s.changefeedBatchSize, s.subs, stop,
 	)
 
 	// start cluster changefeed
 	go changefeed.RunChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
+		ctx, s.baseLog.WithField("component", "changefeed"), s.m, "OpenShiftClusterDocument",
+		dbOpenShiftClusters.ChangeFeed(),
 		s.changefeedInterval,
 		s.changefeedBatchSize, s.clusters, stop,
 	)

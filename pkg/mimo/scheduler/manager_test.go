@@ -1356,7 +1356,7 @@ func TestProcessLoop(t *testing.T) {
 
 			// check the metrics -- we don't want any floats, but we do have gauges
 			metrics.AssertFloats()
-			metrics.AssertGauges(tt.expectedMetrics...)
+			metrics.AssertGauges(withChangefeedGauges(tt.expectedMetrics)...)
 		})
 	}
 }
