@@ -84,7 +84,7 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 		log = utillog.EnrichWithCorrelationData(log, correlationData)
 
 		if r.URL.Query().Has(api.APIVersionKey) {
-			log = log.WithField("api_version", string(r.URL.Query().Get(api.APIVersionKey)))
+			log = log.WithField("api_version", r.URL.Query().Get(api.APIVersionKey))
 		}
 
 		ctx := r.Context()
