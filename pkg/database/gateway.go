@@ -46,7 +46,7 @@ func (c *gateway) NewUUID() string {
 }
 
 func (c *gateway) ChangeFeed() cosmosdb.GatewayDocumentIterator {
-	return c.c.ChangeFeed(nil)
+	return cosmosdb.NewResilientGatewayDocumentChangeFeed(c.c, nil)
 }
 
 func (c *gateway) Create(ctx context.Context, doc *api.GatewayDocument) (*api.GatewayDocument, error) {

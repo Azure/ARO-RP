@@ -206,7 +206,8 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 
 	// fill the cache from the database change feed
 	go changefeed.RunChangefeed(
-		ctx, mon.baseLog.WithField("component", "changefeed"), dbOpenShiftClusters.ChangeFeed(),
+		ctx, mon.baseLog.WithField("component", "changefeed"), mon.m, "OpenShiftClusterDocument",
+		dbOpenShiftClusters.ChangeFeed(),
 		// Align this time with the deletion mechanism.
 		// Go to docs/monitoring.md for the details.
 		mon.changefeedInterval,
@@ -215,7 +216,8 @@ func (mon *monitor) startChangefeeds(ctx context.Context, stop <-chan struct{}) 
 
 	// fill the cache from the database change feed
 	go changefeed.RunChangefeed(
-		ctx, mon.baseLog.WithField("component", "changefeed"), dbSubscriptions.ChangeFeed(),
+		ctx, mon.baseLog.WithField("component", "changefeed"), mon.m, "SubscriptionDocument",
+		dbSubscriptions.ChangeFeed(),
 		mon.changefeedInterval,
 		changefeedBatchSize, mon.subs, stop,
 	)
