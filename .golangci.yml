@@ -181,6 +181,7 @@ linters:
     generated: disable
     paths:
       - (^|/)v20250725/generated($|/)
+      - (^|/)v20260826preview/generated($|/)
     rules:
       - linters:
           - staticcheck
