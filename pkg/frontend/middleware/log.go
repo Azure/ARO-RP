@@ -83,6 +83,10 @@ func (l LogMiddleware) Log(h http.Handler) http.Handler {
 		log = utillog.EnrichWithPath(log, r.URL.Path)
 		log = utillog.EnrichWithCorrelationData(log, correlationData)
 
+		if r.URL.Query().Has(api.APIVersionKey) {
+			log = log.WithField("api_version", string(r.URL.Query().Get(api.APIVersionKey)))
+		}
+
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, ContextKeyLog, log)
 		ctx = api.CtxWithCorrelationData(ctx, correlationData)
