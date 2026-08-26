@@ -7,6 +7,7 @@ using TypeSpec.Rest;
 using TypeSpec.Http;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Foundations;
+using Versioning;
 
 namespace Microsoft.RedHatOpenShift;
 
@@ -323,6 +324,12 @@ model OpenShiftClusterProperties {
    */
   #suppress "@azure-tools/typespec-azure-resource-manager/arm-resource-provisioning-state" "Existing property from original swagger"
   provisioningState?: ProvisioningState;
+
+  /**
+   * The zones the cluster is deployed in.
+   */
+  @added(Versions.v2026_08_26_preview)
+  zones: string[];
 
   /**
    * The cluster profile.

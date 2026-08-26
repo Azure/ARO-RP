@@ -40,6 +40,11 @@ enum Versions {
    * The 2025-07-25 API version.
    */
   v2025_07_25: "2025-07-25",
+
+  /**
+   * The 2026-08-26-preview API version.
+   */
+  v2026_08_26_preview: "2026-08-26-preview",
 }
 
 interface Operations extends Azure.ResourceManager.Legacy.Operations<OperationList, CloudError> {}
