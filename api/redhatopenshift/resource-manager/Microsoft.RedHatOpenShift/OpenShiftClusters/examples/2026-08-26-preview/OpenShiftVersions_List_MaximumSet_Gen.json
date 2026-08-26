@@ -1,0 +1,34 @@
+{
+  "title": "Lists all OpenShift versions available to install in the specified location.",
+  "operationId": "OpenShiftVersions_List",
+  "parameters": {
+    "api-version": "2026-08-26-preview",
+    "subscriptionId": "A6A38F7D-D3FC-4AB4-BCC5-02BD9F98B51C",
+    "location": "qtflaqikhxtyo"
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "value": [
+          {
+            "properties": {
+              "version": "oyazexvjfmvhnnxmtoycusuukl"
+            },
+            "id": "rdepgytskucvdiypnhprvnjrlrkuhn",
+            "name": "bxnzecfrpnypjldawgwjjjrdzm",
+            "type": "ossuqiffjafdviv",
+            "systemData": {
+              "createdBy": "mvbdtx",
+              "createdByType": "User",
+              "createdAt": "2026-08-26T01:29:47.997Z",
+              "lastModifiedBy": "hlrjrlxqbtdsocycqnznogg",
+              "lastModifiedByType": "User",
+              "lastModifiedAt": "2026-08-26T01:29:47.997Z"
+            }
+          }
+        ],
+        "nextLink": "https://microsoft.com/a"
+      }
+    }
+  }
+}

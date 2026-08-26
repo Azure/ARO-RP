@@ -5,7 +5,7 @@
 package generated
 
 const (
-	version20250725 string = "2025-07-25"
+	version20260826Preview string = "2026-08-26-preview"
 )
 
 // CreatedByType - The kind of entity that created the resource.

@@ -1,0 +1,18 @@
+{
+  "title": "Deletes a OpenShift cluster with the specified subscription, resource group and resource name.",
+  "operationId": "OpenShiftClusters_Delete",
+  "parameters": {
+    "api-version": "2026-08-26-preview",
+    "subscriptionId": "A6A38F7D-D3FC-4AB4-BCC5-02BD9F98B51C",
+    "resourceGroupName": "rgredhatopenshift",
+    "resourceName": "bwhzmgizlqpfbhaturtcshrhp"
+  },
+  "responses": {
+    "202": {
+      "headers": {
+        "location": "https://contoso.com/operationstatus"
+      }
+    },
+    "204": {}
+  }
+}

@@ -3,7 +3,7 @@
   "operationId": "OpenShiftClusters_ListByResourceGroup",
   "parameters": {
     "api-version": "2025-07-25",
-    "subscriptionId": "614D7761-D8F3-4DCB-9E03-833873BF661C",
+    "subscriptionId": "ACD764D1-6822-4EFE-9B0A-00AB27B27184",
     "resourceGroupName": "rgredhatopenshift"
   },
   "responses": {
@@ -14,112 +14,112 @@
             "properties": {
               "provisioningState": "AdminUpdating",
               "clusterProfile": {
-                "pullSecret": "xsxwnkwecg",
-                "domain": "vmcphplsedfktrnoipqeaphxiuji",
-                "version": "m",
-                "resourceGroupId": "dmpwsa",
+                "pullSecret": "orgoiyzdxfrfqxfvcvyvjglpkcmhhb",
+                "domain": "ezievzskbncnesus",
+                "version": "hovdwfyuefwnoihlnjy",
+                "resourceGroupId": "gohjqalxvzxsfsc",
                 "fipsValidatedModules": "Disabled",
-                "oidcIssuer": "qkek"
+                "oidcIssuer": "s"
               },
               "consoleProfile": {
-                "url": "xsmotgkmoaaewm"
+                "url": "neryrwouurxkmxdfqokxr"
               },
               "servicePrincipalProfile": {
-                "clientId": "uefiqrqlaycerevhqagwnutdr",
-                "clientSecret": "trboydqywwgaccpqazkibrd"
+                "clientId": "jpwlxlypdsgdco",
+                "clientSecret": "khgtl"
               },
               "platformWorkloadIdentityProfile": {
-                "upgradeableTo": "ypgxpugcuhrkmyfrhqld",
+                "upgradeableTo": "zwuubquubrsksifzibrkidohqeq",
                 "platformWorkloadIdentities": {
-                  "key3097": {
-                    "resourceId": "bjrirbwkvkrbpuyvkjugbvraibgmt",
-                    "clientId": "gypt",
-                    "objectId": "cfptlrcwjm"
+                  "key6132": {
+                    "resourceId": "sbpmbznvxzcfzdouggeyesbwjtl",
+                    "clientId": "qkfedxgodmmwv",
+                    "objectId": "kuoalicigttkllcqgdhaebboaszf"
                   }
                 }
               },
               "networkProfile": {
-                "podCidr": "pgzouvymzvznlhpratmvndbcxmk",
-                "serviceCidr": "tdocgtuh",
+                "podCidr": "crvgrhltmeu",
+                "serviceCidr": "ambdfawxxb",
                 "outboundType": "Loadbalancer",
                 "loadBalancerProfile": {
                   "managedOutboundIps": {
-                    "count": 10
+                    "count": 30
                   },
                   "effectiveOutboundIps": [
                     {
-                      "id": "wzwjhe"
+                      "id": "cbldszmelifmxiaa"
                     }
                   ]
                 },
                 "preconfiguredNSG": "Disabled"
               },
               "masterProfile": {
-                "vmSize": "eblfwkbfxdnheoqtfwg",
-                "subnetId": "scigombthudpmox",
+                "vmSize": "ktiidcnl",
+                "subnetId": "pbllxylsrukizvipvzj",
                 "encryptionAtHost": "Disabled",
-                "diskEncryptionSetId": "rwngocispzxhfesaxozhjx"
+                "diskEncryptionSetId": "csybggscmqzgwtwmhicfu"
               },
               "workerProfiles": [
                 {
-                  "name": "zpwahttakprueesdbelvufshv",
-                  "vmSize": "ddcycqddndqvsuzqqkaqjephjlky",
-                  "diskSizeGB": 3,
-                  "subnetId": "dxvogi",
-                  "count": 16,
+                  "name": "wofb",
+                  "vmSize": "yn",
+                  "diskSizeGB": 15,
+                  "subnetId": "bvhlgta",
+                  "count": 11,
                   "encryptionAtHost": "Disabled",
-                  "diskEncryptionSetId": "wj"
+                  "diskEncryptionSetId": "hpxwgxjw"
                 }
               ],
               "workerProfilesStatus": [
                 {
-                  "name": "zpwahttakprueesdbelvufshv",
-                  "vmSize": "ddcycqddndqvsuzqqkaqjephjlky",
-                  "diskSizeGB": 3,
-                  "subnetId": "dxvogi",
-                  "count": 16,
+                  "name": "wofb",
+                  "vmSize": "yn",
+                  "diskSizeGB": 15,
+                  "subnetId": "bvhlgta",
+                  "count": 11,
                   "encryptionAtHost": "Disabled",
-                  "diskEncryptionSetId": "wj"
+                  "diskEncryptionSetId": "hpxwgxjw"
                 }
               ],
               "apiserverProfile": {
                 "visibility": "Private",
-                "url": "ukpcqhgonswylqexfxkuvpndt",
-                "ip": "zjgqikovkpnouetfckjvrmq"
+                "url": "fclw",
+                "ip": "oxyjivmgmhbrhtluxqicbsmugbo"
               },
               "ingressProfiles": [
                 {
-                  "name": "okzmurcpptvijjgxyv",
+                  "name": "mpnkaecvoenxgpna",
                   "visibility": "Private",
-                  "ip": "egedicccc"
+                  "ip": "de"
                 }
               ]
             },
             "identity": {
-              "principalId": "ulphckgq",
-              "tenantId": "ujeqvmfdisfhhnug",
+              "principalId": "igddnik",
+              "tenantId": "pfuqqwfvddpoxbvwsdkwa",
               "type": "None",
               "userAssignedIdentities": {
-                "key1170": {
-                  "principalId": "nsvaoidcvkhcrietgup",
-                  "clientId": "goqdfqkp"
+                "key5056": {
+                  "principalId": "lxcvntvwdttuesody",
+                  "clientId": "qubttll"
                 }
               }
             },
             "tags": {
-              "key2824": "rzlnwgqivyzzuutlamfkdaqscwqh"
+              "key4149": "lslqwvrooxdpxvpsnlhggdfat"
             },
-            "location": "mjkj",
-            "id": "dojm",
-            "name": "miiwkxcctnyko",
-            "type": "yiogmosvqvhjktompttbsmyhnicbb",
+            "location": "qocrakfuwqbsppldeyywlksrycvzf",
+            "id": "kup",
+            "name": "gmhe",
+            "type": "jnijjdhsjszgaeiohq",
             "systemData": {
-              "createdBy": "dhpwmkpugfmrdugjv",
+              "createdBy": "xvfivllmxuzz",
               "createdByType": "User",
-              "createdAt": "2026-04-22T18:54:45.162Z",
-              "lastModifiedBy": "zmhywxfxsinboncqcttemghznc",
+              "createdAt": "2026-08-26T01:29:49.173Z",
+              "lastModifiedBy": "axdmgtmtagp",
               "lastModifiedByType": "User",
-              "lastModifiedAt": "2026-04-22T18:54:45.163Z"
+              "lastModifiedAt": "2026-08-26T01:29:49.174Z"
             }
           }
         ],

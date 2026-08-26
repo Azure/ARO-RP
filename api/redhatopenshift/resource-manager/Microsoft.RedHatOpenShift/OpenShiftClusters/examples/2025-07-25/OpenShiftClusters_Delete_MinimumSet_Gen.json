@@ -3,9 +3,9 @@
   "operationId": "OpenShiftClusters_Delete",
   "parameters": {
     "api-version": "2025-07-25",
-    "subscriptionId": "614D7761-D8F3-4DCB-9E03-833873BF661C",
+    "subscriptionId": "ACD764D1-6822-4EFE-9B0A-00AB27B27184",
     "resourceGroupName": "rgredhatopenshift",
-    "resourceName": "tjvxrl"
+    "resourceName": "hvteik"
   },
   "responses": {
     "202": {

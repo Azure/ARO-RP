@@ -3,8 +3,8 @@
   "operationId": "PlatformWorkloadIdentityRoleSets_List",
   "parameters": {
     "api-version": "2025-07-25",
-    "subscriptionId": "614D7761-D8F3-4DCB-9E03-833873BF661C",
-    "location": "rrojl"
+    "subscriptionId": "ACD764D1-6822-4EFE-9B0A-00AB27B27184",
+    "location": "bzykfbydcuwjayrxpwqyegel"
   },
   "responses": {
     "200": {
@@ -12,29 +12,29 @@
         "value": [
           {
             "properties": {
-              "openShiftVersion": "gzzznfvxukb",
+              "openShiftVersion": "crktbfkr",
               "platformWorkloadIdentityRoles": [
                 {
-                  "operatorName": "wltwjduibzlnsmzguktcsff",
-                  "roleDefinitionName": "cfjyzrtyfejlkwoiohuewn",
-                  "roleDefinitionId": "vgtcirclbqehscknxrxnsspamvu"
+                  "operatorName": "evmtobtbmtyopzylwgntongbxrhiv",
+                  "roleDefinitionName": "fpgqhzp",
+                  "roleDefinitionId": "owqpdaltfqeujrpqwejoawfowf"
                 }
               ]
             },
-            "id": "rupcqbivmzvbfnnplvfmwbpvpsi",
-            "name": "pffffekrrctppvx",
-            "type": "pytejzzmaiu",
+            "id": "rcbcpuggimbbrykgelokgipan",
+            "name": "tsdxowsp",
+            "type": "yjdupjx",
             "systemData": {
-              "createdBy": "dhpwmkpugfmrdugjv",
+              "createdBy": "xvfivllmxuzz",
               "createdByType": "User",
-              "createdAt": "2026-04-22T18:54:45.162Z",
-              "lastModifiedBy": "zmhywxfxsinboncqcttemghznc",
+              "createdAt": "2026-08-26T01:29:49.173Z",
+              "lastModifiedBy": "axdmgtmtagp",
               "lastModifiedByType": "User",
-              "lastModifiedAt": "2026-04-22T18:54:45.163Z"
+              "lastModifiedAt": "2026-08-26T01:29:49.174Z"
             }
           }
         ],
-        "nextLink": "https://microsoft.com/a"
+        "nextLink": "https://microsoft.com/agc"
       }
     }
   }

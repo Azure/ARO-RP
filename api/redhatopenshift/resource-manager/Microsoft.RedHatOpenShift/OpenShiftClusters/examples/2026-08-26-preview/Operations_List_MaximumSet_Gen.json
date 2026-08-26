@@ -1,0 +1,26 @@
+{
+  "title": "Operations_List_MaximumSet",
+  "operationId": "Operations_List",
+  "parameters": {
+    "api-version": "2026-08-26-preview"
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "value": [
+          {
+            "name": "nfmrmcynoynlmfxwgtkhdssvz",
+            "display": {
+              "provider": "wubbzr",
+              "resource": "tjkrxb",
+              "operation": "kpfxzgpgegzjaisgk",
+              "description": "zqeedggufgh"
+            },
+            "origin": "bklnm"
+          }
+        ],
+        "nextLink": "https://microsoft.com/a"
+      }
+    }
+  }
+}
