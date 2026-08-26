@@ -72,7 +72,7 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 
 	go g.Run()
 
-	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName, encryption.WithLogger(_log))
 	if err != nil {
 		return err
 	}
