@@ -36,8 +36,65 @@ const (
 	// Rotate the secret on every deploy of the RP if the most recent
 	// secret is greater than 7 days old
 	rotateSecretAfter = time.Hour * 24 * 7
-	rpRestartScript   = "systemctl restart aro-monitor; systemctl restart aro-portal; systemctl restart aro-rp"
 )
+
+// rpRestartService is a systemd unit on the RP scale set which
+// restartOldScaleset restarts once PreDeploy has rotated a secret.
+//
+// Restarting is how a rotation reaches these processes. Each enumerates its Key
+// Vault secret versions once, at start-up, and holds that list for the lifetime
+// of the process (see pkg/util/encryption.NewMulti). A service omitted here
+// therefore keeps using the versions it enumerated at start-up, and cannot read
+// data written by a service which has already picked up a newer one.
+//
+// TestRPRestartServicesCoverKeyVaultConsumers asserts the invariant: any service
+// deployed to the RP scale set which is passed KEYVAULT_PREFIX must appear here.
+type rpRestartService struct {
+	name string
+
+	// noBlock restarts the unit with `systemctl restart --no-block`, which
+	// returns once the job has been enqueued rather than once it has run.
+	//
+	// restartOldScaleset iterates the scale set's instances serially and blocks
+	// on each in turn, so a slow shutdown is paid once per instance and adds
+	// directly to deployment duration. Units whose shutdown drains in-flight
+	// work set this so that the drain overlaps the remaining restarts and the
+	// subsequent readiness wait instead of being added to them.
+	noBlock bool
+}
+
+// rpRestartServices is ordered: aro-rp is restarted last because it serves the
+// load balancer health probe which waitForReadiness gates on, and the MIMO
+// units are restarted first so that their drain has the longest possible
+// overlap with the rest of the sequence.
+var rpRestartServices = []rpRestartService{
+	// Both MIMO units drain in-flight maintenance tasks on shutdown
+	// (Backend.StopAndWait), bounded by taskRunTimeout rather than by anything
+	// the deployment controls, so neither is waited on.
+	{name: "aro-mimo-actuator", noBlock: true},
+	{name: "aro-mimo-scheduler", noBlock: true},
+	{name: "aro-monitor"},
+	{name: "aro-portal"},
+	{name: "aro-rp"},
+}
+
+// rpRestartScript is the script restartOldScaleset runs on each instance of an
+// old RP scale set.
+var rpRestartScript = buildRestartScript(rpRestartServices)
+
+// buildRestartScript renders services as a single shell command line, in the
+// order given.
+func buildRestartScript(services []rpRestartService) string {
+	commands := make([]string, 0, len(services))
+	for _, s := range services {
+		if s.noBlock {
+			commands = append(commands, "systemctl restart --no-block "+s.name)
+			continue
+		}
+		commands = append(commands, "systemctl restart "+s.name)
+	}
+	return strings.Join(commands, "; ")
+}
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
