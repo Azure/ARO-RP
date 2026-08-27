@@ -255,7 +255,7 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs, m.managedResourceGroupName()),
 			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
 			steps.Action(m.ensurePlatformWorkloadIdentityRBAC),
-			steps.Action(m.federateIdentityCredentials),
+			steps.AuthorizationRetryingAction(nil, m.federateIdentityCredentials, m.managedResourceGroupName()),
 		)
 	} else {
 		s = append(s,
@@ -425,7 +425,7 @@ func (m *manager) bootstrap() []steps.Step {
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.Action(m.federateIdentityCredentials),
+			steps.AuthorizationRetryingAction(nil, m.federateIdentityCredentials, m.managedResourceGroupName()),
 		)
 	}
 

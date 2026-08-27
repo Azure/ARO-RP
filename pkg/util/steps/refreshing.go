@@ -23,10 +23,10 @@ import (
 
 var ErrWantRefresh = errors.New("want refresh")
 
-// AuthorizationRefreshingAction returns a wrapper Step which will refresh
-// `authorizer` if the step returns an Azure AuthenticationError and rerun it.
-// The step will be retried until `retryTimeout` is hit. Any other error will be
-// returned directly.
+// AuthorizationRetryingAction returns a wrapper Step which retries Azure
+// authorization errors until retryTimeout is hit. If authorizer is non-nil, it
+// is rebuilt before each retry; a nil authorizer enables retry-only behavior.
+// Any other error is returned directly.
 func AuthorizationRetryingAction(r refreshable.Authorizer, action actionFunction, managedRGName string) Step {
 	return &authorizationRefreshingActionStep{
 		auth:          r,
@@ -76,19 +76,22 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		err = s.f(ctx)
 
 		// If we haven't timed out and there is an error that is either an
-		// unauthorized client (AADSTS700016) or "AuthorizationFailed" (likely
-		// role propagation delay) then refresh and retry.
+		// unauthorized client (AADSTS700016), HTTP 403, or
+		// "AuthorizationFailed" (likely role propagation delay) then retry.
 		if timeoutCtx.Err() == nil && err != nil &&
 			(azureerrors.IsUnauthorizedClientError(err) ||
+				azureerrors.IsStatusForbiddenError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.HasLinkedAuthorizationFailedError(err) ||
 				azureerrors.IsInvalidSecretError(err) ||
 				azureerrors.IsDeploymentMissingPermissionsError(err) ||
 				err == ErrWantRefresh) {
-			log.Printf("auth error, refreshing and retrying: %v", err)
-			// Try refreshing auth.
-			err = s.auth.Rebuild()
-			return false, err // retry step
+			log.Printf("auth error, retrying: %v", err)
+			if s.auth != nil {
+				err = s.auth.Rebuild()
+				return false, err
+			}
+			return false, nil
 		}
 		if err != nil {
 			log.Printf("non-auth error, giving up: %v", err)
@@ -96,6 +99,9 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		return true, err
 	}, timeoutCtx.Done())
 
+	if s.auth == nil {
+		return err
+	}
 	return CreateActionableError(err, s.managedRGName)
 }
 

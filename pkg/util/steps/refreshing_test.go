@@ -14,7 +14,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -294,4 +296,41 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAuthorizationRetryingActionWithoutAuthorizerRetriesForbidden(t *testing.T) {
+	callCount := 0
+	action := func(ctx context.Context) error {
+		callCount++
+		if callCount == 1 {
+			return &azcore.ResponseError{StatusCode: http.StatusForbidden}
+		}
+		return nil
+	}
+
+	s := &authorizationRefreshingActionStep{
+		f:            action,
+		retryTimeout: 30 * time.Second,
+		pollInterval: time.Millisecond,
+	}
+
+	err := s.run(context.Background(), logrus.NewEntry(logrus.StandardLogger()))
+
+	require.NoError(t, err)
+	assert.Equal(t, 2, callCount)
+}
+
+func TestAuthorizationRetryingActionWithoutAuthorizerReturnsLastError(t *testing.T) {
+	wantErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
+	s := &authorizationRefreshingActionStep{
+		f: func(ctx context.Context) error {
+			return wantErr
+		},
+		retryTimeout: time.Millisecond,
+		pollInterval: 30 * time.Second,
+	}
+
+	err := s.run(context.Background(), logrus.NewEntry(logrus.StandardLogger()))
+
+	assert.Same(t, wantErr, err)
 }
