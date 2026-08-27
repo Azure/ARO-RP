@@ -209,7 +209,7 @@ func (a *azureActions) CRGSetupForResize(ctx context.Context, vmNames []string, 
 	for _, zone := range uniqueZones {
 		count := int64(zoneCount[zone])
 		if err := a.crgEnsureReservations(ctx, clusterRG, location, zone, targetSKU, crgName, count); err != nil {
-			return "", "", nil, nil, err
+			return crgID, crgName, uniqueZones, resizeVMNames, err
 		}
 	}
 

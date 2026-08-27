@@ -483,12 +483,24 @@ func TestCRGSetupForResize_ReservationFails_ReturnsErrorWithoutCleanup(t *testin
 		mockCRs.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "cluster-rg", gomock.Any(), "cr-target-z2", gomock.Any()).Return(reservationErr),
 	)
 
-	_, _, _, _, err := a.CRGSetupForResize(context.Background(), []string{"master-0", "master-1"}, targetSKU)
+	crgID, crgName, zones, resizeVMNames, err := a.CRGSetupForResize(context.Background(), []string{"master-0", "master-1"}, targetSKU)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 	if !errors.Is(err, reservationErr) {
 		t.Errorf("expected error to wrap the underlying reservation error, got: %v", err)
+	}
+	if crgID != "crg-id" {
+		t.Errorf("expected partially-created crgID to be returned for teardown, got %q", crgID)
+	}
+	if crgName == "" {
+		t.Errorf("expected partially-created crgName to be returned for teardown, got empty string")
+	}
+	if len(zones) != 2 {
+		t.Errorf("expected both zones to be returned for teardown, got %v", zones)
+	}
+	if len(resizeVMNames) != 2 {
+		t.Errorf("expected both VMs to be returned for teardown context (no VMs were modified), got %v", resizeVMNames)
 	}
 }
 
