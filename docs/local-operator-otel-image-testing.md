@@ -32,6 +32,11 @@ REGISTRY_HOST="$(oc get route default-route -n openshift-image-registry -o jsonp
 docker login -u "$(oc whoami)" -p "$(oc whoami -t)" "${REGISTRY_HOST}"
 ```
 
+> **Not using `oc login`?** If you're on a certificate-based admin kubeconfig
+> (e.g. `userAdminKubeconfig` from `hack/db`), `oc whoami -t` has no token — use a
+> service-account token for the registry login instead:
+> `docker login -u builder -p "$(oc create token builder -n openshift-azure-operator)" "${REGISTRY_HOST}"` (podman: add `--tls-verify=false`).
+
 ## 2. Build and push OTel image (Dockerfile.telemetryexporter)
 
 Use `Dockerfile.telemetryexporter` (includes `systemd`/`journalctl` support needed by `journald` receiver):

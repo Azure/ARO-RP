@@ -196,6 +196,66 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 									"description": `OTel exporter pod {{ $labels.pod }} on node {{ $labels.node }} has not exported any log records in the past hour`,
 								},
 							},
+							{
+								Alert: "OTelExporterSendFailingSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`sum by (pod) (rate(otelcol_exporter_send_failed_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} failing to send logs`,
+									"description": `OTel exporter pod {{ $labels.pod }} has been failing to send log records to the gateway for 15m`,
+								},
+							},
+							{
+								Alert: "OTelExporterQueueSaturatedSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`max by (pod) (otelcol_exporter_queue_size{namespace="` + kubeNamespace + `"} / otelcol_exporter_queue_capacity{namespace="` + kubeNamespace + `"}) > 0.9`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} sending queue near capacity`,
+									"description": `OTel exporter pod {{ $labels.pod }} sending queue has been over 90% full for 15m; sustained backpressure risks dropping logs`,
+								},
+							},
+							{
+								Alert: "OTelExporterLogsRefusedSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`sum by (pod) (rate(otelcol_receiver_refused_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} refusing logs at ingestion`,
+									"description": `OTel exporter pod {{ $labels.pod }} has been refusing log records at ingestion for 15m; a receiver or parse failure may be dropping a log stream (for example audit)`,
+								},
+							},
+							{
+								Alert: "OTelExporterRestartLoopingSRE",
+								For:   "15m",
+								Expr: intstr.FromString(
+									`increase(kube_pod_container_status_restarts_total{namespace="` + kubeNamespace + `",container="otel-exporter"}[1h]) >= 5`,
+								),
+								Labels: map[string]string{
+									"severity":  "warning",
+									"namespace": kubeNamespace,
+								},
+								Annotations: map[string]string{
+									"summary":     `OTel exporter {{ $labels.pod }} restart-looping`,
+									"description": `OTel exporter pod {{ $labels.pod }} has restarted 5 or more times in the past hour; the collector is crash/restart-looping`,
+								},
+							},
 						},
 					},
 				},
@@ -323,7 +383,20 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 		otelPullspec = version.TelemetryExporterImage(cluster.Spec.ACRDomain)
 	}
 
+	// When enabled (opt-in), make the healthcheck extension report status from
+	// collector component events so a failed export pipeline — not just a dead
+	// process — fails the /healthz liveness probe and the pod is restarted.
+	// Requires a collector image that supports the gate; an image that rejects
+	// the unknown gate fails to start (a crash loop caught by the
+	// OTelExporterRestartLooping alert), so this defaults off and rolls out
+	// per-fleet after validation.
+	componentHealth := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelComponentHealth)
+
 	newDaemonSet := func(name string, cpuLimit string, nodeSelectorTerms []corev1.NodeSelectorTerm, configKey, configHash string) *appsv1.DaemonSet {
+		args := []string{"--config", "/etc/otel/" + configKey}
+		if componentHealth {
+			args = append(args, "--feature-gates=+extension.healthcheck.useComponentStatus")
+		}
 		return &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -402,7 +475,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 							{
 								Name:  "otel-exporter",
 								Image: otelPullspec,
-								Args:  []string{"--config", "/etc/otel/" + configKey},
+								Args:  args,
 								Env: []corev1.EnvVar{
 									{
 										Name:  "GENEVA_GATEWAY_ENDPOINT",

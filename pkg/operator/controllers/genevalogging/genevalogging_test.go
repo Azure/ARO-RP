@@ -435,14 +435,48 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 			t.Fatalf("expected 1 rule group, got %d", len(prometheusRule.Spec.Groups))
 		}
 		rules := prometheusRule.Spec.Groups[0].Rules
-		if len(rules) != 1 || rules[0].Alert != "OTelExporterNoLogsShippedSRE" {
-			t.Fatalf("unexpected PrometheusRule rules: %v", rules)
+		wantAlerts := []string{
+			"OTelExporterNoLogsShippedSRE",
+			"OTelExporterSendFailingSRE",
+			"OTelExporterQueueSaturatedSRE",
+			"OTelExporterLogsRefusedSRE",
+			"OTelExporterRestartLoopingSRE",
 		}
-		if rules[0].Labels["severity"] != "critical" {
-			t.Fatalf("unexpected alert severity: %q", rules[0].Labels["severity"])
+		if len(rules) != len(wantAlerts) {
+			t.Fatalf("expected %d rules, got %d: %v", len(wantAlerts), len(rules), rules)
 		}
-		if rules[0].For != "10m" {
-			t.Fatalf("unexpected alert For duration: %q", rules[0].For)
+		byAlert := make(map[string]monitoringv1.Rule, len(rules))
+		for _, r := range rules {
+			byAlert[r.Alert] = r
+		}
+		for _, want := range wantAlerts {
+			if _, ok := byAlert[want]; !ok {
+				t.Fatalf("missing alert %q; got rules %v", want, rules)
+			}
+		}
+		if noLogs := byAlert["OTelExporterNoLogsShippedSRE"]; noLogs.Labels["severity"] != "critical" || noLogs.For != "10m" {
+			t.Fatalf("NoLogsShipped alert: severity=%q For=%q", noLogs.Labels["severity"], noLogs.For)
+		}
+		// The collector exposes these counters without a _total suffix (verified
+		// on a live cluster), so the alert expressions use the bare names.
+		for _, want := range []string{
+			"otelcol_exporter_sent_log_records",
+			"otelcol_exporter_send_failed_log_records",
+			"otelcol_receiver_refused_log_records",
+		} {
+			found := false
+			for _, r := range rules {
+				expr := r.Expr.String()
+				if strings.Contains(expr, want+"_total") {
+					t.Fatalf("rule references suffixed %q; collector exposes the bare name", want+"_total")
+				}
+				if strings.Contains(expr, want) {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("no rule references %q", want)
+			}
 		}
 	}
 }
@@ -738,5 +772,47 @@ func TestCleanupStaleResources(t *testing.T) {
 
 	if err := r.cleanupStaleResources(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestOTelDaemonSetsComponentHealthFlag(t *testing.T) {
+	const gate = "--feature-gates=+extension.healthcheck.useComponentStatus"
+	r := &Reconciler{}
+
+	for _, tt := range []struct {
+		name  string
+		flags arov1alpha1.OperatorFlags
+		want  bool
+	}{
+		{name: "disabled by default", flags: arov1alpha1.OperatorFlags{}, want: false},
+		{name: "enabled via flag", flags: arov1alpha1.OperatorFlags{operator.GenevaLoggingOTelComponentHealth: operator.FlagTrue}, want: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			daemonsets, err := r.otelDaemonSets(&arov1alpha1.Cluster{
+				Spec: arov1alpha1.ClusterSpec{
+					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+					ACRDomain:     "acrDomain",
+					OperatorFlags: tt.flags,
+				},
+			}, "10.0.0.8:4317", nil, "master-hash", "worker-hash")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, ds := range daemonsets {
+				exporter, ok := getContainer(ds, "otel-exporter")
+				if !ok {
+					t.Fatalf("missing otel-exporter container in %s", ds.Name)
+				}
+				hasGate := false
+				for _, a := range exporter.Args {
+					if a == gate {
+						hasGate = true
+					}
+				}
+				if hasGate != tt.want {
+					t.Fatalf("%s: feature-gate present=%v, want %v (args=%v)", ds.Name, hasGate, tt.want, exporter.Args)
+				}
+			}
+		})
 	}
 }
