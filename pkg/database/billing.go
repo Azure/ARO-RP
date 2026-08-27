@@ -98,18 +98,20 @@ func (c *billing) ListAll(ctx context.Context) (*api.BillingDocuments, error) {
 
 // Delete a billing document
 func (c *billing) Delete(ctx context.Context, doc *api.BillingDocument) error {
-	if doc.Key != strings.ToLower(doc.Key) {
-		return fmt.Errorf("key %q is not lower case", doc.Key)
+	if doc.ID != strings.ToLower(doc.ID) {
+		return fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
+	// NoETag is intentional: terminal cleanup must delete unconditionally, not 412 on a concurrent write
 	return c.c.Delete(ctx, doc.ID, doc, &cosmosdb.Options{NoETag: true})
 }
 
 // UpdateLastBillingTimestamp update the last billing timestamp field in the document with the time provided
 // This time will be provided by the billing service so we don't need to use trigger
 func (c *billing) UpdateLastBillingTimestamp(ctx context.Context, id string, time int) (*api.BillingDocument, error) {
+	// Passing non-nil Options with NoETag=false makes Replace send If-Match, enabling the patch retry loop's ETag concurrency
 	return c.patch(ctx, id, func(billingdoc *api.BillingDocument) error {
 		billingdoc.Billing.LastBillingTime = time
 		return nil
-	}, nil)
+	}, &cosmosdb.Options{NoETag: false})
 }
