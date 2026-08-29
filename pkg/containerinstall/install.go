@@ -53,25 +53,26 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 		pullPolicy = "always"
 	}
 
-	domain, _, ok := strings.Cut(version.Properties.InstallerPullspec, "/")
-	if !ok {
-		return fmt.Errorf("failed to get domain from %s", version.Properties.InstallerPullspec)
-	}
-	pullSecret, ok := m.pullSecrets[domain]
-	if !ok {
-		return fmt.Errorf("failed to get pullSecret for domain %s", domain)
+	options := (&images.PullOptions{}).
+		WithQuiet(true).
+		WithPolicy(pullPolicy).
+		WithArch("amd64").
+		WithOS("linux")
+
+	if pullPolicy != "never" {
+		domain, _, ok := strings.Cut(version.Properties.InstallerPullspec, "/")
+		if !ok {
+			return fmt.Errorf("failed to get domain from %s", version.Properties.InstallerPullspec)
+		}
+		pullSecret, ok := m.pullSecrets[domain]
+		if !ok {
+			return fmt.Errorf("failed to get pullSecret for domain %s", domain)
+		}
+		options = options.WithUsername(pullSecret.Username).WithPassword(pullSecret.Password)
 	}
 
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
-			options := (&images.PullOptions{}).
-				WithQuiet(true).
-				WithPolicy(pullPolicy).
-				WithUsername(pullSecret.Username).
-				WithPassword(pullSecret.Password).
-				WithArch("amd64").
-				WithOS("linux")
-
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
 		}),
