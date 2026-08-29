@@ -243,6 +243,7 @@ func TestOpenRetriesAfterAConcurrentRefresh(t *testing.T) {
 	const callers = 8
 
 	controller := gomock.NewController(t)
+	defer controller.Finish()
 
 	stale := mock_encryption.NewMockAEAD(controller)
 	stale.EXPECT().Open(gomock.Any()).Return(nil, errors.New("chacha20poly1305: message authentication failed")).AnyTimes()
