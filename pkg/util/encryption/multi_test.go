@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -215,21 +217,86 @@ func TestRefreshIsRateLimited(t *testing.T) {
 	m.keys.Store(&keySet{})
 	m.lastRefreshed = now.Add(-time.Hour)
 
-	if got := m.refresh(); !got {
-		t.Errorf("multi.refresh() = %v, want true", got)
+	m.refresh()
+	if loads != 1 {
+		t.Errorf("keyLoader.load() called %d times after one refresh, want 1", loads)
 	}
-	if got := m.refresh(); got {
-		t.Errorf("multi.refresh() = %v after an immediate second call, want false", got)
+
+	m.refresh()
+	if loads != 1 {
+		t.Errorf("keyLoader.load() called %d times after an immediate second refresh, want 1", loads)
 	}
 
 	now = now.Add(time.Hour)
 
-	if got := m.refresh(); !got {
-		t.Errorf("multi.refresh() = %v after minRefreshInterval elapsed, want true", got)
+	m.refresh()
+	if loads != 2 {
+		t.Errorf("keyLoader.load() called %d times after minRefreshInterval elapsed, want 2", loads)
+	}
+}
+
+// TestOpenRetriesAfterAConcurrentRefresh covers the caller which finds the keys
+// already being refreshed by another goroutine. It must still retry against the
+// refreshed keys: the rotation this fix exists for produces a burst of
+// simultaneous failures, and only one of them performs the re-enumeration.
+func TestOpenRetriesAfterAConcurrentRefresh(t *testing.T) {
+	const callers = 8
+
+	controller := gomock.NewController(t)
+
+	stale := mock_encryption.NewMockAEAD(controller)
+	stale.EXPECT().Open(gomock.Any()).Return(nil, errors.New("chacha20poly1305: message authentication failed")).AnyTimes()
+
+	fresh := mock_encryption.NewMockAEAD(controller)
+	fresh.EXPECT().Open([]byte("sealed")).Return([]byte("opened"), nil).AnyTimes()
+
+	now := time.Unix(0, 0)
+
+	// Released once every caller is under way, so that they all reach refresh
+	// together and contend for it.
+	release := make(chan struct{})
+	var loads int64
+
+	m := &multi{
+		loader: loaderFunc(func(context.Context) (*keySet, error) {
+			atomic.AddInt64(&loads, 1)
+			<-release
+			return &keySet{openers: []AEAD{fresh}}, nil
+		}),
+		minRefreshInterval: time.Hour,
+		now:                func() time.Time { return now },
+	}
+	m.keys.Store(&keySet{openers: []AEAD{stale}})
+	m.lastRefreshed = now.Add(-time.Hour)
+
+	var wg sync.WaitGroup
+	results := make([][]byte, callers)
+	errs := make([]error, callers)
+
+	for i := range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results[i], errs[i] = m.Open([]byte("sealed"))
+		}()
 	}
 
-	if loads != 2 {
-		t.Errorf("keyLoader.load() called %d times, want 2", loads)
+	// Let the single in-flight load complete once all callers are under way.
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+	wg.Wait()
+
+	for i := range callers {
+		if errs[i] != nil {
+			t.Errorf("caller %d: multi.Open() returned unexpected error: %v", i, errs[i])
+		}
+		if !reflect.DeepEqual(results[i], []byte("opened")) {
+			t.Errorf("caller %d: multi.Open() = %q, want %q", i, results[i], []byte("opened"))
+		}
+	}
+
+	if got := atomic.LoadInt64(&loads); got != 1 {
+		t.Errorf("keyLoader.load() called %d times, want 1", got)
 	}
 }
 

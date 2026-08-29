@@ -103,7 +103,9 @@ func newMulti(ctx context.Context, loader keyLoader, opts ...Option) (*multi, er
 }
 
 func (c *multi) Open(input []byte) ([]byte, error) {
-	b, err := open(c.keys.Load(), input)
+	keys := c.keys.Load()
+
+	b, err := open(keys, input)
 	if err == nil {
 		return b, nil
 	}
@@ -112,11 +114,21 @@ func (c *multi) Open(input []byte) ([]byte, error) {
 	// are stale. The services which hold a multi are long-lived and enumerate
 	// the secret versions once, at start-up, so a version created since then is
 	// absent until the process is restarted. Re-enumerate and try once more.
-	if !c.refresh() {
+	c.refresh()
+
+	// Re-read the keys rather than asking whether this call was the one that
+	// replaced them. A refresh performed by a concurrent caller is just as
+	// useful as one performed here, and under the burst of failures that a
+	// rotation produces most callers will find the keys already replaced by the
+	// time they reach this point. Comparing the pointer, rather than trusting
+	// that a refresh happened, also avoids a pointless second attempt when the
+	// rate limit meant no re-enumeration took place at all.
+	refreshed := c.keys.Load()
+	if refreshed == keys {
 		return nil, err
 	}
 
-	b, refreshedErr := open(c.keys.Load(), input)
+	b, refreshedErr := open(refreshed, input)
 	if refreshedErr != nil {
 		// Report the original error. The input cannot be opened by any key this
 		// process holds, and describing that in terms of the first attempt is
@@ -143,16 +155,25 @@ func open(keys *keySet, input []byte) ([]byte, error) {
 	return nil, err
 }
 
-// refresh re-enumerates the keys and reports whether it replaced them. It does
-// nothing, and reports false, if it has already run within the last
-// minRefreshInterval.
-func (c *multi) refresh() bool {
+// refresh re-enumerates the keys and replaces them. It does nothing if it has
+// already run within the last minRefreshInterval.
+//
+// It reports nothing. Callers observe the outcome by re-reading c.keys, so that
+// a caller which arrives while another is already refreshing benefits from that
+// refresh rather than being told its own attempt did nothing.
+//
+// The lock is held across the load, so a caller arriving mid-refresh waits for
+// it. That wait is bounded by refreshTimeout and is the point of the exercise:
+// the keys it is waiting for are the ones that will let it succeed. Returning
+// early instead would hand it a stale key set and a failure it need not have
+// had.
+func (c *multi) refresh() {
 	c.refreshMu.Lock()
 	defer c.refreshMu.Unlock()
 
 	// Another caller may have refreshed while this one waited for the lock.
 	if c.now().Sub(c.lastRefreshed) < c.minRefreshInterval {
-		return false
+		return
 	}
 
 	// Recorded before the attempt rather than after it, so that a Key Vault
@@ -168,7 +189,7 @@ func (c *multi) refresh() bool {
 		if c.log != nil {
 			c.log.Warnf("failed refreshing encryption keys: %s", err)
 		}
-		return false
+		return
 	}
 
 	was := len(c.keys.Load().openers)
@@ -177,8 +198,6 @@ func (c *multi) refresh() bool {
 	if c.log != nil && len(keys.openers) != was {
 		c.log.Infof("refreshed encryption keys: %d openers, was %d", len(keys.openers), was)
 	}
-
-	return true
 }
 
 func (c *multi) Seal(input []byte) ([]byte, error) {
