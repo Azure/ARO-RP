@@ -204,11 +204,14 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		// marked RetriesExceeded.
 		oc, err := ocDb.Get(ctx, a.clusterResourceID)
 		if err != nil {
+			// Logged in the original wording, before wrapping, so that queries
+			// and alerting over the actuator's logs are unaffected.
+			taskLog.Errorf("failed fetching cluster document: %s", err.Error())
+
 			// Marked transient so that a momentary failure to read the document
 			// is retried rather than failing the manifest outright. A durable
 			// one is still bounded, by maxDequeueCount.
 			err = utilmimo.TransientError(fmt.Errorf("failed getting cluster document: %w", err))
-			taskLog.Error(err)
 
 			state, msg := manifestStateForError(doc.Dequeues, err.Error(), err)
 			if _, endErr := mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg); endErr != nil {

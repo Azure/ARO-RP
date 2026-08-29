@@ -98,22 +98,22 @@ func TestProcessWhenClusterDocumentUnreadable(t *testing.T) {
 	}
 
 	processWhenClusterDocumentUnreadableTests := []struct {
-		name          string
-		dequeues      int
-		wantState     api.MaintenanceManifestState
-		wantStatusTex string
+		name           string
+		dequeues       int
+		wantState      api.MaintenanceManifestState
+		wantStatusText string
 	}{
 		{
-			name:          "retriesWhileAttemptsRemain",
-			dequeues:      0,
-			wantState:     api.MaintenanceManifestStatePending,
-			wantStatusTex: "TransientError: failed getting cluster document: 404 : ",
+			name:           "retriesWhileAttemptsRemain",
+			dequeues:       0,
+			wantState:      api.MaintenanceManifestStatePending,
+			wantStatusText: "TransientError: failed getting cluster document: 404 : ",
 		},
 		{
-			name:          "givesUpOnceAttemptsAreExhausted",
-			dequeues:      maxDequeueCount - 1,
-			wantState:     api.MaintenanceManifestStateRetriesExceeded,
-			wantStatusTex: fmt.Sprintf("did not succeed after %d times, failing -- TransientError: failed getting cluster document: 404 : ", maxDequeueCount),
+			name:           "givesUpOnceAttemptsAreExhausted",
+			dequeues:       maxDequeueCount - 1,
+			wantState:      api.MaintenanceManifestStateRetriesExceeded,
+			wantStatusText: fmt.Sprintf("did not succeed after %d times, failing -- TransientError: failed getting cluster document: 404 : ", maxDequeueCount),
 		},
 	}
 
@@ -187,7 +187,7 @@ func TestProcessWhenClusterDocumentUnreadable(t *testing.T) {
 					Dequeues: tt.dequeues + 1,
 					MaintenanceManifest: api.MaintenanceManifest{
 						State:             tt.wantState,
-						StatusText:        tt.wantStatusTex,
+						StatusText:        tt.wantStatusText,
 						MaintenanceTaskID: "0",
 						RunBefore:         600,
 						RunAfter:          0,
