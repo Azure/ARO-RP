@@ -294,6 +294,13 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 // error, so that a manifest which keeps failing transiently is eventually given
 // up on rather than retried indefinitely. That bound relies on the manifest
 // having been leased, since Lease is what increments Dequeues.
+//
+// RetriesExceeded is terminal: the dequeue query matches Pending only, so such
+// a manifest is not picked up again even once whatever caused the failure has
+// been resolved. The window it was scheduled for is therefore missed rather
+// than deferred. This is bounded rather than permanent, because schedules are
+// recurring and the scheduler creates a fresh manifest for the next window, but
+// it does mean a durable fault costs a maintenance window per manifest.
 func manifestStateForError(dequeues int, msg string, err error) (api.MaintenanceManifestState, string) {
 	switch {
 	case dequeues >= maxDequeueCount:
