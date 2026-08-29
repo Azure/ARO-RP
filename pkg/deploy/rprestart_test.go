@@ -159,7 +159,18 @@ type serviceBlock struct {
 	body string
 }
 
-var serviceFilenameRE = regexp.MustCompile(`_service_filename='/etc/systemd/system/([^']+)\.service'`)
+// serviceFilenameRE matches the assignments in util-services.sh which name a
+// unit file. The script writes them in several forms: a prefixed variable
+// (aro_rp_service_filename), a bare one (service_filename), and either quote
+// style. All must be matched, because a line which is missed does not merely go
+// unchecked — its body is attributed to the preceding block instead, which
+// could credit one service's KEYVAULT_PREFIX to another.
+var serviceFilenameRE = regexp.MustCompile(`[\s_]service_filename=['"]/etc/systemd/system/([^'"]+)\.service['"]`)
+
+// unitFileAssignmentRE is a deliberately loose match on the same assignments,
+// used only to check that serviceFilenameRE did not miss any. It is kept
+// independent of serviceFilenameRE so that the two cannot drift together.
+var unitFileAssignmentRE = regexp.MustCompile(`service_filename=['"]?/etc/systemd/system/`)
 
 // parseServiceBlocks splits util-services.sh into one block per unit file that
 // it writes. A block runs from the line naming a unit file to the line naming
@@ -170,7 +181,11 @@ func parseServiceBlocks(t *testing.T) []serviceBlock {
 	t.Helper()
 
 	var blocks []serviceBlock
+	assignments := 0
 	for _, line := range strings.Split(readScript(t, utilServicesScriptPath), "\n") {
+		if unitFileAssignmentRE.MatchString(line) {
+			assignments++
+		}
 		if m := serviceFilenameRE.FindStringSubmatch(line); m != nil {
 			blocks = append(blocks, serviceBlock{name: m[1]})
 			continue
@@ -183,6 +198,14 @@ func parseServiceBlocks(t *testing.T) []serviceBlock {
 	if len(blocks) == 0 {
 		t.Fatalf("parseServiceBlocks() = empty, want at least one; has the format of %s changed?", utilServicesScriptPath)
 	}
+
+	// A shortfall means a unit file is named in a form serviceFilenameRE does
+	// not recognise, so its configuration is being read as part of another
+	// service's.
+	if len(blocks) != assignments {
+		t.Fatalf("parseServiceBlocks() returned %d blocks for %d unit file assignments in %s; a unit file is named in a form serviceFilenameRE does not match", len(blocks), assignments, utilServicesScriptPath)
+	}
+
 	return blocks
 }
 
