@@ -66,6 +66,11 @@ type service struct {
 	workerCount  *atomic.Int32
 	newScheduler newSchedulerFunc
 
+	// changefeeds tracks the goroutines started by startChangefeeds, so that a
+	// caller which closes their stop channel can wait for them to exit rather
+	// than leaving them running.
+	changefeeds sync.WaitGroup
+
 	buckets  atomic.Value // []int
 	b        buckets.WorkerPool[*api.MaintenanceScheduleDocument]
 	subs     changefeed.SubscriptionsCache
@@ -292,20 +297,28 @@ func (s *service) startChangefeeds(ctx context.Context, stop <-chan struct{}) er
 	}
 
 	// start subscription changefeed
-	go changefeed.RunChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), s.m, "SubscriptionDocument",
-		dbSubscriptions.ChangeFeed(),
-		s.changefeedInterval,
-		s.changefeedBatchSize, s.subs, stop,
-	)
+	s.changefeeds.Add(1)
+	go func() {
+		defer s.changefeeds.Done()
+		changefeed.RunChangefeed(
+			ctx, s.baseLog.WithField("component", "changefeed"), s.m, "SubscriptionDocument",
+			dbSubscriptions.ChangeFeed(),
+			s.changefeedInterval,
+			s.changefeedBatchSize, s.subs, stop,
+		)
+	}()
 
 	// start cluster changefeed
-	go changefeed.RunChangefeed(
-		ctx, s.baseLog.WithField("component", "changefeed"), s.m, "OpenShiftClusterDocument",
-		dbOpenShiftClusters.ChangeFeed(),
-		s.changefeedInterval,
-		s.changefeedBatchSize, s.clusters, stop,
-	)
+	s.changefeeds.Add(1)
+	go func() {
+		defer s.changefeeds.Done()
+		changefeed.RunChangefeed(
+			ctx, s.baseLog.WithField("component", "changefeed"), s.m, "OpenShiftClusterDocument",
+			dbOpenShiftClusters.ChangeFeed(),
+			s.changefeedInterval,
+			s.changefeedBatchSize, s.clusters, stop,
+		)
+	}()
 
 	return nil
 }
