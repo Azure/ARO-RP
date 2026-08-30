@@ -6,6 +6,7 @@ package scheduler
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1272,10 +1273,19 @@ func TestProcessLoop(t *testing.T) {
 				WithSubscriptions(subscriptions)
 
 			stop := make(chan struct{})
-			t.Cleanup(func() { close(stop) })
 
 			serv := NewService(_env, log, dbs, metrics)
 			serv.changefeedInterval = 10 * time.Millisecond
+
+			// The changefeeds emit metrics on every poll, and the fake emitter
+			// requires every emitted metric to be accounted for, so they must
+			// be stopped before the assertions below rather than left running
+			// alongside them.
+			stopChangefeeds := sync.OnceFunc(func() {
+				close(stop)
+				serv.changefeeds.Wait()
+			})
+			t.Cleanup(stopChangefeeds)
 
 			a := &scheduler{
 				log: log,
@@ -1355,6 +1365,7 @@ func TestProcessLoop(t *testing.T) {
 			require.NoError(err)
 
 			// check the metrics -- we don't want any floats, but we do have gauges
+			stopChangefeeds()
 			metrics.AssertFloats()
 			metrics.AssertGauges(withChangefeedGauges(tt.expectedMetrics)...)
 		})
