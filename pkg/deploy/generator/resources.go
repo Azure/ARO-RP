@@ -90,7 +90,7 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 	}
 }
 
-func (g *generator) publicLBIPAddressTagged(name string, ipTagsParam string) *arm.Resource {
+func (g *generator) publicLBIPAddressTagged(name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.PublicIPAddress{
 			SKU: &armnetwork.PublicIPAddressSKU{
