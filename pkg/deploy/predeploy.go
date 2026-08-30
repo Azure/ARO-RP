@@ -140,8 +140,9 @@ func (d *deployer) PreDeploy(ctx context.Context, lbHealthcheckWaitTimeSec int) 
 	// key the decision to deploy NSGs on the existence of the gateway
 	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
 	// is deployed for the first time.
-	// When forceNSGs is true, force NSG deployment and skip secret
-	// rotation / VMSS restart to avoid the restartOldScalesets() side effect.
+	// When forceNSGs is true, we skip the gateway-predeploy existence check
+	// and unconditionally set deployNSGs=true. configureServiceSecrets still
+	// runs regardless of forceNSGs.
 	isCreate := false
 	if !d.forceNSGs {
 		_, err = d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))

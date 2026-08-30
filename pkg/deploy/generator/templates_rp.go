@@ -210,8 +210,8 @@ func (g *generator) rpTemplate() *arm.Template {
 		t.Resources = append(t.Resources,
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
-			g.publicLBIPAddressTagged("rp-pip-tagged", "rpLbIpTags"),
-			g.publicLBIPAddressTagged("portal-pip-tagged", "portalLbIpTags"),
+			g.publicLBIPAddressTagged("rp-pip-tagged"),
+			g.publicLBIPAddressTagged("portal-pip-tagged"),
 			g.rpLB(),
 			g.rpVMSS(),
 			g.rpLBAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
