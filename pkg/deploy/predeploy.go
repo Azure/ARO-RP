@@ -36,7 +36,10 @@ const (
 	// Rotate the secret on every deploy of the RP if the most recent
 	// secret is greater than 7 days old
 	rotateSecretAfter = time.Hour * 24 * 7
-	rpRestartScript   = "systemctl restart aro-monitor; systemctl restart aro-portal; systemctl restart aro-rp"
+	// A service reads its secrets once at start-up, so restarting it is how it
+	// picks up a rotated one. The portal session key is the only secret still
+	// rotated, and aro-portal is the only service that holds it.
+	portalRestartScript = "systemctl restart aro-portal"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
@@ -332,7 +335,17 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
-	isRotated := false
+	// aro-portal is the only service holding the portal session key, and that key
+	// is the only one here still rotated, so it alone decides whether the restart
+	// below runs.
+	portalKeyRotated, err := d.ensureAndRotateSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
+	if err != nil {
+		return err
+	}
+
+	// Created if absent and then left alone. Rotating them would require every
+	// service holding a key to be restarted in step, which is not worth doing
+	// until existing documents can be re-sealed and superseded versions retired.
 	for _, s := range []struct {
 		kv         azsecrets.Client
 		secretName string
@@ -340,38 +353,21 @@ func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWai
 	}{
 		{d.serviceKeyvault, env.EncryptionSecretV2Name, 64},
 		{d.serviceKeyvault, env.FrontendEncryptionSecretV2Name, 64},
-		{d.portalKeyvault, env.PortalServerSessionKeySecretName, 32},
-	} {
-		isNew, err := d.ensureAndRotateSecret(ctx, s.kv, s.secretName, s.len)
-		isRotated = isNew || isRotated
-		if err != nil {
-			return err
-		}
-	}
-
-	// don't rotate legacy secrets
-	for _, s := range []struct {
-		kv         azsecrets.Client
-		secretName string
-		len        int
-	}{
 		{d.serviceKeyvault, env.EncryptionSecretName, 32},
 		{d.serviceKeyvault, env.FrontendEncryptionSecretName, 32},
 	} {
-		isNew, err := d.ensureSecret(ctx, s.kv, s.secretName, s.len)
-		isRotated = isNew || isRotated
+		_, err := d.ensureSecret(ctx, s.kv, s.secretName, s.len)
 		if err != nil {
 			return err
 		}
 	}
 
-	isNew, err := d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
-	isRotated = isNew || isRotated
+	_, err = d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
 	if err != nil {
 		return err
 	}
 
-	if isRotated {
+	if portalKeyRotated {
 		err = d.restartOldScalesets(ctx, lbHealthcheckWaitTimeSec)
 		if err != nil {
 			return err
@@ -512,7 +508,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
 			CommandID: pointerutils.ToPtr("RunShellScript"),
-			Script:    &[]string{rpRestartScript},
+			Script:    &[]string{portalRestartScript},
 		})
 		if err != nil {
 			return err

@@ -116,7 +116,7 @@ func TestPreDeploy(t *testing.T) {
 	}
 	deployment := mgmtfeatures.DeploymentExtended{}
 	vmsss := []mgmtcompute.VirtualMachineScaleSet{{Name: &vmssName}}
-	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
+	oneMissingSecrets := []string{env.EncryptionSecretV2Name, env.FrontendEncryptionSecretV2Name, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {
 		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
@@ -163,9 +163,6 @@ func TestPreDeploy(t *testing.T) {
 		return func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 			k.EXPECT().NewListSecretPropertiesPager(nil).Return(mock_azuresdk.NewPager(listForItems(items), []error{returnError}))
 		}
-	}
-	getSecretMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
-		k.EXPECT().GetSecret(ctx, gomock.Any(), "", nil).Return(newSecretBundle, nil)
 	}
 	setSecretMock := func(d *mock_features.MockDeploymentsClient, rg *mock_features.MockResourceGroupsClient, m *mock_msi.MockUserAssignedIdentitiesClient, k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		k.EXPECT().SetSecret(ctx, gomock.Any(), gomock.Any(), nil).Return(azsecretssdk.SetSecretResponse{}, nil)
@@ -482,10 +479,10 @@ func TestPreDeploy(t *testing.T) {
 				acrReplicaDisabled:          true,
 				vmssName:                    vmssName,
 				instanceID:                  instanceID,
-				restartScript:               rpRestartScript,
+				restartScript:               portalRestartScript,
 			},
 			mocks: []mock{
-				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock,
+				createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), msiGetMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock,
 			},
 		},
 	} {
@@ -914,9 +911,34 @@ func TestDeployPreDeploy(t *testing.T) {
 	}
 }
 
+// A service belongs in portalRestartScript only if it holds a secret PreDeploy
+// rotates: each builds its key list once at start-up and never refreshes it, so
+// a restart is the only way it sees a new version. The portal session key is the
+// only rotated secret, and aro-portal the only service holding it.
+//
+// The services below must stay out. None holds a rotated secret, and each reads
+// from Cosmos at start-up, so restarting them serially across a scale set costs
+// time for nothing.
+func TestRestartScriptRestartsOnlyHoldersOfARotatedSecret(t *testing.T) {
+	if !strings.Contains(portalRestartScript, "aro-portal") {
+		t.Errorf("portalRestartScript does not restart aro-portal, which holds the rotated portal session key: %q", portalRestartScript)
+	}
+
+	for _, unit := range []string{
+		"aro-rp",
+		"aro-monitor",
+		"aro-mimo-actuator",
+		"aro-mimo-scheduler",
+	} {
+		if strings.Contains(portalRestartScript, unit) {
+			t.Errorf("portalRestartScript restarts %s, which holds no rotated secret: %q", unit, portalRestartScript)
+		}
+	}
+}
+
 func TestConfigureServiceSecrets(t *testing.T) {
 	ctx := context.Background()
-	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
+	oneMissingSecrets := []string{env.EncryptionSecretV2Name, env.FrontendEncryptionSecretV2Name, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {
 		oneMissingSecretItems = append(oneMissingSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
@@ -925,6 +947,13 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	allSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range allSecrets {
 		allSecretItems = append(allSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
+	}
+	missingDocumentSecretItems := []*azsecretssdk.SecretProperties{}
+	for _, secret := range allSecrets {
+		if secret == env.EncryptionSecretV2Name {
+			continue
+		}
+		missingDocumentSecretItems = append(missingDocumentSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 
 	type testParams struct {
@@ -980,28 +1009,34 @@ func TestConfigureServiceSecrets(t *testing.T) {
 		{
 			name: "return error if ensureAndRotateSecret passes without rotating any secret but ensureSecret fails",
 			mocks: []mock{
-				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, errGeneric),
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
 		{
 			name: "return error if ensureAndRotateSecret passes with rotating a missing secret but ensureSecret fails",
 			mocks: []mock{
-				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, errGeneric),
+				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
 		{
 			name: "return error if ensureAndRotateSecret, ensureSecret passes without rotating a secret but ensureSecretKey fails",
 			mocks: []mock{
-				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, errGeneric),
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
 		{
 			name: "return nil if ensureAndRotateSecret, ensureSecret, ensureSecretKey passes without rotating a secret",
 			mocks: []mock{
-				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil),
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil),
+			},
+		},
+		{
+			name: "return nil without restarting if only a document secret is created",
+			mocks: []mock{
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(missingDocumentSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil),
 			},
 		},
 		{
@@ -1012,7 +1047,7 @@ func TestConfigureServiceSecrets(t *testing.T) {
 				resourceGroup: rgName,
 			},
 			mocks: []mock{
-				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), vmssListMock(errGeneric),
+				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), vmssListMock(errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -1022,10 +1057,10 @@ func TestConfigureServiceSecrets(t *testing.T) {
 				vmssName:      vmssName,
 				instanceID:    instanceID,
 				resourceGroup: rgName,
-				restartScript: rpRestartScript,
+				restartScript: portalRestartScript,
 			},
 			mocks: []mock{
-				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), vmssListMock(nil), vmssVMsListMock, vmRestartMock, instanceViewMock,
+				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), vmssListMock(nil), vmssVMsListMock, vmRestartMock, instanceViewMock,
 			},
 		},
 	} {
@@ -1425,7 +1460,7 @@ func TestRestartOldScalesets(t *testing.T) {
 				resourceGroup: rgName,
 				vmssName:      vmssName,
 				instanceID:    instanceID,
-				restartScript: rpRestartScript,
+				restartScript: portalRestartScript,
 			},
 			mocks: []mock{listVMSSMock(vmsss, nil), listVMSSVMMock(nil), vmRestartMock, getInstanceViewMock},
 		},
@@ -1510,7 +1545,7 @@ func TestRestartOldScaleset(t *testing.T) {
 				resourceGroup: rgName,
 				vmssName:      vmssName,
 				instanceID:    instanceID,
-				restartScript: rpRestartScript,
+				restartScript: portalRestartScript,
 			},
 			mocks:   []mock{listVMSSVMMock(nil), vmRestartMock(errGeneric)},
 			wantErr: "generic error",
@@ -1521,7 +1556,7 @@ func TestRestartOldScaleset(t *testing.T) {
 				resourceGroup: rgName,
 				vmssName:      vmssName,
 				instanceID:    instanceID,
-				restartScript: rpRestartScript,
+				restartScript: portalRestartScript,
 			},
 			mocks: []mock{listVMSSVMMock(nil), vmRestartMock(nil), getInstanceViewMock},
 		},
