@@ -307,9 +307,17 @@ func resourceIDFromEnv() string {
 		_env.SubscriptionID(), vnetResourceGroup, clusterName)
 }
 
-func newClientSet(ctx context.Context) (*clientSet, error) {
+func newE2ETokenCredential() (azcore.TokenCredential, error) {
+	if os.Getenv("AZURE_TOKEN_CREDENTIALS") != "" {
+		return _env.Environment().NewTokenCredential()
+	}
+
 	options := _env.Environment().EnvironmentCredentialOptions()
-	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	return azidentity.NewEnvironmentCredential(options)
+}
+
+func newClientSet(ctx context.Context) (*clientSet, error) {
+	tokenCredential, err := newE2ETokenCredential()
 	if err != nil {
 		return nil, err
 	}
@@ -587,13 +595,19 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 func setupE2EInfrastructure(ctx context.Context) error {
 	if err := env.ValidateVars(
-		"AZURE_CLIENT_ID",
-		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
 		"CLUSTER",
 		"LOCATION"); err != nil {
 		return err
+	}
+
+	if os.Getenv("AZURE_TOKEN_CREDENTIALS") == "" {
+		if err := env.ValidateVars(
+			"AZURE_TENANT_ID",
+			"AZURE_CLIENT_ID",
+			"AZURE_CLIENT_SECRET"); err != nil {
+			return fmt.Errorf("AZURE_TOKEN_CREDENTIALS not set, and one or more of AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET is missing: %w", err)
+		}
 	}
 
 	// Core ARO env
@@ -610,8 +624,7 @@ func setupE2EInfrastructure(ctx context.Context) error {
 	}
 
 	// Build a bare‐bones Azure SDK client for OpenshiftClusters
-	credOptions := _env.Environment().EnvironmentCredentialOptions()
-	tokenCred, err := azidentity.NewEnvironmentCredential(credOptions)
+	tokenCred, err := newE2ETokenCredential()
 	if err != nil {
 		return err
 	}
