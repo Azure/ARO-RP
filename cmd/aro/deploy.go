@@ -110,35 +110,33 @@ func deploy(ctx context.Context, _log *logrus.Entry) error {
 
 	deployer, err := pkgdeploy.New(ctx, env, config, deployVersion, tokenCredential)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create deployer: %w", err)
 	}
 
-	err = deployer.PreDeploy(ctx, 30)
-	if err != nil {
-		return err
+	if err := deployer.PreDeploy(ctx, 30); err != nil {
+		return fmt.Errorf("pre-deploy failed: %w", err)
 	}
 
-	err = deployer.DeployRP(ctx)
-	if err != nil {
-		return err
+	if err := deployer.DeployRP(ctx); err != nil {
+		return fmt.Errorf("deploy RP failed: %w", err)
 	}
 
-	err = deployer.UpgradeRP(ctx)
-	if err != nil {
-		return err
+	if err := deployer.UpgradeRP(ctx); err != nil {
+		return fmt.Errorf("upgrade RP failed: %w", err)
 	}
 
-	err = deployer.DeployGateway(ctx)
-	if err != nil {
-		return err
+	if err := deployer.DeployGateway(ctx); err != nil {
+		return fmt.Errorf("deploy gateway failed: %w", err)
 	}
 
-	err = deployer.UpgradeGateway(ctx)
-	if err != nil {
-		return err
+	if err := deployer.UpgradeGateway(ctx); err != nil {
+		return fmt.Errorf("upgrade gateway failed: %w", err)
 	}
 
 	// Must be last step so we can be sure there are no RPs at older versions
 	// still serving
-	return deployer.SaveVersion(ctx)
+	if err := deployer.SaveVersion(ctx); err != nil {
+		return fmt.Errorf("save version failed: %w", err)
+	}
+	return nil
 }
