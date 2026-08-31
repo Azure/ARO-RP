@@ -118,53 +118,24 @@ func deploy(ctx context.Context, _log *logrus.Entry) error {
 		return err
 	}
 
-	errch := make(chan error, 2)
-	go func() {
-		err := deployer.DeployRP(ctx)
-		if err != nil {
-			log.Error(err)
-			errch <- err
-			return
-		}
-
-		err = deployer.UpgradeRP(ctx)
-		if err != nil {
-			log.Error(err)
-			errch <- err
-			return
-		}
-
-		errch <- nil
-	}()
-
-	go func() {
-		err := deployer.DeployGateway(ctx)
-		if err != nil {
-			log.Error(err)
-			errch <- err
-			return
-		}
-
-		err = deployer.UpgradeGateway(ctx)
-		if err != nil {
-			log.Error(err)
-			errch <- err
-			return
-		}
-
-		errch <- nil
-	}()
-
-	var errorOccurred bool
-	for i := 0; i < 2; i++ {
-		err = <-errch
-		if err != nil {
-			errorOccurred = true
-		}
+	err = deployer.DeployRP(ctx)
+	if err != nil {
+		return err
 	}
 
-	if errorOccurred {
-		return fmt.Errorf("an error occurred")
+	err = deployer.UpgradeRP(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = deployer.DeployGateway(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = deployer.UpgradeGateway(ctx)
+	if err != nil {
+		return err
 	}
 
 	// Must be last step so we can be sure there are no RPs at older versions
