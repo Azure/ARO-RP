@@ -349,7 +349,7 @@ func updateMachineVMSize(ctx context.Context, k adminactions.KubeActions, machin
 }
 
 func doUpdateMachineVMSize(ctx context.Context, k adminactions.KubeActions, machineName, vmSize string) error {
-	rawMachine, err := k.KubeGet(ctx, "Machine.machine.openshift.io", machineNamespace, machineName)
+	rawMachine, err := k.KubeGet(ctx, machineGroupKind, machineNamespace, machineName)
 	if err != nil {
 		return err
 	}

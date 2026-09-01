@@ -33,6 +33,7 @@ const (
 	controlPlaneReplicaCount = azurezones.CONTROL_PLANE_MACHINE_COUNT
 
 	machineNamespace           = "openshift-machine-api"
+	machineGroupKind           = "Machine.machine.openshift.io"
 	machineLabelClusterAPIRole = "machine.openshift.io/cluster-api-machine-role"
 	machineLabelZone           = "machine.openshift.io/zone"
 	machineLabelInstanceType   = "machine.openshift.io/instance-type"
@@ -98,7 +99,7 @@ func unmarshalAzureMachineProviderSpec(machine *machinev1beta1.Machine) (*machin
 func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
 	machines := make(map[string]machineValidationData)
 
-	rawMachines, err := kubeActions.KubeList(ctx, "Machine.machine.openshift.io", machineNamespace)
+	rawMachines, err := kubeActions.KubeList(ctx, machineGroupKind, machineNamespace)
 	if err != nil {
 		return nil, api.NewCloudError(
 			http.StatusInternalServerError,

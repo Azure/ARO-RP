@@ -277,7 +277,7 @@ func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeAction
 		Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
 		AnyTimes()
 	k.EXPECT().
-		KubeList(gomock.Any(), "Machine", machineNamespace).
+		KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 		Return(machineList, nil).
 		AnyTimes()
 }
@@ -285,7 +285,7 @@ func allKubeChecksHealthyMockWithMachineList(k *mock_adminactions.MockKubeAction
 func healthyControlPlaneInventoryMock(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions, resourceGroupName string, vmSize string) {
 	if k != nil {
 		k.EXPECT().
-			KubeList(gomock.Any(), "Machine", machineNamespace).
+			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 			Return(masterMachineListJSON(
 				masterMachineWithZone("master-0", vmSize, "1"),
 				masterMachineWithZone("master-1", vmSize, "2"),
@@ -322,7 +322,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
 		k.EXPECT().
-			KubeList(gomock.Any(), "Machine", machineNamespace).
+			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 			Return(masterMachineListJSON(
 				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
 				masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
@@ -353,7 +353,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
 		k.EXPECT().
-			KubeList(gomock.Any(), "Machine", machineNamespace).
+			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 			Return(nil, fmt.Errorf("connection refused"))
 
 		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
@@ -374,7 +374,7 @@ func TestValidateResizeControlPlaneInventory(t *testing.T) {
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
 		k.EXPECT().
-			KubeList(gomock.Any(), "Machine", machineNamespace).
+			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 			Return(masterMachineListJSON(
 				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
 				masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
@@ -980,7 +980,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
 					AnyTimes()
 				k.EXPECT().
-					KubeList(gomock.Any(), "Machine", machineNamespace).
+					KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 					Return(masterMachineListJSON(
 						masterMachine("master-0", "Standard_D8s_v3", running),
 						masterMachine("master-1", "Standard_D8s_v3", running),
@@ -1101,7 +1101,7 @@ func TestValidateResizeControlPlaneInventoryNormalizesJoinedErrorLineEndings(t *
 	a := mock_adminactions.NewMockAzureActions(ctrl)
 	log := logrus.NewEntry(logrus.New())
 
-	k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).
+	k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).
 		Return(masterMachineListJSON(
 			zonedMasterMachine("master-0", "Standard_D8s_v3", "Running", "1"),
 			zonedMasterMachine("master-1", "Standard_D8s_v3", "Running", "2"),
