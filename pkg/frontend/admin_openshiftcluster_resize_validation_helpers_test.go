@@ -345,7 +345,7 @@ func TestGetClusterMachines(t *testing.T) {
 					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3,
 		},
@@ -359,7 +359,7 @@ func TestGetClusterMachines(t *testing.T) {
 					createMachine("worker-0", "worker", "1", "1", "Standard_D4s_v3", "Standard_D4s_v3", "Running"),
 					createMachine("worker-1", "worker", "2", "2", "Standard_D4s_v3", "Standard_D4s_v3", "Running"),
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3, // Only masters
 		},
@@ -372,7 +372,7 @@ func TestGetClusterMachines(t *testing.T) {
 					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 					createMachine("master-3", "", "1", "1", "Standard_D8s_v3", "", "Running"), // No role label
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3, // Only masters with proper role label
 		},
@@ -385,7 +385,7 @@ func TestGetClusterMachines(t *testing.T) {
 					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 					createMachine("master-infra-0", "infra", "1", "1", "Standard_D8s_v3", "", "Running"), // Has "master" in name but wrong role
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3, // Only masters with role=master
 		},
@@ -397,7 +397,7 @@ func TestGetClusterMachines(t *testing.T) {
 					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", ""), // nil phase
 					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3,
 		},
@@ -409,7 +409,7 @@ func TestGetClusterMachines(t *testing.T) {
 					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Failed"),
 					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantCount: 3,
 		},
@@ -420,7 +420,7 @@ func TestGetClusterMachines(t *testing.T) {
 					createMachine("master-0", "master", "1", "1", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 					createMachine("master-1", "master", "2", "2", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantCount: 2,
 		},
@@ -435,7 +435,7 @@ func TestGetClusterMachines(t *testing.T) {
 					machineWithNilProviderSpec,
 					createMachine("master-2", "master", "3", "3", "Standard_D8s_v3", "Standard_D8s_v3", "Running"),
 				)
-				k.EXPECT().KubeList(ctx, "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(ctx, machineGroupKind, machineNamespace).Return(machines, nil)
 			},
 			wantErr: "controlPlaneMachine/master-1: failed to parse provider spec for machine master-1: provider spec value is nil",
 		},

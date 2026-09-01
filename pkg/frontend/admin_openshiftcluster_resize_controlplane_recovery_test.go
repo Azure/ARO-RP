@@ -172,7 +172,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(masterMachine("master-0", "Standard_D8s_v3", running)), nil)
 
 		gomock.InOrder(
@@ -216,7 +216,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(
 				masterMachine("master-0", desiredSize, running),
 				masterMachine("master-1", "Standard_D8s_v3", running),
@@ -288,7 +288,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(
 				masterMachine("master-0", desiredSize, running),
 				masterMachine("master-1", "Standard_D8s_v3", running),
@@ -347,7 +347,7 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
 
-		k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+		k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 			masterMachineListJSON(
 				masterMachine("master-0", desiredSize, running),
 				masterMachine("master-1", "Standard_D8s_v3", running),

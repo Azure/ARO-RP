@@ -331,7 +331,7 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachine("master-1", desiredSize, running),
 					masterMachine("master-2", desiredSize, running),
 				)
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(machines, nil)
 				gomock.InOrder(
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
 						Return(nodeJSON("master-2", true), nil),
@@ -362,7 +362,7 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachine("master-1", desiredSize, running),
 					masterMachine("master-2", "Standard_D8s_v3", running),
 				)
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(machines, nil)
 
 				gomock.InOrder(
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
@@ -407,7 +407,7 @@ func TestResizeControlPlane(t *testing.T) {
 		{
 			name: "pre-loop gate fails when node is not ready",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 					masterMachineListJSON(masterMachine("master-0", desiredSize, running)), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 					Return(nodeJSON("master-0", false), nil)
@@ -417,7 +417,7 @@ func TestResizeControlPlane(t *testing.T) {
 		{
 			name: "pre-loop gate fails when node is unschedulable",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 					masterMachineListJSON(masterMachine("master-0", desiredSize, running)), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 					Return(nodeJSONWithSchedulability("master-0", true, true), nil)
@@ -427,7 +427,7 @@ func TestResizeControlPlane(t *testing.T) {
 		{
 			name: "no control plane machines found",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(masterMachineListJSON(), nil)
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(masterMachineListJSON(), nil)
 			},
 			wantErr: "409: RequestNotAllowed: : No control plane machines found. Resize cannot proceed.",
 		},
