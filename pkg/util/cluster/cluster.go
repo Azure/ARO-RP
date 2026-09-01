@@ -156,8 +156,8 @@ func NewClusterConfigFromEnv() (*ClusterConfig, error) {
 	switch conf.Zones {
 	// Catch if the zones are empty, we have an explicit value for non-zonal
 	case "":
-		return nil, fmt.Errorf("zones must be set (use 'non-zonal' for non-zonal)")
-	case "non-zonal":
+		return nil, fmt.Errorf("zones must be set (use 'nonzonal' for non-zonal)")
+	case "nonzonal":
 		// No zones
 		conf.Zones = ""
 	}

@@ -172,7 +172,7 @@ generate-api-examples:
 
 .PHONY: swagger-checksums
 swagger-checksums:
-	hack/api/generate-swagger-checksum.sh 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25
+	hack/api/generate-swagger-checksum.sh 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview 2025-07-25 2026-08-26-preview
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
