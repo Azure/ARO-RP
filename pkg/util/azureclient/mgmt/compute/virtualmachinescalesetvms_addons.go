@@ -5,6 +5,8 @@ package compute
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
@@ -20,7 +22,60 @@ func (c *virtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context,
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.Client)
+	err = future.WaitForCompletionRef(ctx, c.Client)
+	if err != nil {
+		return err
+	}
+
+	if future.Result == nil {
+		return nil
+	}
+
+	result, err := future.Result(c.VirtualMachineScaleSetVMsClient)
+	if err != nil {
+		return err
+	}
+
+	return runCommandResultError(result)
+}
+
+// runCommandResultError reports any error the instance raised while running the
+// command.
+//
+// The long-running operation completes successfully whenever the extension
+// managed to run the script at all, whatever the script then did, so waiting on
+// it establishes only that the command was delivered. Anything the instance has
+// to say about the outcome arrives in the result, which was previously
+// discarded, leaving a failed command indistinguishable from a successful one.
+func runCommandResultError(result mgmtcompute.RunCommandResult) error {
+	if result.Value == nil {
+		return nil
+	}
+
+	var reported []string
+	for _, status := range *result.Value {
+		if status.Level != mgmtcompute.Error {
+			continue
+		}
+
+		parts := make([]string, 0, 2)
+		for _, s := range []*string{status.Code, status.Message} {
+			if s != nil && *s != "" {
+				parts = append(parts, *s)
+			}
+		}
+		if len(parts) == 0 {
+			parts = append(parts, "no detail reported")
+		}
+
+		reported = append(reported, strings.Join(parts, ": "))
+	}
+
+	if len(reported) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("run command reported an error: %s", strings.Join(reported, "; "))
 }
 
 func (c *virtualMachineScaleSetVMsClient) List(ctx context.Context, resourceGroupName string, virtualMachineScaleSetName string, filter string, selectParameter string, expand string) ([]mgmtcompute.VirtualMachineScaleSetVM, error) {
