@@ -361,7 +361,7 @@ var _ = Describe("Update clusters", func() {
 			}
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
-		By("verifying that all the conditions on the cluster operator set to the expected values")
+		By("verifying that all the conditions on the cluster operator are set to the expected values")
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
