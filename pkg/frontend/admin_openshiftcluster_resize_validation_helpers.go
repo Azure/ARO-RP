@@ -98,7 +98,7 @@ func unmarshalAzureMachineProviderSpec(machine *machinev1beta1.Machine) (*machin
 func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
 	machines := make(map[string]machineValidationData)
 
-	rawMachines, err := kubeActions.KubeList(ctx, "Machine", machineNamespace)
+	rawMachines, err := kubeActions.KubeList(ctx, "Machine.machine.openshift.io", machineNamespace)
 	if err != nil {
 		return nil, api.NewCloudError(
 			http.StatusInternalServerError,
