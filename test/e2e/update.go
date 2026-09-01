@@ -345,9 +345,6 @@ var _ = Describe("Update clusters", func() {
 			}
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
-		// Since we delete the old identity before setting the cluster up with the new one, the ServicePrincipalValid status
-		// will be false if the operator continues trying to use the old identity, and it will be true if the operator
-		// succeeds in using the new identity.
 		By("verifying that all the conditions on the cluster resource are set to true")
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
