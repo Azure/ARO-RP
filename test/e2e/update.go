@@ -62,9 +62,6 @@ var _ = Describe("Update clusters", func() {
 	})
 
 	It("must restart the aro-operator-master Deployment", func(ctx context.Context) {
-		if isMiwi {
-			Skip("This test is not relevant for miwi clusters")
-		}
 		By("saving the current revision of the aro-operator-master Deployment")
 		getFunc := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get
 		deployment := GetK8sObjectWithRetry(ctx, getFunc, "aro-operator-master", metav1.GetOptions{})
