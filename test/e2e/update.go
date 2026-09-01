@@ -84,12 +84,14 @@ var _ = Describe("Update clusters", func() {
 		Expect(newRevision).To(Equal(oldRevision + 1))
 	})
 
-	It("should successfully replace platform workload identity", func(ctx context.Context) {
+	It("should successfully replace the ARO operator platform workload identity", func(ctx context.Context) {
 		if !isMiwi {
 			Skip("This test is only relevant for workload identity clusters")
 		}
 
 		federatedCredentialRoleDefinitionID := "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole
+		operatorName := "aro-operator"
+		replacementIdentityName := operatorName + "-e2e-replace"
 
 		By("getting the current cluster to read existing platform workload identities")
 		var oc armredhatopenshift.OpenShiftClustersClientGetResponse
@@ -112,15 +114,6 @@ var _ = Describe("Update clusters", func() {
 				g.Expect(identity.PrincipalID).NotTo(BeNil())
 			}
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("picking an operator identity to replace")
-		var operatorName string
-		for name := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			operatorName = name
-			break
-		}
-		replacementIdentityName := operatorName + "-e2e-replace"
-		By(fmt.Sprintf("targeting operator %q for identity replacement", operatorName))
 
 		By("looking up the operator's role definition from platform workload identity role sets")
 		clusterVersion := *oc.Properties.ClusterProfile.Version
