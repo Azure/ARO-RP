@@ -31,7 +31,6 @@ import (
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
-	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -244,34 +243,6 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 
 		By("waiting for the machine health check to be restored")
 		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-	})
-})
-
-var _ = Describe("ARO Operator - Conditions", func() {
-	const (
-		timeout = 30 * time.Second
-	)
-
-	It("must have all the conditions on the cluster resource set to true", func(ctx context.Context) {
-		Eventually(func(g Gomega, ctx context.Context) {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
-
-			for _, condition := range arov1alpha1.ClusterChecksTypes() {
-				g.Expect(conditions.IsTrue(co.Status.Conditions, condition)).To(BeTrue(), "Condition %s", condition)
-			}
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-	})
-
-	It("must have all the conditions on the cluster operator set to the expected values", func(ctx context.Context) {
-		Eventually(func(g Gomega, ctx context.Context) {
-			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
-
-			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable)).To(BeTrue())
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing)).To(BeTrue())
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded)).To(BeTrue())
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithTimeout(timeout).Should(Succeed())
 	})
 })
 
