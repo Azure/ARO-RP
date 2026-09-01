@@ -268,7 +268,9 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	if oc.Properties.Zones != nil {
 		out.Properties.Zones = []string{}
 		for _, z := range oc.Properties.Zones {
-			out.Properties.Zones = append(out.Properties.Zones, *z)
+			if z != nil {
+				out.Properties.Zones = append(out.Properties.Zones, *z)
+			}
 		}
 	}
 

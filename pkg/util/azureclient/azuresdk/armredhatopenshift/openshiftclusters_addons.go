@@ -74,6 +74,7 @@ func stripReadOnlyFields(oc armredhatopenshift.OpenShiftCluster) armredhatopensh
 
 	if p := oc.Properties; p != nil {
 		result.Properties = &armredhatopenshift.OpenShiftClusterProperties{
+			Zones:                   p.Zones,
 			MasterProfile:           p.MasterProfile,
 			ProvisioningState:       p.ProvisioningState,
 			ServicePrincipalProfile: p.ServicePrincipalProfile,

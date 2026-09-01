@@ -337,7 +337,8 @@ func TestOpenShiftClusterConverterJSONCompatibility(t *testing.T) {
 					"workerProfiles":[{"name":"worker","vmSize":"Standard_D4s_v3","diskSizeGB":128,"subnetId":"worker-subnet","count":3,"encryptionAtHost":"Disabled","diskEncryptionSetId":"worker-des"}],
 					"workerProfilesStatus":[{"name":"status","vmSize":"Standard_D4s_v3","diskSizeGB":256,"subnetId":"status-subnet","count":4,"encryptionAtHost":"Enabled","diskEncryptionSetId":"status-des"}],
 					"apiserverProfile":{"visibility":"Private","url":"https://api.example","ip":"1.2.3.4"},
-					"ingressProfiles":[{"name":"default","visibility":"Public","ip":"5.6.7.8"}]
+					"ingressProfiles":[{"name":"default","visibility":"Public","ip":"5.6.7.8"}],
+					"zones": ["1", "2", "3"]
 				},
 				"systemData":{"createdBy":"creator","createdByType":"User","createdAt":"2024-01-02T03:04:05Z","lastModifiedBy":"modifier","lastModifiedByType":"Application","lastModifiedAt":"2024-02-03T04:05:06Z"}
 			}`,
@@ -425,6 +426,7 @@ func converterInternalCluster() *api.OpenShiftCluster {
 		},
 		Properties: api.OpenShiftClusterProperties{
 			ProvisioningState: api.ProvisioningStateSucceeded,
+			Zones:             []string{"1", "2", "3"},
 			ClusterProfile: api.ClusterProfile{
 				PullSecret:           api.SecureString("pull-secret"),
 				Domain:               "domain.example",
@@ -487,6 +489,7 @@ func converterExternalCluster() *OpenShiftCluster {
 			},
 		},
 		Properties: &generated.OpenShiftClusterProperties{
+			Zones:             []*string{pointerutils.ToPtr("1"), pointerutils.ToPtr("2"), pointerutils.ToPtr("3")},
 			ProvisioningState: pointerutils.ToPtr(generated.ProvisioningStateSucceeded),
 			ClusterProfile: &generated.ClusterProfile{
 				PullSecret: pointerutils.ToPtr("pull-secret"), Domain: pointerutils.ToPtr("domain.example"), Version: pointerutils.ToPtr("4.15.1"),
