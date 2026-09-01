@@ -454,8 +454,8 @@ func TestGenevaLoggingResourcesOTel(t *testing.T) {
 				t.Fatalf("missing alert %q; got rules %v", want, rules)
 			}
 		}
-		if noLogs := byAlert["OTelExporterNoLogsShippedSRE"]; noLogs.Labels["severity"] != "critical" || noLogs.For != "10m" {
-			t.Fatalf("NoLogsShipped alert: severity=%q For=%q", noLogs.Labels["severity"], noLogs.For)
+		if noLogs := byAlert["OTelExporterNoLogsShippedSRE"]; noLogs.Labels["severity"] != "critical" || string(*noLogs.For) != "10m" {
+			t.Fatalf("NoLogsShipped alert: severity=%q For=%q", noLogs.Labels["severity"], string(*noLogs.For))
 		}
 		// The collector exposes these counters without a _total suffix (verified
 		// on a live cluster), so the alert expressions use the bare names.
