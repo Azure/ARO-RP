@@ -298,8 +298,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 1,
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -319,8 +319,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 2,
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -449,8 +449,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 1,
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -470,8 +470,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 2,
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -645,8 +645,8 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 1,
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -666,8 +666,8 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 2,
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -687,8 +687,8 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 3,
 						},
-						LatestAvailableRevision: 3,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",

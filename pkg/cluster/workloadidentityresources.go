@@ -102,10 +102,6 @@ func (m *manager) generatePlatformWorkloadIdentitySecretsAndNamespaces(isCreate 
 		}
 
 		secrets = append(secrets, &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.Identifier(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: roles[0].SecretLocation.Namespace,
 				Name:      roles[0].SecretLocation.Name,
@@ -121,10 +117,6 @@ func (m *manager) generatePlatformWorkloadIdentitySecretsAndNamespaces(isCreate 
 		})
 
 		namespaces = append(namespaces, &corev1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.Identifier(),
-				Kind:       "Namespace",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: roles[0].SecretLocation.Namespace,
 			},
@@ -138,10 +130,6 @@ func (m *manager) generateCloudCredentialOperatorSecret() (*corev1.Secret, error
 	tenantId := m.subscriptionDoc.Subscription.Properties.TenantID
 
 	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.Identifier(),
-			Kind:       "Secret",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ccoSecretNamespace,
 			Name:      ccoSecretName,
@@ -160,10 +148,6 @@ func (m *manager) generateAuthenticationConfig() (*configv1.Authentication, erro
 	}
 
 	return &configv1.Authentication{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configv1.SchemeGroupVersion.Identifier(),
-			Kind:       "Authentication",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: authenticationConfigName,
 		},
