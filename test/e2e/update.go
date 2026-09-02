@@ -209,6 +209,8 @@ var _ = Describe("Update clusters", func() {
 			var err error
 			originalMsi, err = clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
 			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(originalMsi.Properties).NotTo(BeNil())
+			g.Expect(originalMsi.Properties.PrincipalID).NotTo(BeNil())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		DeferCleanup(func(ctx context.Context) {
