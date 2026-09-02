@@ -203,24 +203,38 @@ var _ = Describe("Update clusters", func() {
 		replacementResourceID := *msiResp.ID
 		replacementPrincipalID := *msiResp.Properties.PrincipalID
 
-		DeferCleanup(func(ctx context.Context) {
-			By("cleaning up the original identity and its role assignments")
-			originalMsi, err := clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
-			if err != nil {
-				return
-			}
+		// After the operator restart later in the test, all the ServicePrincipalValid status tells us is that
+		// the operator can start up and can acquire an Azure auth token using whatever identity is provided to it.
+		// Deleting the original identity before doing the replacement and restart ensures that the operator can't
+		// pass the status condition checks by starting up using the old identity.
+		By("getting the original identity")
+		var originalMsi armmsi.UserAssignedIdentitiesClientGetResponse
+		Eventually(func(g Gomega, ctx context.Context) {
+			var err error
+			originalMsi, err = clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("cleaning up the original identity's role assignments")
+		Eventually(func(g Gomega, ctx context.Context) {
 			if originalMsi.Properties != nil && originalMsi.Properties.PrincipalID != nil {
 				roleAssignments, err := clients.RoleAssignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *originalMsi.Properties.PrincipalID))
 				if err == nil {
 					for _, ra := range roleAssignments {
 						if strings.HasPrefix(strings.ToLower(*ra.Scope), strings.ToLower("/subscriptions/"+_env.SubscriptionID()+"/resourceGroups/"+vnetResourceGroup)) {
-							_, _ = clients.RoleAssignments.Delete(ctx, *ra.Scope, *ra.Name)
+							_, err = clients.RoleAssignments.Delete(ctx, *ra.Scope, *ra.Name)
+							g.Expect(err).NotTo(HaveOccurred())
 						}
 					}
 				}
 			}
-			_, _ = clients.UserAssignedIdentities.Delete(ctx, vnetResourceGroup, operatorName, nil)
-		})
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("deleting the original identity")
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := clients.UserAssignedIdentities.Delete(ctx, vnetResourceGroup, operatorName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("assigning the operator's role to the replacement identity at VNet scope")
 		vnetRoleAssignmentName := uuid.DefaultGenerator.Generate()
