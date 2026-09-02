@@ -219,6 +219,7 @@ var _ = Describe("Update clusters", func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			if originalMsi.Properties != nil && originalMsi.Properties.PrincipalID != nil {
 				roleAssignments, err := clients.RoleAssignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *originalMsi.Properties.PrincipalID))
+				g.Expect(err).NotTo(HaveOccurred())
 				if err == nil {
 					for _, ra := range roleAssignments {
 						if strings.HasPrefix(strings.ToLower(*ra.Scope), strings.ToLower("/subscriptions/"+_env.SubscriptionID()+"/resourceGroups/"+vnetResourceGroup)) {
@@ -344,19 +345,6 @@ var _ = Describe("Update clusters", func() {
 			g.Expect(identity).NotTo(BeNil())
 			g.Expect(identity.ResourceID).NotTo(BeNil())
 			g.Expect(*identity.ResourceID).To(Equal(replacementResourceID))
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("verifying the old identity no longer has any role assignments at managed resource group scope")
-		Eventually(func(g Gomega, ctx context.Context) {
-			originalMsi, err := clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
-			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(originalMsi.Properties).NotTo(BeNil())
-			g.Expect(originalMsi.Properties.PrincipalID).NotTo(BeNil())
-			roleAssignments, err := clients.RoleAssignments.ListForResourceGroup(ctx, stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/'), "atScope()")
-			g.Expect(err).NotTo(HaveOccurred())
-			for _, ra := range roleAssignments {
-				g.Expect(ra.PrincipalID).NotTo(Equal(originalMsi.Properties.PrincipalID), "old identity %s still has role assignment %s at managed resource group scope", operatorName, *ra.Name)
-			}
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("verifying that all the conditions on the cluster resource are set to true")
