@@ -335,10 +335,9 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
-	// aro-portal is the only service holding the portal session key, and that key
-	// is the only one here still rotated, so it alone decides whether the restart
-	// below runs.
-	portalKeyRotated, err := d.ensureAndRotateSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
+	// True when a new version was written, whether by rotation or because the
+	// secret was absent. Either way aro-portal must be restarted to see it.
+	portalKeyVersionCreated, err := d.ensureAndRotateSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
 	if err != nil {
 		return err
 	}
@@ -362,16 +361,19 @@ func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWai
 		}
 	}
 
+	// The SSH host key is created if absent and then left alone: ensureSecretKey
+	// returns on finding any version, with no age check, so this code never
+	// supersedes a version a running service already holds. Creation therefore
+	// means initial rollout, where there are no old scale sets to sweep. A
+	// manual delete and purge would also reach it, and would need the readers
+	// restarted by hand. The result is deliberately unused.
 	_, err = d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
 	if err != nil {
 		return err
 	}
 
-	if portalKeyRotated {
-		err = d.restartOldScalesets(ctx, lbHealthcheckWaitTimeSec)
-		if err != nil {
-			return err
-		}
+	if portalKeyVersionCreated {
+		return d.restartOldScalesets(ctx, lbHealthcheckWaitTimeSec)
 	}
 	return nil
 }

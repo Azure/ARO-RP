@@ -6,6 +6,7 @@ package deploy
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -911,27 +912,58 @@ func TestDeployPreDeploy(t *testing.T) {
 	}
 }
 
-// A service belongs in portalRestartScript only if it holds a secret PreDeploy
-// rotates: each builds its key list once at start-up and never refreshes it, so
-// a restart is the only way it sees a new version. The portal session key is the
-// only rotated secret, and aro-portal the only service holding it.
+// A service belongs in the restart script only if it holds the secret that
+// script answers for: each service builds its key list once at start-up and
+// never refreshes it, so a restart is the only way it sees a new version. Every
+// other service must stay out, because each reads from Cosmos at start-up and
+// restarting them serially across a scale set is expensive.
 //
-// The services below must stay out. None holds a rotated secret, and each reads
-// from Cosmos at start-up, so restarting them serially across a scale set costs
-// time for nothing.
+// This pins the script against a hand-maintained list of holders. It fails on an
+// edit to the script, which is the drift that produced this incident, but it
+// cannot detect a new reader of the secret appearing inside another service.
 func TestRestartScriptRestartsOnlyHoldersOfARotatedSecret(t *testing.T) {
-	if !strings.Contains(portalRestartScript, "aro-portal") {
-		t.Errorf("portalRestartScript does not restart aro-portal, which holds the rotated portal session key: %q", portalRestartScript)
-	}
-
-	for _, unit := range []string{
+	// Every service started with a key vault prefix, per
+	// pkg/deploy/generator/scripts/util-services.sh.
+	keyvaultConsumers := []string{
+		"aro-portal",
 		"aro-rp",
 		"aro-monitor",
 		"aro-mimo-actuator",
 		"aro-mimo-scheduler",
-	} {
-		if strings.Contains(portalRestartScript, unit) {
-			t.Errorf("portalRestartScript restarts %s, which holds no rotated secret: %q", unit, portalRestartScript)
+	}
+
+	// aro-portal is the only service that reads the portal session key
+	// (cmd/aro/portal.go), and that key is the only secret whose rotation drives
+	// the restart.
+	holders := []string{"aro-portal"}
+
+	// Compare whole unit names rather than substrings, so that a future unit
+	// called aro-rp-something cannot satisfy a check for aro-rp.
+	const restartPrefix = "systemctl restart "
+	restarted := []string{}
+	for _, command := range strings.Split(portalRestartScript, ";") {
+		command = strings.TrimSpace(command)
+		if !strings.HasPrefix(command, restartPrefix) {
+			t.Fatalf("script contains a command that is not a unit restart: %q", command)
+		}
+		restarted = append(restarted, strings.TrimPrefix(command, restartPrefix))
+	}
+
+	for _, unit := range restarted {
+		if !slices.Contains(keyvaultConsumers, unit) {
+			t.Errorf("script restarts %s, which is not a known key vault consumer: %q", unit, portalRestartScript)
+		}
+	}
+
+	for _, unit := range keyvaultConsumers {
+		restarts := slices.Contains(restarted, unit)
+		holds := slices.Contains(holders, unit)
+
+		if holds && !restarts {
+			t.Errorf("script does not restart %s, which holds the portal session key: %q", unit, portalRestartScript)
+		}
+		if !holds && restarts {
+			t.Errorf("script restarts %s, which does not hold the portal session key: %q", unit, portalRestartScript)
 		}
 	}
 }
@@ -950,10 +982,17 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	}
 	missingDocumentSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range allSecrets {
-		if secret == env.EncryptionSecretV2Name {
+		if secret == env.EncryptionSecretV2Name || secret == env.FrontendEncryptionSecretV2Name {
 			continue
 		}
 		missingDocumentSecretItems = append(missingDocumentSecretItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
+	}
+	missingSSHKeyItems := []*azsecretssdk.SecretProperties{}
+	for _, secret := range allSecrets {
+		if secret == env.PortalServerSSHKeySecretName {
+			continue
+		}
+		missingSSHKeyItems = append(missingSSHKeyItems, &azsecretssdk.SecretProperties{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/" + secret + "/whatever"))})
 	}
 
 	type testParams struct {
@@ -982,11 +1021,13 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	vmssVMsListMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().List(ctx, tp.resourceGroup, tp.vmssName, "", "", "").Return(vms, nil).AnyTimes()
 	}
+	// Times(1) rather than AnyTimes(): these cases exist to prove the restart
+	// happens, with the script that matches the secret which changed.
 	vmRestartMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().RunCommandAndWait(ctx, tp.resourceGroup, tp.vmssName, tp.instanceID, mgmtcompute.RunCommandInput{
 			CommandID: pointerutils.ToPtr("RunShellScript"),
 			Script:    &[]string{tp.restartScript},
-		}).Return(nil).AnyTimes()
+		}).Return(nil).Times(1)
 	}
 	instanceViewMock := func(k *mock_azsecrets.MockClient, vmss *mock_compute.MockVirtualMachineScaleSetsClient, vmssvms *mock_compute.MockVirtualMachineScaleSetVMsClient, tp testParams) {
 		vmssvms.EXPECT().GetInstanceView(gomock.Any(), tp.resourceGroup, tp.vmssName, tp.instanceID).Return(healthyVMSS, nil).AnyTimes()
@@ -1034,9 +1075,19 @@ func TestConfigureServiceSecrets(t *testing.T) {
 			},
 		},
 		{
-			name: "return nil without restarting if only a document secret is created",
+			name: "return nil without restarting if only the document secrets are created",
 			mocks: []mock{
-				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(missingDocumentSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil),
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(missingDocumentSecretItems, nil), setSecretMock, getSecretsMock(missingDocumentSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil),
+			},
+		},
+		{
+			// The SSH host key is created only when absent, so no running
+			// service can be holding a superseded version. gomock fails the
+			// test on any unexpected call, so omitting the restart mocks
+			// asserts that no scale set is swept.
+			name: "return nil without restarting if only the portal SSH host key is created",
+			mocks: []mock{
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(missingSSHKeyItems, nil), setSecretMock,
 			},
 		},
 		{
@@ -1540,7 +1591,7 @@ func TestRestartOldScaleset(t *testing.T) {
 			wantErr: "generic error",
 		},
 		{
-			name: "rp restart script failed",
+			name: "restart script failed",
 			testParams: testParams{
 				resourceGroup: rgName,
 				vmssName:      vmssName,
