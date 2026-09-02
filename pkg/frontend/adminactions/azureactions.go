@@ -43,6 +43,10 @@ type AzureActions interface {
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
 	GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error)
 	GetVirtualMachine(ctx context.Context, resourceGroupName string, VMName string, expand mgmtcompute.InstanceViewTypes) (result mgmtcompute.VirtualMachine, err error)
+	CreateCRG(ctx context.Context, clusterRG, location string, zones []string, crgName string) (string, error)
+	CreateCapacityReservation(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error
+	DeleteCRG(ctx context.Context, clusterRG, crgName string) error
+	DeleteCapacityReservation(ctx context.Context, clusterRG, crgName, zone string) error
 }
 
 type azureActions struct {
@@ -61,9 +65,8 @@ type azureActions struct {
 	virtualMachines    compute.VirtualMachinesClient
 	virtualNetworks    armnetwork.VirtualNetworksClient
 
-	armVirtualMachines           armcompute.VirtualMachinesClient
-	armCapacityReservationGroups armcompute.CapacityReservationGroupsClient
-	armCapacityReservations      armcompute.CapacityReservationsClient
+	capacityReservationGroups armcompute.CapacityReservationGroupsClient
+	capacityReservations      armcompute.CapacityReservationsClient
 }
 
 // NewAzureActions returns an azureActions
@@ -113,11 +116,6 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
-	armVirtualMachines, err := armcompute.NewVirtualMachinesClient(subscriptionDoc.ID, credential, options)
-	if err != nil {
-		return nil, err
-	}
-
 	armCapacityReservationGroups, err := armcompute.NewCapacityReservationGroupsClient(subscriptionDoc.ID, credential, options)
 	if err != nil {
 		return nil, err
@@ -144,9 +142,8 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualNetworks:    virtualNetworks,
 
-		armVirtualMachines:           armVirtualMachines,
-		armCapacityReservationGroups: armCapacityReservationGroups,
-		armCapacityReservations:      armCapacityReservations,
+		capacityReservationGroups: armCapacityReservationGroups,
+		capacityReservations:      armCapacityReservations,
 	}, nil
 }
 

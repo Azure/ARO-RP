@@ -46,6 +46,63 @@ func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
+// CreateCRG mocks base method.
+func (m *MockAzureActions) CreateCRG(ctx context.Context, clusterRG, location string, zones []string, crgName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCRG", ctx, clusterRG, location, zones, crgName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateCRG indicates an expected call of CreateCRG.
+func (mr *MockAzureActionsMockRecorder) CreateCRG(ctx, clusterRG, location, zones, crgName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCRG", reflect.TypeOf((*MockAzureActions)(nil).CreateCRG), ctx, clusterRG, location, zones, crgName)
+}
+
+// CreateCapacityReservation mocks base method.
+func (m *MockAzureActions) CreateCapacityReservation(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCapacityReservation", ctx, clusterRG, location, zone, targetSKU, crgName, capacity)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateCapacityReservation indicates an expected call of CreateCapacityReservation.
+func (mr *MockAzureActionsMockRecorder) CreateCapacityReservation(ctx, clusterRG, location, zone, targetSKU, crgName, capacity any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCapacityReservation", reflect.TypeOf((*MockAzureActions)(nil).CreateCapacityReservation), ctx, clusterRG, location, zone, targetSKU, crgName, capacity)
+}
+
+// DeleteCRG mocks base method.
+func (m *MockAzureActions) DeleteCRG(ctx context.Context, clusterRG, crgName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCRG", ctx, clusterRG, crgName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteCRG indicates an expected call of DeleteCRG.
+func (mr *MockAzureActionsMockRecorder) DeleteCRG(ctx, clusterRG, crgName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCRG", reflect.TypeOf((*MockAzureActions)(nil).DeleteCRG), ctx, clusterRG, crgName)
+}
+
+// DeleteCapacityReservation mocks base method.
+func (m *MockAzureActions) DeleteCapacityReservation(ctx context.Context, clusterRG, crgName, zone string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCapacityReservation", ctx, clusterRG, crgName, zone)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteCapacityReservation indicates an expected call of DeleteCapacityReservation.
+func (mr *MockAzureActionsMockRecorder) DeleteCapacityReservation(ctx, clusterRG, crgName, zone any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCapacityReservation", reflect.TypeOf((*MockAzureActions)(nil).DeleteCapacityReservation), ctx, clusterRG, crgName, zone)
+}
+
 // GetEffectiveRouteTable mocks base method.
 func (m *MockAzureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {
 	m.ctrl.T.Helper()
