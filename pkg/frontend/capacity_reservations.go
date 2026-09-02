@@ -39,6 +39,7 @@ func crgTeardown(ctx context.Context, log *logrus.Entry, a crgActions, clusterRG
 	var errs []error
 	for _, zone := range zones {
 		if err := a.DeleteCapacityReservation(ctx, clusterRG, crgName, zone); err != nil {
+			log.WithError(err).Warnf("failed to delete capacity reservation in zone %s for CRG %s", zone, crgName)
 			errs = append(errs, err)
 		}
 	}
