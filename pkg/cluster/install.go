@@ -293,10 +293,15 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.updateOpenShiftSecret),
 			steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
 			steps.Action(m.updateAROSecret),
-			steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
-			steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
 		)
 	}
+
+	// For service principal clusters: the operator restart picks up changes made by m.updateOpenShiftSecret
+	// For managed identity clusters: the operator restart picks up changes made by m.deployPlatformWorkloadIdentitySecrets
+	s = append(s,
+		steps.Action(m.restartAROOperatorMaster),
+		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
+	)
 
 	if m.adoptViaHive {
 		s = append(s,
