@@ -203,7 +203,11 @@ var _ = Describe("Update clusters", func() {
 		replacementResourceID := *msiResp.ID
 		replacementPrincipalID := *msiResp.Properties.PrincipalID
 
-		By("getting the original identity")
+		// After the operator restart later in the test, all the ServicePrincipalValid status tells us is that
+		// the operator can start up and can acquire an Azure auth token using whatever identity is provided to it.
+		// Deleting the original identity before doing the replacement and restart ensures that the operator can't
+		// pass the status condition checks by starting up using the old identity.
+		By("deleting the original identity")
 		var originalMsi armmsi.UserAssignedIdentitiesClientGetResponse
 		Eventually(func(g Gomega, ctx context.Context) {
 			var err error
@@ -211,6 +215,11 @@ var _ = Describe("Update clusters", func() {
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(originalMsi.Properties).NotTo(BeNil())
 			g.Expect(originalMsi.Properties.PrincipalID).NotTo(BeNil())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := clients.UserAssignedIdentities.Delete(ctx, vnetResourceGroup, operatorName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		DeferCleanup(func(ctx context.Context) {
@@ -226,16 +235,6 @@ var _ = Describe("Update clusters", func() {
 				}
 			}
 		})
-
-		// After the operator restart later in the test, all the ServicePrincipalValid status tells us is that
-		// the operator can start up and can acquire an Azure auth token using whatever identity is provided to it.
-		// Deleting the original identity before doing the replacement and restart ensures that the operator can't
-		// pass the status condition checks by starting up using the old identity.
-		By("deleting the original identity")
-		Eventually(func(g Gomega, ctx context.Context) {
-			_, err := clients.UserAssignedIdentities.Delete(ctx, vnetResourceGroup, operatorName, nil)
-			g.Expect(err).NotTo(HaveOccurred())
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("assigning the operator's role to the replacement identity at VNet scope")
 		vnetRoleAssignmentName := uuid.DefaultGenerator.Generate()
