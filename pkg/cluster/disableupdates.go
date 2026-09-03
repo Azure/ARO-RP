@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	configv1 "github.com/openshift/api/config/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func (m *manager) disableUpdates(ctx context.Context) error {
@@ -25,8 +27,8 @@ func (m *manager) disableUpdates(ctx context.Context) error {
 		cv.Spec.Upstream = ""
 		cv.Spec.Channel = ""
 
-		// when installing via Hive we replace the quay.io domain with the ACR domain, so now we set it back to the expected domain
-		if m.installViaHive {
+		// when installing via Hive or AKS Job we replace the quay.io domain with the ACR domain, so now we set it back to the expected domain
+		if m.installerBackend == api.InstallerBackendHive || m.installerBackend == api.InstallerBackendAKSJob {
 			version, err := m.openShiftVersionFromVersion(ctx)
 			if err != nil {
 				return err

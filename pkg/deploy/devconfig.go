@@ -168,6 +168,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			Environment:                       pointerutils.ToPtr("development"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
+			InstallerBackend:         pointerutils.ToPtr(os.Getenv("ARO_INSTALLER_BACKEND")),
 			InstallViaHive:           pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
 			DefaultInstallerPullspec: pointerutils.ToPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
 			AdoptByHive:              pointerutils.ToPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),

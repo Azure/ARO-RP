@@ -83,8 +83,13 @@ func TestDisableUpdates(t *testing.T) {
 					},
 				}),
 				openShiftClusterDocumentVersioner: tt.versioner,
-				installViaHive:                    tt.installViaHive,
-				env:                               env,
+				installerBackend: func() api.InstallerBackend {
+					if tt.installViaHive {
+						return api.InstallerBackendHive
+					}
+					return api.InstallerBackendPodman
+				}(),
+				env: env,
 			}
 
 			err := m.disableUpdates(ctx)

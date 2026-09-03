@@ -116,6 +116,7 @@ type Configuration struct {
 	MimoSchedulerLogLevel *string `json:"mimoSchedulerLogLevel,omitempty"`
 
 	// TODO: Replace with Live Service Configuration in KeyVault
+	InstallerBackend         *string `json:"installerBackend,omitempty"`
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
 	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`

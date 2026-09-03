@@ -438,13 +438,14 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.createCertificates),
 	)
 
-	if m.adoptViaHive || m.installViaHive {
+	if m.adoptViaHive || m.installerBackend == api.InstallerBackendHive {
 		// We will always need a Hive namespace, whether we are installing
 		// via Hive or adopting
 		s = append(s, steps.Action(m.hiveCreateNamespace))
 	}
 
-	if m.installViaHive {
+	switch m.installerBackend {
+	case api.InstallerBackendHive:
 		s = append(s,
 			steps.Action(m.runHiveInstaller),
 			// Give Hive 60 minutes to install the cluster, since this includes
@@ -452,7 +453,14 @@ func (m *manager) bootstrap() []steps.Step {
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
 			steps.Action(m.generateKubeconfigs),
 		)
-	} else {
+
+	case api.InstallerBackendAKSJob:
+		s = append(s,
+			steps.Action(m.runAKSJobInstaller),
+			steps.Action(m.generateKubeconfigs),
+		)
+
+	case api.InstallerBackendPodman:
 		s = append(s,
 			steps.Action(m.runPodmanInstaller),
 			steps.Action(m.generateKubeconfigs),
@@ -464,9 +472,12 @@ func (m *manager) bootstrap() []steps.Step {
 				steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
 			)
 		}
+
+	default:
+		m.log.Errorf("unknown installer backend: %s", m.installerBackend)
 	}
 
-	if m.adoptViaHive || m.installViaHive {
+	if m.adoptViaHive || m.installerBackend == api.InstallerBackendHive {
 		s = append(s,
 			// Reset correlation data whether adopting or installing via Hive
 			steps.Action(m.hiveResetCorrelationData),

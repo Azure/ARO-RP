@@ -179,6 +179,10 @@ type OpenShiftClusterProperties struct {
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
+	// InstallerProfile contains installer execution state (backend, namespace, job info)
+	// This is internal state and not exposed in ARM API
+	InstallerProfile *InstallerProfile `json:"installerProfile,omitempty"`
+
 	StorageSuffix                   string `json:"storageSuffix,omitempty"`
 	ImageRegistryStorageAccountName string `json:"imageRegistryStorageAccountName,omitempty"`
 
@@ -931,6 +935,40 @@ type HiveProfile struct {
 	// of clusters that were created by Hive to avoid deleting existing
 	// ClusterDeployments.
 	CreatedByHive bool `json:"createdByHive,omitempty"`
+}
+
+// InstallerBackend represents the execution backend for cluster installation
+type InstallerBackend string
+
+// InstallerBackend constants
+const (
+	InstallerBackendHive   InstallerBackend = "Hive"
+	InstallerBackendAKSJob InstallerBackend = "AKSJob"
+	InstallerBackendPodman InstallerBackend = "Podman"
+)
+
+// InstallerProfile represents the installer execution state for a cluster installation.
+// This is internal persisted state, not an ARM-facing API property.
+type InstallerProfile struct {
+	MissingFields
+
+	// Backend is the installer execution backend (Hive, AKSJob, Podman)
+	Backend InstallerBackend `json:"backend,omitempty"`
+
+	// ExecutionID is a unique identifier for this installation attempt
+	ExecutionID string `json:"executionId,omitempty"`
+
+	// Namespace is the Kubernetes namespace used for this installation
+	Namespace string `json:"namespace,omitempty"`
+
+	// JobName is the name of the Kubernetes Job (for AKSJob backend)
+	JobName string `json:"jobName,omitempty"`
+
+	// JobUID is the UID of the Kubernetes Job for idempotency checking
+	JobUID string `json:"jobUid,omitempty"`
+
+	// StartedAt is the timestamp when the installer was launched
+	StartedAt *time.Time `json:"startedAt,omitempty"`
 }
 
 // PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.

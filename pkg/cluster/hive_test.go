@@ -214,8 +214,8 @@ func createManagerForTests(t *testing.T, existingNamespaceName string) *manager 
 		db:  fakeDb,
 		doc: doc,
 
-		adoptViaHive:   true,
-		installViaHive: true,
+		adoptViaHive:     true,
+		installerBackend: api.InstallerBackendHive,
 	}
 }
 

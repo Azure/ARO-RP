@@ -9,19 +9,33 @@ import (
 
 	"k8s.io/client-go/rest"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 )
 
 const (
 	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
 	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
+	installerBackendEnvVar    = "ARO_INSTALLER_BACKEND"
 	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
 	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
 )
 
 type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
+
+	// InstallerBackend returns the configured installer backend (Hive, AKSJob, Podman)
+	InstallerBackend(context.Context) (api.InstallerBackend, error)
+
+	// InstallerRestConfig returns the Kubernetes RestConfig for the installer execution cluster
+	// based on the selected backend. For AKSJob, returns the regional SVC AKS cluster in production
+	// or the retained Hive-host AKS cluster in CI. For Hive, returns the Hive AKS cluster.
+	InstallerRestConfig(context.Context) (*rest.Config, error)
+
+	// InstallViaHive is deprecated - use InstallerBackend instead
+	// Kept for backward compatibility during migration
 	InstallViaHive(context.Context) (bool, error)
+
 	AdoptByHive(context.Context) (bool, error)
 
 	// Allows overriding the default installer pullspec for Prod, if the OpenShiftVersions database is not populated

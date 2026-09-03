@@ -117,7 +117,7 @@ type manager struct {
 	samplescli       samplesclient.Interface
 	imageregistrycli imageregistryclient.Interface
 
-	installViaHive       bool
+	installerBackend     api.InstallerBackend
 	adoptViaHive         bool
 	hiveClusterManager   hive.ClusterManager
 	fpServicePrincipalID string
@@ -179,7 +179,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
+	installerBackend, err := _env.LiveConfig().InstallerBackend(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +303,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		storage:                                storage,
 		graph:                                  graph.NewManager(_env, log, aead, storage),
 		rpBlob:                                 rpBlob,
-		installViaHive:                         installViaHive,
+		installerBackend:                       installerBackend,
 		adoptViaHive:                           adoptByHive,
 		hiveClusterManager:                     hiveClusterManager,
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),

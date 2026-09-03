@@ -176,10 +176,10 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 		})
 	}
 
-	// when installing via Hive we need to allow Hive to persist the installConfig graph in the cluster's storage account
-	// TODO: add AKS shard support
+	// when installing via Hive or AKS Job we need to allow the installer to persist the installConfig graph in the cluster's storage account
+	// TODO: add AKS shard support for SVC AKS cluster
 	hiveShard := 1
-	if m.installViaHive && strings.Index(name, "cluster") == 0 {
+	if (m.installerBackend == api.InstallerBackendHive || m.installerBackend == api.InstallerBackendAKSJob) && strings.Index(name, "cluster") == 0 {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
 			Action:                   mgmtstorage.ActionAllow,
