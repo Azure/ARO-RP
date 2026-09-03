@@ -852,7 +852,6 @@ func TestMerge(t *testing.T) {
 			wantEmptyDiff: false,
 		},
 		{
-
 			name:          "MachineHealthCheck customer maxUnhealthy override is preserved",
 			old:           mhcCustomerMaxUnhealthy.DeepCopy(),
 			new:           mhcManifestMaxUnhealthy.DeepCopy(),
