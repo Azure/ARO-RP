@@ -430,8 +430,9 @@ lint-admin-portal:
 .PHONY: test-python
 test-python: pyenv az
 	. pyenv/bin/activate && \
-		azdev linter && \
-		azdev style && \
+		azdev test aro && \
+		azdev linter aro && \
+		azdev style aro && \
 		hack/unit-test-python.sh
 
 .PHONY: test-python-podman

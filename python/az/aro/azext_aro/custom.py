@@ -1013,7 +1013,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids) -> None:
                     role_definition_id = resource_id(
                         subscription=get_subscription_id(cli_ctx),
                         namespace="Microsoft.Authorization",
-                        type="roleDefinition",
+                        type="roleDefinitions",
                         name=role,
                     )
                     create_role_assignment(cli_ctx, sp_id, role_definition_id, resource)
@@ -1059,7 +1059,7 @@ def _determine_required_scopes_from_role_set(cmd, role) -> list[RoleAssignmentSc
             if action.startswith("Microsoft.Network/networkSecurityGroups/"):
                 scopes.add(RoleAssignmentScope.NSG)
 
-            if action.startswith("Microsoft.Network/routeTable/"):
+            if action.startswith("Microsoft.Network/routeTables/"):
                 scopes.add(RoleAssignmentScope.ROUTE_TABLE)
 
     # We're converting the set to a list to maintain a deterministic order.
@@ -1106,10 +1106,19 @@ def create_identity_and_role_assignments(*,
         if not network_scopes[scope]:
             continue
 
+        role_definition_id = role.role_definition_id
+        if not role_definition_id.startswith("/"):
+            role_definition_id = resource_id(
+                subscription=get_subscription_id(cmd.cli_ctx),
+                namespace="Microsoft.Authorization",
+                type="roleDefinitions",
+                name=role_definition_id
+            )
+
         create_role_assignment(
             cmd.cli_ctx,
             identity["principalId"],
-            f"{resource_id(subscription=get_subscription_id(cmd.cli_ctx))}{role.role_definition_id}",
+            role_definition_id,
             network_scopes[scope]
         )
 
