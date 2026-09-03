@@ -6,6 +6,7 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -176,7 +177,7 @@ func TestScenarioResponse(t *testing.T) {
 // TestFirstFailPolicyDo verifies per-URL inject-once behavior.
 func TestFirstFailPolicyDo(t *testing.T) {
 	newPolicy := func(scenarios []faultScenario, srvHost string) *firstFailPolicy {
-		return &firstFailPolicy{scenarios: scenarios, host: srvHost, injected: make(map[string]struct{})}
+		return &firstFailPolicy{scenarios: scenarios, host: srvHost, injected: make(map[string]struct{}), lroPending: make(map[string]faultScenario)}
 	}
 
 	t.Run("first write to a URL injects; retry to same URL passes; scenarios rotate across URLs", func(t *testing.T) {
@@ -196,29 +197,40 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			PerCall: []policy.Policy{p},
 		}, &policy.ClientOptions{Transport: srv})
 
-		do := func(method, rawURL string, wantStatus int) {
+		put := func(rawURL string) int {
 			t.Helper()
-			req, err := runtime.NewRequest(context.Background(), method, rawURL)
+			req, err := runtime.NewRequest(context.Background(), http.MethodPut, rawURL)
 			if err != nil {
 				t.Fatal(err)
 			}
 			resp, err := pl.Do(req)
 			if err != nil {
-				t.Fatalf("%s %s: unexpected error: %v", method, rawURL, err)
-			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf("%s %s: got %d, want %d", method, rawURL, resp.StatusCode, wantStatus)
+				t.Fatalf("PUT %s: unexpected error: %v", rawURL, err)
 			}
 			resp.Body.Close()
+			return resp.StatusCode
 		}
 
 		urlA := srv.URL() + "?resource=a"
 		urlB := srv.URL() + "?resource=b"
 
-		do(http.MethodPut, urlA, http.StatusConflict)        // URL_A: inject (scenario 0)
-		do(http.MethodPut, urlA, http.StatusOK)              // URL_A: retry passes through
-		do(http.MethodPut, urlB, http.StatusTooManyRequests) // URL_B: inject (scenario 1)
-		do(http.MethodPut, urlB, http.StatusOK)              // URL_B: retry passes through
+		// First PUT to each URL: injected (any non-200 status or 202).
+		gotA := put(urlA)
+		if gotA == http.StatusOK {
+			t.Errorf("URL_A first PUT: expected injection, got 200")
+		}
+		gotB := put(urlB)
+		if gotB == http.StatusOK {
+			t.Errorf("URL_B first PUT: expected injection, got 200")
+		}
+
+		// Retry PUT to each URL: passes through to server (200).
+		if got := put(urlA); got != http.StatusOK {
+			t.Errorf("URL_A retry PUT: got %d, want 200", got)
+		}
+		if got := put(urlB); got != http.StatusOK {
+			t.Errorf("URL_B retry PUT: got %d, want 200", got)
+		}
 
 		if got := srv.Requests(); got != 2 {
 			t.Errorf("server received %d requests, want 2 (only retries pass through)", got)
@@ -274,7 +286,7 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			PerCall: []policy.Policy{p},
 		}, &policy.ClientOptions{Transport: srv})
 
-		put := func(rawURL string, wantStatus int) {
+		put := func(rawURL string) int {
 			t.Helper()
 			req, err := runtime.NewRequest(context.Background(), http.MethodPut, rawURL)
 			if err != nil {
@@ -284,10 +296,8 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			if err != nil {
 				t.Fatalf("PUT %s: unexpected error: %v", rawURL, err)
 			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf("PUT %s: got %d, want %d", rawURL, resp.StatusCode, wantStatus)
-			}
 			resp.Body.Close()
+			return resp.StatusCode
 		}
 
 		urls := []string{
@@ -297,17 +307,89 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			srv.URL() + "?ip=d",
 		}
 
-		// First call to each URL: inject
+		// First PUT to each URL: injected (any non-200 status or 202).
 		for _, u := range urls {
-			put(u, http.StatusTooManyRequests)
+			if got := put(u); got == http.StatusOK {
+				t.Errorf("PUT %s first call: expected injection, got 200", u)
+			}
 		}
-		// Retry to each URL: pass through (URL already marked)
+		// Retry to each URL: passes through (URL already marked).
 		for _, u := range urls {
-			put(u, http.StatusOK)
+			if got := put(u); got != http.StatusOK {
+				t.Errorf("PUT %s retry: got %d, want 200", u, got)
+			}
 		}
 
 		if got := srv.Requests(); got != 4 {
 			t.Errorf("server received %d requests, want 4 (only retries pass through)", got)
+		}
+	})
+
+	t.Run("LRO path: lroPending intercepted once then cleared", func(t *testing.T) {
+		srv, close := testhttp.NewServer()
+		defer close()
+		// Two pass-through requests reach the server: poll retry + resource retry.
+		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+
+		sc := faultScenarios["ConflictingConcurrentWriteNotAllowed"]
+		pollURL := fmt.Sprintf("http://%s/lro-fault/1", mustHost(srv.URL()))
+		p := newPolicy([]faultScenario{sc}, mustHost(srv.URL()))
+		p.lroPending[pollURL] = sc
+		p.injected["PUT:"+srv.URL()+"?resource=lro"] = struct{}{}
+		pl := runtime.NewPipeline("test", "v1.0.0", runtime.PipelineOptions{
+			PerCall: []policy.Policy{p},
+		}, &policy.ClientOptions{Transport: srv})
+
+		// First GET to poll URL: intercepted, returns 200 Failed.
+		req, err := runtime.NewRequest(context.Background(), http.MethodGet, pollURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := pl.Do(req)
+		if err != nil {
+			t.Fatalf("poll GET: unexpected error: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("poll GET: got %d, want 200", resp.StatusCode)
+		}
+		var body struct {
+			Status string `json:"status"`
+			Error  struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatalf("poll GET: body decode: %v", err)
+		}
+		resp.Body.Close()
+		if body.Status != "Failed" {
+			t.Errorf("poll GET: status = %q, want \"Failed\"", body.Status)
+		}
+		if body.Error.Code != sc.code {
+			t.Errorf("poll GET: code = %q, want %q", body.Error.Code, sc.code)
+		}
+		if !strings.Contains(body.Error.Message, "Please retry later") {
+			t.Errorf("poll GET: message = %q, want it to contain \"Please retry later\"", body.Error.Message)
+		}
+
+		// Second GET to same poll URL: lroPending cleared, passes through to server.
+		req, err = runtime.NewRequest(context.Background(), http.MethodGet, pollURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err = pl.Do(req)
+		if err != nil {
+			t.Fatalf("second poll GET: unexpected error: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("second poll GET: got %d, want 200", resp.StatusCode)
+		}
+		resp.Body.Close()
+
+		if got := srv.Requests(); got != 1 {
+			t.Errorf("server received %d requests, want 1", got)
 		}
 	})
 }

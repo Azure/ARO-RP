@@ -88,11 +88,12 @@ var faultScenarios = map[string]faultScenario{
 var firstFailLogOnce sync.Once
 
 type firstFailPolicy struct {
-	scenarios []faultScenario
-	host      string // if empty, defaults to "management.azure.com"
-	mu        sync.Mutex
-	injected  map[string]struct{} // set of "METHOD:URL" keys already injected
-	sceneIdx  int                 // index of the next scenario to use; always accessed under mu
+	scenarios  []faultScenario
+	host       string // if empty, defaults to "management.azure.com"
+	mu         sync.Mutex
+	injected   map[string]struct{}      // set of "METHOD:URL" keys already injected
+	lroPending map[string]faultScenario // poll URL -> scenario; GET to this URL returns 200 Failed
+	sceneIdx   int                      // index of the next scenario to use; always accessed under mu
 }
 
 // NewFirstFailPolicy reads ARO_ARM_FAULT_FIRST and returns a policy that injects a synthetic ARM
@@ -106,14 +107,16 @@ func NewFirstFailPolicy() policy.Policy {
 	}
 	logStartup(envVal, scenarios)
 	return &firstFailPolicy{
-		scenarios: scenarios,
-		injected:  make(map[string]struct{}),
+		scenarios:  scenarios,
+		injected:   make(map[string]struct{}),
+		lroPending: make(map[string]faultScenario),
 	}
 }
 
 // Do injects a synthetic error on the first write to each distinct URL. Subsequent requests
 // to the same URL (i.e. SDK retries) always pass through. Read verbs are never injected.
-// Scenarios rotate across distinct injected URLs.
+// Scenarios rotate across distinct injected URLs, alternating between synchronous (409/429)
+// and LRO (202 + poll returning 200 Failed) delivery to exercise both code paths.
 func (p *firstFailPolicy) Do(req *policy.Request) (*http.Response, error) {
 	targetHost := p.host
 	if targetHost == "" {
@@ -122,6 +125,25 @@ func (p *firstFailPolicy) Do(req *policy.Request) (*http.Response, error) {
 	if req.Raw().URL.Host != targetHost {
 		return req.Next()
 	}
+
+	// Check if this is a pending LRO poll GET before checking write-only logic.
+	if req.Raw().Method == http.MethodGet {
+		pollURL := req.Raw().URL.String()
+		p.mu.Lock()
+		sc, pending := p.lroPending[pollURL]
+		if pending {
+			delete(p.lroPending, pollURL)
+		}
+		p.mu.Unlock()
+		if pending {
+			logrus.Warnf("fault injected: %s LRO poll failure on %s", sc.name, utillog.Sanitize(pollURL))
+			resp := lroFailureResponse(sc)
+			resp.Request = req.Raw()
+			return resp, nil
+		}
+		return req.Next()
+	}
+
 	if !slices.Contains([]string{http.MethodPut, http.MethodPost, http.MethodPatch, http.MethodDelete}, req.Raw().Method) {
 		return req.Next()
 	}
@@ -141,11 +163,23 @@ func (p *firstFailPolicy) Do(req *policy.Request) (*http.Response, error) {
 		return req.Next()
 	}
 	p.injected[key] = struct{}{}
+	useLRO := p.sceneIdx%2 == 1
 	p.sceneIdx++
+	var pollURL string
+	if useLRO {
+		pollURL = fmt.Sprintf("http://%s/lro-fault/%d", targetHost, p.sceneIdx)
+		p.lroPending[pollURL] = sc
+	}
 	p.mu.Unlock()
-	logrus.Warnf("fault injected: %s (%d) on %s %s", sc.name, sc.status, utillog.Sanitize(req.Raw().Method), utillog.Sanitize(req.Raw().URL.String()))
+
+	logrus.Warnf("fault injected: %s on %s %s", sc.name, utillog.Sanitize(req.Raw().Method), utillog.Sanitize(req.Raw().URL.String()))
+	if useLRO {
+		resp := lroAcceptedResponse(pollURL)
+		resp.Request = req.Raw()
+		return resp, nil
+	}
 	resp := scenarioResponse(sc)
-	resp.Request = req.Raw() // preserve request context for downstream handlers
+	resp.Request = req.Raw()
 	return resp, nil
 }
 
@@ -215,6 +249,31 @@ func scenarioResponse(sc faultScenario) *http.Response {
 		StatusCode: sc.status,
 		Status:     fmt.Sprintf("%d %s", sc.status, http.StatusText(sc.status)),
 		Header:     h,
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+// lroAcceptedResponse returns a 202 Accepted with an Azure-AsyncOperation header pointing to
+// pollURL, starting an LRO that the SDK will poll.
+func lroAcceptedResponse(pollURL string) *http.Response {
+	h := http.Header{}
+	h.Set("Azure-AsyncOperation", pollURL)
+	return &http.Response{
+		StatusCode: http.StatusAccepted,
+		Status:     "202 Accepted",
+		Header:     h,
+		Body:       io.NopCloser(strings.NewReader("")),
+	}
+}
+
+// lroFailureResponse returns a 200 OK with status=Failed, matching the ARM async operation
+// failure body shape that the azcore poller produces when an LRO terminates with an error.
+func lroFailureResponse(sc faultScenario) *http.Response {
+	body := fmt.Sprintf(`{"status":"Failed","error":{"code":%q,"message":%q}}`, sc.code, sc.msg)
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Status:     "200 OK",
+		Header:     http.Header{},
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 }
