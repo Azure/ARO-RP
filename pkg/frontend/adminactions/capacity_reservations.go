@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
-const targetReservationNameFmt = "cr-target-z%s"
+const targetReservationName = "cr-target-z%s"
 
 func (a *azureActions) CreateCRG(ctx context.Context, clusterRG, location string, zones []string, crgName string) (string, error) {
 	var crg armcompute.CapacityReservationGroup
@@ -36,15 +36,21 @@ func (a *azureActions) CreateCRG(ctx context.Context, clusterRG, location string
 }
 
 func (a *azureActions) CreateCapacityReservation(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error {
-	crTarget := fmt.Sprintf(targetReservationNameFmt, zone)
+	crTarget := fmt.Sprintf(targetReservationName, zone)
+	var crZones []*string
+	logSuffix := "regional"
+	if zone != "" {
+		crZones = []*string{&zone}
+		logSuffix = "zone " + zone
+	}
 	return arm.Retryable(ctx, func() error {
 		return a.capacityReservations.CreateOrUpdateAndWait(ctx, clusterRG, crgName, crTarget,
 			armcompute.CapacityReservation{
 				Location: &location,
-				SKU:      &armcompute.SKU{Name: &targetSKU, Capacity: pointerutils.ToPtr(capacity)},
-				Zones:    []*string{pointerutils.ToPtr(zone)},
+				SKU:      &armcompute.SKU{Name: &targetSKU, Capacity: &capacity},
+				Zones:    crZones,
 			})
-	}, a.log, fmt.Sprintf("create target-SKU reservation in zone %s", zone))
+	}, a.log, fmt.Sprintf("create target-SKU reservation in %s", logSuffix))
 }
 
 func (a *azureActions) DeleteCRG(ctx context.Context, clusterRG, crgName string) error {
@@ -54,7 +60,7 @@ func (a *azureActions) DeleteCRG(ctx context.Context, clusterRG, crgName string)
 }
 
 func (a *azureActions) DeleteCapacityReservation(ctx context.Context, clusterRG, crgName, zone string) error {
-	crName := fmt.Sprintf(targetReservationNameFmt, zone)
+	crName := fmt.Sprintf(targetReservationName, zone)
 	return arm.RetryableDelete(ctx, func() error {
 		return a.capacityReservations.DeleteAndWait(ctx, clusterRG, crgName, crName)
 	}, a.log, fmt.Sprintf("deleting capacity reservation %s from CRG %s", crName, crgName))
