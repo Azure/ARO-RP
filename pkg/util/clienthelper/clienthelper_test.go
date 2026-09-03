@@ -139,6 +139,16 @@ func TestMerge(t *testing.T) {
 	mhcWithStatusAndAnnotation.Status = *mhcWithStatus.Status.DeepCopy()
 	mhcWithStatusAndAnnotation.Annotations = mhcWithAnnotation.Annotations
 
+	// mhcManifestMaxUnhealthy is the MHC as rendered from the static manifest,
+	// which defaults maxUnhealthy to 1.
+	mhcManifestMaxUnhealthy := mhc.DeepCopy()
+	mhcManifestMaxUnhealthy.Spec.MaxUnhealthy = pointerutils.ToPtr(intstr.FromInt32(1))
+
+	// mhcCustomerMaxUnhealthy is the live MHC after a customer edited
+	// maxUnhealthy away from the default (e.g. `oc edit` to 2).
+	mhcCustomerMaxUnhealthy := mhc.DeepCopy()
+	mhcCustomerMaxUnhealthy.Spec.MaxUnhealthy = pointerutils.ToPtr(intstr.FromInt32(2))
+
 	for _, tt := range []struct {
 		name             string
 		old              client.Object
@@ -838,6 +848,24 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{},
 				},
 			},
+			wantChanged:   true,
+			wantEmptyDiff: false,
+		},
+		{
+
+			name:          "MachineHealthCheck customer maxUnhealthy override is preserved",
+			old:           mhcCustomerMaxUnhealthy.DeepCopy(),
+			new:           mhcManifestMaxUnhealthy.DeepCopy(),
+			want:          mhcCustomerMaxUnhealthy.DeepCopy(),
+			wantChanged:   false,
+			wantEmptyDiff: true,
+		},
+		{
+			// If maxUnhealthy is missing on the live object, the manifest default is applied so it is never nil.
+			name:          "MachineHealthCheck maxUnhealthy default is applied when unset",
+			old:           mhc.DeepCopy(),
+			new:           mhcManifestMaxUnhealthy.DeepCopy(),
+			want:          mhcManifestMaxUnhealthy.DeepCopy(),
 			wantChanged:   true,
 			wantEmptyDiff: false,
 		},
