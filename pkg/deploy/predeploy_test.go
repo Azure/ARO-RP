@@ -117,6 +117,10 @@ func TestPreDeploy(t *testing.T) {
 	}
 	deployment := mgmtfeatures.DeploymentExtended{}
 	vmsss := []mgmtcompute.VirtualMachineScaleSet{{Name: &vmssName}}
+	// The secrets the vault already holds. The one absent from this list is the
+	// one the run creates, so listing every secret except the portal session key
+	// is what exercises the create-and-restart path: that key is now the only
+	// secret whose creation or rotation restarts anything.
 	oneMissingSecrets := []string{env.EncryptionSecretV2Name, env.FrontendEncryptionSecretV2Name, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {
@@ -970,6 +974,10 @@ func TestRestartScriptRestartsOnlyHoldersOfARotatedSecret(t *testing.T) {
 
 func TestConfigureServiceSecrets(t *testing.T) {
 	ctx := context.Background()
+	// The secrets the vault already holds. The one absent from this list is the
+	// one the run creates, so listing every secret except the portal session key
+	// is what exercises the create-and-restart path: that key is now the only
+	// secret whose creation or rotation restarts anything.
 	oneMissingSecrets := []string{env.EncryptionSecretV2Name, env.FrontendEncryptionSecretV2Name, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []*azsecretssdk.SecretProperties{}
 	for _, secret := range oneMissingSecrets {

@@ -38,7 +38,8 @@ const (
 	rotateSecretAfter = time.Hour * 24 * 7
 	// A service reads its secrets once at start-up, so restarting it is how it
 	// picks up a rotated one. The portal session key is the only secret still
-	// rotated, and aro-portal is the only service that holds it.
+	// rotated via the predeploy process, and aro-portal is the only service
+	// that holds it.
 	portalRestartScript = "systemctl restart aro-portal"
 )
 
@@ -337,7 +338,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWaitTimeSec int) error {
 	// True when a new version was written, whether by rotation or because the
 	// secret was absent. Either way aro-portal must be restarted to see it.
-	portalKeyVersionCreated, err := d.ensureAndRotateSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
+	portalKeyCreatedOrRotated, err := d.ensureAndRotateSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
 	if err != nil {
 		return err
 	}
@@ -372,7 +373,7 @@ func (d *deployer) configureServiceSecrets(ctx context.Context, lbHealthcheckWai
 		return err
 	}
 
-	if portalKeyVersionCreated {
+	if portalKeyCreatedOrRotated {
 		return d.restartOldScalesets(ctx, lbHealthcheckWaitTimeSec)
 	}
 	return nil
