@@ -13,6 +13,11 @@ import (
 )
 
 func TestRunCommandResultError(t *testing.T) {
+	const (
+		vmScaleSetName = "rp-vmss-test"
+		instanceID     = "3"
+	)
+
 	for _, tt := range []struct {
 		name    string
 		result  mgmtcompute.RunCommandResult
@@ -62,7 +67,7 @@ func TestRunCommandResultError(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "run command reported an error: ComponentStatus/StdErr/failed: Failed to restart aro-portal.service: Unit not found.",
+			wantErr: "run command on scale set rp-vmss-test instance 3 reported an error: ComponentStatus/StdErr/failed: Failed to restart aro-portal.service: Unit not found.",
 		},
 		{
 			name: "error status carrying no detail is still reported",
@@ -73,7 +78,7 @@ func TestRunCommandResultError(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "run command reported an error: no detail reported",
+			wantErr: "run command on scale set rp-vmss-test instance 3 reported an error: no detail reported",
 		},
 		{
 			name: "an error among informational statuses is not lost",
@@ -89,7 +94,7 @@ func TestRunCommandResultError(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "run command reported an error: ComponentStatus/StdErr/failed",
+			wantErr: "run command on scale set rp-vmss-test instance 3 reported an error: ComponentStatus/StdErr/failed",
 		},
 		{
 			name: "every error is reported, not just the first",
@@ -105,11 +110,11 @@ func TestRunCommandResultError(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "run command reported an error: first; second",
+			wantErr: "run command on scale set rp-vmss-test instance 3 reported an error: first; second",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := runCommandResultError(tt.result)
+			err := runCommandResultError(vmScaleSetName, instanceID, tt.result)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

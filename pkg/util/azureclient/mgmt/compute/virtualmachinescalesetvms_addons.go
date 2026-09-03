@@ -36,7 +36,7 @@ func (c *virtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context,
 		return err
 	}
 
-	return runCommandResultError(result)
+	return runCommandResultError(VMScaleSetName, instanceID, result)
 }
 
 // runCommandResultError reports any error the instance raised while running the
@@ -47,7 +47,11 @@ func (c *virtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context,
 // it establishes only that the command was delivered. Anything the instance has
 // to say about the outcome arrives in the result, which was previously
 // discarded, leaving a failed command indistinguishable from a successful one.
-func runCommandResultError(result mgmtcompute.RunCommandResult) error {
+//
+// The scale set and instance are named in the error because both callers run
+// commands across many instances, and a failure which does not say where it
+// happened leaves the reader to work that out from surrounding log lines.
+func runCommandResultError(vmScaleSetName, instanceID string, result mgmtcompute.RunCommandResult) error {
 	if result.Value == nil {
 		return nil
 	}
@@ -75,7 +79,7 @@ func runCommandResultError(result mgmtcompute.RunCommandResult) error {
 		return nil
 	}
 
-	return fmt.Errorf("run command reported an error: %s", strings.Join(reported, "; "))
+	return fmt.Errorf("run command on scale set %s instance %s reported an error: %s", vmScaleSetName, instanceID, strings.Join(reported, "; "))
 }
 
 func (c *virtualMachineScaleSetVMsClient) List(ctx context.Context, resourceGroupName string, virtualMachineScaleSetName string, filter string, selectParameter string, expand string) ([]mgmtcompute.VirtualMachineScaleSetVM, error) {
