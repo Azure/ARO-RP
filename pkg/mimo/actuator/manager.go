@@ -186,19 +186,42 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		})
 		taskLog.Info("begin processing manifest")
 
-		// Fetch a fresh OpenShift cluster document, in case the previous task/a
-		// concurrent action updated anything
-		oc, err := ocDb.Get(ctx, a.clusterResourceID)
-		if err != nil {
-			taskLog.Errorf("failed fetching cluster document: %s", err.Error())
-			return false, fmt.Errorf("failed getting cluster document: %w", err)
-		}
-
 		// Attempt a dequeue
 		doc, err = mmf.Lease(ctx, a.clusterResourceID, doc.ID)
 		if err != nil {
 			// log and continue to the next task if it doesn't work
 			taskLog.Error(err)
+			continue
+		}
+
+		// Fetch a fresh OpenShift cluster document, in case the previous task/a
+		// concurrent action updated anything.
+		//
+		// This is deliberately done after leasing. Lease is what increments
+		// Dequeues, so fetching beforehand meant that a cluster document which
+		// could not be read left the manifest's attempt count untouched, and
+		// the manifest was retried indefinitely rather than eventually being
+		// marked RetriesExceeded.
+		oc, err := ocDb.Get(ctx, a.clusterResourceID)
+		if err != nil {
+			// Logged in the original wording, before wrapping, so that queries
+			// and alerting over the actuator's logs are unaffected.
+			taskLog.Errorf("failed fetching cluster document: %s", err.Error())
+
+			// Marked transient so that a momentary failure to read the document
+			// is retried rather than failing the manifest outright. A durable
+			// one is still bounded, by maxDequeueCount.
+			err = utilmimo.TransientError(fmt.Errorf("failed getting cluster document: %w", err))
+
+			state, msg := manifestStateForError(doc.Dequeues, err.Error(), err)
+			if _, endErr := mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg); endErr != nil {
+				taskLog.Error(fmt.Errorf("failed ending lease on manifest: %w", endErr))
+			}
+
+			// Continue rather than return: being unable to read this cluster's
+			// document says nothing about the other manifests queued against
+			// it, and returning here abandoned them for the whole run.
+			doneSomeWork = true
 			continue
 		}
 
@@ -238,19 +261,14 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		msg := taskContext.getResultMessage()
 
 		if err != nil {
-			if doc.Dequeues >= maxDequeueCount {
-				msg = fmt.Sprintf("did not succeed after %d times, failing -- %s", doc.Dequeues, err.Error())
-				state = api.MaintenanceManifestStateRetriesExceeded
+			state, msg = manifestStateForError(doc.Dequeues, msg, err)
+
+			switch state {
+			case api.MaintenanceManifestStateRetriesExceeded:
 				taskLog.Error(msg)
-			} else if utilmimo.IsRetryableError(err) {
-				// If an error is retryable (i.e explicitly marked as a transient error
-				// by wrapping it in utilmimo.TransientError), then mark it back as
-				// Pending so that it will get picked up and retried.
-				state = api.MaintenanceManifestStatePending
+			case api.MaintenanceManifestStatePending:
 				taskLog.Error(fmt.Errorf("task returned a retryable error: %w", err))
-			} else {
-				// Terminal errors (explicitly marked or unwrapped) cause task failure
-				state = api.MaintenanceManifestStateFailed
+			default:
 				taskLog.Error(fmt.Errorf("task returned a terminal error: %w", err))
 			}
 		} else {
@@ -269,4 +287,36 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	}
 
 	return doneSomeWork, nil
+}
+
+// manifestStateForError returns the state in which a manifest should be left
+// after an attempt to action it returned err, together with the status text to
+// record against it.
+//
+// Attempts are bounded by maxDequeueCount rather than by the nature of the
+// error, so that a manifest which keeps failing transiently is eventually given
+// up on rather than retried indefinitely. That bound relies on the manifest
+// having been leased, since Lease is what increments Dequeues.
+//
+// RetriesExceeded is terminal: the dequeue query matches Pending only, so such
+// a manifest is not picked up again even once whatever caused the failure has
+// been resolved. The window it was scheduled for is therefore missed rather
+// than deferred. This is bounded rather than permanent, because schedules are
+// recurring and the scheduler creates a fresh manifest for the next window, but
+// it does mean a durable fault costs a maintenance window per manifest.
+func manifestStateForError(dequeues int, msg string, err error) (api.MaintenanceManifestState, string) {
+	switch {
+	case dequeues >= maxDequeueCount:
+		return api.MaintenanceManifestStateRetriesExceeded,
+			fmt.Sprintf("did not succeed after %d times, failing -- %s", dequeues, err.Error())
+	case utilmimo.IsRetryableError(err):
+		// An error explicitly marked as transient, by wrapping it in
+		// utilmimo.TransientError, is marked back to Pending so that it is
+		// picked up and retried.
+		return api.MaintenanceManifestStatePending, msg
+	default:
+		// Terminal errors, whether explicitly marked or unwrapped, fail the
+		// manifest.
+		return api.MaintenanceManifestStateFailed, msg
+	}
 }
