@@ -109,6 +109,38 @@ main() {
 	Add Environment \${ENVIRONMENT}
 	Set COMPONENT gateway-otel-collector
 
+# Attached container output has a single journald priority, so normalize the
+# embedded Logrus and Zap levels before forwarding it.
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=(fatal|panic)\s)|(^[0-9TZ:.\-+]+\t(fatal|panic)\t)
+	Set PRIORITY 2
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=error\s)|(^[0-9TZ:.\-+]+\t(dpanic|error)\t)
+	Set PRIORITY 3
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=(warn|warning)\s)|(^[0-9TZ:.\-+]+\t(warn|warning)\t)
+	Set PRIORITY 4
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=info\s)|(^[0-9TZ:.\-+]+\tinfo\t)
+	Set PRIORITY 6
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=debug\s)|(^[0-9TZ:.\-+]+\tdebug\t)
+	Set PRIORITY 7
+
 [FILTER]
 	Name rewrite_tag
 	Match gateway-otel-collector
