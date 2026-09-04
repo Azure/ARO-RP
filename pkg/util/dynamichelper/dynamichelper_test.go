@@ -34,7 +34,7 @@ func (gvr mockGVRResolver) Resolve(groupKind, optionalVersion string) (*schema.G
 	return &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "configmap"}, nil
 }
 
-func TestEsureDeleted(t *testing.T) {
+func TestEnsureDeleted(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	ctx := context.Background()
