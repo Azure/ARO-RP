@@ -187,7 +187,7 @@ func (c *multi) refresh() {
 	keys, err := c.loader.load(ctx)
 	if err != nil {
 		if c.log != nil {
-			c.log.Warnf("failed refreshing encryption keys: %s", err)
+			c.log.Warnf("failed refreshing encryption keys: %v", err)
 		}
 		return
 	}
