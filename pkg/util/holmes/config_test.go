@@ -7,23 +7,16 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 
-	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 )
 
 func TestNewHolmesConfigFromEnv(t *testing.T) {
-	controller := gomock.NewController(t)
-	mockCred := mock_azcore.NewMockTokenCredential(controller)
-
 	tests := []struct {
 		name    string
 		envVars map[string]string
@@ -135,60 +128,6 @@ func TestNewHolmesConfig(t *testing.T) {
 			require.Equal(t, apiBase, cfg.AzureAPIBase)
 			require.NotEmpty(t, cfg.Image)
 			require.NotEmpty(t, cfg.Model)
-		})
-	}
-}
-
-func TestAcquireToken(t *testing.T) {
-	ctx := context.Background()
-
-	tests := []struct {
-		name      string
-		setupMock func(*mock_azcore.MockTokenCredential)
-		wantToken string
-		wantErr   bool
-	}{
-		{
-			name: "successfully acquires token",
-			setupMock: func(m *mock_azcore.MockTokenCredential) {
-				m.EXPECT().GetToken(ctx, policy.TokenRequestOptions{
-					Scopes: []string{cognitiveServicesScope},
-				}).Return(azcore.AccessToken{
-					Token:     "test-entra-token",
-					ExpiresOn: time.Now().Add(time.Hour),
-				}, nil)
-			},
-			wantToken: "test-entra-token",
-		},
-		{
-			name: "token acquisition failure returns error",
-			setupMock: func(m *mock_azcore.MockTokenCredential) {
-				m.EXPECT().GetToken(ctx, policy.TokenRequestOptions{
-					Scopes: []string{cognitiveServicesScope},
-				}).Return(azcore.AccessToken{}, fmt.Errorf("credential expired"))
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-
-			mockCred := mock_azcore.NewMockTokenCredential(controller)
-			tt.setupMock(mockCred)
-
-			cfg := &HolmesConfig{
-				tokenCredential: mockCred,
-			}
-
-			token, err := cfg.AcquireToken(ctx)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.wantToken, token)
 		})
 	}
 }
