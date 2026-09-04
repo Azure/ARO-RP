@@ -256,11 +256,14 @@ func TestOpenRetriesAfterAConcurrentRefresh(t *testing.T) {
 	// Released once every caller is under way, so that they all reach refresh
 	// together and contend for it.
 	release := make(chan struct{})
+	entered := make(chan struct{})
 	var loads int64
 
 	m := &multi{
 		loader: loaderFunc(func(context.Context) (*keySet, error) {
-			atomic.AddInt64(&loads, 1)
+			if atomic.AddInt64(&loads, 1) == 1 {
+				close(entered)
+			}
 			<-release
 			return &keySet{openers: []AEAD{fresh}}, nil
 		}),
@@ -282,8 +285,11 @@ func TestOpenRetriesAfterAConcurrentRefresh(t *testing.T) {
 		}()
 	}
 
-	// Let the single in-flight load complete once all callers are under way.
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the loader to be entered rather than sleeping. A fixed sleep
+	// either wastes time or, on a slow host, releases before any caller has
+	// reached refresh, which would leave the contention this test exists for
+	// unexercised.
+	<-entered
 	close(release)
 	wg.Wait()
 
@@ -309,5 +315,79 @@ func TestNewMultiReportsLoadFailure(t *testing.T) {
 	}))
 	if !errors.Is(err, wantErr) {
 		t.Errorf("newMulti() error = %v, want %v", err, wantErr)
+	}
+}
+
+// A process which starts shortly before a new key version is written must be
+// able to recover on its first failure. Recording the construction load as a
+// refresh would rate-limit that first attempt for minRefreshInterval, leaving
+// the process unable to open anything sealed with the new version for the whole
+// window — the case this type exists to answer.
+func TestOpenRefreshesOnTheFirstFailureAfterConstruction(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	stale := mock_encryption.NewMockAEAD(controller)
+	stale.EXPECT().Open(gomock.Any()).Return(nil, errors.New("chacha20poly1305: message authentication failed")).AnyTimes()
+
+	fresh := mock_encryption.NewMockAEAD(controller)
+	fresh.EXPECT().Open([]byte("sealed")).Return([]byte("opened"), nil).AnyTimes()
+
+	now := time.Unix(0, 0)
+	loads := 0
+
+	m, err := newMulti(t.Context(), loaderFunc(func(context.Context) (*keySet, error) {
+		loads++
+		if loads == 1 {
+			return &keySet{openers: []AEAD{stale}}, nil
+		}
+		return &keySet{openers: []AEAD{fresh}}, nil
+	}), func(m *multi) { m.now = func() time.Time { return now } })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// No time has passed since construction, so a refresh recorded there would
+	// suppress this one.
+	got, err := m.Open([]byte("sealed"))
+	if err != nil {
+		t.Errorf("multi.Open() returned unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(got, []byte("opened")) {
+		t.Errorf("multi.Open() = %q, want %q", got, []byte("opened"))
+	}
+	if loads != 2 {
+		t.Errorf("keyLoader.load() called %d times, want 2: construction, then the first failure", loads)
+	}
+}
+
+func TestWithMinRefreshIntervalIgnoresNonPositiveDurations(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		give time.Duration
+		want time.Duration
+	}{
+		{name: "zero is ignored", give: 0, want: defaultMinRefreshInterval},
+		{name: "negative is ignored", give: -time.Minute, want: defaultMinRefreshInterval},
+		{name: "positive is applied", give: time.Minute, want: time.Minute},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &multi{minRefreshInterval: defaultMinRefreshInterval}
+			WithMinRefreshInterval(tt.give)(m)
+
+			if m.minRefreshInterval != tt.want {
+				t.Errorf("minRefreshInterval = %s, want %s", m.minRefreshInterval, tt.want)
+			}
+		})
+	}
+}
+
+// The loader is an interface seam. One which returned no keys and no error
+// would otherwise leave Open dereferencing a nil keySet.
+func TestOpenWithoutAKeySetReportsNoOpeners(t *testing.T) {
+	_, err := open(nil, []byte("sealed"))
+
+	if !errors.Is(err, errNoOpeners) {
+		t.Errorf("open() error = %v, want %v", err, errNoOpeners)
 	}
 }

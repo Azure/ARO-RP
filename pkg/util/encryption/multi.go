@@ -67,9 +67,15 @@ func WithLogger(log *logrus.Entry) Option {
 }
 
 // WithMinRefreshInterval overrides how often a failure to open may cause the
-// keys to be re-enumerated.
+// keys to be re-enumerated. Non-positive durations are ignored, since they
+// would let every failed open reach Key Vault, and the failures this exists to
+// answer arrive in bursts.
 func WithMinRefreshInterval(d time.Duration) Option {
-	return func(m *multi) { m.minRefreshInterval = d }
+	return func(m *multi) {
+		if d > 0 {
+			m.minRefreshInterval = d
+		}
+	}
 }
 
 func NewMulti(ctx context.Context, serviceKeyvault azsecrets.Client, secretName, legacySecretName string, opts ...Option) (AEAD, error) {
@@ -95,9 +101,19 @@ func newMulti(ctx context.Context, loader keyLoader, opts ...Option) (*multi, er
 	if err != nil {
 		return nil, err
 	}
+	if keys == nil {
+		return nil, errNoOpeners
+	}
 
 	m.keys.Store(keys)
-	m.lastRefreshed = m.now()
+
+	// lastRefreshed is deliberately left at its zero value rather than set to
+	// now. Recording the construction load here would rate-limit the first
+	// failure-triggered refresh for minRefreshInterval, and a process which
+	// starts just before a new key version is written would then be unable to
+	// recover for that whole window — which is the case this type exists for.
+	// The cost of leaving it zero is one extra enumeration if the first
+	// document opened is genuinely undecryptable.
 
 	return m, nil
 }
@@ -140,7 +156,7 @@ func (c *multi) Open(input []byte) ([]byte, error) {
 }
 
 func open(keys *keySet, input []byte) ([]byte, error) {
-	if len(keys.openers) == 0 {
+	if keys == nil || len(keys.openers) == 0 {
 		return nil, errNoOpeners
 	}
 
@@ -185,6 +201,9 @@ func (c *multi) refresh() {
 	defer cancel()
 
 	keys, err := c.loader.load(ctx)
+	if err == nil && keys == nil {
+		err = errNoOpeners
+	}
 	if err != nil {
 		if c.log != nil {
 			c.log.Warnf("failed refreshing encryption keys: %v", err)
