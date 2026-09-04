@@ -35,6 +35,9 @@ func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, 
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
 
 	for _, s := range workerProfiles {
+		if s.SubnetID == "" {
+			continue
+		}
 		if strings.EqualFold(subnetID, s.SubnetID) {
 			isWorkerSubnet = true
 			break
