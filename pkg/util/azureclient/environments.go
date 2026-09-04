@@ -117,9 +117,15 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 func (e *AROEnvironment) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
 	policies := []policy.Policy{NewLoggingPolicy()}
 	if ff := common.NewFirstFailPolicy(); ff != nil {
-		// fault injector is in PerCallPolicies (before the SDK retry loop), so injected errors
-		// are presented to the retry machinery and logged by NewLoggingPolicy() at index 0.
+		// Sync fault injector: injects 409/429 errors on the first write to each distinct URL.
+		// Placed before the SDK retry loop so injected errors are presented to the retry machinery.
 		policies = append(policies, ff)
+	}
+	if lro := common.NewLROPollFaultPolicy(); lro != nil {
+		// LRO fault injector: observes real ARM 202 responses and injects a 200 Failed on the
+		// first poll, exercising the LRO error-handling path. Placed after the sync injector so
+		// only actual LRO call paths (those ARM responds to with 202) are affected.
+		policies = append(policies, lro)
 	}
 	return &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{

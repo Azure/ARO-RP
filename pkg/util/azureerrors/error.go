@@ -405,7 +405,7 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true for transient ARM errors: 429, 409+Retry-After, 409+transientConflictBody, or "RetryableError" in the message.
+// IsRetryableError returns true for transient ARM errors: 429, Retry-After header present, transientConflictBody, or "RetryableError" in the message.
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
@@ -424,13 +424,8 @@ func IsRetryableError(err error) bool {
 		if responseError.StatusCode == http.StatusTooManyRequests {
 			return true
 		}
-		if responseError.StatusCode == http.StatusConflict {
-			if responseError.RawResponse != nil && responseError.RawResponse.Header.Get("Retry-After") != "" {
-				return true
-			}
-			if strings.Contains(errMsg, transientConflictBody) {
-				return true
-			}
+		if responseError.RawResponse != nil && responseError.RawResponse.Header.Get("Retry-After") != "" {
+			return true
 		}
 	}
 
@@ -439,14 +434,13 @@ func IsRetryableError(err error) bool {
 		if detailedErr.StatusCode == http.StatusTooManyRequests {
 			return true
 		}
-		if detailedErr.StatusCode == http.StatusConflict {
-			if detailedErr.Response != nil && detailedErr.Response.Header.Get("Retry-After") != "" {
-				return true
-			}
-			if strings.Contains(errMsg, transientConflictBody) {
-				return true
-			}
+		if detailedErr.Response != nil && detailedErr.Response.Header.Get("Retry-After") != "" {
+			return true
 		}
+	}
+
+	if strings.Contains(errMsg, transientConflictBody) {
+		return true
 	}
 
 	// AADSTS errors indicate transient AAD token propagation failures (e.g. newly
