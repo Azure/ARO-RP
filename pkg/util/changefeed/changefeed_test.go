@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -229,6 +230,52 @@ func TestChangefeedEmitsFailureMetrics(t *testing.T) {
 			assert.Equal(t, tt.wantFailures, m.gauges[MetricConsecutiveFailures], MetricConsecutiveFailures)
 			assert.Len(t, m.gauges[MetricStaleness], len(tt.errs), MetricStaleness+" is emitted on every poll")
 			assert.Equal(t, map[string]string{"name": "OpenShiftClusterDocument"}, m.dimensions[MetricConsecutiveFailures], "dimensions")
+		})
+	}
+}
+
+// skippingChangefeed reports skipped pages, as the resilient iterator does.
+type skippingChangefeed struct {
+	*scriptedChangefeed
+	skipped int
+}
+
+func (f *skippingChangefeed) PagesSkipped() int { return f.skipped }
+
+func TestChangefeedEmitsSkippedPagesOnlyWhenReported(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		iterator func(*scriptedChangefeed) database.DocumentIterator[*api.OpenShiftClusterDocument, *api.OpenShiftClusterDocuments]
+		want     []int64
+	}{
+		{
+			// An iterator which cannot skip must not emit the metric at all,
+			// rather than emitting a permanent zero which would read as a
+			// feed known to have lost nothing.
+			name: "an iterator which cannot skip reports nothing",
+			iterator: func(s *scriptedChangefeed) database.DocumentIterator[*api.OpenShiftClusterDocument, *api.OpenShiftClusterDocuments] {
+				return s
+			},
+		},
+		{
+			name: "a skipped page stays visible after the feed recovers",
+			iterator: func(s *scriptedChangefeed) database.DocumentIterator[*api.OpenShiftClusterDocument, *api.OpenShiftClusterDocuments] {
+				return &skippingChangefeed{scriptedChangefeed: s, skipped: 2}
+			},
+			want: []int64{2, 2},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
+			stopChan := make(chan struct{})
+			m := newRecordingEmitter()
+			s := &scriptedChangefeed{errs: []error{errors.New("test error"), nil}, stopChan: stopChan}
+
+			RunChangefeed(t.Context(), log, m, "OpenShiftClusterDocument",
+				tt.iterator(s), time.Millisecond, 1, &fakeResponder{}, stopChan)
+
+			assert.Equal(t, tt.want, m.gauges[MetricPagesSkipped], MetricPagesSkipped)
 		})
 	}
 }

@@ -99,6 +99,9 @@ func TestChangeFeedAdvancesPastAnUnreadablePage(t *testing.T) {
 		if got := i.Continuation(); got != startPosition {
 			t.Errorf("iterator.Continuation() = %q after %d of %d tolerated failures, want %q", got, attempt, maxFailures, startPosition)
 		}
+		if got := i.PagesSkipped(); got != 0 {
+			t.Errorf("iterator.PagesSkipped() = %d after %d of %d tolerated failures, want 0", got, attempt, maxFailures)
+		}
 	}
 
 	nextExpectingFailure(t, i, maxFailures)
@@ -108,6 +111,12 @@ func TestChangeFeedAdvancesPastAnUnreadablePage(t *testing.T) {
 	}
 	if len(h.Entries) != 1 {
 		t.Errorf("logged %d entries, want 1 reporting the skipped page", len(h.Entries))
+	}
+	// The skip must remain countable after the fact. consecutiveFailures is
+	// reset by the advance, so without this the only surviving evidence that a
+	// page was never delivered is the log line above.
+	if got := i.PagesSkipped(); got != 1 {
+		t.Errorf("iterator.PagesSkipped() = %d after a page was skipped, want 1", got)
 	}
 }
 
