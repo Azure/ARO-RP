@@ -18,7 +18,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func TestClusterServidePrincipalEnricherTask(t *testing.T) {
+func TestClusterServicePrincipalEnricherTask(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
 	name := "azure-credentials"
