@@ -216,7 +216,6 @@ func TestLogLoadBalancers(t *testing.T) {
 			hook, log := testlog.New()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockEnv := mock_env.NewMockInterface(controller)
 			mockEnv.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)

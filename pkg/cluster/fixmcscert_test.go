@@ -4,7 +4,6 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
@@ -13,6 +12,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
@@ -31,6 +31,7 @@ import (
 	mock_graph "github.com/Azure/ARO-RP/pkg/util/mocks/graph"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestFixMCSCert(t *testing.T) {
@@ -48,7 +49,7 @@ func TestFixMCSCert(t *testing.T) {
 		name             string
 		manager          func(*gomock.Controller, *bool) (*manager, error)
 		wantDeleteCalled bool
-		want             string
+		wantSkip         bool
 	}{
 		{
 			name: "basic",
@@ -128,6 +129,7 @@ func TestFixMCSCert(t *testing.T) {
 				}, nil
 			},
 			wantDeleteCalled: true,
+			wantSkip:         false,
 		},
 		{
 			name: "noop",
@@ -179,6 +181,7 @@ func TestFixMCSCert(t *testing.T) {
 					}),
 				}, nil
 			},
+			wantSkip: false,
 		},
 		{
 			name: "cluster version >= 4.19.0",
@@ -199,35 +202,41 @@ func TestFixMCSCert(t *testing.T) {
 					}),
 				}, nil
 			},
-			want: "Skipping FixMCSCert step for cluster version",
+			wantSkip: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			hook, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			var deleteCalled bool
 			m, err := tt.manager(controller, &deleteCalled)
 			if err != nil {
 				t.Error(err)
 			}
-
-			var logBuffer bytes.Buffer
-			logger := logrus.New()
-			logger.SetOutput(&logBuffer)
-			m.log = logrus.NewEntry(logger)
+			m.log = log
 
 			err = m.fixMCSCert(ctx)
 			if err != nil {
 				t.Error(err)
 			}
 
-			if bytes.Contains(logBuffer.Bytes(), []byte(tt.want)) {
-				return
-			}
-
 			if deleteCalled != tt.wantDeleteCalled {
 				t.Error(deleteCalled)
+			}
+
+			if tt.wantSkip {
+				err = testlog.AssertLoggingOutput(hook, []testlog.ExpectedLogEntry{
+					{
+						"msg":   gomega.Equal("Skipping FixMCSCert step for cluster version 4.19.1 >= 4.19.0"),
+						"level": gomega.Equal(logrus.InfoLevel),
+					},
+				})
+				if err != nil {
+					t.Error(err)
+				}
+				return
 			}
 
 			s, err := m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get(ctx, "machine-config-server-tls", metav1.GetOptions{})

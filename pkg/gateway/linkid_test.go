@@ -89,7 +89,6 @@ func TestGatewayVerification(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			mockController := gomock.NewController(t)
-			defer mockController.Finish()
 
 			gatewayMap := map[string]*api.Gateway{
 				"1":        {ID: "1", StorageSuffix: "suffix-1", ImageRegistryStorageAccountName: "account1"},

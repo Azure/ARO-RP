@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -39,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeleteNic(t *testing.T) {
@@ -112,7 +112,6 @@ func TestDeleteNic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
@@ -121,8 +120,9 @@ func TestDeleteNic(t *testing.T) {
 
 			tt.mocks(armNetworkInterfaces)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -199,13 +199,13 @@ func TestShouldDeleteResourceGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().Get(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.getResourceGroup, tt.getErr)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID: clusterResourceId,
@@ -267,13 +267,13 @@ func TestDeleteResourceGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resourceGroups := mock_features.NewMockResourceGroupsClient(controller)
 			resourceGroups.EXPECT().DeleteAndWait(gomock.Any(), gomock.Eq(managedRGName)).Return(tt.deleteErr).Times(1)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID: clusterResourceId,
@@ -381,15 +381,15 @@ func TestDisconnectSecurityGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
 			subnets := mock_armnetwork.NewMockSubnetsClient(controller)
 
 			tt.mocks(securityGroups, subnets)
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				armSecurityGroups: securityGroups,
 				armSubnets:        subnets,
 			}
@@ -415,7 +415,6 @@ func TestDisconnectSecurityGroupRetryExhausted(t *testing.T) {
 	subnetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet", subscription, resourceGroup)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	securityGroups := mock_armnetwork.NewMockSecurityGroupsClient(controller)
 	subnets := mock_armnetwork.NewMockSubnetsClient(controller)
@@ -440,8 +439,9 @@ func TestDisconnectSecurityGroupRetryExhausted(t *testing.T) {
 		autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
 	)
 
+	_, log := testlog.LogForTesting(t)
 	m := manager{
-		log:               logrus.NewEntry(logrus.StandardLogger()),
+		log:               log,
 		armSecurityGroups: securityGroups,
 		armSubnets:        subnets,
 	}
@@ -537,10 +537,10 @@ func TestDeleteClusterMsiCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: tt.doc,
 			}
 
@@ -999,7 +999,6 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			federatedIdentityCredentials := mock_armmsi.NewMockFederatedIdentityCredentialsClient(controller)
 			if tt.mocks != nil {
@@ -1021,8 +1020,9 @@ func TestDeleteFederatedCredentials(t *testing.T) {
 			}
 			factory.EXPECT().NewClient(gomock.Any()).Return(client, nil).AnyTimes()
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log:                                    logrus.NewEntry(logrus.StandardLogger()),
+				log:                                    log,
 				doc:                                    tt.doc,
 				clusterMsiFederatedIdentityCredentials: federatedIdentityCredentials,
 				clusterMsiKeyVaultStore:                mockKvClient,
@@ -1101,7 +1101,6 @@ func TestDeleteResourcesRetry(t *testing.T) {
 			defer func() { arm.TransientBackoff = origBackoff }()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			resources := mock_features.NewMockResourcesClient(controller)
 			resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(
@@ -1120,8 +1119,9 @@ func TestDeleteResourcesRetry(t *testing.T) {
 			).After(first)
 			resources.EXPECT().Client().Return(autorest.Client{})
 
+			_, log := testlog.LogForTesting(t)
 			m := manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -1151,7 +1151,6 @@ func TestDeleteResourcesRetryExhausted(t *testing.T) {
 	resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/publicIPAddresses/test-pip", subscription, resourceGroup)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	resources := mock_features.NewMockResourcesClient(controller)
 	resources.EXPECT().ListByResourceGroup(gomock.Any(), resourceGroup, "", "", nil).Return(
@@ -1166,8 +1165,9 @@ func TestDeleteResourcesRetryExhausted(t *testing.T) {
 		mgmtfeatures.ResourcesDeleteByIDFuture{}, autorest.DetailedError{StatusCode: http.StatusTooManyRequests},
 	)
 
+	_, log := testlog.LogForTesting(t)
 	m := manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{

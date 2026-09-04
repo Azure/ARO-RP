@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminPostExec(t *testing.T) {
@@ -312,8 +313,9 @@ func TestAdminPostExec(t *testing.T) {
 
 // TestExecContainerStream_StderrSuppressedOnCancellation verifies stderr is suppressed on cancel.
 func TestExecContainerStream_StderrSuppressedOnCancellation(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -330,7 +332,7 @@ func TestExecContainerStream_StderrSuppressedOnCancellation(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	execContainerStream(ctx, logrus.NewEntry(logrus.New()), k, "openshift-etcd", "etcd-master-0", "etcdctl", []string{"sh", "-c"}, "sleep 60", wc)
+	execContainerStream(ctx, log, k, "openshift-etcd", "etcd-master-0", "etcdctl", []string{"sh", "-c"}, "sleep 60", wc)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -342,8 +344,9 @@ func TestExecContainerStream_StderrSuppressedOnCancellation(t *testing.T) {
 
 // TestExecContainerStream_ContextCancellation verifies cancel causes a clean return.
 func TestExecContainerStream_ContextCancellation(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -359,7 +362,7 @@ func TestExecContainerStream_ContextCancellation(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	execContainerStream(ctx, logrus.NewEntry(logrus.New()), k, "openshift-etcd", "etcd-master-0", "etcdctl", []string{"sh", "-c"}, "sleep 60", wc)
+	execContainerStream(ctx, log, k, "openshift-etcd", "etcd-master-0", "etcdctl", []string{"sh", "-c"}, "sleep 60", wc)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")
@@ -369,8 +372,9 @@ func TestExecContainerStream_ContextCancellation(t *testing.T) {
 // TestExecContainerStream_NilReturnAfterCancel verifies that when KubeExecStream returns nil
 // but the context was already cancelled, "Done." is not written to the stream.
 func TestExecContainerStream_NilReturnAfterCancel(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -386,7 +390,7 @@ func TestExecContainerStream_NilReturnAfterCancel(t *testing.T) {
 
 	var buf bytes.Buffer
 	wc := &testWriteCloser{Buffer: &buf}
-	execContainerStream(ctx, logrus.NewEntry(logrus.New()), k, "openshift-etcd", "etcd-master-0", "etcdctl", []string{"sh", "-c"}, "sleep 60", wc)
+	execContainerStream(ctx, log, k, "openshift-etcd", "etcd-master-0", "etcdctl", []string{"sh", "-c"}, "sleep 60", wc)
 
 	if !wc.closed {
 		t.Error("expected Close to be called on the WriteCloser")

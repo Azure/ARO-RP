@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -17,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -547,7 +547,6 @@ func TestFixSSH(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			armInterfaces := mock_armnetwork.NewMockInterfacesClient(ctrl)
 			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(ctrl)
@@ -651,8 +650,9 @@ func TestFixSSH(t *testing.T) {
 				outboundType = api.OutboundTypeUserDefinedRouting
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{

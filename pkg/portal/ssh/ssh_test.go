@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -25,6 +24,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestNew(t *testing.T) {
@@ -123,6 +123,8 @@ func TestNew(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			dbPortal, portalClient := testdatabase.NewFakePortal()
@@ -144,12 +146,10 @@ func TestNew(t *testing.T) {
 			r.Header.Set("Content-Type", "application/json")
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
 			env := mock_env.NewMockCore(ctrl)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
-			s, err := New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil)
+			s, err := New(env, log, nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -21,6 +20,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -401,8 +401,9 @@ func TestDeleteManagedResource(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
@@ -412,7 +413,7 @@ func TestDeleteManagedResource(t *testing.T) {
 			tt.mocks(resources, loadBalancers)
 
 			a := azureActions{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				env: env,
 				oc: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{

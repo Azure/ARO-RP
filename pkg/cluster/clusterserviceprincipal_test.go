@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 	"github.com/Azure/ARO-RP/test/util/serversideapply"
 )
 
@@ -47,8 +47,9 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 	resourceGroupID := fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName)
 	assignmentName := "assignment"
 
+	_, log := testlog.LogForTesting(t)
 	m := &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -143,7 +144,6 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			roleAssignments := mock_authorization.NewMockRoleAssignmentsClient(controller)
 			roleDefinitions := mock_authorization.NewMockRoleDefinitionsClient(controller)

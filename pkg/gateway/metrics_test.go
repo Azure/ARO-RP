@@ -34,7 +34,6 @@ func TestEmitMetrics(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			mockController := gomock.NewController(t)
-			defer mockController.Finish()
 			mock_metrics := mock_metrics.NewMockEmitter(mockController)
 
 			mock_metrics.EXPECT().EmitGauge("gateway.connections.open", tt.httpConnections, map[string]string{"protocol": "http"}).Times(1)
