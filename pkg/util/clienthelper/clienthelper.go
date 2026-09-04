@@ -290,6 +290,10 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 	case *machinev1beta1.MachineHealthCheck:
 		old, new := old.(*machinev1beta1.MachineHealthCheck), new.(*machinev1beta1.MachineHealthCheck)
 		new.Status = old.Status
+
+		if old.Spec.MaxUnhealthy != nil {
+			new.Spec.MaxUnhealthy = old.Spec.MaxUnhealthy
+		}
 	}
 
 	diffContent := strings.TrimSpace(cmp.Diff(old, new))
