@@ -433,12 +433,13 @@ func TestMinimumWorkerNodesReady_QuotaError(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			objs := make([]runtime.Object, len(tt.machines))
 			for i, m := range tt.machines {
 				objs[i] = m
 			}
 			mgr := &manager{
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				maocli:        machinefake.NewSimpleClientset(objs...),
 				kubernetescli: fake.NewSimpleClientset(),
 			}

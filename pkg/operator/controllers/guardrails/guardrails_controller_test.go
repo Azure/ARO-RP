@@ -440,7 +440,6 @@ func TestIsMandatoryVAPResource(t *testing.T) {
 
 func TestEnsureMandatoryVAP(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	ensured := map[string]*unstructured.Unstructured{}
 	dh := mock_dynamichelper.NewMockInterface(controller)

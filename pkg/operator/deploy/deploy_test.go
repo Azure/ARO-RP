@@ -468,10 +468,7 @@ func TestOperatorVersion(t *testing.T) {
 }
 
 func TestOperatorResourceRequests(t *testing.T) {
-	ctx := context.Background()
-
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
@@ -502,7 +499,7 @@ func TestOperatorResourceRequests(t *testing.T) {
 		client: ch,
 	}
 
-	staticResources, err := o.createObjects(ctx)
+	staticResources, err := o.createObjects(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
