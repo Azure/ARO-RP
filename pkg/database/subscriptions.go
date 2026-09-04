@@ -115,7 +115,7 @@ func (c *subscriptions) update(ctx context.Context, doc *api.SubscriptionDocumen
 }
 
 func (c *subscriptions) ChangeFeed() cosmosdb.SubscriptionDocumentIterator {
-	return c.c.ChangeFeed(nil)
+	return cosmosdb.NewResilientSubscriptionDocumentChangeFeed(c.c, nil)
 }
 
 func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument, error) {

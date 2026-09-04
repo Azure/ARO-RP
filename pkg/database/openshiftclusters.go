@@ -243,7 +243,7 @@ func (c *openShiftClusters) Delete(ctx context.Context, doc *api.OpenShiftCluste
 }
 
 func (c *openShiftClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator {
-	return c.c.ChangeFeed(nil)
+	return cosmosdb.NewResilientOpenShiftClusterDocumentChangeFeed(c.c, nil)
 }
 
 func (c *openShiftClusters) List(continuation string) cosmosdb.OpenShiftClusterDocumentIterator {
