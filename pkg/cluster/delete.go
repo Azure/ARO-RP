@@ -631,7 +631,7 @@ func (m *manager) Delete(ctx context.Context) error {
 			return err
 		}
 
-		rp := acrManager.GetRegistryProfile(m.doc.OpenShiftCluster)
+		rp := m.doc.OpenShiftCluster.GetRegistryProfile(m.env.ACRDomain())
 		if rp != nil {
 			err = acrManager.Delete(ctx, rp)
 			if err != nil {
