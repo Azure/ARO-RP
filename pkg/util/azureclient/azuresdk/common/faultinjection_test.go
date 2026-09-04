@@ -6,7 +6,6 @@ package common
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -98,6 +97,29 @@ func TestNewFirstFailPolicy(t *testing.T) {
 	})
 }
 
+func TestNewLROPollFaultPolicy(t *testing.T) {
+	t.Run("returns nil when env var unset", func(t *testing.T) {
+		t.Setenv(EnvFaultInjectFirst, "")
+		if got := NewLROPollFaultPolicy(); got != nil {
+			t.Errorf("expected nil, got %T", got)
+		}
+	})
+
+	t.Run("returns nil for unknown scenarios only", func(t *testing.T) {
+		t.Setenv(EnvFaultInjectFirst, "NotAScenario")
+		if got := NewLROPollFaultPolicy(); got != nil {
+			t.Errorf("expected nil, got %T", got)
+		}
+	})
+
+	t.Run("returns policy for known scenario", func(t *testing.T) {
+		t.Setenv(EnvFaultInjectFirst, "TooManyRequests")
+		if got := NewLROPollFaultPolicy(); got == nil {
+			t.Error("expected non-nil policy")
+		}
+	})
+}
+
 func TestScenarioResponse(t *testing.T) {
 	tests := []struct {
 		scenario        string
@@ -177,7 +199,7 @@ func TestScenarioResponse(t *testing.T) {
 // TestFirstFailPolicyDo verifies per-URL inject-once behavior.
 func TestFirstFailPolicyDo(t *testing.T) {
 	newPolicy := func(scenarios []faultScenario, srvHost string) *firstFailPolicy {
-		return &firstFailPolicy{scenarios: scenarios, host: srvHost, injected: make(map[string]struct{}), lroPending: make(map[string]faultScenario)}
+		return &firstFailPolicy{scenarios: scenarios, host: srvHost, injected: make(map[string]struct{})}
 	}
 
 	t.Run("first write to a URL injects; retry to same URL passes; scenarios rotate across URLs", func(t *testing.T) {
@@ -214,14 +236,12 @@ func TestFirstFailPolicyDo(t *testing.T) {
 		urlA := srv.URL() + "?resource=a"
 		urlB := srv.URL() + "?resource=b"
 
-		// First PUT to each URL: injected (any non-200 status or 202).
-		gotA := put(urlA)
-		if gotA == http.StatusOK {
-			t.Errorf("URL_A first PUT: expected injection, got 200")
+		// First PUT to each URL injects the scenario in rotation order.
+		if got := put(urlA); got != http.StatusConflict {
+			t.Errorf("URL_A first PUT: got %d, want %d (ConflictingConcurrentWriteNotAllowed)", got, http.StatusConflict)
 		}
-		gotB := put(urlB)
-		if gotB == http.StatusOK {
-			t.Errorf("URL_B first PUT: expected injection, got 200")
+		if got := put(urlB); got != http.StatusTooManyRequests {
+			t.Errorf("URL_B first PUT: got %d, want %d (TooManyRequests)", got, http.StatusTooManyRequests)
 		}
 
 		// Retry PUT to each URL: passes through to server (200).
@@ -307,10 +327,10 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			srv.URL() + "?ip=d",
 		}
 
-		// First PUT to each URL: injected (any non-200 status or 202).
+		// First PUT to each URL: injected with TooManyRequests (429).
 		for _, u := range urls {
-			if got := put(u); got == http.StatusOK {
-				t.Errorf("PUT %s first call: expected injection, got 200", u)
+			if got := put(u); got != http.StatusTooManyRequests {
+				t.Errorf("PUT %s first call: got %d, want %d", u, got, http.StatusTooManyRequests)
 			}
 		}
 		// Retry to each URL: passes through (URL already marked).
@@ -324,34 +344,71 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			t.Errorf("server received %d requests, want 4 (only retries pass through)", got)
 		}
 	})
+}
 
-	t.Run("LRO path: lroPending intercepted once then cleared", func(t *testing.T) {
+// TestLROFirstFailPolicyDo verifies that lroPollFaultPolicy observes real ARM 202 responses
+// and injects a 200 Failed on the first poll to the returned Azure-AsyncOperation URL.
+func TestLROFirstFailPolicyDo(t *testing.T) {
+	newLROPolicy := func(scenarios []faultScenario, srvHost string) *lroPollFaultPolicy {
+		return &lroPollFaultPolicy{scenarios: scenarios, host: srvHost}
+	}
+
+	t.Run("real ARM 202 triggers LRO poll injection via synthetic URL; all polls intercepted", func(t *testing.T) {
 		srv, close := testhttp.NewServer()
 		defer close()
-		// Two pass-through requests reach the server: poll retry + resource retry.
-		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
-		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+
+		// ARM returns 202 with a real Azure-AsyncOperation URL on the PUT.
+		// The policy replaces this with a synthetic URL before returning to the SDK.
+		realPollURL := srv.URL() + "/subscriptions/sub/providers/Microsoft.Compute/operations/op1"
+		srv.AppendResponse(
+			testhttp.WithStatusCode(http.StatusAccepted),
+			testhttp.WithHeader("Azure-AsyncOperation", realPollURL),
+		)
 
 		sc := faultScenarios["ConflictingConcurrentWriteNotAllowed"]
-		pollURL := fmt.Sprintf("http://%s/lro-fault/1", mustHost(srv.URL()))
-		p := newPolicy([]faultScenario{sc}, mustHost(srv.URL()))
-		p.lroPending[pollURL] = sc
-		p.injected["PUT:"+srv.URL()+"?resource=lro"] = struct{}{}
+		p := newLROPolicy([]faultScenario{sc}, mustHost(srv.URL()))
 		pl := runtime.NewPipeline("test", "v1.0.0", runtime.PipelineOptions{
 			PerCall: []policy.Policy{p},
 		}, &policy.ClientOptions{Transport: srv})
 
-		// First GET to poll URL: intercepted, returns 200 Failed.
-		req, err := runtime.NewRequest(context.Background(), http.MethodGet, pollURL)
+		// PUT: passes through to ARM; policy receives the 202, replaces Azure-AsyncOperation
+		// with a synthetic URL encoding the scenario index, returns modified 202 to caller.
+		putReq, err := runtime.NewRequest(context.Background(), http.MethodPut, srv.URL()+"?resource=r")
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp, err := pl.Do(req)
+		putResp, err := pl.Do(putReq)
+		if err != nil {
+			t.Fatalf("PUT: unexpected error: %v", err)
+		}
+		if putResp.StatusCode != http.StatusAccepted {
+			t.Fatalf("PUT: got %d, want 202", putResp.StatusCode)
+		}
+		// The returned 202 must carry a synthetic poll URL on lroFaultHost, not the real one.
+		syntheticPollURL := putResp.Header.Get("Azure-AsyncOperation")
+		if syntheticPollURL == "" {
+			t.Fatal("PUT response: Azure-AsyncOperation header missing")
+		}
+		if syntheticPollURL == realPollURL {
+			t.Errorf("PUT response: Azure-AsyncOperation was not replaced (still real URL)")
+		}
+		if !strings.Contains(syntheticPollURL, lroFaultHost) {
+			t.Errorf("PUT response: synthetic poll URL %q does not use lroFaultHost (%q)", syntheticPollURL, lroFaultHost)
+		}
+		putResp.Body.Close()
+
+		// GET to synthetic poll URL: intercepted by policy, returns 200 Failed.
+		// The scenario index is encoded in the path — no map lookup needed.
+		pollReq, err := runtime.NewRequest(context.Background(), http.MethodGet, syntheticPollURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pollResp, err := pl.Do(pollReq)
 		if err != nil {
 			t.Fatalf("poll GET: unexpected error: %v", err)
 		}
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("poll GET: got %d, want 200", resp.StatusCode)
+		if pollResp.StatusCode != http.StatusOK {
+			t.Errorf("poll GET: got %d, want 200", pollResp.StatusCode)
 		}
 		var body struct {
 			Status string `json:"status"`
@@ -360,10 +417,10 @@ func TestFirstFailPolicyDo(t *testing.T) {
 				Message string `json:"message"`
 			} `json:"error"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		if err := json.NewDecoder(pollResp.Body).Decode(&body); err != nil {
 			t.Fatalf("poll GET: body decode: %v", err)
 		}
-		resp.Body.Close()
+		pollResp.Body.Close()
 		if body.Status != "Failed" {
 			t.Errorf("poll GET: status = %q, want \"Failed\"", body.Status)
 		}
@@ -374,22 +431,51 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			t.Errorf("poll GET: message = %q, want it to contain \"Please retry later\"", body.Error.Message)
 		}
 
-		// Second GET to same poll URL: lroPending cleared, passes through to server.
-		req, err = runtime.NewRequest(context.Background(), http.MethodGet, pollURL)
+		// Server received only the PUT — all poll GETs are intercepted by the policy.
+		if got := srv.Requests(); got != 1 {
+			t.Errorf("server received %d requests, want 1 (PUT only)", got)
+		}
+	})
+
+	t.Run("non-202 response does not register poll injection", func(t *testing.T) {
+		srv, close := testhttp.NewServer()
+		defer close()
+		// ARM returns synchronous 200 (not an LRO).
+		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+		// GET passes through normally.
+		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+
+		p := newLROPolicy([]faultScenario{faultScenarios["TooManyRequests"]}, mustHost(srv.URL()))
+		pl := runtime.NewPipeline("test", "v1.0.0", runtime.PipelineOptions{
+			PerCall: []policy.Policy{p},
+		}, &policy.ClientOptions{Transport: srv})
+
+		putReq, err := runtime.NewRequest(context.Background(), http.MethodPut, srv.URL()+"?resource=r")
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp, err = pl.Do(req)
+		putResp, err := pl.Do(putReq)
 		if err != nil {
-			t.Fatalf("second poll GET: unexpected error: %v", err)
+			t.Fatalf("PUT: unexpected error: %v", err)
 		}
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("second poll GET: got %d, want 200", resp.StatusCode)
-		}
-		resp.Body.Close()
+		putResp.Body.Close()
 
-		if got := srv.Requests(); got != 1 {
-			t.Errorf("server received %d requests, want 1", got)
+		// Subsequent GET should pass through unmodified.
+		getReq, err := runtime.NewRequest(context.Background(), http.MethodGet, srv.URL()+"/anything")
+		if err != nil {
+			t.Fatal(err)
+		}
+		getResp, err := pl.Do(getReq)
+		if err != nil {
+			t.Fatalf("GET: unexpected error: %v", err)
+		}
+		if getResp.StatusCode != http.StatusOK {
+			t.Errorf("GET: got %d, want 200", getResp.StatusCode)
+		}
+		getResp.Body.Close()
+
+		if got := srv.Requests(); got != 2 {
+			t.Errorf("server received %d requests, want 2", got)
 		}
 	})
 }

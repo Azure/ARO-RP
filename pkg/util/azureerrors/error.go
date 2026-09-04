@@ -405,7 +405,7 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true for transient ARM errors: 429, 409+Retry-After, transientConflictBody, or "RetryableError" in the message.
+// IsRetryableError returns true for transient ARM errors: 429, Retry-After header present, transientConflictBody, or "RetryableError" in the message.
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false

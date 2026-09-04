@@ -33,16 +33,14 @@ const (
 	EnvFaultInjectFirst = "ARO_ARM_FAULT_FIRST"
 )
 
-// faultScenario describes a synthetic ARM error response matching a real ARM transient error.
 type faultScenario struct {
 	name   string // must match the map key in faultScenarios
 	status int
 	code   string
 	msg    string
-	// retryAfter sets the Retry-After header, exercising the header-based detection path.
+	// retryAfter sets the Retry-After header, exercising the header-based retry detection path.
 	retryAfter bool
-	// verbs restricts injection to the listed HTTP methods. Empty means any method.
-	verbs []string
+	verbs      []string // HTTP methods to inject on; empty means any method
 }
 
 var faultScenarios = map[string]faultScenario{
@@ -83,22 +81,19 @@ var faultScenarios = map[string]faultScenario{
 	},
 }
 
-// firstFailLogOnce is shared between NewFirstFailPolicy and NewFirstFailSendDecorator.
-// Both log the same startup message, so one log per process is sufficient.
+// firstFailLogOnce is shared between NewFirstFailPolicy and NewFirstFailSendDecorator
+// so both log the same startup message only once per process.
 var firstFailLogOnce sync.Once
 
 type firstFailPolicy struct {
-	scenarios  []faultScenario
-	host       string // if empty, defaults to "management.azure.com"
-	mu         sync.Mutex
-	injected   map[string]struct{}      // set of "METHOD:URL" keys already injected
-	lroPending map[string]faultScenario // poll URL -> scenario; GET to this URL returns 200 Failed
-	sceneIdx   int                      // index of the next scenario to use; always accessed under mu
+	scenarios []faultScenario
+	host      string // if empty, defaults to "management.azure.com"
+	mu        sync.Mutex
+	injected  map[string]struct{} // "METHOD:URL" keys already injected
+	sceneIdx  int                 // always accessed under mu
 }
 
-// NewFirstFailPolicy reads ARO_ARM_FAULT_FIRST and returns a policy that injects a synthetic ARM
-// error on the first write to each distinct URL, letting retries to the same URL pass through.
-// Returns nil when the env var is absent or contains no valid scenario names.
+// NewFirstFailPolicy returns nil when ARO_ARM_FAULT_FIRST is unset or contains no valid scenario names.
 func NewFirstFailPolicy() policy.Policy {
 	envVal := os.Getenv(EnvFaultInjectFirst)
 	scenarios := parseScenarios(envVal)
@@ -107,40 +102,17 @@ func NewFirstFailPolicy() policy.Policy {
 	}
 	logStartup(envVal, scenarios)
 	return &firstFailPolicy{
-		scenarios:  scenarios,
-		injected:   make(map[string]struct{}),
-		lroPending: make(map[string]faultScenario),
+		scenarios: scenarios,
+		injected:  make(map[string]struct{}),
 	}
 }
 
-// Do injects a synthetic error on the first write to each distinct URL. Subsequent requests
-// to the same URL (i.e. SDK retries) always pass through. Read verbs are never injected.
-// Scenarios rotate across distinct injected URLs, alternating between synchronous (409/429)
-// and LRO (202 + poll returning 200 Failed) delivery to exercise both code paths.
 func (p *firstFailPolicy) Do(req *policy.Request) (*http.Response, error) {
 	targetHost := p.host
 	if targetHost == "" {
 		targetHost = "management.azure.com"
 	}
 	if req.Raw().URL.Host != targetHost {
-		return req.Next()
-	}
-
-	// Check if this is a pending LRO poll GET before checking write-only logic.
-	if req.Raw().Method == http.MethodGet {
-		pollURL := req.Raw().URL.String()
-		p.mu.Lock()
-		sc, pending := p.lroPending[pollURL]
-		if pending {
-			delete(p.lroPending, pollURL)
-		}
-		p.mu.Unlock()
-		if pending {
-			logrus.Warnf("fault injected: %s LRO poll failure on %s", sc.name, utillog.Sanitize(pollURL))
-			resp := lroFailureResponse(sc)
-			resp.Request = req.Raw()
-			return resp, nil
-		}
 		return req.Next()
 	}
 
@@ -156,37 +128,100 @@ func (p *firstFailPolicy) Do(req *policy.Request) (*http.Response, error) {
 		return req.Next()
 	}
 	sc := p.scenarios[p.sceneIdx%len(p.scenarios)]
-	// Check per-scenario verb filter before consuming the injection slot, so
-	// a scenario with a narrower verb set doesn't silently burn a slot.
+	// Check the verb filter before consuming the slot: a narrow-verb scenario must not
+	// silently burn an injection slot on a method it doesn't cover.
 	if len(sc.verbs) > 0 && !slices.Contains(sc.verbs, req.Raw().Method) {
 		p.mu.Unlock()
 		return req.Next()
 	}
 	p.injected[key] = struct{}{}
-	useLRO := p.sceneIdx%2 == 1
 	p.sceneIdx++
-	var pollURL string
-	if useLRO {
-		pollURL = fmt.Sprintf("http://%s/lro-fault/%d", targetHost, p.sceneIdx)
-		p.lroPending[pollURL] = sc
-	}
 	p.mu.Unlock()
 
-	logrus.Warnf("fault injected: %s on %s %s", sc.name, utillog.Sanitize(req.Raw().Method), utillog.Sanitize(req.Raw().URL.String()))
-	if useLRO {
-		resp := lroAcceptedResponse(pollURL)
-		resp.Request = req.Raw()
-		return resp, nil
-	}
+	logrus.Warnf("fault injected: %s (%d) on %s %s", sc.name, sc.status, utillog.Sanitize(req.Raw().Method), utillog.Sanitize(req.Raw().URL.String()))
 	resp := scenarioResponse(sc)
 	resp.Request = req.Raw()
 	return resp, nil
 }
 
+// lroFaultHost is used for synthetic LRO poll URLs. The .test TLD (RFC 6761) is guaranteed
+// never to resolve in real DNS.
+const lroFaultHost = "fault-injection.test"
+
+// lroPollFaultPolicy injects LRO failures on ARM call paths that actually return 202.
+// When ARM responds with 202 and an Azure-AsyncOperation header, this policy replaces
+// that header with a synthetic URL on lroFaultHost encoding the scenario index:
+//
+//	https://fault-injection.test/lro-fault/<idx>
+//
+// This is deliberately separate from firstFailPolicy because LRO injection must be tied
+// to real LRO responses, not to arbitrary writes.
+type lroPollFaultPolicy struct {
+	scenarios []faultScenario
+	host      string // if empty, defaults to "management.azure.com"
+	mu        sync.Mutex
+	sceneIdx  int // always accessed under mu
+}
+
+// NewLROPollFaultPolicy returns nil when ARO_ARM_FAULT_FIRST is unset or contains no valid scenario names.
+func NewLROPollFaultPolicy() policy.Policy {
+	envVal := os.Getenv(EnvFaultInjectFirst)
+	scenarios := parseScenarios(envVal)
+	if len(scenarios) == 0 {
+		return nil
+	}
+	return &lroPollFaultPolicy{
+		scenarios: scenarios,
+	}
+}
+
+func (p *lroPollFaultPolicy) Do(req *policy.Request) (*http.Response, error) {
+	targetHost := p.host
+	if targetHost == "" {
+		targetHost = "management.azure.com"
+	}
+
+	// lroFaultHost GETs must reach this policy even though they're not on targetHost.
+	if req.Raw().URL.Host != targetHost && req.Raw().URL.Host != lroFaultHost {
+		return req.Next()
+	}
+
+	if req.Raw().Method == http.MethodGet && req.Raw().URL.Host == lroFaultHost {
+		var sceneIdx int
+		if n, _ := fmt.Sscanf(req.Raw().URL.Path, "/lro-fault/%d", &sceneIdx); n == 1 {
+			sc := p.scenarios[sceneIdx%len(p.scenarios)]
+			logrus.Warnf("fault injected: %s LRO poll failure on %s", sc.name, utillog.Sanitize(req.Raw().URL.String()))
+			resp := lroFailureResponse(sc)
+			resp.Request = req.Raw()
+			return resp, nil
+		}
+		return req.Next()
+	}
+
+	resp, err := req.Next()
+	if err != nil || resp == nil {
+		return resp, err
+	}
+
+	// Replace the real poll URL with a synthetic one encoding the scenario index.
+	// The index is decoded from the path on the GET, so no map state is needed.
+	if resp.StatusCode == http.StatusAccepted && resp.Header.Get("Azure-AsyncOperation") != "" {
+		p.mu.Lock()
+		idx := p.sceneIdx
+		p.sceneIdx++
+		p.mu.Unlock()
+		syntheticPollURL := fmt.Sprintf("https://%s/lro-fault/%d", lroFaultHost, idx)
+		resp.Header.Set("Azure-AsyncOperation", syntheticPollURL)
+		logrus.Warnf("fault pending: %s LRO poll injection set for %s", p.scenarios[idx%len(p.scenarios)].name, utillog.Sanitize(syntheticPollURL))
+	}
+
+	return resp, nil
+}
+
 // NewFirstFailSendDecorator applies the same first-fail logic as NewFirstFailPolicy for autorest
 // senders. Returns nil when the env var is absent.
-// IMPORTANT: apply only to management-plane senders; unlike firstFailPolicy there is no host
-// filter; correctness relies on DecorateSenderWithLogging being wired to management-plane clients only.
+// IMPORTANT: unlike firstFailPolicy there is no host filter; apply only to management-plane
+// senders. Correctness relies on DecorateSenderWithLogging being wired to those clients only.
 func NewFirstFailSendDecorator() autorest.SendDecorator {
 	envVal := os.Getenv(EnvFaultInjectFirst)
 	scenarios := parseScenarios(envVal)
@@ -211,8 +246,8 @@ func NewFirstFailSendDecorator() autorest.SendDecorator {
 				return s.Do(r)
 			}
 			sc := scenarios[sceneIdx%len(scenarios)]
-			// Check per-scenario verb filter before consuming the injection slot,
-			// so a scenario with a narrower verb set doesn't silently burn a slot.
+			// Check the verb filter before consuming the slot: a narrow-verb scenario must not
+			// silently burn an injection slot on a method it doesn't cover.
 			if len(sc.verbs) > 0 && !slices.Contains(sc.verbs, r.Method) {
 				mu.Unlock()
 				return s.Do(r)
@@ -222,7 +257,7 @@ func NewFirstFailSendDecorator() autorest.SendDecorator {
 			mu.Unlock()
 			logrus.Warnf("fault injected: %s (%d) on %s %s", sc.name, sc.status, utillog.Sanitize(r.Method), utillog.Sanitize(r.URL.String()))
 			resp := scenarioResponse(sc)
-			resp.Request = r // createPollingTracker dispatches on resp.Request.Method; nil → panic
+			resp.Request = r // autorest dispatches on resp.Request.Method; nil causes a panic
 			return resp, nil
 		})
 	}
@@ -253,21 +288,8 @@ func scenarioResponse(sc faultScenario) *http.Response {
 	}
 }
 
-// lroAcceptedResponse returns a 202 Accepted with an Azure-AsyncOperation header pointing to
-// pollURL, starting an LRO that the SDK will poll.
-func lroAcceptedResponse(pollURL string) *http.Response {
-	h := http.Header{}
-	h.Set("Azure-AsyncOperation", pollURL)
-	return &http.Response{
-		StatusCode: http.StatusAccepted,
-		Status:     "202 Accepted",
-		Header:     h,
-		Body:       io.NopCloser(strings.NewReader("")),
-	}
-}
-
-// lroFailureResponse returns a 200 OK with status=Failed, matching the ARM async operation
-// failure body shape that the azcore poller produces when an LRO terminates with an error.
+// lroFailureResponse returns a 200 OK with status=Failed — the ARM async operation terminal
+// failure shape. A 200 (not 4xx) is correct: the poll itself succeeded; the operation failed.
 func lroFailureResponse(sc faultScenario) *http.Response {
 	body := fmt.Sprintf(`{"status":"Failed","error":{"code":%q,"message":%q}}`, sc.code, sc.msg)
 	return &http.Response{
