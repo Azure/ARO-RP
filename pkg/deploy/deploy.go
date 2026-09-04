@@ -73,6 +73,7 @@ type deployer struct {
 	config      *RPConfig
 	version     string
 	vmssCleaner vmsscleaner.Interface
+	forceNSGs   bool
 }
 
 // KnownDeploymentErrorType represents a type of error we encounter during an
@@ -152,6 +153,9 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 		config:      config,
 		version:     version,
 		vmssCleaner: vmsscleaner.New(_env.LoggerForComponent("vmsscleaner"), vmssClient),
+		// TODO(ARO-20087): revert forceNSGs to false (or make configurable)
+		// once tagged IP migration is complete across all regions.
+		forceNSGs: true,
 	}, nil
 }
 
