@@ -24,7 +24,19 @@ const (
 	// MetricConsecutiveFailures is the number of polls which have failed in
 	// succession. It tells a stalled feed apart from a quiet one.
 	MetricConsecutiveFailures = "changefeed.poll.failures"
+
+	// MetricPagesSkipped is the number of pages the feed has given up on and
+	// advanced past, whose contents were therefore never delivered. It only
+	// rises, so that a skip stays visible after the feed recovers and the
+	// failure count resets.
+	MetricPagesSkipped = "changefeed.pages.skipped"
 )
+
+// A skipReporter is an iterator which can say how many pages it has given up
+// on. Iterators which cannot skip do not implement it, and report nothing.
+type skipReporter interface {
+	PagesSkipped() int
+}
 
 // Generic interface of a consumer that NewChangefeed will call with documents,
 // completed pages, etc.
@@ -105,6 +117,10 @@ func RunChangefeed[F any, X api.DocumentList[F]](
 		// report, which is how a month-long stall went unnoticed.
 		m.EmitGauge(MetricStaleness, int64(time.Since(lastSuccessfulPoll).Seconds()), dimensions)
 		m.EmitGauge(MetricConsecutiveFailures, int64(consecutiveFailures), dimensions)
+
+		if s, ok := iterator.(skipReporter); ok {
+			m.EmitGauge(MetricPagesSkipped, int64(s.PagesSkipped()), dimensions)
+		}
 
 		select {
 		case <-t.C:

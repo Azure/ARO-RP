@@ -42,6 +42,7 @@ type resilientChangeFeedIterator[T any] struct {
 	continuation        string
 	consecutiveFailures int
 	maxFailures         int
+	pagesSkipped        int
 }
 
 func newResilientChangeFeedIterator[T any](client *databaseClient, path string, options *Options, setOptions func(*Options, http.Header) error) *resilientChangeFeedIterator[T] {
@@ -126,6 +127,16 @@ func (i *resilientChangeFeedIterator[T]) onFailure(headers http.Header, err erro
 
 	i.continuation = etag
 	i.consecutiveFailures = 0
+	i.pagesSkipped++
+}
+
+// PagesSkipped is the number of pages this iterator has given up on and
+// advanced past. It only ever rises, so that a skip remains visible after the
+// feed recovers: the consecutive-failure count resets on the next success, and
+// a page whose contents were never delivered would otherwise leave nothing
+// behind but a log line.
+func (i *resilientChangeFeedIterator[T]) PagesSkipped() int {
+	return i.pagesSkipped
 }
 
 func (i *resilientChangeFeedIterator[T]) Continuation() string {
