@@ -170,7 +170,11 @@ func TestRotateACRToken(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal("Patch Secret/openshift-config/pull-secret"),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-azure-operator/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-config/pull-secret"),
 				},
 			},
 		},
