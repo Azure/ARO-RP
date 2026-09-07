@@ -211,8 +211,8 @@ func TestRotateTokenPassword(t *testing.T) {
 			if registryProfile.Password != api.SecureString(tt.wantPassword) {
 				t.Errorf("got '%s', want '%s'", registryProfile.Password, tt.wantPassword)
 			}
-			if registryProfile.IssueDate == nil || *registryProfile.IssueDate != time.UnixMilli(1000) {
-				t.Errorf("got issuedate '%s', want '%s'", registryProfile.IssueDate, time.UnixMilli(1000))
+			if registryProfile.IssueDate == nil || *registryProfile.IssueDate != time.UnixMilli(1000).UTC() {
+				t.Errorf("got issuedate '%s', want '%s'", registryProfile.IssueDate, time.UnixMilli(1000).UTC())
 			}
 		})
 	}
