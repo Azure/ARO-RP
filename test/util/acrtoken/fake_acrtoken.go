@@ -51,6 +51,6 @@ func (f *FakeACRToken) RotateTokenPassword(ctx context.Context, registryProfile 
 	newTestPassword := uuid.DefaultGenerator.Generate()
 	f.generatedPasswords = append(f.generatedPasswords, newTestPassword)
 	registryProfile.Password = api.SecureString(newTestPassword)
-	registryProfile.IssueDate = pointerutils.ToPtr(f.now())
+	registryProfile.IssueDate = pointerutils.ToPtr(f.now().UTC())
 	return nil
 }
