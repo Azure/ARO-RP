@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -315,18 +314,19 @@ func (o *resizeControlPlaneOperation) resizeNode(ctx context.Context, state *con
 }
 
 func waitForEtcdHealthy(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions) error {
-	return wait.PollUntilContextTimeout(ctx, etcdHealthPollInterval, etcdHealthPollTimeout, true, func(innerCtx context.Context) (bool, error) {
-		err := validateEtcdHealth(innerCtx, k)
-		if err != nil {
-			var cloudErr *api.CloudError
-			if errors.As(err, &cloudErr) && cloudErr.StatusCode == http.StatusConflict {
-				log.Infof("Waiting for etcd to become healthy: %v", err)
-				return false, nil
-			}
-			return false, err
+	var lastErr error
+	waitErr := wait.PollUntilContextTimeout(ctx, etcdHealthPollInterval, etcdHealthPollTimeout, true, func(innerCtx context.Context) (bool, error) {
+		lastErr = validateEtcdHealth(innerCtx, k)
+		if lastErr != nil {
+			log.Infof("Waiting for etcd to become healthy: %v", lastErr)
+			return false, nil
 		}
 		return true, nil
 	})
+	if waitErr != nil {
+		return errors.Join(waitErr, lastErr)
+	}
+	return nil
 }
 
 func ensureControlPlaneAndEtcdHealthy(ctx context.Context, k adminactions.KubeActions, nodeNames []string) error {

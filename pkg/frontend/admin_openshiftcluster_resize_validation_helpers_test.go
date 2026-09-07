@@ -447,7 +447,7 @@ func TestGetClusterMachines(t *testing.T) {
 			kubeActions := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(kubeActions)
 
-			machines, err := getClusterMachines(ctx, kubeActions)
+			machines, err := getControlPlaneMachines(ctx, kubeActions)
 
 			if tt.wantErr != "" {
 				if err == nil {

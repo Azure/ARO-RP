@@ -151,7 +151,7 @@ func TestWaitForEtcdHealthyBoundsHealthCheckByEtcdTimeout(t *testing.T) {
 
 		err := waitForEtcdHealthy(ctx, log, k)
 		assertErrorContainsAll(t, err,
-			"Failed to retrieve etcd ClusterOperator",
+			"failed to retrieve etcd ClusterOperator",
 			context.DeadlineExceeded.Error(),
 		)
 	})

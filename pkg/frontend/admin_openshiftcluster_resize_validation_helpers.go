@@ -96,7 +96,7 @@ func unmarshalAzureMachineProviderSpec(machine *machinev1beta1.Machine) (*machin
 	return providerSpec, nil
 }
 
-func getClusterMachines(ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
+func getControlPlaneMachines(ctx context.Context, kubeActions adminactions.KubeActions) (map[string]machineValidationData, error) {
 	machines := make(map[string]machineValidationData)
 
 	rawMachines, err := kubeActions.KubeList(ctx, machineGroupKind, machineNamespace)
