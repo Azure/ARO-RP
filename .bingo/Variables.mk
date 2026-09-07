@@ -125,3 +125,9 @@ $(PINACT): $(BINGO_DIR)/pinact.mod
 	@echo "(re)installing $(GOBIN)/pinact-v1.6.0"
 	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=pinact.mod -o=$(GOBIN)/pinact-v1.6.0 "github.com/suzuki-shunsuke/pinact/cmd/pinact"
 
+SETUP_ENVTEST := $(GOBIN)/setup-envtest-v0.0.0-20260125163108-a19ec76a3c5d
+$(SETUP_ENVTEST): $(BINGO_DIR)/setup-envtest.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/setup-envtest-v0.0.0-20260125163108-a19ec76a3c5d"
+	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=setup-envtest.mod -o=$(GOBIN)/setup-envtest-v0.0.0-20260125163108-a19ec76a3c5d "sigs.k8s.io/controller-runtime/tools/setup-envtest"
+
