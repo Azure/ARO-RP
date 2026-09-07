@@ -32,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmonitor"
@@ -123,6 +124,7 @@ type manager struct {
 	fpServicePrincipalID string
 
 	aroOperatorDeployer deploy.Operator
+	newACRTokenManager  func(env.Interface) (acrtoken.Manager, error)
 
 	msiDataplane                           dataplane.ClientFactory
 	clusterMsiKeyVaultStore                azsecrets.Client
@@ -309,6 +311,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 		fpServicePrincipalID:                   fpspID,
+		newACRTokenManager:                     newACRTokenManager,
 	}
 
 	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
