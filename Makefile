@@ -31,7 +31,7 @@ GATEKEEPER_VERSION = v3.19.2
 HOLMESGPT_VERSION ?= 0.36.0
 HOLMESGPT_REF ?= $(HOLMESGPT_VERSION)
 HOLMESGPT_BASE_REGISTRY ?= registry.access.redhat.com
-ENVTEST_KUBERNETES_VERSION=1.33.x! # latest 1.33, corresponds with OCP 4.20
+ENVTEST_KUBERNETES_VERSION=1.33.0 # 1.33, corresponds with OCP 4.20
 
 # Set this to the latest/current API version. TypeSpec only generates based on the latest API version.
 TYPESPEC_API_VERSION = v20250725
