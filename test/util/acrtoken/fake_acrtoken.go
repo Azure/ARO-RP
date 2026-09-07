@@ -5,20 +5,24 @@ package acrtoken
 
 import (
 	"context"
+	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type FakeACRToken struct {
+	now                func() time.Time
 	generatedPasswords []string
 }
 
 var _ acrtoken.Manager = &FakeACRToken{}
 
-func New() *FakeACRToken {
+func New(now func() time.Time) *FakeACRToken {
 	return &FakeACRToken{
+		now:                now,
 		generatedPasswords: make([]string, 0),
 	}
 }
@@ -47,5 +51,6 @@ func (f *FakeACRToken) RotateTokenPassword(ctx context.Context, registryProfile 
 	newTestPassword := uuid.DefaultGenerator.Generate()
 	f.generatedPasswords = append(f.generatedPasswords, newTestPassword)
 	registryProfile.Password = api.SecureString(newTestPassword)
+	registryProfile.IssueDate = pointerutils.ToPtr(f.now())
 	return nil
 }

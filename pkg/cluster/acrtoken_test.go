@@ -133,7 +133,7 @@ func TestRotateACRToken(t *testing.T) {
 						{
 							Name:      publicACR,
 							Username:  user,
-							IssueDate: &expiredTime,
+							IssueDate: &startOf2024,
 							Password:  api.SecureString(generated[0]),
 						},
 					},
@@ -215,7 +215,9 @@ func TestRotateACRToken(t *testing.T) {
 			fixture.AddOpenShiftClusterDocuments(doc)
 			fixture.Create()
 
-			acrManager := testacrtoken.New()
+			acrManager := testacrtoken.New(func() time.Time {
+				return startOf2024
+			})
 			hook, log := testlog.LogForTesting(t)
 
 			restConfig := testenvtest.StartTestEnvironment(t)

@@ -125,7 +125,7 @@ func TestRotateACRToken(t *testing.T) {
 						{
 							Name:      publicACR,
 							Username:  user,
-							IssueDate: &expiredTime,
+							IssueDate: &startOf2024,
 							Password:  api.SecureString(generated[0]),
 						},
 					},
@@ -215,7 +215,9 @@ func TestRotateACRToken(t *testing.T) {
 			tokensClient := mock_armcontainerregistry.NewMockTokensClient(controller)
 			registriesClient := mock_armcontainerregistry.NewMockRegistriesClient(controller)
 
-			acrManager := testacrtoken.New()
+			acrManager := testacrtoken.New(func() time.Time {
+				return startOf2024
+			})
 
 			if tt.fake != nil {
 				tt.fake(acrManager)
