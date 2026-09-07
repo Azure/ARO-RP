@@ -1,36 +1,11 @@
 #!/bin/bash
 # This file is intended to be sourced by bootstrapping scripts for commonly used functions
 
-# get_boot_dev_uuid
-#
-# Get the boot devices uuid
-# args:
-#
-#   * 1) boot_dev_uuid - nameref, string; Empty variable for boot device uuid assignment
-#
-# Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
-get_boot_dev_uuid() {
-    local -n boot_dev_uuid="$1"
-    # Set boot_uuid variable for the boot partition if different from the root
-    boot_dev="$(df /boot/ | tail -1 | cut -d' ' -f1)"
-    root_dev="$(df / | tail -1 | cut -d' ' -f1)"
-
-    boot_dev_uuid="$root_dev"
-    if [ "$boot_dev" != "$root_dev" ]; then
-        # shellcheck disable=SC2034
-        boot_dev_uuid="boot=UUID=$(blkid "$boot_dev" -s UUID -o value)"
-    fi
-}
-
 # fips_verify
 #
-# Verify that fips mode is enabled
-#
-# Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
+# Verify that fips mode is enabled.
+# On Azure Linux 3 FIPS is enabled at the image level (FIPS SKU),
+# so this function validates that the running kernel has FIPS active.
 fips_verify() {
     fips_enabled_proc="$(cat /proc/sys/crypto/fips_enabled)"
     fips_enabled_sysctl="$(sysctl -n crypto.fips_enabled)"
@@ -39,29 +14,6 @@ fips_verify() {
     fi
 
     log "FIPS mode is enabled"
-}
-
-# fips_configure
-#
-# Configures VM to run with fips mode enabled
-#
-# Taken and refactored from https://eng.ms/docs/products/azure-linux/features/security/fips
-# TODO remove this once sku cbl-mariner-2-gen2-fips is supported by automatic OS updates
-#   * Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#supported-os-images
-fips_configure() {
-    # shellcheck disable=SC2034
-    local boot_uuid
-    get_boot_dev_uuid boot_uuid
-
-    local grub2_env
-    if grub2_env="$(grub2-editenv - list | grep kernelopts)"; then
-        grub2-editenv - set "$grub2_env fips=1 $boot_uuid"
-    else
-        grubby --update-kernel=ALL --args="fips=1 $boot_uuid"
-    fi
-
-    # fips mode verification will fail until after the vm has been rebooted
-    # fips_verify
 }
 
 # configure_sshd
@@ -370,15 +322,6 @@ create_required_dirs() {
     done
 }
 
-# firewalld_configure_backend
-firewalld_configure_backend() {
-    log "starting"
-
-    log "Changing firewalld backend to iptables"
-    conf_file="/etc/firewalld/firewalld.conf"
-    sed -i 's/FirewallBackend=nftables/FirewallBackend=iptables/g' "$conf_file"
-}
-
 # firewalld_configure
 #
 # args:
@@ -388,7 +331,7 @@ firewalld_configure() {
     local -n ports="$1"
     log "starting"
 
-    firewalld_configure_backend
+    log "Using default nftables backend on Azure Linux 3"
 
     # shellcheck disable=SC2034
     local -ra service=(

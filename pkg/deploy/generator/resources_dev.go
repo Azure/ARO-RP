@@ -151,8 +151,8 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: pointerutils.ToPtr("MicrosoftCBLMariner"),
-							Offer:     pointerutils.ToPtr("cbl-mariner"),
-							Sku:       pointerutils.ToPtr("cbl-mariner-2-gen2"),
+							Offer:     pointerutils.ToPtr("azure-linux-3"),
+							Sku:       pointerutils.ToPtr("azure-linux-3-gen2"),
 							Version:   pointerutils.ToPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
