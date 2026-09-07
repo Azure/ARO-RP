@@ -11,10 +11,8 @@ import (
 	"maps"
 	"net/http"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -34,6 +32,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -50,9 +49,9 @@ func (f *frontend) getPreResizeControlPlaneVMsValidation(w http.ResponseWriter, 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 	desiredVMSize := r.URL.Query().Get("vmSize")
 
-	b, err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, desiredVMSize, log)
+	err := f._getPreResizeControlPlaneVMsValidation(ctx, resType, resName, resGroupName, resourceID, desiredVMSize, log)
 
-	adminReply(log, w, nil, b, err)
+	adminReply(log, w, nil, nil, err)
 }
 
 // _getPreResizeControlPlaneVMsValidation runs all pre-flight checks before
@@ -62,40 +61,40 @@ func (f *frontend) _getPreResizeControlPlaneVMsValidation(
 	ctx context.Context,
 	resType, resName, resGroupName, resourceID, desiredVMSize string,
 	log *logrus.Entry,
-) ([]byte, error) {
+) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
 	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			fmt.Sprintf(
 				"The Resource '%s/%s' under resource group '%s' was not found.",
 				resType, resName, resGroupName,
 			))
 	case err != nil:
-		return nil, err
+		return err
 	}
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	return f.preResizeControlPlaneVMsValidation(ctx, doc, subscriptionDoc, k, a, desiredVMSize, log)
@@ -109,102 +108,77 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	a adminactions.AzureActions,
 	desiredVMSize string,
 	log *logrus.Entry,
-) ([]byte, error) {
-	// Run checks in parallel, collecting all errors so the caller sees every
-	// failure at once. For API server checks, run ClusterOperator status first
-	// and only run per-pod validation if the operator-level gate is healthy.
-	var (
-		mu      sync.Mutex
-		details []api.CloudErrorBody
-	)
-	collect := func(err error) {
-		if err == nil {
-			return
-		}
-		mu.Lock()
-		defer mu.Unlock()
-		var ce *api.CloudError
-		if errors.As(err, &ce) && ce.CloudErrorBody != nil {
-			details = append(details, *ce.CloudErrorBody)
-		} else {
-			details = append(details, api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInternalServerError,
-				Message: err.Error(),
-			})
-		}
+) error {
+
+	preValidator := &preResizeValidator{
+		doc:             doc,
+		log:             log,
+		subscriptionDoc: subscriptionDoc,
+		f:               f,
+		k:               k,
+		a:               a,
+		desiredVMSize:   desiredVMSize,
+	}
+	validationSteps := []steps.Step{
+		steps.Action(preValidator.validateAPIServerReadyz),
+		steps.Action(preValidator.validateVMSKU),
+		steps.Action(preValidator.validateAPIServerHealth),
+		steps.Action(preValidator.validateAPIServerPods),
+		steps.Action(preValidator.validateEtcdHealth),
+		steps.Action(preValidator.validateClusterSP),
+		steps.Action(preValidator.validateCPMSNotActive),
+		steps.Action(preValidator.validateResizeControlPlaneInventory),
 	}
 
-	if err := k.CheckAPIServerReadyz(ctx); err != nil {
-		return nil, api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeInternalServerError,
-			"kube-apiserver",
-			fmt.Sprintf("API server is reporting a non-ready status: %v", err),
-		)
-	}
+	_, err := steps.Run(ctx, log, time.Second*10, validationSteps, time.Now, "")
 
-	// safeGo wraps a validation function with panic recovery. The
-	// dynamicRESTMapper in controller-runtime v0.11.2 (pinned via replace
-	// directive in go.mod) can nil-pointer panic when the API server is
-	// unreachable (lazy init leaves staticMapper nil). Since these run in
-	// child goroutines, the HTTP Panic middleware cannot catch them — an
-	// unrecovered panic here would crash the entire RP process.
-	safeGo := func(checkName string, fn func() error) func() {
-		return func() {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Errorf("recovered panic during %s pre-flight validation: %#v\n%s", checkName, r, debug.Stack())
-					collect(api.NewCloudError(
-						http.StatusInternalServerError,
-						api.CloudErrorCodeInternalServerError,
-						checkName,
-						fmt.Sprintf("Recovered panic during %s pre-flight validation. Check RP logs for details.", checkName),
-					))
-				}
-			}()
-			collect(fn())
-		}
-	}
-
-	var wg sync.WaitGroup
-
-	wg.Go(safeGo("vmSKUQuota", func() error { return f.validateVMSKU(ctx, doc, subscriptionDoc, desiredVMSize, k, a) }))
-	wg.Go(safeGo("kube-apiserver", func() error {
-		if err := validateAPIServerHealth(ctx, k); err != nil {
-			return err
-		}
-		return validateAPIServerPods(ctx, k)
-	}))
-	wg.Go(safeGo("etcd", func() error { return validateEtcdHealth(ctx, k) }))
-	wg.Go(safeGo("servicePrincipal", func() error { return validateClusterSP(ctx, k) }))
-	wg.Go(safeGo("controlPlaneMachineSet", func() error { return checkCPMSNotActive(ctx, k) }))
-
-	wg.Wait()
-
-	if len(details) > 0 {
-		return nil, preResizeControlPlaneValidationError(details)
-	}
-
-	if err := validateResizeControlPlaneInventory(ctx, log, k, a, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID); err != nil {
-		var ce *api.CloudError
-		if errors.As(err, &ce) && ce.StatusCode == http.StatusBadRequest && ce.CloudErrorBody != nil {
-			return nil, preResizeControlPlaneValidationError([]api.CloudErrorBody{*ce.CloudErrorBody})
-		}
-		return nil, err
-	}
-
-	return json.Marshal("All pre-flight checks passed")
+	return err
 }
 
-func preResizeControlPlaneValidationError(details []api.CloudErrorBody) *api.CloudError {
-	return &api.CloudError{
-		StatusCode: http.StatusBadRequest,
-		CloudErrorBody: &api.CloudErrorBody{
-			Code:    api.CloudErrorCodeInvalidParameter,
-			Message: "Pre-flight validation failed.",
-			Details: details,
-		},
-	}
+// preResizeValidator wraps the validation functions and stores the clients and
+// request metadata. This makes it possible to let the individual functions
+// only take context.Context as their single argument. This is needed so we can
+// use them as argument to steps.Action(...).
+type preResizeValidator struct {
+	doc             *api.OpenShiftClusterDocument
+	log             *logrus.Entry
+	subscriptionDoc *api.SubscriptionDocument
+	f               *frontend
+	k               adminactions.KubeActions
+	a               adminactions.AzureActions
+	desiredVMSize   string
+}
+
+func (v *preResizeValidator) validateAPIServerReadyz(ctx context.Context) error {
+	return v.k.CheckAPIServerReadyz(ctx)
+}
+
+func (v *preResizeValidator) validateAPIServerHealth(ctx context.Context) error {
+	return validateAPIServerHealth(ctx, v.k)
+}
+
+func (v *preResizeValidator) validateAPIServerPods(ctx context.Context) error {
+	return validateAPIServerPods(ctx, v.k)
+}
+
+func (v *preResizeValidator) validateEtcdHealth(ctx context.Context) error {
+	return validateEtcdHealth(ctx, v.k)
+}
+
+func (v *preResizeValidator) validateClusterSP(ctx context.Context) error {
+	return validateClusterSP(ctx, v.k)
+}
+
+func (v *preResizeValidator) validateCPMSNotActive(ctx context.Context) error {
+	return checkCPMSNotActive(ctx, v.k)
+}
+
+func (v *preResizeValidator) validateVMSKU(ctx context.Context) error {
+	return v.f.validateVMSKU(ctx, v.doc, v.subscriptionDoc, v.desiredVMSize, v.k, v.a)
+}
+
+func (v *preResizeValidator) validateResizeControlPlaneInventory(ctx context.Context) error {
+	return validateResizeControlPlaneInventory(ctx, v.log, v.k, v.a, v.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 }
 
 // classifyInventoryError passes through infrastructure errors (already
