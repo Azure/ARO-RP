@@ -189,7 +189,7 @@ func TestRotateTokenPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			controller := gomock.NewController(t)
 			tokens := mock_armcontainerregistry.NewMockTokensClient(controller)
 			registries := mock_armcontainerregistry.NewMockRegistriesClient(controller)
@@ -210,6 +210,9 @@ func TestRotateTokenPassword(t *testing.T) {
 			}
 			if registryProfile.Password != api.SecureString(tt.wantPassword) {
 				t.Errorf("got '%s', want '%s'", registryProfile.Password, tt.wantPassword)
+			}
+			if registryProfile.IssueDate == nil || *registryProfile.IssueDate != time.UnixMilli(1000) {
+				t.Errorf("got issuedate '%s', want '%s'", registryProfile.IssueDate, time.UnixMilli(1000))
 			}
 		})
 	}
