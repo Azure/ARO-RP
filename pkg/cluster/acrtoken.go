@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -17,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	v1 "k8s.io/client-go/applyconfigurations/core/v1"
+	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,7 +70,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		return nil
 	}
 
-	token, err := newACRTokenManager(m.env)
+	token, err := m.newACRTokenManager(m.env)
 	if err != nil {
 		return err
 	}
@@ -120,7 +119,7 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return nil
 	}
 
-	token, err := newACRTokenManager(m.env)
+	token, err := m.newACRTokenManager(m.env)
 	if err != nil {
 		return err
 	}
@@ -173,23 +172,19 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		return err
 	}
 
-	pullSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      operator.SecretName,
-			Namespace: operator.Namespace,
+	applyConfiguration := corev1ac.Secret(operator.SecretName, operator.Namespace).WithData(
+		map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(encodedDockerConfigJson),
 		},
-		Data: make(map[string][]byte),
-	}
-	pullSecret.Data[corev1.DockerConfigJsonKey] = []byte(encodedDockerConfigJson)
-
-	err = ch.Update(ctx, pullSecret)
-	if err != nil {
-		return fmt.Errorf("when updating pullsecret: %w", err)
-	}
-
-	return retryOperation(func() error {
-		return rotateOpenShiftConfigSecret(ctx, log, ch, pullSecret.Data[corev1.DockerConfigJsonKey])
+	)
+	err = retryApply(func() error {
+		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
 	})
+	if err != nil {
+		return fmt.Errorf("when applying pullsecret: %w", err)
+	}
+
+	return rotateOpenShiftConfigSecret(ctx, log, ch, []byte(encodedDockerConfigJson))
 }
 
 func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clienthelper.Interface, encodedDockerConfigJson []byte) error {
@@ -199,7 +194,7 @@ func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clie
 		return fmt.Errorf("unable to fetch %s: %w", pullSecretName, err)
 	}
 	// by default, we create a patch with only the rotated acr token
-	applyConfiguration := v1.Secret(pullSecretName.Name, pullSecretName.Namespace).
+	applyConfiguration := corev1ac.Secret(pullSecretName.Name, pullSecretName.Namespace).
 		WithData(map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson}).
 		WithType(corev1.SecretTypeDockerConfigJson)
 
@@ -228,17 +223,11 @@ func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clie
 			}
 		}
 	}
-
-	d, err := json.Marshal(applyConfiguration)
-	if err != nil {
-		return err
-	}
-
-	err = retryOperation(func() error {
-		return ch.Patch(ctx, openshiftConfigSecret, client.RawPatch(types.ApplyPatchType, d), &client.PatchOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
+	err = retryApply(func() error {
+		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
 	})
 	if err != nil {
-		return fmt.Errorf("error patching secret %s: %w", pullSecretName, err)
+		return fmt.Errorf("error applying secret %s: %w", pullSecretName, err)
 	}
 	return nil
 }
@@ -249,5 +238,15 @@ func retryOperation(retryable func() error) error {
 		Duration: 2 * time.Second,
 	}, func(err error) bool {
 		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err) || kerrors.IsConflict(err)
+	}, retryable)
+}
+
+// Retry operations, but pass up conflicts.
+func retryApply(retryable func() error) error {
+	return retry.OnError(wait.Backoff{
+		Steps:    10,
+		Duration: 2 * time.Second,
+	}, func(err error) bool {
+		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err)
 	}, retryable)
 }
