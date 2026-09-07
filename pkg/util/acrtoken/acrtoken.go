@@ -147,6 +147,7 @@ func (m *manager) RotateTokenPassword(ctx context.Context, registryProfile *api.
 		return err
 	}
 	registryProfile.Password = api.SecureString(newPassword)
+	registryProfile.IssueDate = pointerutils.ToPtr(m.env.Now())
 	return nil
 }
 
