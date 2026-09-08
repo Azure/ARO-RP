@@ -601,6 +601,7 @@ ci-rp:
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
+		--build-arg ENVTEST_KUBERNETES_VERSION=$(ENVTEST_KUBERNETES_VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 
