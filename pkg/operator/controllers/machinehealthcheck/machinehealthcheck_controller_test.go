@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -146,8 +147,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				t.Helper()
 				mhc := &machinev1beta1.MachineHealthCheck{}
 				err := r.Client.Get(ctx, mhcKey, mhc)
-				if err == nil {
-					t.Fatal("expected MHC to be deleted, but it still exists")
+				if !kerrors.IsNotFound(err) {
+					t.Fatalf("expected MHC to be deleted, got: %v", err)
 				}
 			},
 		},
