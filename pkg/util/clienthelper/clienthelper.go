@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 
@@ -285,14 +284,6 @@ func Merge(old, new client.Object) (client.Object, bool, string, error) {
 		}
 		if len(old.Data) == 0 {
 			old.Data = map[string]string{}
-		}
-
-	case *machinev1beta1.MachineHealthCheck:
-		old, new := old.(*machinev1beta1.MachineHealthCheck), new.(*machinev1beta1.MachineHealthCheck)
-		new.Status = old.Status
-
-		if old.Spec.MaxUnhealthy != nil {
-			new.Spec.MaxUnhealthy = old.Spec.MaxUnhealthy
 		}
 	}
 
