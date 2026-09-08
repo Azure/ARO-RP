@@ -115,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	r.Log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineHealthCheckManaged) {
 		err := r.deleteIfExists(ctx, "MachineHealthCheck", &machinev1beta1.MachineHealthCheck{
-			ObjectMeta: metav1.ObjectMeta{Name: "aro-machinehealthcheck", Namespace: "openshift-machine-api"},
+			ObjectMeta: metav1.ObjectMeta{Name: mhcName, Namespace: mhcNamespace},
 		})
 		if err != nil {
 			r.Log.Error(err)
