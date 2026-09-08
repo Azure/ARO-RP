@@ -9,11 +9,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"text/template"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -128,11 +128,7 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	if len(errs) != 0 {
-		errContent := []string{"error removing resource:"}
-		for _, err := range errs {
-			errContent = append(errContent, err.Error())
-		}
-		return errors.New(strings.Join(errContent, "\n"))
+		return fmt.Errorf("error removing resource:\n%w", errors.Join(errs...))
 	}
 
 	return nil

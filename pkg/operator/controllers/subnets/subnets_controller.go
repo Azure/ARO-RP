@@ -5,8 +5,7 @@ package subnets
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 
 	"github.com/sirupsen/logrus"
 
@@ -125,28 +124,26 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 		return err
 	}
 
-	var combinedErrors []string
+	var combinedErrors []error
 
 	// This potentially calls an update twice for the same loop, but this is the price
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AzureSubnetsNsgManaged) {
-			err = r.ensureSubnetNSG(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
+			if err = r.ensureSubnetNSG(ctx, s); err != nil {
+				combinedErrors = append(combinedErrors, err)
 			}
 		}
 
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
-			err = r.ensureSubnetServiceEndpoints(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
+			if err = r.ensureSubnetServiceEndpoints(ctx, s); err != nil {
+				combinedErrors = append(combinedErrors, err)
 			}
 		}
 	}
 
 	if len(combinedErrors) > 0 {
-		return fmt.Errorf("%s", strings.Join(combinedErrors, "\n"))
+		return errors.Join(combinedErrors...)
 	}
 
 	return nil
