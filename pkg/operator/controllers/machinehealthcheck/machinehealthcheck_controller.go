@@ -8,11 +8,10 @@ import (
 	"slices"
 	"time"
 
-	_ "embed"
-
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,12 +37,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
-//go:embed staticresources/machinehealthcheck.yaml
-var machinehealthcheckYaml []byte
-
 const (
 	ControllerName      string = "MachineHealthCheck"
 	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
+
+	mhcName      = "aro-machinehealthcheck"
+	mhcNamespace = "openshift-machine-api"
 )
 
 var requiredMatchExpressions = []metav1.LabelSelectorRequirement{
@@ -68,6 +67,34 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 			Log:    log,
 			Client: client,
 			Name:   ControllerName,
+		},
+	}
+}
+
+func defaultMachineHealthCheck() *machinev1beta1.MachineHealthCheck {
+	return &machinev1beta1.MachineHealthCheck{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      mhcName,
+			Namespace: mhcNamespace,
+		},
+		Spec: machinev1beta1.MachineHealthCheckSpec{
+			Selector: metav1.LabelSelector{
+				MatchExpressions: requiredMatchExpressions,
+			},
+			UnhealthyConditions: []machinev1beta1.UnhealthyCondition{
+				{
+					Type:    corev1.NodeReady,
+					Status:  corev1.ConditionFalse,
+					Timeout: metav1.Duration{Duration: 15 * time.Minute},
+				},
+				{
+					Type:    corev1.NodeReady,
+					Status:  corev1.ConditionUnknown,
+					Timeout: metav1.Duration{Duration: 15 * time.Minute},
+				},
+			},
+			MaxUnhealthy:       pointerutils.ToPtr(intstr.FromInt32(1)),
+			NodeStartupTimeout: &metav1.Duration{Duration: 25 * time.Minute},
 		},
 	}
 }
@@ -111,19 +138,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{RequeueAfter: time.Hour}, err
 	}
 
-	resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(machinehealthcheckYaml, nil, nil)
-	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
-
-		return reconcile.Result{}, err
-	}
-
-	desired, ok := resource.(*machinev1beta1.MachineHealthCheck)
-	if !ok {
-		r.Log.Error("decoded resource is not a MachineHealthCheck")
-		return reconcile.Result{}, nil
-	}
+	desired := defaultMachineHealthCheck()
 
 	isUpgrading, err := r.IsClusterUpgrading(ctx)
 	if err != nil {
