@@ -6,8 +6,7 @@ package machinehealthcheck
 /*
 
 The controller in this package aims to ensure the ARO MachineHealthCheck CR
-exist and are correctly configured to automatically mitigate non-ready worker nodes and create an in-cluster alert
-when remediation is occurring frequently.
+exists and is correctly configured to automatically mitigate non-ready worker nodes.
 
 There are two flags which control the operations performed by the controller:
 
