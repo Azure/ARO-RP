@@ -127,7 +127,7 @@ main() {
 [FILTER]
 	Name modify
 	Match gateway-otel-collector
-	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=(warn|warning)\s)|(^[0-9TZ:.\-+]+\t(warn|warning)\t)
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=warning\s)|(^[0-9TZ:.\-+]+\twarn\t)
 	Set PRIORITY 4
 
 [FILTER]
