@@ -5,7 +5,7 @@ package machinehealthcheck
 
 /*
 
-The controller in this package aims to ensure the ARO MachineHealthCheck CR and MHC Remediation Alert
+The controller in this package aims to ensure the ARO MachineHealthCheck CR
 exist and are correctly configured to automatically mitigate non-ready worker nodes and create an in-cluster alert
 when remediation is occurring frequently.
 
@@ -16,7 +16,7 @@ aro.machinehealthcheck.enabled:
 - When set to true, the controller continues on to check the managed flag
 
 aro.machinehealthcheck.managed
-- When set to false, the controller deletes the aro-machinehealthcheck CR and the MHC Remediation alert.
+- When set to false, the controller deletes the aro-machinehealthcheck CR.
 - When set to true, the controller creates the MHC from a manifest if it does not exist, then on
   subsequent reconciles only enforces:
   - maxUnhealthy defaults to 1 if set to 0 (customer overrides to other values are preserved)
@@ -25,6 +25,6 @@ aro.machinehealthcheck.managed
   - Pause annotation is added during cluster upgrades and removed when complete
 
 More information about how the MHC works can be found here:
-https://docs.openshift.com/container-platform/4.12/machine_management/deploying-machine-health-checks.html
+https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/machine_management/deploying-machine-health-checks
 
 */

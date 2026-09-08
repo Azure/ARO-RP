@@ -651,3 +651,35 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 		})
 	}
 }
+
+func TestDefaultMachineHealthCheck(t *testing.T) {
+	mhc := defaultMachineHealthCheck()
+
+	if mhc.Name != "aro-machinehealthcheck" {
+		t.Errorf("expected name aro-machinehealthcheck, got %s", mhc.Name)
+	}
+	if mhc.Namespace != "openshift-machine-api" {
+		t.Errorf("expected namespace openshift-machine-api, got %s", mhc.Namespace)
+	}
+
+	if mhc.Spec.MaxUnhealthy == nil || mhc.Spec.MaxUnhealthy.IntValue() != 1 {
+		t.Errorf("expected maxUnhealthy=1, got %v", mhc.Spec.MaxUnhealthy)
+	}
+
+	if mhc.Spec.NodeStartupTimeout == nil || mhc.Spec.NodeStartupTimeout.Duration != 25*time.Minute {
+		t.Errorf("expected nodeStartupTimeout=25m, got %v", mhc.Spec.NodeStartupTimeout)
+	}
+
+	if len(mhc.Spec.Selector.MatchExpressions) != 2 {
+		t.Fatalf("expected 2 selector matchExpressions, got %d", len(mhc.Spec.Selector.MatchExpressions))
+	}
+
+	if len(mhc.Spec.UnhealthyConditions) != 2 {
+		t.Fatalf("expected 2 unhealthyConditions, got %d", len(mhc.Spec.UnhealthyConditions))
+	}
+	for _, uc := range mhc.Spec.UnhealthyConditions {
+		if uc.Timeout.Duration != 15*time.Minute {
+			t.Errorf("expected unhealthyCondition timeout=15m, got %v", uc.Timeout.Duration)
+		}
+	}
+}
