@@ -5,9 +5,9 @@ package internetchecker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -59,18 +59,14 @@ func (r *checker) Check(URLs []string) error {
 		}(url)
 	}
 
-	errsAll := []string{}
+	errsAll := make([]error, 0, checkCount)
 	for i := 0; i < checkCount; i++ {
 		if err := <-ch; err != nil {
-			errsAll = append(errsAll, err.Error())
+			errsAll = append(errsAll, err)
 		}
 	}
-	if len(errsAll) != 0 {
-		// TODO: Consider replacing with multi error wrapping with Go 1.20: https://github.com/golang/go/issues/53435#issuecomment-1320343377
-		return fmt.Errorf("%s", strings.Join(errsAll, "\n"))
-	}
 
-	return nil
+	return errors.Join(errsAll...)
 }
 
 // checkWithRetry checks the URL, retrying a failed query a few times

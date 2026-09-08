@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -61,7 +62,7 @@ func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb sdknetwork.
 		if err == nil {
 			return cleanupError
 		}
-		return fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\n%v\n%v", err, cleanupError)
+		return fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\n%w\n%w", err, cleanupError)
 	}
 
 	return err
@@ -203,7 +204,7 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 
 	ch := make(chan deleteIPResult)
 	defer close(ch)
-	var cleanupErrors []string
+	var cleanupErrors []error
 
 	for _, id := range unusedManagedIPs {
 		ipName := stringutils.LastTokenByte(id, '/')
@@ -213,12 +214,12 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	for range unusedManagedIPs {
 		result := <-ch
 		if result.err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Sprintf("deletion of unused managed ip %s failed with error: %v", result.name, result.err))
+			cleanupErrors = append(cleanupErrors, fmt.Errorf("deletion of unused managed ip %s failed with error: %w", result.name, result.err))
 		}
 	}
 
 	if cleanupErrors != nil {
-		return fmt.Errorf("failed to cleanup unused managed ips\n%s", strings.Join(cleanupErrors, "\n"))
+		return errors.Join(append([]error{errors.New("failed to cleanup unused managed ips")}, cleanupErrors...)...)
 	}
 
 	return nil
@@ -329,7 +330,7 @@ func getDesiredOutboundIPs(managedOBIPCount int, ipAddresses map[string]sdknetwo
 func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[string]sdknetwork.PublicIPAddress, numToCreate int) error {
 	ch := make(chan createIPResult)
 	defer close(ch)
-	var errResults []string
+	var errResults []error
 	// create additional IPs if needed
 	for i := 0; i < numToCreate; i++ {
 		go m.createPublicIPAddress(ctx, ch)
@@ -338,14 +339,14 @@ func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[s
 	for i := 0; i < numToCreate; i++ {
 		result := <-ch
 		if result.err != nil {
-			errResults = append(errResults, fmt.Sprintf("creation of ip address %s failed with error: %s", *result.ip.Name, result.err.Error()))
+			errResults = append(errResults, fmt.Errorf("creation of ip address %s failed with error: %w", *result.ip.Name, result.err))
 		} else {
 			ipAddresses[*result.ip.Name] = result.ip
 		}
 	}
 
 	if len(errResults) > 0 {
-		return fmt.Errorf("failed to create required IPs\n%s", strings.Join(errResults, "\n"))
+		return errors.Join(append([]error{errors.New("failed to create required IPs")}, errResults...)...)
 	}
 	return nil
 }
