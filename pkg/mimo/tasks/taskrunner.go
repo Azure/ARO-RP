@@ -20,6 +20,8 @@ const (
 var DEFAULT_MAINTENANCE_TASKS = map[api.MIMOTaskID]MaintenanceTask{
 	mimo.TLS_CERT_ROTATION_ID:            TLSCertRotation,
 	mimo.ACR_TOKEN_CHECKER_ID:            ACRTokenChecker,
+	mimo.ACR_TOKEN_ROTATE_ID:             ACRTokenRotate,
+	mimo.ACR_TOKEN_FORCE_ROTATE_ID:       ACRTokenRotateForce,
 	mimo.OPERATOR_VERSION_RESET_ID:       ResetOperatorVersion,
 	mimo.OPERATOR_UPDATE_ID:              UpdateOperator,
 	mimo.OPERATOR_SYNC_CLUSTER_OBJECT_ID: SyncClusterObject,
