@@ -187,6 +187,12 @@ func (r *Reconciler) ensureMachineHealthCheck(ctx context.Context, desired *mach
 
 		patch := existing.DeepCopy()
 		changed := false
+
+		// Ensure the controller reference exists so the MHC is garbage-collected with the Cluster CR.
+		if metav1.GetControllerOf(patch) == nil && len(desired.OwnerReferences) > 0 {
+			patch.OwnerReferences = append(patch.OwnerReferences, desired.OwnerReferences[0])
+			changed = true
+		}
 		// OpenShift machine-api-controllers defaults maxUnhealthy to "100%" when unset,
 		// so nil is not expected. Default a zero value back to 1.
 		if patch.Spec.MaxUnhealthy != nil &&
