@@ -12,13 +12,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
 
-func RotateACRToken(ctx context.Context) error {
+func RotateACRToken(ctx context.Context, force bool) error {
 	th, err := mimo.GetTaskContext(ctx)
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
-
-	force := false
 
 	tokensClient, err := th.TokensClient()
 	if err != nil {
