@@ -6,7 +6,6 @@ package frontend
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -19,18 +18,19 @@ import (
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1 "github.com/openshift/api/machine/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clusteroperators"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -109,12 +109,10 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	desiredVMSize string,
 	log *logrus.Entry,
 ) error {
-
 	preValidator := &preResizeValidator{
 		doc:             doc,
 		log:             log,
 		subscriptionDoc: subscriptionDoc,
-		f:               f,
 		k:               k,
 		a:               a,
 		desiredVMSize:   desiredVMSize,
@@ -122,15 +120,17 @@ func (f *frontend) preResizeControlPlaneVMsValidation(
 	validationSteps := []steps.Step{
 		steps.Action(preValidator.validateAPIServerReadyz),
 		steps.Action(preValidator.validateVMSKU),
-		steps.Action(preValidator.validateAPIServerHealth),
-		steps.Action(preValidator.validateAPIServerPods),
-		steps.Action(preValidator.validateEtcdHealth),
-		steps.Action(preValidator.validateClusterSP),
-		steps.Action(preValidator.validateCPMSNotActive),
+		steps.Concurrent("preresize", []steps.Step{
+			steps.Action(preValidator.validateAPIServerHealth),
+			steps.Action(preValidator.validateAPIServerPods),
+			steps.Action(preValidator.validateEtcdHealth),
+			steps.Action(preValidator.validateClusterSP),
+			steps.Action(preValidator.validateCPMSNotActive),
+		}),
 		steps.Action(preValidator.validateResizeControlPlaneInventory),
 	}
 
-	_, err := steps.Run(ctx, log, time.Second*10, validationSteps, time.Now, "")
+	_, err := steps.RunWithWrappedError(ctx, log, time.Second*10, validationSteps, time.Now)
 
 	return err
 }
@@ -143,7 +143,6 @@ type preResizeValidator struct {
 	doc             *api.OpenShiftClusterDocument
 	log             *logrus.Entry
 	subscriptionDoc *api.SubscriptionDocument
-	f               *frontend
 	k               adminactions.KubeActions
 	a               adminactions.AzureActions
 	desiredVMSize   string
@@ -153,77 +152,12 @@ func (v *preResizeValidator) validateAPIServerReadyz(ctx context.Context) error 
 	return v.k.CheckAPIServerReadyz(ctx)
 }
 
-func (v *preResizeValidator) validateAPIServerHealth(ctx context.Context) error {
-	return validateAPIServerHealth(ctx, v.k)
-}
-
-func (v *preResizeValidator) validateAPIServerPods(ctx context.Context) error {
-	return validateAPIServerPods(ctx, v.k)
-}
-
-func (v *preResizeValidator) validateEtcdHealth(ctx context.Context) error {
-	return validateEtcdHealth(ctx, v.k)
-}
-
-func (v *preResizeValidator) validateClusterSP(ctx context.Context) error {
-	return validateClusterSP(ctx, v.k)
-}
-
-func (v *preResizeValidator) validateCPMSNotActive(ctx context.Context) error {
-	return checkCPMSNotActive(ctx, v.k)
-}
-
 func (v *preResizeValidator) validateVMSKU(ctx context.Context) error {
-	return v.f.validateVMSKU(ctx, v.doc, v.subscriptionDoc, v.desiredVMSize, v.k, v.a)
+	return validateVMSKU(ctx, v.doc, v.subscriptionDoc, v.desiredVMSize, v.k, v.a)
 }
 
 func (v *preResizeValidator) validateResizeControlPlaneInventory(ctx context.Context) error {
-	return validateResizeControlPlaneInventory(ctx, v.log, v.k, v.a, v.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
-}
-
-// classifyInventoryError passes through infrastructure errors (already
-// wrapped as *api.CloudError with 500 by the helper that hit Kube/Azure)
-// and wraps pure-validation errors as 400 InvalidParameter.
-func classifyInventoryError(err error) error {
-	var ce *api.CloudError
-	if errors.As(err, &ce) {
-		return ce
-	}
-	err = convertErrorLineEndings(err)
-	return api.NewCloudError(
-		http.StatusBadRequest,
-		api.CloudErrorCodeInvalidParameter,
-		"controlPlaneInventory",
-		err.Error(),
-	)
-}
-
-func validateResizeControlPlaneInventory(
-	ctx context.Context,
-	log *logrus.Entry,
-	k adminactions.KubeActions,
-	a adminactions.AzureActions,
-	clusterResourceGroupID string,
-) error {
-	if err := validateLiveControlPlaneInventory(log, ctx, k, a, clusterResourceGroupID); err != nil {
-		return classifyInventoryError(err)
-	}
-	return nil
-}
-
-// defaultValidateResizeQuota creates an FP-authorized compute usage client and
-// delegates to checkResizeComputeQuota. Injected via f.validateResizeQuota so
-// tests can swap it with quotaCheckDisabled.
-func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, subscriptionDoc *api.SubscriptionDocument, location string, currentVMSizes []string, desiredVMSize string) error {
-	tenantID := subscriptionDoc.Subscription.Properties.TenantID
-
-	fpAuthorizer, err := environment.FPAuthorizer(tenantID, nil, environment.Environment().ResourceManagerScope)
-	if err != nil {
-		return err
-	}
-
-	spComputeUsage := compute.NewUsageClient(environment.Environment(), subscriptionDoc.ID, fpAuthorizer)
-	return checkResizeComputeQuota(ctx, spComputeUsage, location, currentVMSizes, desiredVMSize)
+	return validateLiveControlPlaneInventory(v.log, ctx, v.k, v.a, v.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 }
 
 // checkResizeComputeQuota verifies that the subscription has enough remaining
@@ -242,7 +176,7 @@ func defaultValidateResizeQuota(ctx context.Context, environment env.Interface, 
 // This checks subscription-level quota only, not Azure regional datacenter
 // capacity — without a capacity reservation, AllocationFailed errors can only
 // be detected at ARM PUT time.
-func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageClient, location string, currentVMSizes []string, desiredVMSize string) error {
+func checkResizeComputeQuota(ctx context.Context, a adminactions.AzureActions, location string, currentVMSizes []string, desiredVMSize string) error {
 	newSizeStruct, ok := validate.VMSizeFromName(api.VMSize(desiredVMSize))
 	if !ok {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize",
@@ -284,7 +218,7 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 		return nil
 	}
 
-	usages, err := spComputeUsage.List(ctx, location)
+	usages, err := a.ListComputeUsage(ctx, location)
 	if err != nil {
 		return err
 	}
@@ -312,16 +246,39 @@ func checkResizeComputeQuota(ctx context.Context, spComputeUsage compute.UsageCl
 	return nil
 }
 
-// quotaCheckDisabled is a no-op replacement for f.validateResizeQuota in tests.
-func quotaCheckDisabled(_ context.Context, _ env.Interface, _ *api.SubscriptionDocument, _ string, _ []string, _ string) error {
+// validateCPMSNotActive verifies that the ControlPlaneMachineSet is not Active.
+// If it is active, direct VM manipulation would conflict with the CPMS operator.
+// Only NotFound / CRD-not-installed errors are treated as "CPMS absent";
+// all other errors fail the operation closed so we don't bypass the safety check.
+func (v *preResizeValidator) validateCPMSNotActive(ctx context.Context) error {
+	rawCPMS, err := v.k.KubeGet(ctx, "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster")
+	if err != nil {
+		if kerrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+			return nil
+		}
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("failed to check ControlPlaneMachineSet state: %v", err))
+	}
+
+	var cpms machinev1.ControlPlaneMachineSet
+	if err := json.Unmarshal(rawCPMS, &cpms); err != nil {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "",
+			fmt.Sprintf("failed to parse ControlPlaneMachineSet object: %v", err))
+	}
+
+	if cpms.Spec.State == machinev1.ControlPlaneMachineSetStateActive {
+		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
+			"ControlPlaneMachineSet is currently Active. Deactivate CPMS before running this operation.")
+	}
+
 	return nil
 }
 
 // validateAPIServerHealth verifies that the kube-apiserver ClusterOperator is healthy
 // (Available=True, Progressing=False, Degraded=False).
 // Note: API server reachability is checked earlier via CheckAPIServerReadyz
-func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) error {
-	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
+func (v *preResizeValidator) validateAPIServerHealth(ctx context.Context) error {
+	rawCO, err := v.k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "kube-apiserver")
 	if err != nil {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
@@ -351,13 +308,13 @@ func validateAPIServerHealth(ctx context.Context, k adminactions.KubeActions) er
 	return nil
 }
 
-func validateAPIServerPods(ctx context.Context, k adminactions.KubeActions) error {
+func (v *preResizeValidator) validateAPIServerPods(ctx context.Context) error {
 	const (
 		kubeAPIServerNamespace     = "openshift-kube-apiserver"
 		kubeAPIServerLabelSelector = "app=openshift-kube-apiserver"
 	)
 
-	rawPods, err := k.KubeList(ctx, "Pod", kubeAPIServerNamespace, kubeAPIServerLabelSelector)
+	rawPods, err := v.k.KubeList(ctx, "Pod", kubeAPIServerNamespace, kubeAPIServerLabelSelector)
 	if err != nil {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
@@ -424,6 +381,12 @@ func validatePodHealth(pod *corev1.Pod) error {
 
 // validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
 // Resizing takes a master offline, so all etcd members must be healthy.
+func (v *preResizeValidator) validateEtcdHealth(ctx context.Context) error {
+	return validateEtcdHealth(ctx, v.k)
+}
+
+// validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
+// Resizing takes a master offline, so all etcd members must be healthy.
 func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 	rawCO, err := k.KubeGet(ctx, "ClusterOperator.config.openshift.io", "", "etcd")
 	if err != nil {
@@ -457,8 +420,8 @@ func validateEtcdHealth(ctx context.Context, k adminactions.KubeActions) error {
 
 // validateClusterSP checks the ServicePrincipalValid condition on the ARO
 // Cluster CRD. The SP is required for the ARM VM PUT during resize.
-func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
-	rawCluster, err := k.KubeGet(ctx, "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName)
+func (v *preResizeValidator) validateClusterSP(ctx context.Context) error {
+	rawCluster, err := v.k.KubeGet(ctx, "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName)
 	if err != nil {
 		return api.NewCloudError(
 			http.StatusInternalServerError,
@@ -496,7 +459,7 @@ func validateClusterSP(ctx context.Context, k adminactions.KubeActions) error {
 	)
 }
 
-func (f *frontend) validateVMSKU(
+func validateVMSKU(
 	ctx context.Context,
 	doc *api.OpenShiftClusterDocument,
 	subscriptionDoc *api.SubscriptionDocument,
@@ -534,7 +497,7 @@ func (f *frontend) validateVMSKU(
 		return err
 	}
 
-	err = f.validateResizeQuota(ctx, f.env, subscriptionDoc, location, currentVMSizes, desiredVMSize)
+	err = checkResizeComputeQuota(ctx, a, location, currentVMSizes, desiredVMSize)
 	if err != nil {
 		return err
 	}

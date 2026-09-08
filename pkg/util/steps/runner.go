@@ -117,3 +117,28 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 	}
 	return stepTimeRun, nil
 }
+
+// RunWithWrappedError executes the provided steps in order until one fails or
+// all steps are completed. Unlike Run, errors from failed steps are wrapped
+// with the step name for additional context, and no Azure-specific error
+// classification is performed. Time cost for each step run will be recorded
+// for metrics usage.
+func RunWithWrappedError(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, steps []Step, now func() time.Time) (map[string]int64, error) {
+	stepTimeRun := make(map[string]int64)
+	for _, step := range steps {
+		log.Infof("running step %s", step)
+
+		startTime := time.Now()
+		err := step.run(ctx, log)
+		if err != nil {
+			log.Errorf("step %s encountered error: %s", step, err.Error())
+			return nil, fmt.Errorf("step %s encountered error: %w", step, err)
+		}
+
+		if now != nil {
+			currentTime := now()
+			stepTimeRun[step.metricsName()] = int64(currentTime.Sub(startTime).Seconds())
+		}
+	}
+	return stepTimeRun, nil
+}

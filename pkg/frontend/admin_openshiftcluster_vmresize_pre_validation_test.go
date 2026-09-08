@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
@@ -35,12 +34,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
-	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/steps"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func fakeClusterOperatorJSON(name string, conditions []configv1.ClusterOperatorStatusCondition) []byte {
@@ -312,119 +308,6 @@ func healthyControlPlaneInventoryMock(k *mock_adminactions.MockKubeActions, a *m
 	}
 }
 
-func TestValidateResizeControlPlaneInventory(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
-
-	t.Run("propagates Azure SDK error from GetVirtualMachine as 500", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		k := mock_adminactions.NewMockKubeActions(ctrl)
-		a := mock_adminactions.NewMockAzureActions(ctrl)
-
-		k.EXPECT().
-			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
-			Return(masterMachineListJSON(
-				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
-				masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
-				masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
-			), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", gomock.Any(), mgmtcompute.InstanceView).
-			Return(mgmtcompute.VirtualMachine{}, fmt.Errorf("azure auth timeout")).
-			AnyTimes()
-
-		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
-		var ce *api.CloudError
-		if !errors.As(err, &ce) {
-			t.Fatalf("expected *api.CloudError, got %T: %v", err, err)
-		}
-		if ce.StatusCode != http.StatusInternalServerError {
-			t.Errorf("expected status 500, got %d", ce.StatusCode)
-		}
-		if !strings.HasPrefix(ce.Target, "controlPlaneVM/master-") {
-			t.Errorf("expected target to include controlPlaneVM/master-*, got %q", ce.Target)
-		}
-	})
-
-	t.Run("propagates Kube API error from getClusterMachines as 500", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		k := mock_adminactions.NewMockKubeActions(ctrl)
-		a := mock_adminactions.NewMockAzureActions(ctrl)
-
-		k.EXPECT().
-			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
-			Return(nil, fmt.Errorf("connection refused"))
-
-		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
-		var ce *api.CloudError
-		if !errors.As(err, &ce) {
-			t.Fatalf("expected *api.CloudError, got %T: %v", err, err)
-		}
-		if ce.StatusCode != http.StatusInternalServerError {
-			t.Errorf("expected status 500, got %d", ce.StatusCode)
-		}
-	})
-
-	t.Run("rejects inconsistent control plane node labels", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		k := mock_adminactions.NewMockKubeActions(ctrl)
-		a := mock_adminactions.NewMockAzureActions(ctrl)
-
-		k.EXPECT().
-			KubeList(gomock.Any(), machineGroupKind, machineNamespace).
-			Return(masterMachineListJSON(
-				masterMachineWithZone("master-0", "Standard_D8s_v3", "1"),
-				masterMachineWithZone("master-1", "Standard_D8s_v3", "2"),
-				masterMachineWithZone("master-2", "Standard_D8s_v3", "3"),
-			), nil)
-		k.EXPECT().
-			KubeList(gomock.Any(), "Node", "").
-			Return(controlPlaneNodeListJSON(
-				controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-				controlPlaneNode("master-1", "Standard_D16s_v5", "Standard_D16s_v5", true, false),
-				controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-			), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
-			Return(inventoryValidationVM("Standard_D8s_v3", "1"), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
-			Return(inventoryValidationVM("Standard_D8s_v3", "2"), nil)
-		a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-2", mgmtcompute.InstanceView).
-			Return(inventoryValidationVM("Standard_D8s_v3", "3"), nil)
-
-		err := validateResizeControlPlaneInventory(ctx, log, k, a, "/subscriptions/000/resourceGroups/test-cluster")
-		assertErrorContainsAll(t, err,
-			"control plane machine and node inventory is inconsistent",
-			"machine master-1 has size Standard_D8s_v3 in its spec, however node has instance-type Standard_D16s_v5",
-		)
-	})
-}
-
-func TestClassifyInventoryErrorPreservesCloudErrorTarget(t *testing.T) {
-	t.Parallel()
-
-	original := api.NewCloudError(
-		http.StatusInternalServerError,
-		api.CloudErrorCodeInternalServerError,
-		"controlPlaneVM/master-0",
-		"failed to get Azure VM master-0: VM not found",
-	)
-
-	classified := classifyInventoryError(original)
-	var ce *api.CloudError
-	if !errors.As(classified, &ce) {
-		t.Fatalf("expected *api.CloudError, got %T: %v", classified, classified)
-	}
-
-	if ce.Target != "controlPlaneVM/master-0" {
-		t.Fatalf("expected target controlPlaneVM/master-0, got %q", ce.Target)
-	}
-}
-
 func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 	t.Parallel()
 
@@ -515,7 +398,6 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					), nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`"All pre-flight checks passed"` + "\n"),
 		},
 		{
 			name:       "missing vmSize parameter",
@@ -549,8 +431,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			kubeMocks:      allKubeChecksHealthyMock,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The provided vmSize is empty.`,
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 400: InvalidParameter: vmSize: The provided vmSize is empty.`,
 		},
 		{
 			name:       "unsupported master VM size",
@@ -584,8 +466,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			},
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			kubeMocks:      allKubeChecksHealthyMock,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: : The provided vmSize 'Standard_D2s_v3' is unsupported for master.`,
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 400: InvalidParameter: : The provided vmSize 'Standard_D2s_v3' is unsupported for master.`,
 		},
 		{
 			name:       "cluster not found",
@@ -667,8 +549,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					Return(map[string]*armcompute.ResourceSKU{}, nil)
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is unavailable in region 'eastus'`,
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 400: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is unavailable in region 'eastus'`,
 		},
 		{
 			name:       "SKU restricted in subscription",
@@ -726,8 +608,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					}, nil)
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 400: InvalidParameter: vmSize: The selected SKU 'Standard_D8s_v3' is restricted in region 'eastus' for selected subscription`,
 		},
 		{
 			name:       "GetVirtualMachine returns error",
@@ -781,8 +663,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					Return(mgmtcompute.VirtualMachine{}, fmt.Errorf("authorization denied"))
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneVM/master-0: Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 500: InternalServerError: controlPlaneVM/master-0: Failed to retrieve current control plane VM "master-0" from Azure: authorization denied`,
 		},
 		{
 			name:       "control plane VM missing HardwareProfile",
@@ -839,8 +721,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					Return(mgmtcompute.VirtualMachine{}, nil)
 			},
 			kubeMocks:      allKubeChecksHealthyMock,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneVM/master-1: Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 500: InternalServerError: controlPlaneVM/master-1: Control plane VM "master-1" has no HardwareProfile in Azure. Resize cannot proceed until all control plane VM details are available.`,
 		},
 		{
 			name:       "control plane machine inventory incomplete",
@@ -897,102 +779,8 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					masterMachine("master-1", "Standard_D8s_v3", running),
 				))
 			},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: controlPlaneMachines: Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
-		},
-		{
-			name:       "panic recovery is sanitized",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			vmSize:     "Standard_D8s_v3",
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Location: "eastus",
-						Properties: api.OpenShiftClusterProperties{
-							MasterProfile: api.MasterProfile{
-								VMSize: api.VMSizeStandardD8sV3,
-							},
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
-			},
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().
-					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
-					Return(map[string]*armcompute.ResourceSKU{
-						"Standard_D8s_v3": {
-							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
-							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
-							LocationInfo: []*armcompute.ResourceSKULocationInfo{
-								{
-									Location: pointerutils.ToPtr("eastus"),
-								},
-							},
-							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
-							Capabilities: []*armcompute.ResourceSKUCapabilities{},
-						},
-					}, nil)
-				expectControlPlaneVMGetCalls(a, "test-cluster", map[string]string{
-					"master-0": "Standard_D8s_v3",
-					"master-1": "Standard_D8s_v3",
-					"master-2": "Standard_D8s_v3",
-				})
-			},
-			kubeMocks: func(k *mock_adminactions.MockKubeActions) {
-				running := "Running"
-				k.EXPECT().
-					CheckAPIServerReadyz(gomock.Any()).
-					Return(nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
-					Return(healthyKubeAPIServerJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
-					Return(healthyKubeAPIServerPodsJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
-					DoAndReturn(func(context.Context, string, string, string) ([]byte, error) {
-						panic("simulated panic")
-					}).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
-					Return(validServicePrincipalJSON(), nil).
-					AnyTimes()
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", "openshift-machine-api", "cluster").
-					Return(nil, kerrors.NewNotFound(schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}, "cluster")).
-					AnyTimes()
-				k.EXPECT().
-					KubeList(gomock.Any(), machineGroupKind, machineNamespace).
-					Return(masterMachineListJSON(
-						masterMachine("master-0", "Standard_D8s_v3", running),
-						masterMachine("master-1", "Standard_D8s_v3", running),
-						masterMachine("master-2", "Standard_D8s_v3", running),
-					), nil).
-					AnyTimes()
-			},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      `400: InvalidParameter: : Pre-flight validation failed. Details: InternalServerError: etcd: Recovered panic during etcd pre-flight validation. Check RP logs for details.`,
-			notContains:    []string{"runtime/debug.Stack", "goroutine", "simulated panic"},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 500: InternalServerError: controlPlaneMachines: Expected 3 control plane machines but found 2. Resize cannot proceed until all control plane machines are present.`,
 		},
 		{
 			name:       "API server unreachable",
@@ -1031,7 +819,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					Return(fmt.Errorf("connection refused"))
 			},
 			wantStatusCode: http.StatusInternalServerError,
-			wantError:      `500: InternalServerError: kube-apiserver: API server is reporting a non-ready status: connection refused`,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateAPIServerReadyz] encountered error: connection refused`,
 		},
 	} {
 		tt := tt
@@ -1063,9 +851,6 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Override quota validation to avoid creating real Azure clients in tests
-			f.validateResizeQuota = quotaCheckDisabled
-
 			go f.Run(ctx, nil, nil)
 
 			url := fmt.Sprintf("https://server/admin%s/preresizevalidation", tt.resourceID)
@@ -1092,67 +877,6 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 	}
 }
 
-func TestValidateResizeControlPlaneInventoryNormalizesJoinedErrorLineEndings(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	k := mock_adminactions.NewMockKubeActions(ctrl)
-	a := mock_adminactions.NewMockAzureActions(ctrl)
-	log := logrus.NewEntry(logrus.New())
-
-	k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).
-		Return(masterMachineListJSON(
-			zonedMasterMachine("master-0", "Standard_D8s_v3", "Running", "1"),
-			zonedMasterMachine("master-1", "Standard_D8s_v3", "Running", "2"),
-			zonedMasterMachine("master-2", "Standard_D8s_v3", "Running", "3"),
-		), nil)
-	a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-0", mgmtcompute.InstanceView).
-		Return(inventoryValidationVM("Standard_D8s_v3", "1"), nil)
-	a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-1", mgmtcompute.InstanceView).
-		Return(inventoryValidationVM("Standard_D8s_v3", "2"), nil)
-	a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "master-2", mgmtcompute.InstanceView).
-		Return(inventoryValidationVM("Standard_D8s_v3", "3"), nil)
-	k.EXPECT().KubeList(gomock.Any(), "Node", "").
-		Return(controlPlaneNodeListJSON(
-			controlPlaneNode("master-0", "Standard_D8s_v3", "Standard_D8s_v3", true, false),
-			controlPlaneNode("master-1", "Standard_D8s_v3", "Standard_D8s_v3", true, true),
-			controlPlaneNode("master-2", "Standard_D8s_v3", "Standard_D4s_v3", true, false),
-		), nil)
-
-	err := validateResizeControlPlaneInventory(
-		ctx,
-		log,
-		k,
-		a,
-		"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster",
-	)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-
-	var cloudErr *api.CloudError
-	if !errors.As(err, &cloudErr) || cloudErr.CloudErrorBody == nil {
-		t.Fatalf("expected cloud error with body, got %T: %v", err, err)
-	}
-
-	message := cloudErr.Message
-	if strings.Contains(message, "\n") {
-		t.Fatalf("expected normalized inventory error message without newlines, got %q", message)
-	}
-	for _, expected := range []string{
-		"node master-1 is unschedulable",
-		"node master-2 has a mismatch between labels.",
-		" | ",
-	} {
-		if !strings.Contains(message, expected) {
-			t.Fatalf("error message %q does not contain %q", message, expected)
-		}
-	}
-}
-
 func TestCheckResizeComputeQuota(t *testing.T) {
 	t.Parallel()
 
@@ -1162,7 +886,7 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 		name           string
 		currentVMSizes []string
 		vmSize         string
-		mocks          func(*mock_compute.MockUsageClient)
+		mocks          func(*mock_adminactions.MockAzureActions)
 		wantErr        string
 	}
 
@@ -1176,9 +900,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "same family upsize - enough quota for delta across all masters",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_D16s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1203,9 +927,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "same family upsize - not enough quota for all masters",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_D16s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1229,13 +953,13 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "same family downsize - no quota check needed",
 			currentVMSizes: threeMasters("Standard_D16s_v3"),
 			vmSize:         "Standard_D8s_v3",
-			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+			mocks:          func(cuc *mock_adminactions.MockAzureActions) {},
 		},
 		{
 			name:           "same family same size - no quota check needed",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_D8s_v3",
-			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+			mocks:          func(cuc *mock_adminactions.MockAzureActions) {},
 		},
 		{
 			// D8s_v3 → E8s_v3, cross family.  Full new cores: 8 × 3 = 24.
@@ -1244,9 +968,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "cross family - full new cores checked for all masters",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_E8s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1271,9 +995,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "cross family - not enough quota for all masters",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_E8s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1300,9 +1024,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "cross family - regional cores quota exceeded",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_E16s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1329,9 +1053,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "cross family downsize - regional cores not checked",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_E4s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1354,9 +1078,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "family not in usage list - no quota limit",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_D16s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1372,7 +1096,7 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "unsupported new VM size",
 			currentVMSizes: threeMasters("Standard_D8s_v3"),
 			vmSize:         "Standard_Nonexistent_v99",
-			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+			mocks:          func(cuc *mock_adminactions.MockAzureActions) {},
 			wantErr:        "400: InvalidParameter: vmSize: The provided VM SKU 'Standard_Nonexistent_v99' is not supported.",
 		},
 		{
@@ -1382,9 +1106,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "mixed sizes - partial resize only needs quota for remaining VMs",
 			currentVMSizes: []string{"Standard_D16s_v3", "Standard_D8s_v3", "Standard_D8s_v3"},
 			vmSize:         "Standard_D16s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1410,9 +1134,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "mixed sizes - partial resize not enough quota",
 			currentVMSizes: []string{"Standard_D16s_v3", "Standard_D8s_v3", "Standard_D8s_v3"},
 			vmSize:         "Standard_D16s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1437,7 +1161,7 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "all VMs already at desired size - no quota check needed",
 			currentVMSizes: threeMasters("Standard_D16s_v3"),
 			vmSize:         "Standard_D16s_v3",
-			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+			mocks:          func(cuc *mock_adminactions.MockAzureActions) {},
 		},
 		{
 			// Cross-family accumulation: 2 VMs in DSv3, 1 VM in ESv3, resize to D16s_v3.
@@ -1447,9 +1171,9 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "cross-family accumulation - same and cross family contribute to same target",
 			currentVMSizes: []string{"Standard_D8s_v3", "Standard_D8s_v3", "Standard_E8s_v3"},
 			vmSize:         "Standard_D16s_v3",
-			mocks: func(cuc *mock_compute.MockUsageClient) {
+			mocks: func(cuc *mock_adminactions.MockAzureActions) {
 				cuc.EXPECT().
-					List(ctx, "eastus").
+					ListComputeUsage(ctx, "eastus").
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
@@ -1473,7 +1197,7 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			name:           "unresolvable current VM size",
 			currentVMSizes: []string{"Standard_D8s_v3", "Standard_Unknown_v99", "Standard_D8s_v3"},
 			vmSize:         "Standard_D16s_v3",
-			mocks:          func(cuc *mock_compute.MockUsageClient) {},
+			mocks:          func(cuc *mock_adminactions.MockAzureActions) {},
 			wantErr:        "500: InternalServerError: currentVMSize: The current VM SKU 'Standard_Unknown_v99' could not be resolved.",
 		},
 	} {
@@ -1483,10 +1207,10 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			computeUsageClient := mock_compute.NewMockUsageClient(controller)
-			tt.mocks(computeUsageClient)
+			azActions := mock_adminactions.NewMockAzureActions(controller)
+			tt.mocks(azActions)
 
-			err := checkResizeComputeQuota(ctx, computeUsageClient, "eastus", tt.currentVMSizes, tt.vmSize)
+			err := checkResizeComputeQuota(ctx, azActions, "eastus", tt.currentVMSizes, tt.vmSize)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1557,8 +1281,87 @@ func TestValidateVMSP(t *testing.T) {
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
+			p := preResizeValidator{
+				k: k,
+			}
+			err := p.validateClusterSP(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
 
-			err := validateClusterSP(ctx, k)
+func TestCheckCPMSNotActive(t *testing.T) {
+	ctx := context.Background()
+
+	cpmsGR := schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_adminactions.MockKubeActions)
+		wantErr string
+	}{
+		{
+			name: "CPMS not found - safe to proceed",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(nil, kerrors.NewNotFound(cpmsGR, "cluster"))
+			},
+		},
+		{
+			name: "CPMS inactive - safe to proceed",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(cpmsJSON("Inactive"), nil)
+			},
+		},
+		{
+			name: "CPMS active - blocked",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(cpmsJSON("Active"), nil)
+			},
+			wantErr: "409: RequestNotAllowed: : ControlPlaneMachineSet is currently Active. Deactivate CPMS before running this operation.",
+		},
+		{
+			name: "CPMS with empty state - safe to proceed",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(cpmsJSON(""), nil)
+			},
+		},
+		{
+			name: "KubeGet returns non-NotFound error - fails closed",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return(nil, errors.New("connection refused"))
+			},
+			wantErr: "500: InternalServerError: : failed to check ControlPlaneMachineSet state: connection refused",
+		},
+		{
+			name: "CPMS returns invalid JSON - fails closed",
+			mocks: func(k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
+					Return([]byte("not-json"), nil)
+			},
+			wantErr: "500: InternalServerError: : failed to parse ControlPlaneMachineSet object: invalid character 'o' in literal null (expecting 'u')",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			k := mock_adminactions.NewMockKubeActions(ctrl)
+			tt.mocks(k)
+			p := preResizeValidator{
+				k: k,
+			}
+			err := p.validateCPMSNotActive(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1631,8 +1434,10 @@ func TestValidateAPIServerHealth(t *testing.T) {
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
-
-			err := validateAPIServerHealth(ctx, k)
+			p := preResizeValidator{
+				k: k,
+			}
+			err := p.validateAPIServerHealth(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1720,8 +1525,10 @@ func TestValidateAPIServerPods(t *testing.T) {
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
-
-			err := validateAPIServerPods(ctx, k)
+			p := preResizeValidator{
+				k: k,
+			}
+			err := p.validateAPIServerPods(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1794,8 +1601,10 @@ func TestValidateEtcdHealth(t *testing.T) {
 
 			k := mock_adminactions.NewMockKubeActions(controller)
 			tt.mocks(k)
-
-			err := validateEtcdHealth(ctx, k)
+			p := preResizeValidator{
+				k: k,
+			}
+			err := p.validateEtcdHealth(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

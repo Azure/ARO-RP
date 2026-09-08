@@ -91,6 +91,21 @@ func (mr *MockAzureActionsMockRecorder) GroupResourceList(ctx any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupResourceList", reflect.TypeOf((*MockAzureActions)(nil).GroupResourceList), ctx)
 }
 
+// ListComputeUsage mocks base method.
+func (m *MockAzureActions) ListComputeUsage(ctx context.Context, location string) ([]compute.Usage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListComputeUsage", ctx, location)
+	ret0, _ := ret[0].([]compute.Usage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListComputeUsage indicates an expected call of ListComputeUsage.
+func (mr *MockAzureActionsMockRecorder) ListComputeUsage(ctx, location any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListComputeUsage", reflect.TypeOf((*MockAzureActions)(nil).ListComputeUsage), ctx, location)
+}
+
 // NICReconcileFailedState mocks base method.
 func (m *MockAzureActions) NICReconcileFailedState(ctx context.Context, nicName string) error {
 	m.ctrl.T.Helper()

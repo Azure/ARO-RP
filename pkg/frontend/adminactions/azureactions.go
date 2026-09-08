@@ -43,6 +43,7 @@ type AzureActions interface {
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
 	GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error)
 	GetVirtualMachine(ctx context.Context, resourceGroupName string, VMName string, expand mgmtcompute.InstanceViewTypes) (result mgmtcompute.VirtualMachine, err error)
+	ListComputeUsage(ctx context.Context, location string) ([]mgmtcompute.Usage, error)
 }
 
 type azureActions struct {
@@ -59,6 +60,7 @@ type azureActions struct {
 	securityGroups     armnetwork.SecurityGroupsClient
 	storageAccounts    storage.AccountsClient
 	virtualMachines    compute.VirtualMachinesClient
+	computeUsage       compute.UsageClient
 	virtualNetworks    armnetwork.VirtualNetworksClient
 }
 
@@ -123,6 +125,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		securityGroups:     securityGroups,
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		computeUsage:       compute.NewUsageClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualNetworks:    virtualNetworks,
 	}, nil
 }
@@ -183,6 +186,10 @@ func (a *azureActions) ResourceGroupHasVM(ctx context.Context, vmName string) (b
 	}
 
 	return false, nil
+}
+
+func (a *azureActions) ListComputeUsage(ctx context.Context, location string) ([]mgmtcompute.Usage, error) {
+	return a.computeUsage.List(ctx, location)
 }
 
 func (a *azureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {

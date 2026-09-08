@@ -5,9 +5,7 @@ package steps
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/sirupsen/logrus"
 )
@@ -39,38 +37,4 @@ func (s actionStep) String() string {
 
 func (s actionStep) metricsName() string {
 	return fmt.Sprintf("action.%s", shortName(FriendlyName(s.f)))
-}
-
-func Concurrent(s []Step) Step {
-	return concurrentStep{
-		s: s,
-	}
-}
-
-type concurrentStep struct {
-	s []Step
-}
-
-func (s concurrentStep) run(ctx context.Context, log *logrus.Entry) error {
-	eg := &sync.WaitGroup{}
-	errlock := &sync.Mutex{}
-	errs := []error{}
-	for _, curStep := range s.s {
-		eg.Go(func() {
-			err := curStep.run(ctx, log)
-			errlock.Lock()
-			defer errlock.Unlock()
-			errs = append(errs, err)
-		})
-	}
-	eg.Wait()
-	return errors.Join(errs...)
-}
-
-func (s concurrentStep) String() string {
-	return fmt.Sprintf("[Actions %v]", s.s)
-}
-
-func (s concurrentStep) metricsName() string {
-	return fmt.Sprintf("action.concurrent")
 }
