@@ -162,8 +162,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				t.Helper()
 				mhc := &machinev1beta1.MachineHealthCheck{}
 				err := r.Client.Get(ctx, mhcKey, mhc)
-				if err == nil {
-					t.Fatal("expected MHC to be deleted, but it still exists")
+				if !kerrors.IsNotFound(err) {
+					t.Fatalf("expected MHC to be deleted, got: %v", err)
 				}
 			},
 			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {

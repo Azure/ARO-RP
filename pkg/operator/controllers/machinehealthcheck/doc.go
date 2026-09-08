@@ -5,8 +5,8 @@ package machinehealthcheck
 
 /*
 
-The controller in this package aims to ensure the ARO MachineHealthCheck CR
-exists and is correctly configured to automatically mitigate non-ready worker nodes.
+The controller in this package ensures the ARO MachineHealthCheck CR exists
+and is correctly configured to automatically mitigate non-ready worker nodes.
 
 There are two flags which control the operations performed by the controller:
 
@@ -16,7 +16,7 @@ aro.machinehealthcheck.enabled:
 
 aro.machinehealthcheck.managed
 - When set to false, the controller deletes the aro-machinehealthcheck CR.
-- When set to true, the controller creates the MHC from a manifest if it does not exist, then on
+- When set to true, the controller creates the MHC with the default configuration if it does not exist, then on
   subsequent reconciles only enforces:
   - maxUnhealthy defaults to 1 if set to 0 (customer overrides to other values are preserved)
   - Required selector matchExpressions (exclude masters, require machineset membership) are restored
