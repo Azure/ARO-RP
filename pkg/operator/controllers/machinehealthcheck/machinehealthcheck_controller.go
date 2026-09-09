@@ -239,17 +239,33 @@ func (r *Reconciler) deleteIfExists(ctx context.Context, kind string, obj client
 
 func ensureRequiredSelectors(selector *metav1.LabelSelector) bool {
 	changed := false
+
 	for _, req := range requiredMatchExpressions {
+		// Remove any requirements for the same key with a different operator (tampered selector).
+		for i := 0; i < len(selector.MatchExpressions); {
+			e := selector.MatchExpressions[i]
+			if e.Key == req.Key && e.Operator != req.Operator {
+				selector.MatchExpressions = append(selector.MatchExpressions[:i], selector.MatchExpressions[i+1:]...)
+				changed = true
+				continue
+			}
+			i++
+		}
+
 		if idx := findMatchExpression(selector.MatchExpressions, req.Key, req.Operator); idx >= 0 {
 			if !slices.Equal(selector.MatchExpressions[idx].Values, req.Values) {
-				selector.MatchExpressions[idx].Values = req.Values
+				selector.MatchExpressions[idx].Values = slices.Clone(req.Values)
 				changed = true
 			}
-		} else {
-			selector.MatchExpressions = append(selector.MatchExpressions, req)
-			changed = true
+			continue
 		}
+
+		reqCopy := req
+		reqCopy.Values = slices.Clone(req.Values)
+		selector.MatchExpressions = append(selector.MatchExpressions, reqCopy)
+		changed = true
 	}
+
 	return changed
 }
 
