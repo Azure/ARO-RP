@@ -223,23 +223,6 @@ func controlPlaneNodeListJSON(nodes ...corev1.Node) []byte {
 	return b
 }
 
-func inventoryValidationVM(vmSize, zone string) mgmtcompute.VirtualMachine {
-	return virtualMachineValidationWithSizeAndZone(vmSize, zone)
-}
-
-func zonedMasterMachine(name, vmSize, phase, zone string) machinev1beta1.Machine {
-	machine := masterMachine(name, vmSize, phase)
-	providerSpec := &machinev1beta1.AzureMachineProviderSpec{
-		Zone:   zone,
-		VMSize: vmSize,
-	}
-	rawProviderSpec, _ := json.Marshal(providerSpec)
-
-	machine.Labels[machineLabelZone] = zone
-	machine.Spec.ProviderSpec.Value = &kruntime.RawExtension{Raw: rawProviderSpec}
-	return machine
-}
-
 func allKubeChecksHealthyMock(k *mock_adminactions.MockKubeActions) {
 	running := "Running"
 	allKubeChecksHealthyMockWithMachineList(k, masterMachineListJSON(
@@ -1245,7 +1228,7 @@ func TestValidateVMSP(t *testing.T) {
 						},
 					}), nil)
 			},
-			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: Cluster Service Principal is invalid: secret expired",
+			wantErr: "Cluster Service Principal is invalid: secret expired",
 		},
 		{
 			name: "condition not found",
@@ -1254,7 +1237,7 @@ func TestValidateVMSP(t *testing.T) {
 					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
 					Return(fakeAROClusterJSON([]operatorv1.OperatorCondition{}), nil)
 			},
-			wantErr: "409: InvalidServicePrincipalCredentials: servicePrincipal: ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.",
+			wantErr: "ServicePrincipalValid condition not found on the ARO Cluster resource. The ARO operator may not have reconciled yet.",
 		},
 		{
 			name: "KubeGet returns error",
@@ -1263,7 +1246,7 @@ func TestValidateVMSP(t *testing.T) {
 					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
 					Return(nil, fmt.Errorf("connection refused"))
 			},
-			wantErr: "500: InternalServerError: servicePrincipal: Failed to retrieve ARO Cluster resource: connection refused",
+			wantErr: "Failed to retrieve ARO Cluster resource: connection refused",
 		},
 		{
 			name: "KubeGet returns invalid JSON",
@@ -1272,7 +1255,7 @@ func TestValidateVMSP(t *testing.T) {
 					KubeGet(gomock.Any(), "Cluster.aro.openshift.io", "", arov1alpha1.SingletonClusterName).
 					Return([]byte(`{invalid`), nil)
 			},
-			wantErr: "500: InternalServerError: servicePrincipal: Failed to parse ARO Cluster resource: invalid character 'i' looking for beginning of object key string",
+			wantErr: "Failed to parse ARO Cluster resource: invalid character 'i' looking for beginning of object key string",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1323,7 +1306,7 @@ func TestCheckCPMSNotActive(t *testing.T) {
 					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
 					Return(cpmsJSON("Active"), nil)
 			},
-			wantErr: "409: RequestNotAllowed: : ControlPlaneMachineSet is currently Active. Deactivate CPMS before running this operation.",
+			wantErr: "ControlPlaneMachineSet is currently Active. Deactivate CPMS before running this operation.",
 		},
 		{
 			name: "CPMS with empty state - safe to proceed",
@@ -1340,7 +1323,7 @@ func TestCheckCPMSNotActive(t *testing.T) {
 					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
 					Return(nil, errors.New("connection refused"))
 			},
-			wantErr: "500: InternalServerError: : failed to check ControlPlaneMachineSet state: connection refused",
+			wantErr: "failed to check ControlPlaneMachineSet state: connection refused",
 		},
 		{
 			name: "CPMS returns invalid JSON - fails closed",
@@ -1349,7 +1332,7 @@ func TestCheckCPMSNotActive(t *testing.T) {
 					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
 					Return([]byte("not-json"), nil)
 			},
-			wantErr: "500: InternalServerError: : failed to parse ControlPlaneMachineSet object: invalid character 'o' in literal null (expecting 'u')",
+			wantErr: "failed to parse ControlPlaneMachineSet object: invalid character 'o' in literal null (expecting 'u')",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1394,7 +1377,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False, Degraded=True. Resize is not safe while the API server is degraded.",
+			wantErr: "kube-apiserver is not healthy: kube-apiserver Available=True, Progressing=False, Degraded=True. Resize is not safe while the API server is degraded.",
 		},
 		{
 			name: "kube-apiserver unavailable",
@@ -1407,7 +1390,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver: kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True, Degraded=False. Resize is not safe while the API server is degraded.",
+			wantErr: "kube-apiserver is not healthy: kube-apiserver Available=False, Progressing=True, Degraded=False. Resize is not safe while the API server is degraded.",
 		},
 		{
 			name: "KubeGet returns error",
@@ -1416,7 +1399,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return(nil, fmt.Errorf("connection refused"))
 			},
-			wantErr: "500: InternalServerError: kube-apiserver: Failed to retrieve kube-apiserver ClusterOperator: connection refused",
+			wantErr: "Failed to retrieve kube-apiserver ClusterOperator: connection refused",
 		},
 		{
 			name: "KubeGet returns invalid JSON",
@@ -1425,7 +1408,7 @@ func TestValidateAPIServerHealth(t *testing.T) {
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "kube-apiserver").
 					Return([]byte(`{invalid`), nil)
 			},
-			wantErr: "500: InternalServerError: kube-apiserver: Failed to parse kube-apiserver ClusterOperator: invalid character 'i' looking for beginning of object key string",
+			wantErr: "Failed to parse kube-apiserver ClusterOperator: invalid character 'i' looking for beginning of object key string",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1469,7 +1452,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 						fakeKubeAPIServerPod("kube-apiserver-master-1", corev1.PodRunning, true),
 					), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Expected 3 kube-apiserver pods, found 2. Resize is not safe without full API server redundancy.",
+			wantErr: "Expected 3 kube-apiserver pods, found 2. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "kube-apiserver pod unhealthy phase",
@@ -1482,7 +1465,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 						fakeKubeAPIServerPod("kube-apiserver-master-2", corev1.PodRunning, true),
 					), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-1 (phase: Pending)]. Resize is not safe without full API server redundancy.",
+			wantErr: "Unhealthy kube-apiserver pods: [kube-apiserver-master-1 (phase: Pending)]. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "kube-apiserver pod not ready",
@@ -1495,7 +1478,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 						fakeKubeAPIServerPod("kube-apiserver-master-2", corev1.PodRunning, true),
 					), nil)
 			},
-			wantErr: "409: RequestNotAllowed: kube-apiserver-pods: Unhealthy kube-apiserver pods: [kube-apiserver-master-1 (not ready)]. Resize is not safe without full API server redundancy.",
+			wantErr: "Unhealthy kube-apiserver pods: [kube-apiserver-master-1 (not ready)]. Resize is not safe without full API server redundancy.",
 		},
 		{
 			name: "uses server-side label selector filtering",
@@ -1516,7 +1499,7 @@ func TestValidateAPIServerPods(t *testing.T) {
 					KubeList(gomock.Any(), "Pod", "openshift-kube-apiserver", "app=openshift-kube-apiserver").
 					Return(nil, fmt.Errorf("connection refused"))
 			},
-			wantErr: "500: InternalServerError: kube-apiserver-pods: Failed to list pods in openshift-kube-apiserver namespace: connection refused",
+			wantErr: "Failed to list pods in openshift-kube-apiserver namespace: connection refused",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1561,7 +1544,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=True, Progressing=False, Degraded=True. Resize is not safe while etcd quorum is at risk.",
+			wantErr: "etcd is not healthy: etcd Available=True, Progressing=False, Degraded=True. Resize is not safe while etcd quorum is at risk.",
 		},
 		{
 			name: "etcd unavailable",
@@ -1574,7 +1557,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 						{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
 					}), nil)
 			},
-			wantErr: "409: RequestNotAllowed: etcd: etcd is not healthy: etcd Available=False, Progressing=True, Degraded=False. Resize is not safe while etcd quorum is at risk.",
+			wantErr: "etcd is not healthy: etcd Available=False, Progressing=True, Degraded=False. Resize is not safe while etcd quorum is at risk.",
 		},
 		{
 			name: "KubeGet returns error",
@@ -1583,7 +1566,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 					Return(nil, fmt.Errorf("connection refused"))
 			},
-			wantErr: "500: InternalServerError: etcd: Failed to retrieve etcd ClusterOperator: connection refused",
+			wantErr: "Failed to retrieve etcd ClusterOperator: connection refused",
 		},
 		{
 			name: "KubeGet returns invalid JSON",
@@ -1592,7 +1575,7 @@ func TestValidateEtcdHealth(t *testing.T) {
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 					Return([]byte(`{invalid`), nil)
 			},
-			wantErr: "500: InternalServerError: etcd: Failed to parse etcd ClusterOperator: invalid character 'i' looking for beginning of object key string",
+			wantErr: "Failed to parse etcd ClusterOperator: invalid character 'i' looking for beginning of object key string",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

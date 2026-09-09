@@ -242,13 +242,6 @@ func uncordonNode(ctx context.Context, k adminactions.KubeActions, nodeName stri
 	return k.CordonNode(ctx, nodeName, false)
 }
 
-// getControlPlaneMachines is a thin wrapper around getClusterMachines that
-// makes the intent explicit at the call site. getClusterMachines already
-// filters by the machine.openshift.io/cluster-api-machine-role=master label.
-func getControlPlaneMachines(ctx context.Context, k adminactions.KubeActions) (map[string]machineValidationData, error) {
-	return getClusterMachines(ctx, k)
-}
-
 func waitForNodeReady(ctx context.Context, log *logrus.Entry, k adminactions.KubeActions, nodeName string) error {
 	return wait.PollUntilContextTimeout(ctx, nodeReadyPollInterval, nodeReadyPollTimeout, true, func(_ctx context.Context) (bool, error) {
 		ready, err := isNodeReady(_ctx, k, nodeName)

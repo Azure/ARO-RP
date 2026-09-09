@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -318,8 +317,8 @@ func waitForEtcdHealthy(ctx context.Context, log *logrus.Entry, k adminactions.K
 	return wait.PollUntilContextTimeout(ctx, etcdHealthPollInterval, etcdHealthPollTimeout, true, func(innerCtx context.Context) (bool, error) {
 		err := validateEtcdHealth(innerCtx, k)
 		if err != nil {
-			var cloudErr *api.CloudError
-			if errors.As(err, &cloudErr) && cloudErr.StatusCode == http.StatusConflict {
+			var etcdErr etcdOperatorUnavailableError
+			if errors.Is(err, etcdErr) {
 				log.Infof("Waiting for etcd to become healthy: %v", err)
 				return false, nil
 			}
