@@ -382,6 +382,7 @@ validate-fips: $(BINGO)
 
 .PHONY: unit-test-go
 unit-test-go: $(GOTESTSUM)
+	cd pkg/api/ && $(GOTESTSUM) --format pkgname ./...
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
 .PHONY: unit-test-go-coverpkg
