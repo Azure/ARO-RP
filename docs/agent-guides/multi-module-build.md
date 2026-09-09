@@ -37,45 +37,6 @@ The `fmt` target runs `$(GOLANGCI_LINT) fmt` which uses **gci** (import ordering
 
 The pre-commit hook (`.git/hooks/pre-commit`) calls `make fmt` and `make lint-go` on staged Go files.
 
-## Import Ordering (enforced by gci)
-
-Nine tiers, configured in `.golangci.yml`:
-
-1. Standard library
-2. Blank imports
-3. Dot imports
-4. Third-party (default)
-5. `k8s.io/*`
-6. `sigs.k8s.io/*`
-7. `github.com/Azure/*`
-8. `github.com/openshift/*`
-9. Local module packages
-
-### Required Import Aliases
-
-The linter enforces specific aliases (see `.golangci.yml` for full list):
-
-| Alias | Package |
-|-------|---------|
-| `kerrors` | `k8s.io/apimachinery/pkg/api/errors` |
-| `metav1` | `k8s.io/apimachinery/pkg/apis/meta/v1` |
-| `arov1alpha1` | ARO operator v1alpha1 API |
-| `ctrl` | `sigs.k8s.io/controller-runtime` |
-
-## Code Generation
-
-60+ `//go:generate` directives producing:
-
-| Category | Tool | Output |
-|----------|------|--------|
-| Swagger types | `hack/swagger/` | `swagger/{version}/redhatopenshift.json` |
-| Controller code | `controller-gen` | deepcopy, CRDs, RBAC |
-| Mocks | `mockgen` (uber-go/mock) | `pkg/util/mocks/` (40+ packages) |
-| Enumerations | `enumer` | `zz_generated_*_enumer.go` |
-| CosmosDB types | `go-cosmosdb` | `pkg/database/cosmosdb/zz_generated_*` |
-| ARM templates | `hack/gendeploy` | deployment manifests |
-| Binary data | `go-bindata` | embedded assets |
-
 ## Recommended Validation Order
 
 When modifying API types (`pkg/api/v*`):
@@ -95,9 +56,3 @@ When modifying API types (`pkg/api/v*`):
 | `CodeQL` | Static analysis (Go, JS, Python) |
 | `Test coverage` | 6 parallel suites: cmd, pkg-api, pkg-frontend, pkg-operator, pkg-util, pkg-other |
 | `ci/prow/images` | OpenShift CI image build |
-
-## Pointer Utilities
-
-Use `github.com/Azure/ARO-RP/pkg/util/pointerutils`. Do NOT use:
-- `github.com/Azure/go-autorest/autorest/to`
-- `k8s.io/utils/ptr`
