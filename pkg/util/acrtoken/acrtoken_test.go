@@ -212,7 +212,7 @@ func TestRotateTokenPassword(t *testing.T) {
 				t.Errorf("got '%s', want '%s'", registryProfile.Password, tt.wantPassword)
 			}
 			if registryProfile.IssueDate == nil || *registryProfile.IssueDate != time.UnixMilli(1000).UTC() {
-				t.Errorf("got issuedate '%s', want '%s'", registryProfile.IssueDate, time.UnixMilli(1000).UTC())
+				t.Errorf("got issuedate %v, want %v", registryProfile.IssueDate, time.UnixMilli(1000).UTC())
 			}
 		})
 	}
