@@ -1,18 +1,18 @@
 {
   "dependencies": {
-    "@azure-tools/typespec-autorest": "^0.70.1",
-    "@azure-tools/typespec-azure-core": "^0.70.0",
-    "@azure-tools/typespec-azure-resource-manager": "^0.70.0",
-    "@azure-tools/typespec-azure-rulesets": "^0.70.0",
-    "@azure-tools/typespec-client-generator-core": "^0.70.0",
-    "@azure-tools/typespec-go": "^0.15.0",
-    "@azure-tools/typespec-python": "^0.63.0",
-    "@typespec/http": "~1.14.0",
-    "@typespec/openapi": "~1.14.0",
-    "@typespec/rest": "~0.84.0",
-    "@typespec/streams": "~0.84.0",
-    "@typespec/versioning": "~0.84.0",
-    "@typespec/xml": "~0.84.0"
+    "@azure-tools/typespec-autorest": "^0.72.0",
+    "@azure-tools/typespec-azure-core": "^0.72.0",
+    "@azure-tools/typespec-azure-resource-manager": "^0.72.0",
+    "@azure-tools/typespec-azure-rulesets": "^0.72.0",
+    "@azure-tools/typespec-client-generator-core": "^0.72.0",
+    "@azure-tools/typespec-go": "^0.17.4",
+    "@azure-tools/typespec-python": "^0.63.6",
+    "@typespec/http": "~1.16.0",
+    "@typespec/openapi": "~1.16.0",
+    "@typespec/rest": "~0.86.0",
+    "@typespec/streams": "~0.86.0",
+    "@typespec/versioning": "~0.86.0",
+    "@typespec/xml": "~0.86.0"
   },
   "engines": {
     "node": ">=22.22.0"
@@ -26,7 +26,22 @@
     "examples": "oav generate-examples"
   },
   "devDependencies": {
-    "@typespec/compiler": "^1.15.0",
+    "@typespec/compiler": "^1.16.0",
     "oav": "^4.0.4"
+  },
+  "overrides": {
+    "@azure-tools/typespec-python": {
+      "@azure-tools/typespec-autorest": "$@azure-tools/typespec-autorest",
+      "@azure-tools/typespec-azure-core": "$@azure-tools/typespec-azure-core",
+      "@azure-tools/typespec-azure-resource-manager": "$@azure-tools/typespec-azure-resource-manager",
+      "@azure-tools/typespec-azure-rulesets": "$@azure-tools/typespec-azure-rulesets",
+      "@azure-tools/typespec-client-generator-core": "$@azure-tools/typespec-client-generator-core",
+      "@typespec/events": "~0.86.0",
+      "@typespec/rest": "$@typespec/rest",
+      "@typespec/sse": "~0.86.0",
+      "@typespec/streams": "$@typespec/streams",
+      "@typespec/versioning": "$@typespec/versioning",
+      "@typespec/xml": "$@typespec/xml"
+    }
   }
 }
