@@ -45,6 +45,18 @@ if [[ "$target" == "swagger" || "$target" == "examples" ]]; then
     done
 elif [[ "$target" == "go-api-models" ]]; then
     TSP_OUTPUT_DIR="pkg/api/${VERSION}/generated"
+
+    # typespec-go uses the nearest go.mod to determine the module identity.
+    # Seed the output directory so it does not discover the repository root.
+    rm -f ../${TSP_OUTPUT_DIR}/go.mod
+    rm -f ../${TSP_OUTPUT_DIR}/go.sum
+    (
+        mkdir -p "../${TSP_OUTPUT_DIR}"
+        cd ../${TSP_OUTPUT_DIR}
+        printf 'module github.com/Azure/ARO-RP/%s\n' "${TSP_OUTPUT_DIR}" > go.mod
+    )
+    trap 'rm -f ../${TSP_OUTPUT_DIR}/go.mod ../${TSP_OUTPUT_DIR}/go.sum' EXIT
+
     npm run go -- \
         --option "@azure-tools/typespec-go.emitter-output-dir={cwd}/../${TSP_OUTPUT_DIR}" \
         --option "@azure-tools/typespec-go.module=github.com/Azure/ARO-RP/${TSP_OUTPUT_DIR}"
@@ -61,6 +73,18 @@ elif [[ "$target" == "go-api-models" ]]; then
     rm -rf ../${TSP_OUTPUT_DIR}/testdata
 elif [[ "$target" == "go-testsdk" ]]; then
     TSP_OUTPUT_DIR="pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
+
+    # typespec-go uses the nearest go.mod to determine the module identity.
+    # Seed the output directory so it does not discover the repository root.
+    rm -f ../${TSP_OUTPUT_DIR}/go.mod
+    rm -f ../${TSP_OUTPUT_DIR}/go.sum
+    (
+        mkdir -p "../${TSP_OUTPUT_DIR}"
+        cd ../${TSP_OUTPUT_DIR}
+        printf 'module github.com/Azure/ARO-RP/%s\n' "${TSP_OUTPUT_DIR}" > go.mod
+    )
+    trap 'rm -f ../${TSP_OUTPUT_DIR}/go.mod ../${TSP_OUTPUT_DIR}/go.sum' EXIT
+
     npm run go -- \
         --option "@azure-tools/typespec-go.emitter-output-dir={cwd}/../${TSP_OUTPUT_DIR}" \
         --option "@azure-tools/typespec-go.module=github.com/Azure/ARO-RP/${TSP_OUTPUT_DIR}"
