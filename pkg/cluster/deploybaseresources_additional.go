@@ -206,6 +206,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 			AllowCrossTenantReplication: pointerutils.ToPtr(false),
 			EnableHTTPSTrafficOnly:      pointerutils.ToPtr(true),
 			MinimumTLSVersion:           mgmtstorage.MinimumTLSVersionTLS12,
+			PublicNetworkAccess:         mgmtstorage.PublicNetworkAccessEnabled,
 			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
 				Bypass:              mgmtstorage.BypassAzureServices,
 				VirtualNetworkRules: &virtualNetworkRules,
