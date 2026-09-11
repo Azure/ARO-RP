@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -21,10 +19,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestIngressProfilesEnricherTask(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	oioNamespace := "openshift-ingress-operator"
 	oiNamespace := "openshift-ingress"

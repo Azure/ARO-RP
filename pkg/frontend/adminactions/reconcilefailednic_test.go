@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
@@ -18,6 +17,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func getNic(subscription, resourceGroup, location, nicName string) armnetwork.Interface {
@@ -64,8 +64,9 @@ func TestReconcileFailedNic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
@@ -75,7 +76,7 @@ func TestReconcileFailedNic(t *testing.T) {
 			tt.mocks(networkInterfaces)
 
 			a := azureActions{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				env: env,
 				oc: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{

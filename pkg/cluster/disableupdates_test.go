@@ -67,7 +67,6 @@ func TestDisableUpdates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ACRDomain().AnyTimes().Return(acrDomain)

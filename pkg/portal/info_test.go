@@ -21,7 +21,6 @@ func TestInfo(t *testing.T) {
 	ctx := context.Background()
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	_env := mock_env.NewMockCore(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)

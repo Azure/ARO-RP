@@ -8,13 +8,12 @@ import (
 	"crypto/x509"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestSubjectNameAndIssuer(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
 	if err != nil {

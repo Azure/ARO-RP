@@ -126,7 +126,6 @@ func TestWaitForEtcdHealthyBoundsHealthCheckByEtcdTimeout(t *testing.T) {
 		_, log := testlog.New()
 
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 
@@ -167,7 +166,6 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rolls back stopped and cordoned node when resize fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -211,7 +209,6 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rolls back previously resized node when a later node fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -283,7 +280,6 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rechecks control plane health before the next node and rolls back prior progress", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -342,7 +338,6 @@ func TestResizeControlPlaneRollback(t *testing.T) {
 
 	t.Run("rolls back prior progress when later snapshot capture fails", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 		a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -434,7 +429,6 @@ func TestCaptureNodeSnapshotUsesLiveStateForSnapshotOnly(t *testing.T) {
 	_, log := testlog.New()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -455,7 +449,6 @@ func TestCaptureNodeSnapshotUsesLiveStateForSnapshotOnly(t *testing.T) {
 	assertErrorContainsAll(t, err, "failed to capture Azure VM state for master-0")
 
 	ctrl = gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k = mock_adminactions.NewMockKubeActions(ctrl)
 	a = mock_adminactions.NewMockAzureActions(ctrl)
@@ -491,7 +484,6 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 	desiredSize := "Standard_D16s_v5"
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -535,7 +527,6 @@ func TestRollbackNodeRestoresMetadataWhenVMSizeIsAlreadyRestored(t *testing.T) {
 func TestRollbackAllFailsFastWhenEtcdUnhealthyBetweenNodes(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	k := mock_adminactions.NewMockKubeActions(ctrl)
 	a := mock_adminactions.NewMockAzureActions(ctrl)

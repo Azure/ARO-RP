@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -22,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconcileOutboundIPs(t *testing.T) {
@@ -113,10 +113,10 @@ func TestReconcileOutboundIPs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
+			tt.m.log = log
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 
 			if tt.mocks != nil {
@@ -273,10 +273,10 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
+			tt.m.log = log
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 
@@ -1115,11 +1115,11 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 				t.Fatal(err)
 			}
 			tt.m.db = openShiftClustersDatabase
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
+			tt.m.log = log
 
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 

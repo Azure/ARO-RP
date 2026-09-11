@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -106,9 +104,6 @@ func TestSystemreservedEnsure(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-
-			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.mcp != nil {
@@ -208,9 +203,6 @@ func TestSystemreservedRemove(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-
-			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.mcp != nil {

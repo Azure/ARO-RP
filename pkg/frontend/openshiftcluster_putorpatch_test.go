@@ -17,7 +17,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -706,7 +706,6 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
@@ -1111,7 +1110,6 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
@@ -1611,7 +1609,6 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			defer ti.done()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
 			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
 

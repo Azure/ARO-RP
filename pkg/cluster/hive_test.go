@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +18,7 @@ import (
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestHiveClusterDeploymentReady(t *testing.T) {
@@ -54,7 +54,6 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, fakeNamespace)
 
@@ -99,7 +98,6 @@ func TestHiveResetCorrelationData(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			m := createManagerForTests(t, fakeNamespace)
 
 			hiveMock := mock_hive.NewMockClusterManager(controller)
@@ -166,7 +164,6 @@ func TestHiveCreateNamespace(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, tt.existingNamespaceName)
 
@@ -187,6 +184,7 @@ func TestHiveCreateNamespace(t *testing.T) {
 }
 
 func createManagerForTests(t *testing.T, existingNamespaceName string) *manager {
+	_, log := testlog.LogForTesting(t)
 	fakeDb, _ := testdatabase.NewFakeOpenShiftClusters()
 	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 
@@ -210,7 +208,7 @@ func createManagerForTests(t *testing.T, existingNamespaceName string) *manager 
 	}
 
 	return &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 		db:  fakeDb,
 		doc: doc,
 
@@ -246,7 +244,6 @@ func TestHiveEnsureResources(t *testing.T) {
 	} {
 		t.Run(tt.testName, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, "")
 
@@ -299,7 +296,6 @@ func TestHiveDeleteResources(t *testing.T) {
 	} {
 		t.Run(tt.testName, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			m := createManagerForTests(t, tt.namespace)
 

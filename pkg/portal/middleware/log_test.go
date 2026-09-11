@@ -29,7 +29,6 @@ func TestLog(t *testing.T) {
 	otelAudit := testlog.NewOtelAuditClient()
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pires/go-proxyproto"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -19,6 +18,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestNewGateway(t *testing.T) {
@@ -96,9 +96,8 @@ func TestNewGateway(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
-			baseLog := logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
 			metrics := mock_metrics.NewMockEmitter(controller)
 
 			httpl, _ := utilnet.Listen("tcp", ":8080", SocketSize)
@@ -108,7 +107,7 @@ func TestNewGateway(t *testing.T) {
 			env := mock_env.NewMockCore(controller)
 			tt.mocks(env)
 
-			gtwy, err := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, healthListener, tt.acrResourceID, tt.gatewayDomains, metrics)
+			gtwy, err := NewGateway(ctx, env, log, log, nil, httpsl, httpl, healthListener, tt.acrResourceID, tt.gatewayDomains, metrics)
 
 			if tt.wantErr != "" {
 				if err == nil {
@@ -154,16 +153,15 @@ func TestNewGatewayDefaultConditions(t *testing.T) {
 	acrResourceID := "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/resourceName"
 	gatewayDomains := "doMain1,Domain2"
 	ctx := context.Background()
-	baseLog := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 	metrics := mock_metrics.NewMockEmitter(controller)
 	env := mock_env.NewMockCore(controller)
 	env.EXPECT().Environment().AnyTimes().Return(populatedEnv)
 	env.EXPECT().Location().AnyTimes().Return("location")
 
-	gtwy, _ := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, healthListener, acrResourceID, gatewayDomains, metrics)
+	gtwy, _ := NewGateway(ctx, env, log, log, nil, httpsl, httpl, healthListener, acrResourceID, gatewayDomains, metrics)
 
 	gateway, _ := gtwy.(*gateway)
 

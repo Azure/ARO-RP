@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -23,6 +24,8 @@ var (
 )
 
 func TestNewAzRefreshableAuthorizer(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	for _, tt := range []struct {
 		name       string
 		azCloudEnv *azureclient.AROEnvironment
@@ -34,7 +37,7 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 			name:    "fail: nil azure cloud environment",
 			secret:  newV1CoreSecret(azureSecretName, nameSpace),
 			wantErr: "azureEnvironment cannot be nil",
-			log:     logrus.NewEntry(logrus.StandardLogger()),
+			log:     log,
 		},
 		{
 			name:       "fail: nil log entry",
@@ -46,7 +49,7 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 			name:       "pass: create new azrefreshable authorizer",
 			azCloudEnv: &azureclient.PublicCloud,
 			secret:     newV1CoreSecret(azureSecretName, nameSpace),
-			log:        logrus.NewEntry(logrus.StandardLogger()),
+			log:        log,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

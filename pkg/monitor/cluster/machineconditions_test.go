@@ -96,7 +96,6 @@ func setupTestMonitor(t *testing.T, machines []client.Object) (*Monitor, *mock_m
 	t.Helper()
 
 	controller := gomock.NewController(t)
-	t.Cleanup(func() { controller.Finish() })
 
 	m := mock_metrics.NewMockEmitter(controller)
 	_, log := testlog.New()

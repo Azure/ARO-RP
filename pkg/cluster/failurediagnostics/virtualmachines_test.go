@@ -315,7 +315,6 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			hook, entry := testlog.New()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
 

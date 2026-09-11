@@ -442,7 +442,6 @@ func TestGetClusterMachines(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			kubeActions := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(kubeActions)
@@ -1150,7 +1149,6 @@ func TestGetAzureVMs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			azureAction := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(azureAction)
@@ -1393,7 +1391,6 @@ func TestValidateClusterNodes(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			kubeActions := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(kubeActions)

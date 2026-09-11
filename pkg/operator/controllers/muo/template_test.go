@@ -32,7 +32,6 @@ var expectedLocalConfig []byte
 
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	setPullSpec := "MyMUOPullSpec"
 	cluster := &arov1alpha1.Cluster{
@@ -100,7 +99,6 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 
 func TestDeployConfig(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	cluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{

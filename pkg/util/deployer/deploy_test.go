@@ -31,7 +31,6 @@ var staticFiles embed.FS
 
 func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	setPullSpec := "MyMUOPullSpec"
 	cluster := &arov1alpha1.Cluster{
@@ -86,7 +85,6 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 
 func TestDeployDelete(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
@@ -101,7 +99,6 @@ func TestDeployDelete(t *testing.T) {
 
 func TestDeployDeleteFailure(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
