@@ -56,7 +56,7 @@ func mimoScheduler(ctx context.Context, _log *logrus.Entry) error {
 
 	tracing.Register(azure.New(m))
 
-	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName, encryption.WithLogger(log))
 	if err != nil {
 		return err
 	}
