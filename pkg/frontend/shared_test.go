@@ -307,7 +307,7 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 		}
 
 		if diff := cmp.Diff(cloudErr.Error(), wantError, opts...); diff != "" {
-			return fmt.Errorf("unexpected error (-want +got):\n%s", diff)
+			return fmt.Errorf("unexpected error (+want -got):\n%s", diff)
 		}
 
 		return nil

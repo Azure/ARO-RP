@@ -47,6 +47,7 @@ type AzureActions interface {
 	CreateCapacityReservation(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error
 	DeleteCRG(ctx context.Context, clusterRG, crgName string) error
 	DeleteCapacityReservation(ctx context.Context, clusterRG, crgName, zone string) error
+	ListComputeUsage(ctx context.Context, location string) ([]mgmtcompute.Usage, error)
 }
 
 type azureActions struct {
@@ -63,6 +64,7 @@ type azureActions struct {
 	securityGroups     armnetwork.SecurityGroupsClient
 	storageAccounts    storage.AccountsClient
 	virtualMachines    compute.VirtualMachinesClient
+	computeUsage       compute.UsageClient
 	virtualNetworks    armnetwork.VirtualNetworksClient
 
 	capacityReservationGroups armcompute.CapacityReservationGroupsClient
@@ -140,6 +142,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		securityGroups:     securityGroups,
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		computeUsage:       compute.NewUsageClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualNetworks:    virtualNetworks,
 
 		capacityReservationGroups: armCapacityReservationGroups,
@@ -203,6 +206,10 @@ func (a *azureActions) ResourceGroupHasVM(ctx context.Context, vmName string) (b
 	}
 
 	return false, nil
+}
+
+func (a *azureActions) ListComputeUsage(ctx context.Context, location string) ([]mgmtcompute.Usage, error) {
+	return a.computeUsage.List(ctx, location)
 }
 
 func (a *azureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {
