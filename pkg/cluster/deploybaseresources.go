@@ -358,7 +358,16 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 	var innerErr error
 
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
-	workerSubnetId := workerProfiles[0].SubnetID
+	var workerSubnetID string
+	for _, wp := range workerProfiles {
+		if wp.SubnetID != "" {
+			workerSubnetID = wp.SubnetID
+			break
+		}
+	}
+	if workerSubnetID == "" {
+		return fmt.Errorf("no valid worker subnet found: all worker profiles have empty subnetId")
+	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -373,7 +382,7 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollIn
 		c, innerErr = func() (bool, error) {
 			for _, subnetID := range []string{
 				m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-				workerSubnetId,
+				workerSubnetID,
 			} {
 				m.log.Printf("attaching network security group to subnet %s", subnetID)
 				// TODO: there is probably an undesirable race condition here - check if etags can help.

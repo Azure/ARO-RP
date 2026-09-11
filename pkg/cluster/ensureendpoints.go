@@ -16,16 +16,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
+func (m *manager) ensureServiceEndpointsForCreate(ctx context.Context) error {
+	return m.ensureServiceEndpoints(ctx, false)
+}
+
+func (m *manager) ensureServiceEndpointsForUpdate(ctx context.Context) error {
+	return m.ensureServiceEndpoints(ctx, true)
+}
+
 // ensureServiceEndpoints should enable service endpoints on
 // subnets for storage account access, but only if egress lockdown is
 // not enabled.
-func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
+func (m *manager) ensureServiceEndpoints(ctx context.Context, isUpdate bool) error {
 	// Only add service endpoints to the subnet if egress lockdown is not enabled.
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
 		return nil
 	}
 
-	subnetIds, err := m.getSubnetIds()
+	subnetIds, err := m.getSubnetIds(isUpdate)
 	if err != nil {
 		return err
 	}
@@ -53,7 +61,7 @@ func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) getSubnetIds() ([]string, error) {
+func (m *manager) getSubnetIds(isUpdate bool) ([]string, error) {
 	subnets := []string{
 		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 	}
@@ -61,6 +69,9 @@ func (m *manager) getSubnetIds() ([]string, error) {
 
 	for _, wp := range workerProfiles {
 		if len(wp.SubnetID) == 0 {
+			if isUpdate {
+				continue
+			}
 			return nil, fmt.Errorf("WorkerProfile '%s' has no SubnetID; check that the corresponding MachineSet is valid", wp.Name)
 		}
 		subnets = append(subnets, wp.SubnetID)
