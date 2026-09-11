@@ -320,22 +320,25 @@ var _ = Describe("Update clusters", func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("sending the PATCH request to replace the operator identity")
-		err := clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{
-			Properties: &armredhatopenshift.OpenShiftClusterProperties{
-				PlatformWorkloadIdentityProfile: &armredhatopenshift.PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]*armredhatopenshift.PlatformWorkloadIdentity{
-						operatorName: {
-							ResourceID: &replacementResourceID,
+		Eventually(func(g Gomega, ctx context.Context) {
+			err := clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{
+				Properties: &armredhatopenshift.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &armredhatopenshift.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]*armredhatopenshift.PlatformWorkloadIdentity{
+							operatorName: {
+								ResourceID: &replacementResourceID,
+							},
 						},
 					},
 				},
-			},
-		})
-		Expect(err).NotTo(HaveOccurred())
+			})
+			g.Expect(err).NotTo(HaveOccurred())
+			// Optionally, to avoid waiting here, get the replacement identity ready in e2e BeforeSuite.
+		}).WithContext(ctx).WithTimeout(PropagationDelayEventuallyTimeout).Should(Succeed())
 
 		By("verifying the identity was replaced")
 		Eventually(func(g Gomega, ctx context.Context) {
-			oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
+			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(oc.Properties).NotTo(BeNil())
 			g.Expect(oc.Properties.PlatformWorkloadIdentityProfile).NotTo(BeNil())

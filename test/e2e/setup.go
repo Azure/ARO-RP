@@ -84,8 +84,9 @@ const (
 var staticResources embed.FS
 
 var (
-	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
-	DefaultEventuallyTimeout  = 5 * time.Minute
+	disallowedInFilenameRegex         = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+	DefaultEventuallyTimeout          = 5 * time.Minute
+	PropagationDelayEventuallyTimeout = 25 * time.Second
 )
 
 type clientSet struct {
