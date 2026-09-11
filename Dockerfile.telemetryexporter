@@ -7,7 +7,11 @@ ARG BUILDER_TAG=rhel-9-golang-1.25-openshift-4.21
 ARG REPOSITORY=ubi9/ubi-minimal
 ARG TAG=latest
 ARG VERSION
+# Copy into a distinct name: the builder image sets ENV VERSION=1.25, which
+# shadows a same-named ARG inside this stage.
+ARG OTEL_VERSION=${VERSION}
 FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
+ARG OTEL_VERSION
 
 ENV GO_COMPLIANCE_INFO=0
 ENV GOWORK=off
@@ -19,7 +23,7 @@ WORKDIR /app
 
 COPY . /app
 
-RUN make build-telemetryexporter VERSION=${VERSION} && make validate-fips-telemetryexporter
+RUN make build-telemetryexporter VERSION=${OTEL_VERSION} && make validate-fips-telemetryexporter
 
 FROM ${REGISTRY}/${REPOSITORY}:${TAG}
 USER root
