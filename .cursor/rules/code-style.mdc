@@ -1,0 +1,68 @@
+---
+description: Code style conventions enforced by CI — imports, formatting, patterns
+alwaysApply: true
+---
+
+# Code Style
+
+## Formatting
+
+Always use `make fmt`, never `gofmt`. The fmt target runs `golangci-lint fmt` which applies **gci** (import ordering) + **gofumpt** (stricter gofmt).
+
+## Import Ordering (9 tiers, enforced by gci)
+
+1. Standard library
+2. Blank imports
+3. Dot imports
+4. Third-party (default)
+5. `k8s.io/*`
+6. `sigs.k8s.io/*`
+7. `github.com/Azure/*`
+8. `github.com/openshift/*`
+9. Local module packages
+
+## Required Import Aliases
+
+The `importas` linter enforces specific aliases — CI will reject wrong ones. Key examples:
+
+- `kerrors` -> `k8s.io/apimachinery/pkg/api/errors`
+- `metav1` -> `k8s.io/apimachinery/pkg/apis/meta/v1`
+- `arov1alpha1` -> ARO operator v1alpha1 API
+- `ctrl` -> `sigs.k8s.io/controller-runtime`
+- `kruntime` -> `k8s.io/apimachinery/pkg/runtime`
+
+See `.golangci.yml` for the full list of ~40+ enforced aliases.
+
+## Banned Packages
+
+The `depguard` linter blocks these — use `pkg/util/pointerutils` instead:
+- `github.com/Azure/go-autorest/autorest/to`
+- `k8s.io/utils/ptr`
+
+## Error Handling
+
+- Wrap: `fmt.Errorf("context: %w", err)`
+- Check: `errors.Is()` / `errors.As()`
+- **Do NOT wrap errors in `api.CloudError` if you're not adding context** — `adminReply()` has a type-switch that converts `kerrors.APIStatus`, `*api.CloudError`, `statusCodeError`, and bare `error` into the correct HTTP response. Double-wrapping a `CloudError` inside another `CloudError` (or wrapping it with `fmt.Errorf`) defeats this mechanism by hiding the original type. When the underscore method returns an error already of the right type, return it directly.
+
+## Package Rules
+
+- No files directly in `pkg/util/` — always use a subpackage.
+- No filenames containing colons (Windows compat).
+
+## Admin API Handler Pattern
+
+New admin endpoints must use the "underscore pattern" — main handler extracts HTTP params, calls `_methodName()` with raw values for testability:
+
+```go
+func (f *frontend) postAdminFoo(w http.ResponseWriter, r *http.Request) {
+    err := f._postAdminFoo(log, ctx, r)
+    adminReply(log, w, nil, nil, err)
+}
+
+func (f *frontend) _postAdminFoo(log *logrus.Entry, ctx context.Context, r *http.Request) error {
+    // Business logic here — testable without HTTP mocking
+}
+```
+
+Register routes in `pkg/frontend/frontend.go`.
