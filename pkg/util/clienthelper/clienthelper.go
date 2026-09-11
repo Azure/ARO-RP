@@ -144,6 +144,55 @@ func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) erro
 	})
 }
 
+// Wrappers for regular APIs to log similar to Ensure/EnsureDeleted
+func (ch *clientHelper) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	gvk, err := apiutil.GVKForObject(obj, scheme.Scheme)
+	if err != nil {
+		return err
+	}
+	ch.log.Infof("Patch %s", keyFunc(gvk.GroupKind(), obj.GetNamespace(), obj.GetName()))
+	return ch.Client.Patch(ctx, obj, patch, opts...)
+}
+
+// Interface that top-level kubebuilder ApplyConfigurations implement, as the
+// base ApplyConfiguration doesn't (as it can apply to subresources)
+type applyConfigurationMeta interface {
+	GetKind() *string
+	GetAPIVersion() *string
+	GetName() *string
+	GetNamespace() *string
+}
+
+func (ch *clientHelper) Apply(ctx context.Context, ac kruntime.ApplyConfiguration, opts ...client.ApplyOption) error {
+	obj, ok := ac.(applyConfigurationMeta)
+	if ok {
+		apiversion := ""
+		if obj.GetAPIVersion() != nil {
+			apiversion = *obj.GetAPIVersion()
+		}
+
+		objtype := "unknown"
+		if obj.GetKind() != nil {
+			objtype = *obj.GetKind()
+		}
+
+		name := ""
+		if obj.GetName() != nil {
+			name = *obj.GetName()
+		}
+
+		namespace := ""
+		if obj.GetNamespace() != nil {
+			namespace = *obj.GetNamespace()
+		}
+
+		ch.log.Infof("Apply %s/%s/%s/%s", apiversion, objtype, namespace, name)
+	} else {
+		ch.log.Infof("Apply (unknown object)")
+	}
+	return ch.Client.Apply(ctx, ac, opts...)
+}
+
 // merge takes the existing (old) and desired (new) objects.  It compares them
 // to see if an update is necessary, fixes up the new object if needed, and
 // returns the difference for debugging purposes.

@@ -31,6 +31,7 @@ GATEKEEPER_VERSION = v3.19.2
 HOLMESGPT_VERSION ?= 0.36.0
 HOLMESGPT_REF ?= $(HOLMESGPT_VERSION)
 HOLMESGPT_BASE_REGISTRY ?= registry.access.redhat.com
+ENVTEST_KUBERNETES_VERSION=1.33.0 # 1.33, corresponds with OCP 4.20
 
 # Set this to the latest/current API version. TypeSpec only generates based on the latest API version.
 TYPESPEC_API_VERSION = v20250725
@@ -410,6 +411,10 @@ validate-lint-go-fix: lint-go-fix
 		exit 1; \
 	fi
 
+.PHONY: setup-envtest
+setup-envtest: $(SETUP_ENVTEST)
+	$(SETUP_ENVTEST) use $(ENVTEST_KUBERNETES_VERSION)
+
 .PHONY: validate-gh-actions
 validate-gh-actions: $(PINACT) ## Validate GitHub Actions are pinned to SHA
 	@echo "Checking that all GitHub Actions are pinned to SHA..."
@@ -596,6 +601,7 @@ ci-rp:
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
+		--build-arg ENVTEST_KUBERNETES_VERSION=$(ENVTEST_KUBERNETES_VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 

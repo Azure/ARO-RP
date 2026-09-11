@@ -54,6 +54,11 @@ COPY test test
 # Ensure JS assets are available before generating Go code
 COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
 
+# Download the envtest binaries and mark our tests as running with them
+ARG ENVTEST_KUBERNETES_VERSION
+RUN setup-envtest use ${ENVTEST_KUBERNETES_VERSION}
+ENV ARO_USE_ENVTEST=true
+
 # Build RP and E2E test suite bins
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
 

@@ -5,24 +5,38 @@ package cluster
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	v1 "k8s.io/client-go/applyconfigurations/core/v1"
+	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+)
+
+var (
+	ErrNoRegistryProfileFound     = errors.New("no registry profile found")
+	ErrCannotRotateACRTokensInDev = errors.New("attempted to rotate ACR credentials in dev")
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
@@ -56,19 +70,19 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		return nil
 	}
 
-	token, err := newACRTokenManager(m.env)
+	token, err := m.newACRTokenManager(m.env)
 	if err != nil {
 		return err
 	}
 
-	rp := token.GetRegistryProfile(m.doc.OpenShiftCluster)
+	rp := m.doc.OpenShiftCluster.GetRegistryProfile(m.env.ACRDomain())
 	if rp == nil {
 		// 1. choose a name and establish the intent to create a token with
 		// that name
 		rp = token.NewRegistryProfile()
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			token.PutRegistryProfile(doc.OpenShiftCluster, rp)
+			doc.OpenShiftCluster.PutRegistryProfile(rp)
 			return nil
 		})
 		if err != nil {
@@ -88,7 +102,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		rp.IssueDate = &currentTime
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			token.PutRegistryProfile(doc.OpenShiftCluster, rp)
+			doc.OpenShiftCluster.PutRegistryProfile(rp)
 			return nil
 		})
 		if err != nil {
@@ -105,32 +119,46 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return nil
 	}
 
-	token, err := newACRTokenManager(m.env)
+	token, err := m.newACRTokenManager(m.env)
 	if err != nil {
 		return err
 	}
 
-	registryProfile := token.GetRegistryProfile(m.doc.OpenShiftCluster)
+	updateDB := func(ctx context.Context, oscdm database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+		return m.db.PatchWithLease(ctx, m.doc.Key, oscdm)
+	}
+
+	return RotateACRToken(ctx, m.env, m.log, m.ch, m.doc, token, updateDB, false)
+}
+
+func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, ch clienthelper.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager, updateDB database.OpenShiftClusterDocumentMutatorRunner, force bool) error {
+	// we do not want to rotate tokens in local development
+	if env.IsLocalDevelopmentMode() || env.IsCI() {
+		return ErrCannotRotateACRTokensInDev
+	}
+
+	registryProfile := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
 	if registryProfile == nil {
-		// this should never happen, but just in case
-		return m.ensureACRToken(ctx)
+		// No registry profile found, needs to be created with ensureACRToken
+		return ErrNoRegistryProfileFound
 	}
 
-	// Only rotate the token if required
-	shouldRotate, _, durationUntilRotate, validityRemaining := acrtoken.ShouldRotateToken(m.env, registryProfile)
-	m.log.Infof("token has %s validity remaining, should rotate in %s", validityRemaining.String(), durationUntilRotate.String())
-	if !shouldRotate {
+	shouldRotate, _, durationUntilRotate, validityRemaining := acrtoken.ShouldRotateToken(env, registryProfile)
+	log.Infof("token has %s validity remaining, should rotate in %s", validityRemaining.String(), durationUntilRotate.String())
+	if !shouldRotate && !force {
 		return nil
+	} else if !shouldRotate && force {
+		log.Infof("force rotating token before rotation period")
 	}
 
-	m.log.Infof("rotating ACR token")
-	err = token.RotateTokenPassword(ctx, registryProfile)
+	log.Infof("rotating ACR token")
+	err := token.RotateTokenPassword(ctx, registryProfile)
 	if err != nil {
 		return err
 	}
 
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		token.PutRegistryProfile(doc.OpenShiftCluster, registryProfile)
+	_, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.PutRegistryProfile(registryProfile)
 		return nil
 	})
 	if err != nil {
@@ -144,37 +172,36 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return err
 	}
 
-	// wait for response from operator that reconciliation is completed successfully
-	pullSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      operator.SecretName,
-			Namespace: operator.Namespace,
+	applyConfiguration := corev1ac.Secret(operator.SecretName, operator.Namespace).WithData(
+		map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(encodedDockerConfigJson),
 		},
-		Data: make(map[string][]byte),
-	}
-	pullSecret.Data[corev1.DockerConfigJsonKey] = []byte(encodedDockerConfigJson)
-
-	_, err = m.kubernetescli.CoreV1().Secrets(operator.Namespace).Update(ctx, pullSecret, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	err = retryOperation(func() error {
-		return m.rotateOpenShiftConfigSecret(ctx, pullSecret.Data[corev1.DockerConfigJsonKey])
+	)
+	err = retryApply(func() error {
+		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("when applying pullsecret: %w", err)
 	}
 
-	return nil
+	return rotateOpenShiftConfigSecret(ctx, log, ch, []byte(encodedDockerConfigJson))
 }
 
-func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDockerConfigJson []byte) error {
-	openshiftConfigSecret, err := m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clienthelper.Interface, encodedDockerConfigJson []byte) error {
+	openshiftConfigSecret := &corev1.Secret{
+		// instantiate objectmeta in case the object is not found and the apply
+		// becomes a create
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pullSecretName.Name,
+			Namespace: pullSecretName.Namespace,
+		},
+	}
+	err := ch.GetOne(ctx, pullSecretName, openshiftConfigSecret)
 	if err != nil && !kerrors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("unable to fetch %s: %w", pullSecretName, err)
 	}
 	// by default, we create a patch with only the rotated acr token
-	applyConfiguration := v1.Secret(pullSecretName.Name, pullSecretName.Namespace).
+	applyConfiguration := corev1ac.Secret(pullSecretName.Name, pullSecretName.Namespace).
 		WithData(map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson}).
 		WithType(corev1.SecretTypeDockerConfigJson)
 
@@ -184,7 +211,7 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 
 	if recreationOfSecretRequired {
 		err := retryOperation(func() error {
-			return m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
+			return ch.EnsureDeleted(ctx, metav1.SchemeGroupVersion.WithKind("Secret"), pullSecretName)
 		})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
@@ -199,15 +226,17 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 			if err == nil {
 				applyConfiguration.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
 			} else {
-				m.log.Error("Could not merge openshift config pull secret, overriding with new acr token", err)
+				log.Error("Could not merge openshift config pull secret, overriding with new acr token", err)
 			}
 		}
 	}
-
-	return retryOperation(func() error {
-		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Apply(ctx, applyConfiguration, metav1.ApplyOptions{FieldManager: "aro-rp", Force: true})
-		return err
+	err = retryApply(func() error {
+		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
 	})
+	if err != nil {
+		return fmt.Errorf("error applying secret %s: %w", pullSecretName, err)
+	}
+	return nil
 }
 
 func retryOperation(retryable func() error) error {
@@ -216,5 +245,15 @@ func retryOperation(retryable func() error) error {
 		Duration: 2 * time.Second,
 	}, func(err error) bool {
 		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err) || kerrors.IsConflict(err)
+	}, retryable)
+}
+
+// Retry operations, but pass up conflicts.
+func retryApply(retryable func() error) error {
+	return retry.OnError(wait.Backoff{
+		Steps:    10,
+		Duration: 2 * time.Second,
+	}, func(err error) bool {
+		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err)
 	}, retryable)
 }
