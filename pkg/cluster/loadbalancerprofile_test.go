@@ -1133,7 +1133,12 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			err = tt.m.reconcileLoadBalancerProfile(ctx)
 			// Expect error to be in the array of errors provided or to be nil
 			if tt.expectedErr != nil {
-				assert.Contains(t, tt.expectedErr, err, "Unexpected error exception")
+				require.Error(t, err, "Expected an error but got none")
+				expectedErrMsgs := make([]string, len(tt.expectedErr))
+				for i, e := range tt.expectedErr {
+					expectedErrMsgs[i] = e.Error()
+				}
+				assert.Contains(t, expectedErrMsgs, err.Error(), "Unexpected error exception")
 			} else {
 				require.NoError(t, err, "Unexpected error exception")
 			}
