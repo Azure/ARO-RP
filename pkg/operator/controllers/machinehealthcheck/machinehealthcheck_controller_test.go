@@ -5,15 +5,15 @@ package machinehealthcheck
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"go.uber.org/mock/gomock"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -23,7 +23,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
@@ -32,7 +32,6 @@ import (
 
 // Test reconcile function
 func TestMachineHealthCheckReconciler(t *testing.T) {
-	transitionTime := metav1.Time{Time: time.Now()}
 	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
 	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
 	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
@@ -80,20 +79,22 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 		},
 	}
 
+	mhcKey := types.NamespacedName{Namespace: "openshift-machine-api", Name: "aro-machinehealthcheck"}
+
 	type test struct {
 		name             string
 		instance         *arov1alpha1.Cluster
 		clusterversion   *configv1.ClusterVersion
-		mocks            func(mdh *mock_dynamichelper.MockInterface)
+		existingMHC      *machinev1beta1.MachineHealthCheck
 		wantConditions   []operatorv1.OperatorCondition
 		wantErr          string
 		wantRequeueAfter time.Duration
+		assertMHC        func(t *testing.T, ctx context.Context, r *Reconciler)
 	}
 
 	for _, tt := range []*test{
 		{
 			name:           "Failure to get instance",
-			mocks:          func(mdh *mock_dynamichelper.MockInterface) {},
 			wantConditions: defaultConditions,
 			wantErr:        `clusters.aro.openshift.io "cluster" not found`,
 		},
@@ -111,10 +112,6 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				Status: arov1alpha1.ClusterStatus{
 					Conditions: defaultConditions,
 				},
-			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(0)
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
 			},
 			wantConditions: defaultConditions,
 			wantErr:        "",
@@ -135,14 +132,28 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Conditions: defaultConditions,
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+				},
 			},
 			wantConditions: defaultConditions,
 			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				err := r.Client.Get(ctx, mhcKey, mhc)
+				if !kerrors.IsNotFound(err) {
+					t.Fatalf("expected MHC to be deleted, got: %v", err)
+				}
+			},
 		},
 		{
-			name: "Managed Feature Flag is true: ensure Prometheus Alert is deleted",
+			name: "Managed Feature Flag is true: MHC is created with defaults",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -157,64 +168,21 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Conditions: defaultConditions,
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-			},
 			wantConditions: defaultConditions,
 			wantErr:        "",
-		},
-		{
-			name: "Managed Feature Flag is false: MHC fails to delete, an error is returned",
-			instance: &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: arov1alpha1.SingletonClusterName,
-				},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						operator.MachineHealthCheckEnabled: operator.FlagTrue,
-						operator.MachineHealthCheckManaged: operator.FlagFalse,
-					},
-				},
-				Status: arov1alpha1.ClusterStatus{
-					Conditions: defaultConditions,
-				},
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to be created: %v", err)
+				}
+				if mhc.Spec.MaxUnhealthy == nil {
+					t.Fatal("expected maxUnhealthy to be set")
+				}
+				if mhc.Spec.MaxUnhealthy.IntValue() != 1 {
+					t.Errorf("expected maxUnhealthy=1, got %v", mhc.Spec.MaxUnhealthy)
+				}
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Return(errors.New("Could not delete mhc"))
-			},
-			wantErr: "Could not delete mhc",
-			wantConditions: []operatorv1.OperatorCondition{
-				defaultAvailable,
-				defaultProgressing,
-				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: transitionTime,
-					Message:            "Could not delete mhc",
-				},
-			},
-			wantRequeueAfter: time.Hour,
-		},
-		{
-			name: "Managed Feature Flag is true: dynamic helper ensures resources",
-			instance: &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: arov1alpha1.SingletonClusterName,
-				},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						operator.MachineHealthCheckEnabled: operator.FlagTrue,
-						operator.MachineHealthCheckManaged: operator.FlagTrue,
-					},
-				},
-			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
-				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(false)).Return(nil).Times(1)
-			},
-			wantConditions: defaultConditions,
-			wantErr:        "",
 		},
 		{
 			name: "Managed Feature Flag is true and cluster is upgrading: sets paused annotation on MHC",
@@ -230,11 +198,17 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 			},
 			clusterversion: clusterversionUpgrading,
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
-				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(true)).Return(nil).Times(1)
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if _, ok := mhc.Annotations[MHCPausedAnnotation]; !ok {
+					t.Error("expected paused annotation to be set during upgrade")
+				}
 			},
-			wantErr: "",
 		},
 		{
 			// ARO-26990: an ARO MCO config rollout sets Progressing=True but does not
@@ -252,14 +226,20 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 			},
 			clusterversion: clusterversionMCORollout,
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
-				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(false)).Return(nil).Times(1)
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if _, ok := mhc.Annotations[MHCPausedAnnotation]; ok {
+					t.Error("expected paused annotation NOT to be set during MCO rollout")
+				}
 			},
-			wantErr: "",
 		},
 		{
-			name: "When ensuring resources fails, an error is returned",
+			name: "Existing MHC with customer maxUnhealthy override is preserved",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -270,35 +250,367 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 						operator.MachineHealthCheckManaged: operator.FlagTrue,
 					},
 				},
-				Status: arov1alpha1.ClusterStatus{
-					Conditions: defaultConditions,
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(2)),
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(nil).Times(1)
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(errors.New("failed to ensure"))
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if mhc.Spec.MaxUnhealthy == nil {
+					t.Fatal("expected maxUnhealthy to be set")
+				}
+				if mhc.Spec.MaxUnhealthy.IntValue() != 2 {
+					t.Errorf("expected customer maxUnhealthy=2 to be preserved, got %v", mhc.Spec.MaxUnhealthy)
+				}
 			},
-			wantErr: "failed to ensure",
-			wantConditions: []operatorv1.OperatorCondition{
-				defaultAvailable,
-				defaultProgressing,
-				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: transitionTime,
-					Message:            "failed to ensure",
+		},
+		{
+			name: "Existing MHC with integer 0 maxUnhealthy is defaulted to 1",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
 				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(0)),
+				},
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if mhc.Spec.MaxUnhealthy == nil {
+					t.Fatal("expected maxUnhealthy to be defaulted")
+				}
+				if mhc.Spec.MaxUnhealthy.IntValue() != 1 {
+					t.Errorf("expected maxUnhealthy=1 default, got %v", mhc.Spec.MaxUnhealthy)
+				}
+			},
+		},
+		{
+			name: "Existing MHC with string 0 maxUnhealthy is defaulted to 1",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromString("0")),
+				},
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if mhc.Spec.MaxUnhealthy == nil {
+					t.Fatal("expected maxUnhealthy to be defaulted")
+				}
+				if mhc.Spec.MaxUnhealthy.IntValue() != 1 {
+					t.Errorf("expected maxUnhealthy=1 default, got %v", mhc.Spec.MaxUnhealthy)
+				}
+			},
+		},
+		{
+			name: "Existing MHC with 100% maxUnhealthy is preserved",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromString("100%")),
+				},
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if mhc.Spec.MaxUnhealthy == nil {
+					t.Fatal("expected maxUnhealthy to still be set")
+				}
+				if mhc.Spec.MaxUnhealthy.StrVal != "100%" {
+					t.Errorf("expected maxUnhealthy to remain 100%%, got %v", mhc.Spec.MaxUnhealthy)
+				}
+			},
+		},
+		{
+			name: "Existing MHC with missing required selectors has them restored",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					Selector:     metav1.LabelSelector{},
+				},
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if len(mhc.Spec.Selector.MatchExpressions) != 2 {
+					t.Fatalf("expected 2 required matchExpressions, got %d", len(mhc.Spec.Selector.MatchExpressions))
+				}
+			},
+		},
+		{
+			name: "Existing MHC with required selectors plus custom ones preserves all",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					Selector: metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "machine.openshift.io/cluster-api-machine-role",
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"master"},
+							},
+							{
+								Key:      "machine.openshift.io/cluster-api-machineset",
+								Operator: metav1.LabelSelectorOpExists,
+							},
+							{
+								Key:      "custom-label",
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{"custom-value"},
+							},
+						},
+					},
+				},
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if len(mhc.Spec.Selector.MatchExpressions) != 3 {
+					t.Fatalf("expected 3 matchExpressions (2 required + 1 custom), got %d", len(mhc.Spec.Selector.MatchExpressions))
+				}
+			},
+		},
+		{
+			name: "Existing MHC with corrupted selector values has them corrected",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+					Selector: metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "machine.openshift.io/cluster-api-machine-role",
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"worker"},
+							},
+							{
+								Key:      "machine.openshift.io/cluster-api-machineset",
+								Operator: metav1.LabelSelectorOpExists,
+							},
+						},
+					},
+				},
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if len(mhc.Spec.Selector.MatchExpressions) != 2 {
+					t.Fatalf("expected 2 matchExpressions, got %d", len(mhc.Spec.Selector.MatchExpressions))
+				}
+				for _, expr := range mhc.Spec.Selector.MatchExpressions {
+					if expr.Key == "machine.openshift.io/cluster-api-machine-role" {
+						if len(expr.Values) != 1 || expr.Values[0] != "master" {
+							t.Errorf("expected values [master], got %v", expr.Values)
+						}
+						return
+					}
+				}
+				t.Error("required machine-role expression not found")
+			},
+		},
+		{
+			name: "Existing MHC with paused annotation is unpaused when not upgrading",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+					Annotations: map[string]string{
+						MHCPausedAnnotation: "",
+					},
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+				},
+			},
+			wantConditions: defaultConditions,
+			wantErr:        "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if _, ok := mhc.Annotations[MHCPausedAnnotation]; ok {
+					t.Error("expected paused annotation to be removed when not upgrading")
+				}
+			},
+		},
+		{
+			name: "Existing MHC without paused annotation gets paused during upgrade",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
+					},
+				},
+			},
+			clusterversion: clusterversionUpgrading,
+			existingMHC: &machinev1beta1.MachineHealthCheck{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "aro-machinehealthcheck",
+					Namespace: "openshift-machine-api",
+				},
+				Spec: machinev1beta1.MachineHealthCheckSpec{
+					MaxUnhealthy: pointerutils.ToPtr(intstr.FromInt32(1)),
+				},
+			},
+			wantErr: "",
+			assertMHC: func(t *testing.T, ctx context.Context, r *Reconciler) {
+				t.Helper()
+				mhc := &machinev1beta1.MachineHealthCheck{}
+				if err := r.Client.Get(ctx, mhcKey, mhc); err != nil {
+					t.Fatalf("expected MHC to exist: %v", err)
+				}
+				if _, ok := mhc.Annotations[MHCPausedAnnotation]; !ok {
+					t.Error("expected paused annotation to be added during upgrade")
+				}
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			mdh := mock_dynamichelper.NewMockInterface(controller)
-
-			tt.mocks(mdh)
-
 			clientBuilder := testclienthelper.NewAROFakeClientBuilder()
 			if tt.instance != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.instance)
@@ -308,13 +620,15 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			} else {
 				clientBuilder = clientBuilder.WithObjects(tt.clusterversion)
 			}
+			if tt.existingMHC != nil {
+				clientBuilder = clientBuilder.WithObjects(tt.existingMHC)
+			}
 
 			ctx := context.Background()
 
 			r := NewReconciler(
 				logrus.NewEntry(logrus.StandardLogger()),
 				clientBuilder.Build(),
-				mdh,
 			)
 
 			request := ctrl.Request{}
@@ -331,37 +645,42 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			}
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			if tt.assertMHC != nil {
+				tt.assertMHC(t, ctx, r)
+			}
 		})
 	}
 }
 
-type mhcIsPausedMatcher struct {
-	paused bool
-}
+func TestDefaultMachineHealthCheck(t *testing.T) {
+	mhc := defaultMachineHealthCheck()
 
-func (m mhcIsPausedMatcher) Matches(x interface{}) bool {
-	if objs, ok := x.([]kruntime.Object); !ok {
-		return false
-	} else {
-		for _, obj := range objs {
-			if mhc, ok := obj.(*machinev1beta1.MachineHealthCheck); ok {
-				if _, ok := mhc.Annotations[MHCPausedAnnotation]; ok != m.paused {
-					return false
-				}
-			}
+	if mhc.Name != "aro-machinehealthcheck" {
+		t.Errorf("expected name aro-machinehealthcheck, got %s", mhc.Name)
+	}
+	if mhc.Namespace != "openshift-machine-api" {
+		t.Errorf("expected namespace openshift-machine-api, got %s", mhc.Namespace)
+	}
+
+	if mhc.Spec.MaxUnhealthy == nil || mhc.Spec.MaxUnhealthy.IntValue() != 1 {
+		t.Errorf("expected maxUnhealthy=1, got %v", mhc.Spec.MaxUnhealthy)
+	}
+
+	if mhc.Spec.NodeStartupTimeout == nil || mhc.Spec.NodeStartupTimeout.Duration != 25*time.Minute {
+		t.Errorf("expected nodeStartupTimeout=25m, got %v", mhc.Spec.NodeStartupTimeout)
+	}
+
+	if len(mhc.Spec.Selector.MatchExpressions) != 2 {
+		t.Fatalf("expected 2 selector matchExpressions, got %d", len(mhc.Spec.Selector.MatchExpressions))
+	}
+
+	if len(mhc.Spec.UnhealthyConditions) != 2 {
+		t.Fatalf("expected 2 unhealthyConditions, got %d", len(mhc.Spec.UnhealthyConditions))
+	}
+	for _, uc := range mhc.Spec.UnhealthyConditions {
+		if uc.Timeout.Duration != 15*time.Minute {
+			t.Errorf("expected unhealthyCondition timeout=15m, got %v", uc.Timeout.Duration)
 		}
 	}
-	return true
-}
-
-func (m mhcIsPausedMatcher) String() string {
-	if m.paused {
-		return "has mhc with paused annotation"
-	} else {
-		return "has mhc with no paused annotation"
-	}
-}
-
-func mhcIsPaused(paused bool) gomock.Matcher {
-	return mhcIsPausedMatcher{paused: paused}
 }

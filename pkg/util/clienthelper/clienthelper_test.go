@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/openshift/hive/apis/hive/v1/azure"
@@ -90,54 +89,6 @@ func TestEnsureDeleted(t *testing.T) {
 
 func TestMerge(t *testing.T) {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
-
-	mhc := &machinev1beta1.MachineHealthCheck{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aro-machinehealthcheck",
-			Namespace: "openshift-machine-api",
-		},
-		Spec: machinev1beta1.MachineHealthCheckSpec{
-			Selector: metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "machine.openshift.io/cluster-api-machineset",
-						Operator: metav1.LabelSelectorOpExists,
-					},
-				},
-			},
-			UnhealthyConditions: []machinev1beta1.UnhealthyCondition{
-				{
-					Type:    corev1.NodeReady,
-					Timeout: metav1.Duration{Duration: 15 * time.Minute},
-					Status:  corev1.ConditionFalse,
-				},
-			},
-			NodeStartupTimeout: &metav1.Duration{Duration: 25 * time.Minute},
-		},
-	}
-
-	mhcWithStatus := mhc.DeepCopy()
-	mhcWithStatus.Status = machinev1beta1.MachineHealthCheckStatus{
-		Conditions: []machinev1beta1.Condition{
-			{
-				Type:               machinev1beta1.RemediationAllowedCondition,
-				Status:             corev1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: time.Now()},
-			},
-		},
-		CurrentHealthy:      pointerutils.ToPtr(3),
-		ExpectedMachines:    pointerutils.ToPtr(3),
-		RemediationsAllowed: 1,
-	}
-
-	mhcWithAnnotation := mhc.DeepCopy()
-	mhcWithAnnotation.Annotations = map[string]string{
-		"cluster.x-k8s.io/paused": "",
-	}
-
-	mhcWithStatusAndAnnotation := mhc.DeepCopy()
-	mhcWithStatusAndAnnotation.Status = *mhcWithStatus.Status.DeepCopy()
-	mhcWithStatusAndAnnotation.Annotations = mhcWithAnnotation.Annotations
 
 	for _, tt := range []struct {
 		name             string
