@@ -223,17 +223,6 @@ var _ = Describe("Update clusters", func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		DeferCleanup(func(ctx context.Context) {
-			By("checking cluster provisioning state")
-			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
-			if err != nil {
-				return
-			}
-			if oc.Properties != nil && oc.Properties.ProvisioningState != nil && *oc.Properties.ProvisioningState != armredhatopenshift.ProvisioningStateSucceeded {
-				By("sending the PATCH request to retry update")
-				err := clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{})
-				Expect(err).NotTo(HaveOccurred())
-			}
-
 			By("cleaning up any remaining role assignments for the original identity")
 			if originalMsi.Properties != nil && originalMsi.Properties.PrincipalID != nil {
 				roleAssignments, err := clients.RoleAssignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *originalMsi.Properties.PrincipalID))
@@ -344,7 +333,8 @@ var _ = Describe("Update clusters", func() {
 				},
 			})
 			g.Expect(err).NotTo(HaveOccurred())
-		}).WithContext(ctx).WithTimeout(2 * time.Second).Should(Succeed())
+			// Optionally, to avoid waiting here, get the replacement identity ready in e2e BeforeSuite.
+		}).WithContext(ctx).WithTimeout(PropagationDelayEventuallyTimeout).Should(Succeed())
 
 		By("verifying the identity was replaced")
 		Eventually(func(g Gomega, ctx context.Context) {
