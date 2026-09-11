@@ -175,12 +175,40 @@ func fakeOpenShiftClustersOnlyResourceID(client cosmosdb.OpenShiftClusterDocumen
 	return cosmosdb.NewFakeOpenShiftClusterDocumentIterator(newDocs, startingIndex)
 }
 
+// fakeOpenShiftClustersResourceGroupIDOnly mirrors the SELECT doc.id projection:
+// it filters by @resourceGroupID but populates only ID, leaving OpenShiftCluster
+// nil so callers relying on the full payload are caught.
+func fakeOpenShiftClustersResourceGroupIDOnly(client cosmosdb.OpenShiftClusterDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.OpenShiftClusterDocumentRawIterator {
+	startingIndex, err := fakeOpenShiftClustersGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeOpenShiftClusterDocumentErroringRawIterator(err)
+	}
+
+	docs, err := fakeOpenShiftClustersGetAllDocuments(client)
+	if err != nil {
+		return cosmosdb.NewFakeOpenShiftClusterDocumentErroringRawIterator(err)
+	}
+
+	newDocs := make([]*api.OpenShiftClusterDocument, 0)
+
+	for _, d := range docs {
+		if d.ClusterResourceGroupIDKey == query.Parameters[0].Value {
+			newDocs = append(newDocs, &api.OpenShiftClusterDocument{
+				ID: d.ID,
+			})
+		}
+	}
+
+	return cosmosdb.NewFakeOpenShiftClusterDocumentIterator(newDocs, startingIndex)
+}
+
 func injectOpenShiftClusters(c *cosmosdb.FakeOpenShiftClusterDocumentClient) {
 	c.SetQueryHandler(database.OpenShiftClustersDequeueQuery, fakeOpenShiftClustersDequeueQuery)
 	c.SetQueryHandler(database.OpenShiftClustersQueueLengthQuery, fakeOpenShiftClustersQueueLengthQuery)
 	c.SetQueryHandler(database.OpenShiftClustersGetQuery, fakeOpenshiftClustersMatchQuery)
 	c.SetQueryHandler(database.OpenshiftClustersClientIdQuery, fakeOpenshiftClustersMatchQuery)
 	c.SetQueryHandler(database.OpenshiftClustersResourceGroupQuery, fakeOpenshiftClustersMatchQuery)
+	c.SetQueryHandler(database.OpenshiftClustersResourceGroupIDOnlyQuery, fakeOpenShiftClustersResourceGroupIDOnly)
 	c.SetQueryHandler(database.OpenshiftClustersPrefixQuery, fakeOpenshiftClustersPrefixQuery)
 	c.SetQueryHandler(database.OpenshiftClustersClusterResourceIDOnlyQuery, fakeOpenShiftClustersOnlyResourceID)
 
