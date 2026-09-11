@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
@@ -148,7 +149,7 @@ func TestSubscriptionChangefeed(t *testing.T) {
 			stop := make(chan struct{})
 			defer close(stop)
 
-			go RunChangefeed(t.Context(), log, subscriptionChangefeed, 100*time.Microsecond, 1, cache, stop)
+			go RunChangefeed(t.Context(), log, &noop.Noop{}, "SubscriptionDocument", subscriptionChangefeed, 100*time.Microsecond, 1, cache, stop)
 
 			cache.WaitForInitialPopulation()
 			require.Eventually(t, func() bool {
@@ -307,7 +308,7 @@ func TestSubscriptionChangefeedError(t *testing.T) {
 	defer close(stop)
 
 	// set it on a massive loop so it only runs once
-	go RunChangefeed(t.Context(), log, subscriptionChangefeed, 10000*time.Hour, 1, cache, stop)
+	go RunChangefeed(t.Context(), log, &noop.Noop{}, "SubscriptionDocument", subscriptionChangefeed, 10000*time.Hour, 1, cache, stop)
 
 	// it'll print the log when on the first loop, use Eventually so that we're
 	// not in a race with the goroutine we spawned

@@ -67,6 +67,7 @@ var _ client.AuthData = gatewayAuthInfo{}
 type authManager struct {
 	_env env.Core
 	log  *logrus.Entry
+	m    metrics.Emitter
 
 	// Underlying TLS transport configuration (serving key/cert)
 	tls credentials.TransportCredentials
@@ -94,6 +95,7 @@ func newAuthManager(
 	return &authManager{
 		_env: _env,
 		log:  _env.LoggerForComponent("auth"),
+		m:    m,
 
 		tls: tls,
 
@@ -105,7 +107,8 @@ func newAuthManager(
 
 func (m *authManager) startChangefeed(ctx context.Context, db database.Gateway) {
 	go changefeed.RunChangefeed(
-		ctx, m._env.LoggerForComponent("changefeed"), db.ChangeFeed(),
+		ctx, m._env.LoggerForComponent("changefeed"), m.m, "GatewayDocument",
+		db.ChangeFeed(),
 		m.changefeedRefreshInterval,
 		m.changefeedBatchSize, m.gatewayCache, ctx.Done(),
 	)
