@@ -444,11 +444,11 @@ storage account so other people on your team can access it via `make secrets`.
 
 ## Deploy shared RP development environment (once per location)
 
-Look at the [helper file](../hack/devtools/deploy-shared-env.sh) to understand
-each of the bash functions below.
+### Option 1: Automated Bicep Deployment (Recommended)
 
-1. Copy, edit (if necessary) and source your environment file. The required
-   environment variable configuration is documented immediately below:
+The Bicep-based deployment automates all infrastructure orchestration steps, replacing the manual bash function calls with a single command.
+
+1. Copy, edit (if necessary) and source your environment file:
 
    ```bash
    cp env.example env
@@ -458,8 +458,57 @@ each of the bash functions below.
 
    - LOCATION: Location of the shared RP development environment (default:
      `eastus`).
+
+1. Create AzSecPack managed Identity https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/234249/AzSecPack-AutoConfig-UserAssigned-Managed-Identity (required for proxy/VPN deployment)
+
+1. Enable EncryptionAtHost for subscription:
+
+   ```bash
+   az feature register --namespace Microsoft.Compute --name EncryptionAtHost 
+   ```
+
+1. Run the automated Bicep deployment:
+
+   ```bash
+   ./hack/devtools/deploy-shared-env-bicep.sh
+   ```
+
+   This script will:
+   - Validate prerequisites and environment variables
+   - Create the resource group
+   - Deploy all infrastructure using Bicep orchestration
+   - Configure OIDC storage account
+   - Import certificates to Key Vault
+   - Update parent domain DNS zone
+   - Generate VPN client configuration
+
+   **Options:**
+   - If you encounter a "VirtualNetworkGatewayCannotUseStandardPublicIP" error, add `--use-basic-ip`:
+     ```bash
+     ./hack/devtools/deploy-shared-env-bicep.sh --use-basic-ip
+     ```
+   - To skip AKS deployment: `--skip-aks`
+   - To skip MIWI infrastructure: `--skip-miwi`
+   - To skip post-deployment steps: `--skip-post-deployment`
+   - For help: `--help`
+
+   See [hack/devtools/bicep/README.md](../hack/devtools/bicep/README.md) for more details.
+
+### Option 2: Manual Bash Functions (Legacy)
+
+Alternatively, you can deploy using the original bash helper functions. Look at the [helper file](../hack/devtools/deploy-shared-env.sh) to understand each of the bash functions below.
+
+1. Copy, edit (if necessary) and source your environment file:
+
+   ```bash
+   cp env.example env
+   vi env
+   . ./env
+   ```
+
 1. Create AzSecPack managed Identity https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/234249/AzSecPack-AutoConfig-UserAssigned-Managed-Identity (required for `deploy_env_dev`)
-1. Enable EncryptionAtHost for subscription.
+
+1. Enable EncryptionAtHost for subscription:
 
    ```bash
    az feature register --namespace Microsoft.Compute --name EncryptionAtHost 
