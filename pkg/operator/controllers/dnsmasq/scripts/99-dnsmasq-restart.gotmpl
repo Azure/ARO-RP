@@ -1,5 +1,5 @@
 {{ define "99-dnsmasq-restart" }}
-#!/bin/sh
+#!/bin/bash
 # This is a NetworkManager dispatcher script to restart dnsmasq
 # in the event of a network interface change (e. g. host servicing event https://learn.microsoft.com/en-us/azure/developer/intro/hosting-apps-on-azure)
 # this will restart dnsmasq, reapplying our /etc/resolv.conf file and overwriting any modifications made by NetworkManager

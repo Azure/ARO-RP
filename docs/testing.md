@@ -24,6 +24,14 @@ To run python client and `az aro` CLI tests:
 make test-python
 ```
 
+To run bash unit tests for the critical VMSS bootstrap, recovery, and dnsmasq shell assets:
+
+```bash
+make unit-test-bash
+```
+
+The bash suite uses a pinned `ShellSpec` container image via `hack/unit-test-bash.sh`, so the same command works on Linux and macOS as long as Docker or Podman is available. On macOS, the runner defaults to `linux/amd64` for compatibility with the upstream ShellSpec image.
+
 To run Go linting tasks (requires [golanglint-ci](https://golangci-lint.run/usage/install/) to be installed):
 
 ```bash
