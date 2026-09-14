@@ -265,14 +265,15 @@ func TestFrontendOperationResultLog(t *testing.T) {
 }
 
 func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
 	f := &frontend{
-		baseLog: logrus.NewEntry(logrus.StandardLogger()),
+		baseLog: log,
 		env:     _env,
 	}
 	router := f.setupRouter()

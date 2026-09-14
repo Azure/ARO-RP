@@ -100,7 +100,6 @@ func TestEnsureClusterMsiCertificate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			var mockEnv *mock_env.MockInterface
 			var mockKV *mock_azsecrets.MockClient

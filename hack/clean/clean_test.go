@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestShouldDeleteRespectsPersistTagValue(t *testing.T) {
@@ -19,7 +19,7 @@ func TestShouldDeleteRespectsPersistTagValue(t *testing.T) {
 		ttl:        time.Hour,
 		createdTag: defaultCreatedAtTag,
 	}
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
 	groupName := "test-rg"
 	oldCreatedAt := time.Now().Add(-2 * time.Hour).Format(time.RFC3339Nano)
 
@@ -43,7 +43,7 @@ func TestShouldDeleteSkipsOnPersistTrueCaseInsensitive(t *testing.T) {
 		ttl:        time.Hour,
 		createdTag: defaultCreatedAtTag,
 	}
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
 	groupName := "test-rg"
 	oldCreatedAt := time.Now().Add(-2 * time.Hour).Format(time.RFC3339Nano)
 
@@ -67,7 +67,7 @@ func TestShouldDeleteReadsCreatedAtTagCaseInsensitive(t *testing.T) {
 		ttl:        time.Hour,
 		createdTag: defaultCreatedAtTag,
 	}
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
 	groupName := "test-rg"
 	oldCreatedAt := time.Now().Add(-2 * time.Hour).Format(time.RFC3339Nano)
 
@@ -90,7 +90,7 @@ func TestShouldDeleteSkipsWhenNameMissing(t *testing.T) {
 		ttl:        time.Hour,
 		createdTag: defaultCreatedAtTag,
 	}
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
 	oldCreatedAt := time.Now().Add(-2 * time.Hour).Format(time.RFC3339Nano)
 
 	resourceGroup := mgmtfeatures.ResourceGroup{

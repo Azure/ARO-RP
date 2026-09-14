@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -27,6 +25,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // Test reconcile function
@@ -270,6 +269,8 @@ func TestImageConfigReconciler(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			instance := &arov1alpha1.Cluster{
@@ -292,7 +293,7 @@ func TestImageConfigReconciler(t *testing.T) {
 
 			clientFake := testclienthelper.NewAROFakeClientBuilder(instance, tt.image).Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			r := NewReconciler(log, clientFake)
 			request := ctrl.Request{}
 			request.Name = "cluster"
 

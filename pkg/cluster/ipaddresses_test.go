@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const (
@@ -180,7 +180,6 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			dns := mock_dns.NewMockManager(controller)
 			if tt.mocks != nil {
@@ -205,8 +204,9 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				doc:           doc,
 				db:            dbOpenShiftClusters,
 				dns:           dns,
@@ -385,7 +385,6 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			publicIPAddresses := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 			dns := mock_dns.NewMockManager(controller)
@@ -641,7 +640,6 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			if tt.mocks != nil {
@@ -802,7 +800,6 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			publicIPAddresses := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
@@ -1183,7 +1180,6 @@ func TestEnsureGatewayCreate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			privateEndpoints := mock_armnetwork.NewMockPrivateEndpointsClient(controller)

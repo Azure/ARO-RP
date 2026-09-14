@@ -9,16 +9,16 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnrichOne(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	enricherName := "enricherName"
 
@@ -90,7 +90,6 @@ func TestEnrichOne(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			metricsMock := mock_metrics.NewMockEmitter(controller)
 			metricsMock.EXPECT().EmitGauge("enricher.tasks.count", int64(1), nil).Times(tt.taskCount)

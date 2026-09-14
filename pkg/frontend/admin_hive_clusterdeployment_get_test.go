@@ -69,7 +69,6 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			controller := gomock.NewController(t)
 			defer ti.done()
-			defer controller.Finish()
 
 			ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 				Key: strings.ToLower(tt.resourceID),

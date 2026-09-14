@@ -7,12 +7,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestUpdateConsoleBranding(t *testing.T) {
@@ -20,8 +20,9 @@ func TestUpdateConsoleBranding(t *testing.T) {
 
 	consoleName := "cluster"
 
+	_, log := testlog.LogForTesting(t)
 	m := &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 		operatorcli: operatorfake.NewSimpleClientset(&operatorv1.Console{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: consoleName,

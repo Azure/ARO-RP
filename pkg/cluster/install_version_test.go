@@ -73,7 +73,6 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 			ctx := context.Background()
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			tlc := testliveconfig.NewTestLiveConfig(false, false)
 			_env := mock_env.NewMockInterface(controller)

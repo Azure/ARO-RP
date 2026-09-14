@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -24,6 +22,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconciler(t *testing.T) {
@@ -163,6 +162,8 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			clusterMock := fakeCluster(tt.controllerEnabledFlag)
 			if len(tt.startConditions) > 0 {
 				clusterMock.Status.Conditions = append(clusterMock.Status.Conditions, tt.startConditions...)
@@ -174,7 +175,7 @@ func TestReconciler(t *testing.T) {
 			}
 			clientFake := clientBuilder.Build()
 
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			r := NewReconciler(log, clientFake)
 
 			request := ctrl.Request{}
 			ctx := context.Background()

@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +25,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestNetworkPolicyReconciler(t *testing.T) {
@@ -177,7 +177,7 @@ func TestNetworkPolicyReconciler(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.LogForTesting(t)
 
 			mdh := mock_dynamichelper.NewMockInterface(controller)
 			tt.mocks(mdh)
@@ -193,7 +193,7 @@ func TestNetworkPolicyReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			r := NewReconciler(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				clientBuilder.Build(),
 				mdh,
 			)

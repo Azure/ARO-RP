@@ -8,13 +8,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestRemoveFailedScaleset(t *testing.T) {
@@ -112,13 +112,13 @@ func TestRemoveFailedScaleset(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.LogForTesting(t)
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 			tt.mocks(mockVMSS)
 
 			c := cleaner{
-				log:  logrus.NewEntry(logrus.StandardLogger()),
+				log:  log,
 				vmss: mockVMSS,
 			}
 

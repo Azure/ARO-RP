@@ -143,7 +143,6 @@ func TestAAD(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
@@ -248,7 +247,6 @@ func TestCheckAuthentication(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
@@ -337,7 +335,6 @@ func TestLogin(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -428,7 +425,6 @@ func TestLogout(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -749,7 +745,6 @@ func TestCallback(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
@@ -841,7 +836,6 @@ func TestCallback(t *testing.T) {
 
 func TestClientAssertion(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)

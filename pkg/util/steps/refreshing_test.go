@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type expectCloudErrorFields struct {
@@ -260,6 +260,8 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			callCount := 0
 			action := func(ctx context.Context) error {
 				idx := callCount
@@ -279,7 +281,7 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 				managedRGName: "",
 			}
 
-			err := s.run(context.Background(), logrus.NewEntry(logrus.StandardLogger()))
+			err := s.run(t.Context(), log)
 
 			if tt.expectRetries {
 				assert.Greater(t, callCount, 1, "action should have been called more than once")
@@ -299,6 +301,8 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 }
 
 func TestAuthorizationRetryingActionWithoutAuthorizerRetriesForbidden(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	callCount := 0
 	action := func(ctx context.Context) error {
 		callCount++
@@ -314,13 +318,15 @@ func TestAuthorizationRetryingActionWithoutAuthorizerRetriesForbidden(t *testing
 		pollInterval: time.Millisecond,
 	}
 
-	err := s.run(context.Background(), logrus.NewEntry(logrus.StandardLogger()))
+	err := s.run(t.Context(), log)
 
 	require.NoError(t, err)
 	assert.Equal(t, 2, callCount)
 }
 
 func TestAuthorizationRetryingActionWithoutAuthorizerReturnsLastError(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	wantErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
 	s := &authorizationRefreshingActionStep{
 		f: func(ctx context.Context) error {
@@ -330,7 +336,7 @@ func TestAuthorizationRetryingActionWithoutAuthorizerReturnsLastError(t *testing
 		pollInterval: 30 * time.Second,
 	}
 
-	err := s.run(context.Background(), logrus.NewEntry(logrus.StandardLogger()))
+	err := s.run(t.Context(), log)
 
 	assert.Same(t, wantErr, err)
 }

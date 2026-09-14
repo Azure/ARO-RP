@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	azsecretssdk "github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -20,6 +19,7 @@ import (
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 const testCertBundle1 = `-----BEGIN PRIVATE KEY-----
@@ -258,13 +258,15 @@ func TestRefreshingCertificate(t *testing.T) {
 
 	for _, test := range tt {
 		t.Run(test.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			mock, tick := newMockTicker(test.tickCount)
 
 			refreshing := newCertificateRefresher(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				// interval is not used in tests, it is mocked
 				0,
 				test.managerFactory(mockController),

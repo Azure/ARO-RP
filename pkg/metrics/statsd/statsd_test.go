@@ -291,7 +291,6 @@ func TestConnectionDetails(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 
 			if tt.mdmsocketstring == "" {
@@ -323,7 +322,6 @@ func TestConnectionDetails(t *testing.T) {
 
 func TestNewAddsEnvironmentDimension(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	mockEnv := mock_env.NewMockCore(controller)
 	mockEnv.EXPECT().LoggerForComponent("metrics").Return(&logrus.Entry{Logger: logrus.StandardLogger()})
@@ -365,7 +363,6 @@ func TestNewAddsEnvironmentDimension(t *testing.T) {
 
 func TestNewMetricsForClusterAddsEnvironmentDimension(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	mockEnv := mock_env.NewMockCore(controller)
 	mockEnv.EXPECT().LoggerForComponent("clustermetrics").Return(&logrus.Entry{Logger: logrus.StandardLogger()})

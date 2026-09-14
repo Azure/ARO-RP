@@ -138,7 +138,6 @@ func TestNew(t *testing.T) {
 			r.Header.Set("Content-Type", "application/json")
 
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			_env := mock_env.NewMockInterface(ctrl)
 			_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)

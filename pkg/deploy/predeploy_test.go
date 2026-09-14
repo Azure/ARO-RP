@@ -12,7 +12,6 @@ import (
 	"time"
 
 	gofrsuuid "github.com/gofrs/uuid"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
@@ -32,6 +31,7 @@ import (
 	mock_msi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -493,7 +493,6 @@ func TestPreDeploy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 			mockResourceGroups := mock_features.NewMockResourceGroupsClient(controller)
@@ -502,8 +501,9 @@ func TestPreDeploy(t *testing.T) {
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 			mockVMSSVM := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:                          logrus.NewEntry(logrus.StandardLogger()),
+				log:                          log,
 				globaldeployments:            mockDeployments,
 				deployments:                  mockDeployments,
 				groups:                       mockResourceGroups,
@@ -580,12 +580,12 @@ func TestDeployRPSubscription(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				config: &RPConfig{
 					Configuration: &Configuration{
 						SubscriptionResourceGroupName: &tt.testParams.resourceGroup,
@@ -655,12 +655,12 @@ func TestDeployManagedIdentity(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				config: &RPConfig{
 					Configuration: &Configuration{},
 				},
@@ -741,12 +741,12 @@ func TestDeployRPGlobal(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				config: &RPConfig{
 					Configuration: &Configuration{
 						GlobalResourceGroupName: pointerutils.ToPtr(tt.testParams.resourceGroup),
@@ -806,12 +806,12 @@ func TestDeployRPGlobalACRReplication(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				config: &RPConfig{
 					Configuration: &Configuration{
 						GlobalResourceGroupName: pointerutils.ToPtr(tt.testParams.resourceGroup),
@@ -893,12 +893,12 @@ func TestDeployPreDeploy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				config: &RPConfig{
 					Configuration:            &Configuration{},
 					GatewayResourceGroupName: tt.testParams.resourceGroup,
@@ -1125,14 +1125,14 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 			mockVMSSVM := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				config: &RPConfig{
 					RPResourceGroupName:      tt.testParams.resourceGroup,
 					GatewayResourceGroupName: tt.testParams.resourceGroup,
@@ -1230,12 +1230,12 @@ func TestEnsureAndRotateSecret(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 			}
 
 			for _, m := range tt.mocks {
@@ -1305,12 +1305,12 @@ func TestEnsureSecret(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 			}
 
 			for _, m := range tt.mocks {
@@ -1363,12 +1363,12 @@ func TestCreateSecret(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 			}
 
 			for _, m := range tt.mocks {
@@ -1435,12 +1435,12 @@ func TestEnsureSecretKey(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockKV := mock_azsecrets.NewMockClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 			}
 
 			for _, m := range tt.mocks {
@@ -1526,13 +1526,13 @@ func TestRestartOldScalesets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
 			mockVMSSVM := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:     logrus.NewEntry(logrus.StandardLogger()),
+				log:     log,
 				vmss:    mockVMSS,
 				vmssvms: mockVMSSVM,
 				config: &RPConfig{
@@ -1622,12 +1622,12 @@ func TestRestartOldScaleset(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:     logrus.NewEntry(logrus.StandardLogger()),
+				log:     log,
 				vmssvms: mockVMSS,
 				config: &RPConfig{
 					RPResourceGroupName: rgName,
@@ -1694,12 +1694,12 @@ func TestWaitForReadiness(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:     logrus.NewEntry(logrus.StandardLogger()),
+				log:     log,
 				vmssvms: mockVMSS,
 				config: &RPConfig{
 					RPResourceGroupName: rgName,
@@ -1793,12 +1793,12 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetVMsClient(controller)
 
+			_, log := testlog.LogForTesting(t)
 			d := deployer{
-				log:     logrus.NewEntry(logrus.StandardLogger()),
+				log:     log,
 				vmssvms: mockVMSS,
 			}
 

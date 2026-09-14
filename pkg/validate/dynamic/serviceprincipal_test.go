@@ -9,13 +9,13 @@ import (
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type tokenRequirements struct {
@@ -40,7 +40,7 @@ func (m signingMethodFake) Alg() string {
 
 func TestValidateServicePrincipal(t *testing.T) {
 	ctx := context.Background()
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	for _, tt := range []struct {
 		tr      *tokenRequirements

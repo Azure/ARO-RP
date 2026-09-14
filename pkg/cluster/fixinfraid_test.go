@@ -8,10 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestFixInfraID(t *testing.T) {
@@ -80,8 +79,9 @@ func TestFixInfraID(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				doc: clusterdoc,
 				db:  fakeOpenShiftClustersDatabase,
 			}

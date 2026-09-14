@@ -52,7 +52,6 @@ func TestEnsureCertificateIssuer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			clusterKeyvault := mock_azcertificates.NewMockClient(controller)
 			env := mock_env.NewMockInterface(controller)

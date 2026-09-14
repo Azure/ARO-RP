@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	apitesterror "github.com/Azure/ARO-RP/pkg/api/test/error"
 )
 
@@ -182,9 +180,6 @@ func TestClusterMsiResourceId(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			_, err := tt.oc.ClusterMsiResourceId()
 			apitesterror.AssertErrorMessage(t, err, tt.wantErr)
 		})
@@ -238,9 +233,6 @@ func TestHasUserAssignedIdentities(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
 			got := tt.oc.HasUserAssignedIdentities()
 			if got != tt.wantResult {
 				t.Error(fmt.Errorf("got != want: %v != %v", got, tt.wantResult))
