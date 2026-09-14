@@ -99,7 +99,7 @@ func (r *checker) checkOnce(url string, timeout time.Duration) error {
 	resp, err := r.httpClient.Do(req)
 	if err != nil {
 		<-ctx.Done()
-		return fmt.Errorf("%s: %s", url, err)
+		return fmt.Errorf("%s: %w", url, err)
 	}
 
 	resp.Body.Close()
