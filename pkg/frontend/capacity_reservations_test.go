@@ -143,7 +143,6 @@ func TestCRGSetupForResize(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			a := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(a)
@@ -237,7 +236,6 @@ func TestCRGTeardown(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			a := mock_adminactions.NewMockAzureActions(ctrl)
 			tt.mocks(a)
