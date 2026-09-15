@@ -5,8 +5,8 @@ package subnets
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -125,28 +126,27 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 		return err
 	}
 
-	var combinedErrors []string
+	var combinedErrors []error
 
 	// This potentially calls an update twice for the same loop, but this is the price
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
+		subnetName := stringutils.LastTokenByte(s.ResourceID, '/')
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AzureSubnetsNsgManaged) {
-			err = r.ensureSubnetNSG(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
+			if err = r.ensureSubnetNSG(ctx, s); err != nil {
+				combinedErrors = append(combinedErrors, fmt.Errorf("subnet %s: %w", subnetName, err))
 			}
 		}
 
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
-			err = r.ensureSubnetServiceEndpoints(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
+			if err = r.ensureSubnetServiceEndpoints(ctx, s); err != nil {
+				combinedErrors = append(combinedErrors, fmt.Errorf("subnet %s: %w", subnetName, err))
 			}
 		}
 	}
 
 	if len(combinedErrors) > 0 {
-		return fmt.Errorf("%s", strings.Join(combinedErrors, "\n"))
+		return fmt.Errorf("failed to reconcile subnets: %w", errors.Join(combinedErrors...))
 	}
 
 	return nil
