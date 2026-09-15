@@ -21,7 +21,7 @@ func (f *frontend) postAdminOpenshiftClusterEnsureCSPRBAC(w http.ResponseWriter,
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-	resourceID := strings.TrimPrefix(r.URL.Path, "/admin/")
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	err := f._postAdminOpenshiftClusterEnsureCSPRBAC(ctx, log, resourceID)
 	adminReply(log, w, nil, nil, err)
