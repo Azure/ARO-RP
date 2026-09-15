@@ -5,7 +5,7 @@ Read this when adding VM sizes, modifying validation logic, or changing cluster 
 ## Cluster Topology
 
 - **Exactly 3 master nodes** — cannot be added, removed, or replaced by customers
-- **3 worker nodes** during creation
+- **2-50 worker nodes** during creation
 - **SLA**: 99.95% availability
 
 ## VM Size Constraints
