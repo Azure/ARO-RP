@@ -1,0 +1,39 @@
+---
+description: Checklist and focus areas when reviewing ARO-RP pull requests
+alwaysApply: false
+globs:
+  - "**/*.go"
+---
+
+# Code Review
+
+When reviewing a PR, check these areas systematically.
+
+## Structural Checks
+
+1. **Multi-module scope**: If the PR touches `pkg/api/`, verify tests were run separately (see `multi-module-awareness` rule).
+2. **Code style**: Verify imports, aliases, and banned packages conform (see `code-style` rule).
+
+## Architecture Checks
+
+3. **Async invariant**: Any frontend handler touching cluster state must go through CosmosDB async flow, never directly.
+4. **Runtime context**: No CI-only packages (`pkg/util/cluster`, `hack/`, `test/e2e`) imported from production packages.
+5. **Admin API pattern**: New admin endpoints should use the underscore pattern for testability.
+6. **VMSize types**: If VM sizes are involved, verify the correct type is used in context (see `multi-module-awareness` rule).
+
+## Comment–Code Coherence
+
+7. **Comments must match code behaviour**: When a log message, error string, or doc comment describes an action (e.g. "Uncordoning node"), the called function must obviously perform that action. Boolean-flag APIs like `CordonNode(ctx, name, false)` to mean "uncordon" are fragile — wrap them in named helpers (`uncordonNode`) or use named constants so the intent is visible at the call site.
+8. **Function names must match semantics**: If a function is named `getClusterMachines` but it only returns control plane machines, the name is misleading. Use `getControlPlaneMachines` or add a wrapper that clarifies the filtering.
+9. **Error wrapping must not hide types**: Do NOT double-wrap errors in `api.CloudError` or `fmt.Errorf` when the original error is already a `CloudError` — `adminReply()` relies on type assertions to set the HTTP status code (see `code-style` rule).
+
+## Test Checks
+
+10. **Coverage**: Are the changed code paths tested?
+11. **Mock usage**: Mocks should be generated via `mockgen` (`//go:generate`), not hand-written.
+
+## PR Hygiene
+
+12. **Clean history**: No merge commits, fixup commits, or WIP commits (see `clean-history` rule).
+13. **Scoped changes**: Diff should only contain task-related files.
+14. **Swagger**: If API types changed, `make generate-swagger` output should be included.
