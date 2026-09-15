@@ -604,6 +604,8 @@ ci-rp:
 	docker create --name extract_cover_out ${LOCAL_ARO_RP_IMAGE}:${VERSION}; \
 	docker cp extract_cover_out:/app/report.xml ./report.xml; \
 	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
+	docker cp extract_cover_out:/app/reportapi.xml ./reportapi.xml; \
+	docker cp extract_cover_out:/app/coverageapi.xml ./coverageapi.xml; \
 	docker rm extract_cover_out;
 
 .PHONY: aro-e2e

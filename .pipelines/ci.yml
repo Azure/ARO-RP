@@ -165,7 +165,7 @@ stages:
           - task: PublishTestResults@2
             displayName: 📊 Publish tests results
             inputs:
-              testResultsFiles: $(System.DefaultWorkingDirectory)/report.xml
+              testResultsFiles: $(System.DefaultWorkingDirectory)/report*.xml
             condition: succeededOrFailed()
 
           # Publish code coverage results
@@ -173,7 +173,8 @@ stages:
             displayName: 📈 Publish code coverage
             inputs:
               codeCoverageTool: Cobertura
-              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage.xml
+              pathToSources: $(System.DefaultWorkingDirectory)
+              summaryFileLocation: $(System.DefaultWorkingDirectory)/coverage*.xml
               failIfCoverageEmpty: false
             condition: succeededOrFailed()
 
