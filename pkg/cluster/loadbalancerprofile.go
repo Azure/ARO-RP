@@ -219,7 +219,7 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	}
 
 	if cleanupErrors != nil {
-		return errors.Join(append([]error{errors.New("failed to cleanup unused managed ips")}, cleanupErrors...)...)
+		return fmt.Errorf("failed to cleanup unused managed ips: %w", errors.Join(cleanupErrors...))
 	}
 
 	return nil
@@ -346,7 +346,7 @@ func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[s
 	}
 
 	if len(errResults) > 0 {
-		return errors.Join(append([]error{errors.New("failed to create required IPs")}, errResults...)...)
+		return fmt.Errorf("failed to create required IPs: %w", errors.Join(errResults...))
 	}
 	return nil
 }
