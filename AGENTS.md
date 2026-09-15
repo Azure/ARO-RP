@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Azure Red Hat OpenShift RP — ARM resource provider for OpenShift clusters on Azure. A single `aro` binary is produced with both RP-side services and the in-cluster ARO Operator, with the service selected in the command line (e.g. `aro rp`, `aro portal`, `aro operator master`)
 
@@ -17,7 +17,7 @@ Cluster mutations (PUT/DELETE) are **async**: Frontend writes to CosmosDB with n
 
 Root imports API via `replace` directive. **`./...` from root excludes `pkg/api/` tests.**
 
-> Read `docs/agent-guides/multi-module-build.md` when changing build, test, or formatting targets.
+> Read `docs/agent-guides/build.md` when changing build, test, or formatting targets.
 
 ## Essential Commands
 
@@ -38,7 +38,7 @@ go test -v ./pkg/frontend/... -run TestSpecificFunction   # Single test
 |---------|-----------------|
 | Modifying `pkg/api/v*` types | `docs/agent-guides/api-type-system.md` |
 | Adding/changing VM sizes | `docs/agent-guides/azure-product-constraints.md` |
-| Changing Makefile, CI, or build targets | `docs/agent-guides/multi-module-build.md` |
+| Changing Makefile, CI, or build targets | `docs/agent-guides/build.md` |
 
 
 **`client-generate` is destructive** — it deletes all generated SDK clients before regenerating. If Docker/autorest fails mid-run, restore with `git checkout -- pkg/client/ python/client/`.
