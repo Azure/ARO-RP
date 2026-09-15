@@ -28,8 +28,8 @@ import (
 const (
 	resizeControlPlanePerNodeTimeout = 45 * time.Minute
 
-	azureOperationMaxAttempts = 3
-	azureOperationRetryDelay  = 5 * time.Second
+	azureOperationMaxAttempts       = 3
+	defaultAzureOperationRetryDelay = 5 * time.Second
 
 	etcdHealthPollTimeout  = 10 * time.Minute
 	etcdHealthPollInterval = 10 * time.Second
@@ -86,6 +86,8 @@ type resizeControlPlaneOperation struct {
 	clusterResourceGroupName string
 	steps                    []string
 	nodes                    []*controlPlaneNodeProgress
+
+	retryDelay time.Duration
 }
 
 // newResizeControlPlaneExecutionContext stays local because only the admin
@@ -124,6 +126,8 @@ func newResizeControlPlaneOperation(
 		desiredVMSize:            desiredVMSize,
 		deallocateVM:             deallocateVM,
 		clusterResourceGroupName: clusterResourceGroupName,
+
+		retryDelay: defaultAzureOperationRetryDelay,
 	}
 }
 
@@ -338,7 +342,7 @@ func ensureControlPlaneAndEtcdHealthy(ctx context.Context, k adminactions.KubeAc
 
 // Keep Azure retries local so resize and rollback keep the same semantics the
 // recovery tests assert without pushing policy into pkg/util/steps.
-func retryAzureOperation(ctx context.Context, operationDesc string, fn func() error) error {
+func retryAzureOperation(ctx context.Context, operationDesc string, retryDelay time.Duration, fn func() error) error {
 	var lastErr error
 	for attempt := range azureOperationMaxAttempts {
 		lastErr = fn()
@@ -351,7 +355,7 @@ func retryAzureOperation(ctx context.Context, operationDesc string, fn func() er
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(azureOperationRetryDelay):
+		case <-time.After(retryDelay):
 		}
 	}
 	return fmt.Errorf("could not complete %s after %d attempts: %w", operationDesc, azureOperationMaxAttempts, lastErr)
@@ -373,12 +377,12 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 			// deallocateVM flag. Cross-family resizes require deallocation; during
 			// rollback we take the most conservative Azure path to ensure restoring
 			// the original SKU succeeds reliably.
-			if err := retryAzureOperation(ctx, "stop VM for rollback", func() error {
+			if err := retryAzureOperation(ctx, "stop VM for rollback", o.retryDelay, func() error {
 				return o.a.VMStopAndWait(ctx, nodeName, true)
 			}); err != nil {
 				return fmt.Errorf("stopping VM before restoring original size: %w", err)
 			}
-			if err := retryAzureOperation(ctx, "resize VM for rollback", func() error {
+			if err := retryAzureOperation(ctx, "resize VM for rollback", o.retryDelay, func() error {
 				return o.a.VMResize(ctx, nodeName, state.snapshot.originalVMSize)
 			}); err != nil {
 				return fmt.Errorf("restoring VM size to %s: %w", state.snapshot.originalVMSize, err)
@@ -386,7 +390,7 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 			vmSizeRestored = true
 			state.vmResized = false
 			o.log.Infof("VM size for %s successfully restored to %s; continuing with VM start", nodeName, state.snapshot.originalVMSize)
-			if err := retryAzureOperation(ctx, "start VM after rollback", func() error {
+			if err := retryAzureOperation(ctx, "start VM after rollback", o.retryDelay, func() error {
 				return o.a.VMStartAndWait(ctx, nodeName)
 			}); err != nil {
 				return fmt.Errorf("starting VM after restoring original size: %w", err)
@@ -409,7 +413,7 @@ func (o *resizeControlPlaneOperation) rollbackNode(ctx context.Context, state *c
 	} else if state.vmStopped {
 		nodeReadyForSchedRestore = false
 		start := time.Now()
-		startErr := retryAzureOperation(ctx, "start VM during rollback", func() error {
+		startErr := retryAzureOperation(ctx, "start VM during rollback", o.retryDelay, func() error {
 			return o.a.VMStartAndWait(ctx, nodeName)
 		})
 		o.recordStep(nodeName, "start", time.Since(start), startErr)

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -76,7 +77,22 @@ func newKubeActionsTestFrontend(
 	if err != nil {
 		t.Fatal(err)
 	}
-	go f.Run(ctx, nil, nil)
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	t.Cleanup(func() {
+		close(stop)
+
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatal("frontend failed to stop after 10s")
+		}
+	})
+
+	go f.Run(ctx, stop, done)
+
 	return ti, k
 }
 
