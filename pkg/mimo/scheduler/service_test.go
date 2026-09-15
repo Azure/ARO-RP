@@ -23,11 +23,34 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 	testmetrics "github.com/Azure/ARO-RP/test/util/metrics"
 )
+
+// withChangefeedGauges returns assertions together with the metrics the
+// service's two changefeeds emit on every poll. Tests which run the service
+// need them so that the fake emitter, which requires every emitted metric to
+// be accounted for, is satisfied; the values themselves are covered by the
+// changefeed's own tests.
+func withChangefeedGauges(assertions []testmetrics.MetricsAssertion[int64]) []testmetrics.MetricsAssertion[int64] {
+	all := make([]testmetrics.MetricsAssertion[int64], 0, len(assertions)+4)
+	all = append(all, assertions...)
+
+	for _, name := range []string{"OpenShiftClusterDocument", "SubscriptionDocument"} {
+		for _, metric := range []string{changefeed.MetricStaleness, changefeed.MetricConsecutiveFailures} {
+			all = append(all, testmetrics.MetricsAssertion[int64]{
+				MetricName: metric,
+				Dimensions: map[string]string{"name": name},
+				Value:      0,
+			})
+		}
+	}
+
+	return all
+}
 
 func TestSchedulerPolling(t *testing.T) {
 	testCases := []struct {
@@ -374,7 +397,7 @@ func TestSchedulerGoesReady(t *testing.T) {
 	r.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
-	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+	m.AssertGauges(withChangefeedGauges([]testmetrics.MetricsAssertion[int64]{
 		{
 			MetricName: "changefeed.caches.size",
 			Dimensions: map[string]string{
@@ -388,7 +411,7 @@ func TestSchedulerGoesReady(t *testing.T) {
 			Dimensions: map[string]string{},
 			Value:      0,
 		},
-	}...)
+	})...)
 }
 
 func TestSchedulerStopsIfBucketFailure(t *testing.T) {
@@ -576,7 +599,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 	r.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
-	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+	m.AssertGauges(withChangefeedGauges([]testmetrics.MetricsAssertion[int64]{
 		{
 			MetricName: "changefeed.caches.size",
 			Dimensions: map[string]string{
@@ -614,7 +637,7 @@ func TestSchedulerServesBucket(t *testing.T) {
 			Dimensions: map[string]string{},
 			Value:      0,
 		},
-	}...)
+	})...)
 }
 
 func TestSchedulerServesBucketWhenChanges(t *testing.T) {
@@ -773,7 +796,7 @@ func TestSchedulerServesBucketWhenChanges(t *testing.T) {
 	r.Equal(int32(0), svc.workerCount.Load())
 
 	m.AssertFloats()
-	m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+	m.AssertGauges(withChangefeedGauges([]testmetrics.MetricsAssertion[int64]{
 		{
 			MetricName: "changefeed.caches.size",
 			Dimensions: map[string]string{
@@ -821,7 +844,7 @@ func TestSchedulerServesBucketWhenChanges(t *testing.T) {
 			Dimensions: map[string]string{},
 			Value:      0,
 		},
-	}...)
+	})...)
 }
 
 func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
@@ -937,7 +960,7 @@ func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 			r.Equal(int32(0), svc.workerCount.Load())
 
 			m.AssertFloats()
-			m.AssertGauges([]testmetrics.MetricsAssertion[int64]{
+			m.AssertGauges(withChangefeedGauges([]testmetrics.MetricsAssertion[int64]{
 				{
 					MetricName: "changefeed.caches.size",
 					Dimensions: map[string]string{
@@ -951,7 +974,7 @@ func TestSchedulerDoesNotProcessConstantlyIfNoUpdates(t *testing.T) {
 					Dimensions: map[string]string{},
 					Value:      0,
 				},
-			}...)
+			})...)
 		})
 	}
 }
