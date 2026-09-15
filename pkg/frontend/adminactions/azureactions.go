@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -17,12 +18,15 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -47,6 +51,7 @@ type AzureActions interface {
 	CreateCapacityReservation(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error
 	DeleteCRG(ctx context.Context, clusterRG, crgName string) error
 	DeleteCapacityReservation(ctx context.Context, clusterRG, crgName, zone string) error
+	EnsureClusterServicePrincipalRBAC(ctx context.Context) error
 }
 
 type azureActions struct {
@@ -67,6 +72,9 @@ type azureActions struct {
 
 	capacityReservationGroups armcompute.CapacityReservationGroupsClient
 	capacityReservations      armcompute.CapacityReservationsClient
+
+	deployments     features.DeploymentsClient
+	roleAssignments authorization.RoleAssignmentsClient
 }
 
 // NewAzureActions returns an azureActions
@@ -144,6 +152,9 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 
 		capacityReservationGroups: armCapacityReservationGroups,
 		capacityReservations:      armCapacityReservations,
+
+		deployments:     features.NewDeploymentsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		roleAssignments: authorization.NewRoleAssignmentsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 	}, nil
 }
 
@@ -223,4 +234,47 @@ func (a *azureActions) GetEffectiveRouteTable(ctx context.Context, nicName strin
 
 func (a *azureActions) GetVirtualMachine(ctx context.Context, resourceGroupName string, VMName string, expand mgmtcompute.InstanceViewTypes) (result mgmtcompute.VirtualMachine, err error) {
 	return a.virtualMachines.Get(ctx, resourceGroupName, VMName, expand)
+}
+
+func (a *azureActions) EnsureClusterServicePrincipalRBAC(ctx context.Context) error {
+	if a.oc.UsesWorkloadIdentity() {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+			"Cluster uses workload identity and has no cluster service principal")
+	}
+	spp := a.oc.Properties.ServicePrincipalProfile
+	if spp == nil || spp.SPObjectID == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+			"Cluster service principal object id is not populated")
+	}
+	resourceGroupID := a.oc.Properties.ClusterProfile.ResourceGroupID
+	resourceGroup := stringutils.LastTokenByte(resourceGroupID, '/')
+
+	roleAssignments, err := a.roleAssignments.ListForResourceGroup(ctx, resourceGroup, "")
+	if err != nil {
+		return err
+	}
+
+	for _, assignment := range roleAssignments {
+		if strings.EqualFold(*assignment.Scope, resourceGroupID) &&
+			strings.EqualFold(*assignment.PrincipalID, spp.SPObjectID) &&
+			strings.HasSuffix(strings.ToLower(*assignment.RoleDefinitionID), strings.ToLower(rbac.RoleContributor)) {
+			a.log.Info("cluster service principal already has Contributor on the managed resource group")
+			return nil
+		}
+	}
+	a.log.Info("restoring cluster service principal Contributor on the managed resource group")
+	t := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Resources: []*arm.Resource{
+			rbac.ResourceGroupRoleAssignmentWithName(
+				rbac.RoleContributor,
+				"'"+spp.SPObjectID+"'",
+				"guid(resourceGroup().id, 'SP / Contributor')",
+			),
+		},
+	}
+	return arm.Retryable(ctx, func() error {
+		return arm.DeployTemplate(ctx, a.log, a.deployments, resourceGroup, "clustersp", t, nil)
+	}, a.log, "deploying cluster service principal RBAC")
 }
