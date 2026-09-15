@@ -1040,11 +1040,13 @@ StartLimitIntervalSec=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/gateway-otel-collector
+SyslogIdentifier=gateway-otel-collector
 ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --hostname %H \
   --name %N \
   --rm \
+  --log-driver=none \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   --cpu-shares 512 \
