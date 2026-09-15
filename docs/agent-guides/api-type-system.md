@@ -104,12 +104,11 @@ pkg/api/v*/openshiftcluster.go  →  hack/swagger-legacy/swagger.go  →  swagge
 
 ## Client Generation
 
-```
-api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp  →  TypeSpec (invoked via npm scripts in api/package.json)  →  pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift
+`api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp`  →  TypeSpec (invoked via npm scripts in api/package.json)  →  `pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift`
 
 - Make target: `make client-generate`
 - Generates both Go SDK and Python SDK clients
-- Generates based on the latest API version in the TypeSpec (currently `2025-07-25`)
+- Generates based on the latest API version in the TypeSpec
 
 ## Adding New VM Sizes Checklist
 
