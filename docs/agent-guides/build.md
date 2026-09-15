@@ -20,22 +20,3 @@ For example:
 * `make fmt` instead of direct `gofmt` invocations (calls `golangci-lint` with configured `gci` and `gofumpt` plugins)
 * `make unit-test-go` for running all tests instead of `go test ./...`
 * `make lint-go` for lint checks
-
-## Recommended Validation Order
-
-When modifying API types (`pkg/api/v*`):
-
-1. `make fmt`
-2. `make unit-test-go`
-3. If swagger-facing types changed: `make generate-swagger`
-4. If clients need regeneration: `make client`
-
-## CI Workflows
-
-| Workflow | What it checks |
-|----------|---------------|
-| `ci-go` | vendor-check, generate-check, golangci-lint, validate-go |
-| `ci-python` | Python validation |
-| `CodeQL` | Static analysis (Go, JS, Python) |
-| `Test coverage` | 6 parallel suites: cmd, pkg-api, pkg-frontend, pkg-operator, pkg-util, pkg-other |
-| `ci/prow/images` | OpenShift CI image build |
