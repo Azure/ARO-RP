@@ -13,7 +13,7 @@ Root imports API via `replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api` in `
 
 ### Use Makefile targets
 
-Makefile targets perform tasks on both modules where applicable and includes required environment variables/configuration. Use them instead of tools directly.
+Makefile targets perform tasks on both modules where applicable and include required environment variables/configuration. Use them instead of tools directly.
 
 For example:
 
