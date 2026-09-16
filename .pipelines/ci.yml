@@ -166,6 +166,7 @@ stages:
             displayName: 📊 Publish tests results
             inputs:
               testResultsFiles: $(System.DefaultWorkingDirectory)/report*.xml
+              mergeTestResults: true
             condition: succeededOrFailed()
 
           # Publish code coverage results
