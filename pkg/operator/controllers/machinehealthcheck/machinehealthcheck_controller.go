@@ -79,7 +79,7 @@ func defaultMachineHealthCheck() *machinev1beta1.MachineHealthCheck {
 		},
 		Spec: machinev1beta1.MachineHealthCheckSpec{
 			Selector: metav1.LabelSelector{
-				MatchExpressions: requiredMatchExpressions,
+				MatchExpressions: slices.Clone(requiredMatchExpressions),
 			},
 			UnhealthyConditions: []machinev1beta1.UnhealthyCondition{
 				{
@@ -157,6 +157,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// helps with garbage collection of the resources we are dealing with
 	err = controllerutil.SetControllerReference(instance, desired, scheme.Scheme)
 	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
@@ -252,9 +254,9 @@ func ensureRequiredSelectors(selector *metav1.LabelSelector) bool {
 			i++
 		}
 
-		if idx := findMatchExpression(selector.MatchExpressions, req.Key, req.Operator); idx >= 0 {
-			if !slices.Equal(selector.MatchExpressions[idx].Values, req.Values) {
-				selector.MatchExpressions[idx].Values = slices.Clone(req.Values)
+		if matchIdx := findMatchExpression(selector.MatchExpressions, req.Key, req.Operator); matchIdx >= 0 {
+			if !slices.Equal(selector.MatchExpressions[matchIdx].Values, req.Values) {
+				selector.MatchExpressions[matchIdx].Values = slices.Clone(req.Values)
 				changed = true
 			}
 			continue
