@@ -61,10 +61,10 @@ RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure
 
 # Additional tests
 RUN cd pkg/api/ \
-    && gotestsum --format pkgname --junitfile ../../reportapi.xml -- -coverprofile=coverapi.out ./... \
+    && gotestsum --format pkgname --junitfile ../../reportapi.xml -- -coverpkg=./... -coverprofile=coverapi.out ./... \
     && gocov convert coverapi.out | gocov-xml > ../../coverageapi.xml \
     && cd ../..
-RUN gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... \
+RUN gotestsum --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover.out ./... \
     && gocov convert cover.out | gocov-xml > coverage.xml
 
 # Validate FIPS
