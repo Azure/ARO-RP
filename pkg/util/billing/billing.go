@@ -34,11 +34,16 @@ func NewManager(env env.Interface, billing database.Billing, sub database.Subscr
 }
 
 func (m *manager) logForDoc(doc *api.OpenShiftClusterDocument) *logrus.Entry {
+	infraID := ""
+	if doc.OpenShiftCluster != nil {
+		infraID = doc.OpenShiftCluster.Properties.InfraID
+	}
+
 	return m.log.WithFields(logrus.Fields{
 		"resource_id":               utillog.Sanitize(doc.Key),
 		"billing_id":                doc.ID,
 		"cluster_resource_group_id": utillog.Sanitize(doc.ClusterResourceGroupIDKey),
-		"infra_id":                  doc.OpenShiftCluster.Properties.InfraID,
+		"infra_id":                  infraID,
 	})
 }
 

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -23,16 +25,18 @@ func TestDelete(t *testing.T) {
 	ctx := context.Background()
 
 	const (
-		docID    = "00000000-0000-0000-0000-000000000000"
-		subID    = "11111111-1111-1111-1111-111111111111"
-		tenantID = "22222222-2222-2222-2222-222222222222"
-		location = "eastus"
+		docID       = "00000000-0000-0000-0000-000000000000"
+		subID       = "11111111-1111-1111-1111-111111111111"
+		tenantID    = "22222222-2222-2222-2222-222222222222"
+		mockInfraID = "infra"
+		location    = "eastus"
 	)
 
 	type test struct {
 		name          string
 		fixture       func(*testdatabase.Fixture)
 		wantDocuments func(*testdatabase.Checker)
+		wantLogs      []testlog.ExpectedLogEntry
 		dbError       error
 		wantErr       string
 	}
@@ -66,6 +70,24 @@ func TestDelete(t *testing.T) {
 					},
 				})
 			},
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"msg":                       gomega.Equal("updating billing record with deletion time"),
+					"level":                     gomega.Equal(logrus.InfoLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+				},
+				{
+					"msg":                       gomega.Equal("billing record marked for deletion"),
+					"level":                     gomega.Equal(logrus.InfoLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+				},
+			},
 		},
 		{
 			name: "no error on mark for deletion on billing entry that is not found",
@@ -78,6 +100,24 @@ func TestDelete(t *testing.T) {
 						Location: location,
 					},
 				})
+			},
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"msg":                       gomega.Equal("updating billing record with deletion time"),
+					"level":                     gomega.Equal(logrus.InfoLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+				},
+				{
+					"msg":                       gomega.Equal("billing record not found, nothing to mark for deletion"),
+					"level":                     gomega.Equal(logrus.InfoLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+				},
 			},
 		},
 		{
@@ -94,10 +134,29 @@ func TestDelete(t *testing.T) {
 			},
 			dbError: errors.New("random error"),
 			wantErr: "random error",
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"msg":                       gomega.Equal("updating billing record with deletion time"),
+					"level":                     gomega.Equal(logrus.InfoLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+				},
+				{
+					"msg":                       gomega.Equal("failed to mark billing record for deletion"),
+					"level":                     gomega.Equal(logrus.ErrorLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+					"error":                     gomega.MatchError("random error"),
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, log := testlog.LogForTesting(t)
+			hook, log := testlog.LogForTesting(t)
 			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			billingDatabase, billingClient := testdatabase.NewFakeBilling()
 			subscriptionsDatabase, _ := testdatabase.NewFakeSubscriptions()
@@ -123,7 +182,16 @@ func TestDelete(t *testing.T) {
 				billingDB: billingDatabase,
 			}
 
-			err := m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
+			err := m.Delete(ctx, &api.OpenShiftClusterDocument{
+				Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+				ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+				ID:                        docID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						InfraID: mockInfraID,
+					},
+				},
+			})
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantDocuments != nil {
@@ -133,6 +201,10 @@ func TestDelete(t *testing.T) {
 				for _, err := range errs {
 					t.Error(err)
 				}
+			}
+
+			if err := testlog.AssertLoggingOutput(hook, tt.wantLogs); err != nil {
+				t.Error(err)
 			}
 		})
 	}
@@ -153,6 +225,7 @@ func TestEnsure(t *testing.T) {
 		name          string
 		fixture       func(*testdatabase.Fixture)
 		wantDocuments func(*testdatabase.Checker)
+		wantLogs      []testlog.ExpectedLogEntry
 		dbError       error
 		wantErr       string
 	}
@@ -195,6 +268,16 @@ func TestEnsure(t *testing.T) {
 					},
 					InfraID: mockInfraID,
 				})
+			},
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"msg":                       gomega.Equal("billing record created in DB"),
+					"level":                     gomega.Equal(logrus.InfoLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+				},
 			},
 		},
 		{
@@ -256,6 +339,16 @@ func TestEnsure(t *testing.T) {
 					InfraID: mockInfraID,
 				})
 			},
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"msg":                       gomega.Equal("billing record already present in DB"),
+					"level":                     gomega.Equal(logrus.InfoLevel),
+					"resource_id":               gomega.Equal(strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName"))),
+					"billing_id":                gomega.Equal(docID),
+					"cluster_resource_group_id": gomega.Equal(fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID)),
+					"infra_id":                  gomega.Equal(mockInfraID),
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -265,7 +358,7 @@ func TestEnsure(t *testing.T) {
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
-			_, log := testlog.LogForTesting(t)
+			hook, log := testlog.LogForTesting(t)
 			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			billingDatabase, billingClient := testdatabase.NewFakeBilling()
 			subscriptionsDatabase, _ := testdatabase.NewFakeSubscriptions()
@@ -309,6 +402,10 @@ func TestEnsure(t *testing.T) {
 				for _, err := range errs {
 					t.Error(err)
 				}
+			}
+
+			if err := testlog.AssertLoggingOutput(hook, tt.wantLogs); err != nil {
+				t.Error(err)
 			}
 		})
 	}
