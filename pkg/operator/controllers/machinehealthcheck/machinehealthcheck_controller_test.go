@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,6 +26,7 @@ import (
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachineHealthCheckReconciler(t *testing.T) {
@@ -625,8 +624,10 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 
 			ctx := context.Background()
 
+			_, log := testlog.LogForTesting(t)
+
 			r := NewReconciler(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				clientBuilder.Build(),
 			)
 
