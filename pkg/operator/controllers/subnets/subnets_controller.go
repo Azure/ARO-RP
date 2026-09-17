@@ -134,22 +134,17 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 		subnetName := stringutils.LastTokenByte(s.ResourceID, '/')
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AzureSubnetsNsgManaged) {
 			if err = r.ensureSubnetNSG(ctx, s); err != nil {
-				combinedErrors = append(combinedErrors, fmt.Errorf("subnet %s: %w", subnetName, err))
+				combinedErrors = append(combinedErrors, fmt.Errorf("failed to reconcile subnet: %s: %w", subnetName, err))
 			}
 		}
 
 		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
 			if err = r.ensureSubnetServiceEndpoints(ctx, s); err != nil {
-				combinedErrors = append(combinedErrors, fmt.Errorf("subnet %s: %w", subnetName, err))
+				combinedErrors = append(combinedErrors, fmt.Errorf("failed to reconcile subnet: %s: %w", subnetName, err))
 			}
 		}
 	}
-
-	if len(combinedErrors) > 0 {
-		return fmt.Errorf("failed to reconcile subnets: %w", errors.Join(combinedErrors...))
-	}
-
-	return nil
+	return errors.Join(combinedErrors...)
 }
 
 // SetupWithManager creates the controller
