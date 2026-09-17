@@ -1031,7 +1031,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: []error{fmt.Errorf("failed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error"), fmt.Errorf("failed to cleanup unused managed ips\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
+			expectedErr: []error{fmt.Errorf("failed to cleanup unused managed ips:\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error"), fmt.Errorf("failed to cleanup unused managed ips:\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
 		},
 		{
 			name:  "all errors propagated",
@@ -1102,7 +1102,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: []error{fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create required IPs\ncreation of ip address uuid2-outbound-pip-v4 failed with error: failed to create ip\nfailed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
+			expectedErr: []error{fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create required IPs:\ncreation of ip address uuid2-outbound-pip-v4 failed with error: failed to create ip\nfailed to cleanup unused managed ips:\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1133,7 +1133,12 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			err = tt.m.reconcileLoadBalancerProfile(ctx)
 			// Expect error to be in the array of errors provided or to be nil
 			if tt.expectedErr != nil {
-				assert.Contains(t, tt.expectedErr, err, "Unexpected error exception")
+				require.Error(t, err, "Expected an error but got none")
+				expectedErrMsgs := make([]string, len(tt.expectedErr))
+				for i, e := range tt.expectedErr {
+					expectedErrMsgs[i] = e.Error()
+				}
+				assert.Contains(t, expectedErrMsgs, err.Error(), "Unexpected error exception")
 			} else {
 				require.NoError(t, err, "Unexpected error exception")
 			}
