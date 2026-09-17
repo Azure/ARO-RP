@@ -46,8 +46,8 @@ backup_etcd() {
         mkdir -p "$bdir" || abort "failed to make backup directory"
         echo "Moving $etcd_yaml to $bdir"
         mv "$etcd_yaml" "$bdir" || abort "failed to move $etcd_yaml to $bdir"
-        echo "Moving $etcd_dir to /host/tmp"
-        mv "$etcd_dir" $bdir || abort "failed to move $etcd_dir to $bdir"
+        echo "Moving $etcd_dir to $bdir"
+        mv "$etcd_dir" "$bdir" || abort "failed to move $etcd_dir to $bdir"
     else
         echo "$etcd_dir doesn't exist or $etcd_yaml has already been moved"
         echo "Not taking host etcd backup"
