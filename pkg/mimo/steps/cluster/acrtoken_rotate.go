@@ -18,12 +18,12 @@ func RotateACRToken(ctx context.Context, force bool) error {
 		return mimo.TerminalError(err)
 	}
 
-	tokensClient, err := th.TokensClient()
+	tokensClient, err := th.FirstPartyTokensClient()
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
 
-	registriesClient, err := th.RegistriesClient()
+	registriesClient, err := th.FirstPartyRegistriesClient()
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
