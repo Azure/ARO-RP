@@ -157,14 +157,6 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		return err
 	}
 
-	_, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.PutRegistryProfile(registryProfile)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
 	// update cluster pull secret in openshift-azure-operator namespace
 	// secret is stored as a .dockerconfigjson string in the .dockerconfigjson key
 	encodedDockerConfigJson, _, err := pullsecret.SetRegistryProfiles("", registryProfile)
@@ -184,7 +176,16 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		return fmt.Errorf("when applying pullsecret: %w", err)
 	}
 
-	return rotateOpenShiftConfigSecret(ctx, log, ch, []byte(encodedDockerConfigJson))
+	err = rotateOpenShiftConfigSecret(ctx, log, ch, []byte(encodedDockerConfigJson))
+	if err != nil {
+		return fmt.Errorf("when rotating OpenShift secret: %w", err)
+	}
+
+	_, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.PutRegistryProfile(registryProfile)
+		return nil
+	})
+	return err
 }
 
 func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clienthelper.Interface, encodedDockerConfigJson []byte) error {
@@ -205,13 +206,12 @@ func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clie
 		WithData(map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson}).
 		WithType(corev1.SecretTypeDockerConfigJson)
 
-	recreationOfSecretRequired := openshiftConfigSecret == nil ||
-		(openshiftConfigSecret.Type != corev1.SecretTypeDockerConfigJson || openshiftConfigSecret.Data == nil) ||
+	recreationOfSecretRequired := (openshiftConfigSecret.Type != corev1.SecretTypeDockerConfigJson || openshiftConfigSecret.Data == nil) ||
 		(openshiftConfigSecret.Immutable != nil && *openshiftConfigSecret.Immutable)
 
 	if recreationOfSecretRequired {
 		err := retryOperation(func() error {
-			return ch.EnsureDeleted(ctx, metav1.SchemeGroupVersion.WithKind("Secret"), pullSecretName)
+			return ch.EnsureDeleted(ctx, corev1.SchemeGroupVersion.WithKind("Secret"), pullSecretName)
 		})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err

@@ -2,6 +2,7 @@ package cluster
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+
 import (
 	"encoding/base64"
 	"reflect"
@@ -26,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testenvtest "github.com/Azure/ARO-RP/test/envtest"
 	testacrtoken "github.com/Azure/ARO-RP/test/util/acrtoken"
@@ -180,6 +182,115 @@ func TestRotateACRToken(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal("Apply v1/Secret/openshift-azure-operator/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-config/pull-secret"),
+				},
+			},
+		},
+		{
+			name: "token is expired, is rotated, immutable OCP secret is deleted",
+			oc: func() api.OpenShiftClusterProperties {
+				return api.OpenShiftClusterProperties{
+					RegistryProfiles: []*api.RegistryProfile{
+						{
+							Name:      publicACR,
+							Username:  user,
+							IssueDate: &expiredTime,
+						},
+					},
+				}
+			},
+			objects: []client.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-azure-operator",
+					},
+				},
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-config",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cluster",
+						Namespace: "openshift-azure-operator",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pull-secret",
+						Namespace: "openshift-config",
+					},
+					Immutable: pointerutils.ToPtr(true),
+					Type:      corev1.SecretTypeDockerConfigJson,
+					Data: map[string][]byte{
+						"somethingElse":     {},
+						".dockerconfigjson": []byte(`{}`),
+					},
+				},
+			},
+			verify: func(r *require.Assertions, t *testacrtoken.FakeACRToken) (api.OpenShiftClusterProperties, []runtime.Object) {
+				generated := t.GetGeneratedPasswords()
+				r.Len(generated, 1, "wrong number of passwords requested")
+
+				props := api.OpenShiftClusterProperties{
+					RegistryProfiles: []*api.RegistryProfile{
+						{
+							Name:      publicACR,
+							Username:  user,
+							IssueDate: &startOf2024,
+							Password:  api.SecureString(generated[0]),
+						},
+					},
+				}
+
+				// The two secrets are laid down with the correct content
+				b64pwpair := base64.StdEncoding.EncodeToString([]byte(user + ":" + generated[0]))
+				objs := []runtime.Object{
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "pull-secret",
+							Namespace: "openshift-config",
+						},
+						Type: corev1.SecretTypeDockerConfigJson,
+						Data: map[string][]byte{
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "cluster",
+							Namespace: "openshift-azure-operator",
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: map[string][]byte{
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+				}
+
+				return props, objs
+			},
+			wantErr: nil,
+			expectedLogs: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("token has 0s validity remaining, should rotate in -5400h0m0s"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("rotating ACR token"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-azure-operator/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Delete kind Secret ns openshift-config name pull-secret"),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
