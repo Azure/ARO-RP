@@ -60,7 +60,11 @@ RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${A
 RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
 # Additional tests
-RUN gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./... \
+RUN cd pkg/api/ \
+    && gotestsum --format pkgname --junitfile ../../reportapi.xml -- -coverpkg=./... -coverprofile=coverapi.out ./... \
+    && gocov convert coverapi.out | gocov-xml > ../../coverageapi.xml \
+    && cd ../..
+RUN gotestsum --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover.out ./... \
     && gocov convert cover.out | gocov-xml > coverage.xml
 
 # Validate FIPS
@@ -72,7 +76,7 @@ RUN hack/fips/validate-fips.sh ./aro
 FROM ${REGISTRY}/ubi9/ubi-minimal AS final
 LABEL aro-final=true
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
-COPY --from=builder /app/report.xml /app/coverage.xml /app/
+COPY --from=builder /app/report.xml /app/coverage.xml /app/reportapi.xml /app/coverageapi.xml /app/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
 USER 1000
