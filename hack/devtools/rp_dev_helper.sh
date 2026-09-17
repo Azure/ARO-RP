@@ -36,6 +36,45 @@ get_digest_tag() {
     echo "$IMAGE_TAG"
 }
 
+# Prepare only the MISE health-monitor image; do not change shared aro mirror behavior.
+mirror_mise_otel_image() {
+    if [[ $# -ne 1 || ! "$1" =~ ^[a-zA-Z0-9]{5,50}$ ]]; then
+        echo "Usage: mirror_mise_otel_image <destination-acr-name>" >&2
+        return 1
+    fi
+
+    local pullspec
+    if ! pullspec=$(sed -n '/^func OTelImage(/,/^}/s/^[[:space:]]*return acrDomain + "\([^"]*\)"[[:space:]]*$/\1/p' "$VERSION_CONST_FILE"); then
+        echo "Unable to read the MISE OTEL image from $VERSION_CONST_FILE" >&2
+        return 1
+    fi
+    if [[ ! "$pullspec" =~ ^/oss/otel/opentelemetry-collector-contrib@sha256:[0-9a-f]{64}$ ]]; then
+        echo "Expected a single digest-pinned OTelImage reference in $VERSION_CONST_FILE" >&2
+        return 1
+    fi
+
+    local repository="${pullspec#/}"
+    repository="${repository%@*}"
+    local digest="${pullspec##*@}"
+    # A digest-derived tag keeps the required manifest out of untagged-image retention.
+    if ! az acr import --name "$1" --source "mcr.microsoft.com${pullspec}" \
+        --image "${repository}:${digest#sha256:}" --force --only-show-errors --output none; then
+        echo "Failed to import MISE OTEL into ACR $1" >&2
+        return 1
+    fi
+
+    local imported_digest
+    if ! imported_digest=$(az acr repository show --name "$1" --image "${pullspec#/}" \
+        --query digest --output tsv --only-show-errors); then
+        echo "Unable to verify the MISE OTEL digest in ACR $1" >&2
+        return 1
+    fi
+    if [[ "$imported_digest" != "$digest" ]]; then
+        echo "MISE OTEL digest mismatch in ACR $1: expected $digest, got $imported_digest" >&2
+        return 1
+    fi
+}
+
 # Function to login to ACR using PULL_SECRET
 # Usage: acr_login "arointsvc"
 acr_login() {
