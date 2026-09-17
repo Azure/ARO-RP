@@ -22,6 +22,7 @@ import (
 
 type Manager interface {
 	BlobService(ctx context.Context, resourceGroup, account string, p storagesdk.Permissions, r storagesdk.SignedResourceTypes) (azblob.BlobsClient, error)
+	GetProperties(ctx context.Context, resourceGroup, account string) (storagesdk.Account, error)
 }
 
 type manager struct {
@@ -34,11 +35,9 @@ type manager struct {
 
 func NewManager(subscriptionID, storageEndpointSuffix string, credential azcore.TokenCredential, usesWorkloadIdentity bool, options *arm.ClientOptions) (m Manager, err error) {
 	var accountsClient armstorage.AccountsClient
-	if !usesWorkloadIdentity {
-		accountsClient, err = armstorage.NewAccountsClient(subscriptionID, credential, options)
-		if err != nil {
-			return nil, err
-		}
+	accountsClient, err = armstorage.NewAccountsClient(subscriptionID, credential, options)
+	if err != nil {
+		return nil, err
 	}
 	return &manager{
 		storageAccounts:       accountsClient,
@@ -99,4 +98,12 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 
 	sasURL := fmt.Sprintf("%s/?%s", serviceURL, *res.AccountSasToken)
 	return azblob.NewBlobsClientUsingSAS(sasURL, m.clientOptions)
+}
+
+func (m *manager) GetProperties(ctx context.Context, resourceGroup, account string) (storagesdk.Account, error) {
+	s, err := m.storageAccounts.GetProperties(ctx, resourceGroup, account, nil)
+	if err != nil {
+		return storagesdk.Account{}, getCorrectErrWhenTooManyRequests(err)
+	}
+	return s.Account, nil
 }

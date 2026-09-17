@@ -58,3 +58,18 @@ func (mr *MockManagerMockRecorder) BlobService(ctx, resourceGroup, account, p, r
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlobService", reflect.TypeOf((*MockManager)(nil).BlobService), ctx, resourceGroup, account, p, r)
 }
+
+// GetProperties mocks base method.
+func (m *MockManager) GetProperties(ctx context.Context, resourceGroup, account string) (armstorage.Account, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProperties", ctx, resourceGroup, account)
+	ret0, _ := ret[0].(armstorage.Account)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProperties indicates an expected call of GetProperties.
+func (mr *MockManagerMockRecorder) GetProperties(ctx, resourceGroup, account any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProperties", reflect.TypeOf((*MockManager)(nil).GetProperties), ctx, resourceGroup, account)
+}

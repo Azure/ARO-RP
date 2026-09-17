@@ -127,6 +127,7 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 		steps.Action(m.migrateStorageAccounts),
+		steps.Action(m.validateDeployedResources),
 		steps.Action(m.fixSSH),
 	}
 	stepsThatNeedAPIServer := []steps.Step{
@@ -441,6 +442,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate, m.managedResourceGroupName()),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint, m.managedResourceGroupName()),
 		steps.Action(m.createCertificates),
+		steps.Action(m.validateDeployedResources),
 	)
 
 	if m.adoptViaHive || m.installViaHive {
