@@ -96,6 +96,7 @@ func (g *generator) rpTemplate() *arm.Template {
 
 			// TODO: Replace with Live Service Configuration in KeyVault
 			"installerBackend",
+			"installerIdentityClientId",
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
@@ -164,6 +165,7 @@ func (g *generator) rpTemplate() *arm.Template {
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		case "installerBackend",
+			"installerIdentityClientId",
 			"clustersInstallViaHive",
 			"clustersAdoptByHive",
 			"clusterDefaultInstallerPullspec":

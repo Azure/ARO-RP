@@ -409,6 +409,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"installerBackend",
+		"installerIdentityClientId",
 		"clustersInstallViaHive",
 		"clustersAdoptByHive",
 		"clusterDefaultInstallerPullspec",

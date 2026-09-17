@@ -10,5 +10,6 @@ import (
 )
 
 func (m *manager) openShiftVersionFromVersion(ctx context.Context) (*api.OpenShiftVersion, error) {
-	return m.openShiftClusterDocumentVersioner.Get(ctx, m.doc, m.dbOpenShiftVersions, m.env, m.installerBackend == api.InstallerBackendHive)
+	remoteInstaller := m.installerBackend == api.InstallerBackendHive || m.installerBackend == api.InstallerBackendAKSJob
+	return m.openShiftClusterDocumentVersioner.Get(ctx, m.doc, m.dbOpenShiftVersions, m.env, remoteInstaller)
 }

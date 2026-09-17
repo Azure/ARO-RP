@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -18,24 +19,51 @@ import (
 )
 
 func (m *manager) runAKSJobInstaller(ctx context.Context) error {
-	// Persist the installer backend and execution ID before launching
-	executionID := uuid.New().String()
-	namespace := fmt.Sprintf("aro-install-%s", m.doc.OpenShiftCluster.Properties.InfraID)
-
-	var err error
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.InstallerProfile = &api.InstallerProfile{
-			Backend:     api.InstallerBackendAKSJob,
-			ExecutionID: executionID,
-			Namespace:   namespace,
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("failed to persist installer profile: %w", err)
+	profile := m.doc.OpenShiftCluster.Properties.InstallerProfile
+	if profile != nil && profile.Backend != api.InstallerBackendAKSJob {
+		return fmt.Errorf("installer profile backend %q does not match selected backend %q", profile.Backend, api.InstallerBackendAKSJob)
 	}
 
-	// Get the OpenShift version
+	if profile == nil || profile.ExecutionID == "" || profile.Namespace == "" {
+		now := time.Now().UTC()
+		executionID := uuid.New().String()
+		profile = &api.InstallerProfile{
+			Backend:     api.InstallerBackendAKSJob,
+			ExecutionID: executionID,
+			Namespace:   aksjob.Namespace,
+			JobName:     aksjob.JobName(executionID),
+			StartedAt:   &now,
+		}
+
+		var err error
+		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.InstallerProfile = profile
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("failed to persist installer profile: %w", err)
+		}
+	} else {
+		m.log.Infof("resuming AKS Job installer in namespace %s with execution ID %s", profile.Namespace, profile.ExecutionID)
+	}
+
+	restConfig, err := m.env.LiveConfig().InstallerRestConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get installer AKS cluster config: %w", err)
+	}
+
+	aksJobManager, err := aksjob.New(m.log, restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create AKS job manager: %w", err)
+	}
+
+	if profile.CompletedAt != nil {
+		if err := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName); err != nil {
+			m.log.WithError(err).Warn("failed to clean up completed AKS Job installer")
+		}
+		return nil
+	}
+
 	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
@@ -63,26 +91,34 @@ func (m *manager) runAKSJobInstaller(ctx context.Context) error {
 	}
 
 	// Set namespace and execution ID
-	installerInputs.Namespace = namespace
-	installerInputs.ExecutionID = executionID
+	installerInputs.Namespace = profile.Namespace
+	installerInputs.ExecutionID = profile.ExecutionID
+	installerInputs.JobName = profile.JobName
 
-	// Get the RestConfig for the installer AKS cluster
-	restConfig, err := m.env.LiveConfig().InstallerRestConfig(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get installer AKS cluster config: %w", err)
-	}
-
-	// Create AKS Job installer manager
-	aksJobManager, err := aksjob.New(m.log, restConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create AKS job manager: %w", err)
-	}
-
-	// Run the installer
-	m.log.Infof("starting AKS Job installer in namespace %s with execution ID %s", namespace, executionID)
+	m.log.Infof("starting AKS Job installer in namespace %s with execution ID %s", profile.Namespace, profile.ExecutionID)
 	err = aksJobManager.Install(ctx, installerInputs)
 	if err != nil {
-		return fmt.Errorf("AKS job installer failed: %w", err)
+		if cleanupErr := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName); cleanupErr != nil {
+			m.log.WithError(cleanupErr).Error("failed to clean up unsuccessful AKS Job installer")
+		}
+		return err
+	}
+
+	completedAt := time.Now().UTC()
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		persisted := doc.OpenShiftCluster.Properties.InstallerProfile
+		if persisted == nil || persisted.ExecutionID != profile.ExecutionID {
+			return fmt.Errorf("installer profile changed while execution %s was running", profile.ExecutionID)
+		}
+		persisted.CompletedAt = &completedAt
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to persist completed installer profile: %w", err)
+	}
+
+	if err := aksJobManager.Cleanup(ctx, profile.Namespace, profile.JobName); err != nil {
+		m.log.WithError(err).Warn("failed to clean up completed AKS Job installer")
 	}
 
 	m.log.Info("AKS Job installer completed successfully")

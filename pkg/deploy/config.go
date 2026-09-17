@@ -116,10 +116,11 @@ type Configuration struct {
 	MimoSchedulerLogLevel *string `json:"mimoSchedulerLogLevel,omitempty"`
 
 	// TODO: Replace with Live Service Configuration in KeyVault
-	InstallerBackend         *string `json:"installerBackend,omitempty"`
-	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
-	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
-	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
+	InstallerBackend          *string `json:"installerBackend,omitempty"`
+	InstallerIdentityClientID *string `json:"installerIdentityClientId,omitempty"`
+	InstallViaHive            *string `json:"clustersInstallViaHive,omitempty"`
+	DefaultInstallerPullspec  *string `json:"clusterDefaultInstallerPullspec,omitempty"`
+	AdoptByHive               *string `json:"clustersAdoptByHive,omitempty"`
 }
 
 // Note: if this configuration block is provided, all throughputs must be present and valid

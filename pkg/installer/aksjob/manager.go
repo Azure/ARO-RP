@@ -22,11 +22,21 @@ type Manager interface {
 	// GetLogs retrieves logs from the installer Job
 	GetLogs(ctx context.Context, namespace, jobName string) (string, error)
 
-	// Cleanup removes installer resources (namespace, Job, secrets)
-	Cleanup(ctx context.Context, namespace string) error
+	// Cleanup removes resources belonging to one installer execution. The
+	// namespace and ServiceAccount are provisioned with the SVC cluster.
+	Cleanup(ctx context.Context, namespace, jobName string) error
 
 	// GetStatus returns the current status of an installer Job
 	GetStatus(ctx context.Context, namespace, jobName string) (*JobStatus, error)
+}
+
+const (
+	Namespace          = "aro-installer"
+	ServiceAccountName = "aro-installer"
+)
+
+func JobName(executionID string) string {
+	return "installer-" + executionID
 }
 
 // JobStatus represents the status of an installer Job
@@ -68,4 +78,11 @@ func New(log *logrus.Entry, config *rest.Config) (Manager, error) {
 		client: client,
 		config: config,
 	}, nil
+}
+
+func newManager(log *logrus.Entry, client kubernetes.Interface) *manager {
+	return &manager{
+		log:    log,
+		client: client,
+	}
 }

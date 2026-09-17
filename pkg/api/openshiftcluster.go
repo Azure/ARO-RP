@@ -969,6 +969,10 @@ type InstallerProfile struct {
 
 	// StartedAt is the timestamp when the installer was launched
 	StartedAt *time.Time `json:"startedAt,omitempty"`
+
+	// CompletedAt is set after the installer Job succeeds. It prevents a later
+	// retry of the cluster step graph from launching the installer again.
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
 }
 
 // PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.

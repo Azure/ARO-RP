@@ -5,43 +5,37 @@ package aksjob
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
-// Cleanup removes installer resources (namespace and all contained resources)
-func (m *manager) Cleanup(ctx context.Context, namespace string) error {
-	m.log.Infof("cleaning up namespace %s", namespace)
+// Cleanup removes resources owned by one execution while retaining the shared
+// namespace and ServiceAccount provisioned with the SVC cluster.
+func (m *manager) Cleanup(ctx context.Context, namespace, jobName string) error {
+	m.log.Infof("cleaning up installer execution %s/%s", namespace, jobName)
 
-	// Check if namespace exists
-	_, err := m.client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			m.log.Info("namespace already deleted")
-			return nil
+	propagation := metav1.DeletePropagationBackground
+	err := m.client.BatchV1().Jobs(namespace).Delete(ctx, jobName, metav1.DeleteOptions{
+		PropagationPolicy: &propagation,
+	})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete installer Job %s/%s: %w", namespace, jobName, err)
+	}
+
+	names := resourceNames(jobName)
+	for _, name := range []string{
+		names.inputsSecret,
+		names.boundKeySecret,
+		names.manifestsSecret,
+		names.pullSecret,
+	} {
+		err = m.client.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete installer Secret %s/%s: %w", namespace, name, err)
 		}
-		m.log.Warnf("failed to check namespace: %v", err)
-		return nil // Non-fatal
 	}
 
-	// Delete namespace with grace period
-	deleteOptions := metav1.DeleteOptions{
-		GracePeriodSeconds: pointerutils.ToPtr(int64(30)),
-	}
-
-	err = m.client.CoreV1().Namespaces().Delete(ctx, namespace, deleteOptions)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			m.log.Info("namespace already deleted")
-			return nil
-		}
-		m.log.Warnf("failed to delete namespace: %v", err)
-		return nil // Non-fatal cleanup failures
-	}
-
-	m.log.Infof("namespace %s deleted", namespace)
 	return nil
 }

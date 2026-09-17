@@ -15,8 +15,11 @@ import (
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
+	"sigs.k8s.io/yaml"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 // InstallerInputs contains all the inputs needed to run the OpenShift installer
@@ -27,9 +30,9 @@ type InstallerInputs struct {
 	SubscriptionJSON []byte
 
 	// Installer images
-	InstallerPullspec   string
-	OpenShiftPullspec   string
-	InstallerPullSecret *PullSecret
+	InstallerPullspec string
+	OpenShiftPullspec string
+	PullSecretJSON    []byte
 
 	// Credentials for target cluster
 	// Only one of ServicePrincipalJSON or BoundSASigningKey should be set
@@ -48,22 +51,18 @@ type InstallerInputs struct {
 	EnvironmentVariables map[string]string
 
 	// Metadata
-	ClusterUUID       string
-	ResourceID        string
-	SubscriptionID    string
-	CorrelationData   *api.CorrelationData
-	Location          string
-	Domain            string
-	Namespace         string
-	ExecutionID       string
-	Timeout           time.Duration
-	IsDevelopmentMode bool
-}
-
-// PullSecret represents container registry credentials
-type PullSecret struct {
-	Username string
-	Password string
+	ClusterUUID               string
+	ResourceID                string
+	SubscriptionID            string
+	CorrelationData           *api.CorrelationData
+	Location                  string
+	Domain                    string
+	Namespace                 string
+	ExecutionID               string
+	JobName                   string
+	Timeout                   time.Duration
+	IsDevelopmentMode         bool
+	InstallerIdentityClientID string
 }
 
 // Builder constructs InstallerInputs from cluster and subscription documents
@@ -113,6 +112,12 @@ func (b *Builder) Build(
 	}
 	inputs.SubscriptionJSON = subJSON
 
+	pullSecretJSON, err := pullsecret.Build(doc.OpenShiftCluster, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to build installer pull secret: %w", err)
+	}
+	inputs.PullSecretJSON = []byte(pullSecretJSON)
+
 	// Set domain
 	inputs.Domain = doc.OpenShiftCluster.Properties.ClusterProfile.Domain
 	if !strings.ContainsRune(inputs.Domain, '.') {
@@ -124,14 +129,11 @@ func (b *Builder) Build(
 
 	// Handle credentials based on cluster type
 	if doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		// Managed identity cluster - add bound SA signing key
-		if doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile != nil {
-			boundKey, err := b.getBoundSASigningKey(doc.OpenShiftCluster)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get bound SA signing key: %w", err)
-			}
-			inputs.BoundSASigningKey = boundKey
+		boundKey, err := b.getBoundSASigningKey(doc.OpenShiftCluster)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get bound SA signing key: %w", err)
 		}
+		inputs.BoundSASigningKey = boundKey
 	} else {
 		// Service principal cluster - add SP credentials
 		spJSON, err := b.getServicePrincipalJSON(doc.OpenShiftCluster, sub)
@@ -143,7 +145,7 @@ func (b *Builder) Build(
 
 	// Convert custom manifests to bytes
 	for key, obj := range customManifests {
-		manifestBytes, err := json.Marshal(obj)
+		manifestBytes, err := yaml.Marshal(obj)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal manifest %s: %w", key, err)
 		}
@@ -177,11 +179,11 @@ func (b *Builder) getServicePrincipalJSON(oc *api.OpenShiftCluster, sub *api.Sub
 		return nil, fmt.Errorf("service principal profile is nil")
 	}
 
-	spData := map[string]interface{}{
-		"subscriptionId":  sub.ID,
-		"tenantId":        sub.Subscription.Properties.TenantID,
-		"aadClientId":     oc.Properties.ServicePrincipalProfile.ClientID,
-		"aadClientSecret": string(oc.Properties.ServicePrincipalProfile.ClientSecret),
+	spData := map[string]string{
+		"subscriptionId": sub.ID,
+		"tenantId":       sub.Subscription.Properties.TenantID,
+		"clientId":       oc.Properties.ServicePrincipalProfile.ClientID,
+		"clientSecret":   string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 	}
 
 	return json.Marshal(spData)
@@ -189,10 +191,11 @@ func (b *Builder) getServicePrincipalJSON(oc *api.OpenShiftCluster, sub *api.Sub
 
 // getBoundSASigningKey retrieves the bound service account signing key for workload identity clusters
 func (b *Builder) getBoundSASigningKey(oc *api.OpenShiftCluster) ([]byte, error) {
-	// This would need to be implemented based on where the signing key is stored
-	// For now, return a placeholder
-	// TODO: Implement actual key retrieval from KeyVault or cluster MSI store
-	return nil, fmt.Errorf("bound SA signing key retrieval not yet implemented")
+	if oc.Properties.ClusterProfile.BoundServiceAccountSigningKey == nil {
+		return nil, fmt.Errorf("properties.clusterProfile.boundServiceAccountSigningKey not set")
+	}
+
+	return []byte(*oc.Properties.ClusterProfile.BoundServiceAccountSigningKey), nil
 }
 
 // addDevelopmentEnvironment adds development-specific environment variables
@@ -229,8 +232,39 @@ func (b *Builder) addDevelopmentEnvironment(inputs *InstallerInputs) error {
 
 // addProductionEnvironment adds production-specific environment variables
 func (b *Builder) addProductionEnvironment(inputs *InstallerInputs) error {
-	// Production environment variables would be injected via KeyVault or similar
-	// For now, this is a placeholder
+	prodEnvVars := []string{
+		"AZURE_FP_CLIENT_ID",
+		"CLUSTER_MDSD_ACCOUNT",
+		"CLUSTER_MDSD_CONFIG_VERSION",
+		"CLUSTER_MDSD_NAMESPACE",
+		"DOMAIN_NAME",
+		"GATEWAY_DOMAINS",
+		"GATEWAY_RESOURCEGROUP",
+		"KEYVAULT_PREFIX",
+		"MDSD_ENVIRONMENT",
+		"ACR_RESOURCE_ID",
+	}
+
+	for _, envvar := range prodEnvVars {
+		inputs.EnvironmentVariables["ARO_"+envvar] = os.Getenv(envvar)
+	}
+
+	for _, envvar := range []string{
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+		"LOCATION",
+		"RESOURCEGROUP",
+	} {
+		if value := os.Getenv(envvar); value != "" {
+			inputs.EnvironmentVariables["ARO_"+envvar] = value
+		}
+	}
+
+	inputs.InstallerIdentityClientID = os.Getenv("ARO_INSTALLER_IDENTITY_CLIENT_ID")
+	if inputs.InstallerIdentityClientID == "" {
+		return fmt.Errorf("ARO_INSTALLER_IDENTITY_CLIENT_ID must be set for AKS Job installation in production")
+	}
+
 	return nil
 }
 

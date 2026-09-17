@@ -474,7 +474,9 @@ func (m *manager) bootstrap() []steps.Step {
 		}
 
 	default:
-		m.log.Errorf("unknown installer backend: %s", m.installerBackend)
+		s = append(s, steps.Action(func(context.Context) error {
+			return fmt.Errorf("unknown installer backend: %s", m.installerBackend)
+		}))
 	}
 
 	if m.adoptViaHive || m.installerBackend == api.InstallerBackendHive {

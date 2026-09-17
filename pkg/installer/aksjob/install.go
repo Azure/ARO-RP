@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,6 +24,26 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
+
+const (
+	maxInstallerLogBytes = 1024 * 1024
+)
+
+type executionResourceNames struct {
+	inputsSecret    string
+	boundKeySecret  string
+	manifestsSecret string
+	pullSecret      string
+}
+
+func resourceNames(jobName string) executionResourceNames {
+	return executionResourceNames{
+		inputsSecret:    jobName + "-inputs",
+		boundKeySecret:  jobName + "-bound-key",
+		manifestsSecret: jobName + "-manifests",
+		pullSecret:      jobName + "-pull",
+	}
+}
 
 // Install creates and runs an installer Job on AKS
 func (m *manager) Install(ctx context.Context, installerInputs *inputs.InstallerInputs) error {
@@ -40,93 +62,53 @@ func (m *manager) Install(ctx context.Context, installerInputs *inputs.Installer
 		steps.Action(func(ctx context.Context) error {
 			return m.ensureJob(ctx, installerInputs)
 		}),
-		steps.Condition(func(ctx context.Context) (bool, error) {
-			return m.jobCompleted(ctx, installerInputs)
-		}, installerInputs.Timeout, false),
-		steps.Action(func(ctx context.Context) error {
-			return m.collectLogs(ctx, installerInputs)
-		}),
-		steps.Action(func(ctx context.Context) error {
-			return m.Cleanup(ctx, installerInputs.Namespace)
-		}),
 	}
 
 	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil, "")
+	if err == nil {
+		_, err = steps.Run(ctx, m.log, 10*time.Second, []steps.Step{
+			steps.Condition(func(ctx context.Context) (bool, error) {
+				return m.jobCompleted(ctx, installerInputs)
+			}, installerInputs.Timeout, true),
+		}, nil, "")
+	}
+
+	if logErr := m.collectLogs(ctx, installerInputs); logErr != nil {
+		m.log.WithError(logErr).Warn("failed to collect installer logs")
+	}
+
 	return err
 }
 
-// ensureNamespace creates the namespace if it doesn't exist
+// ensureNamespace verifies the SVC deployment has provisioned the shared
+// installer namespace.
 func (m *manager) ensureNamespace(ctx context.Context, installerInputs *inputs.InstallerInputs) error {
-	m.log.Infof("ensuring namespace %s", installerInputs.Namespace)
-
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: installerInputs.Namespace,
-			Labels: map[string]string{
-				"aro-cluster-uuid":  installerInputs.ClusterUUID,
-				"installer-backend": "aksjob",
-			},
-		},
-	}
-
 	_, err := m.client.CoreV1().Namespaces().Get(ctx, installerInputs.Namespace, metav1.GetOptions{})
-	if err == nil {
-		m.log.Info("namespace already exists")
-		return nil
-	}
-	if !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to check namespace: %w", err)
-	}
-
-	_, err = m.client.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to create namespace: %w", err)
+		return fmt.Errorf("installer namespace %s is not available: %w", installerInputs.Namespace, err)
 	}
-
-	m.log.Info("namespace created")
 	return nil
 }
 
-// ensureServiceAccount creates the service account with workload identity annotations
+// ensureServiceAccount verifies the ServiceAccount bound to the pre-provisioned
+// installer workload identity.
 func (m *manager) ensureServiceAccount(ctx context.Context, installerInputs *inputs.InstallerInputs) error {
-	m.log.Info("ensuring service account")
-
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "installer",
-			Namespace:   installerInputs.Namespace,
-			Annotations: map[string]string{
-				// TODO: Get installer identity client ID from environment/config
-				// "azure.workload.identity/client-id": "<installer-identity-client-id>",
-			},
-			Labels: map[string]string{
-				"azure.workload.identity/use": "true",
-				"execution-id":                installerInputs.ExecutionID,
-			},
-		},
-	}
-
-	_, err := m.client.CoreV1().ServiceAccounts(installerInputs.Namespace).Get(ctx, "installer", metav1.GetOptions{})
-	if err == nil {
-		m.log.Info("service account already exists")
-		return nil
-	}
-	if !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to check service account: %w", err)
-	}
-
-	_, err = m.client.CoreV1().ServiceAccounts(installerInputs.Namespace).Create(ctx, serviceAccount, metav1.CreateOptions{})
+	serviceAccount, err := m.client.CoreV1().ServiceAccounts(installerInputs.Namespace).Get(ctx, ServiceAccountName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to create service account: %w", err)
+		return fmt.Errorf("installer ServiceAccount %s/%s is not available: %w", installerInputs.Namespace, ServiceAccountName, err)
 	}
 
-	m.log.Info("service account created")
+	if installerInputs.InstallerIdentityClientID != "" &&
+		serviceAccount.Annotations["azure.workload.identity/client-id"] != installerInputs.InstallerIdentityClientID {
+		return fmt.Errorf("installer ServiceAccount %s/%s has unexpected workload identity client ID", installerInputs.Namespace, ServiceAccountName)
+	}
 	return nil
 }
 
 // ensureSecrets creates the secrets needed by the installer
 func (m *manager) ensureSecrets(ctx context.Context, installerInputs *inputs.InstallerInputs) error {
 	m.log.Info("ensuring installer secrets")
+	names := resourceNames(installerInputs.JobName)
 
 	// Create main installer inputs secret
 	secretData := map[string][]byte{
@@ -154,8 +136,9 @@ func (m *manager) ensureSecrets(ctx context.Context, installerInputs *inputs.Ins
 
 	installerSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "installer-inputs",
+			Name:      names.inputsSecret,
 			Namespace: installerInputs.Namespace,
+			Labels:    executionLabels(installerInputs),
 		},
 		Data: secretData,
 		Type: corev1.SecretTypeOpaque,
@@ -163,15 +146,16 @@ func (m *manager) ensureSecrets(ctx context.Context, installerInputs *inputs.Ins
 
 	err := m.createOrUpdateSecret(ctx, installerSecret)
 	if err != nil {
-		return fmt.Errorf("failed to create installer-inputs secret: %w", err)
+		return fmt.Errorf("failed to create installer inputs secret: %w", err)
 	}
 
 	// Create bound SA signing key secret for managed identity clusters
 	if len(installerInputs.BoundSASigningKey) > 0 {
 		boundKeySecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bound-sa-signing-key",
+				Name:      names.boundKeySecret,
 				Namespace: installerInputs.Namespace,
+				Labels:    executionLabels(installerInputs),
 			},
 			Data: map[string][]byte{
 				"bound-service-account-signing-key.key": installerInputs.BoundSASigningKey,
@@ -189,8 +173,9 @@ func (m *manager) ensureSecrets(ctx context.Context, installerInputs *inputs.Ins
 	if len(installerInputs.CustomManifests) > 0 {
 		manifestsSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "custom-manifests",
+				Name:      names.manifestsSecret,
 				Namespace: installerInputs.Namespace,
+				Labels:    executionLabels(installerInputs),
 			},
 			Data: installerInputs.CustomManifests,
 			Type: corev1.SecretTypeOpaque,
@@ -202,15 +187,32 @@ func (m *manager) ensureSecrets(ctx context.Context, installerInputs *inputs.Ins
 		}
 	}
 
+	if len(installerInputs.PullSecretJSON) > 0 {
+		pullSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      names.pullSecret,
+				Namespace: installerInputs.Namespace,
+				Labels:    executionLabels(installerInputs),
+			},
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: installerInputs.PullSecretJSON,
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+		}
+		if err := m.createOrUpdateSecret(ctx, pullSecret); err != nil {
+			return fmt.Errorf("failed to create installer pull secret: %w", err)
+		}
+	}
+
 	m.log.Info("secrets created")
 	return nil
 }
 
 // createOrUpdateSecret creates or updates a secret
 func (m *manager) createOrUpdateSecret(ctx context.Context, secret *corev1.Secret) error {
-	_, err := m.client.CoreV1().Secrets(secret.Namespace).Get(ctx, secret.Name, metav1.GetOptions{})
+	existing, err := m.client.CoreV1().Secrets(secret.Namespace).Get(ctx, secret.Name, metav1.GetOptions{})
 	if err == nil {
-		// Secret exists, update it
+		secret.ResourceVersion = existing.ResourceVersion
 		_, err = m.client.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
 		return err
 	}
@@ -226,12 +228,14 @@ func (m *manager) createOrUpdateSecret(ctx context.Context, secret *corev1.Secre
 // ensureJob creates the installer Job
 func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.InstallerInputs) error {
 	m.log.Info("ensuring installer Job")
+	names := resourceNames(installerInputs.JobName)
 
 	// Check if Job already exists
-	existingJob, err := m.client.BatchV1().Jobs(installerInputs.Namespace).Get(ctx, "installer", metav1.GetOptions{})
+	existingJob, err := m.client.BatchV1().Jobs(installerInputs.Namespace).Get(ctx, installerInputs.JobName, metav1.GetOptions{})
 	if err == nil {
 		// Job exists - verify it matches our execution ID
-		if existingJob.Labels["execution-id"] == installerInputs.ExecutionID {
+		if existingJob.Labels["execution-id"] == installerInputs.ExecutionID &&
+			existingJob.Labels["aro-cluster-uuid"] == installerInputs.ClusterUUID {
 			m.log.Info("reattaching to existing job")
 			return nil
 		}
@@ -254,8 +258,27 @@ func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.Install
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "installer-inputs",
-			MountPath: "/var/run/installer-inputs",
+			MountPath: "/.azure/99_aro.json",
+			SubPath:   "99_aro.json",
 			ReadOnly:  true,
+		},
+		{
+			Name:      "installer-inputs",
+			MountPath: "/.azure/99_sub.json",
+			SubPath:   "99_sub.json",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "azure-workdir",
+			MountPath: "/.azure",
+		},
+		{
+			Name:      "output",
+			MountPath: "/output",
+		},
+		{
+			Name:      "tmp",
+			MountPath: "/tmp",
 		},
 	}
 	volumes := []corev1.Volume{
@@ -263,24 +286,68 @@ func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.Install
 			Name: "installer-inputs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "installer-inputs",
+					SecretName: names.inputsSecret,
 				},
 			},
 		},
+		{
+			Name: "azure-workdir",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory,
+				},
+			},
+		},
+		{
+			Name: "output",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+		{
+			Name: "tmp",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+	}
+
+	if len(installerInputs.ServicePrincipalJSON) > 0 {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "installer-inputs",
+			MountPath: "/.azure/osServicePrincipal.json",
+			SubPath:   "osServicePrincipal.json",
+			ReadOnly:  true,
+		})
+	}
+
+	for key, value := range map[string][]byte{
+		"proxy.crt":        installerInputs.ProxyCert,
+		"proxy-client.crt": installerInputs.ProxyClientCert,
+		"proxy-client.key": installerInputs.ProxyClientKey,
+	} {
+		if installerInputs.IsDevelopmentMode && len(value) > 0 {
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "installer-inputs",
+				MountPath: "/.azure/" + key,
+				SubPath:   key,
+				ReadOnly:  true,
+			})
+		}
 	}
 
 	// Add bound SA signing key volume for managed identity clusters
 	if len(installerInputs.BoundSASigningKey) > 0 {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "bound-sa-signing-key",
-			MountPath: "/var/run/secrets/openshift/bound-sa-signing-key",
+			MountPath: "/boundsasigningkey",
 			ReadOnly:  true,
 		})
 		volumes = append(volumes, corev1.Volume{
 			Name: "bound-sa-signing-key",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "bound-sa-signing-key",
+					SecretName: names.boundKeySecret,
 				},
 			},
 		})
@@ -290,14 +357,14 @@ func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.Install
 	if len(installerInputs.CustomManifests) > 0 {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "custom-manifests",
-			MountPath: "/var/run/installer-custom-manifests",
+			MountPath: "/manifests",
 			ReadOnly:  true,
 		})
 		volumes = append(volumes, corev1.Volume{
 			Name: "custom-manifests",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "custom-manifests",
+					SecretName: names.manifestsSecret,
 				},
 			},
 		})
@@ -306,33 +373,33 @@ func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.Install
 	// Create Job
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "installer",
+			Name:      installerInputs.JobName,
 			Namespace: installerInputs.Namespace,
-			Labels: map[string]string{
-				"aro-cluster-uuid":               installerInputs.ClusterUUID,
-				"execution-id":                   installerInputs.ExecutionID,
-				"installer-backend":              "aksjob",
-				"kubernetes.azure.com/managedby": "sub_" + installerInputs.SubscriptionID,
-			},
+			Labels:    executionLabels(installerInputs),
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit:          pointerutils.ToPtr(int32(0)),    // No retries
-			ActiveDeadlineSeconds: pointerutils.ToPtr(int64(3600)), // 60 min timeout
+			BackoffLimit:          pointerutils.ToPtr(int32(0)),
+			ActiveDeadlineSeconds: pointerutils.ToPtr(int64(installerInputs.Timeout.Seconds())),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"aro-cluster-uuid":               installerInputs.ClusterUUID,
 						"execution-id":                   installerInputs.ExecutionID,
 						"kubernetes.azure.com/managedby": "sub_" + installerInputs.SubscriptionID,
+						"azure.workload.identity/use":    "true",
 					},
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "installer",
+					ServiceAccountName: ServiceAccountName,
 					RestartPolicy:      corev1.RestartPolicyNever,
+					ImagePullSecrets: []corev1.LocalObjectReference{
+						{Name: names.pullSecret},
+					},
 					Containers: []corev1.Container{
 						{
-							Name:  "installer",
-							Image: installerInputs.InstallerPullspec,
+							Name:       "installer",
+							Image:      installerInputs.InstallerPullspec,
+							WorkingDir: "/.azure",
 							Command: []string{
 								"/bin/bash",
 								"-c",
@@ -369,7 +436,7 @@ func (m *manager) ensureJob(ctx context.Context, installerInputs *inputs.Install
 
 // jobCompleted checks if the Job has completed (success or failure)
 func (m *manager) jobCompleted(ctx context.Context, installerInputs *inputs.InstallerInputs) (bool, error) {
-	job, err := m.client.BatchV1().Jobs(installerInputs.Namespace).Get(ctx, "installer", metav1.GetOptions{})
+	job, err := m.client.BatchV1().Jobs(installerInputs.Namespace).Get(ctx, installerInputs.JobName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			m.log.Debug("job not found yet")
@@ -445,14 +512,14 @@ func (m *manager) parseInstallationError(logs string) error {
 	return parseInstallationFailure(logs)
 }
 
-// collectLogs retrieves and stores the Job logs in a ConfigMap
+// collectLogs forwards the Job logs to the RP log pipeline before cleanup.
 func (m *manager) collectLogs(ctx context.Context, installerInputs *inputs.InstallerInputs) error {
 	m.log.Info("collecting installer logs")
 
-	logs, err := m.getLogsFromPod(ctx, installerInputs.Namespace)
+	logs, err := m.getLogsFromPod(ctx, installerInputs.Namespace, installerInputs.JobName)
 	if err != nil {
 		m.log.Warnf("failed to get logs from pod: %v", err)
-		return nil // Non-fatal
+		return err
 	}
 
 	if logs == "" {
@@ -460,22 +527,34 @@ func (m *manager) collectLogs(ctx context.Context, installerInputs *inputs.Insta
 		return nil
 	}
 
-	// Store logs in ConfigMap (like Hive stores in ClusterProvision.Spec.InstallLog)
-	err = m.storeLogsInConfigMap(ctx, installerInputs, logs)
-	if err != nil {
-		m.log.Warnf("failed to store logs in ConfigMap: %v", err)
-		return nil // Non-fatal
+	logs = truncateInstallerLogs(logs)
+	for _, line := range strings.Split(strings.TrimSuffix(logs, "\n"), "\n") {
+		m.log.WithFields(logrus.Fields{
+			"clusterUUID": installerInputs.ClusterUUID,
+			"executionID": installerInputs.ExecutionID,
+		}).Infof("installer: %s", line)
 	}
 
-	m.log.Infof("stored installer logs (%d bytes) in ConfigMap", len(logs))
 	return nil
 }
 
+func truncateInstallerLogs(logs string) string {
+	if len(logs) <= maxInstallerLogBytes {
+		return logs
+	}
+
+	const marker = "\n... installer logs truncated ...\n"
+	remaining := maxInstallerLogBytes - len(marker)
+	first := remaining / 2
+	last := remaining - first
+	return logs[:first] + marker + logs[len(logs)-last:]
+}
+
 // getLogsFromPod retrieves logs directly from the installer pod
-func (m *manager) getLogsFromPod(ctx context.Context, namespace string) (string, error) {
+func (m *manager) getLogsFromPod(ctx context.Context, namespace, jobName string) (string, error) {
 	// Find pods for the job
 	pods, err := m.client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "job-name=installer",
+		LabelSelector: "job-name=" + jobName,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to list pods: %w", err)
@@ -507,50 +586,16 @@ func (m *manager) getLogsFromPod(ctx context.Context, namespace string) (string,
 	return buf.String(), nil
 }
 
-// storeLogsInConfigMap stores installer logs in a ConfigMap for retrieval
-func (m *manager) storeLogsInConfigMap(ctx context.Context, installerInputs *inputs.InstallerInputs, logs string) error {
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "installer-logs",
-			Namespace: installerInputs.Namespace,
-			Labels: map[string]string{
-				"execution-id": installerInputs.ExecutionID,
-				"cluster-uuid": installerInputs.ClusterUUID,
-			},
-		},
-		Data: map[string]string{
-			"install.log": logs,
-		},
-	}
-
-	// Try to create the ConfigMap
-	_, err := m.client.CoreV1().ConfigMaps(installerInputs.Namespace).Create(ctx, cm, metav1.CreateOptions{})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create ConfigMap: %w", err)
-	}
-
-	// If it already exists, update it
-	if errors.IsAlreadyExists(err) {
-		_, err = m.client.CoreV1().ConfigMaps(installerInputs.Namespace).Update(ctx, cm, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to update ConfigMap: %w", err)
-		}
-	}
-
-	return nil
+// getStoredLogs retrieves logs from the installer pod.
+func (m *manager) getStoredLogs(ctx context.Context, installerInputs *inputs.InstallerInputs) (string, error) {
+	return m.getLogsFromPod(ctx, installerInputs.Namespace, installerInputs.JobName)
 }
 
-// getStoredLogs retrieves logs from ConfigMap or pod
-func (m *manager) getStoredLogs(ctx context.Context, installerInputs *inputs.InstallerInputs) (string, error) {
-	// First try to get logs from ConfigMap (stored by collectLogs)
-	cm, err := m.client.CoreV1().ConfigMaps(installerInputs.Namespace).Get(ctx, "installer-logs", metav1.GetOptions{})
-	if err == nil {
-		if logs, ok := cm.Data["install.log"]; ok {
-			return logs, nil
-		}
+func executionLabels(installerInputs *inputs.InstallerInputs) map[string]string {
+	return map[string]string{
+		"aro-cluster-uuid":               installerInputs.ClusterUUID,
+		"execution-id":                   installerInputs.ExecutionID,
+		"installer-backend":              "aksjob",
+		"kubernetes.azure.com/managedby": "sub_" + installerInputs.SubscriptionID,
 	}
-
-	// Fallback to getting logs directly from pod
-	m.log.Debug("ConfigMap not found, retrieving logs from pod")
-	return m.getLogsFromPod(ctx, installerInputs.Namespace)
 }
