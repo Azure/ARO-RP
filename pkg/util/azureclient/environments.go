@@ -117,9 +117,10 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 func (e *AROEnvironment) ArmClientOptions(middlewares ...policy.Policy) *arm.ClientOptions {
 	policies := []policy.Policy{NewLoggingPolicy()}
 	if ff := common.NewFirstFailPolicy(); ff != nil {
-		// fault injector is in PerCallPolicies (before the SDK retry loop), so injected errors
-		// are presented to the retry machinery and logged by NewLoggingPolicy() at index 0.
 		policies = append(policies, ff)
+	}
+	if lro := common.NewLROPollFaultPolicy(); lro != nil {
+		policies = append(policies, lro)
 	}
 	return &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{

@@ -601,7 +601,19 @@ func TestIsRetryableError(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "azcore 409 without body (not retryable)",
+			name: "azcore LRO failure 200 with Please retry later",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusOK,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"status":"Failed","error":{"code":"RegistrationOfImplicitNicViaArmFailed","message":"Registration of implicit NIC failed with error: ConflictingConcurrentWriteNotAllowed, message: The operation was interrupted by a conflicting concurrent write on the same entity. Please retry later."}}`)),
+				},
+				ErrorCode: "RegistrationOfImplicitNicViaArmFailed",
+			},
+			want: true,
+		},
+		{
+			name: "azcore 409 without Please retry later (not retryable)",
 			err: &azcore.ResponseError{
 				StatusCode: http.StatusConflict,
 				RawResponse: &http.Response{
@@ -631,6 +643,36 @@ func TestIsRetryableError(t *testing.T) {
 					StatusCode: http.StatusConflict,
 					Header:     http.Header{"Retry-After": []string{"5"}},
 				},
+			},
+			want: true,
+		},
+		{
+			name: "azcore non-409 with Retry-After header",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusInternalServerError,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "autorest non-409 with Retry-After header",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusInternalServerError,
+				Response: &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Header:     http.Header{"Retry-After": []string{"5"}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "autorest LRO failure 200 with Please retry later",
+			err: autorest.DetailedError{
+				StatusCode: http.StatusOK,
+				Original:   errors.New(`Code="RegistrationOfImplicitNicViaArmFailed" Message="Registration of implicit NIC failed with error: ConflictingConcurrentWriteNotAllowed, message: The operation was interrupted by a conflicting concurrent write on the same entity. Please retry later."`),
 			},
 			want: true,
 		},
