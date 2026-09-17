@@ -103,6 +103,20 @@ func (mr *MockAzureActionsMockRecorder) DeleteCapacityReservation(ctx, clusterRG
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCapacityReservation", reflect.TypeOf((*MockAzureActions)(nil).DeleteCapacityReservation), ctx, clusterRG, crgName, zone)
 }
 
+// EnsureClusterServicePrincipalRBAC mocks base method.
+func (m *MockAzureActions) EnsureClusterServicePrincipalRBAC(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureClusterServicePrincipalRBAC", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureClusterServicePrincipalRBAC indicates an expected call of EnsureClusterServicePrincipalRBAC.
+func (mr *MockAzureActionsMockRecorder) EnsureClusterServicePrincipalRBAC(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureClusterServicePrincipalRBAC", reflect.TypeOf((*MockAzureActions)(nil).EnsureClusterServicePrincipalRBAC), ctx)
+}
+
 // GetEffectiveRouteTable mocks base method.
 func (m *MockAzureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {
 	m.ctrl.T.Helper()
