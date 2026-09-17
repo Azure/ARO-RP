@@ -23,6 +23,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
+const registryResourceID = "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
+
 func TestAzureInit(t *testing.T) {
 	require := require.New(t)
 	controller := gomock.NewController(t)
@@ -31,7 +33,7 @@ func TestAzureInit(t *testing.T) {
 	f := &th{env: _env}
 
 	// no subscription document
-	_, err := f.TokensClient()
+	_, err := f.FirstPartyTokensClient()
 	require.ErrorIs(err, errInvalidSubDoc)
 
 	f.sub = &api.SubscriptionDocument{
@@ -41,14 +43,20 @@ func TestAzureInit(t *testing.T) {
 		}},
 	}
 
-	// client cert credential creation failure
+	// cluster tenant client cert credential creation failure
 	_env.EXPECT().FPNewClientCertificateCredential(gomock.Eq("123"), gomock.Nil()).Return(nil, errors.New("oh no"))
-	_, err = f.TokensClient()
+	_, err = f.FirstPartyTokensClient()
 	require.ErrorIs(err, errCreatingFpCredClusterTenant)
 
-	// test successfully creating the client
+	// RP tenant client cert credential creation failure
 	cred := &azcorefake.TokenCredential{}
 	_env.EXPECT().FPNewClientCertificateCredential(gomock.Eq("123"), gomock.Nil()).Return(cred, nil)
+	_env.EXPECT().TenantID().Return("456")
+	_env.EXPECT().FPNewClientCertificateCredential(gomock.Eq("456"), gomock.Nil()).Return(nil, errors.New("oh no"))
+
+	// test successfully creating the client
+	_, err = f.FirstPartyTokensClient()
+	require.ErrorIs(err, errCreatingFpCredRPTenant)
 
 	// add a fake in for testing
 	fakeTokens := &armcontainerregistryfake.TokensServer{
@@ -91,8 +99,20 @@ func TestAzureInit(t *testing.T) {
 	// no azure clients client before we create it
 	require.Nil(f.az)
 
+	// invalid ACR returns failure
+	_env.EXPECT().TenantID().Return("456")
+	_env.EXPECT().FPNewClientCertificateCredential(gomock.Eq("123"), gomock.Nil()).Return(cred, nil)
+	_env.EXPECT().FPNewClientCertificateCredential(gomock.Eq("456"), gomock.Nil()).Return(cred, nil)
+	_env.EXPECT().ACRResourceID().Return("")
+	_, err = f.FirstPartyTokensClient()
+	require.ErrorIs(err, errParsingACRResourceID)
+
+	// we should have the azure clients now because that part succeeded
+	require.NotNil(f.az)
+
 	// Successfully create the client
-	c, err := f.TokensClient()
+	_env.EXPECT().ACRResourceID().Return(registryResourceID)
+	c, err := f.FirstPartyTokensClient()
 	require.NoError(err)
 
 	// Call the client w/ params and check that they're passed through
