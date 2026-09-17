@@ -220,14 +220,14 @@ func (t *fakeTestContext) InterfacesClient() (armnetwork.InterfacesClient, error
 	return *t.interfacesClient, nil
 }
 
-func (t *fakeTestContext) RegistriesClient() (armcontainerregistry.RegistriesClient, error) {
+func (t *fakeTestContext) FirstPartyRegistriesClient() (armcontainerregistry.RegistriesClient, error) {
 	if t.registriesClient == nil {
 		return nil, fmt.Errorf("no armcontainerregistry.RegistriesClient provided")
 	}
 	return *t.registriesClient, nil
 }
 
-func (t *fakeTestContext) TokensClient() (armcontainerregistry.TokensClient, error) {
+func (t *fakeTestContext) FirstPartyTokensClient() (armcontainerregistry.TokensClient, error) {
 	if t.tokensClient == nil {
 		return nil, fmt.Errorf("no armcontainerregistry.TokensClient provided")
 	}
