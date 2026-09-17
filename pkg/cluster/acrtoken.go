@@ -33,17 +33,17 @@ func newACRTokenManager(_env env.Interface) (acrtoken.Manager, error) {
 		return nil, err
 	}
 
-	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID(), nil)
+	msiCred, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
 
-	armRPTokensClient, err := armcontainerregistry.NewTokensClient(acrR.SubscriptionID, fpCredRPTenant, _env.Environment().ArmClientOptions())
+	armRPTokensClient, err := armcontainerregistry.NewTokensClient(acrR.SubscriptionID, msiCred, _env.Environment().ArmClientOptions())
 	if err != nil {
 		return nil, err
 	}
 
-	armRPRegistriesClient, err := armcontainerregistry.NewRegistriesClient(acrR.SubscriptionID, fpCredRPTenant, _env.Environment().ArmClientOptions())
+	armRPRegistriesClient, err := armcontainerregistry.NewRegistriesClient(acrR.SubscriptionID, msiCred, _env.Environment().ArmClientOptions())
 	if err != nil {
 		return nil, err
 	}
