@@ -257,7 +257,7 @@ func (m *manager) ensurePlatformWorkloadIdentityRBAC(ctx context.Context) error 
 			Resources:      toAdd,
 		}
 		err = arm.Retryable(ctx, func() error {
-			return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "platformworkloadidentityrbac", t, nil)
+			return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "platformworkloadidentityrbac", t, nil, nil)
 		}, m.log, "deploying platform workload identity RBAC")
 		if err != nil {
 			return err

@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
-func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, parameters map[string]interface{}) error {
+func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, parameters map[string]interface{}, resourcesToValidate map[string]map[string]interface{}) error {
 	log.Printf("deploying %s template", deploymentName)
 	err := deployments.CreateOrUpdateAndWait(ctx, resourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
@@ -64,5 +64,13 @@ func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features
 		}
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	if len(resourcesToValidate) == 0 {
+		return nil
+	}
+
+	return validateDeploymentWithWhatIf(ctx, log, deployments, resourceGroupName, deploymentName, template, resourcesToValidate)
 }
