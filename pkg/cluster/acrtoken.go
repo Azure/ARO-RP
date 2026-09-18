@@ -219,7 +219,7 @@ func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clie
 	}
 
 	// attempt to merge the data
-	if openshiftConfigSecret != nil && openshiftConfigSecret.Data != nil {
+	if openshiftConfigSecret.Data != nil {
 		previousConfigData, previousConfigDataExists := openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]
 		if previousConfigDataExists {
 			mergedPullSecretData, _, err := pullsecret.Merge(string(previousConfigData), string(encodedDockerConfigJson))
