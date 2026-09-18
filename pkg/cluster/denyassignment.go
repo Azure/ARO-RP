@@ -53,6 +53,6 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 	}
 
 	return arm.Retryable(ctx, func() error {
-		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil, nil)
 	}, m.log, "deploying deny assignment")
 }
