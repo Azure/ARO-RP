@@ -252,8 +252,10 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		Resources:      resources,
 	}
 
+	resourcesToValidate := arm.BuildStorageAccountsValidationMap(clusterStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName)
+
 	return arm.Retryable(ctx, func() error {
-		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil, resourcesToValidate)
 	}, m.log, "deploying base resources")
 }
 

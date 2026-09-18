@@ -76,7 +76,7 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 			Resources:      []*arm.Resource{m.clusterServicePrincipalRBAC()},
 		}
 		err = arm.Retryable(ctx, func() error {
-			return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "clustersp", t, nil)
+			return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "clustersp", t, nil, nil)
 		}, m.log, "deploying cluster service principal RBAC")
 		if err != nil {
 			return err
