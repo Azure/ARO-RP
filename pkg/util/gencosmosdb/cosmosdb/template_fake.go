@@ -1,5 +1,8 @@
 package cosmosdb
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"fmt"
@@ -11,8 +14,10 @@ import (
 	pkg "github.com/Azure/ARO-RP/pkg/util/gencosmosdb/cosmosdb/dummy"
 )
 
-type fakeTemplateTriggerHandler func(context.Context, *pkg.Template) error
-type fakeTemplateQueryHandler func(TemplateClient, *Query, *Options) TemplateRawIterator
+type (
+	fakeTemplateTriggerHandler func(context.Context, *pkg.Template) error
+	fakeTemplateQueryHandler   func(TemplateClient, *Query, *Options) TemplateRawIterator
+)
 
 var _ TemplateClient = &FakeTemplateClient{}
 

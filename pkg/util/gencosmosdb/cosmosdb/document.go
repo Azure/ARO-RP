@@ -1,5 +1,8 @@
 package cosmosdb
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // Query represents a query
 type Query struct {
 	Query      string      `json:"query,omitempty"`

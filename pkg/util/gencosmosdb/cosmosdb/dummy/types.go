@@ -1,5 +1,8 @@
 package dummy
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // Template represents a template
 type Template struct {
 	ID          string                 `json:"id,omitempty"`
