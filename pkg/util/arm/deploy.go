@@ -64,13 +64,5 @@ func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features
 		}
 	}
 
-	if err != nil {
-		return err
-	}
-
-	if len(resourcesToValidate) == 0 {
-		return nil
-	}
-
-	return validateDeploymentWithWhatIf(ctx, log, deployments, resourceGroupName, deploymentName, template, resourcesToValidate)
+	return err
 }

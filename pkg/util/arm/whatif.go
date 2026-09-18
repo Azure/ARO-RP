@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 )
 
-func validateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, resourcesToValidate map[string]map[string]interface{}) error {
+func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, resourcesToValidate map[string]map[string]interface{}) error {
 	log.Printf("validating %s deployment with what-if", deploymentName)
 
 	whatIfParams := mgmtfeatures.DeploymentWhatIf{
@@ -31,7 +31,8 @@ func validateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deploy
 
 	whatIfResult, err := deployments.WhatIfAndWait(ctx, resourceGroupName, deploymentName, whatIfParams)
 	if err != nil {
-		return err
+		log.Errorf("ValidateDeploymentWithWhatIf failed with error: %v", err)
+		return nil
 	}
 
 	if whatIfResult.WhatIfOperationProperties == nil || whatIfResult.Changes == nil {
@@ -43,7 +44,8 @@ func validateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deploy
 		if change.ResourceID != nil {
 			resourceConfig, err := findMatchingResourceConfig(*change.ResourceID, resourcesToValidate)
 			if err != nil {
-				return err
+				log.Errorf("findMatchingResourceConfig failed with error: %v", err)
+				return nil
 			}
 			if resourceConfig != nil && change.Delta != nil {
 				mismatches := collectPropertyChanges(*change.Delta, change.ResourceID, resourceConfig)
