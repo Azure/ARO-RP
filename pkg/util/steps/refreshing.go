@@ -88,8 +88,12 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 				err == ErrWantRefresh) {
 			log.Printf("auth error, retrying: %v", err)
 			if s.auth != nil {
-				err = s.auth.Rebuild()
-				return false, err
+				rebuildErr := s.auth.Rebuild()
+				if rebuildErr != nil {
+					log.Printf("auth authorizer rebuild failed: %v", rebuildErr)
+					err = rebuildErr
+				}
+				return false, rebuildErr
 			}
 			return false, nil
 		}
