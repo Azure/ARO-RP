@@ -201,6 +201,7 @@ func (f *fakeRefreshableAuthorizer) WithAuthorization() autorest.PrepareDecorato
 
 func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 	forbiddenErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
+	rebuildErr := errors.New("authorizer rebuild failed")
 
 	for _, tt := range []struct {
 		name           string
@@ -210,6 +211,7 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 		pollInterval   time.Duration
 		repeatLastErr  bool
 		expectRetries  bool
+		expectRebuild  bool
 		expectFinalErr string
 		expectError    error
 	}{
@@ -291,8 +293,15 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 			retryTimeout:  time.Millisecond,
 			pollInterval:  30 * time.Second,
 			repeatLastErr: true,
-			expectRetries: true,
+			expectRebuild: true,
 			expectError:   forbiddenErr,
+		},
+		{
+			name:          "authorizer rebuild error is returned",
+			errors:        []error{forbiddenErr},
+			auth:          &fakeRefreshableAuthorizer{rebuildErr: rebuildErr},
+			expectRebuild: true,
+			expectError:   rebuildErr,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -333,12 +342,13 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 
 			if tt.expectRetries {
 				assert.Greater(t, callCount, 1, "action should have been called more than once")
-				if tt.auth != nil {
-					assert.Positive(t, tt.auth.rebuildCalled, "Rebuild should have been called")
-				}
 			} else {
 				assert.Equal(t, 1, callCount, "action should have been called exactly once")
-				if tt.auth != nil {
+			}
+			if tt.auth != nil {
+				if tt.expectRetries || tt.expectRebuild {
+					assert.Positive(t, tt.auth.rebuildCalled, "Rebuild should have been called")
+				} else {
 					assert.Equal(t, 0, tt.auth.rebuildCalled, "Rebuild should not have been called")
 				}
 			}
