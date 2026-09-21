@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
@@ -201,33 +200,44 @@ func (f *fakeRefreshableAuthorizer) WithAuthorization() autorest.PrepareDecorato
 }
 
 func TestAuthorizationRefreshingActionRetries(t *testing.T) {
+	forbiddenErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
+
 	for _, tt := range []struct {
 		name           string
 		errors         []error
+		auth           *fakeRefreshableAuthorizer
+		retryTimeout   time.Duration
+		pollInterval   time.Duration
+		repeatLastErr  bool
 		expectRetries  bool
 		expectFinalErr string
+		expectError    error
 	}{
 		{
 			name:           "AuthorizationFailed is retried then succeeds",
 			errors:         []error{autorest.DetailedError{Original: &azure.ServiceError{Code: "AuthorizationFailed"}}, nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "LinkedAuthorizationFailed is retried then succeeds",
 			errors:         []error{autorest.DetailedError{Original: &azure.ServiceError{Code: "LinkedAuthorizationFailed"}}, nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "UnauthorizedClient (AADSTS700016) is retried then succeeds",
 			errors:         []error{fmt.Errorf("AADSTS700016: application not found"), nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "InvalidSecret (AADSTS7000215) is retried then succeeds",
 			errors:         []error{fmt.Errorf("AADSTS7000215: invalid client secret"), nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
@@ -237,30 +247,64 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 				autorest.DetailedError{Original: &azure.ServiceError{Code: "InvalidTemplateDeployment", Message: "Authorization failed for template resource 'foo'"}},
 				nil,
 			},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "ErrWantRefresh is retried then succeeds",
 			errors:         []error{ErrWantRefresh, nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "non-auth error is not retried",
 			errors:         []error{fmt.Errorf("some other error")},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  false,
 			expectFinalErr: "some other error",
 		},
 		{
 			name:           "nil error succeeds immediately",
 			errors:         []error{nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  false,
 			expectFinalErr: "",
+		},
+		{
+			name:          "forbidden error without authorizer is retried then succeeds",
+			errors:        []error{forbiddenErr, nil},
+			expectRetries: true,
+		},
+		{
+			name:         "forbidden error without authorizer returns last error after retry timeout",
+			errors:       []error{forbiddenErr},
+			retryTimeout: time.Millisecond,
+			pollInterval: 30 * time.Second,
+			expectError:  forbiddenErr,
+		},
+		{
+			name:          "persistent forbidden error with authorizer returns error after retry timeout",
+			errors:        []error{forbiddenErr},
+			auth:          &fakeRefreshableAuthorizer{},
+			retryTimeout:  time.Millisecond,
+			pollInterval:  30 * time.Second,
+			repeatLastErr: true,
+			expectRetries: true,
+			expectError:   forbiddenErr,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
+			retryTimeout := tt.retryTimeout
+			if retryTimeout == 0 {
+				retryTimeout = time.Second
+			}
+			pollInterval := tt.pollInterval
+			if pollInterval == 0 {
+				pollInterval = time.Millisecond
+			}
 
 			callCount := 0
 			action := func(ctx context.Context) error {
@@ -269,95 +313,43 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 				if idx < len(tt.errors) {
 					return tt.errors[idx]
 				}
+				if tt.repeatLastErr {
+					return tt.errors[len(tt.errors)-1]
+				}
 				return nil
 			}
 
-			auth := &fakeRefreshableAuthorizer{}
 			s := &authorizationRefreshingActionStep{
 				f:             action,
-				auth:          auth,
-				retryTimeout:  30 * time.Second,
-				pollInterval:  1 * time.Millisecond,
+				retryTimeout:  retryTimeout,
+				pollInterval:  pollInterval,
 				managedRGName: "",
+			}
+			if tt.auth != nil {
+				s.auth = tt.auth
 			}
 
 			err := s.run(t.Context(), log)
 
 			if tt.expectRetries {
 				assert.Greater(t, callCount, 1, "action should have been called more than once")
-				assert.Positive(t, auth.rebuildCalled, "Rebuild should have been called")
+				if tt.auth != nil {
+					assert.Positive(t, tt.auth.rebuildCalled, "Rebuild should have been called")
+				}
 			} else {
 				assert.Equal(t, 1, callCount, "action should have been called exactly once")
-				assert.Equal(t, 0, auth.rebuildCalled, "Rebuild should not have been called")
+				if tt.auth != nil {
+					assert.Equal(t, 0, tt.auth.rebuildCalled, "Rebuild should not have been called")
+				}
 			}
 
-			if tt.expectFinalErr == "" {
+			if tt.expectError != nil {
+				assert.ErrorIs(t, err, tt.expectError)
+			} else if tt.expectFinalErr == "" {
 				assert.NoError(t, err)
 			} else {
 				assert.ErrorContains(t, err, tt.expectFinalErr)
 			}
 		})
 	}
-}
-
-func TestAuthorizationRetryingActionWithoutAuthorizerRetriesForbidden(t *testing.T) {
-	_, log := testlog.LogForTesting(t)
-
-	callCount := 0
-	action := func(ctx context.Context) error {
-		callCount++
-		if callCount == 1 {
-			return &azcore.ResponseError{StatusCode: http.StatusForbidden}
-		}
-		return nil
-	}
-
-	s := &authorizationRefreshingActionStep{
-		f:            action,
-		retryTimeout: 30 * time.Second,
-		pollInterval: time.Millisecond,
-	}
-
-	err := s.run(t.Context(), log)
-
-	require.NoError(t, err)
-	assert.Equal(t, 2, callCount)
-}
-
-func TestAuthorizationRetryingActionWithoutAuthorizerReturnsLastError(t *testing.T) {
-	_, log := testlog.LogForTesting(t)
-
-	wantErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
-	s := &authorizationRefreshingActionStep{
-		f: func(ctx context.Context) error {
-			return wantErr
-		},
-		retryTimeout: time.Millisecond,
-		pollInterval: 30 * time.Second,
-	}
-
-	err := s.run(t.Context(), log)
-
-	assert.Same(t, wantErr, err)
-}
-
-func TestAuthorizationRetryingActionWithAuthorizerReturnsErrorAfterRetryTimeout(t *testing.T) {
-	_, log := testlog.LogForTesting(t)
-
-	wantErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
-	auth := &fakeRefreshableAuthorizer{
-		rebuildErr: nil, // simulate successful auth rebuilds
-	}
-	s := &authorizationRefreshingActionStep{
-		f: func(ctx context.Context) error {
-			return wantErr
-		},
-		auth:         auth,
-		retryTimeout: time.Millisecond,
-		pollInterval: 30 * time.Second,
-	}
-
-	err := s.run(t.Context(), log)
-
-	assert.ErrorIs(t, err, wantErr)
 }
