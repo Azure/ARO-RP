@@ -290,7 +290,7 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 			name:          "persistent forbidden error with authorizer returns error after retry timeout",
 			errors:        []error{forbiddenErr},
 			auth:          &fakeRefreshableAuthorizer{},
-			retryTimeout:  time.Millisecond,
+retryTimeout: 100 * time.Millisecond,
 			pollInterval:  30 * time.Second,
 			repeatLastErr: true,
 			expectRebuild: true,
