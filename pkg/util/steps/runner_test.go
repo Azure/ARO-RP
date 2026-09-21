@@ -430,7 +430,7 @@ func TestRunWithWrappedError(t *testing.T) {
 			h, log := testlog.New()
 			steps := tt.steps
 
-			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc, "")
+			_, err := RunWithWrappedError(ctx, log, steps)
 
 			if ! errors.Is(err, tt.wantError) {
 				t.Errorf("got error '%v', but wanted error '%v'", err, tt.wantError)
