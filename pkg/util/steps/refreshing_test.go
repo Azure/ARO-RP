@@ -340,3 +340,24 @@ func TestAuthorizationRetryingActionWithoutAuthorizerReturnsLastError(t *testing
 
 	assert.Same(t, wantErr, err)
 }
+
+func TestAuthorizationRetryingActionWithAuthorizerReturnsErrorAfterRetryTimeout(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	wantErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
+	auth := &fakeRefreshableAuthorizer{
+		rebuildErr: nil, // simulate successful auth rebuilds
+	}
+	s := &authorizationRefreshingActionStep{
+		f: func(ctx context.Context) error {
+			return wantErr
+		},
+		auth:         auth,
+		retryTimeout: time.Millisecond,
+		pollInterval: 30 * time.Second,
+	}
+
+	err := s.run(t.Context(), log)
+
+	assert.ErrorIs(t, err, wantErr)
+}
