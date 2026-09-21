@@ -366,16 +366,15 @@ func TestStepMetricsNameFormatting(t *testing.T) {
 	}
 }
 
-
 func TestRunWithWrappedError(t *testing.T) {
 	simpleError := errors.New("oh no")
-	failure := func(ctx context.Context) error {return simpleError}
+	failure := func(ctx context.Context) error { return simpleError }
 
 	tests := []struct {
-		name string // description of this test case
-		steps   []Step
+		name        string // description of this test case
+		steps       []Step
 		wantEntries []testlog.ExpectedLogEntry
-		wantError error
+		wantError   error
 	}{
 		{
 			name: "Test no err",
@@ -432,7 +431,7 @@ func TestRunWithWrappedError(t *testing.T) {
 
 			_, err := RunWithWrappedError(ctx, log, steps)
 
-			if ! errors.Is(err, tt.wantError) {
+			if !errors.Is(err, tt.wantError) {
 				t.Errorf("got error '%v', but wanted error '%v'", err, tt.wantError)
 			}
 
@@ -443,4 +442,3 @@ func TestRunWithWrappedError(t *testing.T) {
 		})
 	}
 }
-
