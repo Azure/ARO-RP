@@ -13,6 +13,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Concurrent returns a Step which will run all given substeps in their own
+// goroutines concocurrently. Errors from sub-steps will be joined via
+// errors.Join(). name controls the formatting of the metrics name of this step.
 func Concurrent(name string, s []Step) Step {
 	return concurrentStep{
 		name: name,

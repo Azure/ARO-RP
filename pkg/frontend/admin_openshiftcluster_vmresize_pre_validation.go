@@ -340,8 +340,7 @@ func validatePodHealth(pod *corev1.Pod) error {
 	return fmt.Errorf("ready condition not found")
 }
 
-// validateEtcdHealth verifies that the etcd ClusterOperator is healthy.
-// Resizing takes a master offline, so all etcd members must be healthy.
+// validateEtcdHealth wraps the package level function so it can be used as a steps.actionFunc
 func (v *preResizeValidator) validateEtcdHealth(ctx context.Context) error {
 	return validateEtcdHealth(ctx, v.k)
 }

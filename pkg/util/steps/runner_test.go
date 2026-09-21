@@ -365,3 +365,82 @@ func TestStepMetricsNameFormatting(t *testing.T) {
 		})
 	}
 }
+
+
+func TestRunWithWrappedError(t *testing.T) {
+	simpleError := errors.New("oh no")
+	failure := func(ctx context.Context) error {return simpleError}
+
+	tests := []struct {
+		name string // description of this test case
+		steps   []Step
+		wantEntries []testlog.ExpectedLogEntry
+		wantError error
+	}{
+		{
+			name: "Test no err",
+			steps: []Step{
+				Action(successfulFunc),
+				Action(successfulFunc),
+				Action(successfulFunc),
+			},
+
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+			},
+		},
+		{
+			name: "Test Error wrapped",
+			steps: []Step{
+				Action(successfulFunc),
+				Action(failure),
+			},
+			wantError: simpleError,
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.TestRunWithWrappedError.func1]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action pkg/util/steps.TestRunWithWrappedError.func1] encountered error: oh no"),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			h, log := testlog.New()
+			steps := tt.steps
+
+			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc, "")
+
+			if ! errors.Is(err, tt.wantError) {
+				t.Errorf("got error '%v', but wanted error '%v'", err, tt.wantError)
+			}
+
+			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+

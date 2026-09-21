@@ -73,7 +73,6 @@ func Test_concurrentStep_run(t *testing.T) {
 	tests := []struct {
 		name     string
 		steps    []Step
-		wantErr  bool
 		wantErrs []error
 	}{
 		{
@@ -83,7 +82,6 @@ func Test_concurrentStep_run(t *testing.T) {
 				Action(func(ctx context.Context) error { return errTwo }),
 				Action(func(ctx context.Context) error { return errThree }),
 			},
-			wantErr:  true,
 			wantErrs: []error{errOne, errTwo, errThree},
 		},
 		{
@@ -93,7 +91,6 @@ func Test_concurrentStep_run(t *testing.T) {
 				Action(func(ctx context.Context) error { return nil }),
 				Action(func(ctx context.Context) error { return errThree }),
 			},
-			wantErr:  true,
 			wantErrs: []error{errThree},
 		},
 		{
