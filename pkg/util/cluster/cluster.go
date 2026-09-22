@@ -29,6 +29,7 @@ import (
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	sdknetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	sdkpolicy "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -44,6 +45,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	armpolicy "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armpolicy"
 	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -105,6 +107,8 @@ type Cluster struct {
 	vaultsClient             armkeyvault.VaultsClient
 	msiClient                armmsi.UserAssignedIdentitiesClient
 	diskEncryptionSetsClient compute.DiskEncryptionSetsClient
+	policyAssignmentsClient  armpolicy.AssignmentsClient
+	policyDefinitionsClient  armpolicy.DefinitionsClient
 }
 
 const (
@@ -268,6 +272,16 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		return nil, err
 	}
 
+	policyDefinitionsClient, err := armpolicy.NewDefinitionsClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	policyAssignmentsClient, err := armpolicy.NewAssignmentsClient(conf.SubscriptionID, spTokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(conf.SubscriptionID, spTokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
@@ -302,6 +316,8 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 		vaultsClient:             vaultClient,
 		msiClient:                *msiClient,
 		diskEncryptionSetsClient: diskEncryptionSetsClient,
+		policyDefinitionsClient:  policyDefinitionsClient,
+		policyAssignmentsClient:  policyAssignmentsClient,
 	}
 
 	if c.Config.IsCI && c.Config.IsLocalDevelopmentMode() {
@@ -656,6 +672,14 @@ func (c *Cluster) Create(ctx context.Context) error {
 		_, err = c.groups.CreateOrUpdate(ctx, c.Config.VnetResourceGroup, mgmtfeatures.ResourceGroup{
 			Location: pointerutils.ToPtr(c.Config.Location),
 		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if env.IsLocalDevelopmentMode() {
+		c.log.Infof("ensuring policy for testing")
+		err = c.ensureTestingPolicy(ctx)
 		if err != nil {
 			return err
 		}
@@ -1713,4 +1737,69 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 	}
 
 	return err
+}
+
+func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
+	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f77-f4dc9e2298e1"
+	policyName := "e2e-storage-public-access-validate"
+	policyRule := map[string]interface{}{
+		"if": map[string]interface{}{
+			"allOf": []map[string]interface{}{
+				{
+					"field":  "type",
+					"equals": "Microsoft.Storage/storageAccounts",
+				},
+				{
+					"value":  "[resourceGroup().tags['v4-e2e-V-test']]",
+					"equals": "trigger-policy",
+				},
+			},
+		},
+		"then": map[string]interface{}{
+			"effect": "modify",
+			"details": map[string]interface{}{
+				"roleDefinitionIds": []string{roleDefID},
+				"operations": []map[string]interface{}{
+					{
+						"operation": "addOrReplace",
+						"field":     "Microsoft.Storage/storageAccounts/publicNetworkAccess",
+						"value":     "Disabled",
+					},
+				},
+			},
+		},
+	}
+
+	policyDefinition, err := c.policyDefinitionsClient.CreateOrUpdate(ctx, policyName, sdkpolicy.Definition{
+		Properties: &sdkpolicy.DefinitionProperties{
+			DisplayName: pointerutils.ToPtr(policyName),
+			Mode:        pointerutils.ToPtr("Indexed"),
+			PolicyRule:  policyRule,
+			PolicyType:  pointerutils.ToPtr(sdkpolicy.PolicyTypeCustom),
+		},
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create policy definition: %v", err)
+	}
+	c.log.Infof("policy definition %s created", policyName)
+
+	assignmentName := fmt.Sprintf("%s-assign", policyName)
+	scope := fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
+
+	_, err = c.policyAssignmentsClient.Create(ctx, scope, assignmentName, sdkpolicy.Assignment{
+		Identity: &sdkpolicy.Identity{
+			Type: pointerutils.ToPtr(sdkpolicy.ResourceIdentityTypeSystemAssigned),
+		},
+		Properties: &sdkpolicy.AssignmentProperties{
+			DisplayName:        pointerutils.ToPtr(assignmentName),
+			PolicyDefinitionID: pointerutils.ToPtr(*policyDefinition.ID),
+		},
+		Location: pointerutils.ToPtr(c.Config.Location),
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create policy assignment: %v", err)
+	}
+	c.log.Infof("policy assignment %s created", assignmentName)
+
+	return nil
 }
