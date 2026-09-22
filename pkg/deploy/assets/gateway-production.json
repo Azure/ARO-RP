@@ -126,7 +126,7 @@
     },
     "resources": [
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-01-01",
             "location": "[resourceGroup().location]",
             "name": "gateway-lb-internal",
             "properties": {
@@ -228,7 +228,7 @@
             "type": "Microsoft.Network/loadBalancers"
         },
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-01-01",
             "dependsOn": [
                 "Microsoft.Network/loadBalancers/gateway-lb-internal"
             ],
@@ -462,7 +462,7 @@
             ]
         },
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-01-01",
             "location": "[resourceGroup().location]",
             "name": "gateway-vnet/peering-rp-vnet",
             "properties": {
