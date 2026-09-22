@@ -14,6 +14,7 @@ import (
 
 type AssignmentsClient interface {
 	Create(ctx context.Context, scope string, policyAssignmentName string, parameters armpolicy.Assignment, options *armpolicy.AssignmentsClientCreateOptions) (armpolicy.AssignmentsClientCreateResponse, error)
+	Delete(ctx context.Context, scope string, policyAssignmentName string, options *armpolicy.AssignmentsClientDeleteOptions) (armpolicy.AssignmentsClientDeleteResponse, error)
 }
 
 type assignmentsClient struct {

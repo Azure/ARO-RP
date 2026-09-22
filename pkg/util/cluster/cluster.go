@@ -677,12 +677,10 @@ func (c *Cluster) Create(ctx context.Context) error {
 		}
 	}
 
-	if env.IsLocalDevelopmentMode() {
-		c.log.Infof("ensuring policy for testing")
-		err = c.ensureTestingPolicy(ctx)
-		if err != nil {
-			return err
-		}
+	c.log.Infof("ensuring policy for testing mutation")
+	err = c.ensureTestingPolicy(ctx)
+	if err != nil {
+		return err
 	}
 
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileClusterPredeploy)
@@ -962,8 +960,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	var errs []error
 
 	if c.Config.IsCI {
-		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
+		if err := c.ensureResourceGroupCreationPolicy(ctx, clusterResourceGroup); err != nil {
+			c.log.Errorf("Failed to ensure resource group creation policy: %v", err)
+			errs = append(errs, fmt.Errorf("failed to ensure resource group creation policy: %w", err))
+		}
+		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
 			if azureerrors.IsStatusNotFoundError(err) {
 				c.log.Infof("Cluster %s not found in resource group %s, assuming already deleted", clusterName, vnetResourceGroup)
@@ -972,6 +974,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 				errs = append(errs, fmt.Errorf("failed to get cluster: %w", err))
 			}
 		}
+
 		if oc != nil {
 			if oc.Properties.ServicePrincipalProfile != nil {
 				if err := c.deleteApplication(ctx, oc.Properties.ServicePrincipalProfile.ClientID); err != nil {
@@ -984,6 +987,24 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
 			c.log.Errorf("Failed to delete cluster: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+		}
+
+		if err := c.Create(ctx); err != nil {
+			if strings.Contains(err.Error(), "Unexpected property mutations detected") {
+				c.log.Infof("Cluster creation correctly failed with mutation error as expected")
+			} else {
+				c.log.Errorf("Failed to verify cluster creation fails with mutation error: %v", err)
+				errs = append(errs, fmt.Errorf("failed to verify cluster creation fails with mutation error: %w", err))
+			}
+			if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
+				c.log.Errorf("Failed to delete cluster: %v", err)
+				errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
+			}
+		}
+
+		if err := c.deleteResourceGroupCreationPolicyAssignment(ctx); err != nil {
+			c.log.Errorf("Failed to delete resource group creation policy assignment: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete resource group creation policy assignment: %w", err))
 		}
 
 		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
@@ -1740,7 +1761,8 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 }
 
 func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
-	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f77-f4dc9e2298e1"
+	c.log.Info("ensuring testing mutation policy")
+	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/4a9ae827-6dc8-4573-8ac7-8239c1ad1e23"
 	policyName := "e2e-storage-public-access-validate"
 	policyRule := map[string]interface{}{
 		"if": map[string]interface{}{
@@ -1800,6 +1822,88 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 		return fmt.Errorf("failed to create policy assignment: %v", err)
 	}
 	c.log.Infof("policy assignment %s created", assignmentName)
+
+	return nil
+}
+
+func (c *Cluster) getResourceGroupPolicyConfig() (policyName, assignmentName, scope string) {
+	policyName = "e2e-resource-group-creation-validate"
+	assignmentName = fmt.Sprintf("%s-assign", policyName)
+	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
+	return
+}
+
+func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, clusterResourceGroup string) error {
+	c.log.Info("ensuring resource group creation policy assignment")
+	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/4a9ae827-6dc8-4573-8ac7-8239c1ad1e23"
+	policyName, assignmentName, scope := c.getResourceGroupPolicyConfig()
+	policyRule := map[string]interface{}{
+		"if": map[string]interface{}{
+			"allOf": []map[string]interface{}{
+				{
+					"field":  "type",
+					"equals": "Microsoft.Resources/resourceGroups",
+				},
+				{
+					"field":  "name",
+					"equals": clusterResourceGroup,
+				},
+			},
+		},
+		"then": map[string]interface{}{
+			"effect": "modify",
+			"details": map[string]interface{}{
+				"roleDefinitionIds": []string{roleDefID},
+				"operations": []map[string]interface{}{
+					{
+						"operation": "addOrReplace",
+						"field":     "tags['v4-e2e-V-test']",
+						"value":     "trigger-policy",
+					},
+				},
+			},
+		},
+	}
+
+	policyDefinition, err := c.policyDefinitionsClient.CreateOrUpdate(ctx, policyName, sdkpolicy.Definition{
+		Properties: &sdkpolicy.DefinitionProperties{
+			DisplayName: pointerutils.ToPtr(policyName),
+			Mode:        pointerutils.ToPtr("Indexed"),
+			PolicyRule:  policyRule,
+			PolicyType:  pointerutils.ToPtr(sdkpolicy.PolicyTypeCustom),
+		},
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create policy definition: %v", err)
+	}
+	c.log.Infof("policy definition %s created", policyName)
+
+	_, err = c.policyAssignmentsClient.Create(ctx, scope, assignmentName, sdkpolicy.Assignment{
+		Identity: &sdkpolicy.Identity{
+			Type: pointerutils.ToPtr(sdkpolicy.ResourceIdentityTypeSystemAssigned),
+		},
+		Properties: &sdkpolicy.AssignmentProperties{
+			DisplayName:        pointerutils.ToPtr(assignmentName),
+			PolicyDefinitionID: pointerutils.ToPtr(*policyDefinition.ID),
+		},
+		Location: pointerutils.ToPtr(c.Config.Location),
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create policy assignment: %v", err)
+	}
+	c.log.Infof("policy assignment %s created", assignmentName)
+
+	return nil
+}
+
+func (c *Cluster) deleteResourceGroupCreationPolicyAssignment(ctx context.Context) error {
+	c.log.Info("deleting resource group creation policy assignment")
+	_, assignmentName, scope := c.getResourceGroupPolicyConfig()
+
+	_, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil)
+	if err != nil {
+		c.log.Warnf("Failed to delete policy assignment %s: %v", assignmentName, err)
+	}
 
 	return nil
 }
