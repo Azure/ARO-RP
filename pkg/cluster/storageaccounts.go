@@ -34,12 +34,15 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false, false),
 		},
 	}
+	err = arm.Retryable(ctx, func() error {
+		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+	}, m.log, "deploying storage accounts")
+	if err != nil {
+		return err
+	}
 
 	resourcesToValidate := arm.BuildStorageAccountsValidationMap(clusterStorageAccountName, registryStorageAccountName)
-
-	return arm.Retryable(ctx, func() error {
-		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil, resourcesToValidate)
-	}, m.log, "deploying storage accounts")
+	return arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", t, resourcesToValidate)
 }
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {

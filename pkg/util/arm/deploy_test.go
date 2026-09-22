@@ -112,7 +112,7 @@ func TestDeployARMTemplate(t *testing.T) {
 
 			_, log := testlog.LogForTesting(t)
 
-			err := DeployTemplate(ctx, log, deploymentsClient, resourceGroup, deploymentName, armTemplate, params, nil)
+			err := DeployTemplate(ctx, log, deploymentsClient, resourceGroup, deploymentName, armTemplate, params)
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
