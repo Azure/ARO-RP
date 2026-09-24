@@ -34,6 +34,11 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 			"v4-e2e-V-test": pointerutils.ToPtr("trigger-policy"),
 		})
 		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func(ctx context.Context) {
+			if err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationDelete, map[string]*string{"v4-e2e-V-test": pointerutils.ToPtr("trigger-policy")}); err != nil {
+				log.Warnf("DeferCleanup: failed to remove trigger tag: %v", err)
+			}
+		})
 
 		By("triggering admin update with policy violation")
 		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, true, json.RawMessage("{}"), oc)

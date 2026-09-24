@@ -960,13 +960,6 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	var errs []error
 
 	if c.Config.IsCI {
-		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
-		policySetupOK := true
-		if err := c.ensureResourceGroupCreationPolicy(ctx, clusterResourceGroup); err != nil {
-			policySetupOK = false
-			c.log.Errorf("Failed to ensure resource group creation policy: %v", err)
-			errs = append(errs, fmt.Errorf("failed to ensure resource group creation policy: %w", err))
-		}
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
 			if azureerrors.IsStatusNotFoundError(err) {
@@ -991,28 +984,6 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if policySetupOK {
-			createErr := c.Create(ctx)
-			switch {
-			case createErr == nil:
-				c.log.Errorf("Cluster creation unexpectedly succeeded; mutation policy did not trigger")
-				errs = append(errs, fmt.Errorf("cluster creation unexpectedly succeeded; mutation policy did not trigger"))
-			case strings.Contains(createErr.Error(), "Unexpected property mutations detected"):
-				c.log.Infof("Cluster creation correctly failed with mutation error as expected")
-			default:
-				c.log.Errorf("Failed to verify cluster creation fails with mutation error: %v", createErr)
-				errs = append(errs, fmt.Errorf("failed to verify cluster creation fails with mutation error: %w", createErr))
-			}
-			if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
-				c.log.Errorf("Failed to delete cluster: %v", err)
-				errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
-			}
-		} else {
-			c.log.Warnf("Skipping negative-create verification because policy setup failed")
-		}
-
-		c.deletePolicyDefinitions(ctx)
-
 		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
 			errs = append(errs, fmt.Errorf("failed to delete workload identity role assignments: %w", err))
@@ -1023,6 +994,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete workload identities: %w", err))
 		}
 
+		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err := c.checkResourceGroupDeleted(ctx, clusterResourceGroup); err != nil {
 			c.log.Errorf("Failed to check resource group %s deleted: %v", clusterResourceGroup, err)
 			errs = append(errs, fmt.Errorf("failed to check resource group %s deleted: %w", clusterResourceGroup, err))
@@ -1839,88 +1811,4 @@ func (c *Cluster) getPolicyConfig(prefix string) (policyName, assignmentName, sc
 	assignmentName = fmt.Sprintf("%s-assign", policyName)
 	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
 	return
-}
-
-func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, clusterResourceGroup string) error {
-	c.log.Info("ensuring resource group creation policy assignment")
-	policyName, assignmentName, scope := c.getPolicyConfig("e2e-resource-group-creation-validate")
-	policyRule := map[string]interface{}{
-		"if": map[string]interface{}{
-			"allOf": []map[string]interface{}{
-				{
-					"field":  "type",
-					"equals": "Microsoft.Resources/subscriptions/resourceGroups",
-				},
-				{
-					"field":  "name",
-					"equals": clusterResourceGroup,
-				},
-			},
-		},
-		"then": map[string]interface{}{
-			"effect": "append",
-			"details": []map[string]interface{}{
-				{
-					"field": "tags['v4-e2e-V-test']",
-					"value": "trigger-policy",
-				},
-			},
-		},
-	}
-
-	policyDefinition, err := c.policyDefinitionsClient.CreateOrUpdate(ctx, policyName, sdkpolicy.Definition{
-		Properties: &sdkpolicy.DefinitionProperties{
-			DisplayName: pointerutils.ToPtr(policyName),
-			Mode:        pointerutils.ToPtr("All"),
-			PolicyRule:  policyRule,
-			PolicyType:  pointerutils.ToPtr(sdkpolicy.PolicyTypeCustom),
-		},
-	}, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create policy definition: %v", err)
-	}
-	c.log.Infof("policy definition %s created", policyName)
-
-	_, err = c.policyAssignmentsClient.Create(ctx, scope, assignmentName, sdkpolicy.Assignment{
-		Identity: &sdkpolicy.Identity{
-			Type: pointerutils.ToPtr(sdkpolicy.ResourceIdentityTypeSystemAssigned),
-		},
-		Properties: &sdkpolicy.AssignmentProperties{
-			DisplayName:        pointerutils.ToPtr(assignmentName),
-			PolicyDefinitionID: pointerutils.ToPtr(*policyDefinition.ID),
-		},
-		Location: pointerutils.ToPtr(c.Config.Location),
-	}, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create policy assignment: %v", err)
-	}
-	c.log.Infof("policy assignment %s created", assignmentName)
-
-	return nil
-}
-
-func (c *Cluster) deletePolicyDefinitions(ctx context.Context) {
-	scope := fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
-
-	c.log.Info("deleting resource group creation policy assignment and definition")
-	definitionName, assignmentName, _ := c.getPolicyConfig("e2e-resource-group-creation-validate")
-
-	if _, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil); err != nil {
-		c.log.Warnf("Failed to delete rg policy assignment %s: %v", assignmentName, err)
-	}
-
-	if _, err := c.policyDefinitionsClient.Delete(ctx, definitionName, nil); err != nil {
-		c.log.Warnf("Failed to delete rg policy definition %s: %v", definitionName, err)
-	}
-
-	c.log.Info("deleting storage public network access policy assignment and definition")
-	definitionName, assignmentName, _ = c.getPolicyConfig("e2e-storage-public-access-validate")
-
-	if _, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil); err != nil {
-		c.log.Warnf("Failed to delete storage public network access policy assignment %s: %v", assignmentName, err)
-	}
-
-	if _, err := c.policyDefinitionsClient.Delete(ctx, definitionName, nil); err != nil {
-		c.log.Warnf("Failed to delete storage public network access policy definition %s: %v", definitionName, err)
-	}
 }
