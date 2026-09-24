@@ -14,6 +14,7 @@ import (
 
 type DefinitionsClient interface {
 	CreateOrUpdate(ctx context.Context, policyDefinitionName string, parameters armpolicy.Definition, options *armpolicy.DefinitionsClientCreateOrUpdateOptions) (armpolicy.DefinitionsClientCreateOrUpdateResponse, error)
+	Delete(ctx context.Context, policyDefinitionName string, options *armpolicy.DefinitionsClientDeleteOptions) (armpolicy.DefinitionsClientDeleteResponse, error)
 }
 
 type definitionsClient struct {

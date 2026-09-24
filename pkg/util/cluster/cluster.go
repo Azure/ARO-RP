@@ -1827,7 +1827,11 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 }
 
 func (c *Cluster) getResourceGroupPolicyConfig() (policyName, assignmentName, scope string) {
-	policyName = "e2e-resource-group-creation-validate"
+	clusterType := "csp"
+	if c.Config.UseWorkloadIdentity {
+		clusterType = "miwi"
+	}
+	policyName = fmt.Sprintf("e2e-resource-group-creation-validate-%s-%s", c.Config.Location, clusterType)
 	assignmentName = fmt.Sprintf("%s-assign", policyName)
 	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
 	return
@@ -1835,14 +1839,13 @@ func (c *Cluster) getResourceGroupPolicyConfig() (policyName, assignmentName, sc
 
 func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, clusterResourceGroup string) error {
 	c.log.Info("ensuring resource group creation policy assignment")
-	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/4a9ae827-6dc8-4573-8ac7-8239c1ad1e23"
 	policyName, assignmentName, scope := c.getResourceGroupPolicyConfig()
 	policyRule := map[string]interface{}{
 		"if": map[string]interface{}{
 			"allOf": []map[string]interface{}{
 				{
 					"field":  "type",
-					"equals": "Microsoft.Resources/resourceGroups",
+					"equals": "Microsoft.Resources/subscriptions/resourceGroups",
 				},
 				{
 					"field":  "name",
@@ -1851,15 +1854,11 @@ func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, cluster
 			},
 		},
 		"then": map[string]interface{}{
-			"effect": "modify",
-			"details": map[string]interface{}{
-				"roleDefinitionIds": []string{roleDefID},
-				"operations": []map[string]interface{}{
-					{
-						"operation": "addOrReplace",
-						"field":     "tags['v4-e2e-V-test']",
-						"value":     "trigger-policy",
-					},
+			"effect": "append",
+			"details": []map[string]interface{}{
+				{
+					"field": "tags['v4-e2e-V-test']",
+					"value": "trigger-policy",
 				},
 			},
 		},
@@ -1868,7 +1867,7 @@ func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, cluster
 	policyDefinition, err := c.policyDefinitionsClient.CreateOrUpdate(ctx, policyName, sdkpolicy.Definition{
 		Properties: &sdkpolicy.DefinitionProperties{
 			DisplayName: pointerutils.ToPtr(policyName),
-			Mode:        pointerutils.ToPtr("Indexed"),
+			Mode:        pointerutils.ToPtr("All"),
 			PolicyRule:  policyRule,
 			PolicyType:  pointerutils.ToPtr(sdkpolicy.PolicyTypeCustom),
 		},
@@ -1898,11 +1897,16 @@ func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, cluster
 
 func (c *Cluster) deleteResourceGroupCreationPolicyAssignment(ctx context.Context) error {
 	c.log.Info("deleting resource group creation policy assignment")
-	_, assignmentName, scope := c.getResourceGroupPolicyConfig()
+	definitionName, assignmentName, scope := c.getResourceGroupPolicyConfig()
 
 	_, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil)
 	if err != nil {
 		c.log.Warnf("Failed to delete policy assignment %s: %v", assignmentName, err)
+	}
+
+	_, err = c.policyDefinitionsClient.Delete(ctx, definitionName, nil)
+	if err != nil {
+		c.log.Warnf("Failed to delete policy definition %s: %v", definitionName, err)
 	}
 
 	return nil
