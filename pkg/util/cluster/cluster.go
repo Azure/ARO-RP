@@ -961,7 +961,9 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 
 	if c.Config.IsCI {
 		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
+		policySetupOK := true
 		if err := c.ensureResourceGroupCreationPolicy(ctx, clusterResourceGroup); err != nil {
+			policySetupOK = false
 			c.log.Errorf("Failed to ensure resource group creation policy: %v", err)
 			errs = append(errs, fmt.Errorf("failed to ensure resource group creation policy: %w", err))
 		}
@@ -989,23 +991,27 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 		}
 
-		if err := c.Create(ctx); err != nil {
-			if strings.Contains(err.Error(), "Unexpected property mutations detected") {
+		if policySetupOK {
+			createErr := c.Create(ctx)
+			switch {
+			case createErr == nil:
+				c.log.Errorf("Cluster creation unexpectedly succeeded; mutation policy did not trigger")
+				errs = append(errs, fmt.Errorf("cluster creation unexpectedly succeeded; mutation policy did not trigger"))
+			case strings.Contains(createErr.Error(), "Unexpected property mutations detected"):
 				c.log.Infof("Cluster creation correctly failed with mutation error as expected")
-			} else {
-				c.log.Errorf("Failed to verify cluster creation fails with mutation error: %v", err)
-				errs = append(errs, fmt.Errorf("failed to verify cluster creation fails with mutation error: %w", err))
+			default:
+				c.log.Errorf("Failed to verify cluster creation fails with mutation error: %v", createErr)
+				errs = append(errs, fmt.Errorf("failed to verify cluster creation fails with mutation error: %w", createErr))
 			}
 			if err := c.deleteCluster(ctx, vnetResourceGroup, clusterName); err != nil {
 				c.log.Errorf("Failed to delete cluster: %v", err)
 				errs = append(errs, fmt.Errorf("failed to delete cluster: %w", err))
 			}
+		} else {
+			c.log.Warnf("Skipping negative-create verification because policy setup failed")
 		}
 
-		if err := c.deletePolicyDefinitions(ctx); err != nil {
-			c.log.Errorf("Failed to delete policy definitions: %v", err)
-			errs = append(errs, fmt.Errorf("failed to delete policy definitions: %w", err))
-		}
+		c.deletePolicyDefinitions(ctx)
 
 		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
 			c.log.Errorf("Failed to delete workload identity role assignments: %v", err)
@@ -1762,7 +1768,7 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 
 func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	c.log.Info("ensuring testing mutation policy")
-	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/4a9ae827-6dc8-4573-8ac7-8239c1ad1e23"
+	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f53-869881c3d3ab"
 	policyName, assignmentName, scope := c.getPolicyConfig("e2e-storage-public-access-validate")
 	policyRule := map[string]interface{}{
 		"if": map[string]interface{}{
@@ -1893,31 +1899,28 @@ func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, cluster
 	return nil
 }
 
-func (c *Cluster) deletePolicyDefinitions(ctx context.Context) error {
-	c.log.Info("deleting resource group creation policy assignment and definition")
-	definitionName, assignmentName, scope := c.getPolicyConfig("e2e-resource-group-creation-validate")
+func (c *Cluster) deletePolicyDefinitions(ctx context.Context) {
+	scope := fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
 
-	_, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil)
-	if err != nil {
+	c.log.Info("deleting resource group creation policy assignment and definition")
+	definitionName, assignmentName, _ := c.getPolicyConfig("e2e-resource-group-creation-validate")
+
+	if _, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil); err != nil {
 		c.log.Warnf("Failed to delete rg policy assignment %s: %v", assignmentName, err)
 	}
 
-	_, err = c.policyDefinitionsClient.Delete(ctx, definitionName, nil)
-	if err != nil {
+	if _, err := c.policyDefinitionsClient.Delete(ctx, definitionName, nil); err != nil {
 		c.log.Warnf("Failed to delete rg policy definition %s: %v", definitionName, err)
 	}
 
 	c.log.Info("deleting storage public network access policy assignment and definition")
-	definitionName, assignmentName, scope = c.getPolicyConfig("e2e-storage-public-access-validate")
-	_, err = c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil)
-	if err != nil {
+	definitionName, assignmentName, _ = c.getPolicyConfig("e2e-storage-public-access-validate")
+
+	if _, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil); err != nil {
 		c.log.Warnf("Failed to delete storage public network access policy assignment %s: %v", assignmentName, err)
 	}
 
-	_, err = c.policyDefinitionsClient.Delete(ctx, definitionName, nil)
-	if err != nil {
+	if _, err := c.policyDefinitionsClient.Delete(ctx, definitionName, nil); err != nil {
 		c.log.Warnf("Failed to delete storage public network access policy definition %s: %v", definitionName, err)
 	}
-
-	return nil
 }

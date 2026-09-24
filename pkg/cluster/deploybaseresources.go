@@ -258,6 +258,9 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	err = arm.Retryable(ctx, func() error {
 		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 	}, m.log, "deploying base resources")
+	if err != nil {
+		return err
+	}
 
 	validateResourceTemplate := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -267,10 +270,6 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 			imageRegistryStorageAccount,
 		},
 	}
-	if err != nil {
-		return err
-	}
-
 	resourcesToValidate := arm.BuildStorageAccountsValidationMap(clusterStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName)
 	return arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", validateResourceTemplate, resourcesToValidate)
 }

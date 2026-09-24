@@ -30,7 +30,7 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("tagging resource group to trigger policy violation")
-		err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, map[string]*string{
+		err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationMerge, map[string]*string{
 			"v4-e2e-V-test": pointerutils.ToPtr("trigger-policy"),
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -48,7 +48,7 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("removing policy violation tag from resource group")
-		err = tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, map[string]*string{"v4-e2e-V-test": pointerutils.ToPtr("")})
+		err = tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationDelete, map[string]*string{"v4-e2e-V-test": pointerutils.ToPtr("trigger-policy")})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("retrying admin update - should succeed now")
@@ -66,10 +66,11 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 	})
 })
 
-func tagResource(ctx context.Context, resourceName string, tags map[string]*string) error {
-	log.Infof("tag resource %s: %v", resourceName, tags)
+func tagResource(ctx context.Context, resourceName string, operation armresources.TagsPatchOperation, tags map[string]*string) error {
+	log.Infof("patch tags on %s (%s): %v", resourceName, operation, tags)
 
-	_, err := clients.Tags.CreateOrUpdateAtScope(ctx, resourceName, armresources.TagsResource{
+	_, err := clients.Tags.UpdateAtScope(ctx, resourceName, armresources.TagsPatchResource{
+		Operation: pointerutils.ToPtr(operation),
 		Properties: &armresources.Tags{
 			Tags: tags,
 		},

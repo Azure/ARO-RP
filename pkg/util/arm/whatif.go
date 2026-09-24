@@ -48,10 +48,7 @@ func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deploy
 				log.Errorf("ParseResourceID failed with error: %v", err)
 				continue
 			}
-			resourceConfig, err := findMatchingResourceConfig(parsedResourceID, resourcesToValidate)
-			if err != nil {
-				continue
-			}
+			resourceConfig := findMatchingResourceConfig(parsedResourceID, resourcesToValidate)
 			if resourceConfig != nil && change.Delta != nil {
 				mismatches := collectPropertyChanges(log, *change.Delta, parsedResourceID, resourceConfig)
 				allMismatches = append(allMismatches, mismatches...)
@@ -78,15 +75,20 @@ func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deploy
 	return nil
 }
 
-func findMatchingResourceConfig(parsedResourceID *arm.ResourceID, resourcesToValidate map[string]map[string]interface{}) (map[string]interface{}, error) {
-	extractedName := strings.ToLower(parsedResourceID.Name)
-	if config, exists := resourcesToValidate[extractedName]; exists {
-		expectedType, ok := config["resourceType"].(string)
-		if ok && strings.Contains(strings.ToLower(parsedResourceID.ResourceType.String()), strings.ToLower(expectedType)) {
-			return config["expectedProperties"].(map[string]interface{}), nil
-		}
+func findMatchingResourceConfig(parsedResourceID *arm.ResourceID, resourcesToValidate map[string]map[string]interface{}) map[string]interface{} {
+	config, exists := resourcesToValidate[strings.ToLower(parsedResourceID.Name)]
+	if !exists {
+		return nil
 	}
-	return nil, nil
+	expectedType, ok := config["resourceType"].(string)
+	if !ok || !strings.EqualFold(parsedResourceID.ResourceType.String(), expectedType) {
+		return nil
+	}
+	expectedProperties, ok := config["expectedProperties"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	return expectedProperties
 }
 
 func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.WhatIfPropertyChange, parsedResourceID *arm.ResourceID, expectedProperties map[string]interface{}) []map[string]interface{} {
@@ -97,7 +99,7 @@ func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.Wh
 
 			log.Infof("Checking property change for path: %s, value %v, for resource: %s", path, propChange.Before, parsedResourceID.String())
 			if expectedVal, ok := expectedProperties[path]; ok {
-				if propChange.Before != nil && propChange.Before != expectedVal {
+				if propChange.Before != expectedVal {
 					mismatch := map[string]interface{}{
 						"resourceName":  parsedResourceID.Name,
 						"resourceType":  parsedResourceID.ResourceType.String(),
