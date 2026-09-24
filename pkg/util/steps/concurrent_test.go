@@ -118,46 +118,47 @@ func Test_concurrentStep_run(t *testing.T) {
 
 			gotErr := s.run(context.Background(), nil)
 
-			if gotErr != nil {
-				je, ok := gotErr.(joinedErr)
-				if !ok {
-					t.Errorf("Unexpected error type: %v", gotErr)
-					return
-				}
-
-				gotErrs := je.Unwrap()
-				if len(tt.wantErrs) != len(gotErrs) {
-					t.Errorf("Unexpected number of errors: run() = %v, want %v", gotErr, tt.wantErrs)
-					return
-				}
-
-				for _, curErr := range gotErrs {
-					if !slices.ContainsFunc(tt.wantErrs, func(e error) bool {
-						if strings.Contains(curErr.Error(), "panic") {
-							return strings.Contains(curErr.Error(), e.Error())
-						}
-						return errors.Is(curErr, e)
-					}) {
-						t.Errorf("Got unexpected error: curErr = %v, expectedErrs = %v", curErr, tt.wantErrs)
-						return
-					}
-				}
-
-				for _, curErr := range tt.wantErrs {
-					if !slices.ContainsFunc(gotErrs, func(e error) bool {
-						if strings.Contains(e.Error(), "panic") {
-							return strings.Contains(e.Error(), curErr.Error())
-						}
-						return errors.Is(curErr, e)
-					}) {
-						t.Errorf("Missing expected Error: run() = %v, want %v", gotErr, tt.wantErrs)
-						return
-					}
+			if gotErr == nil {
+				if len(tt.wantErrs) > 0 {
+					t.Fatalf("run() succeeded unexpectedly. Expected errors: %+v", tt.wantErrs)
 				}
 				return
 			}
-			if len(tt.wantErrs) > 0 {
-				t.Fatal("run() succeeded unexpectedly")
+
+			je, ok := gotErr.(joinedErr)
+			if !ok {
+				t.Errorf("Unexpected error type: %v", gotErr)
+				return
+			}
+
+			gotErrs := je.Unwrap()
+			if len(tt.wantErrs) != len(gotErrs) {
+				t.Errorf("Unexpected number of errors: run() = %v, want %v", gotErr, tt.wantErrs)
+				return
+			}
+
+			for _, curErr := range gotErrs {
+				if !slices.ContainsFunc(tt.wantErrs, func(e error) bool {
+					if strings.Contains(curErr.Error(), "panic") {
+						return strings.Contains(curErr.Error(), e.Error())
+					}
+					return errors.Is(curErr, e)
+				}) {
+					t.Errorf("Got unexpected error: curErr = %v, expectedErrs = %v", curErr, tt.wantErrs)
+					return
+				}
+			}
+
+			for _, curErr := range tt.wantErrs {
+				if !slices.ContainsFunc(gotErrs, func(e error) bool {
+					if strings.Contains(e.Error(), "panic") {
+						return strings.Contains(e.Error(), curErr.Error())
+					}
+					return errors.Is(curErr, e)
+				}) {
+					t.Errorf("Missing expected Error: run() = %v, want %v", gotErr, tt.wantErrs)
+					return
+				}
 			}
 		})
 	}

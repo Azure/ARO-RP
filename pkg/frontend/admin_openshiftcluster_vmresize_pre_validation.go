@@ -392,7 +392,7 @@ func (v *preResizeValidator) validateClusterSP(ctx context.Context) error {
 
 func (v *preResizeValidator) validateVMSKU(ctx context.Context) error {
 	if v.desiredVMSize == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmSize", "The provided vmSize is empty.")
+		return fmt.Errorf("the provided vmSize is empty")
 	}
 
 	err := validateAdminMasterVMSize(v.desiredVMSize)
