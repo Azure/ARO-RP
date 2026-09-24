@@ -1002,9 +1002,9 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			}
 		}
 
-		if err := c.deleteResourceGroupCreationPolicyAssignment(ctx); err != nil {
-			c.log.Errorf("Failed to delete resource group creation policy assignment: %v", err)
-			errs = append(errs, fmt.Errorf("failed to delete resource group creation policy assignment: %w", err))
+		if err := c.deletePolicyDefinitions(ctx); err != nil {
+			c.log.Errorf("Failed to delete policy definitions: %v", err)
+			errs = append(errs, fmt.Errorf("failed to delete policy definitions: %w", err))
 		}
 
 		if err := c.deleteMiwiRoleAssignments(ctx, vnetResourceGroup); err != nil {
@@ -1763,7 +1763,7 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	c.log.Info("ensuring testing mutation policy")
 	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/4a9ae827-6dc8-4573-8ac7-8239c1ad1e23"
-	policyName := "e2e-storage-public-access-validate"
+	policyName, assignmentName, scope := c.getPolicyConfig("e2e-storage-public-access-validate")
 	policyRule := map[string]interface{}{
 		"if": map[string]interface{}{
 			"allOf": []map[string]interface{}{
@@ -1805,9 +1805,6 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	}
 	c.log.Infof("policy definition %s created", policyName)
 
-	assignmentName := fmt.Sprintf("%s-assign", policyName)
-	scope := fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
-
 	_, err = c.policyAssignmentsClient.Create(ctx, scope, assignmentName, sdkpolicy.Assignment{
 		Identity: &sdkpolicy.Identity{
 			Type: pointerutils.ToPtr(sdkpolicy.ResourceIdentityTypeSystemAssigned),
@@ -1826,12 +1823,13 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) getResourceGroupPolicyConfig() (policyName, assignmentName, scope string) {
+func (c *Cluster) getPolicyConfig(prefix string) (policyName, assignmentName, scope string) {
 	clusterType := "csp"
 	if c.Config.UseWorkloadIdentity {
 		clusterType = "miwi"
 	}
-	policyName = fmt.Sprintf("e2e-resource-group-creation-validate-%s-%s", c.Config.Location, clusterType)
+
+	policyName = fmt.Sprintf("%s-%s-%s", prefix, c.Config.Location, clusterType)
 	assignmentName = fmt.Sprintf("%s-assign", policyName)
 	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
 	return
@@ -1839,7 +1837,7 @@ func (c *Cluster) getResourceGroupPolicyConfig() (policyName, assignmentName, sc
 
 func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, clusterResourceGroup string) error {
 	c.log.Info("ensuring resource group creation policy assignment")
-	policyName, assignmentName, scope := c.getResourceGroupPolicyConfig()
+	policyName, assignmentName, scope := c.getPolicyConfig("e2e-resource-group-creation-validate")
 	policyRule := map[string]interface{}{
 		"if": map[string]interface{}{
 			"allOf": []map[string]interface{}{
@@ -1895,18 +1893,30 @@ func (c *Cluster) ensureResourceGroupCreationPolicy(ctx context.Context, cluster
 	return nil
 }
 
-func (c *Cluster) deleteResourceGroupCreationPolicyAssignment(ctx context.Context) error {
-	c.log.Info("deleting resource group creation policy assignment")
-	definitionName, assignmentName, scope := c.getResourceGroupPolicyConfig()
+func (c *Cluster) deletePolicyDefinitions(ctx context.Context) error {
+	c.log.Info("deleting resource group creation policy assignment and definition")
+	definitionName, assignmentName, scope := c.getPolicyConfig("e2e-resource-group-creation-validate")
 
 	_, err := c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil)
 	if err != nil {
-		c.log.Warnf("Failed to delete policy assignment %s: %v", assignmentName, err)
+		c.log.Warnf("Failed to delete rg policy assignment %s: %v", assignmentName, err)
 	}
 
 	_, err = c.policyDefinitionsClient.Delete(ctx, definitionName, nil)
 	if err != nil {
-		c.log.Warnf("Failed to delete policy definition %s: %v", definitionName, err)
+		c.log.Warnf("Failed to delete rg policy definition %s: %v", definitionName, err)
+	}
+
+	c.log.Info("deleting storage public network access policy assignment and definition")
+	definitionName, assignmentName, scope = c.getPolicyConfig("e2e-storage-public-access-validate")
+	_, err = c.policyAssignmentsClient.Delete(ctx, scope, assignmentName, nil)
+	if err != nil {
+		c.log.Warnf("Failed to delete storage public network access policy assignment %s: %v", assignmentName, err)
+	}
+
+	_, err = c.policyDefinitionsClient.Delete(ctx, definitionName, nil)
+	if err != nil {
+		c.log.Warnf("Failed to delete storage public network access policy definition %s: %v", definitionName, err)
 	}
 
 	return nil
