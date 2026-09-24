@@ -39,7 +39,7 @@ func validateLiveControlPlaneInventory(
 	azureActions adminactions.AzureActions,
 	clusterResourceGroupID string,
 ) error {
-	machines, err := getClusterMachines(ctx, kubeActions)
+	machines, err := getControlPlaneMachines(ctx, kubeActions)
 	if err != nil {
 		return err
 	}
