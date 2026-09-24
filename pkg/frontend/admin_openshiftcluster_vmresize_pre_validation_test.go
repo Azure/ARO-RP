@@ -415,7 +415,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
 			kubeMocks:      allKubeChecksHealthyMock,
 			wantStatusCode: http.StatusInternalServerError,
-			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: 400: InvalidParameter: vmSize: The provided vmSize is empty.`,
+			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateVMSKU] encountered error: the provided vmSize is empty`,
 		},
 		{
 			name:       "unsupported master VM size",
