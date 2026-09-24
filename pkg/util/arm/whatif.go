@@ -19,7 +19,30 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 )
 
-func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, resourcesToValidate map[string]map[string]interface{}) error {
+type Mismatch struct {
+	ResourceName  string              `json:"resourceName"`
+	ResourceType  string              `json:"resourceType"`
+	ResourceGroup string              `json:"resourceGroup"`
+	Property      string              `json:"property"`
+	Expected      interface{}         `json:"expected"`
+	Actual        interface{}         `json:"actual"`
+	Policies      []PolicyAttribution `json:"policies,omitempty"`
+}
+
+type PolicyAttribution struct {
+	Field            string     `json:"field"`
+	Result           string     `json:"result,omitempty"`
+	PolicyDefinition *PolicyRef `json:"policyDefinition,omitempty"`
+	PolicyAssignment *PolicyRef `json:"policyAssignment,omitempty"`
+}
+
+type PolicyRef struct {
+	Name              string `json:"name,omitempty"`
+	SubscriptionID    string `json:"subscriptionId,omitempty"`
+	ResourceGroupName string `json:"resourceGroupName,omitempty"`
+}
+
+func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, resourcesToValidate map[string]map[string]interface{}) []Mismatch {
 	log.Printf("validating %s deployment with what-if", deploymentName)
 
 	whatIfParams := mgmtfeatures.DeploymentWhatIf{
@@ -40,7 +63,7 @@ func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deploy
 		return nil
 	}
 
-	var allMismatches []map[string]interface{}
+	var allMismatches []Mismatch
 	for _, change := range *whatIfResult.Changes {
 		if change.ResourceID != nil {
 			parsedResourceID, err := arm.ParseResourceID(*change.ResourceID)
@@ -56,23 +79,26 @@ func ValidateDeploymentWithWhatIf(ctx context.Context, log *logrus.Entry, deploy
 		}
 	}
 
-	if len(allMismatches) > 0 {
-		mismatchJSON, _ := json.Marshal(allMismatches)
-		return &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeDeploymentFailed,
-				Message: "Deployment failed.",
-				Details: []api.CloudErrorBody{
-					{
-						Message: fmt.Sprintf("Unexpected property mutations detected, likely due to Azure policies. Details: %s", string(mismatchJSON)),
-					},
+	return allMismatches
+}
+
+func MismatchesToCloudError(mismatches []Mismatch) error {
+	if len(mismatches) == 0 {
+		return nil
+	}
+	mismatchJSON, _ := json.Marshal(mismatches)
+	return &api.CloudError{
+		StatusCode: http.StatusBadRequest,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code:    api.CloudErrorCodeDeploymentFailed,
+			Message: "Deployment failed.",
+			Details: []api.CloudErrorBody{
+				{
+					Message: fmt.Sprintf("%s%s", mismatchDetailsPrefix, string(mismatchJSON)),
 				},
 			},
-		}
+		},
 	}
-
-	return nil
 }
 
 func findMatchingResourceConfig(parsedResourceID *arm.ResourceID, resourcesToValidate map[string]map[string]interface{}) map[string]interface{} {
@@ -91,8 +117,8 @@ func findMatchingResourceConfig(parsedResourceID *arm.ResourceID, resourcesToVal
 	return expectedProperties
 }
 
-func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.WhatIfPropertyChange, parsedResourceID *arm.ResourceID, expectedProperties map[string]interface{}) []map[string]interface{} {
-	var mismatches []map[string]interface{}
+func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.WhatIfPropertyChange, parsedResourceID *arm.ResourceID, expectedProperties map[string]interface{}) []Mismatch {
+	var mismatches []Mismatch
 	for _, propChange := range propertyChanges {
 		if propChange.Path != nil {
 			path := normalizePath(*propChange.Path)
@@ -100,15 +126,14 @@ func collectPropertyChanges(log *logrus.Entry, propertyChanges []mgmtfeatures.Wh
 			log.Infof("Checking property change for path: %s, value %v, for resource: %s", path, propChange.Before, parsedResourceID.String())
 			if expectedVal, ok := expectedProperties[path]; ok {
 				if propChange.Before != expectedVal {
-					mismatch := map[string]interface{}{
-						"resourceName":  parsedResourceID.Name,
-						"resourceType":  parsedResourceID.ResourceType.String(),
-						"resourceGroup": parsedResourceID.ResourceGroupName,
-						"property":      path,
-						"expected":      expectedVal,
-						"actual":        propChange.Before,
-					}
-					mismatches = append(mismatches, mismatch)
+					mismatches = append(mismatches, Mismatch{
+						ResourceName:  parsedResourceID.Name,
+						ResourceType:  parsedResourceID.ResourceType.String(),
+						ResourceGroup: parsedResourceID.ResourceGroupName,
+						Property:      path,
+						Expected:      expectedVal,
+						Actual:        propChange.Before,
+					})
 				}
 			}
 		}

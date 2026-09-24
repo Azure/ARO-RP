@@ -42,7 +42,9 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	}
 
 	resourcesToValidate := arm.BuildStorageAccountsValidationMap(clusterStorageAccountName, registryStorageAccountName)
-	return arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", t, resourcesToValidate)
+	mismatches := arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", t, resourcesToValidate)
+	arm.EnrichMismatchesWithPolicyContext(ctx, m.log, m.armPolicyRestrictions, resourceGroup, mismatches)
+	return arm.MismatchesToCloudError(mismatches)
 }
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {

@@ -271,7 +271,9 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		},
 	}
 	resourcesToValidate := arm.BuildStorageAccountsValidationMap(clusterStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName)
-	return arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", validateResourceTemplate, resourcesToValidate)
+	mismatches := arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", validateResourceTemplate, resourcesToValidate)
+	arm.EnrichMismatchesWithPolicyContext(ctx, m.log, m.armPolicyRestrictions, resourceGroup, mismatches)
+	return arm.MismatchesToCloudError(mismatches)
 }
 
 func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.Resource) {
