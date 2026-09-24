@@ -34,10 +34,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
-var (
-	ErrNoRegistryProfileFound     = errors.New("no registry profile found")
-	ErrCannotRotateACRTokensInDev = errors.New("attempted to rotate ACR credentials in dev")
-)
+var ErrCannotRotateACRTokensInDev = errors.New("attempted to rotate ACR credentials in dev")
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
@@ -66,7 +63,8 @@ func newACRTokenManager(_env env.Interface) (acrtoken.Manager, error) {
 }
 
 func (m *manager) ensureACRToken(ctx context.Context) error {
-	if m.env.IsLocalDevelopmentMode() {
+	// we do not want to create tokens in local development
+	if m.env.IsLocalDevelopmentMode() || m.env.IsCI() {
 		return nil
 	}
 
@@ -75,18 +73,27 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		return err
 	}
 
-	rp := m.doc.OpenShiftCluster.GetRegistryProfile(m.env.ACRDomain())
+	updateDB := func(ctx context.Context, oscdm database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
+		return m.db.PatchWithLease(ctx, m.doc.Key, oscdm)
+	}
+
+	_, err = ensureACRToken(ctx, m.env, m.doc, token, updateDB)
+	return err
+}
+
+func ensureACRToken(ctx context.Context, env env.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager, updateDB database.OpenShiftClusterDocumentMutatorRunner) (*api.RegistryProfile, error) {
+	rp := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
 	if rp == nil {
 		// 1. choose a name and establish the intent to create a token with
 		// that name
 		rp = token.NewRegistryProfile()
 
-		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		_, err := updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.PutRegistryProfile(rp)
 			return nil
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -95,22 +102,22 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		// password for it and store it in the database
 		password, err := token.EnsureTokenAndPassword(ctx, rp)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		currentTime := m.env.Now().UTC()
+		currentTime := env.Now().UTC()
 		rp.Password = api.SecureString(password)
 		rp.IssueDate = &currentTime
 
-		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		_, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.PutRegistryProfile(rp)
 			return nil
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return rp, nil
 }
 
 func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
@@ -132,6 +139,7 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 }
 
 func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, ch clienthelper.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager, updateDB database.OpenShiftClusterDocumentMutatorRunner, force bool) error {
+	var err error
 	// we do not want to rotate tokens in local development
 	if env.IsLocalDevelopmentMode() || env.IsCI() {
 		return ErrCannotRotateACRTokensInDev
@@ -139,22 +147,25 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 
 	registryProfile := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
 	if registryProfile == nil {
-		// No registry profile found, needs to be created with ensureACRToken
-		return ErrNoRegistryProfileFound
-	}
+		log.Infof("registry profile missing, creating it")
+		registryProfile, err = ensureACRToken(ctx, env, doc, token, updateDB)
+		if err != nil {
+			return err
+		}
+	} else {
+		shouldRotate, _, durationUntilRotate, validityRemaining := acrtoken.ShouldRotateToken(env, registryProfile)
+		log.Infof("token has %s validity remaining, should rotate in %s", validityRemaining.String(), durationUntilRotate.String())
+		if !shouldRotate && !force {
+			return nil
+		} else if !shouldRotate && force {
+			log.Infof("force rotating token before rotation period")
+		}
 
-	shouldRotate, _, durationUntilRotate, validityRemaining := acrtoken.ShouldRotateToken(env, registryProfile)
-	log.Infof("token has %s validity remaining, should rotate in %s", validityRemaining.String(), durationUntilRotate.String())
-	if !shouldRotate && !force {
-		return nil
-	} else if !shouldRotate && force {
-		log.Infof("force rotating token before rotation period")
-	}
-
-	log.Infof("rotating ACR token")
-	err := token.RotateTokenPassword(ctx, registryProfile)
-	if err != nil {
-		return err
+		log.Infof("rotating ACR token")
+		err := token.RotateTokenPassword(ctx, registryProfile)
+		if err != nil {
+			return err
+		}
 	}
 
 	// update cluster pull secret in openshift-azure-operator namespace
