@@ -37,6 +37,7 @@ import (
 
 func TestRotateACRToken(t *testing.T) {
 	startOf2024 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	notExpiredTime := startOf2024.AddDate(0, 0, -1)
 	expiredTime := startOf2024.AddDate(0, 0, -365)
 
 	fpRGName := "firstpartyrg"
@@ -49,6 +50,7 @@ func TestRotateACRToken(t *testing.T) {
 		name     string // description of this test case
 		azureEnv azureclient.AROEnvironment
 		isDev    bool
+		force    bool
 		oc       func() api.OpenShiftClusterProperties
 		objects  []client.Object
 
@@ -179,13 +181,195 @@ func TestRotateACRToken(t *testing.T) {
 			},
 		},
 		{
-			name:     "no registry profile",
-			isDev:    false,
-			azureEnv: azureclient.PublicCloud,
+			name:  "token is force rotated",
+			force: true,
+			oc: func() api.OpenShiftClusterProperties {
+				return api.OpenShiftClusterProperties{
+					RegistryProfiles: []*api.RegistryProfile{
+						{
+							Name:      publicACR,
+							Username:  user,
+							IssueDate: &notExpiredTime,
+						},
+					},
+				}
+			},
+			objects: []client.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-azure-operator",
+					},
+				},
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-config",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cluster",
+						Namespace: "openshift-azure-operator",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pull-secret",
+						Namespace: "openshift-config",
+					},
+					Type: corev1.SecretTypeDockerConfigJson,
+					Data: map[string][]byte{
+						".dockerconfigjson": []byte(`{}`),
+					},
+				},
+			},
+			verify: func(r *require.Assertions, t *testacrtoken.FakeACRToken) (api.OpenShiftClusterProperties, []runtime.Object) {
+				generated := t.GetGeneratedPasswords()
+				r.Len(generated, 1, "wrong number of passwords requested")
+
+				props := api.OpenShiftClusterProperties{
+					RegistryProfiles: []*api.RegistryProfile{
+						{
+							Name:      publicACR,
+							Username:  user,
+							IssueDate: &startOf2024,
+							Password:  api.SecureString(generated[0]),
+						},
+					},
+				}
+
+				// The two secrets are laid down with the correct content
+				b64pwpair := base64.StdEncoding.EncodeToString([]byte(user + ":" + generated[0]))
+				objs := []runtime.Object{
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "pull-secret",
+							Namespace: "openshift-config",
+						},
+						Type: corev1.SecretTypeDockerConfigJson,
+						Data: map[string][]byte{
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "cluster",
+							Namespace: "openshift-azure-operator",
+						},
+						Data: map[string][]byte{
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+				}
+
+				return props, objs
+			},
+			wantErr: nil,
+			expectedLogs: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("token has 4296h0m0s validity remaining, should rotate in 3336h0m0s"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("force rotating token before rotation period"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("rotating ACR token"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-azure-operator/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-config/pull-secret"),
+				},
+			},
+		},
+		{
+			name: "no registry profile has one created",
 			oc: func() api.OpenShiftClusterProperties {
 				return api.OpenShiftClusterProperties{}
 			},
-			wantErr: cluster.ErrNoRegistryProfileFound,
+			objects: []client.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-azure-operator",
+					},
+				},
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "openshift-config",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pull-secret",
+						Namespace: "openshift-config",
+					},
+					Type: corev1.SecretTypeDockerConfigJson,
+					Data: map[string][]byte{
+						".dockerconfigjson": []byte(`{}`),
+					},
+				},
+			},
+			verify: func(r *require.Assertions, t *testacrtoken.FakeACRToken) (api.OpenShiftClusterProperties, []runtime.Object) {
+				generated := t.GetGeneratedPasswords()
+				r.Len(generated, 1, "wrong number of passwords requested")
+
+				props := api.OpenShiftClusterProperties{
+					RegistryProfiles: []*api.RegistryProfile{
+						{
+							Name:      publicACR,
+							Username:  user,
+							IssueDate: &startOf2024,
+							Password:  api.SecureString(generated[0]),
+						},
+					},
+				}
+
+				// The two secrets are laid down with the correct content
+				b64pwpair := base64.StdEncoding.EncodeToString([]byte(user + ":" + generated[0]))
+				objs := []runtime.Object{
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "pull-secret",
+							Namespace: "openshift-config",
+						},
+						Type: corev1.SecretTypeDockerConfigJson,
+						Data: map[string][]byte{
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "cluster",
+							Namespace: "openshift-azure-operator",
+						},
+						Data: map[string][]byte{
+							".dockerconfigjson": []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"` + b64pwpair + `"}}}`),
+						},
+					},
+				}
+
+				return props, objs
+			},
+			wantErr: nil,
+			expectedLogs: []testlog.ExpectedLogEntry{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("registry profile missing, creating it"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-azure-operator/cluster"),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal("Apply v1/Secret/openshift-config/pull-secret"),
+				},
+			},
 		},
 		{
 			name:     "does not run in test",
@@ -217,7 +401,7 @@ func TestRotateACRToken(t *testing.T) {
 
 			acrManager := testacrtoken.New(func() time.Time {
 				return startOf2024
-			})
+			}, publicACR)
 
 			if tt.fake != nil {
 				tt.fake(acrManager)
@@ -250,7 +434,7 @@ func TestRotateACRToken(t *testing.T) {
 				testtasks.WithRegistriesClient(registriesClient),
 			)
 
-			gotErr := rotateACRTokenWithManager(tc, acrManager, false)
+			gotErr := rotateACRTokenWithManager(tc, acrManager, tt.force)
 			if tt.wantErr != nil {
 				r.ErrorIs(gotErr, tt.wantErr)
 				return
