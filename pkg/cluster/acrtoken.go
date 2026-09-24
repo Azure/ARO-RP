@@ -146,7 +146,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 	}
 
 	registryProfile := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
-	if registryProfile == nil {
+	if registryProfile == nil || registryProfile.Password == "" {
 		log.Infof("registry profile missing, creating it")
 		registryProfile, err = ensureACRToken(ctx, env, doc, token, updateDB)
 		if err != nil {
