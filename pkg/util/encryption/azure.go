@@ -18,7 +18,7 @@ const (
 
 // NewAEADWithCore creates an AEAD encryption manager with resources available
 // from the Core env object.
-func NewAEADWithCore(ctx context.Context, _env env.Core, encryptionSecretV2Name string, encryptionSecretName string) (AEAD, error) {
+func NewAEADWithCore(ctx context.Context, _env env.Core, encryptionSecretV2Name string, encryptionSecretName string, opts ...Option) (AEAD, error) {
 	msiCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
@@ -32,6 +32,6 @@ func NewAEADWithCore(ctx context.Context, _env env.Core, encryptionSecretV2Name 
 	}
 
 	return NewMulti(
-		ctx, serviceKeyvault, encryptionSecretV2Name, encryptionSecretName,
+		ctx, serviceKeyvault, encryptionSecretV2Name, encryptionSecretName, opts...,
 	)
 }
