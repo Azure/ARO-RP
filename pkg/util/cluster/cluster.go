@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -220,7 +221,12 @@ func New(log *logrus.Entry, conf *ClusterConfig) (*Cluster, error) {
 
 	options := azEnvironment.EnvironmentCredentialOptions()
 
-	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	var spTokenCredential azcore.TokenCredential
+	if os.Getenv("AZURE_TOKEN_CREDENTIALS") != "" {
+		spTokenCredential, err = azEnvironment.NewTokenCredential()
+	} else {
+		spTokenCredential, err = azidentity.NewEnvironmentCredential(options)
+	}
 	if err != nil {
 		return nil, err
 	}
