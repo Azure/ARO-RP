@@ -1779,7 +1779,7 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 		},
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create policy definition: %v", err)
+		return fmt.Errorf("failed to create policy definition: %w", err)
 	}
 	c.log.Infof("policy definition %s created", policyName)
 
@@ -1794,7 +1794,7 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 		Location: pointerutils.ToPtr(c.Config.Location),
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create policy assignment: %v", err)
+		return fmt.Errorf("failed to create policy assignment: %w", err)
 	}
 	c.log.Infof("policy assignment %s created", assignmentName)
 
@@ -1807,18 +1807,14 @@ const (
 	TestingPolicyTriggerVal = "trigger-policy"
 )
 
-func PolicyNames(prefix, location string, useWorkloadIdentity bool) (policyName, assignmentName string) {
-	clusterType := "csp"
-	if useWorkloadIdentity {
-		clusterType = "miwi"
-	}
-	policyName = fmt.Sprintf("%s-%s-%s", prefix, location, clusterType)
+func PolicyNames(prefix string) (policyName, assignmentName string) {
+	policyName = prefix
 	assignmentName = fmt.Sprintf("%s-assign", policyName)
 	return
 }
 
 func (c *Cluster) getPolicyConfig(prefix string) (policyName, assignmentName, scope string) {
-	policyName, assignmentName = PolicyNames(prefix, c.Config.Location, c.Config.UseWorkloadIdentity)
+	policyName, assignmentName = PolicyNames(prefix)
 	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
 	return
 }

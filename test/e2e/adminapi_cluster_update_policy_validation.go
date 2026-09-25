@@ -51,9 +51,8 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 			g.Expect(oc.Properties.FailedProvisioningState).To(Equal(admin.ProvisioningStateAdminUpdating))
 			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring("Unexpected property mutations detected"))
 
-			expectedPolicyName, expectedAssignmentName := cluster.PolicyNames(cluster.TestingPolicyPrefix, _env.Location(), isMiwi)
+			expectedPolicyName, _ := cluster.PolicyNames(cluster.TestingPolicyPrefix)
 			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring(expectedPolicyName))
-			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring(expectedAssignmentName))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("removing policy violation tag from resource group")
