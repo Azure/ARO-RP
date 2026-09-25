@@ -99,7 +99,7 @@ func TestResourceMarshal(t *testing.T) {
 		{
 			name: "vnet",
 			r: &Resource{
-				APIVersion: "2020-08-01",
+				APIVersion: "2021-01-01",
 				Resource: armnetwork.VirtualNetwork{
 					ID:       pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet"),
 					Name:     pointerutils.ToPtr("vnet"),
@@ -158,7 +158,7 @@ func TestResourceMarshal(t *testing.T) {
 				},
 			},
 			want: []byte(`{
-    "apiVersion": "2020-08-01",
+    "apiVersion": "2021-01-01",
     "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resource-group/providers/Microsoft.Network/virtualNetworks/vnet",
     "location": "eastus",
     "name": "vnet",
@@ -279,7 +279,7 @@ func TestResourceMarshal(t *testing.T) {
 		{
 			name: "type and location should be included",
 			r: &Resource{
-				APIVersion: "2020-08-01",
+				APIVersion: "2021-01-01",
 				Type:       "Microsoft.Network/virtualNetworks",
 				Location:   "westus",
 				Resource: armnetwork.VirtualNetwork{
@@ -292,7 +292,7 @@ func TestResourceMarshal(t *testing.T) {
 				},
 			},
 			want: []byte(`{
-    "apiVersion": "2020-08-01",
+    "apiVersion": "2021-01-01",
     "location": "westus",
     "name": "test-vnet",
     "properties": {
