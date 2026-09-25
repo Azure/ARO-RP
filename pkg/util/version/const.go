@@ -79,9 +79,9 @@ func MiseImage(acrDomain string) string {
 	return acrDomain + "/msftonly/mise:1.42.1-azurelinux3.0-distroless"
 }
 
-// OtelImage contains the location of the OpenTelemetry container image for MISE
+// OTelImage contains the location of the OpenTelemetry container image for MISE.
 func OTelImage(acrDomain string) string {
-	return "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
+	return acrDomain + "/oss/otel/opentelemetry-collector-contrib@sha256:2597e3942ecda57062eed0171d2faf125ef6373772660cab5a175e185b10ba92"
 }
 
 // TelemetryExporterImage contains the location of the telemetry exporter container image
