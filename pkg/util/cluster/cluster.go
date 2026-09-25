@@ -1779,7 +1779,7 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 		},
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create policy definition: %v", err)
+		return fmt.Errorf("failed to create policy definition: %w", err)
 	}
 	c.log.Infof("policy definition %s created", policyName)
 
@@ -1794,7 +1794,7 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 		Location: pointerutils.ToPtr(c.Config.Location),
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create policy assignment: %v", err)
+		return fmt.Errorf("failed to create policy assignment: %w", err)
 	}
 	c.log.Infof("policy assignment %s created", assignmentName)
 

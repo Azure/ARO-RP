@@ -138,3 +138,41 @@ func TestCluster_GetPlatformWIRoles(t *testing.T) {
 		})
 	}
 }
+
+func TestPolicyNames(t *testing.T) {
+	for _, tt := range []struct {
+		name               string
+		prefix             string
+		location           string
+		useMiwi            bool
+		wantPolicyName     string
+		wantAssignmentName string
+	}{
+		{
+			name:               "csp",
+			prefix:             cluster.TestingPolicyPrefix,
+			location:           "eastus",
+			useMiwi:            false,
+			wantPolicyName:     "e2e-storage-public-access-validate-eastus-csp",
+			wantAssignmentName: "e2e-storage-public-access-validate-eastus-csp-assign",
+		},
+		{
+			name:               "miwi",
+			prefix:             cluster.TestingPolicyPrefix,
+			location:           "westeurope",
+			useMiwi:            true,
+			wantPolicyName:     "e2e-storage-public-access-validate-westeurope-miwi",
+			wantAssignmentName: "e2e-storage-public-access-validate-westeurope-miwi-assign",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotPolicy, gotAssignment := cluster.PolicyNames(tt.prefix, tt.location, tt.useMiwi)
+			if gotPolicy != tt.wantPolicyName {
+				t.Errorf("policyName = %q, want %q", gotPolicy, tt.wantPolicyName)
+			}
+			if gotAssignment != tt.wantAssignmentName {
+				t.Errorf("assignmentName = %q, want %q", gotAssignment, tt.wantAssignmentName)
+			}
+		})
+	}
+}

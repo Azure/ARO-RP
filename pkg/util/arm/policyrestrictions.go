@@ -5,6 +5,7 @@ package arm
 
 import (
 	"context"
+	"path"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -44,7 +45,24 @@ func EnrichMismatchesWithPolicyContext(
 	type resKey struct {
 		name, resourceType string
 	}
-	cache := make(map[resKey][]PolicyAttribution)
+
+	fields := make(map[resKey]map[string]struct{})
+	for i := range mismatches {
+		if mismatches[i].ResourceName == "" || mismatches[i].ResourceType == "" {
+			continue
+		}
+		tail := fieldTail(mismatches[i].Property)
+		if tail == "" {
+			continue
+		}
+		key := resKey{name: strings.ToLower(mismatches[i].ResourceName), resourceType: strings.ToLower(mismatches[i].ResourceType)}
+		if fields[key] == nil {
+			fields[key] = make(map[string]struct{})
+		}
+		fields[key][tail] = struct{}{}
+	}
+
+	cache := make(map[resKey]map[string][]PolicyAttribution)
 
 	for i := range mismatches {
 		name := mismatches[i].ResourceName
@@ -53,7 +71,7 @@ func EnrichMismatchesWithPolicyContext(
 			continue
 		}
 		key := resKey{name: strings.ToLower(name), resourceType: strings.ToLower(resourceType)}
-		policies, cached := cache[key]
+		byField, cached := cache[key]
 		if !cached {
 			apiVersion := azureclient.APIVersion(resourceType)
 			if apiVersion == "" {
@@ -61,13 +79,24 @@ func EnrichMismatchesWithPolicyContext(
 				cache[key] = nil
 				continue
 			}
-			policies = lookupPolicyRestrictions(ctx, log, policyClient, resourceGroupName, resourceType, name, apiVersion)
-			cache[key] = policies
+			byField = lookupPolicyRestrictions(ctx, log, policyClient, resourceGroupName, resourceType, name, apiVersion, fields[key])
+			cache[key] = byField
 		}
-		if len(policies) > 0 {
-			mismatches[i].Policies = policies
+		if matched := byField[fieldTail(mismatches[i].Property)]; len(matched) > 0 {
+			mismatches[i].Policies = matched
 		}
 	}
+}
+
+func fieldTail(s string) string {
+	if s == "" {
+		return ""
+	}
+	base := path.Base(normalizePath(s))
+	if base == "." || base == "/" {
+		return ""
+	}
+	return strings.ToLower(base)
 }
 
 func lookupPolicyRestrictions(
@@ -78,7 +107,8 @@ func lookupPolicyRestrictions(
 	resourceType string,
 	resourceName string,
 	apiVersion string,
-) []PolicyAttribution {
+	allowedFields map[string]struct{},
+) map[string][]PolicyAttribution {
 	content := map[string]interface{}{
 		"type": resourceType,
 		"name": resourceName,
@@ -98,11 +128,18 @@ func lookupPolicyRestrictions(
 		return nil
 	}
 
-	var out []PolicyAttribution
+	out := make(map[string][]PolicyAttribution)
 	for _, fr := range resp.FieldRestrictions {
 		field := ""
 		if fr.Field != nil {
 			field = *fr.Field
+		}
+		tail := fieldTail(field)
+		if tail == "" {
+			continue
+		}
+		if _, ok := allowedFields[tail]; !ok {
+			continue
 		}
 		for _, restriction := range fr.Restrictions {
 			if restriction.PolicyEffect == nil {
@@ -129,7 +166,7 @@ func lookupPolicyRestrictions(
 					entry.PolicyAssignment = parsePolicyRef(log, *restriction.Policy.PolicyAssignmentID)
 				}
 			}
-			out = append(out, entry)
+			out[tail] = append(out[tail], entry)
 		}
 	}
 	return out
