@@ -151,8 +151,8 @@ github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 h1:Qzk5C6cYgle
 github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01/go.mod h1:9rfv8iPl1ZP7aqh9YA68wnZv2NUDbXdcdPHVz0pFbPY=
 github.com/containers/ocicrypt v1.2.1 h1:0qIOTT9DoYwcKmxSt8QJt+VzMY18onl9jUXsxpVhSmM=
 github.com/containers/ocicrypt v1.2.1/go.mod h1:aD0AAqfMp0MtwqWgHM1bUwe1anx0VazI108CRrSKINQ=
-github.com/containers/podman/v5 v5.8.2 h1:727vdQaw041NEEsfmzZgW7v2bqjqR+/Y/7FU0nSeugs=
-github.com/containers/podman/v5 v5.8.2/go.mod h1:XeHvullSXw7x5IHNO3fXfPpJEVA2toJqgmOoINIMeZ0=
+github.com/containers/podman/v5 v5.8.6 h1:gOF21Pb8wBDMYxYLeDCACxWu51i1f4UtQ+ycwL8WYAA=
+github.com/containers/podman/v5 v5.8.6/go.mod h1:5mMXU913/zkU+TdeLoKhIijyKjuMzBrxHCiTgvfPTjg=
 github.com/containers/psgo v1.9.1-0.20250826150930-4ae76f200c86 h1:bYj0TVlkRZtMJYd6SbFOi1gjUJDJmVsYCpJla3URD7Y=
 github.com/containers/psgo v1.9.1-0.20250826150930-4ae76f200c86/go.mod h1:52GX23ST30pXpeviDvNpOCXoHqr+WJDv+7BjEH+AabY=
 github.com/coreos/go-oidc/v3 v3.17.0 h1:hWBGaQfbi0iVviX4ibC7bk8OKT5qNr4klBaCHVNvehc=
