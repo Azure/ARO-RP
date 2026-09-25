@@ -1741,7 +1741,7 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	c.log.Info("ensuring testing mutation policy")
 	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f53-869881c3d3ab"
-	policyName, assignmentName, scope := c.getPolicyConfig("e2e-storage-public-access-validate")
+	policyName, assignmentName, scope := c.getPolicyConfig(TestingPolicyPrefix)
 	policyRule := map[string]interface{}{
 		"if": map[string]interface{}{
 			"allOf": []map[string]interface{}{
@@ -1750,8 +1750,8 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 					"equals": "Microsoft.Storage/storageAccounts",
 				},
 				{
-					"value":  "[resourceGroup().tags['v4-e2e-V-test']]",
-					"equals": "trigger-policy",
+					"value":  fmt.Sprintf("[resourceGroup().tags['%s']]", TestingPolicyTriggerTag),
+					"equals": TestingPolicyTriggerVal,
 				},
 			},
 		},
@@ -1801,14 +1801,24 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) getPolicyConfig(prefix string) (policyName, assignmentName, scope string) {
+const (
+	TestingPolicyPrefix     = "e2e-storage-public-access-validate"
+	TestingPolicyTriggerTag = "v4-e2e-V-test"
+	TestingPolicyTriggerVal = "trigger-policy"
+)
+
+func PolicyNames(prefix, location string, useWorkloadIdentity bool) (policyName, assignmentName string) {
 	clusterType := "csp"
-	if c.Config.UseWorkloadIdentity {
+	if useWorkloadIdentity {
 		clusterType = "miwi"
 	}
-
-	policyName = fmt.Sprintf("%s-%s-%s", prefix, c.Config.Location, clusterType)
+	policyName = fmt.Sprintf("%s-%s-%s", prefix, location, clusterType)
 	assignmentName = fmt.Sprintf("%s-assign", policyName)
+	return
+}
+
+func (c *Cluster) getPolicyConfig(prefix string) (policyName, assignmentName, scope string) {
+	policyName, assignmentName = PolicyNames(prefix, c.Config.Location, c.Config.UseWorkloadIdentity)
 	scope = fmt.Sprintf("/subscriptions/%s", c.Config.SubscriptionID)
 	return
 }

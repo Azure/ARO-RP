@@ -32,6 +32,8 @@ type Mismatch struct {
 type PolicyAttribution struct {
 	Field            string     `json:"field"`
 	Result           string     `json:"result,omitempty"`
+	Effect           string     `json:"effect,omitempty"`
+	Values           []string   `json:"values,omitempty"`
 	PolicyDefinition *PolicyRef `json:"policyDefinition,omitempty"`
 	PolicyAssignment *PolicyRef `json:"policyAssignment,omitempty"`
 }

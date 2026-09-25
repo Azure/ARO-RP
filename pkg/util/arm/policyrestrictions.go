@@ -19,6 +19,17 @@ import (
 
 const mismatchDetailsPrefix = "Unexpected property mutations detected, likely due to Azure policies. Details: "
 
+var mutatingPolicyEffects = map[string]struct{}{
+	"append": {},
+	"modify": {},
+	"mutate": {},
+}
+
+func isMutatingEffect(effect string) bool {
+	_, ok := mutatingPolicyEffects[strings.ToLower(effect)]
+	return ok
+}
+
 func EnrichMismatchesWithPolicyContext(
 	ctx context.Context,
 	log *logrus.Entry,
@@ -94,9 +105,21 @@ func lookupPolicyRestrictions(
 			field = *fr.Field
 		}
 		for _, restriction := range fr.Restrictions {
-			entry := PolicyAttribution{Field: field}
+			if restriction.PolicyEffect == nil {
+				continue
+			}
+			effect := *restriction.PolicyEffect
+			if !isMutatingEffect(effect) {
+				continue
+			}
+			entry := PolicyAttribution{Field: field, Effect: effect}
 			if restriction.Result != nil {
 				entry.Result = string(*restriction.Result)
+			}
+			for _, v := range restriction.Values {
+				if v != nil {
+					entry.Values = append(entry.Values, *v)
+				}
 			}
 			if restriction.Policy != nil {
 				if restriction.Policy.PolicyDefinitionID != nil {

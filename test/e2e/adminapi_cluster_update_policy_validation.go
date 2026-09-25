@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
@@ -30,12 +31,11 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("tagging resource group to trigger policy violation")
-		err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationMerge, map[string]*string{
-			"v4-e2e-V-test": pointerutils.ToPtr("trigger-policy"),
-		})
+		triggerTags := map[string]*string{cluster.TestingPolicyTriggerTag: pointerutils.ToPtr(cluster.TestingPolicyTriggerVal)}
+		err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationMerge, triggerTags)
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func(ctx context.Context) {
-			if err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationDelete, map[string]*string{"v4-e2e-V-test": pointerutils.ToPtr("trigger-policy")}); err != nil {
+			if err := tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationDelete, triggerTags); err != nil {
 				log.Warnf("DeferCleanup: failed to remove trigger tag: %v", err)
 			}
 		})
@@ -50,10 +50,14 @@ var _ = Describe("[Admin API] Cluster admin update with policy validation", Seri
 			oc = adminGetCluster(g, ctx, clusterResourceID)
 			g.Expect(oc.Properties.FailedProvisioningState).To(Equal(admin.ProvisioningStateAdminUpdating))
 			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring("Unexpected property mutations detected"))
+
+			expectedPolicyName, expectedAssignmentName := cluster.PolicyNames(cluster.TestingPolicyPrefix, _env.Location(), isMiwi)
+			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring(expectedPolicyName))
+			g.Expect(oc.Properties.LastAdminUpdateError).To(ContainSubstring(expectedAssignmentName))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("removing policy violation tag from resource group")
-		err = tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationDelete, map[string]*string{"v4-e2e-V-test": pointerutils.ToPtr("trigger-policy")})
+		err = tagResource(ctx, oc.Properties.ClusterProfile.ResourceGroupID, armresources.TagsPatchOperationDelete, triggerTags)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("retrying admin update - should succeed now")
