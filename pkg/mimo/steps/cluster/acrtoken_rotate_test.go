@@ -71,6 +71,7 @@ func TestRotateACRToken(t *testing.T) {
 							Name:      publicACR,
 							Username:  user,
 							IssueDate: &startOf2024,
+							Password:  api.SecureString("something"),
 						},
 					},
 				}
@@ -94,6 +95,7 @@ func TestRotateACRToken(t *testing.T) {
 							Name:      publicACR,
 							Username:  user,
 							IssueDate: &expiredTime,
+							Password:  api.SecureString("something"),
 						},
 					},
 				}
@@ -190,6 +192,7 @@ func TestRotateACRToken(t *testing.T) {
 							Name:      publicACR,
 							Username:  user,
 							IssueDate: &notExpiredTime,
+							Password:  api.SecureString("something"),
 						},
 					},
 				}
