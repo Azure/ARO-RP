@@ -4,13 +4,16 @@ package backend
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -266,6 +269,49 @@ func TestEmitMetrics(t *testing.T) {
 			ok := reflect.DeepEqual(dimensions, d)
 			if !ok {
 				t.Errorf("%s != %s", dimensions, d)
+			}
+		})
+	}
+}
+
+func TestGetResultType(t *testing.T) {
+	ocb := &openShiftClusterBackend{}
+
+	for _, tt := range []struct {
+		name       string
+		backendErr error
+		want       utillog.ResultType
+	}{
+		{
+			name:       "nil error yields empty result type",
+			backendErr: nil,
+			want:       utillog.ResultType(""),
+		},
+		{
+			name:       "non-CloudError yields empty result type",
+			backendErr: errors.New("some unclassified error"),
+			want:       utillog.ResultType(""),
+		},
+		{
+			name:       "bare CloudError maps to its status code",
+			backendErr: &api.CloudError{StatusCode: http.StatusBadRequest},
+			want:       utillog.UserErrorResultType,
+		},
+		{
+			name:       "wrapped CloudError maps to its status code",
+			backendErr: fmt.Errorf("step failed: %w", &api.CloudError{StatusCode: http.StatusBadRequest}),
+			want:       utillog.UserErrorResultType,
+		},
+		{
+			name:       "wrapped server CloudError maps to its status code",
+			backendErr: fmt.Errorf("step failed: %w", &api.CloudError{StatusCode: http.StatusInternalServerError}),
+			want:       utillog.ServerErrorResultType,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ocb.getResultType(tt.backendErr)
+			if got != tt.want {
+				t.Errorf("getResultType(%v) = %q, want %q", tt.backendErr, got, tt.want)
 			}
 		})
 	}
