@@ -1,13 +1,9 @@
 # Fake/synthetic gateway OTEL collector config for e2e integration testing.
-# Receives OTLP from cluster exporters and appends log records to a file for
-# assertion. No gatewayauth/TLS (Tier A).
+# Receives OTLP from cluster exporters and prints records via the debug exporter
+# (Tier A: no gatewayauth/TLS). Intended to run as ACI with VNet injection.
 #
-# Run (from repo root):
-#   go run ./hack/otele2e
-# (builds telemetrycollector via make if the binary is missing)
-#
-# Flags: -config, -logfile, -binary, -health, -ready-timeout
-# Received logs default to _out/otel-e2e/logs.json
+# Received logs get attribute aro.e2e.otel="[ARO-E2E-OTEL]" so container logs
+# can be filtered with that marker (debug exporter dumps attributes).
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -18,13 +14,16 @@ receivers:
       grpc:
         endpoint: 0.0.0.0:4317
 
+processors:
+  attributes/e2e-sink:
+    actions:
+      - key: aro.e2e.otel
+        value: "[ARO-E2E-OTEL]"
+        action: insert
+
 exporters:
-  file:
-    path: ${env:OTEL_E2E_LOG_FILE}
-    format: json
-    append: true
-    create_directory: true
-    flush_interval: 1s
+  debug:
+    verbosity: detailed
 
 service:
   telemetry:
@@ -35,4 +34,5 @@ service:
   pipelines:
     logs:
       receivers: [otlp]
-      exporters: [file]
+      processors: [attributes/e2e-sink]
+      exporters: [debug]
