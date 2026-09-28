@@ -260,12 +260,10 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 			asyncdoc.AsyncOperation.EndTime = &now
 
 			if provisioningState == api.ProvisioningStateFailed {
-				// if type is CloudError - we want to propagate it to the
-				// asyncOperations errors. Otherwise - return generic error
-				err, ok := backendErr.(*api.CloudError)
-				if ok {
+				var cloudErr *api.CloudError
+				if errors.As(backendErr, &cloudErr) {
 					log.Print(backendErr)
-					asyncdoc.AsyncOperation.Error = err.CloudErrorBody
+					asyncdoc.AsyncOperation.Error = cloudErr.CloudErrorBody
 				} else {
 					log.Error(backendErr)
 					asyncdoc.AsyncOperation.Error = &api.CloudErrorBody{

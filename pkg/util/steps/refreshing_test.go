@@ -142,6 +142,22 @@ func TestCreateActionableError(t *testing.T) {
 			},
 		},
 		{
+			testName:      "CloudError naming the managed resource group is preserved",
+			managedRGName: "aro-managed-rg",
+			rawErr: api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"properties.workerProfiles[0].subnetId",
+				"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+			),
+			expectCloudError: &expectCloudErrorFields{
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"properties.workerProfiles[0].subnetId",
+				"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+			},
+		},
+		{
 			testName:      "AuthorizationFailed with no managedRGName falls back to SP credentials error",
 			managedRGName: "",
 			rawErr: autorest.DetailedError{
