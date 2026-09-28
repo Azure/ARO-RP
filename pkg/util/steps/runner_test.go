@@ -339,8 +339,6 @@ func TestStepRunner(t *testing.T) {
 }
 
 func TestRunPreservesCloudError(t *testing.T) {
-	ctx := context.Background()
-	_, log := testlog.New()
 	cloudErr := api.NewCloudError(
 		http.StatusBadRequest,
 		api.CloudErrorCodeInvalidLinkedVNet,
@@ -348,11 +346,33 @@ func TestRunPreservesCloudError(t *testing.T) {
 		"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
 	)
 
-	_, err := Run(ctx, log, time.Second, []Step{
-		Action(func(context.Context) error { return cloudErr }),
-	}, nil, "aro-managed-rg")
+	for _, tt := range []struct {
+		name    string
+		stepErr error
+		wantMsg string
+	}{
+		{
+			name:    "bare CloudError is preserved",
+			stepErr: cloudErr,
+			wantMsg: cloudErr.Error(),
+		},
+		{
+			name:    "wrapped CloudError is preserved",
+			stepErr: fmt.Errorf("step failed: %w", cloudErr),
+			wantMsg: "step failed: " + cloudErr.Error(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			_, log := testlog.New()
 
-	utilerror.AssertErrorMessage(t, err, cloudErr.Error())
+			_, err := Run(ctx, log, time.Second, []Step{
+				Action(func(context.Context) error { return tt.stepErr }),
+			}, nil, "aro-managed-rg")
+
+			utilerror.AssertErrorMessage(t, err, tt.wantMsg)
+		})
+	}
 }
 
 func TestStepMetricsNameFormatting(t *testing.T) {
