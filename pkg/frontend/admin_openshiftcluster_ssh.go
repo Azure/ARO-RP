@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -42,7 +43,8 @@ const adminSSHTTL = time.Minute
 var rxSSHUsername = regexp.MustCompile(`^[a-zA-Z0-9._%+][a-zA-Z0-9._%+-]*$`)
 
 type adminSSHRequest struct {
-	Master int `json:"master"`
+	Master *int   `json:"master,omitempty"`
+	VMName string `json:"vmName,omitempty"`
 }
 
 type adminSSHResponse struct {
@@ -89,7 +91,13 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", fmt.Sprintf("The request body could not be parsed: %v.", err))
 	}
-	if req.Master < 0 || req.Master > 2 {
+	if req.VMName != "" && req.Master != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "Specify either vmName or master, not both.")
+	}
+	if req.VMName == "" && req.Master == nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "Either vmName or master is required.")
+	}
+	if req.Master != nil && (*req.Master < 0 || *req.Master > 2) {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "master", "master must be 0, 1, or 2.")
 	}
 
@@ -139,17 +147,34 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The caller identity contains unsupported characters.")
 	}
 
-	// Best-effort: if the requested master is powered off in Azure, reject now
-	// with a clear message rather than mint a token that dies on a dial timeout
-	// at connect. A transient Azure lookup failure must not block SSH access, so
-	// anything short of a definitive "not running" is allowed through.
-	if err := f.checkSSHMasterPowered(ctx, log, doc, req.Master); err != nil {
-		return nil, err
+	var vmName string
+	var port int
+	if req.VMName != "" {
+		vmName, port, err = f.resolveSSHVMTarget(ctx, log, doc, req.VMName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Transitional compatibility for the already-built Geneva Action.
+		// New callers must send vmName so the RP can validate the exact VM.
+		if err := f.checkSSHMasterPowered(ctx, log, doc, *req.Master); err != nil {
+			return nil, err
+		}
+		port = 2200 + *req.Master
 	}
 
 	dbPortal, err := f.dbGroup.Portal()
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	ssh := &api.SSH{}
+	if vmName != "" {
+		ssh.Master = port - 2200
+		ssh.VMName = vmName
+		ssh.Port = port
+	} else {
+		ssh.Master = *req.Master
 	}
 
 	password := dbPortal.NewUUID()
@@ -159,9 +184,7 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 		Portal: &api.Portal{
 			Username: username,
 			ID:       resourceID,
-			SSH: &api.SSH{
-				Master: req.Master,
-			},
+			SSH:      ssh,
 		},
 	}
 
@@ -171,7 +194,8 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 	log.WithFields(logrus.Fields{
 		"username":   username,
 		"resourceID": resourceID,
-		"master":     req.Master,
+		"vmName":     vmName,
+		"port":       port,
 		"ttlSeconds": portalDoc.TTL,
 	}).Info("admin ssh create")
 
@@ -188,6 +212,133 @@ func (f *frontend) _adminOpenShiftClusterSSHNewElevated(ctx context.Context, log
 	}
 
 	return &adminSSHResponse{Command: command, Password: password}, nil
+}
+
+func (f *frontend) resolveSSHVMTarget(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, vmName string) (string, int, error) {
+	if err := validateAdminVMName(vmName); err != nil {
+		return "", 0, err
+	}
+
+	infraID := doc.OpenShiftCluster.Properties.InfraID
+	isBootstrap := vmName == infraID+"-bootstrap"
+	isMaster := strings.HasPrefix(vmName, infraID+"-master")
+	if !isBootstrap && !isMaster {
+		return "", 0, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmName", "VM must be a control-plane or bootstrap VM for this cluster.")
+	}
+
+	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
+	if err != nil {
+		return "", 0, err
+	}
+	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	if err != nil {
+		return "", 0, err
+	}
+
+	clusterRGName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	vm, err := a.GetVirtualMachine(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
+	if err != nil {
+		if azureerrors.IsStatusNotFoundError(err) {
+			return "", 0, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "vmName", fmt.Sprintf("Virtual machine %q was not found.", vmName))
+		}
+		return "", 0, err
+	}
+	powerState := masterPowerStateCode(vm)
+	if powerState != "PowerState/running" {
+		if powerState == "" {
+			powerState = "unknown"
+		}
+		return "", 0, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmName", fmt.Sprintf("VM %q is not running (%s).", vmName, powerState))
+	}
+	if vm.NetworkProfile == nil || vm.NetworkProfile.NetworkInterfaces == nil || len(*vm.NetworkProfile.NetworkInterfaces) == 0 || (*vm.NetworkProfile.NetworkInterfaces)[0].ID == nil {
+		return "", 0, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmName", fmt.Sprintf("VM %q has no network interface.", vmName))
+	}
+
+	selectedNICID := *(*vm.NetworkProfile.NetworkInterfaces)[0].ID
+	nicName := stringutils.LastTokenByte(selectedNICID, '/')
+	nicInfo, err := a.GetNetworkInterfaceSSHInfo(ctx, clusterRGName, nicName)
+	if err != nil {
+		if azureerrors.IsStatusNotFoundError(err) {
+			return "", 0, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "vmName", fmt.Sprintf("Network interface %q for VM %q was not found.", nicName, vmName))
+		}
+		return "", 0, err
+	}
+	if !strings.EqualFold(nicInfo.ID, selectedNICID) {
+		return "", 0, fmt.Errorf("network interface lookup for %q returned unexpected ID %q", nicName, nicInfo.ID)
+	}
+	if isMaster {
+		masterSubnetID := doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
+		if len(nicInfo.SubnetIDs) == 0 {
+			return "", 0, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmName", fmt.Sprintf("VM %q network interface has no subnet.", vmName))
+		}
+		for _, subnetID := range nicInfo.SubnetIDs {
+			if !strings.EqualFold(subnetID, masterSubnetID) {
+				return "", 0, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "vmName", fmt.Sprintf("VM %q is not attached to the cluster master subnet.", vmName))
+			}
+		}
+	}
+
+	lbName := infraID + "-internal"
+	if doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+		lbName = infraID + "-internal-lb"
+	}
+	lbID := strings.TrimSuffix(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, "/") + "/providers/Microsoft.Network/loadBalancers/" + lbName
+	expectedPools := map[string]int{}
+	if isBootstrap {
+		expectedPools[strings.ToLower(lbID+"/backendAddressPools/bootstrap-ssh")] = 2199
+	} else {
+		for master, port := range []int{2200, 2201, 2202} {
+			expectedPools[strings.ToLower(fmt.Sprintf("%s/backendAddressPools/ssh-%d", lbID, master))] = port
+		}
+	}
+
+	matchingPoolCount := 0
+	matchedPoolID := ""
+	port := 0
+	for _, poolID := range nicInfo.BackendPoolIDs {
+		if matchedPort, ok := expectedPools[strings.ToLower(poolID)]; ok {
+			matchingPoolCount++
+			matchedPoolID = poolID
+			port = matchedPort
+		}
+	}
+	sshUnavailable := func(reason string) error {
+		if isBootstrap {
+			return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "vmName", fmt.Sprintf("Bootstrap SSH is unavailable for VM %q: %s. Run or re-run install-failure diagnostics to configure the bootstrap SSH route.", vmName, reason))
+		}
+		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "vmName", fmt.Sprintf("Exact SSH routing is unavailable for VM %q: %s. Wait for control-plane SSH reconciliation to complete.", vmName, reason))
+	}
+	switch matchingPoolCount {
+	case 0:
+		return "", 0, sshUnavailable(fmt.Sprintf("its network interface is not attached to an SSH backend pool on load balancer %q", lbName))
+	case 1:
+	default:
+		return "", 0, sshUnavailable(fmt.Sprintf("its network interface has %d SSH backend pool mappings on load balancer %q", matchingPoolCount, lbName))
+	}
+
+	routeStatus, err := a.GetSSHRouteStatus(
+		ctx,
+		clusterRGName,
+		doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
+		lbName,
+		matchedPoolID,
+		selectedNICID,
+		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP,
+		int32(port),
+	)
+	if err != nil {
+		if azureerrors.IsStatusNotFoundError(err) {
+			return "", 0, sshUnavailable(fmt.Sprintf("load balancer %q or its SSH route was not found", lbName))
+		}
+		return "", 0, err
+	}
+	if routeStatus.LoadBalancingRuleCount != 1 {
+		return "", 0, sshUnavailable(fmt.Sprintf("load balancer %q has %d matching SSH rules", lbName, routeStatus.LoadBalancingRuleCount))
+	}
+	if len(routeStatus.BackendPoolNetworkInterfaceIDs) != 1 || !strings.EqualFold(routeStatus.BackendPoolNetworkInterfaceIDs[0], selectedNICID) {
+		return "", 0, sshUnavailable(fmt.Sprintf("backend pool has %d network interfaces and does not uniquely target the selected VM", len(routeStatus.BackendPoolNetworkInterfaceIDs)))
+	}
+	return vmName, port, nil
 }
 
 // checkSSHMasterPowered rejects the request when the target master VM is not

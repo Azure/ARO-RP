@@ -145,17 +145,24 @@ func (f *frontend) _adminOpenShiftClusterKubeconfigNew(ctx context.Context, log 
 	}))
 }
 
-// sreUsername returns the SRE UPN forwarded by ACIS in the ARM SystemData
-// header.
+// sreUsername returns the SRE UPN forwarded in ARM SystemData, or by ACIS in
+// X-Ms-Client-Principal-Name on admin-plane requests.
 func sreUsername(ctx context.Context) string {
 	sd, ok := ctx.Value(middleware.ContextKeySystemData).(*api.SystemData)
-	if !ok || sd == nil {
+	if ok && sd != nil {
+		if sd.LastModifiedBy != "" {
+			return sd.LastModifiedBy
+		}
+		if sd.CreatedBy != "" {
+			return sd.CreatedBy
+		}
+	}
+
+	correlationData := api.GetCorrelationDataFromCtx(ctx)
+	if correlationData == nil {
 		return ""
 	}
-	if sd.LastModifiedBy != "" {
-		return sd.LastModifiedBy
-	}
-	return sd.CreatedBy
+	return correlationData.ClientPrincipalName
 }
 
 func makeAdminKubeconfig(server, token string, caData []byte) ([]byte, error) {

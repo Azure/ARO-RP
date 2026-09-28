@@ -32,17 +32,18 @@ func TestAdminOpenShiftClusterKubeconfigNew(t *testing.T) {
 	resourcePath := strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName"))
 
 	type test struct {
-		name              string
-		urlSuffix         string // "/kubeconfig/new" or "/kubeconfig/newelevated"
-		systemDataHeader  string // raw JSON; empty => header omitted
-		omitServingCert   bool   // simulate cert-load failure path
-		omitClusterDoc    bool   // don't seed the target OpenShiftClusterDocument
-		injectPortalError error  // simulate a Cosmos write failure
-		wantStatusCode    int
-		wantError         string
-		wantElevated      bool
-		wantUsername      string
-		wantFilenameSlug  string // expected filename body (no extension)
+		name                string
+		urlSuffix           string // "/kubeconfig/new" or "/kubeconfig/newelevated"
+		systemDataHeader    string // raw JSON; empty => header omitted
+		clientPrincipalName string
+		omitServingCert     bool  // simulate cert-load failure path
+		omitClusterDoc      bool  // don't seed the target OpenShiftClusterDocument
+		injectPortalError   error // simulate a Cosmos write failure
+		wantStatusCode      int
+		wantError           string
+		wantElevated        bool
+		wantUsername        string
+		wantFilenameSlug    string // expected filename body (no extension)
 	}
 
 	for _, tt := range []*test{
@@ -74,9 +75,17 @@ func TestAdminOpenShiftClusterKubeconfigNew(t *testing.T) {
 			wantFilenameSlug: "resourcename",
 		},
 		{
-			name:             "missing SystemData header produces an empty username (auditing gap surfaced by Geneva, not blocked here)",
+			name:                "falls back to client principal name when SystemData is absent",
+			urlSuffix:           "/kubeconfig/new",
+			clientPrincipalName: "acis-sre@redhat.com",
+			wantStatusCode:      http.StatusOK,
+			wantElevated:        false,
+			wantUsername:        "acis-sre@redhat.com",
+			wantFilenameSlug:    "resourcename",
+		},
+		{
+			name:             "missing SystemData and client principal name produces an empty username",
 			urlSuffix:        "/kubeconfig/new",
-			systemDataHeader: "",
 			wantStatusCode:   http.StatusOK,
 			wantElevated:     false,
 			wantUsername:     "",
@@ -148,6 +157,9 @@ func TestAdminOpenShiftClusterKubeconfigNew(t *testing.T) {
 			header := http.Header{}
 			if tt.systemDataHeader != "" {
 				header.Set("X-Ms-Arm-Resource-System-Data", tt.systemDataHeader)
+			}
+			if tt.clientPrincipalName != "" {
+				header.Set("X-Ms-Client-Principal-Name", tt.clientPrincipalName)
 			}
 
 			resp, b, err := ti.request(http.MethodPost,
