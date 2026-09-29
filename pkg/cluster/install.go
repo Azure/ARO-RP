@@ -130,8 +130,8 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.fixSSH),
 	}
 	stepsThatNeedAPIServer := []steps.Step{
-		steps.Action(m.fixSREKubeconfig),
-		steps.Action(m.fixUserAdminKubeconfig),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixSREKubeconfig, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixUserAdminKubeconfig, m.managedResourceGroupName()),
 		steps.Action(m.createOrUpdateRouterIPFromCluster),
 
 		steps.Action(m.ensureGatewayUpgrade),
@@ -152,7 +152,7 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 	s := []steps.Step{
 		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.correctCertificateIssuer),
-		steps.Action(m.fixMCSCert),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixMCSCert, m.managedResourceGroupName()),
 		steps.Action(m.fixMCSUserData),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
@@ -277,7 +277,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.correctCertificateIssuer),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.fixUserAdminKubeconfig),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixUserAdminKubeconfig, m.managedResourceGroupName()),
 		steps.Action(m.reconcileLoadBalancerProfile),
 		steps.Action(m.reconcileSoftwareDefinedNetwork),
 		steps.Action(m.ensureCredentialsRequest),
@@ -516,7 +516,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.disableUpdates),
 			steps.Condition(m.clusterVersionReady, 30*time.Minute, true),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
-			steps.Action(m.updateClusterData),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateClusterData, m.managedResourceGroupName()),
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
