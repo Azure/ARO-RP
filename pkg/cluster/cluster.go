@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmonitor"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armpolicyinsights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -100,6 +101,7 @@ type manager struct {
 	armSubnets                    armnetwork.SubnetsClient
 	userAssignedIdentities        armmsi.UserAssignedIdentitiesClient
 	armMonitor                    armmonitor.MetricsClient
+	armPolicyRestrictions         armpolicyinsights.PolicyRestrictionsClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -231,6 +233,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armPolicyRestrictions, err := armpolicyinsights.NewPolicyRestrictionsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	storage, err := storage.NewManager(r.SubscriptionID, _env.Environment().StorageEndpointSuffix, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity(), clientOptions)
 	if err != nil {
 		return nil, err
@@ -298,6 +305,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armClusterPrivateLinkServices: clusterRPPrivateLinkServices,
 		armSubnets:                    armSubnetsClient,
 		armMonitor:                    armMonitorClient,
+		armPolicyRestrictions:         armPolicyRestrictions,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,

@@ -178,7 +178,7 @@ func TestDeleteManagedResource(t *testing.T) {
 			currentLB:   originalLB,
 			expectedErr: "",
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083", "2021-01-01").Return(mgmtfeatures.GenericResource{}, nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, armnetwork.LoadBalancer{
 					SKU: &armnetwork.LoadBalancerSKU{
@@ -249,8 +249,8 @@ func TestDeleteManagedResource(t *testing.T) {
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083",
 			expectedErr: "",
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
-				resources.EXPECT().DeleteByIDAndWait(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(nil)
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2021-01-01").Return(mgmtfeatures.GenericResource{}, nil)
+				resources.EXPECT().DeleteByIDAndWait(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2021-01-01").Return(nil)
 			},
 		},
 		{
@@ -279,7 +279,7 @@ func TestDeleteManagedResource(t *testing.T) {
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse",
 			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "Load balancer health probe /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse is used by load balancing rules, remove the referencing load balancing rules before removing the health probe").Error(),
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeInUse", "2021-01-01").Return(mgmtfeatures.GenericResource{}, nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
 			},
 		},
@@ -288,7 +288,7 @@ func TestDeleteManagedResource(t *testing.T) {
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeToDelete",
 			expectedErr: "",
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeToDelete", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/probes/testProbeToDelete", "2021-01-01").Return(mgmtfeatures.GenericResource{}, nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, armnetwork.LoadBalancer{
 					SKU: &armnetwork.LoadBalancerSKU{
@@ -353,7 +353,7 @@ func TestDeleteManagedResource(t *testing.T) {
 			expectedErr: "",
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 				lbFixture := loadBalancerWithRuleReferences()
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/loadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80", "2021-01-01").Return(mgmtfeatures.GenericResource{}, nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: lbFixture}, nil)
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, gomock.AssignableToTypeOf(armnetwork.LoadBalancer{}), nil).DoAndReturn(
 					func(ctx context.Context, resourceGroupName, loadBalancerName string, parameters armnetwork.LoadBalancer, options *armnetwork.LoadBalancersClientBeginCreateOrUpdateOptions) error {
@@ -394,7 +394,7 @@ func TestDeleteManagedResource(t *testing.T) {
 			expectedErr: "",
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_armnetwork.MockLoadBalancersClient) {
 				lbFixture := loadBalancerWithRuleReferences()
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/LoadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/LoadBalancingRules/ae3506385907e44eba9ef9bf76eac973-TCP-80", "2021-01-01").Return(mgmtfeatures.GenericResource{}, nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: lbFixture}, nil)
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, gomock.AssignableToTypeOf(armnetwork.LoadBalancer{}), nil).Return(nil)
 			},

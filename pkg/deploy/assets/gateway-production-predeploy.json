@@ -16,7 +16,7 @@
     },
     "resources": [
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-01-01",
             "condition": "[parameters('deployNSGs')]",
             "location": "[resourceGroup().location]",
             "name": "gateway-nsg",
@@ -24,7 +24,7 @@
             "type": "Microsoft.Network/networkSecurityGroups"
         },
         {
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-01-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"
             ],

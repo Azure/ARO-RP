@@ -114,6 +114,21 @@ func (mr *MockDeploymentsClientMockRecorder) Wait(ctx, resourceGroupName, deploy
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeploymentsClient)(nil).Wait), ctx, resourceGroupName, deploymentName)
 }
 
+// WhatIfAndWait mocks base method.
+func (m *MockDeploymentsClient) WhatIfAndWait(ctx context.Context, resourceGroupName, deploymentName string, parameters features.DeploymentWhatIf) (features.WhatIfOperationResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WhatIfAndWait", ctx, resourceGroupName, deploymentName, parameters)
+	ret0, _ := ret[0].(features.WhatIfOperationResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WhatIfAndWait indicates an expected call of WhatIfAndWait.
+func (mr *MockDeploymentsClientMockRecorder) WhatIfAndWait(ctx, resourceGroupName, deploymentName, parameters any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WhatIfAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).WhatIfAndWait), ctx, resourceGroupName, deploymentName, parameters)
+}
+
 // MockProvidersClient is a mock of ProvidersClient interface.
 type MockProvidersClient struct {
 	ctrl     *gomock.Controller
