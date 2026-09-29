@@ -455,12 +455,12 @@ func (m *manager) bootstrap() []steps.Step {
 			// Give Hive 60 minutes to install the cluster, since this includes
 			// all of bootstrapping being complete
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
-			steps.Action(m.generateKubeconfigs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.generateKubeconfigs, m.managedResourceGroupName()),
 		)
 	} else {
 		s = append(s,
 			steps.Action(m.runPodmanInstaller),
-			steps.Action(m.generateKubeconfigs),
+			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.generateKubeconfigs, m.managedResourceGroupName()),
 		)
 
 		if m.adoptViaHive {
