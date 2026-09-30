@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/bindings/images"
-	"github.com/containers/podman/v5/pkg/bindings/secrets"
-	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/bindings/images"
+	"go.podman.io/podman/v6/pkg/bindings/secrets"
+	"go.podman.io/podman/v6/pkg/specgen"
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
