@@ -37,7 +37,7 @@ import (
 
 func TestRotateACRToken(t *testing.T) {
 	publicACR := "arosvc.azurecr.io"
-	user := "testuser"
+	user := "token-some-uuid"
 
 	startOf2024 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	expiredTime := startOf2024.AddDate(0, 0, -365)
@@ -401,6 +401,7 @@ func TestRotateACRToken(t *testing.T) {
 			r := require.New(t)
 
 			doc := &api.OpenShiftClusterDocument{
+				ID:  "some-uuid",
 				Key: strings.ToLower(key),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID:         key,
@@ -453,6 +454,7 @@ func TestRotateACRToken(t *testing.T) {
 			if tt.verify != nil {
 				afterProps, afterObjects := tt.verify(r, acrManager)
 				afterDoc := &api.OpenShiftClusterDocument{
+					ID:  "some-uuid",
 					Key: strings.ToLower(key),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:         key,
