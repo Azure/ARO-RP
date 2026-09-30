@@ -321,7 +321,7 @@ func TestNewARegistryProfile(t *testing.T) {
 	newProfile := mgr.NewRegistryProfile("foobar")
 	a.NotNil(newProfile)
 	a.Equal("token-foobar", newProfile.Username)
-	a.Equal("1970-01-01T00:00:01Z", newProfile.IssueDate.Format(time.RFC3339))
+	a.Nil(newProfile.IssueDate)
 }
 
 func TestShouldRotate(t *testing.T) {

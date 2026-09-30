@@ -449,6 +449,7 @@ func TestRotateACRToken(t *testing.T) {
 			if tt.verify != nil {
 				afterProps, afterObjects := tt.verify(r, acrManager)
 				afterDoc := &api.OpenShiftClusterDocument{
+					ID:  clusterUUID,
 					Key: strings.ToLower(key),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:         key,
