@@ -52,12 +52,10 @@ func (f *FakeACRToken) EnsureTokenAndPassword(ctx context.Context, registryProfi
 }
 
 // NewRegistryProfile implements [acrtoken.Manager].
-func (f *FakeACRToken) NewRegistryProfile() *api.RegistryProfile {
-	currentTime := f.now().UTC()
+func (f *FakeACRToken) NewRegistryProfile(clusterUUID string) *api.RegistryProfile {
 	return &api.RegistryProfile{
-		Name:      f.acrDomain,
-		Username:  "testuser",
-		IssueDate: &currentTime,
+		Name:     f.acrDomain,
+		Username: "token-" + clusterUUID,
 	}
 }
 

@@ -18,7 +18,6 @@ import (
 	mock_armcontainerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcontainerregistry"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 )
 
 const (
@@ -276,13 +275,11 @@ func setupManager(controller *gomock.Controller, tc *mock_armcontainerregistry.M
 	env.EXPECT().ACRDomain().AnyTimes().Return(registryDomain)
 	env.EXPECT().Now().AnyTimes().DoAndReturn(func() time.Time { return time.UnixMilli(1000) })
 	r, _ := azure.ParseResourceID(registryResourceID)
-	u := deterministicuuid.NewTestUUIDGenerator(0x22)
 	return &manager{
 		env:        env,
 		r:          r,
 		tokens:     tc,
 		registries: rc,
-		uuid:       u,
 	}
 }
 
@@ -321,9 +318,9 @@ func TestNewARegistryProfile(t *testing.T) {
 	controller := gomock.NewController(t)
 	mgr := setupManager(controller, nil, nil)
 
-	newProfile := mgr.NewRegistryProfile()
+	newProfile := mgr.NewRegistryProfile("foobar")
 	a.NotNil(newProfile)
-	a.Equal("token-22222222-2222-2222-2222-222222220001", newProfile.Username)
+	a.Equal("token-foobar", newProfile.Username)
 	a.Equal("1970-01-01T00:00:01Z", newProfile.IssueDate.Format(time.RFC3339))
 }
 

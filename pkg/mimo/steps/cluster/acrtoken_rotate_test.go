@@ -413,6 +413,7 @@ func TestRotateACRToken(t *testing.T) {
 			hook, log := testlog.LogForTesting(t)
 
 			doc := &api.OpenShiftClusterDocument{
+				ID:  clusterUUID,
 				Key: strings.ToLower(key),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID:         key,

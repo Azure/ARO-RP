@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 // Maximum lifetime of the ACR token
@@ -28,7 +27,7 @@ const (
 )
 
 type Manager interface {
-	NewRegistryProfile() *api.RegistryProfile
+	NewRegistryProfile(clusterUUID string) *api.RegistryProfile
 	EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, error)
 	RotateTokenPassword(ctx context.Context, registryProfile *api.RegistryProfile) error
 	Delete(ctx context.Context, registryProfile *api.RegistryProfile) error
@@ -40,8 +39,6 @@ type manager struct {
 
 	tokens     armcontainerregistry.TokensClient
 	registries armcontainerregistry.RegistriesClient
-
-	uuid uuid.Generator
 }
 
 func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClient, registriesClient armcontainerregistry.RegistriesClient) (Manager, error) {
@@ -56,18 +53,15 @@ func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClien
 
 		tokens:     tokensClient,
 		registries: registriesClient,
-		uuid:       uuid.DefaultGenerator,
 	}
 
 	return m, nil
 }
 
-func (m *manager) NewRegistryProfile() *api.RegistryProfile {
-	currentTime := m.env.Now().UTC()
+func (m *manager) NewRegistryProfile(clusterUUID string) *api.RegistryProfile {
 	return &api.RegistryProfile{
-		Name:      m.env.ACRDomain(),
-		Username:  "token-" + m.uuid.Generate(),
-		IssueDate: &currentTime,
+		Name:     m.env.ACRDomain(),
+		Username: "token-" + clusterUUID,
 	}
 }
 

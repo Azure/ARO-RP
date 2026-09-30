@@ -73,33 +73,27 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		return err
 	}
 
-	updateDB := func(ctx context.Context, oscdm database.OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
-		return m.db.PatchWithLease(ctx, m.doc.Key, oscdm)
+	registryProfile, err := ensureACRToken(ctx, m.env, m.doc, token)
+	if err != nil {
+		return err
 	}
 
-	_, err = ensureACRToken(ctx, m.env, m.doc, token, updateDB)
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.PutRegistryProfile(registryProfile)
+		return nil
+	})
 	return err
 }
 
-func ensureACRToken(ctx context.Context, env env.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager, updateDB database.OpenShiftClusterDocumentMutatorRunner) (*api.RegistryProfile, error) {
+func ensureACRToken(ctx context.Context, env env.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager) (*api.RegistryProfile, error) {
 	rp := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
 	if rp == nil {
-		// 1. choose a name and establish the intent to create a token with
-		// that name
-		rp = token.NewRegistryProfile()
-
-		_, err := updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.PutRegistryProfile(rp)
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
+		// 1. establish the intent to create a token with the cluster's UUID
+		rp = token.NewRegistryProfile(doc.ID)
 	}
 
 	if rp.Password == "" {
-		// 2. ensure a token with the chosen name exists, generate a
-		// password for it and store it in the database
+		// 2. ensure a token with the chosen name exists and generate a password
 		password, err := token.EnsureTokenAndPassword(ctx, rp)
 		if err != nil {
 			return nil, err
@@ -107,14 +101,6 @@ func ensureACRToken(ctx context.Context, env env.Interface, doc *api.OpenShiftCl
 		currentTime := env.Now().UTC()
 		rp.Password = api.SecureString(password)
 		rp.IssueDate = &currentTime
-
-		_, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.PutRegistryProfile(rp)
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return rp, nil
@@ -148,7 +134,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 	registryProfile := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
 	if registryProfile == nil || registryProfile.Password == "" {
 		log.Infof("registry profile missing, creating it")
-		registryProfile, err = ensureACRToken(ctx, env, doc, token, updateDB)
+		registryProfile, err = ensureACRToken(ctx, env, doc, token)
 		if err != nil {
 			return err
 		}
