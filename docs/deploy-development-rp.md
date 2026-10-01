@@ -7,10 +7,6 @@ setup, while also having a functional cluster. It uses hacks scripts around a
 lot of the setup to make things easier to bootstrap and be more sensible for
 running off of your local laptop.
 
-- Check the specific use-case examples where [deploying full RP
-  service](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-full-rp-service-in-dev.md)
-  can be a better match.
-
 ## Prerequisites
 
 1. Your development environment is prepared according to the steps outlined in
