@@ -1,8 +1,12 @@
-ARG REGISTRY
 ARG BUILDER_REGISTRY
+ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
+ARG BUILDER_TAG=rhel-9-golang-1.25-openshift-4.21
+ARG REGISTRY
+ARG REPOSITORY=ubi9/ubi-minimal
+ARG TAG=latest
 ARG ARO_VERSION
 
-FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21 AS builder
+FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
 ARG ARO_VERSION
 USER root
 WORKDIR /app
@@ -19,7 +23,7 @@ COPY pkg pkg
 # build
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./hack/tunnel
 
-FROM ${REGISTRY}/ubi9/ubi-minimal AS final
+FROM ${REGISTRY}/${REPOSITORY}:${TAG} AS final
 COPY --from=builder /app/tunnel /usr/local/bin/
 ENTRYPOINT ["tunnel"]
 EXPOSE 8443/tcp

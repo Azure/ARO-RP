@@ -1,11 +1,17 @@
-ARG REGISTRY
 ARG BUILDER_REGISTRY
+ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
+ARG BUILDER_TAG=rhel-9-golang-1.25-openshift-4.21
+ARG REGISTRY
+ARG REPOSITORY=ubi9/ubi-minimal
+ARG NODE_BUILDER_REPOSITORY=ubi9/nodejs-22
+ARG NODE_BUILDER_TAG=latest
+ARG TAG=latest
 ARG ARO_VERSION
 
 ###############################################################################
 # Stage 1: Build the SRE Portal Assets
 ###############################################################################
-FROM ${REGISTRY}/ubi9/nodejs-22  AS portal-build
+FROM ${REGISTRY}/${NODE_BUILDER_REPOSITORY}:${NODE_BUILDER_TAG} AS portal-build
 LABEL aro-portal-build=true
 WORKDIR /build/portal/v2
 USER root
@@ -24,7 +30,7 @@ RUN npm run lint && npm run build
 ###############################################################################
 # Stage 2: Compile the Golang RP code
 ###############################################################################
-FROM ${BUILDER_REGISTRY}/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21 AS builder
+FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
 ARG ARO_VERSION
 LABEL aro-builder=true
 USER root
@@ -73,7 +79,7 @@ RUN hack/fips/validate-fips.sh ./aro
 ###############################################################################
 # Stage 3: final is our slim image with minimal layers and tools
 ###############################################################################
-FROM ${REGISTRY}/ubi9/ubi-minimal AS final
+FROM ${REGISTRY}/${REPOSITORY}:${TAG} AS final
 LABEL aro-final=true
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 COPY --from=builder /app/report.xml /app/coverage.xml /app/reportapi.xml /app/coverageapi.xml /app/

@@ -1,9 +1,9 @@
 # Uses a multi-stage container build to build the RP.
 #
-ARG REGISTRY
 ARG BUILDER_REGISTRY
 ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
 ARG BUILDER_TAG=rhel-9-golang-1.25-openshift-4.21
+ARG REGISTRY
 ARG REPOSITORY=ubi9/ubi-minimal
 ARG TAG=latest
 FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
