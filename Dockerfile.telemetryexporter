@@ -3,7 +3,7 @@
 ARG REGISTRY
 ARG BUILDER_REGISTRY
 ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
-ARG BUILDER_TAG=rhel-9-golang-1.25-openshift-4.21
+ARG BUILDER_TAG=rhel-9-golang-1.26-openshift-4.23
 ARG REPOSITORY=ubi9/ubi-minimal
 ARG TAG=latest
 ARG VERSION
