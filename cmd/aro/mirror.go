@@ -129,12 +129,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		"registry.redhat.io/rhel8/support-tools:latest",
 		"registry.redhat.io/rhel9/support-tools:latest",
 
-		// https://catalog.redhat.com/software/containers/openshift4/ose-tools-rhel8/5f748d3399cc5b9e7c1a8747
-		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.12",
-		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.13",
-		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.14",
-		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.15",
-
 		// https://catalog.redhat.com/software/containers/openshift4/ose-cli-rhel9/6528096620ebdcf82af4cbf9
 		"registry.redhat.io/openshift4/ose-cli-rhel9:v4.16",
 		"registry.redhat.io/openshift4/ose-cli-rhel9:v4.17",
@@ -149,10 +143,6 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 		// https://catalog.redhat.com/software/containers/ubi9/toolbox/615bd9b4075b022acc111bf5
 		"registry.access.redhat.com/ubi9/toolbox:latest",
 
-		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
-		"registry.access.redhat.com/ubi8/nodejs-18:latest",
-		// https://catalog.redhat.com/software/containers/ubi9/nodejs-18/62e8e7ed22d1d3c2dfe2ca01
-		"registry.access.redhat.com/ubi9/nodejs-18:latest",
 		// https://catalog.redhat.com/software/containers/ubi9/nodejs-22/
 		"registry.access.redhat.com/ubi9/nodejs-22:latest",
 
@@ -165,8 +155,8 @@ func mirror(ctx context.Context, _log *logrus.Entry) error {
 
 		// OpenShift Automated Release Tooling partner images
 		// These images are re-tagged versions of the images that OpenShift uses to build internally, mirrored for use in building ARO-RP in CI and ev2
-		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.24-openshift-4.20",
 		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.25-openshift-4.21",
+		"quay.io/openshift-release-dev/golang-builder--partner-share:rhel-9-golang-1.26-openshift-4.23",
 	} {
 		l := mirrorLog.WithField("payload", ref)
 		startTime := time.Now()
