@@ -7,10 +7,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/containers/podman/v5/pkg/bindings"
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/sirupsen/logrus"
+	"go.podman.io/podman/v6/pkg/bindings"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/specgen"
 )
 
 func getConnection(ctx context.Context) (context.Context, error) {
