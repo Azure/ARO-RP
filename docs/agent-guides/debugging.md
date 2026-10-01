@@ -1,13 +1,13 @@
-# Agentic Hints for Debugging ARO Classic
+# Agentic Hints for Debugging ARO Standard
 
 - IMPORTANT: this document is referenced by agentic workflows, DO NOT REMOVE IT.
-- Start with this file before loading any specialized ARO Classic debugging hints.
+- Start with this file before loading any specialized ARO Standard debugging hints.
 - This file is intentionally short. Load only the specialized doc(s) needed for the current task.
 - If any of the info below turns out not to be accurate, suggest an update PR at the end of the session.
 
 ## Scope
 
-- Use this file to choose which ARO Classic debugging hints to load.
+- Use this file to choose which ARO Standard debugging hints to load.
 - Do not pull specialized docs into context unless the current task actually needs them.
 - Add future specialized docs here instead of expanding this file into a catch-all runbook.
 - Prefer the current workspace for checked-in ARO-RP code and docs.
@@ -20,9 +20,9 @@
 
 - Add future specialized docs here with one-line trigger descriptions.
 
-## Core ARO Classic Context
+## Core ARO Standard Context
 
-- Do not assume ARO HCP debugging docs, Kusto tables, or Grafana datasource names apply to ARO Classic.
+- Do not assume ARO HCP debugging docs, Kusto tables, or Grafana datasource names apply to ARO Standard.
 - Customer cluster mutations (`PUT` / `PATCH` / `DELETE`) are async: the frontend accepts the request and persists state, then the backend completes the work later. Many investigations span both frontend and backend evidence.
 - Cross-cutting pivots that are useful across multiple debugging modes: `request_id`, `resource_id`, `subscription_id`, `resource_group`, `resource_name`, and sometimes `correlation_id` / `client_request_id`.
 
