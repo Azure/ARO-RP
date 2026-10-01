@@ -3,7 +3,7 @@
 * The full list of operator controllers with descriptions can be found in the README at the root of the repository.
 * The checks done by the operator can be found at: `ARO-RP/pkg/operator/controllers/checkers`.
 
-* The static pod resources can be found at `pkg/operator/deploy/staticresources`. 
+* The static pod resources can be found at `pkg/operator/deploy/staticresources`.
 * The deploy operation kicks off two deployments in the `openshift-azure-operator` namespace: `aro-operator-master` and `aro-operator-worker`.
   * The `aro-operator-master` deployment runs all controllers,
   * The `aro-operator-worker` deployment runs only the internet checker in the worker subnet.
@@ -34,9 +34,6 @@ Remediations in place:
 A cluster agent provides a centralized location to handle this use case.  Many
 post-install configurations should probably move here.
 
-* monitor and repair mdsd as needed
-* set the alertmanager webhook
-
 ### Remediation metrics
 
 Metrics are emitted for each remediation with labels `success` and `error` to represent the outcome.
@@ -49,7 +46,7 @@ Currently, only `pullSecret` remediation metrics are being emitted.
 1. Tag and push the image to your own repo
 ```
 podman tag arointsvc.azurecr.io/aro:latest quay.io/<user>/aro:latest
-podman push quay.io/<user>/aro:latest 
+podman push quay.io/<user>/aro:latest
 ```
 
 ## Testing
@@ -93,7 +90,7 @@ go run ./cmd/aro operator master
 ### Using the RP API
 #### Pre-requisites
 * Have a local dev RP running
-* Have a local dev cluster 
+* Have a local dev cluster
 
 #### Steps
 1. Stop the RP and update the `env` file, the variable value `$ARO_IMAGE` with the custom built image:

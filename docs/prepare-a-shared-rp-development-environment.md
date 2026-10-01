@@ -73,7 +73,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    export SECRET_STORAGE_RESOURCEGROUP=<resource-group-for-secret-storage>
    # When sourcing deploy-shared-env.sh environment variables may not be set,
    # that is okay for the purpose of just deploying storage.
-   . ./hack/devtools/deploy-shared-env.sh 
+   . ./hack/devtools/deploy-shared-env.sh
 
    deploy_global_secret_storage
    ```
@@ -370,12 +370,6 @@ Generate new key/certificate files using an helper utility, and when these files
    mv dev-client.* secrets
    ```
 
-1. Create the cluster-mdsd CA key/certificate:
-
-   ```bash
-   go run ./hack/genkey cluster-mdsd
-   mv cluster-mdsd.* secrets
-   ```
 
 ## Environment file
 
@@ -462,7 +456,7 @@ each of the bash functions below.
 1. Enable EncryptionAtHost for subscription.
 
    ```bash
-   az feature register --namespace Microsoft.Compute --name EncryptionAtHost 
+   az feature register --namespace Microsoft.Compute --name EncryptionAtHost
    ```
 
 1. Create the resource group and deploy the RP resources:
@@ -501,9 +495,9 @@ each of the bash functions below.
    import_certs_secrets
    ```
 
-   > **NOTE:**: in production, three additional keys/certificates (rp-mdm, rp-mdsd, and
-   > cluster-mdsd) are also required in the $KEYVAULT_PREFIX-svc key vault. These
-   > are client certificates for RP metric and log forwarding (respectively) to
+   > **NOTE:**: in production, two additional keys/certificates (rp-mdm and
+   > rp-mdsd) are also required in the $KEYVAULT_PREFIX-svc key vault. These are
+   > client certificates for RP metric and log forwarding (respectively) to
    > Geneva.
 
    If you need them in development:
@@ -527,10 +521,6 @@ each of the bash functions below.
         --vault-name "$KEYVAULT_PREFIX-gwy" \
         --name gwy-mdsd \
         --file secrets/rp-logging-int.pem
-   az keyvault certificate import \
-        --vault-name "$KEYVAULT_PREFIX-svc" \
-        --name cluster-mdsd \
-        --file secrets/cluster-logging-int.pem
    ```
 
    > **NOTE:**: in development, if you don't have valid certs for these, you can just
@@ -547,24 +537,15 @@ each of the bash functions below.
    Vault Name: "$KEYVAULT_PREFIX-svc"
    Certificate: rp-firstparty
    Development value: secrets/firstparty.pem
-
-   Vault Name: "$KEYVAULT_PREFIX-svc"
-   Certificate: cluster-mdsd
-   Development value: secrets/cluster-logging-int.pem
    ```
 
-   > __NOTE:__: in the new tenant OneCert is not available, therefore firstparty and cluster-mdsd are self signed.
+   > __NOTE:__: in the new tenant OneCert is not available, therefore firstparty is self signed.
 
    ```bash
       az keyvault certificate import \
          --vault-name "$KEYVAULT_PREFIX-svc" \
          --name rp-firstparty \
          --file secrets/firstparty.pem
-
-      az keyvault certificate import \
-         --vault-name "$KEYVAULT_PREFIX-svc" \
-         --name cluster-mdsd \
-         --file secrets/cluster-mdsd.pem
    ```
 
 1. Create nameserver records in the parent DNS zone:

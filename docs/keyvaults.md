@@ -27,7 +27,6 @@ Majority of the certificates are configured for auto-renewal to ensure that when
 
 1. Service (svc)
     - Certificates:
-        - `cluster-mdsd` is the certificate persisted for logging for every ARO cluster
         - `rp-firstparty` is the certificate for the First Party service principal credentials
         - `rp-mdm` is the MDM certificate the RP uses to emit cluster metrics within the monitor and RP metrics within the RP processes
         - `rp-mdsd` is the MDSD certificate the RP uses to emit logs to the Geneva/MDSD service
