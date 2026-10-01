@@ -32,7 +32,7 @@ Setting up your ARO-RP development environment.
     ```
 3. Configure `pyenv` Python version
     ```sh
-    pyenv local 3.10.0
+    pyenv local 3.12
     pyenv rehash
 
     python --version
@@ -69,10 +69,7 @@ Setting up your ARO-RP development environment.
 
 ## Getting Started With Docker Compose
 
-1. Install optional dependencies
-   1. [Fedora/RHEL Optional Dependencies](#fedorarhel-optional-dependencies)
-   2. [Debian Optional Dependencies](#debian-optional-dependencies)
-   3. [MacOS Optional Dependencies](#optional-macos-dependencies)
+1. Install Docker Compose.
 2. Check the `env.example` file and copy it to create your own
     ```sh
     cp env.example env

@@ -28,10 +28,7 @@
 
 ## Install Package Dependencies
 
-### Fedora/RHEL Dependencies
-
-> [!IMPORTANT]
-> For other OS specific requirements, refer to the [Miscellaneous OS Requirements](#other-os-requirements) section.
+### Fedora Dependencies
 
 1. General dependencies
     ```sh
@@ -93,7 +90,6 @@ If you do not have a compatible Golang version available through your system's p
     ```sh
     gvm install go1.26.4
     ```
-
 
 ### Install Python (`pyenv`)
 
