@@ -2,7 +2,7 @@
 
 Azure Red Hat OpenShift RP — ARM resource provider for OpenShift clusters on Azure. A single `aro` binary is produced with both RP-side services and the in-cluster ARO Operator, with the service selected in the command line (e.g. `aro rp`, `aro portal`, `aro operator master`)
 
-All Golang code in this repository is written for Go 1.25+.
+All Golang code in this repository is written for Go 1.26+.
 
 ## Architecture Invariant
 
