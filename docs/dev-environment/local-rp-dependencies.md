@@ -63,35 +63,6 @@
         make
     ```
 
-#### Fedora/RHEL Optional Dependencies
-1. Install [Docker Compose](https://docs.docker.com/compose/install/linux/#install-using-the-repository)
-    1. Fedora/RHEL
-        ```sh
-        sudo dnf install -y \
-            docker-compose-plugin
-        ```
-    2. See [Install Go via `gvm`](#prepare-dev-environment/gvm.md)
-    [gvm](#prepare-dev-environment/gvm.md)
-
-### Debian Dependencies
-
-1. Install the required dependencies
-    ```sh
-    sudo apt install -y \
-        libgpgme-dev \
-        libbtrfs-dev \
-        libdevmapper-dev \
-        nodejs \
-        npm
-    ```
-
-#### Debian Optional Dependencies
-   1. Install `docker-compose-plugin`
-        ```sh
-        sudo apt install -y
-            docker-compose-plugin
-        ```
-
 ### MacOS Dependencies
 
 1. Install the required dependencies
@@ -249,25 +220,7 @@ If you do not have a compatible Golang version available through your system's p
 
 ---
 
-# Miscellaneous OS Requirements
-
-## RHEL
-
-1. Register the system with `subscription-manager register`
-2. Enable the [CodeReady Linux Builder](https://access.redhat.com/articles/4348511) repository to install *-devel packages
-3. Enable the [EPEL repository](https://docs.fedoraproject.org/en-US/epel/#_quickstart) for packages not in the base repositories (such as OpenVPN)
-
-## Debian
-
-> [!IMPORTANT]
-> Your actual `pkgconfig` path may differ; please adjust it accordingly.
-1. Ensure you have installed all [Debian dependencies](#debian-dependencies)
-2. Make sure that `PKG_CONFIG_PATH` contains the `pkgconfig` files of the above packages. For example:
-    ```sh
-    export PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig
-    ```
-
-## MacOS
+# Miscellaneous MacOS
 
 > [!NOTE]
 > Developers using macOS are encouraged to contribute to this repository. To ensure compatibility, macOS users should install GNU utilities on their systems.
