@@ -168,11 +168,13 @@ func DevConfig(_env env.Core) (*Config, error) {
 			Environment:                       pointerutils.ToPtr("development"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
-			InstallerBackend:          pointerutils.ToPtr(os.Getenv("ARO_INSTALLER_BACKEND")),
-			InstallerIdentityClientID: pointerutils.ToPtr(os.Getenv("ARO_INSTALLER_IDENTITY_CLIENT_ID")),
-			InstallViaHive:            pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
-			DefaultInstallerPullspec:  pointerutils.ToPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
-			AdoptByHive:               pointerutils.ToPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
+			InstallerBackend:              pointerutils.ToPtr(os.Getenv("ARO_INSTALLER_BACKEND")),
+			InstallerIdentityClientID:     pointerutils.ToPtr(os.Getenv("ARO_INSTALLER_IDENTITY_CLIENT_ID")),
+			InstallerAKSClusterName:       pointerutils.ToPtr(os.Getenv("ARO_INSTALLER_AKS_CLUSTER_NAME")),
+			InstallerAKSResourceGroupName: pointerutils.ToPtr(os.Getenv("ARO_INSTALLER_AKS_RESOURCE_GROUP")),
+			InstallViaHive:                pointerutils.ToPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
+			DefaultInstallerPullspec:      pointerutils.ToPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
+			AdoptByHive:                   pointerutils.ToPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
 		},
 	}, nil
 }
