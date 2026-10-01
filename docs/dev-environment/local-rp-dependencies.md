@@ -115,47 +115,21 @@
 
 ## Install Go
 
-### Install Go Manually
+If you do not have a compatible Golang version available through your system's package manager:
 
-> [!TIP]
-> Go versions installation and management can be simplified with `gvm`.
-> See [Install Go With `gvm`](dev-environment/gvm.md)
-1. [Download Go](https://golang.org/dl) matching the version in `go.mod`.
-2. Extract the archive
-
-   ```sh
-   cd $HOME/Downloads
-   sudo tar -C /usr/local -xzf go1.22.12.linux-amd64.tar.gz
-   ```
-3. Add Go to `PATH` in your shell's RC file
-
-   ```sh
-   export PATH="${PATH}:/usr/local/go/bin"
-   ```
-4. Configure `GOPATH` as an environment variable in your shell, as it is required by some dependencies for `make generate`. To use the default path, add the following to your shell's RC file
-
+1. Follow the [gvm installation instructions](https://github.com/moovweb/gvm#installing).
+2. Install the required Golang version using `gvm`
     ```sh
-    export GOPATH=$(go env GOPATH)
+    gvm install go1.26.4
     ```
+
 
 ### Install Python (`pyenv`)
 
-> [!IMPORTANT]
-> Python versions earlier than 3.6 or later than 3.10 are currently **not** supported.
-
-1. Install `pyenv`
+1. Follow the [pyenv installation instructions](https://github.com/pyenv/pyenv#installation).
+2. Install required Python version using `pyenv`
     ```sh
-    curl https://pyenv.run | bash
-    ```
-2. Append the following to your shell's RC file
-    ```sh
-    export PATH="$HOME/.pyenv/bin:$PATH"
-    eval "$(pyenv init --path)"
-    eval "$(pyenv init -)"
-    ```
-3. Install required Python version using `pyenv`
-    ```sh
-    pyenv install 3.10.0
+    pyenv install 3.12
     ```
 
 ## Install AZ Client
@@ -272,23 +246,6 @@
     podman run --rm alpine uname -m  # Should output: x86_64
     ```
 
-## Install GolangCI Lint
-
-1. Find latest version [here](https://github.com/golangci/golangci-lint/releases)
-2. Run the install
-    ```sh
-    # https://github.com/golangci/golangci-lint/releases
-    GOLINT_VERSION="<REPLACE WITH LATEST>"
-
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin "$GOLINT_VERSION"
-    ```
-
-## Install YAMLLint
-
-```sh
-sudo dnf install -y \
-    yamllint
-```
 
 ---
 
