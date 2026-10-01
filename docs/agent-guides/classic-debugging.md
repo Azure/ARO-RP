@@ -11,7 +11,7 @@
 - Do not pull specialized docs into context unless the current task actually needs them.
 - Add future specialized docs here instead of expanding this file into a catch-all runbook.
 - Prefer the current workspace for checked-in ARO-RP code and docs.
-- You may use the full contents of this repository, not just files under `docs/ai/`.
+- You may use the full contents of this repository, not just files under `docs/agent-guides/`.
 - If the current workspace lacks needed context, you may use another local checkout of this repo or clone it if necessary.
 - When drawing code-specific conclusions from another checkout, prefer one whose revision you can identify and match to the workspace or target deployment; otherwise call out the uncertainty.
 - You may use relevant `eng.ms` documentation when available through an MCP server, or a locally cloned/mirrored copy of that documentation when available, as supporting context. Some external docs may require access. Verify them against the checked-out code and current environment.
