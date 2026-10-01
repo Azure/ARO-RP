@@ -677,10 +677,12 @@ func (c *Cluster) Create(ctx context.Context) error {
 		}
 	}
 
-	c.log.Infof("ensuring policy for testing mutation")
-	err = c.ensureTestingPolicy(ctx)
-	if err != nil {
-		return err
+	if c.Config.IsLocalDevelopmentMode() {
+		c.log.Infof("ensuring policy for testing mutation")
+		err = c.ensureTestingPolicy(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileClusterPredeploy)
