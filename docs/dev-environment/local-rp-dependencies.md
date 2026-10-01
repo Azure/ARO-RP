@@ -2,25 +2,15 @@
 
 - [Local RP Dependency Setup](#local-rp-dependency-setup)
   - [Install Package Dependencies](#install-package-dependencies)
-    - [Fedora/RHEL Dependencies](#fedorarhel-dependencies)
-      - [Fedora/RHEL Optional Dependencies](#fedorarhel-optional-dependencies)
-    - [Debian Dependencies](#debian-dependencies)
-      - [Debian Optional Dependencies](#debian-optional-dependencies)
+    - [Fedora Dependencies](#fedora-dependencies)
     - [MacOS Dependencies](#macos-dependencies)
       - [Optional MacOS Dependencies](#optional-macos-dependencies)
   - [Install Go](#install-go)
-    - [Install Go Manually](#install-go-manually)
-    - [Install Python (`pyenv`)](#install-python-pyenv)
+  - [Install Python (`pyenv`)](#install-python-pyenv)
   - [Install AZ Client](#install-az-client)
   - [Install OpenVPN](#install-openvpn)
   - [Install Podman and Podman Docker](#install-podman-and-podman-docker)
     - [Configure Podman](#configure-podman)
-  - [Install GolangCI Lint](#install-golangci-lint)
-  - [Install YAMLLint](#install-yamllint)
-- [Miscellaneous OS Requirements](#miscellaneous-os-requirements)
-  - [RHEL](#rhel)
-  - [Debian](#debian)
-  - [MacOS](#macos)
   - [Containerized RP Software Required](#containerized-rp-software-required)
 
 > [!NOTE]
@@ -79,6 +69,41 @@
 1. Install `docker-compose`
     ```sh
     brew install docker-compose
+    ```
+
+> [!NOTE]
+> Developers using macOS are encouraged to contribute to this repository. To ensure compatibility, macOS users should install GNU utilities on their systems.
+>
+> The goal is to minimize shell scripting and other platform-specific variations within the repository. Installing GNU utilities on macOS helps reduce discrepancies in command-line flags, usage and more, ensuring a consistent development experience across environments.
+
+1. Ensure you have installed all [MacOS dependencies](#macos-dependencies)
+2. Link `gettext` to make commands available system-wide
+    ```sh
+    brew link gettext
+    ```
+3. Update your `PATH` in your shell's RC file to prepend your `PATH` with GBU Utils paths
+    ```sh
+    export PATH=$(find $(brew --prefix)/opt -type d -follow -name gnubin -print | paste -s -d ':' -):\$PATH
+    ```
+4. Add the following to your shell's RC file
+    ```sh
+    export LDFLAGS="-L$(brew --prefix)/lib"
+    export CFLAGS="-I$(brew --prefix)/include"
+    export CGO_LDFLAGS=$LDFLAGS
+    export CGO_CFLAGS=$CFLAGS
+    ```
+5. Login to ACR
+    > [!TIP]
+    > The following steps ***may*** be applicable where you symlink `docker` to `podman` location.
+
+    ```sh
+    ### CHECK SYMLINK ###
+    ls -la $(whereis -q docker)
+
+    # Example Output: /Users/<USER>/.local/bin/docker -> /opt/homebrew/bin/podman
+
+    ### LOGIN TO ACR ###
+    az acr login --name <TARGET_ACR>
     ```
 
 ## Install Go
@@ -211,46 +236,6 @@ If you do not have a compatible Golang version available through your system's p
     # Test pulling an amd64 image
     podman pull --platform linux/amd64 alpine
     podman run --rm alpine uname -m  # Should output: x86_64
-    ```
-
-
----
-
-# Miscellaneous MacOS
-
-> [!NOTE]
-> Developers using macOS are encouraged to contribute to this repository. To ensure compatibility, macOS users should install GNU utilities on their systems.
->
-> The goal is to minimize shell scripting and other platform-specific variations within the repository. Installing GNU utilities on macOS helps reduce discrepancies in command-line flags, usage and more, ensuring a consistent development experience across environments.
-
-1. Ensure you have installed all [MacOS dependencies](#macos-dependencies)
-2. Link `gettext` to make commands available system-wide
-    ```sh
-    brew link gettext
-    ```
-3. Update your `PATH` in your shell's RC file to prepend your `PATH` with GBU Utils paths
-    ```sh
-    export PATH=$(find $(brew --prefix)/opt -type d -follow -name gnubin -print | paste -s -d ':' -):\$PATH
-    ```
-4. Add the following to your shell's RC file
-    ```sh
-    export LDFLAGS="-L$(brew --prefix)/lib"
-    export CFLAGS="-I$(brew --prefix)/include"
-    export CGO_LDFLAGS=$LDFLAGS
-    export CGO_CFLAGS=$CFLAGS
-    ```
-5. Login to ACR
-    > [!TIP]
-    > The following steps ***may*** be applicable where you symlink `docker` to `podman` location.
-
-    ```sh
-    ### CHECK SYMLINK ###
-    ls -la $(whereis -q docker)
-
-    # Example Output: /Users/<USER>/.local/bin/docker -> /opt/homebrew/bin/podman
-
-    ### LOGIN TO ACR ###
-    az acr login --name <TARGET_ACR>
     ```
 
 ---
