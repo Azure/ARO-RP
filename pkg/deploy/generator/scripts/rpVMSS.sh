@@ -61,7 +61,7 @@ main() {
     local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
 
     # shellcheck disable=SC2034
-    local -r otelimage="$OTELIMAGE"
+    local -r otelimage="${RPIMAGE%%/*}/${OTELIMAGE#*/}"
 
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"

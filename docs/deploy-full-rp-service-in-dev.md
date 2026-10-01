@@ -149,6 +149,23 @@
         go run ./cmd/aro mirror 4.11.21
         ```
 
+   1. Mirror the MISE OTEL health-monitor image to your ACR
+
+        The RP pulls this image from its own ACR, even when MISE authentication
+        is disabled. Prepare it before deploying the RP VMSS:
+
+        ```bash
+        source hack/devtools/rp_dev_helper.sh
+        mirror_mise_otel_image "$DST_ACR_NAME"
+        ```
+
+        Run this from the repository root using your existing Azure CLI login.
+        The helper reads the full pinned image reference from `OTelImage()` in
+        `pkg/util/version/const.go`, imports it from public MCR, and verifies the
+        destination digest. Your identity needs permission to import into and
+        read the developer ACR. Re-running the helper prepares the same image.
+        This is separate from the custom telemetry collector/exporter images.
+
    1. Mirror upstream distroless Geneva MDM/MDSD images to your ACR
 
         Run the following commands to mirror two Microsoft Geneva images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
