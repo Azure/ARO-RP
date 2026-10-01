@@ -124,7 +124,7 @@ func TestProdHiveAdmin(t *testing.T) {
 		t.Fatal(errors.New("invalid number of credentials returned"))
 	}
 
-	lc := NewProd("eastus", mcc)
+	lc := NewProd("eastus", mcc, &azfake.TokenCredential{})
 
 	restConfig, err := lc.HiveRestConfig(ctx, 1)
 	if err != nil {

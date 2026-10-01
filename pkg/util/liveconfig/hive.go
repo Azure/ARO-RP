@@ -59,6 +59,10 @@ func getAksShardKubeconfig(ctx context.Context, managedClustersClient utilcontai
 }
 
 func parseKubeconfig(credentials []*armcontainerservice.CredentialResult) (*rest.Config, error) {
+	if len(credentials) == 0 || credentials[0] == nil || len(credentials[0].Value) == 0 {
+		return nil, fmt.Errorf("AKS returned no kubeconfig credentials")
+	}
+
 	clientconfig, err := clientcmd.NewClientConfigFromBytes(credentials[0].Value)
 	if err != nil {
 		return nil, err

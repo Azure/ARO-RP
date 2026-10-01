@@ -9,6 +9,8 @@ import (
 
 	"k8s.io/client-go/rest"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
 )
@@ -19,6 +21,8 @@ const (
 	installerBackendEnvVar    = "ARO_INSTALLER_BACKEND"
 	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
 	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
+	installerAKSClusterEnvVar = "ARO_INSTALLER_AKS_CLUSTER_NAME"
+	installerAKSRGEnvVar      = "ARO_INSTALLER_AKS_RESOURCE_GROUP"
 )
 
 type Manager interface {
@@ -62,15 +66,22 @@ func NewDev(location string, managedClustersClient utilcontainerservice.ManagedC
 type prod struct {
 	location              string
 	managedClustersClient utilcontainerservice.ManagedClustersClient
+	tokenCredential       azcore.TokenCredential
 
 	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
+
+	installerCredentialsMutex sync.RWMutex
+	cachedInstallerConfig     *rest.Config
+	cachedInstallerCluster    string
+	cachedInstallerRG         string
 }
 
-func NewProd(location string, managedClustersClient utilcontainerservice.ManagedClustersClient) Manager {
+func NewProd(location string, managedClustersClient utilcontainerservice.ManagedClustersClient, tokenCredential azcore.TokenCredential) Manager {
 	return &prod{
 		location:              location,
 		managedClustersClient: managedClustersClient,
+		tokenCredential:       tokenCredential,
 		cachedCredentials:     make(map[int]*rest.Config),
 		hiveCredentialsMutex:  sync.RWMutex{},
 	}

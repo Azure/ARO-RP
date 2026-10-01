@@ -15,11 +15,18 @@ import (
 // ManagedClustersAddons is a minimal interface for azure ManagedClustersAddons
 type ManagedClustersAddons interface {
 	ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (armcontainerservice.ManagedClustersClientListClusterAdminCredentialsResponse, error)
+	ListClusterUserCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (armcontainerservice.ManagedClustersClientListClusterUserCredentialsResponse, error)
 	List(ctx context.Context) *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse]
 }
 
 func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (armcontainerservice.ManagedClustersClientListClusterAdminCredentialsResponse, error) {
 	return r.ManagedClustersClient.ListClusterAdminCredentials(ctx, resourceGroupName, resourceName, &armcontainerservice.ManagedClustersClientListClusterAdminCredentialsOptions{
+		ServerFqdn: pointerutils.ToPtr(serverFqdn),
+	})
+}
+
+func (r *managedClustersClient) ListClusterUserCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (armcontainerservice.ManagedClustersClientListClusterUserCredentialsResponse, error) {
+	return r.ManagedClustersClient.ListClusterUserCredentials(ctx, resourceGroupName, resourceName, &armcontainerservice.ManagedClustersClientListClusterUserCredentialsOptions{
 		ServerFqdn: pointerutils.ToPtr(serverFqdn),
 	})
 }

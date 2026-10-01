@@ -130,7 +130,7 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 		return liveconfig.NewDev(c.Location(), mcc), nil
 	}
 
-	return liveconfig.NewProd(c.Location(), mcc), nil
+	return liveconfig.NewProd(c.Location(), mcc, credential), nil
 }
 
 func NewCore(ctx context.Context, _log *logrus.Entry, service ServiceName) (Core, error) {
