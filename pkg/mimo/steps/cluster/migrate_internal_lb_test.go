@@ -164,8 +164,8 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 				}, nil,
 			)
 
-			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
-				yield(&armcompute.ResourceSKU{
+			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return(func(yield func(armcompute.ResourceSKU, error) bool) {
+				yield(armcompute.ResourceSKU{
 					Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
 					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
 					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
