@@ -97,6 +97,29 @@ func TestNewFirstFailPolicy(t *testing.T) {
 	})
 }
 
+func TestNewLROPollFaultPolicy(t *testing.T) {
+	t.Run("returns nil when env var unset", func(t *testing.T) {
+		t.Setenv(EnvFaultInjectFirst, "")
+		if got := NewLROPollFaultPolicy(); got != nil {
+			t.Errorf("expected nil, got %T", got)
+		}
+	})
+
+	t.Run("returns nil for unknown scenarios only", func(t *testing.T) {
+		t.Setenv(EnvFaultInjectFirst, "NotAScenario")
+		if got := NewLROPollFaultPolicy(); got != nil {
+			t.Errorf("expected nil, got %T", got)
+		}
+	})
+
+	t.Run("returns policy for known scenario", func(t *testing.T) {
+		t.Setenv(EnvFaultInjectFirst, "TooManyRequests")
+		if got := NewLROPollFaultPolicy(); got == nil {
+			t.Error("expected non-nil policy")
+		}
+	})
+}
+
 func TestScenarioResponse(t *testing.T) {
 	tests := []struct {
 		scenario        string
@@ -196,29 +219,38 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			PerCall: []policy.Policy{p},
 		}, &policy.ClientOptions{Transport: srv})
 
-		do := func(method, rawURL string, wantStatus int) {
+		put := func(rawURL string) int {
 			t.Helper()
-			req, err := runtime.NewRequest(context.Background(), method, rawURL)
+			req, err := runtime.NewRequest(context.Background(), http.MethodPut, rawURL)
 			if err != nil {
 				t.Fatal(err)
 			}
 			resp, err := pl.Do(req)
 			if err != nil {
-				t.Fatalf("%s %s: unexpected error: %v", method, rawURL, err)
-			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf("%s %s: got %d, want %d", method, rawURL, resp.StatusCode, wantStatus)
+				t.Fatalf("PUT %s: unexpected error: %v", rawURL, err)
 			}
 			resp.Body.Close()
+			return resp.StatusCode
 		}
 
 		urlA := srv.URL() + "?resource=a"
 		urlB := srv.URL() + "?resource=b"
 
-		do(http.MethodPut, urlA, http.StatusConflict)        // URL_A: inject (scenario 0)
-		do(http.MethodPut, urlA, http.StatusOK)              // URL_A: retry passes through
-		do(http.MethodPut, urlB, http.StatusTooManyRequests) // URL_B: inject (scenario 1)
-		do(http.MethodPut, urlB, http.StatusOK)              // URL_B: retry passes through
+		// First PUT to each URL injects the scenario in rotation order.
+		if got := put(urlA); got != http.StatusConflict {
+			t.Errorf("URL_A first PUT: got %d, want %d (ConflictingConcurrentWriteNotAllowed)", got, http.StatusConflict)
+		}
+		if got := put(urlB); got != http.StatusTooManyRequests {
+			t.Errorf("URL_B first PUT: got %d, want %d (TooManyRequests)", got, http.StatusTooManyRequests)
+		}
+
+		// Retry PUT to each URL: passes through to server (200).
+		if got := put(urlA); got != http.StatusOK {
+			t.Errorf("URL_A retry PUT: got %d, want 200", got)
+		}
+		if got := put(urlB); got != http.StatusOK {
+			t.Errorf("URL_B retry PUT: got %d, want 200", got)
+		}
 
 		if got := srv.Requests(); got != 2 {
 			t.Errorf("server received %d requests, want 2 (only retries pass through)", got)
@@ -274,7 +306,7 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			PerCall: []policy.Policy{p},
 		}, &policy.ClientOptions{Transport: srv})
 
-		put := func(rawURL string, wantStatus int) {
+		put := func(rawURL string) int {
 			t.Helper()
 			req, err := runtime.NewRequest(context.Background(), http.MethodPut, rawURL)
 			if err != nil {
@@ -284,10 +316,8 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			if err != nil {
 				t.Fatalf("PUT %s: unexpected error: %v", rawURL, err)
 			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf("PUT %s: got %d, want %d", rawURL, resp.StatusCode, wantStatus)
-			}
 			resp.Body.Close()
+			return resp.StatusCode
 		}
 
 		urls := []string{
@@ -297,17 +327,231 @@ func TestFirstFailPolicyDo(t *testing.T) {
 			srv.URL() + "?ip=d",
 		}
 
-		// First call to each URL: inject
+		// First PUT to each URL: injected with TooManyRequests (429).
 		for _, u := range urls {
-			put(u, http.StatusTooManyRequests)
+			if got := put(u); got != http.StatusTooManyRequests {
+				t.Errorf("PUT %s first call: got %d, want %d", u, got, http.StatusTooManyRequests)
+			}
 		}
-		// Retry to each URL: pass through (URL already marked)
+		// Retry to each URL: passes through (URL already marked).
 		for _, u := range urls {
-			put(u, http.StatusOK)
+			if got := put(u); got != http.StatusOK {
+				t.Errorf("PUT %s retry: got %d, want 200", u, got)
+			}
 		}
 
 		if got := srv.Requests(); got != 4 {
 			t.Errorf("server received %d requests, want 4 (only retries pass through)", got)
+		}
+	})
+}
+
+// TestLROPollFaultPolicyDo verifies that lroPollFaultPolicy observes real ARM 202 responses,
+// records the real poll URL, and injects a 200 Failed when that poll URL is subsequently GET-ted.
+// The real response is never mutated.
+func TestLROPollFaultPolicyDo(t *testing.T) {
+	newLROPolicy := func(scenarios []faultScenario, srvHost string) *lroPollFaultPolicy {
+		return &lroPollFaultPolicy{
+			scenarios:      scenarios,
+			host:           srvHost,
+			injectedWrites: make(map[string]struct{}),
+			pendingPolls:   make(map[string]faultScenario),
+		}
+	}
+
+	t.Run("real ARM 202 triggers LRO poll injection on real poll URL", func(t *testing.T) {
+		srv, close := testhttp.NewServer()
+		defer close()
+
+		realPollURL := srv.URL() + "/subscriptions/sub/providers/Microsoft.Compute/operations/op1"
+		srv.AppendResponse(
+			testhttp.WithStatusCode(http.StatusAccepted),
+			testhttp.WithHeader("Azure-AsyncOperation", realPollURL),
+		)
+
+		sc := faultScenarios["ConflictingConcurrentWriteNotAllowed"]
+		p := newLROPolicy([]faultScenario{sc}, mustHost(srv.URL()))
+		pl := runtime.NewPipeline("test", "v1.0.0", runtime.PipelineOptions{
+			PerCall: []policy.Policy{p},
+		}, &policy.ClientOptions{Transport: srv})
+
+		putReq, err := runtime.NewRequest(context.Background(), http.MethodPut, srv.URL()+"?resource=r")
+		if err != nil {
+			t.Fatal(err)
+		}
+		putResp, err := pl.Do(putReq)
+		if err != nil {
+			t.Fatalf("PUT: unexpected error: %v", err)
+		}
+		if putResp.StatusCode != http.StatusAccepted {
+			t.Fatalf("PUT: got %d, want 202", putResp.StatusCode)
+		}
+		// The 202 must carry the real poll URL; the policy must not mutate the response.
+		if got := putResp.Header.Get("Azure-AsyncOperation"); got != realPollURL {
+			t.Errorf("PUT response: Azure-AsyncOperation = %q, want real URL %q", got, realPollURL)
+		}
+		putResp.Body.Close()
+
+		pollReq, err := runtime.NewRequest(context.Background(), http.MethodGet, realPollURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pollResp, err := pl.Do(pollReq)
+		if err != nil {
+			t.Fatalf("poll GET: unexpected error: %v", err)
+		}
+		if pollResp.StatusCode != http.StatusOK {
+			t.Errorf("poll GET: got %d, want 200", pollResp.StatusCode)
+		}
+		var body struct {
+			Status string `json:"status"`
+			Error  struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if err := json.NewDecoder(pollResp.Body).Decode(&body); err != nil {
+			t.Fatalf("poll GET: body decode: %v", err)
+		}
+		pollResp.Body.Close()
+		if body.Status != "Failed" {
+			t.Errorf("poll GET: status = %q, want \"Failed\"", body.Status)
+		}
+		if body.Error.Code != sc.code {
+			t.Errorf("poll GET: code = %q, want %q", body.Error.Code, sc.code)
+		}
+		if !strings.Contains(body.Error.Message, "Please retry later") {
+			t.Errorf("poll GET: message = %q, want it to contain \"Please retry later\"", body.Error.Message)
+		}
+
+		if got := srv.Requests(); got != 1 {
+			t.Errorf("server received %d requests, want 1 (PUT only)", got)
+		}
+	})
+
+	t.Run("non-202 response does not register poll injection", func(t *testing.T) {
+		srv, close := testhttp.NewServer()
+		defer close()
+		// ARM returns synchronous 200 (not an LRO); subsequent GET passes through normally.
+		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+
+		p := newLROPolicy([]faultScenario{faultScenarios["TooManyRequests"]}, mustHost(srv.URL()))
+		pl := runtime.NewPipeline("test", "v1.0.0", runtime.PipelineOptions{
+			PerCall: []policy.Policy{p},
+		}, &policy.ClientOptions{Transport: srv})
+
+		putReq, err := runtime.NewRequest(context.Background(), http.MethodPut, srv.URL()+"?resource=r")
+		if err != nil {
+			t.Fatal(err)
+		}
+		putResp, err := pl.Do(putReq)
+		if err != nil {
+			t.Fatalf("PUT: unexpected error: %v", err)
+		}
+		putResp.Body.Close()
+
+		getReq, err := runtime.NewRequest(context.Background(), http.MethodGet, srv.URL()+"/anything")
+		if err != nil {
+			t.Fatal(err)
+		}
+		getResp, err := pl.Do(getReq)
+		if err != nil {
+			t.Fatalf("GET: unexpected error: %v", err)
+		}
+		if getResp.StatusCode != http.StatusOK {
+			t.Errorf("GET: got %d, want 200", getResp.StatusCode)
+		}
+		getResp.Body.Close()
+
+		if got := srv.Requests(); got != 2 {
+			t.Errorf("server received %d requests, want 2", got)
+		}
+	})
+
+	t.Run("second PUT to same URL passes through unmodified (retry path)", func(t *testing.T) {
+		srv, close := testhttp.NewServer()
+		defer close()
+
+		realPollURL := srv.URL() + "/subscriptions/sub/providers/Microsoft.Compute/operations/op1"
+
+		// ARM returns 202 on both PUTs (same URL, two attempts).
+		srv.AppendResponse(
+			testhttp.WithStatusCode(http.StatusAccepted),
+			testhttp.WithHeader("Azure-AsyncOperation", realPollURL),
+		)
+		srv.AppendResponse(
+			testhttp.WithStatusCode(http.StatusAccepted),
+			testhttp.WithHeader("Azure-AsyncOperation", realPollURL),
+		)
+		// ARM returns 200 Succeeded on the second poll (retry succeeds).
+		srv.AppendResponse(testhttp.WithStatusCode(http.StatusOK))
+
+		sc := faultScenarios["ConflictingConcurrentWriteNotAllowed"]
+		p := newLROPolicy([]faultScenario{sc}, mustHost(srv.URL()))
+		pl := runtime.NewPipeline("test", "v1.0.0", runtime.PipelineOptions{
+			PerCall: []policy.Policy{p},
+		}, &policy.ClientOptions{Transport: srv})
+
+		writeURL := srv.URL() + "?resource=r"
+
+		put := func() *http.Response {
+			t.Helper()
+			req, err := runtime.NewRequest(context.Background(), http.MethodPut, writeURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := pl.Do(req)
+			if err != nil {
+				t.Fatalf("PUT: unexpected error: %v", err)
+			}
+			return resp
+		}
+		get := func(url string) *http.Response {
+			t.Helper()
+			req, err := runtime.NewRequest(context.Background(), http.MethodGet, url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := pl.Do(req)
+			if err != nil {
+				t.Fatalf("GET %s: unexpected error: %v", url, err)
+			}
+			return resp
+		}
+
+		// Attempt 1: injection fires on the poll.
+		resp1 := put()
+		defer resp1.Body.Close()
+		if resp1.StatusCode != http.StatusAccepted {
+			t.Fatalf("attempt 1 PUT: got %d, want 202", resp1.StatusCode)
+		}
+		if got := resp1.Header.Get("Azure-AsyncOperation"); got != realPollURL {
+			t.Errorf("attempt 1 PUT: Azure-AsyncOperation = %q, want real URL %q (response must not be mutated)", got, realPollURL)
+		}
+
+		poll1 := get(realPollURL)
+		defer poll1.Body.Close()
+		if poll1.StatusCode != http.StatusOK {
+			t.Errorf("attempt 1 poll: got %d, want 200 (injected failure)", poll1.StatusCode)
+		}
+
+		// Attempt 2: write already marked, poll passes through to server.
+		resp2 := put()
+		defer resp2.Body.Close()
+		if resp2.StatusCode != http.StatusAccepted {
+			t.Fatalf("attempt 2 PUT: got %d, want 202", resp2.StatusCode)
+		}
+
+		poll2 := get(realPollURL)
+		defer poll2.Body.Close()
+		if poll2.StatusCode != http.StatusOK {
+			t.Errorf("attempt 2 poll: got %d, want 200 (real ARM success)", poll2.StatusCode)
+		}
+
+		// Server received: PUT1, PUT2, GET(poll2); poll1 GET was intercepted.
+		if got := srv.Requests(); got != 3 {
+			t.Errorf("server received %d requests, want 3 (PUT1, PUT2, poll2 GET)", got)
 		}
 	})
 }

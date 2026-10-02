@@ -6,7 +6,9 @@ package arm
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,6 +60,22 @@ func TestRetryable(t *testing.T) {
 			wantLogMsg:      "error on test-op, retrying:",
 			wantRetryAfter:  1.0,
 			checkRetryAfter: true,
+		},
+		{
+			name: "retryable azcore LRO failure 200 with Please retry later",
+			err: &azcore.ResponseError{
+				StatusCode: http.StatusOK,
+				RawResponse: &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     http.Header{},
+					Body: io.NopCloser(strings.NewReader(
+						`{"status":"Failed","error":{"code":"RegistrationOfImplicitNicViaArmFailed","message":"Registration of implicit NIC failed with error: ConflictingConcurrentWriteNotAllowed, message: The operation was interrupted by a conflicting concurrent write on the same entity. Please retry later."}}`,
+					)),
+				},
+				ErrorCode: "RegistrationOfImplicitNicViaArmFailed",
+			},
+			wantRetry:  true,
+			wantLogMsg: "error on test-op, retrying:",
 		},
 		{
 			name:      "non-retryable error is not retried and not logged",
