@@ -4,6 +4,7 @@ package backend
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -37,9 +38,9 @@ func (ocb *openShiftClusterBackend) getMetricName(operationType api.Provisioning
 
 func (ocb *openShiftClusterBackend) getResultType(backendErr error) utillog.ResultType {
 	var resultType utillog.ResultType
-	err, ok := backendErr.(*api.CloudError)
-	if ok {
-		resultType = utillog.MapStatusCodeToResultType(err.StatusCode)
+	var cloudErr *api.CloudError
+	if errors.As(backendErr, &cloudErr) {
+		resultType = utillog.MapStatusCodeToResultType(cloudErr.StatusCode)
 	}
 	return resultType
 }

@@ -146,6 +146,19 @@ func CreateActionableError(err error, managedRGName string) error {
 	log.Printf("Converting to user actionable error: %v [%T]", err, err)
 
 	if err == nil {
+		return nil
+	}
+
+	// If the error is (or wraps) a CloudError it is already user-actionable;
+	// return it unchanged. This must come before the managed-resource-group
+	// check below, since a CloudError message can legitimately reference the
+	// managed resource group (e.g. an NSG that lives in it) and would
+	// otherwise be misclassified as an InternalServerError. Return the
+	// original err (not the extracted CloudError) so the full error chain and
+	// its contextual message are preserved; callers can still discover the
+	// CloudError with errors.As.
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) {
 		return err
 	}
 
