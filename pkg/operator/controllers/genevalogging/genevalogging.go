@@ -52,7 +52,7 @@ const (
 	clusterMonitoringLabel = "openshift.io/cluster-monitoring"
 )
 
-var renderOTelConfigFn func(otelProfile, bool) (string, error) = renderOTelConfig
+var renderOTelConfigFn func(otelProfile, bool, bool) (string, error) = renderOTelConfig
 
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc := &securityv1.SecurityContextConstraints{}
@@ -268,8 +268,9 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
+	gatewayTLSInsecure := cluster.Spec.OperatorFlags.GetSimpleBoolean(pkgoperator.GenevaLoggingOTelGatewayInsecure)
 	renderProfileConfig := func(nodeRole string, profile otelProfile) (string, error) {
-		cfg, err := selectOTelConfig(profile, nodeRole != "worker")
+		cfg, err := selectOTelConfig(profile, nodeRole != "worker", gatewayTLSInsecure)
 		if err != nil {
 			return "", fmt.Errorf("rendering %s otel config: %w", nodeRole, err)
 		}
@@ -335,10 +336,10 @@ func otelConfigSHA256(config string) string {
 
 // selectOTelConfig renders the requested profile and falls back to minimal logs if needed.
 // If both renders fail, return an error so reconciliation fails fast instead of writing an empty config.
-func selectOTelConfig(profile otelProfile, isControlPlane bool) (string, error) {
-	cfg, err := renderOTelConfigFn(profile, isControlPlane)
+func selectOTelConfig(profile otelProfile, isControlPlane bool, gatewayTLSInsecure bool) (string, error) {
+	cfg, err := renderOTelConfigFn(profile, isControlPlane, gatewayTLSInsecure)
 	if err != nil {
-		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs, isControlPlane)
+		cfg, minimalErr := renderOTelConfigFn(otelProfileMinimalLogs, isControlPlane, gatewayTLSInsecure)
 		if minimalErr != nil {
 			return "", fmt.Errorf("failed to render otel config for profile %q (%v) and fallback profile %q (%v)", profile, err, otelProfileMinimalLogs, minimalErr)
 		}

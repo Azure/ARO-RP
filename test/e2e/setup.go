@@ -50,6 +50,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerinstance"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -103,6 +104,8 @@ type clientSet struct {
 	NetworkSecurityGroups  armnetwork.SecurityGroupsClient
 	Subnet                 armnetwork.SubnetsClient
 	VirtualNetworks        armnetwork.VirtualNetworksClient
+	ContainerGroups        armcontainerinstance.ContainerGroupsClient
+	Containers             armcontainerinstance.ContainersClient
 	Storage                storage.AccountsClient
 	UserAssignedIdentities armmsi.UserAssignedIdentitiesClient
 	RoleAssignments        authorization.RoleAssignmentsClient
@@ -523,6 +526,16 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	containerGroupsClient, err := armcontainerinstance.NewContainerGroupsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	containersClient, err := armcontainerinstance.NewContainersClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	msiClient, err := armmsi.NewUserAssignedIdentitiesClient(_env.SubscriptionID(), tokenCredential, clientOptions)
 	if err != nil {
 		return nil, err
@@ -552,6 +565,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		NetworkSecurityGroups:  securityGroupsClient,
 		Subnet:                 subnetsClient,
 		VirtualNetworks:        virtualNetworksClient,
+		ContainerGroups:        containerGroupsClient,
+		Containers:             containersClient,
 		Storage:                storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		UserAssignedIdentities: *msiClient,
 		RoleAssignments:        authorization.NewRoleAssignmentsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
