@@ -650,6 +650,77 @@ func TestAttachNSGs(t *testing.T) {
 				}).Times(1)
 			},
 		},
+		{
+			name: "Success - first worker has empty SubnetID, uses second",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								Name:     "emptyWorker",
+								SubnetID: "",
+							},
+							{
+								SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/worker-vnet/subnets/worker-subnet",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_armnetwork.MockSubnetsClient) {
+				subnet.EXPECT().Get(ctx, "subscription-rg", "master-vnet", "master-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "master-vnet", "master-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(nil)
+				subnet.EXPECT().Get(ctx, "subscription-rg", "worker-vnet", "worker-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
+					Subnet: sdknetwork.Subnet{},
+				}, nil)
+				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "subscription-rg", "worker-vnet", "worker-subnet", sdknetwork.Subnet{
+					Properties: &sdknetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &sdknetwork.SecurityGroup{
+							ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}, nil).Return(nil)
+			},
+		},
+		{
+			name: "Failure - all worker SubnetIDs empty",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/subscription-rg/providers/Microsoft.Network/virtualNetworks/master-vnet/subnets/master-subnet",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{Name: "emptyWorker1", SubnetID: ""},
+							{Name: "emptyWorker2", SubnetID: ""},
+						},
+					},
+				},
+			},
+			mocks:   func(subnet *mock_armnetwork.MockSubnetsClient) {},
+			wantErr: "no valid worker subnet found: all worker profiles have empty subnetId",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
