@@ -28,7 +28,7 @@ const (
 	clusterUUID = "512a50c8-2a43-4c2a-8fd9-a5539475df2a"
 	publicACR   = "arosvc.azurecr.io"
 	intACR      = "arointsvc.azurecr.io"
-	user        = "testuser"
+	user        = "token-" + clusterUUID
 )
 
 func TestEnsureACRToken(t *testing.T) {

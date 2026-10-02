@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 // Maximum lifetime of the ACR token
@@ -28,9 +27,7 @@ const (
 )
 
 type Manager interface {
-	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
-	NewRegistryProfile() *api.RegistryProfile
-	PutRegistryProfile(oc *api.OpenShiftCluster, registryProfile *api.RegistryProfile)
+	NewRegistryProfile(clusterUUID string) *api.RegistryProfile
 	EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, error)
 	RotateTokenPassword(ctx context.Context, registryProfile *api.RegistryProfile) error
 	Delete(ctx context.Context, registryProfile *api.RegistryProfile) error
@@ -42,8 +39,6 @@ type manager struct {
 
 	tokens     armcontainerregistry.TokensClient
 	registries armcontainerregistry.RegistriesClient
-
-	uuid uuid.Generator
 }
 
 func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClient, registriesClient armcontainerregistry.RegistriesClient) (Manager, error) {
@@ -58,50 +53,16 @@ func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClien
 
 		tokens:     tokensClient,
 		registries: registriesClient,
-		uuid:       uuid.DefaultGenerator,
 	}
 
 	return m, nil
 }
 
-func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
-	for i, registryProfile := range oc.Properties.RegistryProfiles {
-		if registryProfile.Name == m.env.ACRDomain() {
-			return oc.Properties.RegistryProfiles[i]
-		}
-	}
-
-	return nil
-}
-
-func GetRegistryProfileFromSlice(_env env.Interface, registryProfiles []*api.RegistryProfile) *api.RegistryProfile {
-	for _, registryProfile := range registryProfiles {
-		if registryProfile.Name == _env.ACRDomain() {
-			return registryProfile
-		}
-	}
-
-	return nil
-}
-
-func (m *manager) NewRegistryProfile() *api.RegistryProfile {
-	currentTime := m.env.Now().UTC()
+func (m *manager) NewRegistryProfile(clusterUUID string) *api.RegistryProfile {
 	return &api.RegistryProfile{
-		Name:      m.env.ACRDomain(),
-		Username:  "token-" + m.uuid.Generate(),
-		IssueDate: &currentTime,
+		Name:     m.env.ACRDomain(),
+		Username: "token-" + clusterUUID,
 	}
-}
-
-func (m *manager) PutRegistryProfile(oc *api.OpenShiftCluster, registryProfile *api.RegistryProfile) {
-	for i, _existingRegistryProfile := range oc.Properties.RegistryProfiles {
-		if _existingRegistryProfile.Name == registryProfile.Name {
-			oc.Properties.RegistryProfiles[i] = registryProfile
-			return
-		}
-	}
-
-	oc.Properties.RegistryProfiles = append(oc.Properties.RegistryProfiles, registryProfile)
 }
 
 // EnsureTokenAndPassword ensures a token exists with the given username,
@@ -180,6 +141,7 @@ func (m *manager) RotateTokenPassword(ctx context.Context, registryProfile *api.
 		return err
 	}
 	registryProfile.Password = api.SecureString(newPassword)
+	registryProfile.IssueDate = pointerutils.ToPtr(m.env.Now().UTC())
 	return nil
 }
 

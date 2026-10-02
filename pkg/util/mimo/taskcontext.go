@@ -56,8 +56,8 @@ type TaskContext interface {
 	ResourceSKUsClient() (armcompute.ResourceSKUsClient, error)
 
 	// Azure Container Registry clients
-	TokensClient() (armcontainerregistry.TokensClient, error)
-	RegistriesClient() (armcontainerregistry.RegistriesClient, error)
+	FirstPartyTokensClient() (armcontainerregistry.TokensClient, error)
+	FirstPartyRegistriesClient() (armcontainerregistry.RegistriesClient, error)
 }
 
 func GetTaskContext(c context.Context) (TaskContext, error) {
