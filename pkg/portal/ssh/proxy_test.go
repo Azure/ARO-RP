@@ -270,6 +270,58 @@ func TestProxy(t *testing.T) {
 			ciphers: goodCiphers,
 		},
 		{
+			name:     "bootstrap explicit port",
+			username: username,
+			password: password,
+			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.VMName = "aro-infra-bootstrap"
+				portalDocument.Portal.SSH.Port = 2199
+				fixture.AddPortalDocuments(portalDocument)
+				openShiftClusterDocument := goodOpenShiftClusterDocument()
+				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+				portalDocument = goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.VMName = "aro-infra-bootstrap"
+				portalDocument.Portal.SSH.Port = 2199
+				portalDocument.Portal.SSH.Authenticated = true
+				checker.AddPortalDocuments(portalDocument)
+				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+			},
+			mocks: func(dialer *mock_proxy.MockDialer) {
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2199").Return(l.DialContext(ctx, "", ""))
+			},
+			wantLogs: []testlog.ExpectedLogEntry{
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("authentication succeeded"),
+					"remote_addr": gomega.Not(gomega.BeEmpty()),
+					"username":    gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("connected"),
+					"hostname":        gomega.Equal("aro-infra-bootstrap"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("disconnected"),
+					"duration":        gomega.BeNumerically(">", 0),
+					"hostname":        gomega.Equal("aro-infra-bootstrap"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+			},
+			ciphers: goodCiphers,
+		},
+		{
 			name:     "bad username",
 			username: "bad",
 			password: password,
@@ -551,6 +603,76 @@ func TestProxy(t *testing.T) {
 			err = testlog.AssertLoggingOutput(hook, tt.wantLogs)
 			if err != nil {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestResolveSSHDestination(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		ssh      *api.SSH
+		wantName string
+		wantPort int
+		wantErr  string
+	}{
+		{
+			name:     "legacy master",
+			ssh:      &api.SSH{Master: 1},
+			wantName: "master-1",
+			wantPort: 2201,
+		},
+		{
+			name:     "bootstrap lower bound",
+			ssh:      &api.SSH{VMName: "aro-infra-bootstrap", Port: 2199},
+			wantName: "aro-infra-bootstrap",
+			wantPort: 2199,
+		},
+		{
+			name:     "master upper bound",
+			ssh:      &api.SSH{VMName: "aro-infra-master-r4nd0-2", Port: 2202},
+			wantName: "aro-infra-master-r4nd0-2",
+			wantPort: 2202,
+		},
+		{
+			name:    "port below range",
+			ssh:     &api.SSH{VMName: "aro-infra-bootstrap", Port: 2198},
+			wantErr: "invalid SSH port 2198",
+		},
+		{
+			name:    "port above range",
+			ssh:     &api.SSH{VMName: "aro-infra-master-0", Port: 2203},
+			wantErr: "invalid SSH port 2203",
+		},
+		{
+			name:    "explicit port without VM name",
+			ssh:     &api.SSH{Port: 2200},
+			wantErr: "VM name and port are both required for an explicit SSH destination",
+		},
+		{
+			name:    "explicit VM name without port",
+			ssh:     &api.SSH{VMName: "aro-infra-master-r4nd0"},
+			wantErr: "VM name and port are both required for an explicit SSH destination",
+		},
+		{
+			name:    "invalid legacy master",
+			ssh:     &api.SSH{Master: 3},
+			wantErr: "invalid master index 3",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			name, port, err := resolveSSHDestination(tt.ssh)
+			if tt.wantErr != "" {
+				if err == nil || err.Error() != tt.wantErr {
+					t.Fatalf("got error %v, want %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if name != tt.wantName || port != tt.wantPort {
+				t.Fatalf("got (%q, %d), want (%q, %d)", name, port, tt.wantName, tt.wantPort)
 			}
 		})
 	}

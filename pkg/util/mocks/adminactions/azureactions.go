@@ -20,6 +20,8 @@ import (
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+
+	adminactions "github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 )
 
 // MockAzureActions is a mock of AzureActions interface.
@@ -116,6 +118,36 @@ func (m *MockAzureActions) GetEffectiveRouteTable(ctx context.Context, nicName s
 func (mr *MockAzureActionsMockRecorder) GetEffectiveRouteTable(ctx, nicName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffectiveRouteTable", reflect.TypeOf((*MockAzureActions)(nil).GetEffectiveRouteTable), ctx, nicName)
+}
+
+// GetNetworkInterfaceSSHInfo mocks base method.
+func (m *MockAzureActions) GetNetworkInterfaceSSHInfo(ctx context.Context, resourceGroupName, networkInterfaceName string) (*adminactions.NetworkInterfaceSSHInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNetworkInterfaceSSHInfo", ctx, resourceGroupName, networkInterfaceName)
+	ret0, _ := ret[0].(*adminactions.NetworkInterfaceSSHInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNetworkInterfaceSSHInfo indicates an expected call of GetNetworkInterfaceSSHInfo.
+func (mr *MockAzureActionsMockRecorder) GetNetworkInterfaceSSHInfo(ctx, resourceGroupName, networkInterfaceName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkInterfaceSSHInfo", reflect.TypeOf((*MockAzureActions)(nil).GetNetworkInterfaceSSHInfo), ctx, resourceGroupName, networkInterfaceName)
+}
+
+// GetSSHRouteStatus mocks base method.
+func (m *MockAzureActions) GetSSHRouteStatus(ctx context.Context, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP string, frontendPort int32) (*adminactions.SSHRouteStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSSHRouteStatus", ctx, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP, frontendPort)
+	ret0, _ := ret[0].(*adminactions.SSHRouteStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSSHRouteStatus indicates an expected call of GetSSHRouteStatus.
+func (mr *MockAzureActionsMockRecorder) GetSSHRouteStatus(ctx, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP, frontendPort any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSSHRouteStatus", reflect.TypeOf((*MockAzureActions)(nil).GetSSHRouteStatus), ctx, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP, frontendPort)
 }
 
 // GetVirtualMachine mocks base method.
