@@ -141,7 +141,7 @@ microsoft-security-utilities-secret-masker==1.0.0b4
 msal==1.35.0b1
 msal-extensions==1.2.0
 msrest==0.7.1
-oauthlib==3.3.1
+oauthlib==4.0.0
 orderly-set==5.5.0
 packaging==26.0
 paramiko==3.5.1
