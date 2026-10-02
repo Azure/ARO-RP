@@ -436,7 +436,8 @@ func (m *manager) bootstrap() []steps.Step {
 
 	s = append(s,
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateAPIIPEarly, m.managedResourceGroupName()),
+		// Allow extra time for ARM authorization to propagate to the internal load balancer.
+		steps.AuthorizationRetryingActionWithTimeout(m.fpAuthorizer, m.updateAPIIPEarly, m.managedResourceGroupName(), 15*time.Minute),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createOrUpdateRouterIPEarly, m.managedResourceGroupName()),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate, m.managedResourceGroupName()),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint, m.managedResourceGroupName()),

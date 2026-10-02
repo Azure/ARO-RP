@@ -10,9 +10,11 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
@@ -188,6 +190,70 @@ func TestCreateActionableError(t *testing.T) {
 type fakeRefreshableAuthorizer struct {
 	rebuildCalled int
 	rebuildErr    error
+}
+
+func TestAuthorizationRetryingActionTimeout(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		timeout   time.Duration
+		succeedAt time.Duration
+		wantTime  time.Duration
+		wantError bool
+	}{
+		{
+			name:      "default still stops at ten minutes",
+			wantTime:  10 * time.Minute,
+			wantError: true,
+		},
+		{
+			name:      "extended window succeeds after ten minutes",
+			timeout:   15 * time.Minute,
+			succeedAt: 12 * time.Minute,
+			wantTime:  12 * time.Minute,
+		},
+		{
+			name:      "extended window returns persistent error at fifteen minutes",
+			timeout:   15 * time.Minute,
+			wantTime:  15 * time.Minute,
+			wantError: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				_, log := testlog.LogForTesting(t)
+				auth := &fakeRefreshableAuthorizer{}
+				forbiddenErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
+				start := time.Now()
+				var attempts []time.Duration
+				action := func(context.Context) error {
+					elapsed := time.Since(start)
+					attempts = append(attempts, elapsed)
+					if tt.succeedAt != 0 && elapsed >= tt.succeedAt {
+						return nil
+					}
+					return forbiddenErr
+				}
+				step := AuthorizationRetryingAction(auth, action, "")
+				if tt.timeout != 0 {
+					step = AuthorizationRetryingActionWithTimeout(auth, action, "", tt.timeout)
+				}
+
+				err := step.run(t.Context(), log)
+
+				if tt.wantError {
+					require.ErrorIs(t, err, forbiddenErr)
+				} else {
+					require.NoError(t, err)
+				}
+				assert.Equal(t, tt.wantTime, time.Since(start))
+				assert.Equal(t, time.Duration(0), attempts[0])
+				for i := 1; i < len(attempts); i++ {
+					assert.Equal(t, 30*time.Second, attempts[i]-attempts[i-1])
+				}
+				assert.Positive(t, auth.rebuildCalled)
+			})
+		})
+	}
 }
 
 func (f *fakeRefreshableAuthorizer) Rebuild() error {
