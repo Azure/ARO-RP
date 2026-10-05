@@ -4,7 +4,6 @@ package dynamic
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"strconv"
 	"testing"
 
@@ -100,8 +99,7 @@ func TestValidateLoadBalancerProfile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 
 			controller := gomock.NewController(t)
 
@@ -301,8 +299,7 @@ func TestValidatePublicIPQuota(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 
 			controller := gomock.NewController(t)
 
@@ -422,8 +419,7 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, log := testlog.LogForTesting(t)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 
 			controller := gomock.NewController(t)
 

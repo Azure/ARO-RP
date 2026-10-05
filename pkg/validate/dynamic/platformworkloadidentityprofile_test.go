@@ -256,8 +256,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 }
 
 func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	msiResourceID := resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-msi-resource"
 	clusterResourceId, _ := azure.ParseResourceID(clusterID)
 	platformIdentity1ResourceId, _ := azure.ParseResourceID(platformIdentity1)
