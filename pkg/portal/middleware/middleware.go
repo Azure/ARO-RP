@@ -9,4 +9,5 @@ const (
 	ContextKeyUsername contextKey = iota
 	ContextKeyGroups
 	ContextKeyPortalDoc
+	ContextKeyCSPNonce
 )
