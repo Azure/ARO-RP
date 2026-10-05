@@ -103,8 +103,3 @@ func TestShouldDeleteSkipsWhenNameMissing(t *testing.T) {
 		t.Fatalf("expected group with missing name to be skipped")
 	}
 }
-
-//go:fix inline
-func stringPtr(s string) *string {
-	return new(s)
-}
