@@ -194,7 +194,7 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 		Value: d.config.Configuration.TokenContributorRoleID,
 	}
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		d.log.Infof("deploying %s", deploymentName)
 		err = d.globaldeployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{

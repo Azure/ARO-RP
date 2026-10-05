@@ -32,7 +32,7 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	var resp *http.Response
 	var err error
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		hc := &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {

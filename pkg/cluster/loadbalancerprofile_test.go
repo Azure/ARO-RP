@@ -1172,7 +1172,7 @@ func fakeUpdatedLoadBalancer(additionalIPCount int) sdknetwork.LoadBalancer {
 	lb := getClearedLB()
 	ipResourceRefs := []api.ResourceReference{}
 	ipResourceRefs = append(ipResourceRefs, api.ResourceReference{ID: defaultOutboundIPID})
-	for i := 0; i < additionalIPCount; i++ {
+	for i := range additionalIPCount {
 		ipResourceRefs = append(ipResourceRefs, api.ResourceReference{ID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid%d-outbound-pip-v4", i+1)})
 	}
 	addOutboundIPsToLB(clusterRGID, lb, ipResourceRefs)
@@ -1237,7 +1237,7 @@ func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibil
 			},
 		},
 	}
-	for i := 0; i < additionalIPCount; i++ {
+	for i := range additionalIPCount {
 		fipName := fmt.Sprintf("uuid%d-outbound-pip-v4", i+1)
 		ipID := fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid%d-outbound-pip-v4", i+1)
 		fipID := fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid%d-outbound-pip-v4", i+1)
@@ -1281,7 +1281,7 @@ func getFakePublicIPList(managedCount int) []*sdknetwork.PublicIPAddress {
 			Name: new("infraID-default-v4"),
 		},
 	}
-	for i := 0; i < managedCount; i++ {
+	for i := range managedCount {
 		ipName := fmt.Sprintf("uuid%d-outbound-pip-v4", i+1)
 		ip := getFakePublicIPAddress(ipName, "eastus")
 		ips = append(ips, &ip)

@@ -511,7 +511,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 // createRoleAssignmentWithRetry creates a role assignment with automatic retry logic, handling transient or 409 errors.
 // Uses exponential backoff (1s, 2s, 4s, 8s) based on retryDelay. If retryDelay is 0, skips sleeps (for tests).
 func (c *Cluster) createRoleAssignmentWithRetry(ctx context.Context, scope string, roleDefinitionID string, principalID string) error {
-	for i := 0; i < roleAssignmentMaxRetries; i++ {
+	for i := range roleAssignmentMaxRetries {
 		_, err := c.roleassignments.Create(
 			ctx,
 			scope,

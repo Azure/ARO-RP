@@ -251,7 +251,7 @@ func (m *manager) getUnusedManagedIPs(ctx context.Context) ([]string, error) {
 
 	outboundIPs := getOutboundIPsFromLB(lb.LoadBalancer)
 	outboundIPMap := make(map[string]api.ResourceReference, len(outboundIPs))
-	for i := 0; i < len(outboundIPs); i++ {
+	for i := range outboundIPs {
 		outboundIPMap[strings.ToLower(outboundIPs[i].ID)] = outboundIPs[i]
 	}
 	var unusedManagedIPs []string
@@ -331,11 +331,11 @@ func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[s
 	defer close(ch)
 	var errResults []error
 	// create additional IPs if needed
-	for i := 0; i < numToCreate; i++ {
+	for range numToCreate {
 		go m.createPublicIPAddress(ctx, ch)
 	}
 
-	for i := 0; i < numToCreate; i++ {
+	for range numToCreate {
 		result := <-ch
 		if result.err != nil {
 			errResults = append(errResults, fmt.Errorf("creation of ip address %s failed with error: %w", *result.ip.Name, result.err))

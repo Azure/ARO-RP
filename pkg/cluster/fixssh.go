@@ -221,7 +221,7 @@ func checkAndUpdateLB(ctx context.Context, log *logrus.Entry, lbClient armnetwor
 
 func updateLB(log *logrus.Entry, lb *armnetwork_sdk.LoadBalancer, lbName string) (changed bool) {
 backendAddressPools:
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		name := fmt.Sprintf("ssh-%d", i)
 		for _, p := range lb.Properties.BackendAddressPools {
 			if strings.EqualFold(*p.Name, name) {
@@ -237,7 +237,7 @@ backendAddressPools:
 	}
 
 loadBalancingRules:
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		name := fmt.Sprintf("ssh-%d", i)
 		for _, r := range lb.Properties.LoadBalancingRules {
 			if strings.EqualFold(*r.Name, name) {

@@ -169,7 +169,7 @@ func TestRefreshingCertificate(t *testing.T) {
 		}
 
 		mockSource := func(cancel context.CancelFunc) {
-			for i := 0; i < n; i++ {
+			for range n {
 				s <- time.Time{}
 			}
 			cancel()

@@ -56,7 +56,7 @@ var ErrNotImplemented = fmt.Errorf("not implemented")
 // RetryOnPreconditionFailed retries a function if it fails due to
 // PreconditionFailed
 func RetryOnPreconditionFailed(f func() error) (err error) {
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err = f()
 		if !IsErrorStatusCode(err, http.StatusPreconditionFailed) {
 			return

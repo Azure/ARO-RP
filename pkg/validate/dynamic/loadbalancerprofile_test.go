@@ -442,7 +442,7 @@ func TestValidateOBRuleV4FrontendPorts(t *testing.T) {
 
 func getFakeBackendIPConfigs(ipConfigCount int) []*sdknetwork.InterfaceIPConfiguration {
 	ipConfigs := []*sdknetwork.InterfaceIPConfiguration{}
-	for i := 0; i < ipConfigCount; i++ {
+	for i := range ipConfigCount {
 		ipConfigName := "ip-" + strconv.Itoa(i)
 		ipConfigs = append(ipConfigs, &sdknetwork.InterfaceIPConfiguration{Name: new(ipConfigName)})
 	}

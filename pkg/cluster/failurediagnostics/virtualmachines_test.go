@@ -216,9 +216,9 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				}, nil)
 
 				iothing := bytes.NewBufferString("")
-				for i := 0; i < 11; i++ {
+				for i := range 11 {
 					fmt.Fprintf(iothing, "%d", i)
-					for x := 0; x < 98; x++ {
+					for range 98 {
 						iothing.WriteByte('a')
 					}
 					iothing.WriteByte('\n')

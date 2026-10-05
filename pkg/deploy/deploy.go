@@ -196,7 +196,7 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName string, deployment mgmtfeatures.Deployment) (err error) {
 	numAttempts := 3
 
-	for i := 0; i < numAttempts; i++ {
+	for i := range numAttempts {
 		d.log.Printf("deploying %s", deploymentName)
 		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
 		serviceErr, isServiceError := err.(*azure.ServiceError)
@@ -305,7 +305,7 @@ func (d *deployer) runCommandWithRetry(ctx context.Context, resourceGroupName, v
 	const retryDelaySecs = 10
 
 	var err error
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		err = d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, instanceID, input)
 		if err == nil || !isOperationPreemptedError(err) {
 			break

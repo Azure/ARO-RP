@@ -35,7 +35,7 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 		csrData := csrDataDecoded[:csrDataLength]
 
 		By("creating mock CSRs via Kubernetes API")
-		for i := 0; i < csrCount; i++ {
+		for i := range csrCount {
 			csr := mockCSR(prefix+strconv.Itoa(i), namespace, csrData)
 
 			createFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create
@@ -45,7 +45,7 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 
 	AfterEach(func(ctx context.Context) {
 		By("deleting the mock CSRs via Kubernetes API")
-		for i := 0; i < csrCount; i++ {
+		for i := range csrCount {
 			deleteFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
 			DeleteK8sObjectWithRetry(ctx, deleteFunc, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
 		}
