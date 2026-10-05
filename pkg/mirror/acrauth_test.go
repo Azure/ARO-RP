@@ -252,8 +252,7 @@ func TestAcrAuthGet(t *testing.T) {
 		var wg sync.WaitGroup
 
 		for range 10 {
-			wg.Add(1)
-			go func() { acrauth.Get(ctx); wg.Done() }()
+			wg.Go(func() { acrauth.Get(ctx) })
 		}
 		wg.Wait()
 	})

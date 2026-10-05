@@ -145,8 +145,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 	wg := &sync.WaitGroup{}
 
 	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			l := log.WithField("worker", i)
 			for w := range ch {
 				l.Debugf("mirroring %s", w.tag)
@@ -173,8 +172,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 
 				results <- err
 			}
-			wg.Done()
-		}()
+		})
 	}
 
 	go func() {
