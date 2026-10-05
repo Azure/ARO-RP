@@ -75,6 +75,7 @@ type manager struct {
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
 	fpAuthorizer      refreshable.Authorizer
+	fpCredRefresher   refreshable.Rebuilder
 	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
@@ -158,7 +159,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	fpCredClusterTenant, err := _env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
+	fpCredClusterTenant, err := refreshable.NewFPTokenCredential(_env, subscriptionDoc.Subscription.Properties.TenantID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -173,10 +174,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 	fpspID := tokenClaims.ObjectId
 
-	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID(), nil)
+	fpCredRPTenant, err := refreshable.NewFPTokenCredential(_env, _env.TenantID(), nil)
 	if err != nil {
 		return nil, err
 	}
+
+	fpCredRefresher := refreshable.NewMultiRebuilder(fpAuthorizer, fpCredClusterTenant, fpCredRPTenant)
 
 	msiCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
@@ -283,6 +286,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		doc:                           doc,
 		subscriptionDoc:               subscriptionDoc,
 		fpAuthorizer:                  fpAuthorizer,
+		fpCredRefresher:               fpCredRefresher,
 		localFpAuthorizer:             localFPAuthorizer,
 		metricsEmitter:                metricsEmitter,
 		disks:                         compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
