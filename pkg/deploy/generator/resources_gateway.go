@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -65,7 +64,7 @@ func (g *generator) gatewayVnet() *arm.Resource {
 						Locations: []*string{new("*")},
 					},
 				},
-				PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+				PrivateLinkServiceNetworkPolicies: new(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 			},
 			Name: new("gateway-subnet"),
 		},
@@ -76,7 +75,7 @@ func (g *generator) gatewayLB() *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.LoadBalancer{
 			SKU: &armnetwork.LoadBalancerSKU{
-				Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+				Name: new(armnetwork.LoadBalancerSKUNameStandard),
 			},
 			Properties: &armnetwork.LoadBalancerPropertiesFormat{
 				FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
@@ -107,8 +106,8 @@ func (g *generator) gatewayLB() *arm.Resource {
 							Probe: &armnetwork.SubResource{
 								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
 							},
-							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
 							FrontendPort:     new(int32(443)),
 							BackendPort:      new(int32(443)),
 						},
@@ -125,8 +124,8 @@ func (g *generator) gatewayLB() *arm.Resource {
 							Probe: &armnetwork.SubResource{
 								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
 							},
-							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
 							FrontendPort:     new(int32(80)),
 							BackendPort:      new(int32(80)),
 						},
@@ -143,8 +142,8 @@ func (g *generator) gatewayLB() *arm.Resource {
 							Probe: &armnetwork.SubResource{
 								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe-otel')]"),
 							},
-							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
 							FrontendPort:     new(int32(4317)),
 							BackendPort:      new(int32(4317)),
 						},
@@ -154,7 +153,7 @@ func (g *generator) gatewayLB() *arm.Resource {
 				Probes: []*armnetwork.Probe{
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
-							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTP),
+							Protocol:       new(armnetwork.ProbeProtocolHTTP),
 							Port:           new(int32(80)),
 							NumberOfProbes: new(int32(2)),
 							RequestPath:    new("/healthz/ready"),
@@ -163,7 +162,7 @@ func (g *generator) gatewayLB() *arm.Resource {
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
-							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
+							Protocol:       new(armnetwork.ProbeProtocolTCP),
 							Port:           new(int32(13133)),
 							NumberOfProbes: new(int32(2)),
 						},

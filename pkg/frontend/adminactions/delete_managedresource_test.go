@@ -18,7 +18,6 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -32,7 +31,7 @@ var (
 
 var originalLB = armnetwork.LoadBalancer{
 	SKU: &armnetwork.LoadBalancerSKU{
-		Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+		Name: new(armnetwork.LoadBalancerSKUNameStandard),
 	},
 	Properties: &armnetwork.LoadBalancerPropertiesFormat{
 		FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
@@ -108,7 +107,7 @@ func loadBalancerWithRuleReferences() armnetwork.LoadBalancer {
 
 	return armnetwork.LoadBalancer{
 		SKU: &armnetwork.LoadBalancerSKU{
-			Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+			Name: new(armnetwork.LoadBalancerSKUNameStandard),
 		},
 		Properties: &armnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
@@ -182,7 +181,7 @@ func TestDeleteManagedResource(t *testing.T) {
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, armnetwork.LoadBalancer{
 					SKU: &armnetwork.LoadBalancerSKU{
-						Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+						Name: new(armnetwork.LoadBalancerSKUNameStandard),
 					},
 					Properties: &armnetwork.LoadBalancerPropertiesFormat{
 						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
@@ -292,7 +291,7 @@ func TestDeleteManagedResource(t *testing.T) {
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", nil).Return(armnetwork.LoadBalancersClientGetResponse{LoadBalancer: originalLB}, nil)
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, infraID, armnetwork.LoadBalancer{
 					SKU: &armnetwork.LoadBalancerSKU{
-						Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+						Name: new(armnetwork.LoadBalancerSKUNameStandard),
 					},
 					Properties: &armnetwork.LoadBalancerPropertiesFormat{
 						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{

@@ -26,7 +26,6 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -97,7 +96,7 @@ func getValidSubnet(resourceId string) *armnetwork.Subnet {
 		se := &armnetwork.ServiceEndpointPropertiesFormat{
 			Service:           new(endpoint),
 			Locations:         []*string{new(location)},
-			ProvisioningState: (*armnetwork.ProvisioningState)(pointerutils.ToPtr(string(armnetwork.ProvisioningStateSucceeded))),
+			ProvisioningState: (*armnetwork.ProvisioningState)(new(string(armnetwork.ProvisioningStateSucceeded))),
 		}
 		s.Properties.ServiceEndpoints = append(s.Properties.ServiceEndpoints, se)
 	}

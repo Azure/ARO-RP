@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -91,10 +90,10 @@ var (
 	mockSystemData = &generated.SystemData{
 		CreatedAt:          &mockCurrentTime,
 		CreatedBy:          new("ExampleUser"),
-		CreatedByType:      pointerutils.ToPtr(generated.CreatedByTypeApplication),
+		CreatedByType:      new(generated.CreatedByTypeApplication),
 		LastModifiedAt:     &mockCurrentTime,
 		LastModifiedBy:     new("ExampleUser"),
-		LastModifiedByType: pointerutils.ToPtr(generated.CreatedByTypeApplication),
+		LastModifiedByType: new(generated.CreatedByTypeApplication),
 	}
 )
 
@@ -125,30 +124,30 @@ func getOpenShiftClusterRequest() *v20250725.OpenShiftCluster {
 					Version:              new(defaultVersion),
 					Domain:               new(mockDomain),
 					ResourceGroupID:      new(mockResourceGroupID),
-					FipsValidatedModules: pointerutils.ToPtr(generated.FipsValidatedModulesDisabled),
+					FipsValidatedModules: new(generated.FipsValidatedModulesDisabled),
 				},
 				NetworkProfile: &generated.NetworkProfile{
 					PodCidr:     new(mockPodCIDR),
 					ServiceCidr: new(mockServiceCIDR),
 				},
 				ApiserverProfile: &generated.APIServerProfile{
-					Visibility: pointerutils.ToPtr(generated.VisibilityPrivate),
+					Visibility: new(generated.VisibilityPrivate),
 				},
 				IngressProfiles: []*generated.IngressProfile{
 					{
 						Name:       new("default"),
-						Visibility: pointerutils.ToPtr(generated.VisibilityPublic),
+						Visibility: new(generated.VisibilityPublic),
 					},
 				},
 				MasterProfile: &generated.MasterProfile{
-					EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+					EncryptionAtHost: new(generated.EncryptionAtHostDisabled),
 					VMSize:           new(mockVMSize),
 					SubnetID:         new(mockMasterSubnetID),
 				},
 				WorkerProfiles: []*generated.WorkerProfile{
 					{
 						Name:             new("worker"),
-						EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+						EncryptionAtHost: new(generated.EncryptionAtHostDisabled),
 						VMSize:           new(mockVMSize),
 						DiskSizeGB:       new(int32(128)),
 						Count:            new(int32(3)),
@@ -172,7 +171,7 @@ func getServicePrincipalOpenShiftClusterRequest() *v20250725.OpenShiftCluster {
 func getWorkloadIdentityOpenShiftClusterRequest() *v20250725.OpenShiftCluster {
 	cluster := getOpenShiftClusterRequest()
 	cluster.Identity = &generated.ManagedServiceIdentity{
-		Type: pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned),
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
 		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 			mockMiResourceId: {},
 		},
@@ -188,14 +187,14 @@ func getNewOpenShiftClusterResponse() *v20250725.OpenShiftCluster {
 	cluster.ID = new(mockResourceID)
 	cluster.Type = new("Microsoft.RedHatOpenShift/openShiftClusters")
 	cluster.SystemData = &generated.SystemData{}
-	cluster.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateCreating)
-	cluster.Properties.NetworkProfile.OutboundType = pointerutils.ToPtr(generated.OutboundTypeLoadbalancer)
+	cluster.Properties.ProvisioningState = new(generated.ProvisioningStateCreating)
+	cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 	cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 		ManagedOutboundIPs: &generated.ManagedOutboundIPs{
 			Count: new(int32(1)),
 		},
 	}
-	cluster.Properties.NetworkProfile.PreconfiguredNSG = pointerutils.ToPtr(generated.PreconfiguredNSGDisabled)
+	cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 	return cluster
 }
 
@@ -210,7 +209,7 @@ func getNewServicePrincipalOpenShiftClusterResponse() *v20250725.OpenShiftCluste
 func getNewWorkloadIdentityOpenShiftClusterResponse() *v20250725.OpenShiftCluster {
 	cluster := getNewOpenShiftClusterResponse()
 	cluster.Identity = &generated.ManagedServiceIdentity{
-		Type: pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned),
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
 		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 			mockMiResourceId: {},
 		},
@@ -679,7 +678,7 @@ func TestPutorPatchOpenShiftClusterCreate(t *testing.T) {
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				cluster.Identity = &generated.ManagedServiceIdentity{
-					Type: pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned),
+					Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
 					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						mockMiResourceId: {},
 					},
@@ -827,9 +826,9 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = pointerutils.ToPtr(generated.OutboundTypeLoadbalancer)
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = pointerutils.ToPtr(generated.PreconfiguredNSGDisabled)
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// Update the LoadBalancerProfile to have 2 ManagedOutboundIPs
 				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
@@ -877,7 +876,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{},
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -886,9 +885,9 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = pointerutils.ToPtr(generated.OutboundTypeLoadbalancer)
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = pointerutils.ToPtr(generated.PreconfiguredNSGDisabled)
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile to have 1 ManagedOutboundIPs, i.e. current value
 				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
@@ -914,7 +913,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -952,8 +951,8 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			name: "update a cluster from failed with empty failedProvisioningState",
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := getServicePrincipalOpenShiftClusterRequest()
-				cluster.Properties.NetworkProfile.OutboundType = pointerutils.ToPtr(generated.OutboundTypeLoadbalancer)
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = pointerutils.ToPtr(generated.PreconfiguredNSGDisabled)
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
 						Count: new(int32(1)),
@@ -977,7 +976,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			},
 			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -986,9 +985,9 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = pointerutils.ToPtr(generated.OutboundTypeLoadbalancer)
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = pointerutils.ToPtr(generated.PreconfiguredNSGDisabled)
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile is set to the current value
 				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
@@ -1013,7 +1012,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingWorkloadIdentityOpenShiftClusterResponse()
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1022,9 +1021,9 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = pointerutils.ToPtr(generated.OutboundTypeLoadbalancer)
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = pointerutils.ToPtr(generated.PreconfiguredNSGDisabled)
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile is set to the current value
 				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
@@ -1064,7 +1063,7 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 					ResourceID: new(mockMiResourceId),
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1073,9 +1072,9 @@ func TestPutorPatchOpenShiftClusterUpdatePut(t *testing.T) {
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := getWorkloadIdentityOpenShiftClusterRequest()
 				// OutboundType is set to the current value
-				cluster.Properties.NetworkProfile.OutboundType = pointerutils.ToPtr(generated.OutboundTypeLoadbalancer)
+				cluster.Properties.NetworkProfile.OutboundType = new(generated.OutboundTypeLoadbalancer)
 				// PreconfiguredNSG is set to the current value
-				cluster.Properties.NetworkProfile.PreconfiguredNSG = pointerutils.ToPtr(generated.PreconfiguredNSGDisabled)
+				cluster.Properties.NetworkProfile.PreconfiguredNSG = new(generated.PreconfiguredNSGDisabled)
 				// LoadBalancerProfile is set to the current value
 				cluster.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
@@ -1284,7 +1283,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{},
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1331,7 +1330,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 					ResourceID: new(mockMiResourceId),
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1373,7 +1372,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 					ResourceID: new(mockMiResourceId),
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1460,7 +1459,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			request: func() *v20250725.OpenShiftCluster {
 				cluster := &generated.OpenShiftCluster{
 					Identity: &generated.ManagedServiceIdentity{
-						Type: pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned),
+						Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
 						UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 							mockMiResourceId2: {
 								ClientID:    new(mockGuid),
@@ -1505,7 +1504,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 				// Expect the Identity to be updated to new value
 				response.Identity = &generated.ManagedServiceIdentity{
 					TenantID: new("qwer"),
-					Type:     pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned),
+					Type:     new(generated.ManagedServiceIdentityTypeUserAssigned),
 					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						mockMiResourceId2: {
 							ClientID:    new(mockGuid),
@@ -1514,7 +1513,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 					},
 				}
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1540,7 +1539,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
 				// ProvisioningState is set to Updating
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},
@@ -1595,7 +1594,7 @@ func TestPutorPatchOpenShiftClusterUpdatePatch(t *testing.T) {
 			},
 			wantResponse: func() *v20250725.OpenShiftCluster {
 				response := getExistingServicePrincipalOpenShiftClusterResponse()
-				response.Properties.ProvisioningState = pointerutils.ToPtr(generated.ProvisioningStateUpdating)
+				response.Properties.ProvisioningState = new(generated.ProvisioningStateUpdating)
 				return response
 			},
 		},

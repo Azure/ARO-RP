@@ -5,7 +5,6 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -22,7 +21,7 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc.SystemData = nil
 	oc.Properties.WorkerProfilesStatus = nil
 	oc.Identity = &generated.ManagedServiceIdentity{
-		Type: pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned),
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
 		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 			"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name": {},
 		},
@@ -48,19 +47,19 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Name = nil
 	oc.Type = nil
 	oc.Identity = &generated.ManagedServiceIdentity{
-		Type: pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned),
+		Type: new(generated.ManagedServiceIdentityTypeUserAssigned),
 		UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 			"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name": {},
 		},
 	}
 	oc.Properties.ProvisioningState = nil
 	oc.Properties.ClusterProfile.Version = nil
-	oc.Properties.ClusterProfile.FipsValidatedModules = pointerutils.ToPtr(generated.FipsValidatedModulesEnabled)
+	oc.Properties.ClusterProfile.FipsValidatedModules = new(generated.FipsValidatedModulesEnabled)
 	oc.Properties.ConsoleProfile.URL = nil
 	oc.Properties.ApiserverProfile.URL = nil
 	oc.Properties.ApiserverProfile.IP = nil
 	oc.Properties.IngressProfiles[0].IP = nil
-	oc.Properties.MasterProfile.EncryptionAtHost = pointerutils.ToPtr(generated.EncryptionAtHostEnabled)
+	oc.Properties.MasterProfile.EncryptionAtHost = new(generated.EncryptionAtHostEnabled)
 	oc.Properties.WorkerProfilesStatus = nil
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 		ManagedOutboundIPs: &generated.ManagedOutboundIPs{

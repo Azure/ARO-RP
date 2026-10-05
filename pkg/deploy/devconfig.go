@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -82,11 +81,11 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ARMAPIClientCertCommonName:   &clientCert.Subject.CommonName,
 			ARMClientID:                  new(os.Getenv("AZURE_ARM_CLIENT_ID")),
 			AzureSecPackVSATenantId:      new(""),
-			ClusterMDMAccount:            pointerutils.ToPtr(version.DevClusterGenevaMetricsAccount),
-			ClusterMDSDAccount:           pointerutils.ToPtr(version.DevClusterGenevaLoggingAccount),
-			ClusterMDSDConfigVersion:     pointerutils.ToPtr(version.DevClusterGenevaLoggingConfigVersion),
-			ClusterMDSDNamespace:         pointerutils.ToPtr(version.DevClusterGenevaLoggingNamespace),
-			OtelClusterMDSDConfigVersion: pointerutils.ToPtr(version.DevClusterGenevaLoggingConfigVersion),
+			ClusterMDMAccount:            new(version.DevClusterGenevaMetricsAccount),
+			ClusterMDSDAccount:           new(version.DevClusterGenevaLoggingAccount),
+			ClusterMDSDConfigVersion:     new(version.DevClusterGenevaLoggingConfigVersion),
+			ClusterMDSDNamespace:         new(version.DevClusterGenevaLoggingNamespace),
+			OtelClusterMDSDConfigVersion: new(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterParentDomainName:      new(azureUniquePrefix + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
 			CosmosDB: &CosmosDBConfiguration{
 				StandardProvisionedThroughput:      1000,
@@ -115,14 +114,14 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"qos.ppe.warm.ingest.monitor.core.windows.net",
 				"test1.diagnostics.monitoring.core.windows.net",
 			},
-			GatewayMDSDConfigVersion:    pointerutils.ToPtr(version.DevGatewayGenevaLoggingConfigVersion),
+			GatewayMDSDConfigVersion:    new(version.DevGatewayGenevaLoggingConfigVersion),
 			GatewayVMSize:               new("Standard_D2s_v3"),
 			GatewayVMSSCapacity:         new(1),
 			GlobalResourceGroupLocation: new(_env.Location()),
 			GlobalResourceGroupName:     new(azureUniquePrefix + "-global"),
 			GlobalSubscriptionID:        new(_env.SubscriptionID()),
 			MDMFrontendURL:              new("https://global.ppe.microsoftmetrics.com/"),
-			MDSDEnvironment:             pointerutils.ToPtr(version.DevGenevaLoggingEnvironment),
+			MDSDEnvironment:             new(version.DevGenevaLoggingEnvironment),
 			MsiRpEndpoint:               new("https://iamaplaceholder.com"),
 			MiseValidAudiences: []string{
 				"https://management.core.windows.net/",
@@ -151,10 +150,10 @@ func DevConfig(_env env.Core) (*Config, error) {
 			},
 			// TODO update this to support FF
 			RPImagePrefix:                     new(azureUniquePrefix + "aro.azurecr.io/aro"),
-			RPMDMAccount:                      pointerutils.ToPtr(version.DevRPGenevaMetricsAccount),
-			RPMDSDAccount:                     pointerutils.ToPtr(version.DevRPGenevaLoggingAccount),
-			RPMDSDConfigVersion:               pointerutils.ToPtr(version.DevRPGenevaLoggingConfigVersion),
-			RPMDSDNamespace:                   pointerutils.ToPtr(version.DevRPGenevaLoggingNamespace),
+			RPMDMAccount:                      new(version.DevRPGenevaMetricsAccount),
+			RPMDSDAccount:                     new(version.DevRPGenevaLoggingAccount),
+			RPMDSDConfigVersion:               new(version.DevRPGenevaLoggingConfigVersion),
+			RPMDSDNamespace:                   new(version.DevRPGenevaLoggingNamespace),
 			RPParentDomainName:                new(azureUniquePrefix + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
 			RPVersionStorageAccountName:       new(azureUniquePrefix + "rpversion"),
 			RPVMSSCapacity:                    new(1),

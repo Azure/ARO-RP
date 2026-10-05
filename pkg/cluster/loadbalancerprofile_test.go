@@ -17,7 +17,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -1154,11 +1153,11 @@ func getFakePublicIPAddress(name, location string) sdknetwork.PublicIPAddress {
 		ID:       &id,
 		Location: new(location),
 		Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodStatic),
-			PublicIPAddressVersion:   pointerutils.ToPtr(sdknetwork.IPVersionIPv4),
+			PublicIPAllocationMethod: new(sdknetwork.IPAllocationMethodStatic),
+			PublicIPAddressVersion:   new(sdknetwork.IPVersionIPv4),
 		},
 		SKU: &sdknetwork.PublicIPAddressSKU{
-			Name: pointerutils.ToPtr(sdknetwork.PublicIPAddressSKUNameStandard),
+			Name: new(sdknetwork.PublicIPAddressSKUNameStandard),
 		},
 	}
 }

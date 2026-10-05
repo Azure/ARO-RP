@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azurezones"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -107,7 +106,7 @@ func MigrateInternalLoadBalancerZones(
 	temporaryFIPName := fmt.Sprintf("%d-ip", _env.Now().Unix())
 	temporaryFIPConfig := &armnetwork_sdk.FrontendIPConfiguration{
 		Properties: &armnetwork_sdk.FrontendIPConfigurationPropertiesFormat{
-			PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork_sdk.IPAllocationMethodDynamic),
+			PrivateIPAllocationMethod: new(armnetwork_sdk.IPAllocationMethodDynamic),
 			Subnet: &armnetwork_sdk.Subnet{
 				ID: new(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 			},
@@ -157,7 +156,7 @@ func MigrateInternalLoadBalancerZones(
 	frontendConfigID := fmt.Sprintf("%s/frontendIPConfigurations/%s", *lb.ID, internalLBFrontendIPName)
 	newFrontendIP := &armnetwork_sdk.FrontendIPConfiguration{
 		Properties: &armnetwork_sdk.FrontendIPConfigurationPropertiesFormat{
-			PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork_sdk.IPAllocationMethodStatic),
+			PrivateIPAllocationMethod: new(armnetwork_sdk.IPAllocationMethodStatic),
 			PrivateIPAddress:          new(doc.OpenShiftCluster.Properties.APIServerProfile.IntIP),
 			Subnet: &armnetwork_sdk.Subnet{
 				ID: new(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
@@ -186,8 +185,8 @@ func MigrateInternalLoadBalancerZones(
 				Probe: &armnetwork_sdk.SubResource{
 					ID: new(apiProbeID),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
+				Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+				LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
 				FrontendPort:         new(int32(6443)),
 				BackendPort:          new(int32(6443)),
 				IdleTimeoutInMinutes: new(int32(30)),
@@ -206,8 +205,8 @@ func MigrateInternalLoadBalancerZones(
 				Probe: &armnetwork_sdk.SubResource{
 					ID: new(sintProbeID),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
+				Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+				LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
 				FrontendPort:         new(int32(22623)),
 				BackendPort:          new(int32(22623)),
 				IdleTimeoutInMinutes: new(int32(30)),

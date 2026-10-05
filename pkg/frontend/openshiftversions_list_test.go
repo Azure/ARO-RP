@@ -14,8 +14,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
@@ -59,14 +58,14 @@ func TestListInstallVersions(t *testing.T) {
 					{
 						OpenShiftVersion: generated.OpenShiftVersion{
 							Properties: &generated.OpenShiftVersionProperties{Version: new("4.11.0")},
-							Type:       pointerutils.ToPtr(api.OpenShiftVersionsType),
+							Type:       new(api.OpenShiftVersionsType),
 							Name:       new("4.11.0"),
 						},
 					},
 					{
 						OpenShiftVersion: generated.OpenShiftVersion{
 							Properties: &generated.OpenShiftVersionProperties{Version: new("4.11.5")},
-							Type:       pointerutils.ToPtr(api.OpenShiftVersionsType),
+							Type:       new(api.OpenShiftVersionsType),
 							Name:       new("4.11.5"),
 						},
 					},

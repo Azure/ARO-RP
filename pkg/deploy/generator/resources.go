@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
@@ -76,10 +75,10 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.PublicIPAddress{
 			SKU: &armnetwork.PublicIPAddressSKU{
-				Name: pointerutils.ToPtr(armnetwork.PublicIPAddressSKUNameStandard),
+				Name: new(armnetwork.PublicIPAddressSKUNameStandard),
 			},
 			Properties: &armnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
+				PublicIPAllocationMethod: new(armnetwork.IPAllocationMethodStatic),
 			},
 			Zones:    []*string{},
 			Name:     &name,

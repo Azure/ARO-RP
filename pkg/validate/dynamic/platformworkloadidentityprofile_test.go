@@ -26,7 +26,6 @@ import (
 	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -464,7 +463,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
@@ -939,7 +938,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.15.40")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
@@ -968,7 +967,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.14.60")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.14.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,
@@ -997,7 +996,7 @@ func TestValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
 						PlatformWorkloadIdentities: platformWorkloadIdentities,
-						UpgradeableTo:              pointerutils.ToPtr(api.UpgradeableTo("4.13.60")),
+						UpgradeableTo:              new(api.UpgradeableTo("4.13.60")),
 					},
 					ClusterProfile: api.ClusterProfile{
 						Version:    openShiftVersion,

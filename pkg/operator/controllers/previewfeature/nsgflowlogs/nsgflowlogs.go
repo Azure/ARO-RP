@@ -13,7 +13,6 @@ import (
 
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -84,7 +83,7 @@ func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeat
 			TargetResourceID: &nsgID,
 			Enabled:          new(true),
 			Format: &sdknetwork.FlowLogFormatParameters{
-				Type:    pointerutils.ToPtr(sdknetwork.FlowLogFormatTypeJSON),
+				Type:    new(sdknetwork.FlowLogFormatTypeJSON),
 				Version: new(int32(instance.Spec.NSGFlowLogs.Version)),
 			},
 			RetentionPolicy: &sdknetwork.RetentionPolicyParameters{

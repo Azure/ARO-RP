@@ -18,7 +18,6 @@ import (
 	mock_armcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcompute"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -229,8 +228,8 @@ func TestFixSSH(t *testing.T) {
 						Probe: &armnetwork_sdk.SubResource{
 							ID: new(tt.internalLBName + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
+						Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
 						FrontendPort:         new(int32(2200)),
 						BackendPort:          new(int32(22)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -250,8 +249,8 @@ func TestFixSSH(t *testing.T) {
 						Probe: &armnetwork_sdk.SubResource{
 							ID: new(tt.internalLBName + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
+						Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
 						FrontendPort:         new(int32(2201)),
 						BackendPort:          new(int32(22)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -270,8 +269,8 @@ func TestFixSSH(t *testing.T) {
 						Probe: &armnetwork_sdk.SubResource{
 							ID: new(tt.internalLBName + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
+						Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
 						FrontendPort:         new(int32(2202)),
 						BackendPort:          new(int32(22)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -306,7 +305,7 @@ func TestFixSSH(t *testing.T) {
 						{
 							Name: new("ssh"),
 							Properties: &armnetwork_sdk.ProbePropertiesFormat{
-								Protocol:          pointerutils.ToPtr(armnetwork_sdk.ProbeProtocolTCP),
+								Protocol:          new(armnetwork_sdk.ProbeProtocolTCP),
 								Port:              new(int32(22)),
 								IntervalInSeconds: new(int32(5)),
 								NumberOfProbes:    new(int32(2)),

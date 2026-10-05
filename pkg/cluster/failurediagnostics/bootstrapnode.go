@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -33,7 +32,7 @@ const (
 )
 
 var bootstrapNodeSSHProbeProperties = &armnetwork.ProbePropertiesFormat{
-	Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
+	Protocol:          new(armnetwork.ProbeProtocolTCP),
 	Port:              new(int32(sshPort)),
 	IntervalInSeconds: new(int32(5)),
 	NumberOfProbes:    new(int32(2)),
@@ -370,8 +369,8 @@ func (m *manager) ensureBootstrapNodeLBConfig(lb *armnetwork.LoadBalancer) (chan
 				Probe: &armnetwork.SubResource{
 					ID: new(fmt.Sprintf("%s/probes/%s", *lb.ID, bootstrapNodeSSHProbeName)),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+				Protocol:             new(armnetwork.TransportProtocolTCP),
+				LoadDistribution:     new(armnetwork.LoadDistributionDefault),
 				FrontendPort:         new(int32(bootstrapNodeLBSSHPort)),
 				BackendPort:          new(int32(sshPort)),
 				IdleTimeoutInMinutes: new(int32(30)),

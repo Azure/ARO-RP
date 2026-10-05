@@ -28,7 +28,6 @@ import (
 
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -183,7 +182,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 						Rules: []monitoringv1.Rule{
 							{
 								Alert: "OTelExporterNoLogsShippedSRE",
-								For:   pointerutils.ToPtr(monitoringv1.Duration("10m")),
+								For:   new(monitoringv1.Duration("10m")),
 								Expr: intstr.FromString(
 									`kube_pod_info{namespace="` + kubeNamespace + `",created_by_kind="DaemonSet",pod=~"otel-exporter-.*"} unless on(pod) ((up{namespace="` + kubeNamespace + `"} == 1) * on(pod) group_left() (sum by (pod) (rate(otelcol_exporter_sent_log_records{namespace="` + kubeNamespace + `"}[1h])) > 0))`,
 								),
@@ -198,7 +197,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 							},
 							{
 								Alert: "OTelExporterSendFailingSRE",
-								For:   pointerutils.ToPtr(monitoringv1.Duration("15m")),
+								For:   new(monitoringv1.Duration("15m")),
 								Expr: intstr.FromString(
 									`sum by (pod) (rate(otelcol_exporter_send_failed_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
 								),
@@ -213,7 +212,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 							},
 							{
 								Alert: "OTelExporterQueueSaturatedSRE",
-								For:   pointerutils.ToPtr(monitoringv1.Duration("15m")),
+								For:   new(monitoringv1.Duration("15m")),
 								Expr: intstr.FromString(
 									`max by (pod) (otelcol_exporter_queue_size{namespace="` + kubeNamespace + `"} / otelcol_exporter_queue_capacity{namespace="` + kubeNamespace + `"}) > 0.9`,
 								),
@@ -228,7 +227,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 							},
 							{
 								Alert: "OTelExporterLogsRefusedSRE",
-								For:   pointerutils.ToPtr(monitoringv1.Duration("15m")),
+								For:   new(monitoringv1.Duration("15m")),
 								Expr: intstr.FromString(
 									`sum by (pod) (rate(otelcol_receiver_refused_log_records{namespace="` + kubeNamespace + `"}[10m])) > 0`,
 								),
@@ -243,7 +242,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 							},
 							{
 								Alert: "OTelExporterRestartLoopingSRE",
-								For:   pointerutils.ToPtr(monitoringv1.Duration("15m")),
+								For:   new(monitoringv1.Duration("15m")),
 								Expr: intstr.FromString(
 									`increase(kube_pod_container_status_restarts_total{namespace="` + kubeNamespace + `",container="otel-exporter"}[1h]) >= 5`,
 								),
@@ -447,7 +446,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
 										Path: "/var/lib/otelcol/file_storage",
-										Type: pointerutils.ToPtr(corev1.HostPathDirectoryOrCreate),
+										Type: new(corev1.HostPathDirectoryOrCreate),
 									},
 								},
 							},
@@ -456,7 +455,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
 										Path: "/etc/machine-id",
-										Type: pointerutils.ToPtr(corev1.HostPathFile),
+										Type: new(corev1.HostPathFile),
 									},
 								},
 							},

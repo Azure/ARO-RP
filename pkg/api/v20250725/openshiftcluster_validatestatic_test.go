@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
@@ -66,10 +65,10 @@ func validSystemData() *generated.SystemData {
 
 	return &generated.SystemData{
 		CreatedBy:          new("00000000-0000-0000-0000-000000000000"),
-		CreatedByType:      pointerutils.ToPtr(generated.CreatedByTypeApplication),
+		CreatedByType:      new(generated.CreatedByTypeApplication),
 		CreatedAt:          &timestamp,
 		LastModifiedBy:     new("00000000-0000-0000-0000-000000000000"),
-		LastModifiedByType: pointerutils.ToPtr(generated.CreatedByTypeApplication),
+		LastModifiedByType: new(generated.CreatedByTypeApplication),
 		LastModifiedAt:     &timestamp,
 	}
 }
@@ -85,13 +84,13 @@ func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
 				"key": new("value"),
 			},
 			Properties: &generated.OpenShiftClusterProperties{
-				ProvisioningState: pointerutils.ToPtr(generated.ProvisioningStateSucceeded),
+				ProvisioningState: new(generated.ProvisioningStateSucceeded),
 				ClusterProfile: &generated.ClusterProfile{
 					PullSecret:           new(`{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`),
 					Domain:               new("cluster.location.aroapp.io"),
 					Version:              new(version),
 					ResourceGroupID:      new(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)),
-					FipsValidatedModules: pointerutils.ToPtr(generated.FipsValidatedModulesDisabled),
+					FipsValidatedModules: new(generated.FipsValidatedModulesDisabled),
 				},
 				ConsoleProfile: &generated.ConsoleProfile{
 					URL: new(""),
@@ -103,7 +102,7 @@ func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
 				NetworkProfile: &generated.NetworkProfile{
 					PodCidr:      new("10.128.0.0/14"),
 					ServiceCidr:  new("172.30.0.0/16"),
-					OutboundType: pointerutils.ToPtr(generated.OutboundTypeLoadbalancer),
+					OutboundType: new(generated.OutboundTypeLoadbalancer),
 					LoadBalancerProfile: &generated.LoadBalancerProfile{
 						ManagedOutboundIPs: &generated.ManagedOutboundIPs{
 							Count: new(int32(1)),
@@ -112,28 +111,28 @@ func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
 				},
 				MasterProfile: &generated.MasterProfile{
 					VMSize:           new("Standard_D8s_v3"),
-					EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+					EncryptionAtHost: new(generated.EncryptionAtHostDisabled),
 					SubnetID:         new(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)),
 				},
 				WorkerProfiles: []*generated.WorkerProfile{
 					{
 						Name:             new("worker"),
 						VMSize:           new("Standard_D4s_v3"),
-						EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+						EncryptionAtHost: new(generated.EncryptionAtHostDisabled),
 						DiskSizeGB:       new(int32(128)),
 						SubnetID:         new(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
 						Count:            new(int32(3)),
 					},
 				},
 				ApiserverProfile: &generated.APIServerProfile{
-					Visibility: pointerutils.ToPtr(generated.VisibilityPublic),
+					Visibility: new(generated.VisibilityPublic),
 					URL:        new(""),
 					IP:         new(""),
 				},
 				IngressProfiles: []*generated.IngressProfile{
 					{
 						Name:       new("default"),
-						Visibility: pointerutils.ToPtr(generated.VisibilityPublic),
+						Visibility: new(generated.VisibilityPublic),
 						IP:         new(""),
 					},
 				},
@@ -150,7 +149,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.architectureVersion == nil {
-					tt.architectureVersion = pointerutils.ToPtr(api.ArchitectureVersionV2)
+					tt.architectureVersion = new(api.ArchitectureVersionV2)
 				}
 
 				if tt.location == nil {
@@ -418,7 +417,7 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 					{
 						Name:             new("worker"),
 						VMSize:           new("Standard_D4s_v3"),
-						EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+						EncryptionAtHost: new(generated.EncryptionAtHostDisabled),
 						DiskSizeGB:       new(int32(128)),
 						SubnetID:         new(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
 						Count:            new(int32(3)),
@@ -947,7 +946,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 					},
 				}
 			},
-			architectureVersion: (*api.ArchitectureVersion)(pointerutils.ToPtr(int(api.ArchitectureVersionV1))),
+			architectureVersion: (*api.ArchitectureVersion)(new(int(api.ArchitectureVersionV1))),
 			wantErr:             "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.managedOutboundIps.count: The provided managedOutboundIps.count 20 is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.",
 		},
 	}

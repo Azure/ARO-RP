@@ -52,7 +52,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -779,7 +778,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 				{
 					Properties: &sdknetwork.RoutePropertiesFormat{
 						AddressPrefix: new("0.0.0.0/0"),
-						NextHopType:   pointerutils.ToPtr(sdknetwork.RouteNextHopTypeNone),
+						NextHopType:   new(sdknetwork.RouteNextHopTypeNone),
 					},
 					Name: new("blackhole"),
 				},
@@ -1777,7 +1776,7 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 			DisplayName: new(policyName),
 			Mode:        new("Indexed"),
 			PolicyRule:  policyRule,
-			PolicyType:  pointerutils.ToPtr(sdkpolicy.PolicyTypeCustom),
+			PolicyType:  new(sdkpolicy.PolicyTypeCustom),
 		},
 	}, nil)
 	if err != nil {
@@ -1787,7 +1786,7 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 
 	_, err = c.policyAssignmentsClient.Create(ctx, scope, assignmentName, sdkpolicy.Assignment{
 		Identity: &sdkpolicy.Identity{
-			Type: pointerutils.ToPtr(sdkpolicy.ResourceIdentityTypeSystemAssigned),
+			Type: new(sdkpolicy.ResourceIdentityTypeSystemAssigned),
 		},
 		Properties: &sdkpolicy.AssignmentProperties{
 			DisplayName:        new(assignmentName),

@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armstorage"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azblob"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type Manager interface {
@@ -81,10 +80,10 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, storagesdk.AccountSasParameters{
-		Services:               pointerutils.ToPtr(storagesdk.ServicesB),
+		Services:               new(storagesdk.ServicesB),
 		ResourceTypes:          new(r),
 		Permissions:            new(p),
-		Protocols:              pointerutils.ToPtr(storagesdk.HTTPProtocolHTTPS),
+		Protocols:              new(storagesdk.HTTPProtocolHTTPS),
 		SharedAccessStartTime:  &t,
 		SharedAccessExpiryTime: new(t.Add(24 * time.Hour)),
 	}, nil)

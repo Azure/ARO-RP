@@ -166,7 +166,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 
 			skus.EXPECT().List(gomock.Any(), "location eq eastus", false).Return(func(yield func(armcompute.ResourceSKU, error) bool) {
 				yield(armcompute.ResourceSKU{
-					Name:      pointerutils.ToPtr(string(api.VMSizeStandardD16asV4)),
+					Name:      new(string(api.VMSizeStandardD16asV4)),
 					Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
 					LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
 						{Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"})},
@@ -198,7 +198,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 							},
 							{
 								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
+									PrivateIPAllocationMethod: new(armnetwork.IPAllocationMethodDynamic),
 									Subnet: &armnetwork.Subnet{
 										ID: new("subnetID"),
 									},
@@ -224,7 +224,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 							{
 								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
+									PrivateIPAllocationMethod: new(armnetwork.IPAllocationMethodDynamic),
 									Subnet: &armnetwork.Subnet{
 										ID: new("subnetID"),
 									},
@@ -239,14 +239,14 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 
 			goodFIP := &armnetwork.FrontendIPConfiguration{
 				Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-					PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodStatic),
+					PrivateIPAllocationMethod: new(armnetwork.IPAllocationMethodStatic),
 					Subnet: &armnetwork.Subnet{
 						ID: new("subnetID"),
 					},
 					PrivateIPAddress: new("127.1.2.3"),
 				},
 				Zones: pointerutils.ToSlicePtr([]string{"1", "2", "3"}),
-				Name:  pointerutils.ToPtr(internalLBFrontendIPName),
+				Name:  new(internalLBFrontendIPName),
 			}
 
 			goodRules := []*armnetwork.LoadBalancingRule{
@@ -262,8 +262,8 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 						Probe: &armnetwork.SubResource{
 							ID: new(tt.internalLBName + "/probes/api-internal-probe"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+						Protocol:             new(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork.LoadDistributionDefault),
 						FrontendPort:         new(int32(6443)),
 						BackendPort:          new(int32(6443)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -282,8 +282,8 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 						Probe: &armnetwork.SubResource{
 							ID: new(tt.internalLBName + "/probes/sint-probe"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+						Protocol:             new(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork.LoadDistributionDefault),
 						FrontendPort:         new(int32(22623)),
 						BackendPort:          new(int32(22623)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -298,7 +298,7 @@ func TestUpdateLoadBalancerZonalMigration(t *testing.T) {
 					FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 						{
 							Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-								PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
+								PrivateIPAllocationMethod: new(armnetwork.IPAllocationMethodDynamic),
 								Subnet: &armnetwork.Subnet{
 									ID: new("subnetID"),
 								},

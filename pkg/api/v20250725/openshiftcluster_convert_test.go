@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -146,7 +145,7 @@ func TestOpenShiftClusterConverterToInternalPreservesExistingValues(t *testing.T
 		Identity:   &api.ManagedServiceIdentity{PrincipalID: "existing-principal"},
 		SystemData: api.SystemData{CreatedBy: "existing-creator"},
 		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile:          api.ClusterProfile{OIDCIssuer: pointerutils.ToPtr(api.OIDCIssuer("existing-issuer"))},
+			ClusterProfile:          api.ClusterProfile{OIDCIssuer: new(api.OIDCIssuer("existing-issuer"))},
 			ConsoleProfile:          api.ConsoleProfile{URL: "existing-console"},
 			ServicePrincipalProfile: &api.ServicePrincipalProfile{ClientID: "existing-client"},
 			PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
@@ -477,20 +476,20 @@ func converterExternalCluster() *OpenShiftCluster {
 		ID: new("resource-id"), Name: new("cluster"), Type: new("Microsoft.RedHatOpenShift/openShiftClusters"),
 		Location: new("eastus"), Tags: map[string]*string{"tag": new("value")},
 		SystemData: &generated.SystemData{
-			CreatedBy: new("creator"), CreatedByType: pointerutils.ToPtr(generated.CreatedByTypeUser), CreatedAt: &createdAt,
-			LastModifiedBy: new("modifier"), LastModifiedByType: pointerutils.ToPtr(generated.CreatedByTypeApplication), LastModifiedAt: &modifiedAt,
+			CreatedBy: new("creator"), CreatedByType: new(generated.CreatedByTypeUser), CreatedAt: &createdAt,
+			LastModifiedBy: new("modifier"), LastModifiedByType: new(generated.CreatedByTypeApplication), LastModifiedAt: &modifiedAt,
 		},
 		Identity: &generated.ManagedServiceIdentity{
-			Type: pointerutils.ToPtr(generated.ManagedServiceIdentityTypeUserAssigned), PrincipalID: new("principal"), TenantID: new("tenant"),
+			Type: new(generated.ManagedServiceIdentityTypeUserAssigned), PrincipalID: new("principal"), TenantID: new("tenant"),
 			UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 				"identity": {ClientID: new("identity-client"), PrincipalID: new("identity-principal")},
 			},
 		},
 		Properties: &generated.OpenShiftClusterProperties{
-			ProvisioningState: pointerutils.ToPtr(generated.ProvisioningStateSucceeded),
+			ProvisioningState: new(generated.ProvisioningStateSucceeded),
 			ClusterProfile: &generated.ClusterProfile{
 				PullSecret: new("pull-secret"), Domain: new("domain.example"), Version: new("4.15.1"),
-				ResourceGroupID: new("cluster-rg"), FipsValidatedModules: pointerutils.ToPtr(generated.FipsValidatedModulesEnabled), OidcIssuer: new("https://issuer.example"),
+				ResourceGroupID: new("cluster-rg"), FipsValidatedModules: new(generated.FipsValidatedModulesEnabled), OidcIssuer: new("https://issuer.example"),
 			},
 			ConsoleProfile:          &generated.ConsoleProfile{URL: new("https://console.example")},
 			ServicePrincipalProfile: &generated.ServicePrincipalProfile{ClientID: new("sp-client"), ClientSecret: new("sp-secret")},
@@ -501,26 +500,26 @@ func converterExternalCluster() *OpenShiftCluster {
 				},
 			},
 			NetworkProfile: &generated.NetworkProfile{
-				PodCidr: new("10.128.0.0/14"), ServiceCidr: new("172.30.0.0/16"), OutboundType: pointerutils.ToPtr(generated.OutboundTypeLoadbalancer),
-				PreconfiguredNSG: pointerutils.ToPtr(generated.PreconfiguredNSGEnabled),
+				PodCidr: new("10.128.0.0/14"), ServiceCidr: new("172.30.0.0/16"), OutboundType: new(generated.OutboundTypeLoadbalancer),
+				PreconfiguredNSG: new(generated.PreconfiguredNSGEnabled),
 				LoadBalancerProfile: &generated.LoadBalancerProfile{
 					ManagedOutboundIPs:   &generated.ManagedOutboundIPs{Count: new(int32(2))},
 					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{{ID: new("effective-ip")}},
 				},
 			},
 			MasterProfile: &generated.MasterProfile{
-				VMSize: new("Standard_D8s_v3"), SubnetID: new("master-subnet"), EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostEnabled), DiskEncryptionSetID: new("master-des"),
+				VMSize: new("Standard_D8s_v3"), SubnetID: new("master-subnet"), EncryptionAtHost: new(generated.EncryptionAtHostEnabled), DiskEncryptionSetID: new("master-des"),
 			},
 			WorkerProfiles: []*generated.WorkerProfile{{
 				Name: new("worker"), VMSize: new("Standard_D4s_v3"), DiskSizeGB: new(int32(128)), SubnetID: new("worker-subnet"), Count: new(int32(3)),
-				EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled), DiskEncryptionSetID: new("worker-des"),
+				EncryptionAtHost: new(generated.EncryptionAtHostDisabled), DiskEncryptionSetID: new("worker-des"),
 			}},
 			WorkerProfilesStatus: []*generated.WorkerProfile{{
 				Name: new("status"), VMSize: new("Standard_D4s_v3"), DiskSizeGB: new(int32(256)), SubnetID: new("status-subnet"), Count: new(int32(4)),
-				EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostEnabled), DiskEncryptionSetID: new("status-des"),
+				EncryptionAtHost: new(generated.EncryptionAtHostEnabled), DiskEncryptionSetID: new("status-des"),
 			}},
-			ApiserverProfile: &generated.APIServerProfile{Visibility: pointerutils.ToPtr(generated.VisibilityPrivate), URL: new("https://api.example"), IP: new("1.2.3.4")},
-			IngressProfiles:  []*generated.IngressProfile{{Name: new("default"), Visibility: pointerutils.ToPtr(generated.VisibilityPublic), IP: new("5.6.7.8")}},
+			ApiserverProfile: &generated.APIServerProfile{Visibility: new(generated.VisibilityPrivate), URL: new("https://api.example"), IP: new("1.2.3.4")},
+			IngressProfiles:  []*generated.IngressProfile{{Name: new("default"), Visibility: new(generated.VisibilityPublic), IP: new("5.6.7.8")}},
 		},
 	}}
 }

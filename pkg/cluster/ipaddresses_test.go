@@ -21,7 +21,6 @@ import (
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/dns"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -1265,7 +1264,7 @@ func TestGetHighestFreeIP(t *testing.T) {
 		{
 			name: "valid",
 			subnet: armnetwork.Subnet{
-				ID: pointerutils.ToPtr(subnetID),
+				ID: new(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
 					AddressPrefix: new("10.0.0.0/29"),
 				},
@@ -1275,7 +1274,7 @@ func TestGetHighestFreeIP(t *testing.T) {
 		{
 			name: "valid, use addressPrefixes",
 			subnet: armnetwork.Subnet{
-				ID: pointerutils.ToPtr(subnetID),
+				ID: new(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
 					AddressPrefixes: []*string{new("10.0.0.0/29")},
 				},
@@ -1285,7 +1284,7 @@ func TestGetHighestFreeIP(t *testing.T) {
 		{
 			name: "valid, top address used",
 			subnet: armnetwork.Subnet{
-				ID: pointerutils.ToPtr(subnetID),
+				ID: new(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
 					AddressPrefix: new("10.0.0.0/29"),
 					IPConfigurations: []*armnetwork.IPConfiguration{
@@ -1305,7 +1304,7 @@ func TestGetHighestFreeIP(t *testing.T) {
 		{
 			name: "exhausted",
 			subnet: armnetwork.Subnet{
-				ID: pointerutils.ToPtr(subnetID),
+				ID: new(subnetID),
 				Properties: &armnetwork.SubnetPropertiesFormat{
 					AddressPrefix: new("10.0.0.0/29"),
 					IPConfigurations: []*armnetwork.IPConfiguration{

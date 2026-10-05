@@ -32,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -77,7 +76,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 				{
 					Name: new(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
+						RoleDefinitionID: new(rbac.RoleContributor),
 						Scope:            new(resourceGroupID),
 						PrincipalID:      new(fakeClusterSPObjectId),
 					},
@@ -115,7 +114,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 				{
 					Name: new(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
+						RoleDefinitionID: new(rbac.RoleContributor),
 						Scope:            new(resourceGroupID),
 						PrincipalID:      new("00000000-0000-0000-0000-000000000001"),
 					},

@@ -580,7 +580,7 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 							},
 							Restrictions: []*armcompute.ResourceSKURestrictions{
 								{
-									Type: pointerutils.ToPtr(armcompute.ResourceSKURestrictionsTypeLocation),
+									Type: new(armcompute.ResourceSKURestrictionsTypeLocation),
 									RestrictionInfo: &armcompute.ResourceSKURestrictionInfo{
 										Locations: pointerutils.ToSlicePtr([]string{"eastus"}),
 									},

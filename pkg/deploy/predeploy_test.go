@@ -29,7 +29,6 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_msi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/msi"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -93,7 +92,7 @@ var (
 	}
 
 	secretItems = func(err error) *runtime.Pager[azsecretssdk.ListSecretPropertiesResponse] {
-		return mock_azuresdk.NewPager(listForItems([]*azsecretssdk.SecretProperties{{ID: pointerutils.ToPtr(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/secretExists/whatever"))}}), []error{err})
+		return mock_azuresdk.NewPager(listForItems([]*azsecretssdk.SecretProperties{{ID: new(azsecretssdk.ID("https://myvaultname.vault.azure.net/keys/secretExists/whatever"))}}), []error{err})
 	}
 
 	vmsss        = []mgmtcompute.VirtualMachineScaleSet{{Name: new(vmssName)}}

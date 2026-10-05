@@ -11,7 +11,6 @@ import (
 	armcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	armnetwork "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiljson "github.com/Azure/ARO-RP/test/util/json"
 )
 
@@ -107,14 +106,14 @@ func TestResourceMarshal(t *testing.T) {
 					Location: new("eastus"),
 					Tags:     map[string]*string{"Tag": new("Value")},
 					Properties: &armnetwork.VirtualNetworkPropertiesFormat{
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						ResourceGUID:      new("00000000-0000-0000-0000-000000000000"),
 						AddressSpace: &armnetwork.AddressSpace{
 							AddressPrefixes: []*string{new("10.0.0.0/22")},
 						},
 						Encryption: &armnetwork.VirtualNetworkEncryption{
 							Enabled:     new(false),
-							Enforcement: pointerutils.ToPtr(armnetwork.VirtualNetworkEncryptionEnforcementAllowUnencrypted),
+							Enforcement: new(armnetwork.VirtualNetworkEncryptionEnforcementAllowUnencrypted),
 						},
 						EnableDdosProtection:   new(false),
 						VirtualNetworkPeerings: []*armnetwork.VirtualNetworkPeering{},
@@ -124,7 +123,7 @@ func TestResourceMarshal(t *testing.T) {
 								Name: new("master"),
 								Type: new("Microsoft.Network/virtualNetworks/subnets"),
 								Properties: &armnetwork.SubnetPropertiesFormat{
-									ProvisioningState:    pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+									ProvisioningState:    new(armnetwork.ProvisioningStateSucceeded),
 									AddressPrefixes:      []*string{new("10.0.0.0/23")},
 									NetworkSecurityGroup: &armnetwork.SecurityGroup{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
 									IPConfigurations: []*armnetwork.IPConfiguration{
@@ -134,8 +133,8 @@ func TestResourceMarshal(t *testing.T) {
 										{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateLinkServices/ARO-00000-PLS/ipConfigurations/ARO-00000-PLS-NIC")},
 									},
 									PrivateEndpoints:                  []*armnetwork.PrivateEndpoint{{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/privateEndpoints/ARO-00000-PE")}},
-									PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-									PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+									PrivateEndpointNetworkPolicies:    new(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+									PrivateLinkServiceNetworkPolicies: new(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 									Purpose:                           new("PrivateEndpoints"),
 									Delegations:                       []*armnetwork.Delegation{},
 								},
@@ -145,11 +144,11 @@ func TestResourceMarshal(t *testing.T) {
 								Name: new("worker"),
 								Type: new("Microsoft.Network/virtualNetworks/subnets"),
 								Properties: &armnetwork.SubnetPropertiesFormat{
-									ProvisioningState:                 pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+									ProvisioningState:                 new(armnetwork.ProvisioningStateSucceeded),
 									AddressPrefixes:                   []*string{new("10.0.2.0/23")},
 									NetworkSecurityGroup:              &armnetwork.SecurityGroup{ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/aro-00000000/providers/Microsoft.Network/networkSecurityGroups/aro-00000-nsg")},
-									PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-									PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesEnabled),
+									PrivateEndpointNetworkPolicies:    new(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+									PrivateLinkServiceNetworkPolicies: new(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesEnabled),
 									Delegations:                       []*armnetwork.Delegation{},
 								},
 							},

@@ -31,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -483,12 +482,12 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 
 	if s.Properties.PrivateEndpointNetworkPolicies == nil || *s.Properties.PrivateEndpointNetworkPolicies != armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled {
 		needsUpdate = true
-		s.Properties.PrivateEndpointNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
+		s.Properties.PrivateEndpointNetworkPolicies = new(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled)
 	}
 
 	if s.Properties.PrivateLinkServiceNetworkPolicies == nil || *s.Properties.PrivateLinkServiceNetworkPolicies != armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled {
 		needsUpdate = true
-		s.Properties.PrivateLinkServiceNetworkPolicies = pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
+		s.Properties.PrivateLinkServiceNetworkPolicies = new(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled)
 	}
 
 	// return if we do not need to update the subnet

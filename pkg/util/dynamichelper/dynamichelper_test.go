@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/rest/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -224,7 +223,7 @@ func TestMergeGK(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",

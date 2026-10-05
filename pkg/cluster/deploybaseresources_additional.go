@@ -26,17 +26,17 @@ func (m *manager) denyAssignment() *arm.Resource {
 		for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
 				ID:   new(identity.ObjectID),
-				Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
+				Type: new(string(mgmtauthorization.ServicePrincipal)),
 			})
 		}
 		excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
 			ID:   new(m.fpServicePrincipalID),
-			Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
+			Type: new(string(mgmtauthorization.ServicePrincipal)),
 		})
 	} else {
 		excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
 			ID:   &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID,
-			Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
+			Type: new(string(mgmtauthorization.ServicePrincipal)),
 		})
 	}
 
@@ -378,10 +378,10 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 	return &arm.Resource{
 		Resource: &sdknetwork.PublicIPAddress{
 			SKU: &sdknetwork.PublicIPAddressSKU{
-				Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+				Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 			},
 			Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+				PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 			},
 			Zones:    pointerutils.ToSlicePtr(m.doc.OpenShiftCluster.Properties.Zones),
 			Name:     &name,
@@ -397,13 +397,13 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 	return &arm.Resource{
 		Resource: &sdknetwork.LoadBalancer{
 			SKU: &sdknetwork.LoadBalancerSKU{
-				Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+				Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 			},
 			Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 				FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
 					{
 						Properties: &sdknetwork.FrontendIPConfigurationPropertiesFormat{
-							PrivateIPAllocationMethod: pointerutils.ToPtr(sdknetwork.IPAllocationMethodDynamic),
+							PrivateIPAllocationMethod: new(sdknetwork.IPAllocationMethodDynamic),
 							Subnet: &sdknetwork.Subnet{
 								ID: new(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
@@ -438,8 +438,8 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 							Probe: &sdknetwork.SubResource{
 								ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
-							Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-							LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+							Protocol:             new(sdknetwork.TransportProtocolTCP),
+							LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 							FrontendPort:         new(int32(6443)),
 							BackendPort:          new(int32(6443)),
 							IdleTimeoutInMinutes: new(int32(30)),
@@ -458,8 +458,8 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 							Probe: &sdknetwork.SubResource{
 								ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'sint-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
-							Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-							LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+							Protocol:             new(sdknetwork.TransportProtocolTCP),
+							LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 							FrontendPort:         new(int32(22623)),
 							BackendPort:          new(int32(22623)),
 							IdleTimeoutInMinutes: new(int32(30)),
@@ -477,8 +477,8 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 							Probe: &sdknetwork.SubResource{
 								ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
-							Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-							LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+							Protocol:             new(sdknetwork.TransportProtocolTCP),
+							LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 							FrontendPort:         new(int32(2200)),
 							BackendPort:          new(int32(22)),
 							IdleTimeoutInMinutes: new(int32(30)),
@@ -497,8 +497,8 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 							Probe: &sdknetwork.SubResource{
 								ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
-							Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-							LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+							Protocol:             new(sdknetwork.TransportProtocolTCP),
+							LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 							FrontendPort:         new(int32(2201)),
 							BackendPort:          new(int32(22)),
 							IdleTimeoutInMinutes: new(int32(30)),
@@ -517,8 +517,8 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 							Probe: &sdknetwork.SubResource{
 								ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
-							Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-							LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+							Protocol:             new(sdknetwork.TransportProtocolTCP),
+							LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 							FrontendPort:         new(int32(2202)),
 							BackendPort:          new(int32(22)),
 							IdleTimeoutInMinutes: new(int32(30)),
@@ -530,7 +530,7 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 				Probes: []*sdknetwork.Probe{
 					{
 						Properties: &sdknetwork.ProbePropertiesFormat{
-							Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+							Protocol:          new(sdknetwork.ProbeProtocolHTTPS),
 							Port:              new(int32(6443)),
 							IntervalInSeconds: new(int32(5)),
 							NumberOfProbes:    new(int32(2)),
@@ -540,7 +540,7 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 					},
 					{
 						Properties: &sdknetwork.ProbePropertiesFormat{
-							Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+							Protocol:          new(sdknetwork.ProbeProtocolHTTPS),
 							Port:              new(int32(22623)),
 							IntervalInSeconds: new(int32(5)),
 							NumberOfProbes:    new(int32(2)),
@@ -550,7 +550,7 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 					},
 					{
 						Properties: &sdknetwork.ProbePropertiesFormat{
-							Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolTCP),
+							Protocol:          new(sdknetwork.ProbeProtocolTCP),
 							Port:              new(int32(22)),
 							IntervalInSeconds: new(int32(5)),
 							NumberOfProbes:    new(int32(2)),
@@ -571,7 +571,7 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []api.ResourceReference) *arm.Resource {
 	lb := &sdknetwork.LoadBalancer{
 		SKU: &sdknetwork.LoadBalancerSKU{
-			Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+			Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 		},
 		Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{},
@@ -589,7 +589,7 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 						BackendAddressPool: &sdknetwork.SubResource{
 							ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 						},
-						Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+						Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 						IdleTimeoutInMinutes: new(int32(30)),
 					},
 					Name: new("outbound-rule-v4"),
@@ -622,8 +622,8 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 				Probe: &sdknetwork.SubResource{
 					ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
-				Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+				Protocol:             new(sdknetwork.TransportProtocolTCP),
+				LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 				FrontendPort:         new(int32(6443)),
 				BackendPort:          new(int32(6443)),
 				IdleTimeoutInMinutes: new(int32(30)),
@@ -634,7 +634,7 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 
 		lb.Properties.Probes = append(lb.Properties.Probes, &sdknetwork.Probe{
 			Properties: &sdknetwork.ProbePropertiesFormat{
-				Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+				Protocol:          new(sdknetwork.ProbeProtocolHTTPS),
 				Port:              new(int32(6443)),
 				IntervalInSeconds: new(int32(5)),
 				NumberOfProbes:    new(int32(2)),

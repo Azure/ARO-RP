@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -259,8 +258,8 @@ loadBalancingRules:
 				Probe: &armnetwork_sdk.SubResource{
 					ID: new(*lb.ID + "/probes/ssh"),
 				},
-				Protocol:             pointerutils.ToPtr(armnetwork_sdk.TransportProtocolTCP),
-				LoadDistribution:     pointerutils.ToPtr(armnetwork_sdk.LoadDistributionDefault),
+				Protocol:             new(armnetwork_sdk.TransportProtocolTCP),
+				LoadDistribution:     new(armnetwork_sdk.LoadDistributionDefault),
 				FrontendPort:         new(int32(2200) + int32(i)),
 				BackendPort:          new(int32(22)),
 				IdleTimeoutInMinutes: new(int32(30)),
@@ -280,7 +279,7 @@ loadBalancingRules:
 	log.Infof("Adding ssh Health Probe to Internal Load Balancer %s", lbName)
 	lb.Properties.Probes = append(lb.Properties.Probes, &armnetwork_sdk.Probe{
 		Properties: &armnetwork_sdk.ProbePropertiesFormat{
-			Protocol:          pointerutils.ToPtr(armnetwork_sdk.ProbeProtocolTCP),
+			Protocol:          new(armnetwork_sdk.ProbeProtocolTCP),
 			Port:              new(int32(22)),
 			IntervalInSeconds: new(int32(5)),
 			NumberOfProbes:    new(int32(2)),

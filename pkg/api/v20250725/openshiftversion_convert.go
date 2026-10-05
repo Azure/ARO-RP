@@ -5,7 +5,6 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -35,7 +34,7 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 	}
 
 	if value(out.Type) == "" {
-		out.Type = pointerutils.ToPtr(api.OpenShiftVersionsType)
+		out.Type = new(api.OpenShiftVersionsType)
 	}
 
 	return out

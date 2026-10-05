@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 // devLBInternal is needed for defining a healthprobe.
@@ -23,7 +22,7 @@ func (g *generator) devLBInternal() *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.LoadBalancer{
 			SKU: &armnetwork.LoadBalancerSKU{
-				Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameBasic),
+				Name: new(armnetwork.LoadBalancerSKUNameBasic),
 			},
 			Properties: &armnetwork.LoadBalancerPropertiesFormat{
 				FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
@@ -53,8 +52,8 @@ func (g *generator) devLBInternal() *arm.Resource {
 							Probe: &armnetwork.SubResource{
 								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
 							},
-							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
 							FrontendPort:     new(int32(443)),
 							BackendPort:      new(int32(443)),
 						},
@@ -64,7 +63,7 @@ func (g *generator) devLBInternal() *arm.Resource {
 				Probes: []*armnetwork.Probe{
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
-							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
+							Protocol:       new(armnetwork.ProbeProtocolTCP),
 							Port:           new(int32(443)),
 							NumberOfProbes: new(int32(3)),
 						},
@@ -108,7 +107,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     pointerutils.ToPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardF2sV2)),
+				Name:     new(string(mgmtcompute.VirtualMachineSizeTypesStandardF2sV2)),
 				Tier:     new("Standard"),
 				Capacity: new(int64(1)),
 			},
@@ -270,10 +269,10 @@ func (g *generator) devVPNPip() *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.PublicIPAddress{
 			SKU: &armnetwork.PublicIPAddressSKU{
-				Name: pointerutils.ToPtr(armnetwork.PublicIPAddressSKUName("[parameters('publicIPAddressSkuName')]")),
+				Name: new(armnetwork.PublicIPAddressSKUName("[parameters('publicIPAddressSkuName')]")),
 			},
 			Properties: &armnetwork.PublicIPAddressPropertiesFormat{
-				PublicIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethod("[parameters('publicIPAddressAllocationMethod')]")),
+				PublicIPAllocationMethod: new(armnetwork.IPAllocationMethod("[parameters('publicIPAddressAllocationMethod')]")),
 			},
 			Name:     new("dev-vpn-pip"),
 			Type:     new("Microsoft.Network/publicIPAddresses"),
@@ -325,10 +324,10 @@ func (g *generator) devVPN() *arm.Resource {
 						Name: new("default"),
 					},
 				},
-				VPNType: pointerutils.ToPtr(armnetwork.VPNTypeRouteBased),
+				VPNType: new(armnetwork.VPNTypeRouteBased),
 				SKU: &armnetwork.VirtualNetworkGatewaySKU{
-					Name: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUNameVPNGw1AZ),
-					Tier: pointerutils.ToPtr(armnetwork.VirtualNetworkGatewaySKUTierVPNGw1AZ),
+					Name: new(armnetwork.VirtualNetworkGatewaySKUNameVPNGw1AZ),
+					Tier: new(armnetwork.VirtualNetworkGatewaySKUTierVPNGw1AZ),
 				},
 				VPNClientConfiguration: &armnetwork.VPNClientConfiguration{
 					VPNClientAddressPool: &armnetwork.AddressSpace{
@@ -343,7 +342,7 @@ func (g *generator) devVPN() *arm.Resource {
 						},
 					},
 					VPNClientProtocols: []*armnetwork.VPNClientProtocol{
-						pointerutils.ToPtr(armnetwork.VPNClientProtocolOpenVPN),
+						new(armnetwork.VPNClientProtocolOpenVPN),
 					},
 				},
 			},

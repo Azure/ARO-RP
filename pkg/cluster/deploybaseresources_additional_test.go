@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
@@ -59,7 +58,7 @@ func TestDenyAssignment(t *testing.T) {
 			ExpectedExcludePrincipals: &[]mgmtauthorization.Principal{
 				{
 					ID:   new(fakeClusterSPObjectId),
-					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
+					Type: new(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},
 		},
@@ -91,15 +90,15 @@ func TestDenyAssignment(t *testing.T) {
 			ExpectedExcludePrincipals: &[]mgmtauthorization.Principal{
 				{
 					ID:   new("00000000-0000-0000-0000-000000000000"),
-					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
+					Type: new(string(mgmtauthorization.ServicePrincipal)),
 				},
 				{
 					ID:   new("88888888-8888-8888-8888-888888888888"),
-					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
+					Type: new(string(mgmtauthorization.ServicePrincipal)),
 				},
 				{
 					ID:   new("77777777-7777-7777-7777-777777777777"),
-					Type: pointerutils.ToPtr(string(mgmtauthorization.ServicePrincipal)),
+					Type: new(string(mgmtauthorization.ServicePrincipal)),
 				},
 			},
 		},
@@ -168,7 +167,7 @@ func TestFpspStorageBlobContributorRBAC(t *testing.T) {
 					Type: new(resourceType + "/providers/roleAssignments"),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            new("[" + resourceID + "]"),
-						RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleStorageBlobDataContributor + "')]"),
+						RoleDefinitionID: new("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleStorageBlobDataContributor + "')]"),
 						PrincipalID:      new("['" + fakePrincipalID + "']"),
 						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
@@ -247,13 +246,13 @@ func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
 			expectedARMResource: &arm.Resource{
 				Resource: &armnetwork.LoadBalancer{
 					SKU: &armnetwork.LoadBalancerSKU{
-						Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+						Name: new(armnetwork.LoadBalancerSKUNameStandard),
 					},
 					Properties: &armnetwork.LoadBalancerPropertiesFormat{
 						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 							{
 								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
+									PrivateIPAllocationMethod: new(armnetwork.IPAllocationMethodDynamic),
 									Subnet: &armnetwork.Subnet{
 										ID: new("someID"),
 									},
@@ -315,13 +314,13 @@ func TestNetworkInternalLoadBalancerZonality(t *testing.T) {
 			expectedARMResource: &arm.Resource{
 				Resource: &armnetwork.LoadBalancer{
 					SKU: &armnetwork.LoadBalancerSKU{
-						Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+						Name: new(armnetwork.LoadBalancerSKUNameStandard),
 					},
 					Properties: &armnetwork.LoadBalancerPropertiesFormat{
 						FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 							{
 								Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-									PrivateIPAllocationMethod: pointerutils.ToPtr(armnetwork.IPAllocationMethodDynamic),
+									PrivateIPAllocationMethod: new(armnetwork.IPAllocationMethodDynamic),
 									Subnet: &armnetwork.Subnet{
 										ID: new("someID"),
 									},

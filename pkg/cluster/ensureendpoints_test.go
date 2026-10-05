@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var (
@@ -29,14 +28,14 @@ var (
 	masterSubnet      = armnetwork.Subnet{
 		ID: new(subnetIdMaster),
 		Properties: &armnetwork.SubnetPropertiesFormat{
-			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+			ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 			ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
 	workerSubnet = armnetwork.Subnet{
 		ID: new(subnetIdWorker),
 		Properties: &armnetwork.SubnetPropertiesFormat{
-			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+			ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 			ServiceEndpoints:  []*armnetwork.ServiceEndpointPropertiesFormat{},
 		},
 	}
@@ -83,7 +82,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				expectedMasterSubnet := armnetwork.Subnet{
 					ID: new(subnetIdMaster),
 					Properties: &armnetwork.SubnetPropertiesFormat{
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service:   new("Microsoft.ContainerRegistry"),
@@ -99,7 +98,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				expectedWorkerSubnet := armnetwork.Subnet{
 					ID: new(subnetIdWorker),
 					Properties: &armnetwork.SubnetPropertiesFormat{
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service:   new("Microsoft.ContainerRegistry"),
@@ -151,12 +150,12 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 					{
 						Service:           new("Microsoft.Storage"),
 						Locations:         []*string{new("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 					},
 					{
 						Service:           new("Microsoft.ContainerRegistry"),
 						Locations:         []*string{new("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 					},
 				}
 				workerSubnetWithServiceEndpoints := workerSubnet
@@ -164,12 +163,12 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 					{
 						Service:           new("Microsoft.Storage"),
 						Locations:         []*string{new("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 					},
 					{
 						Service:           new("Microsoft.ContainerRegistry"),
 						Locations:         []*string{new("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 					},
 				}
 				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: masterSubnetWithServiceEndpoints}, nil)
@@ -193,7 +192,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 					{
 						Service:           new("Microsoft.Storage"),
 						Locations:         []*string{new("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 					},
 				}
 				workerSubnetWithServiceEndpoints := workerSubnet
@@ -201,7 +200,7 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 					{
 						Service:           new("Microsoft.ContainerRegistry"),
 						Locations:         []*string{new("*")},
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 					},
 				}
 				subnets.EXPECT().Get(gomock.Any(), vnetResourceGroup, vnetName, subnetNameMaster, nil).Return(armnetwork.SubnetsClientGetResponse{Subnet: masterSubnetWithServiceEndpoints}, nil)
@@ -209,12 +208,12 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				expectedMasterSubnet := armnetwork.Subnet{
 					ID: new(subnetIdMaster),
 					Properties: &armnetwork.SubnetPropertiesFormat{
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service:           new("Microsoft.Storage"),
 								Locations:         []*string{new("*")},
-								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 							},
 							{
 								Service:   new("Microsoft.ContainerRegistry"),
@@ -226,12 +225,12 @@ func TestEnsureServiceEndpoints(t *testing.T) {
 				expectedWorkerSubnet := armnetwork.Subnet{
 					ID: new(subnetIdWorker),
 					Properties: &armnetwork.SubnetPropertiesFormat{
-						ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+						ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service:           new("Microsoft.ContainerRegistry"),
 								Locations:         []*string{new("*")},
-								ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 							},
 							{
 								Service:   new("Microsoft.Storage"),
@@ -287,12 +286,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 						{
 							Service:           new("Microsoft.ContainerRegistry"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						},
 						{
 							Service:           new("Microsoft.Storage"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						},
 					},
 				},
@@ -305,12 +304,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 						{
 							Service:           new("Microsoft.ContainerRegistry"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						},
 						{
 							Service:           new("Microsoft.Storage"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						},
 					},
 				},
@@ -376,12 +375,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 						{
 							Service:           new("Microsoft.ContainerRegistry"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateFailed),
+							ProvisioningState: new(armnetwork.ProvisioningStateFailed),
 						},
 						{
 							Service:           new("Microsoft.Storage"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateFailed),
+							ProvisioningState: new(armnetwork.ProvisioningStateFailed),
 						},
 					},
 				},
@@ -394,12 +393,12 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 						{
 							Service:           new("Microsoft.ContainerRegistry"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateFailed),
+							ProvisioningState: new(armnetwork.ProvisioningStateFailed),
 						},
 						{
 							Service:           new("Microsoft.Storage"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateFailed),
+							ProvisioningState: new(armnetwork.ProvisioningStateFailed),
 						},
 						{
 							Service:   new("Microsoft.ContainerRegistry"),
@@ -423,7 +422,7 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 						{
 							Service:           new("Microsoft.ContainerRegistry"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						},
 					},
 				},
@@ -436,7 +435,7 @@ func TestAddEndpointsToSubnets(t *testing.T) {
 						{
 							Service:           new("Microsoft.ContainerRegistry"),
 							Locations:         []*string{new("*")},
-							ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+							ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 						},
 						{
 							Service:   new("Microsoft.Storage"),

@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -26,7 +25,7 @@ func getNic(subscription, resourceGroup, location, nicName string) armnetwork.In
 		Location: new(location),
 		ID:       new(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, resourceGroup, nicName)),
 		Properties: &armnetwork.InterfacePropertiesFormat{
-			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateFailed),
+			ProvisioningState: new(armnetwork.ProvisioningStateFailed),
 		},
 	}
 }
@@ -55,7 +54,7 @@ func TestReconcileFailedNic(t *testing.T) {
 			name: "nic not in failed provisioning state",
 			mocks: func(networkInterfaces *mock_armnetwork.MockInterfacesClient) {
 				nic := getNic(subscription, clusterRG, location, nicName)
-				nic.Properties.ProvisioningState = pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded)
+				nic.Properties.ProvisioningState = new(armnetwork.ProvisioningStateSucceeded)
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{Interface: nic}, nil)
 			},
 			wantErr: fmt.Sprintf("skipping nic '%s' because it is not in a failed provisioning state", nicName),

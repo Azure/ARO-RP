@@ -33,7 +33,6 @@ import (
 	"github.com/openshift/hive/apis/hive/v1/azure"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -374,7 +373,7 @@ func TestMerge(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -432,7 +431,7 @@ func TestMerge(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1148,7 +1147,7 @@ func TestMergeApply(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -1218,7 +1217,7 @@ func TestMergeApply(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: pointerutils.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+							TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",

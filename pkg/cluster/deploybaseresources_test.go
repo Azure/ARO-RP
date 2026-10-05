@@ -40,7 +40,6 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -752,8 +751,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				}, nil)
 				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "test-rg", "test-vnet", "test-subnet", sdknetwork.Subnet{
 					Properties: &sdknetwork.SubnetPropertiesFormat{
-						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+						PrivateEndpointNetworkPolicies:    new(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+						PrivateLinkServiceNetworkPolicies: new(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 					},
 				}, nil).Return(nil)
 			},
@@ -766,8 +765,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				}, nil)
 				subnet.EXPECT().CreateOrUpdateAndWait(ctx, "test-rg", "test-vnet", "test-subnet", sdknetwork.Subnet{
 					Properties: &sdknetwork.SubnetPropertiesFormat{
-						PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-						PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+						PrivateEndpointNetworkPolicies:    new(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+						PrivateLinkServiceNetworkPolicies: new(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 					},
 				}, nil).Return(nil)
 			},
@@ -779,8 +778,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
 					Subnet: sdknetwork.Subnet{
 						Properties: &sdknetwork.SubnetPropertiesFormat{
-							PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-							PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+							PrivateEndpointNetworkPolicies:    new(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+							PrivateLinkServiceNetworkPolicies: new(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 						},
 					},
 				}, nil)
@@ -793,8 +792,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				subnet.EXPECT().Get(ctx, "test-rg", "test-vnet", "test-subnet", nil).Return(sdknetwork.SubnetsClientGetResponse{
 					Subnet: sdknetwork.Subnet{
 						Properties: &sdknetwork.SubnetPropertiesFormat{
-							PrivateEndpointNetworkPolicies:    pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
-							PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
+							PrivateEndpointNetworkPolicies:    new(sdknetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+							PrivateLinkServiceNetworkPolicies: new(sdknetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 						},
 					},
 				}, nil)
@@ -1305,10 +1304,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     new(infraID + "-pip-v4"),
 						Type:     new("Microsoft.Network/publicIPAddresses"),
@@ -1320,7 +1319,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.LoadBalancer{
 						SKU: &sdknetwork.LoadBalancerSKU{
-							Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+							Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 						},
 						Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
@@ -1350,8 +1349,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										Probe: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-										LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+										Protocol:             new(sdknetwork.TransportProtocolTCP),
+										LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 										FrontendPort:         new(int32(6443)),
 										BackendPort:          new(int32(6443)),
 										IdleTimeoutInMinutes: new(int32(30)),
@@ -1363,7 +1362,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 							Probes: []*sdknetwork.Probe{
 								{
 									Properties: &sdknetwork.ProbePropertiesFormat{
-										Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+										Protocol:          new(sdknetwork.ProbeProtocolHTTPS),
 										Port:              new(int32(6443)),
 										IntervalInSeconds: new(int32(5)),
 										NumberOfProbes:    new(int32(2)),
@@ -1383,7 +1382,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										BackendAddressPool: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+										Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 										IdleTimeoutInMinutes: new(int32(30)),
 									},
 									Name: new("outbound-rule-v4"),
@@ -1441,10 +1440,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Zones:    []*string{new("1"), new("2"), new("3")},
 						Name:     new(infraID + "-pip-v4"),
@@ -1456,7 +1455,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.LoadBalancer{
 						SKU: &sdknetwork.LoadBalancerSKU{
-							Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+							Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 						},
 						Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
@@ -1486,8 +1485,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										Probe: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-										LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+										Protocol:             new(sdknetwork.TransportProtocolTCP),
+										LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 										FrontendPort:         new(int32(6443)),
 										BackendPort:          new(int32(6443)),
 										IdleTimeoutInMinutes: new(int32(30)),
@@ -1499,7 +1498,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 							Probes: []*sdknetwork.Probe{
 								{
 									Properties: &sdknetwork.ProbePropertiesFormat{
-										Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+										Protocol:          new(sdknetwork.ProbeProtocolHTTPS),
 										Port:              new(int32(6443)),
 										IntervalInSeconds: new(int32(5)),
 										NumberOfProbes:    new(int32(2)),
@@ -1519,7 +1518,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										BackendAddressPool: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+										Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 										IdleTimeoutInMinutes: new(int32(30)),
 									},
 									Name: new("outbound-rule-v4"),
@@ -1576,10 +1575,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     new(infraID + "-pip-v4"),
 						Type:     new("Microsoft.Network/publicIPAddresses"),
@@ -1591,10 +1590,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     new("uuid1-outbound-pip-v4"),
 						Type:     new("Microsoft.Network/publicIPAddresses"),
@@ -1606,7 +1605,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.LoadBalancer{
 						SKU: &sdknetwork.LoadBalancerSKU{
-							Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+							Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 						},
 						Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
@@ -1645,8 +1644,8 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										Probe: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.TransportProtocolTCP),
-										LoadDistribution:     pointerutils.ToPtr(sdknetwork.LoadDistributionDefault),
+										Protocol:             new(sdknetwork.TransportProtocolTCP),
+										LoadDistribution:     new(sdknetwork.LoadDistributionDefault),
 										FrontendPort:         new(int32(6443)),
 										BackendPort:          new(int32(6443)),
 										IdleTimeoutInMinutes: new(int32(30)),
@@ -1658,7 +1657,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 							Probes: []*sdknetwork.Probe{
 								{
 									Properties: &sdknetwork.ProbePropertiesFormat{
-										Protocol:          pointerutils.ToPtr(sdknetwork.ProbeProtocolHTTPS),
+										Protocol:          new(sdknetwork.ProbeProtocolHTTPS),
 										Port:              new(int32(6443)),
 										IntervalInSeconds: new(int32(5)),
 										NumberOfProbes:    new(int32(2)),
@@ -1681,7 +1680,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										BackendAddressPool: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+										Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 										IdleTimeoutInMinutes: new(int32(30)),
 									},
 									Name: new("outbound-rule-v4"),
@@ -1739,10 +1738,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Zones:    []*string{},
 						Name:     new("uuid1-outbound-pip-v4"),
@@ -1754,7 +1753,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.LoadBalancer{
 						SKU: &sdknetwork.LoadBalancerSKU{
-							Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+							Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 						},
 						Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
@@ -1786,7 +1785,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										BackendAddressPool: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+										Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 										IdleTimeoutInMinutes: new(int32(30)),
 									},
 									Name: new("outbound-rule-v4"),
@@ -1843,10 +1842,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Zones:    []*string{},
 						Name:     new("uuid1-outbound-pip-v4"),
@@ -1858,7 +1857,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.LoadBalancer{
 						SKU: &sdknetwork.LoadBalancerSKU{
-							Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+							Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 						},
 						Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
@@ -1890,7 +1889,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										BackendAddressPool: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+										Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 										IdleTimeoutInMinutes: new(int32(30)),
 									},
 									Name: new("outbound-rule-v4"),
@@ -1948,10 +1947,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Zones:    []*string{new("1"), new("2"), new("3")},
 						Name:     new("uuid1-outbound-pip-v4"),
@@ -1963,7 +1962,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.LoadBalancer{
 						SKU: &sdknetwork.LoadBalancerSKU{
-							Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+							Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 						},
 						Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
@@ -1995,7 +1994,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										BackendAddressPool: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+										Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 										IdleTimeoutInMinutes: new(int32(30)),
 									},
 									Name: new("outbound-rule-v4"),
@@ -2052,10 +2051,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     new("uuid1-outbound-pip-v4"),
 						Type:     new("Microsoft.Network/publicIPAddresses"),
@@ -2067,10 +2066,10 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.PublicIPAddress{
 						SKU: &sdknetwork.PublicIPAddressSKU{
-							Name: (*sdknetwork.PublicIPAddressSKUName)(pointerutils.ToPtr(string(sdknetwork.PublicIPAddressSKUNameStandard))),
+							Name: (*sdknetwork.PublicIPAddressSKUName)(new(string(sdknetwork.PublicIPAddressSKUNameStandard))),
 						},
 						Properties: &sdknetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(pointerutils.ToPtr(string(sdknetwork.IPAllocationMethodStatic))),
+							PublicIPAllocationMethod: (*sdknetwork.IPAllocationMethod)(new(string(sdknetwork.IPAllocationMethodStatic))),
 						},
 						Name:     new("uuid2-outbound-pip-v4"),
 						Type:     new("Microsoft.Network/publicIPAddresses"),
@@ -2082,7 +2081,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 				{
 					Resource: &sdknetwork.LoadBalancer{
 						SKU: &sdknetwork.LoadBalancerSKU{
-							Name: pointerutils.ToPtr(sdknetwork.LoadBalancerSKUNameStandard),
+							Name: new(sdknetwork.LoadBalancerSKUNameStandard),
 						},
 						Properties: &sdknetwork.LoadBalancerPropertiesFormat{
 							FrontendIPConfigurations: []*sdknetwork.FrontendIPConfiguration{
@@ -2126,7 +2125,7 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 										BackendAddressPool: &sdknetwork.SubResource{
 											ID: new(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
 										},
-										Protocol:             pointerutils.ToPtr(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
+										Protocol:             new(sdknetwork.LoadBalancerOutboundRuleProtocolAll),
 										IdleTimeoutInMinutes: new(int32(30)),
 									},
 									Name: new("outbound-rule-v4"),
@@ -2495,7 +2494,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 							Version:    "4.14.40",
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"CloudControllerManager": {
 									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),
@@ -2584,7 +2583,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 							Version:    "4.14.40",
 						},
 						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-							UpgradeableTo: pointerutils.ToPtr(api.UpgradeableTo("4.15.40")),
+							UpgradeableTo: new(api.UpgradeableTo("4.15.40")),
 							PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{
 								"DummyOperator": {
 									ResourceID: fmt.Sprintf("%s/%s", resourceID, "ccm"),

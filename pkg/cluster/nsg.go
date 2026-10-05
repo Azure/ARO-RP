@@ -10,7 +10,6 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
@@ -25,14 +24,14 @@ func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 		nsg.Properties.SecurityRules = []*armnetwork.SecurityRule{
 			{
 				Properties: &armnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+					Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
 					SourcePortRange:          new("*"),
 					DestinationPortRange:     new("6443"),
 					SourceAddressPrefix:      new("*"),
 					DestinationAddressPrefix: new("*"),
-					Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+					Access:                   new(armnetwork.SecurityRuleAccessAllow),
 					Priority:                 new(int32(120)),
-					Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+					Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 				},
 				Name: new("apiserver_in"),
 			},

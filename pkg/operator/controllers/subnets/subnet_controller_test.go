@@ -26,7 +26,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -84,7 +83,7 @@ func getValidSubnet() *armnetwork.Subnet {
 	for _, endpoint := range api.SubnetsEndpoints {
 		s.Properties.ServiceEndpoints = append(s.Properties.ServiceEndpoints, &armnetwork.ServiceEndpointPropertiesFormat{
 			Service:           new(endpoint),
-			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateSucceeded),
+			ProvisioningState: new(armnetwork.ProvisioningStateSucceeded),
 		})
 	}
 	return s

@@ -17,7 +17,6 @@ import (
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -68,7 +67,7 @@ func getValidFlowLogFeature() *armnetwork.FlowLog {
 				Days: new(int32(0)),
 			},
 			Format: &armnetwork.FlowLogFormatParameters{
-				Type:    pointerutils.ToPtr(armnetwork.FlowLogFormatTypeJSON),
+				Type:    new(armnetwork.FlowLogFormatTypeJSON),
 				Version: new(int32(0)),
 			},
 			FlowAnalyticsConfiguration: &armnetwork.TrafficAnalyticsProperties{

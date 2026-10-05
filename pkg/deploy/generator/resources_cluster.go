@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -110,7 +109,7 @@ func (g *generator) diskEncryptionKeyVaultRBAC() *arm.Resource {
 			Type: new("Microsoft.KeyVault/vaults/providers/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            new("[" + resourceID + "]"),
-				RoleDefinitionID: pointerutils.ToPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleKeyVaultCryptoServiceEncryptionUser + "')]"),
+				RoleDefinitionID: new("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + rbac.RoleKeyVaultCryptoServiceEncryptionUser + "')]"),
 				PrincipalID:      &spID,
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},

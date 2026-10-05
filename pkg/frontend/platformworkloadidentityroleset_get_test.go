@@ -11,9 +11,10 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20220904"
+	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
@@ -71,7 +72,7 @@ func TestGetPlatformWorkloadIdentityRoleSet(t *testing.T) {
 					},
 					ID:   new("mockID"),
 					Name: new(availableMinorVersion),
-					Type: pointerutils.ToPtr(api.PlatformWorkloadIdentityRoleSetsType),
+					Type: new(api.PlatformWorkloadIdentityRoleSetsType),
 				},
 			},
 		},

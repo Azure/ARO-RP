@@ -23,7 +23,6 @@ import (
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -409,7 +408,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "pass: subnet provisioning state is succeeded",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.ProvisioningState = pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded)
+				vnet.Properties.Subnets[0].Properties.ProvisioningState = new(sdknetwork.ProvisioningStateSucceeded)
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -418,7 +417,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: subnet provisioning state is not succeeded",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.ProvisioningState = pointerutils.ToPtr(sdknetwork.ProvisioningStateFailed)
+				vnet.Properties.Subnets[0].Properties.ProvisioningState = new(sdknetwork.ProvisioningStateFailed)
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -575,7 +574,7 @@ func TestValidateSubnets(t *testing.T) {
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 					},
@@ -2196,7 +2195,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 						{
@@ -2206,7 +2205,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &workerNSGv1,
 								},
-								ProvisioningState: pointerutils.ToPtr(sdknetwork.ProvisioningStateSucceeded),
+								ProvisioningState: new(sdknetwork.ProvisioningStateSucceeded),
 							},
 						},
 					},

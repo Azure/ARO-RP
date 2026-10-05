@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -74,8 +73,8 @@ func lbAfter(lbID string) armnetwork.LoadBalancer {
 						Probe: &armnetwork.SubResource{
 							ID: new(lbID + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+						Protocol:             new(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork.LoadDistributionDefault),
 						FrontendPort:         new(int32(2200)),
 						BackendPort:          new(int32(22)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -94,8 +93,8 @@ func lbAfter(lbID string) armnetwork.LoadBalancer {
 						Probe: &armnetwork.SubResource{
 							ID: new(lbID + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+						Protocol:             new(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork.LoadDistributionDefault),
 						FrontendPort:         new(int32(2201)),
 						BackendPort:          new(int32(22)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -114,8 +113,8 @@ func lbAfter(lbID string) armnetwork.LoadBalancer {
 						Probe: &armnetwork.SubResource{
 							ID: new(lbID + "/probes/ssh"),
 						},
-						Protocol:             pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-						LoadDistribution:     pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+						Protocol:             new(armnetwork.TransportProtocolTCP),
+						LoadDistribution:     new(armnetwork.LoadDistributionDefault),
 						FrontendPort:         new(int32(2202)),
 						BackendPort:          new(int32(22)),
 						IdleTimeoutInMinutes: new(int32(30)),
@@ -127,7 +126,7 @@ func lbAfter(lbID string) armnetwork.LoadBalancer {
 			Probes: []*armnetwork.Probe{
 				{
 					Properties: &armnetwork.ProbePropertiesFormat{
-						Protocol:          pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
+						Protocol:          new(armnetwork.ProbeProtocolTCP),
 						Port:              new(int32(22)),
 						IntervalInSeconds: new(int32(5)),
 						NumberOfProbes:    new(int32(2)),

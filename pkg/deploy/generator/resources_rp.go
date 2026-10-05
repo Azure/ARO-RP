@@ -19,7 +19,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -37,14 +36,14 @@ func (g *generator) rpManagedIdentity() *arm.Resource {
 
 func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resource {
 	return g.securityRules("rp-nsg/portal_in", &armnetwork.SecurityRulePropertiesFormat{
-		Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+		Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
 		SourcePortRange:          new("*"),
 		DestinationPortRange:     new("444"),
 		SourceAddressPrefixes:    []*string{},
 		DestinationAddressPrefix: new("*"),
-		Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+		Access:                   new(armnetwork.SecurityRuleAccessAllow),
 		Priority:                 new(int32(142)),
-		Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+		Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
 }
 
@@ -52,27 +51,27 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 	rules := []*armnetwork.SecurityRule{
 		{
 			Properties: &armnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+				Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
 				SourcePortRange:          new("*"),
 				DestinationPortRange:     new("443"),
 				SourceAddressPrefix:      new("AzureResourceManager"),
 				DestinationAddressPrefix: new("*"),
-				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+				Access:                   new(armnetwork.SecurityRuleAccessAllow),
 				Priority:                 new(int32(120)),
-				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+				Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 			},
 			Name: new("rp_in_arm"),
 		},
 		{
 			Properties: &armnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+				Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
 				SourcePortRange:          new("*"),
 				DestinationPortRange:     new("443"),
 				SourceAddressPrefix:      new("GenevaActions"),
 				DestinationAddressPrefix: new("*"),
-				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+				Access:                   new(armnetwork.SecurityRuleAccessAllow),
 				Priority:                 new(int32(130)),
-				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+				Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 			},
 			Name: new("rp_in_geneva"),
 		},
@@ -84,14 +83,14 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 
 		rules = append(rules, &armnetwork.SecurityRule{
 			Properties: &armnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+				Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
 				SourcePortRange:          new("*"),
 				DestinationPortRange:     new("22"),
 				SourceAddressPrefix:      new("*"),
 				DestinationAddressPrefix: new("*"),
-				Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessAllow),
+				Access:                   new(armnetwork.SecurityRuleAccessAllow),
 				Priority:                 new(int32(125)),
-				Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+				Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 			},
 			Name: new("ssh_in"),
 		})
@@ -99,14 +98,14 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 		rules = append(rules,
 			&armnetwork.SecurityRule{
 				Properties: &armnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 pointerutils.ToPtr(armnetwork.SecurityRuleProtocolTCP),
+					Protocol:                 new(armnetwork.SecurityRuleProtocolTCP),
 					SourcePortRange:          new("*"),
 					DestinationPortRange:     new("*"),
 					SourceAddressPrefix:      new("10.0.8.0/24"),
 					DestinationAddressPrefix: new("*"),
-					Access:                   pointerutils.ToPtr(armnetwork.SecurityRuleAccessDeny),
+					Access:                   new(armnetwork.SecurityRuleAccessDeny),
 					Priority:                 new(int32(145)),
-					Direction:                pointerutils.ToPtr(armnetwork.SecurityRuleDirectionInbound),
+					Direction:                new(armnetwork.SecurityRuleDirectionInbound),
 				},
 				Name: new("deny_in_gateway"),
 			},
@@ -166,7 +165,7 @@ func (g *generator) rpPEVnet() *arm.Resource {
 				NetworkSecurityGroup: &armnetwork.SecurityGroup{
 					ID: new("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 				},
-				PrivateEndpointNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
+				PrivateEndpointNetworkPolicies: new(armnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled),
 				ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 					{
 						Service:   new("Microsoft.Storage"),
@@ -183,7 +182,7 @@ func (g *generator) rpLB() *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.LoadBalancer{
 			SKU: &armnetwork.LoadBalancerSKU{
-				Name: pointerutils.ToPtr(armnetwork.LoadBalancerSKUNameStandard),
+				Name: new(armnetwork.LoadBalancerSKUNameStandard),
 			},
 			Properties: &armnetwork.LoadBalancerPropertiesFormat{
 				FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
@@ -221,8 +220,8 @@ func (g *generator) rpLB() *arm.Resource {
 							Probe: &armnetwork.SubResource{
 								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
 							},
-							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
 							FrontendPort:     new(int32(443)),
 							BackendPort:      new(int32(443)),
 						},
@@ -239,8 +238,8 @@ func (g *generator) rpLB() *arm.Resource {
 							Probe: &armnetwork.SubResource{
 								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
 							},
-							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
 							FrontendPort:     new(int32(443)),
 							BackendPort:      new(int32(444)),
 						},
@@ -257,8 +256,8 @@ func (g *generator) rpLB() *arm.Resource {
 							Probe: &armnetwork.SubResource{
 								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh')]"),
 							},
-							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
-							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
+							Protocol:         new(armnetwork.TransportProtocolTCP),
+							LoadDistribution: new(armnetwork.LoadDistributionDefault),
 							FrontendPort:     new(int32(22)),
 							BackendPort:      new(int32(2222)),
 						},
@@ -268,7 +267,7 @@ func (g *generator) rpLB() *arm.Resource {
 				Probes: []*armnetwork.Probe{
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
-							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTPS),
+							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
 							Port:           new(int32(443)),
 							NumberOfProbes: new(int32(2)),
 							RequestPath:    new("/healthz/ready"),
@@ -277,7 +276,7 @@ func (g *generator) rpLB() *arm.Resource {
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
-							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTPS),
+							Protocol:       new(armnetwork.ProbeProtocolHTTPS),
 							Port:           new(int32(444)),
 							NumberOfProbes: new(int32(2)),
 							RequestPath:    new("/healthz/ready"),
@@ -286,7 +285,7 @@ func (g *generator) rpLB() *arm.Resource {
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
-							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
+							Protocol:       new(armnetwork.ProbeProtocolTCP),
 							Port:           new(int32(2222)),
 							NumberOfProbes: new(int32(2)),
 						},
@@ -731,7 +730,7 @@ func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, componen
 			Type: new("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            &scope,
-				RoleDefinitionID: pointerutils.ToPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '" + rbac.RoleDocumentDBDataContributor + "')]"),
+				RoleDefinitionID: new("[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '" + rbac.RoleDocumentDBDataContributor + "')]"),
 				PrincipalID:      new("[parameters('" + component + "ServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},

@@ -17,8 +17,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates"
-
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type Eku string
@@ -35,7 +33,7 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 		CertificatePolicy: &azcertificates.CertificatePolicy{
 			KeyProperties: &azcertificates.KeyProperties{
 				Exportable: new(true),
-				KeyType:    pointerutils.ToPtr(azcertificates.KeyTypeRSA),
+				KeyType:    new(azcertificates.KeyTypeRSA),
 				KeySize:    new(int32(2048)),
 			},
 			SecretProperties: &azcertificates.SecretProperties{
@@ -52,8 +50,8 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 					},
 				},
 				KeyUsage: []*azcertificates.KeyUsageType{
-					pointerutils.ToPtr(azcertificates.KeyUsageTypeDigitalSignature),
-					pointerutils.ToPtr(azcertificates.KeyUsageTypeKeyEncipherment),
+					new(azcertificates.KeyUsageTypeDigitalSignature),
+					new(azcertificates.KeyUsageTypeKeyEncipherment),
 				},
 				ValidityInMonths: new(int32(3)),
 			},
@@ -63,7 +61,7 @@ func SignedCertificateParameters(issuer string, commonName string, eku Eku) azce
 						DaysBeforeExpiry: new(int32(30)),
 					},
 					Action: &azcertificates.LifetimeActionType{
-						ActionType: pointerutils.ToPtr(azcertificates.CertificatePolicyActionAutoRenew),
+						ActionType: new(azcertificates.CertificatePolicyActionAutoRenew),
 					},
 				},
 			},

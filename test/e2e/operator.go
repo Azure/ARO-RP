@@ -42,7 +42,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilversion "github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -347,7 +346,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		By("creating an empty test NSG")
 		testNSG = armnetwork.SecurityGroup{
 			Location:   &location,
-			Name:       pointerutils.ToPtr(nsg),
+			Name:       new(nsg),
 			Type:       new("Microsoft.Network/networkSecurityGroups"),
 			Properties: &armnetwork.SecurityGroupPropertiesFormat{},
 		}
