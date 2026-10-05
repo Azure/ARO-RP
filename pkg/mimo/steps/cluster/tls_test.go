@@ -36,7 +36,6 @@ import (
 	mock_azsecrets "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azsecrets"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -339,8 +338,8 @@ func TestRotateClusterCertificates(t *testing.T) {
 				},
 			},
 			mocks: func(kv *mock_azsecrets.MockClient) {
-				apiserver_secret := azsecrets.Secret{Value: pointerutils.ToPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificate[0].Raw})) + string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})))}
-				ingress_secret := azsecrets.Secret{Value: pointerutils.ToPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ingresscertificate[0].Raw})) + string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(ingresskey)})))}
+				apiserver_secret := azsecrets.Secret{Value: new(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificate[0].Raw})) + string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})))}
+				ingress_secret := azsecrets.Secret{Value: new(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ingresscertificate[0].Raw})) + string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(ingresskey)})))}
 
 				kv.EXPECT().GetSecret(gomock.Any(), "512a50c8-2a43-4c2a-8fd9-a5539475df2a-apiserver", "", nil).Return(
 					azsecrets.GetSecretResponse{Secret: apiserver_secret}, nil,
@@ -396,7 +395,7 @@ func TestRotateClusterCertificates(t *testing.T) {
 				},
 			},
 			mocks: func(kv *mock_azsecrets.MockClient) {
-				ingress_secret := azsecrets.Secret{Value: pointerutils.ToPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ingresscertificate[0].Raw})) + string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(ingresskey)})))}
+				ingress_secret := azsecrets.Secret{Value: new(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ingresscertificate[0].Raw})) + string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(ingresskey)})))}
 
 				kv.EXPECT().GetSecret(gomock.Any(), "512a50c8-2a43-4c2a-8fd9-a5539475df2a-apiserver", "", nil).Times(1).Return(
 					azsecrets.GetSecretResponse{}, azcoreruntime.NewResponseError(&http.Response{StatusCode: http.StatusNotFound}),

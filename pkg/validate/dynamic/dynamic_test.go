@@ -223,14 +223,14 @@ func TestValidateCIDRRanges(t *testing.T) {
 			vnets := []sdknetwork.VirtualNetwork{
 				{
 					ID:       &vnetID,
-					Location: pointerutils.ToPtr("eastus"),
-					Name:     pointerutils.ToPtr("VNET With AddressPrefix"),
+					Location: new("eastus"),
+					Name:     new("VNET With AddressPrefix"),
 					Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
 						Subnets: []*sdknetwork.Subnet{
 							{
 								ID: &masterSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+									AddressPrefix: new("10.0.0.0/24"),
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &masterNSGv1,
 									},
@@ -239,7 +239,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 							{
 								ID: &workerSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefix: pointerutils.ToPtr("10.0.1.0/24"),
+									AddressPrefix: new("10.0.1.0/24"),
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &workerNSGv1,
 									},
@@ -250,14 +250,14 @@ func TestValidateCIDRRanges(t *testing.T) {
 				},
 				{
 					ID:       &vnetID,
-					Location: pointerutils.ToPtr("eastus"),
-					Name:     pointerutils.ToPtr("VNET With AddressPrefixes"),
+					Location: new("eastus"),
+					Name:     new("VNET With AddressPrefixes"),
 					Properties: &sdknetwork.VirtualNetworkPropertiesFormat{
 						Subnets: []*sdknetwork.Subnet{
 							{
 								ID: &masterSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefixes: []*string{pointerutils.ToPtr("10.0.0.0/24")},
+									AddressPrefixes: []*string{new("10.0.0.0/24")},
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &masterNSGv1,
 									},
@@ -266,7 +266,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 							{
 								ID: &workerSubnet,
 								Properties: &sdknetwork.SubnetPropertiesFormat{
-									AddressPrefixes: []*string{pointerutils.ToPtr("10.0.1.0/24")},
+									AddressPrefixes: []*string{new("10.0.1.0/24")},
 									NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 										ID: &workerNSGv1,
 									},
@@ -328,8 +328,8 @@ func TestValidateVnetLocation(t *testing.T) {
 
 			vnet := sdknetwork.VirtualNetworksClientGetResponse{
 				VirtualNetwork: sdknetwork.VirtualNetwork{
-					ID:       pointerutils.ToPtr(vnetID),
-					Location: pointerutils.ToPtr(tt.location),
+					ID:       new(vnetID),
+					Location: new(tt.location),
 				},
 			}
 
@@ -444,7 +444,7 @@ func TestValidateSubnets(t *testing.T) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
 			},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("not-the-correct-nsg")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("not-the-correct-nsg")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -458,7 +458,7 @@ func TestValidateSubnets(t *testing.T) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 			},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("attached")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("attached")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -479,7 +479,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: nsg id doesn't match expected",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("not matching")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("not matching")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -493,7 +493,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "pass: byonsg doesn't check if nsg ids are matched after creating",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = pointerutils.ToPtr("don't care what it is")
+				vnet.Properties.Subnets[0].Properties.NetworkSecurityGroup.ID = new("don't care what it is")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -534,7 +534,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: invalid subnet CIDR",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.AddressPrefix = pointerutils.ToPtr("not-valid")
+				vnet.Properties.Subnets[0].Properties.AddressPrefix = new("not-valid")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -544,7 +544,7 @@ func TestValidateSubnets(t *testing.T) {
 		{
 			name: "fail: too small subnet CIDR",
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[0].Properties.AddressPrefix = pointerutils.ToPtr("10.0.0.0/28")
+				vnet.Properties.Subnets[0].Properties.AddressPrefix = new("10.0.0.0/28")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -571,7 +571,7 @@ func TestValidateSubnets(t *testing.T) {
 						{
 							ID: &masterSubnet,
 							Properties: &sdknetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+								AddressPrefix: new("10.0.0.0/24"),
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
@@ -934,7 +934,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        log,
 				pdpClient:                  pdpClient,
@@ -1112,7 +1112,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        log,
 				pdpClient:                  pdpClient,
@@ -1285,7 +1285,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			name:   "fail: CSP validation for CSP cluster - worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
+				vnet.Properties.Subnets[1].ID = new("not valid")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -1459,7 +1459,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        log,
@@ -1637,7 +1637,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			name:   "fail: CSP validation for CSP cluster - worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_armnetwork.MockVirtualNetworksClient, vnet sdknetwork.VirtualNetworksClientGetResponse) {
-				vnet.Properties.Subnets[1].ID = pointerutils.ToPtr("not valid")
+				vnet.Properties.Subnets[1].ID = new("not valid")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, nil).
 					Return(vnet, nil)
@@ -1812,7 +1812,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				env:                        env,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        log,
@@ -2192,7 +2192,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 						{
 							ID: &masterSubnet,
 							Properties: &sdknetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.0.0/24"),
+								AddressPrefix: new("10.0.0.0/24"),
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
@@ -2202,7 +2202,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 						{
 							ID: &workerSubnet,
 							Properties: &sdknetwork.SubnetPropertiesFormat{
-								AddressPrefix: pointerutils.ToPtr("10.0.1.0/24"),
+								AddressPrefix: new("10.0.1.0/24"),
 								NetworkSecurityGroup: &sdknetwork.SecurityGroup{
 									ID: &workerNSGv1,
 								},
@@ -2233,7 +2233,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 
 			dv := &dynamic{
 				env:                        env,
-				appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+				appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				virtualNetworks:            vnetClient,
 				pdpClient:                  pdpClient,

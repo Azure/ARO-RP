@@ -30,9 +30,9 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 		PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 			"": {
-				ResourceID: pointerutils.ToPtr(""),
-				ClientID:   pointerutils.ToPtr(""),
-				ObjectID:   pointerutils.ToPtr(""),
+				ResourceID: new(""),
+				ClientID:   new(""),
+				ObjectID:   new(""),
 			},
 		},
 	}
@@ -64,15 +64,15 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Properties.WorkerProfilesStatus = nil
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 		ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-			Count: pointerutils.ToPtr(int32(1)),
+			Count: new(int32(1)),
 		},
 	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 		PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 			"": {
-				ResourceID: pointerutils.ToPtr(""),
-				ClientID:   pointerutils.ToPtr(""),
-				ObjectID:   pointerutils.ToPtr(""),
+				ResourceID: new(""),
+				ClientID:   new(""),
+				ObjectID:   new(""),
 			},
 		},
 	}
@@ -91,19 +91,19 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 		EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{
 			{
-				ID: pointerutils.ToPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName"),
+				ID: new("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName"),
 			},
 		},
 		ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-			Count: pointerutils.ToPtr(int32(1)),
+			Count: new(int32(1)),
 		},
 	}
 	oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 		PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 			"": {
-				ResourceID: pointerutils.ToPtr(""),
-				ClientID:   pointerutils.ToPtr(""),
-				ObjectID:   pointerutils.ToPtr(""),
+				ResourceID: new(""),
+				ClientID:   new(""),
+				ObjectID:   new(""),
 			},
 		},
 	}

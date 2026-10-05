@@ -86,37 +86,37 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 					{
 						PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
 							Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{
-								OpenShiftVersion: pointerutils.ToPtr("4.14"),
+								OpenShiftVersion: new("4.14"),
 								PlatformWorkloadIdentityRoles: []*generated.PlatformWorkloadIdentityRole{
 									{
-										OperatorName:       pointerutils.ToPtr("CloudControllerManager"),
-										RoleDefinitionName: pointerutils.ToPtr("Azure RedHat OpenShift Cloud Controller Manager Role"),
-										RoleDefinitionID:   pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
+										OperatorName:       new("CloudControllerManager"),
+										RoleDefinitionName: new("Azure RedHat OpenShift Cloud Controller Manager Role"),
+										RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
 									},
 								},
 							},
-							Name: pointerutils.ToPtr("4.14"),
+							Name: new("4.14"),
 							Type: pointerutils.ToPtr(api.PlatformWorkloadIdentityRoleSetsType),
 						},
 					},
 					{
 						PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
 							Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{
-								OpenShiftVersion: pointerutils.ToPtr("4.15"),
+								OpenShiftVersion: new("4.15"),
 								PlatformWorkloadIdentityRoles: []*generated.PlatformWorkloadIdentityRole{
 									{
-										OperatorName:       pointerutils.ToPtr("CloudControllerManager"),
-										RoleDefinitionName: pointerutils.ToPtr("Azure RedHat OpenShift Cloud Controller Manager Role"),
-										RoleDefinitionID:   pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
+										OperatorName:       new("CloudControllerManager"),
+										RoleDefinitionName: new("Azure RedHat OpenShift Cloud Controller Manager Role"),
+										RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
 									},
 									{
-										OperatorName:       pointerutils.ToPtr("ClusterIngressOperator"),
-										RoleDefinitionName: pointerutils.ToPtr("Azure RedHat OpenShift Cluster Ingress Operator Role"),
-										RoleDefinitionID:   pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c"),
+										OperatorName:       new("ClusterIngressOperator"),
+										RoleDefinitionName: new("Azure RedHat OpenShift Cluster Ingress Operator Role"),
+										RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c"),
 									},
 								},
 							},
-							Name: pointerutils.ToPtr("4.15"),
+							Name: new("4.15"),
 							Type: pointerutils.ToPtr(api.PlatformWorkloadIdentityRoleSetsType),
 						},
 					},

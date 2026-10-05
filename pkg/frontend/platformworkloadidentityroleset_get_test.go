@@ -60,17 +60,17 @@ func TestGetPlatformWorkloadIdentityRoleSet(t *testing.T) {
 			wantResponse: &v20250725.PlatformWorkloadIdentityRoleSet{
 				PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
 					Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{
-						OpenShiftVersion: pointerutils.ToPtr(availableMinorVersion),
+						OpenShiftVersion: new(availableMinorVersion),
 						PlatformWorkloadIdentityRoles: []*generated.PlatformWorkloadIdentityRole{
 							{
-								OperatorName:       pointerutils.ToPtr("CloudControllerManager"),
-								RoleDefinitionName: pointerutils.ToPtr("Azure RedHat OpenShift Cloud Controller Manager Role"),
-								RoleDefinitionID:   pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
+								OperatorName:       new("CloudControllerManager"),
+								RoleDefinitionName: new("Azure RedHat OpenShift Cloud Controller Manager Role"),
+								RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
 							},
 						},
 					},
-					ID:   pointerutils.ToPtr("mockID"),
-					Name: pointerutils.ToPtr(availableMinorVersion),
+					ID:   new("mockID"),
+					Name: new(availableMinorVersion),
 					Type: pointerutils.ToPtr(api.PlatformWorkloadIdentityRoleSetsType),
 				},
 			},

@@ -21,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -250,7 +249,7 @@ func workerMachineSet(name string) *machinev1beta1.MachineSet {
 			Namespace: machineSetsNamespace,
 		},
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: pointerutils.ToPtr(int32(1)),
+			Replicas: new(int32(1)),
 		},
 	}
 }

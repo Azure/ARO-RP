@@ -40,7 +40,6 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	"github.com/Azure/ARO-RP/pkg/util/pki"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -628,18 +627,18 @@ func (m *mockClient) GetUserAssignedIdentitiesCredentials(ctx context.Context, r
 	return &dataplane.ManagedIdentityCredentials{
 		ExplicitIdentities: []dataplane.UserAssignedIdentityCredentials{
 			{
-				ClientID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_CLIENT_ID")),
-				ClientSecret:               pointerutils.ToPtr(os.Getenv("MOCK_MSI_CERT")),
-				TenantID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_TENANT_ID")),
-				ObjectID:                   pointerutils.ToPtr(os.Getenv("MOCK_MSI_OBJECT_ID")),
-				ResourceID:                 pointerutils.ToPtr(m.msiResourceId),
-				AuthenticationEndpoint:     pointerutils.ToPtr(m.aadHost),
-				CannotRenewAfter:           pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays*5).Format(time.RFC3339)),
+				ClientID:                   new(os.Getenv("MOCK_MSI_CLIENT_ID")),
+				ClientSecret:               new(os.Getenv("MOCK_MSI_CERT")),
+				TenantID:                   new(os.Getenv("MOCK_MSI_TENANT_ID")),
+				ObjectID:                   new(os.Getenv("MOCK_MSI_OBJECT_ID")),
+				ResourceID:                 new(m.msiResourceId),
+				AuthenticationEndpoint:     new(m.aadHost),
+				CannotRenewAfter:           new(now.AddDate(0, 0, mockMsiCertValidityDays*5).Format(time.RFC3339)),
 				ClientSecretURL:            &placeholder,
 				MtlsAuthenticationEndpoint: &placeholder,
-				NotAfter:                   pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays).Format(time.RFC3339)),
-				NotBefore:                  pointerutils.ToPtr(now.Add(-1 * time.Hour).Format(time.RFC3339)),
-				RenewAfter:                 pointerutils.ToPtr(now.AddDate(0, 0, mockMsiCertValidityDays/2).Format(time.RFC3339)),
+				NotAfter:                   new(now.AddDate(0, 0, mockMsiCertValidityDays).Format(time.RFC3339)),
+				NotBefore:                  new(now.Add(-1 * time.Hour).Format(time.RFC3339)),
+				RenewAfter:                 new(now.AddDate(0, 0, mockMsiCertValidityDays/2).Format(time.RFC3339)),
 				CustomClaims: &dataplane.CustomClaims{
 					XMSAzNwperimid: []string{placeholder},
 					XMSAzTm:        &placeholder,

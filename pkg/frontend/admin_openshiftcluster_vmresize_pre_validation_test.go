@@ -172,8 +172,8 @@ func masterMachineWithZone(name, vmSize, zone string) machinev1beta1.Machine {
 
 func virtualMachineValidationWithSizeAndZone(vmSize, zone string) mgmtcompute.VirtualMachine {
 	statuses := []mgmtcompute.InstanceViewStatus{
-		{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-		{Code: pointerutils.ToPtr("PowerState/running")},
+		{Code: new("ProvisioningState/succeeded")},
+		{Code: new("PowerState/running")},
 	}
 	zones := []string{zone}
 
@@ -347,12 +347,12 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
 					Return(map[string]*armcompute.ResourceSKU{
 						"Standard_D8s_v3": {
-							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Name:         new("Standard_D8s_v3"),
+							ResourceType: new("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
 							LocationInfo: []*armcompute.ResourceSKULocationInfo{
 								{
-									Location: pointerutils.ToPtr("eastus"),
+									Location: new("eastus"),
 								},
 							},
 							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
@@ -570,12 +570,12 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
 					Return(map[string]*armcompute.ResourceSKU{
 						"Standard_D8s_v3": {
-							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Name:         new("Standard_D8s_v3"),
+							ResourceType: new("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
 							LocationInfo: []*armcompute.ResourceSKULocationInfo{
 								{
-									Location: pointerutils.ToPtr("eastus"),
+									Location: new("eastus"),
 								},
 							},
 							Restrictions: []*armcompute.ResourceSKURestrictions{
@@ -629,12 +629,12 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
 					Return(map[string]*armcompute.ResourceSKU{
 						"Standard_D8s_v3": {
-							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Name:         new("Standard_D8s_v3"),
+							ResourceType: new("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
 							LocationInfo: []*armcompute.ResourceSKULocationInfo{
 								{
-									Location: pointerutils.ToPtr("eastus"),
+									Location: new("eastus"),
 								},
 							},
 							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
@@ -684,12 +684,12 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
 					Return(map[string]*armcompute.ResourceSKU{
 						"Standard_D8s_v3": {
-							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Name:         new("Standard_D8s_v3"),
+							ResourceType: new("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
 							LocationInfo: []*armcompute.ResourceSKULocationInfo{
 								{
-									Location: pointerutils.ToPtr("eastus"),
+									Location: new("eastus"),
 								},
 							},
 							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
@@ -742,12 +742,12 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 					VMGetSKUs(gomock.Any(), []string{"Standard_D8s_v3"}).
 					Return(map[string]*armcompute.ResourceSKU{
 						"Standard_D8s_v3": {
-							Name:         pointerutils.ToPtr("Standard_D8s_v3"),
-							ResourceType: pointerutils.ToPtr("virtualMachines"),
+							Name:         new("Standard_D8s_v3"),
+							ResourceType: new("virtualMachines"),
 							Locations:    pointerutils.ToSlicePtr([]string{"eastus"}),
 							LocationInfo: []*armcompute.ResourceSKULocationInfo{
 								{
-									Location: pointerutils.ToPtr("eastus"),
+									Location: new("eastus"),
 								},
 							},
 							Restrictions: pointerutils.ToSlicePtr([]armcompute.ResourceSKURestrictions{}),
@@ -889,17 +889,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: new("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(76)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(76)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(76)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(76)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -916,17 +916,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: new("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(77)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(77)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(77)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(77)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -957,17 +957,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardESv3Family"),
+								Value: new("standardESv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(76)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(76)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(100)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(100)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -984,17 +984,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardESv3Family"),
+								Value: new("standardESv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(77)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(77)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(100)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(100)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -1013,17 +1013,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardESv3Family"),
+								Value: new("standardESv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(50)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(50)),
+							Limit:        new(int64(200)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(177)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(177)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -1042,17 +1042,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardESv3Family"),
+								Value: new("standardESv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(88)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(88)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(199)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(199)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -1067,10 +1067,10 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardESv3Family"),
+								Value: new("standardESv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(50)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(50)),
+							Limit:        new(int64(100)),
 						},
 					}, nil)
 			},
@@ -1095,17 +1095,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: new("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(84)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(84)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(84)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(84)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -1123,17 +1123,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: new("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(85)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(85)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(85)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(85)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},
@@ -1160,17 +1160,17 @@ func TestCheckResizeComputeQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: new("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(69)),
-							Limit:        pointerutils.ToPtr(int64(100)),
+							CurrentValue: new(int32(69)),
+							Limit:        new(int64(100)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(50)),
-							Limit:        pointerutils.ToPtr(int64(200)),
+							CurrentValue: new(int32(50)),
+							Limit:        new(int64(200)),
 						},
 					}, nil)
 			},

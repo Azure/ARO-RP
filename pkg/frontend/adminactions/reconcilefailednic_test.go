@@ -22,9 +22,9 @@ import (
 
 func getNic(subscription, resourceGroup, location, nicName string) armnetwork.Interface {
 	return armnetwork.Interface{
-		Name:     pointerutils.ToPtr(nicName),
-		Location: pointerutils.ToPtr(location),
-		ID:       pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, resourceGroup, nicName)),
+		Name:     new(nicName),
+		Location: new(location),
+		ID:       new(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkInterfaces/%s", subscription, resourceGroup, nicName)),
 		Properties: &armnetwork.InterfacePropertiesFormat{
 			ProvisioningState: pointerutils.ToPtr(armnetwork.ProvisioningStateFailed),
 		},

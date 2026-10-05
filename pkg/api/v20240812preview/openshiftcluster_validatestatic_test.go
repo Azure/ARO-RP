@@ -150,11 +150,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				if tt.location == nil {
-					tt.location = pointerutils.ToPtr("location")
+					tt.location = new("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = pointerutils.ToPtr("resourceName")
+					tt.clusterName = new("resourceName")
 				}
 
 				v := &openShiftClusterStaticValidator{

@@ -82,11 +82,11 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, storagesdk.AccountSasParameters{
 		Services:               pointerutils.ToPtr(storagesdk.ServicesB),
-		ResourceTypes:          pointerutils.ToPtr(r),
-		Permissions:            pointerutils.ToPtr(p),
+		ResourceTypes:          new(r),
+		Permissions:            new(p),
 		Protocols:              pointerutils.ToPtr(storagesdk.HTTPProtocolHTTPS),
 		SharedAccessStartTime:  &t,
-		SharedAccessExpiryTime: pointerutils.ToPtr(t.Add(24 * time.Hour)),
+		SharedAccessExpiryTime: new(t.Add(24 * time.Hour)),
 	}, nil)
 	if err != nil {
 		return nil, getCorrectErrWhenTooManyRequests(err)

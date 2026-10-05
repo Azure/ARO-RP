@@ -5,7 +5,6 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -19,11 +18,11 @@ type openShiftClusterCredentialsConverter struct{}
 func (openShiftClusterCredentialsConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftClusterCredentials{
 		OpenShiftClusterCredentials: generated.OpenShiftClusterCredentials{
-			KubeadminUsername: pointerutils.ToPtr("kubeadmin"),
+			KubeadminUsername: new("kubeadmin"),
 		},
 	}
 	if oc.Properties.KubeadminPassword != "" {
-		out.KubeadminPassword = pointerutils.ToPtr(string(oc.Properties.KubeadminPassword))
+		out.KubeadminPassword = new(string(oc.Properties.KubeadminPassword))
 	}
 
 	return out

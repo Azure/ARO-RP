@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armcontainerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armcontainerregistry"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -37,8 +36,8 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 	tokens.EXPECT().
 		CreateAndWait(ctx, "global", "arointsvc", gomock.Any(), sdkarmcontainerregistry.Token{
 			Properties: &sdkarmcontainerregistry.TokenProperties{
-				ScopeMapID: pointerutils.ToPtr(registryResourceID + "/scopeMaps/_repositories_pull"),
-				Status:     pointerutils.ToPtr(sdkarmcontainerregistry.TokenStatusEnabled),
+				ScopeMapID: new(registryResourceID + "/scopeMaps/_repositories_pull"),
+				Status:     new(sdkarmcontainerregistry.TokenStatusEnabled),
 			},
 		}).
 		Return(nil, nil)
@@ -49,8 +48,8 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 		Return(&sdkarmcontainerregistry.GenerateCredentialsResult{
 			Passwords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Value:        pointerutils.ToPtr("foo"),
-					CreationTime: pointerutils.ToPtr(time.UnixMilli(1000)),
+					Value:        new("foo"),
+					CreationTime: new(time.UnixMilli(1000)),
 				},
 			},
 		}, nil)
@@ -97,8 +96,8 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "uses password1 when only password2 exists",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
@@ -108,8 +107,8 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "uses password2 when only password1 exists",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -119,11 +118,11 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password1 when it has no creation time",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					Name: new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
@@ -133,11 +132,11 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password2 when it has no creation time",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
 				},
 				{
-					Name: pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					Name: new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -147,12 +146,12 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password1 when it is the oldest password",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(now.Add(-60 * time.Hour * 24)),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword1,
@@ -162,12 +161,12 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password2 when it is the oldest password",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(now.Add(-60 * time.Hour * 24)),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -177,12 +176,12 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password2 when it is the oldest password, even if in reverse order",
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(now.Add(-60 * time.Hour * 24)),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -192,16 +191,16 @@ func TestRotateTokenPassword(t *testing.T) {
 			name: "renews password2 even when password1 is the oldest password, if password2 is in use",
 			registryProfile: &api.RegistryProfile{
 				Username:  tokenName,
-				IssueDate: pointerutils.ToPtr(now.Add(-60 * time.Hour * 24)),
+				IssueDate: new(now.Add(-60 * time.Hour * 24)),
 			},
 			currentTokenPasswords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					CreationTime: pointerutils.ToPtr(now.Add(-60 * time.Hour * 24)),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					CreationTime: new(now.Add(-60 * time.Hour * 24)),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					CreationTime: pointerutils.ToPtr(now),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					CreationTime: new(now),
 				},
 			},
 			wantRenewalName: sdkarmcontainerregistry.TokenPasswordNamePassword2,
@@ -280,11 +279,11 @@ func TestRotateTokenPasswordNeedsName(t *testing.T) {
 	tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", tokenName).Return(
 		fakeTokenProperties([]*sdkarmcontainerregistry.TokenPassword{
 			{
-				CreationTime: pointerutils.ToPtr(time.Now().Add(-60 * time.Hour * 24)),
+				CreationTime: new(time.Now().Add(-60 * time.Hour * 24)),
 			},
 			{
-				Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-				CreationTime: pointerutils.ToPtr(time.Now()),
+				Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+				CreationTime: new(time.Now()),
 			},
 		}), nil)
 
@@ -318,13 +317,13 @@ func fakeCredentialResult(oneGenerated sdkarmcontainerregistry.TokenPasswordName
 		return &sdkarmcontainerregistry.GenerateCredentialsResult{
 			Passwords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					Value:        pointerutils.ToPtr("foo"),
-					CreationTime: pointerutils.ToPtr(time.UnixMilli(1000).UTC()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					Value:        new("foo"),
+					CreationTime: new(time.UnixMilli(1000).UTC()),
 				},
 				{
-					Name:  pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					Value: pointerutils.ToPtr("bar"),
+					Name:  new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					Value: new("bar"),
 				},
 			},
 		}
@@ -332,13 +331,13 @@ func fakeCredentialResult(oneGenerated sdkarmcontainerregistry.TokenPasswordName
 		return &sdkarmcontainerregistry.GenerateCredentialsResult{
 			Passwords: []*sdkarmcontainerregistry.TokenPassword{
 				{
-					Name:  pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword1),
-					Value: pointerutils.ToPtr("foo"),
+					Name:  new(sdkarmcontainerregistry.TokenPasswordNamePassword1),
+					Value: new("foo"),
 				},
 				{
-					Name:         pointerutils.ToPtr(sdkarmcontainerregistry.TokenPasswordNamePassword2),
-					Value:        pointerutils.ToPtr("bar"),
-					CreationTime: pointerutils.ToPtr(time.UnixMilli(1000).UTC()),
+					Name:         new(sdkarmcontainerregistry.TokenPasswordNamePassword2),
+					Value:        new("bar"),
+					CreationTime: new(time.UnixMilli(1000).UTC()),
 				},
 			},
 		}
@@ -357,8 +356,8 @@ func fakeTokenProperties(tp []*sdkarmcontainerregistry.TokenPassword) *sdkarmcon
 
 func generateCredentialsParameters(tpn sdkarmcontainerregistry.TokenPasswordName) sdkarmcontainerregistry.GenerateCredentialsParameters {
 	return sdkarmcontainerregistry.GenerateCredentialsParameters{
-		TokenID: pointerutils.ToPtr(registryResourceID + "/tokens/" + tokenName),
-		Name:    pointerutils.ToPtr(tpn),
+		TokenID: new(registryResourceID + "/tokens/" + tokenName),
+		Name:    new(tpn),
 	}
 }
 
@@ -397,7 +396,7 @@ func TestShouldRotate(t *testing.T) {
 		{
 			name: "old token causes rotation",
 			registryProfile: &api.RegistryProfile{
-				IssueDate: pointerutils.ToPtr(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+				IssueDate: new(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 			},
 			shouldRotate:                true,
 			shouldBeValid:               false,
@@ -407,7 +406,7 @@ func TestShouldRotate(t *testing.T) {
 		{
 			name: "future token (somehow) does not cause rotation",
 			registryProfile: &api.RegistryProfile{
-				IssueDate: pointerutils.ToPtr(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)),
+				IssueDate: new(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)),
 			},
 			shouldRotate:                false,
 			shouldBeValid:               true,
@@ -417,7 +416,7 @@ func TestShouldRotate(t *testing.T) {
 		{
 			name: "current token does not cause rotation",
 			registryProfile: &api.RegistryProfile{
-				IssueDate: pointerutils.ToPtr(time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC)),
+				IssueDate: new(time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC)),
 			},
 			shouldRotate:                false,
 			shouldBeValid:               true,

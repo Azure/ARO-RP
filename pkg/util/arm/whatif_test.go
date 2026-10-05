@@ -18,7 +18,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -173,7 +172,7 @@ func TestCollectPropertyChanges(t *testing.T) {
 		{
 			name: "matching value produces no mismatch",
 			changes: []mgmtfeatures.WhatIfPropertyChange{{
-				Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+				Path:   new("/properties/publicNetworkAccess"),
 				Before: "Enabled",
 				After:  "Disabled",
 			}},
@@ -181,7 +180,7 @@ func TestCollectPropertyChanges(t *testing.T) {
 		{
 			name: "mismatched value is reported",
 			changes: []mgmtfeatures.WhatIfPropertyChange{{
-				Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+				Path:   new("/properties/publicNetworkAccess"),
 				Before: "Disabled",
 				After:  "Enabled",
 			}},
@@ -191,7 +190,7 @@ func TestCollectPropertyChanges(t *testing.T) {
 		{
 			name: "nil Before is reported as mismatch",
 			changes: []mgmtfeatures.WhatIfPropertyChange{{
-				Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+				Path:   new("/properties/publicNetworkAccess"),
 				Before: nil,
 				After:  "Enabled",
 			}},
@@ -201,7 +200,7 @@ func TestCollectPropertyChanges(t *testing.T) {
 		{
 			name: "unwatched path is ignored",
 			changes: []mgmtfeatures.WhatIfPropertyChange{{
-				Path:   pointerutils.ToPtr("/properties/somethingElse"),
+				Path:   new("/properties/somethingElse"),
 				Before: "value1",
 				After:  "value2",
 			}},
@@ -209,7 +208,7 @@ func TestCollectPropertyChanges(t *testing.T) {
 		{
 			name: "dot-notation path is normalized then matched",
 			changes: []mgmtfeatures.WhatIfPropertyChange{{
-				Path:   pointerutils.ToPtr("properties.publicNetworkAccess"),
+				Path:   new("properties.publicNetworkAccess"),
 				Before: "Disabled",
 				After:  "Enabled",
 			}},
@@ -226,9 +225,9 @@ func TestCollectPropertyChanges(t *testing.T) {
 		{
 			name: "children are recursed",
 			changes: []mgmtfeatures.WhatIfPropertyChange{{
-				Path: pointerutils.ToPtr("/properties"),
+				Path: new("/properties"),
 				Children: &[]mgmtfeatures.WhatIfPropertyChange{{
-					Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+					Path:   new("/properties/publicNetworkAccess"),
 					Before: "Disabled",
 					After:  "Enabled",
 				}},
@@ -277,41 +276,41 @@ func TestValidateDeploymentWithWhatIf(t *testing.T) {
 	}
 
 	mismatchChange := mgmtfeatures.WhatIfChange{
-		ResourceID: pointerutils.ToPtr(storageAccountResourceID(whatifDeploymentSA1)),
+		ResourceID: new(storageAccountResourceID(whatifDeploymentSA1)),
 		Delta: &[]mgmtfeatures.WhatIfPropertyChange{{
-			Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+			Path:   new("/properties/publicNetworkAccess"),
 			Before: "Disabled",
 			After:  "Enabled",
 		}},
 	}
 
 	matchingChange := mgmtfeatures.WhatIfChange{
-		ResourceID: pointerutils.ToPtr(storageAccountResourceID(whatifDeploymentSA1)),
+		ResourceID: new(storageAccountResourceID(whatifDeploymentSA1)),
 		Delta: &[]mgmtfeatures.WhatIfPropertyChange{{
-			Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+			Path:   new("/properties/publicNetworkAccess"),
 			Before: "Enabled",
 			After:  "Enabled",
 		}},
 	}
 
 	unknownResourceChange := mgmtfeatures.WhatIfChange{
-		ResourceID: pointerutils.ToPtr(storageAccountResourceID("unmonitoredsa")),
+		ResourceID: new(storageAccountResourceID("unmonitoredsa")),
 		Delta: &[]mgmtfeatures.WhatIfPropertyChange{{
-			Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+			Path:   new("/properties/publicNetworkAccess"),
 			Before: "Disabled",
 		}},
 	}
 
 	unparseableChange := mgmtfeatures.WhatIfChange{
-		ResourceID: pointerutils.ToPtr("not-a-resource-id"),
+		ResourceID: new("not-a-resource-id"),
 		Delta: &[]mgmtfeatures.WhatIfPropertyChange{{
-			Path:   pointerutils.ToPtr("/properties/publicNetworkAccess"),
+			Path:   new("/properties/publicNetworkAccess"),
 			Before: "Disabled",
 		}},
 	}
 
 	nilDeltaChange := mgmtfeatures.WhatIfChange{
-		ResourceID: pointerutils.ToPtr(storageAccountResourceID(whatifDeploymentSA1)),
+		ResourceID: new(storageAccountResourceID(whatifDeploymentSA1)),
 		Delta:      nil,
 	}
 

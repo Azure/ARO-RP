@@ -6,7 +6,6 @@ package v20250725
 import (
 	"encoding/base64"
 
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -15,7 +14,7 @@ import (
 func ExampleOpenShiftClusterAdminKubeconfigResponse() interface{} {
 	return &OpenShiftClusterAdminKubeconfig{
 		OpenShiftClusterAdminKubeconfig: generated.OpenShiftClusterAdminKubeconfig{
-			Kubeconfig: pointerutils.ToPtr(base64.StdEncoding.EncodeToString([]byte("{}"))),
+			Kubeconfig: new(base64.StdEncoding.EncodeToString([]byte("{}"))),
 		},
 	}
 }

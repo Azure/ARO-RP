@@ -51,10 +51,10 @@ func TestGetInstallVersions(t *testing.T) {
 			wantResponse: v20250725.OpenShiftVersion{
 				OpenShiftVersion: generated.OpenShiftVersion{
 					Properties: &generated.OpenShiftVersionProperties{
-						Version: pointerutils.ToPtr(availableVersion),
+						Version: new(availableVersion),
 					},
-					Name: pointerutils.ToPtr(availableVersion),
-					ID:   pointerutils.ToPtr("mockID"),
+					Name: new(availableVersion),
+					ID:   new("mockID"),
 					Type: pointerutils.ToPtr(api.OpenShiftVersionsType),
 				},
 			},

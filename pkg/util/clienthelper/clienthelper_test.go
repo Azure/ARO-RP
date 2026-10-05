@@ -387,7 +387,7 @@ func TestMerge(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(10)),
+					RevisionHistoryLimit: new(int32(10)),
 				},
 			},
 			wantChanged: true,
@@ -428,7 +428,7 @@ func TestMerge(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
@@ -452,8 +452,8 @@ func TestMerge(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(10)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(10)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,
@@ -616,7 +616,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -647,7 +647,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -675,7 +675,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -709,7 +709,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -734,7 +734,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -756,7 +756,7 @@ func TestMerge(t *testing.T) {
 					ClusterMetadata: &hivev1.ClusterMetadata{
 						Platform: &hivev1.ClusterPlatformMetadata{
 							Azure: &azure.Metadata{
-								ResourceGroupName: pointerutils.ToPtr("test"),
+								ResourceGroupName: new("test"),
 							},
 						},
 					},
@@ -1128,7 +1128,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DaemonSetSpec{
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			want: &appsv1.DaemonSet{
@@ -1161,7 +1161,7 @@ func TestMergeApply(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			wantChanged: true,
@@ -1196,7 +1196,7 @@ func TestMergeApply(t *testing.T) {
 					Namespace: "testnamespace",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: pointerutils.ToPtr(int32(12)),
+					RevisionHistoryLimit: new(int32(12)),
 				},
 			},
 			want: &appsv1.Deployment{
@@ -1214,7 +1214,7 @@ func TestMergeApply(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointerutils.ToPtr(int32(1)),
+					Replicas: new(int32(1)),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
@@ -1238,8 +1238,8 @@ func TestMergeApply(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointerutils.ToPtr(int32(12)),
-					ProgressDeadlineSeconds: pointerutils.ToPtr(int32(600)),
+					RevisionHistoryLimit:    new(int32(12)),
+					ProgressDeadlineSeconds: new(int32(600)),
 				},
 			},
 			wantChanged: true,

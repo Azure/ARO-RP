@@ -32,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -283,7 +282,7 @@ func (d *deployer) disableAutomaticRepairsOnVMSS(ctx context.Context, resourceGr
 	err := d.vmss.UpdateAndWait(ctx, resourceGroupName, vmssName, mgmtcompute.VirtualMachineScaleSetUpdate{
 		VirtualMachineScaleSetUpdateProperties: &mgmtcompute.VirtualMachineScaleSetUpdateProperties{
 			AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
-				Enabled: pointerutils.ToPtr(false),
+				Enabled: new(false),
 			},
 		},
 	})

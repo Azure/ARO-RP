@@ -46,10 +46,10 @@ const (
 var (
 	subscriptionID    = "00000000-0000-0000-0000-000000000000"
 	platformIdentity1 = &generated.PlatformWorkloadIdentity{
-		ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name"),
+		ResourceID: new("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name"),
 	}
 	platformIdentity2 = &generated.PlatformWorkloadIdentity{
-		ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-two"),
+		ResourceID: new("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-two"),
 	}
 	clusterIdentity1 = &generated.UserAssignedIdentity{}
 )
@@ -65,10 +65,10 @@ func validSystemData() *generated.SystemData {
 	}
 
 	return &generated.SystemData{
-		CreatedBy:          pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+		CreatedBy:          new("00000000-0000-0000-0000-000000000000"),
 		CreatedByType:      pointerutils.ToPtr(generated.CreatedByTypeApplication),
 		CreatedAt:          &timestamp,
-		LastModifiedBy:     pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+		LastModifiedBy:     new("00000000-0000-0000-0000-000000000000"),
 		LastModifiedByType: pointerutils.ToPtr(generated.CreatedByTypeApplication),
 		LastModifiedAt:     &timestamp,
 	}
@@ -77,64 +77,64 @@ func validSystemData() *generated.SystemData {
 func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
 	oc := &OpenShiftCluster{
 		OpenShiftCluster: generated.OpenShiftCluster{
-			ID:       pointerutils.ToPtr(getResourceID(name)),
-			Name:     pointerutils.ToPtr(name),
-			Type:     pointerutils.ToPtr("Microsoft.RedHatOpenShift/OpenShiftClusters"),
-			Location: pointerutils.ToPtr(location),
+			ID:       new(getResourceID(name)),
+			Name:     new(name),
+			Type:     new("Microsoft.RedHatOpenShift/OpenShiftClusters"),
+			Location: new(location),
 			Tags: map[string]*string{
-				"key": pointerutils.ToPtr("value"),
+				"key": new("value"),
 			},
 			Properties: &generated.OpenShiftClusterProperties{
 				ProvisioningState: pointerutils.ToPtr(generated.ProvisioningStateSucceeded),
 				ClusterProfile: &generated.ClusterProfile{
-					PullSecret:           pointerutils.ToPtr(`{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`),
-					Domain:               pointerutils.ToPtr("cluster.location.aroapp.io"),
-					Version:              pointerutils.ToPtr(version),
-					ResourceGroupID:      pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)),
+					PullSecret:           new(`{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`),
+					Domain:               new("cluster.location.aroapp.io"),
+					Version:              new(version),
+					ResourceGroupID:      new(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)),
 					FipsValidatedModules: pointerutils.ToPtr(generated.FipsValidatedModulesDisabled),
 				},
 				ConsoleProfile: &generated.ConsoleProfile{
-					URL: pointerutils.ToPtr(""),
+					URL: new(""),
 				},
 				ServicePrincipalProfile: &generated.ServicePrincipalProfile{
-					ClientSecret: pointerutils.ToPtr("clientSecret"),
-					ClientID:     pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
+					ClientSecret: new("clientSecret"),
+					ClientID:     new("11111111-1111-1111-1111-111111111111"),
 				},
 				NetworkProfile: &generated.NetworkProfile{
-					PodCidr:      pointerutils.ToPtr("10.128.0.0/14"),
-					ServiceCidr:  pointerutils.ToPtr("172.30.0.0/16"),
+					PodCidr:      new("10.128.0.0/14"),
+					ServiceCidr:  new("172.30.0.0/16"),
 					OutboundType: pointerutils.ToPtr(generated.OutboundTypeLoadbalancer),
 					LoadBalancerProfile: &generated.LoadBalancerProfile{
 						ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-							Count: pointerutils.ToPtr(int32(1)),
+							Count: new(int32(1)),
 						},
 					},
 				},
 				MasterProfile: &generated.MasterProfile{
-					VMSize:           pointerutils.ToPtr("Standard_D8s_v3"),
+					VMSize:           new("Standard_D8s_v3"),
 					EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
-					SubnetID:         pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)),
+					SubnetID:         new(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)),
 				},
 				WorkerProfiles: []*generated.WorkerProfile{
 					{
-						Name:             pointerutils.ToPtr("worker"),
-						VMSize:           pointerutils.ToPtr("Standard_D4s_v3"),
+						Name:             new("worker"),
+						VMSize:           new("Standard_D4s_v3"),
 						EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
-						DiskSizeGB:       pointerutils.ToPtr(int32(128)),
-						SubnetID:         pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
-						Count:            pointerutils.ToPtr(int32(3)),
+						DiskSizeGB:       new(int32(128)),
+						SubnetID:         new(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
+						Count:            new(int32(3)),
 					},
 				},
 				ApiserverProfile: &generated.APIServerProfile{
 					Visibility: pointerutils.ToPtr(generated.VisibilityPublic),
-					URL:        pointerutils.ToPtr(""),
-					IP:         pointerutils.ToPtr(""),
+					URL:        new(""),
+					IP:         new(""),
 				},
 				IngressProfiles: []*generated.IngressProfile{
 					{
-						Name:       pointerutils.ToPtr("default"),
+						Name:       new("default"),
 						Visibility: pointerutils.ToPtr(generated.VisibilityPublic),
-						IP:         pointerutils.ToPtr(""),
+						IP:         new(""),
 					},
 				},
 			},
@@ -154,15 +154,15 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				if tt.location == nil {
-					tt.location = pointerutils.ToPtr("location")
+					tt.location = new("location")
 				}
 
 				if tt.clusterName == nil {
-					tt.clusterName = pointerutils.ToPtr("resourceName")
+					tt.clusterName = new("resourceName")
 				}
 
 				if tt.clusterVersion == nil {
-					tt.clusterVersion = pointerutils.ToPtr("4.10.0")
+					tt.clusterVersion = new("4.10.0")
 				}
 
 				v := &openShiftClusterStaticValidator{
@@ -416,12 +416,12 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfilesStatus = []*generated.WorkerProfile{
 					{
-						Name:             pointerutils.ToPtr("worker"),
-						VMSize:           pointerutils.ToPtr("Standard_D4s_v3"),
+						Name:             new("worker"),
+						VMSize:           new("Standard_D4s_v3"),
 						EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
-						DiskSizeGB:       pointerutils.ToPtr(int32(128)),
-						SubnetID:         pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
-						Count:            pointerutils.ToPtr(int32(3)),
+						DiskSizeGB:       new(int32(128)),
+						SubnetID:         new(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
+						Count:            new(int32(3)),
 					},
 				}
 			},
@@ -693,7 +693,7 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 				*oc.Properties.ApiserverProfile.Visibility = generated.VisibilityPrivate
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(3)),
+						Count: new(int32(3)),
 					},
 				}
 			},
@@ -888,7 +888,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(20)),
+						Count: new(int32(20)),
 					},
 				}
 			},
@@ -899,7 +899,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(21)),
+						Count: new(int32(21)),
 					},
 				}
 			},
@@ -910,7 +910,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(0)),
+						Count: new(int32(0)),
 					},
 				}
 			},
@@ -924,11 +924,11 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(1)),
+						Count: new(int32(1)),
 					},
 					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{
 						{
-							ID: pointerutils.ToPtr("someId"),
+							ID: new("someId"),
 						},
 					},
 				}
@@ -943,7 +943,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(20)),
+						Count: new(int32(20)),
 					},
 				}
 			},
@@ -987,15 +987,15 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 		{
 			name: "disk encryption set is invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr("invalid")
-				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = pointerutils.ToPtr("invalid")
+				oc.Properties.MasterProfile.DiskEncryptionSetID = new("invalid")
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = new("invalid")
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.diskEncryptionSetId: The provided master disk encryption set 'invalid' is invalid.",
 		},
 		{
 			name: "disk encryption set not matching cluster subscriptionId",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr("/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1")
+				oc.Properties.MasterProfile.DiskEncryptionSetID = new("/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1")
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.diskEncryptionSetId: The provided master disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be in same subscription as cluster.",
 		},
@@ -1020,13 +1020,13 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			name: "disk encryption set is valid",
 			modify: func(oc *OpenShiftCluster) {
 				desID := fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID)
-				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr(desID)
-				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = pointerutils.ToPtr(desID)
+				oc.Properties.MasterProfile.DiskEncryptionSetID = new(desID)
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = new(desID)
 			},
 		},
 		{
 			name:           "vmSize invalid for version",
-			clusterVersion: pointerutils.ToPtr("4.10.0"),
+			clusterVersion: new("4.10.0"),
 			modify: func(oc *OpenShiftCluster) {
 				*oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
 			},
@@ -1034,7 +1034,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 		},
 		{
 			name:           "vmSize valid for version",
-			clusterVersion: pointerutils.ToPtr("4.20.0"),
+			clusterVersion: new("4.20.0"),
 			modify: func(oc *OpenShiftCluster) {
 				*oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
 			},
@@ -1067,7 +1067,7 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		},
 		{
 			name:           "vmSize invalid for version",
-			clusterVersion: pointerutils.ToPtr("4.10.0"),
+			clusterVersion: new("4.10.0"),
 			modify: func(oc *OpenShiftCluster) {
 				*oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
 			},
@@ -1075,7 +1075,7 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		},
 		{
 			name:           "vmSize valid for version",
-			clusterVersion: pointerutils.ToPtr("4.20.0"),
+			clusterVersion: new("4.20.0"),
 			modify: func(oc *OpenShiftCluster) {
 				*oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
 			},
@@ -1140,8 +1140,8 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		{
 			name: "disk encryption set not matching master disk encryption set",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID))
-				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = pointerutils.ToPtr("/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1")
+				oc.Properties.MasterProfile.DiskEncryptionSetID = new(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID))
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = new("/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1")
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be the same as master disk encryption set '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set'.",
 		},
@@ -1304,7 +1304,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:   "valid tags change",
-			modify: func(oc *OpenShiftCluster) { oc.Tags = map[string]*string{"new": pointerutils.ToPtr("value")} },
+			modify: func(oc *OpenShiftCluster) { oc.Tags = map[string]*string{"new": new("value")} },
 		},
 		{
 			name:    "provisioningState change",
@@ -1453,7 +1453,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "systemData LastUpdated changed",
 			modify: func(oc *OpenShiftCluster) {
 				oc.SystemData = &generated.SystemData{}
-				oc.SystemData.LastModifiedBy = pointerutils.ToPtr("Bob")
+				oc.SystemData.LastModifiedBy = new("Bob")
 			},
 			wantErr: "400: PropertyChangeNotAllowed: systemData: Changing property 'systemData' is not allowed.",
 		},
@@ -1462,7 +1462,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(5)),
+						Count: new(int32(5)),
 					},
 				}
 			},
@@ -1472,17 +1472,17 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "update LoadBalancerProfile.EffectiveOutboundIPs",
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []*generated.EffectiveOutboundIP{
-					{ID: pointerutils.ToPtr("resourceId")},
+					{ID: new("resourceId")},
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
 					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
-						Count: pointerutils.ToPtr(int32(5)),
+						Count: new(int32(5)),
 					},
 					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{
 						{
-							ID: pointerutils.ToPtr("BadResourceId"),
+							ID: new("BadResourceId"),
 						},
 					},
 				}
@@ -1516,8 +1516,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Identity = &generated.ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": {
-							ClientID:    pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
-							PrincipalID: pointerutils.ToPtr("SOMETHING"),
+							ClientID:    new("11111111-1111-1111-1111-111111111111"),
+							PrincipalID: new("SOMETHING"),
 						},
 					},
 				}
@@ -1530,15 +1530,15 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Identity = &generated.ManagedServiceIdentity{
 					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": {
-							ClientID:    pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
-							PrincipalID: pointerutils.ToPtr("SOMETHING"),
+							ClientID:    new("11111111-1111-1111-1111-111111111111"),
+							PrincipalID: new("SOMETHING"),
 						},
 					},
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": {
-							ResourceID: pointerutils.ToPtr("BAD"),
+							ResourceID: new("BAD"),
 						},
 					},
 				}
@@ -1552,7 +1552,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": {
-							ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/otherThing/fake-cluster-name"),
+							ResourceID: new("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/otherThing/fake-cluster-name"),
 						},
 					},
 				}
@@ -1579,8 +1579,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = &generated.ServicePrincipalProfile{
-					ClientID:     pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
-					ClientSecret: pointerutils.ToPtr("BAD"),
+					ClientID:     new("11111111-1111-1111-1111-111111111111"),
+					ClientSecret: new("BAD"),
 				}
 			},
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Cannot use identities and service principal credentials at the same time.",
@@ -1632,7 +1632,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"": {
-							ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name"),
+							ResourceID: new("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name"),
 						},
 					},
 				}
@@ -1678,7 +1678,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 						"ANOTHER-FAKE-OPERATOR": {
-							ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/FAKE-CLUSTER-NAME"),
+							ResourceID: new("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/FAKE-CLUSTER-NAME"),
 						},
 					},
 				}

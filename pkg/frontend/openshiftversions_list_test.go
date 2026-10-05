@@ -58,16 +58,16 @@ func TestListInstallVersions(t *testing.T) {
 				OpenShiftVersions: []*v20250725.OpenShiftVersion{
 					{
 						OpenShiftVersion: generated.OpenShiftVersion{
-							Properties: &generated.OpenShiftVersionProperties{Version: pointerutils.ToPtr("4.11.0")},
+							Properties: &generated.OpenShiftVersionProperties{Version: new("4.11.0")},
 							Type:       pointerutils.ToPtr(api.OpenShiftVersionsType),
-							Name:       pointerutils.ToPtr("4.11.0"),
+							Name:       new("4.11.0"),
 						},
 					},
 					{
 						OpenShiftVersion: generated.OpenShiftVersion{
-							Properties: &generated.OpenShiftVersionProperties{Version: pointerutils.ToPtr("4.11.5")},
+							Properties: &generated.OpenShiftVersionProperties{Version: new("4.11.5")},
 							Type:       pointerutils.ToPtr(api.OpenShiftVersionsType),
-							Name:       pointerutils.ToPtr("4.11.5"),
+							Name:       new("4.11.5"),
 						},
 					},
 				},

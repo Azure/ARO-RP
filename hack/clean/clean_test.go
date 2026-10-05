@@ -26,7 +26,7 @@ func TestShouldDeleteRespectsPersistTagValue(t *testing.T) {
 	resourceGroup := mgmtfeatures.ResourceGroup{
 		Name: &groupName,
 		Tags: map[string]*string{
-			"PERSIST":           stringPtr("false"),
+			"PERSIST":           new("false"),
 			defaultCreatedAtTag: &oldCreatedAt,
 		},
 	}
@@ -50,7 +50,7 @@ func TestShouldDeleteSkipsOnPersistTrueCaseInsensitive(t *testing.T) {
 	resourceGroup := mgmtfeatures.ResourceGroup{
 		Name: &groupName,
 		Tags: map[string]*string{
-			"PeRsIsT":           stringPtr("TrUe"),
+			"PeRsIsT":           new("TrUe"),
 			defaultCreatedAtTag: &oldCreatedAt,
 		},
 	}
@@ -104,6 +104,7 @@ func TestShouldDeleteSkipsWhenNameMissing(t *testing.T) {
 	}
 }
 
+//go:fix inline
 func stringPtr(s string) *string {
-	return &s
+	return new(s)
 }

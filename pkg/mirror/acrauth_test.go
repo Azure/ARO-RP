@@ -21,7 +21,6 @@ import (
 	mock_azcontainerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcontainerregistry"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -37,7 +36,7 @@ func TestAcrAuthGet(t *testing.T) {
 
 	validAcrRefreshTokenResponse := sdkcontainerregistry.AuthenticationClientExchangeAADAccessTokenForACRRefreshTokenResponse{
 		ACRRefreshToken: sdkcontainerregistry.ACRRefreshToken{
-			RefreshToken: pointerutils.ToPtr("password"),
+			RefreshToken: new("password"),
 		},
 	}
 

@@ -20,18 +20,18 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 	out := &OpenShiftVersion{
 		OpenShiftVersion: generated.OpenShiftVersion{
 			Properties: &generated.OpenShiftVersionProperties{
-				Version: pointerutils.ToPtr(v.Properties.Version),
+				Version: new(v.Properties.Version),
 			},
-			Name: pointerutils.ToPtr(v.Name),
-			Type: pointerutils.ToPtr(v.Type),
+			Name: new(v.Name),
+			Type: new(v.Type),
 		},
 	}
 	if v.ID != "" {
-		out.ID = pointerutils.ToPtr(v.ID)
+		out.ID = new(v.ID)
 	}
 
 	if value(out.Name) == "" {
-		out.Name = pointerutils.ToPtr(v.Properties.Version)
+		out.Name = new(v.Properties.Version)
 	}
 
 	if value(out.Type) == "" {

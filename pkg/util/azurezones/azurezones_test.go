@@ -122,13 +122,13 @@ func TestDetermineZones(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controlPlaneSku := &armcompute.ResourceSKU{
-				Name: pointerutils.ToPtr("controlPlaneSKU"),
+				Name: new("controlPlaneSKU"),
 				LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
 					{Zones: pointerutils.ToSlicePtr(tt.controlPlaneSkuZones)},
 				}),
 			}
 			workerSku := &armcompute.ResourceSKU{
-				Name: pointerutils.ToPtr("workerSKU"),
+				Name: new("workerSKU"),
 				LocationInfo: pointerutils.ToSlicePtr([]armcompute.ResourceSKULocationInfo{
 					{Zones: pointerutils.ToSlicePtr(tt.workerSkuZones)},
 				}),

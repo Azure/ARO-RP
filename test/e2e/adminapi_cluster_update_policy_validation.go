@@ -78,7 +78,7 @@ func tagResource(ctx context.Context, resourceName string, operation armresource
 	log.Infof("patch tags on %s (%s): %v", resourceName, operation, tags)
 
 	_, err := clients.Tags.UpdateAtScope(ctx, resourceName, armresources.TagsPatchResource{
-		Operation: pointerutils.ToPtr(operation),
+		Operation: new(operation),
 		Properties: &armresources.Tags{
 			Tags: tags,
 		},

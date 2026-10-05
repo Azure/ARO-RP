@@ -23,7 +23,6 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_checkaccess "github.com/Azure/ARO-RP/pkg/util/mocks/checkaccess"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -84,7 +83,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("eastus")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("eastus")}, nil)
 					},
 				},
 				{
@@ -112,7 +111,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("eastus")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("eastus")}, nil)
 					},
 					platformIdentities: platformIdentities,
 					platformIdentityMap: map[string][]string{
@@ -136,7 +135,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 						mockTokenCredential(tokenCred)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("eastus")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("eastus")}, nil)
 					},
 					platformIdentities: platformIdentities,
 					platformIdentityMap: map[string][]string{
@@ -166,7 +165,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("eastus")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("eastus")}, nil)
 					},
 				},
 				{
@@ -204,10 +203,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							).AnyTimes()
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("eastus")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("eastus")}, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR2.ResourceGroup, fakeDesR2.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("eastus")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("eastus")}, nil)
 					},
 				},
 				{
@@ -386,7 +385,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							).AnyTimes()
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("eastus")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("eastus")}, nil)
 					},
 					wantErr: fmt.Sprintf("400: InvalidLinkedDiskEncryptionSet: properties.workerProfiles[0].diskEncryptionSetId: The disk encryption set '%s' could not be found.", fakeDesID2),
 				},
@@ -415,7 +414,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
-							Return(mgmtcompute.DiskEncryptionSet{Location: pointerutils.ToPtr("westeurope")}, nil)
+							Return(mgmtcompute.DiskEncryptionSet{Location: new("westeurope")}, nil)
 					},
 					wantErr: "400: InvalidLinkedDiskEncryptionSet: : The disk encryption set location 'westeurope' must match the cluster location 'eastus'.",
 				},
@@ -434,7 +433,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					remotePDPClient := mock_checkaccess.NewMockRemotePDPClient(controller)
 
 					dv := &dynamic{
-						appID:                      pointerutils.ToPtr("fff51942-b1f9-4119-9453-aaa922259eb7"),
+						appID:                      new("fff51942-b1f9-4119-9453-aaa922259eb7"),
 						env:                        _env,
 						authorizerType:             authorizerType,
 						log:                        log,

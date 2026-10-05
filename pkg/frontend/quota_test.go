@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -36,31 +35,31 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(100)),
-							Limit:        pointerutils.ToPtr(int64(212)),
+							CurrentValue: new(int32(100)),
+							Limit:        new(int64(212)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("virtualMachines"),
+								Value: new("virtualMachines"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(100)),
-							Limit:        pointerutils.ToPtr(int64(114)),
+							CurrentValue: new(int32(100)),
+							Limit:        new(int64(114)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: new("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(100)),
-							Limit:        pointerutils.ToPtr(int64(212)),
+							CurrentValue: new(int32(100)),
+							Limit:        new(int64(212)),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("PremiumDiskCount"),
+								Value: new("PremiumDiskCount"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(100)),
-							Limit:        pointerutils.ToPtr(int64(114)),
+							CurrentValue: new(int32(100)),
+							Limit:        new(int64(114)),
 						},
 					}, nil)
 				nuc.EXPECT().
@@ -68,10 +67,10 @@ func TestValidateQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: pointerutils.ToPtr("PublicIPAddresses"),
+								Value: new("PublicIPAddresses"),
 							},
-							CurrentValue: pointerutils.ToPtr(int64(4)),
-							Limit:        pointerutils.ToPtr(int64(10)),
+							CurrentValue: new(int64(4)),
+							Limit:        new(int64(10)),
 						},
 					}, nil)
 			},
@@ -85,10 +84,10 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("cores"),
+								Value: new("cores"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(101)),
-							Limit:        pointerutils.ToPtr(int64(212)),
+							CurrentValue: new(int32(101)),
+							Limit:        new(int64(212)),
 						},
 					}, nil)
 			},
@@ -102,10 +101,10 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("virtualMachines"),
+								Value: new("virtualMachines"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(101)),
-							Limit:        pointerutils.ToPtr(int64(114)),
+							CurrentValue: new(int32(101)),
+							Limit:        new(int64(114)),
 						},
 					}, nil)
 			},
@@ -119,10 +118,10 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("standardDSv3Family"),
+								Value: new("standardDSv3Family"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(101)),
-							Limit:        pointerutils.ToPtr(int64(212)),
+							CurrentValue: new(int32(101)),
+							Limit:        new(int64(212)),
 						},
 					}, nil)
 			},
@@ -136,10 +135,10 @@ func TestValidateQuota(t *testing.T) {
 					Return([]mgmtcompute.Usage{
 						{
 							Name: &mgmtcompute.UsageName{
-								Value: pointerutils.ToPtr("PremiumDiskCount"),
+								Value: new("PremiumDiskCount"),
 							},
-							CurrentValue: pointerutils.ToPtr(int32(101)),
-							Limit:        pointerutils.ToPtr(int64(114)),
+							CurrentValue: new(int32(101)),
+							Limit:        new(int64(114)),
 						},
 					}, nil)
 			},
@@ -156,10 +155,10 @@ func TestValidateQuota(t *testing.T) {
 					Return([]*sdknetwork.Usage{
 						{
 							Name: &sdknetwork.UsageName{
-								Value: pointerutils.ToPtr("PublicIPAddresses"),
+								Value: new("PublicIPAddresses"),
 							},
-							CurrentValue: pointerutils.ToPtr(int64(4)),
-							Limit:        pointerutils.ToPtr(int64(6)),
+							CurrentValue: new(int64(4)),
+							Limit:        new(int64(6)),
 						},
 					}, nil)
 			},

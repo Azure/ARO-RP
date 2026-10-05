@@ -23,9 +23,9 @@ import (
 func (g *generator) gatewayManagedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
-			Type:     pointerutils.ToPtr("Microsoft.ManagedIdentity/userAssignedIdentities"),
-			Name:     pointerutils.ToPtr("[concat('aro-gateway-', resourceGroup().location)]"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Type:     new("Microsoft.ManagedIdentity/userAssignedIdentities"),
+			Name:     new("[concat('aro-gateway-', resourceGroup().location)]"),
+			Location: new("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ManagedIdentity"),
 	}
@@ -39,35 +39,35 @@ func (g *generator) gatewayVnet() *arm.Resource {
 	return g.virtualNetwork("gateway-vnet", "10.0.8.0/24", []*armnetwork.Subnet{
 		{
 			Properties: &armnetwork.SubnetPropertiesFormat{
-				AddressPrefix: pointerutils.ToPtr("10.0.8.0/24"),
+				AddressPrefix: new("10.0.8.0/24"),
 				NetworkSecurityGroup: &armnetwork.SecurityGroup{
-					ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"),
+					ID: new("[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"),
 				},
 				ServiceEndpoints: []*armnetwork.ServiceEndpointPropertiesFormat{
 					{
-						Service:   pointerutils.ToPtr("Microsoft.AzureCosmosDB"),
-						Locations: []*string{pointerutils.ToPtr("*")},
+						Service:   new("Microsoft.AzureCosmosDB"),
+						Locations: []*string{new("*")},
 					},
 					{
-						Service:   pointerutils.ToPtr("Microsoft.ContainerRegistry"),
-						Locations: []*string{pointerutils.ToPtr("*")},
+						Service:   new("Microsoft.ContainerRegistry"),
+						Locations: []*string{new("*")},
 					},
 					{
-						Service:   pointerutils.ToPtr("Microsoft.EventHub"),
-						Locations: []*string{pointerutils.ToPtr("*")},
+						Service:   new("Microsoft.EventHub"),
+						Locations: []*string{new("*")},
 					},
 					{
-						Service:   pointerutils.ToPtr("Microsoft.Storage"),
-						Locations: []*string{pointerutils.ToPtr("*")},
+						Service:   new("Microsoft.Storage"),
+						Locations: []*string{new("*")},
 					},
 					{
-						Service:   pointerutils.ToPtr("Microsoft.KeyVault"),
-						Locations: []*string{pointerutils.ToPtr("*")},
+						Service:   new("Microsoft.KeyVault"),
+						Locations: []*string{new("*")},
 					},
 				},
 				PrivateLinkServiceNetworkPolicies: pointerutils.ToPtr(armnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled),
 			},
-			Name: pointerutils.ToPtr("gateway-subnet"),
+			Name: new("gateway-subnet"),
 		},
 	}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'gateway-nsg')]"})
 }
@@ -83,97 +83,97 @@ func (g *generator) gatewayLB() *arm.Resource {
 					{
 						Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
 							Subnet: &armnetwork.Subnet{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
+								ID: new("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 							},
 						},
 						Zones: []*string{},
-						Name:  pointerutils.ToPtr("gateway-frontend"),
+						Name:  new("gateway-frontend"),
 					},
 				},
 				BackendAddressPools: []*armnetwork.BackendAddressPool{
 					{
-						Name: pointerutils.ToPtr("gateway-backend"),
+						Name: new("gateway-backend"),
 					},
 				},
 				LoadBalancingRules: []*armnetwork.LoadBalancingRule{
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
 							},
 							BackendAddressPool: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
 							},
 							Probe: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-							FrontendPort:     pointerutils.ToPtr(int32(443)),
-							BackendPort:      pointerutils.ToPtr(int32(443)),
+							FrontendPort:     new(int32(443)),
+							BackendPort:      new(int32(443)),
 						},
-						Name: pointerutils.ToPtr("gateway-lbrule-https"),
+						Name: new("gateway-lbrule-https"),
 					},
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
 							},
 							BackendAddressPool: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
 							},
 							Probe: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-							FrontendPort:     pointerutils.ToPtr(int32(80)),
-							BackendPort:      pointerutils.ToPtr(int32(80)),
+							FrontendPort:     new(int32(80)),
+							BackendPort:      new(int32(80)),
 						},
-						Name: pointerutils.ToPtr("gateway-lbrule-http"),
+						Name: new("gateway-lbrule-http"),
 					},
 					{
 						Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
 							},
 							BackendAddressPool: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
 							},
 							Probe: &armnetwork.SubResource{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe-otel')]"),
+								ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe-otel')]"),
 							},
 							Protocol:         pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
 							LoadDistribution: pointerutils.ToPtr(armnetwork.LoadDistributionDefault),
-							FrontendPort:     pointerutils.ToPtr(int32(4317)),
-							BackendPort:      pointerutils.ToPtr(int32(4317)),
+							FrontendPort:     new(int32(4317)),
+							BackendPort:      new(int32(4317)),
 						},
-						Name: pointerutils.ToPtr("gateway-lbrule-otel"),
+						Name: new("gateway-lbrule-otel"),
 					},
 				},
 				Probes: []*armnetwork.Probe{
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
 							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolHTTP),
-							Port:           pointerutils.ToPtr(int32(80)),
-							NumberOfProbes: pointerutils.ToPtr(int32(2)),
-							RequestPath:    pointerutils.ToPtr("/healthz/ready"),
+							Port:           new(int32(80)),
+							NumberOfProbes: new(int32(2)),
+							RequestPath:    new("/healthz/ready"),
 						},
-						Name: pointerutils.ToPtr("gateway-probe"),
+						Name: new("gateway-probe"),
 					},
 					{
 						Properties: &armnetwork.ProbePropertiesFormat{
 							Protocol:       pointerutils.ToPtr(armnetwork.ProbeProtocolTCP),
-							Port:           pointerutils.ToPtr(int32(13133)),
-							NumberOfProbes: pointerutils.ToPtr(int32(2)),
+							Port:           new(int32(13133)),
+							NumberOfProbes: new(int32(2)),
 						},
-						Name: pointerutils.ToPtr("gateway-probe-otel"),
+						Name: new("gateway-probe-otel"),
 					},
 				},
 			},
-			Name:     pointerutils.ToPtr("gateway-lb-internal"),
-			Type:     pointerutils.ToPtr("Microsoft.Network/loadBalancers"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Name:     new("gateway-lb-internal"),
+			Type:     new("Microsoft.Network/loadBalancers"),
+			Location: new("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -185,24 +185,24 @@ func (g *generator) gatewayPLS() *arm.Resource {
 			Properties: &armnetwork.PrivateLinkServiceProperties{
 				LoadBalancerFrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
 					{
-						ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
+						ID: new("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"),
 					},
 				},
 				IPConfigurations: []*armnetwork.PrivateLinkServiceIPConfiguration{
 					{
 						Properties: &armnetwork.PrivateLinkServiceIPConfigurationProperties{
 							Subnet: &armnetwork.Subnet{
-								ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
+								ID: new("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 							},
 						},
-						Name: pointerutils.ToPtr("gateway-pls-001-nic"),
+						Name: new("gateway-pls-001-nic"),
 					},
 				},
-				EnableProxyProtocol: pointerutils.ToPtr(true),
+				EnableProxyProtocol: new(true),
 			},
-			Name:     pointerutils.ToPtr("gateway-pls-001"),
-			Type:     pointerutils.ToPtr("Microsoft.Network/privateLinkServices"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Name:     new("gateway-pls-001"),
+			Type:     new("Microsoft.Network/privateLinkServices"),
+			Location: new("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
@@ -306,12 +306,12 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     pointerutils.ToPtr("[parameters('gatewayVmSize')]"),
-				Tier:     pointerutils.ToPtr("Standard"),
-				Capacity: pointerutils.ToPtr(int64(1339)),
+				Name:     new("[parameters('gatewayVmSize')]"),
+				Tier:     new("Standard"),
+				Capacity: new(int64(1339)),
 			},
 			Tags: map[string]*string{
-				"AMA_Tenant_AROClusterLogs": pointerutils.ToPtr("/etc/amatenants/AROClusterLogs"),
+				"AMA_Tenant_AROClusterLogs": new("/etc/amatenants/AROClusterLogs"),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#arm-templates
@@ -319,30 +319,30 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					Mode: mgmtcompute.UpgradeModeAutomatic,
 					RollingUpgradePolicy: &mgmtcompute.RollingUpgradePolicy{
 						// Percentage equates to 1.02 instances out of 3
-						MaxBatchInstancePercent:             pointerutils.ToPtr(int32(34)),
-						MaxUnhealthyInstancePercent:         pointerutils.ToPtr(int32(34)),
-						MaxUnhealthyUpgradedInstancePercent: pointerutils.ToPtr(int32(34)),
-						PauseTimeBetweenBatches:             pointerutils.ToPtr("PT10M"),
+						MaxBatchInstancePercent:             new(int32(34)),
+						MaxUnhealthyInstancePercent:         new(int32(34)),
+						MaxUnhealthyUpgradedInstancePercent: new(int32(34)),
+						PauseTimeBetweenBatches:             new("PT10M"),
 					},
 					AutomaticOSUpgradePolicy: &mgmtcompute.AutomaticOSUpgradePolicy{
-						EnableAutomaticOSUpgrade: pointerutils.ToPtr(true),
+						EnableAutomaticOSUpgrade: new(true),
 					},
 				},
 				// https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-instance-repairs?tabs=portal-1%2Cportal-2%2Crest-api-4%2Crest-api-5
 				AutomaticRepairsPolicy: &mgmtcompute.AutomaticRepairsPolicy{
-					Enabled: pointerutils.ToPtr(true),
+					Enabled: new(true),
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: pointerutils.ToPtr("[concat('gateway-', parameters('vmssName'), '-')]"),
-						AdminUsername:      pointerutils.ToPtr("cloud-user"),
+						ComputerNamePrefix: new("[concat('gateway-', parameters('vmssName'), '-')]"),
+						AdminUsername:      new("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-							DisablePasswordAuthentication: pointerutils.ToPtr(true),
+							DisablePasswordAuthentication: new(true),
 							SSH: &mgmtcompute.SSHConfiguration{
 								PublicKeys: &[]mgmtcompute.SSHPublicKey{
 									{
-										Path:    pointerutils.ToPtr("/home/cloud-user/.ssh/authorized_keys"),
-										KeyData: pointerutils.ToPtr("[parameters('sshPublicKey')]"),
+										Path:    new("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: new("[parameters('sshPublicKey')]"),
 									},
 								},
 							},
@@ -350,42 +350,42 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
-							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/azure-linux-3-gen2-fips/versions/latest"),
+							SharedGalleryImageID: new("/sharedGalleries/CblMariner.1P/images/azure-linux-3-gen2-fips/versions/latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
-							DiskSizeGB: pointerutils.ToPtr(int32(1024)),
+							DiskSizeGB: new(int32(1024)),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
 						HealthProbe: &mgmtcompute.APIEntityReference{
-							ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
+							ID: new("[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"),
 						},
 						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
 							{
-								Name: pointerutils.ToPtr("gateway-vmss-nic"),
+								Name: new("gateway-vmss-nic"),
 								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary: pointerutils.ToPtr(true),
+									Primary: new(true),
 									// disabling accelerated networking due to egress issues
 									// see icm 271210960 (egress) and 274977072 (accelerated networking team)
-									EnableAcceleratedNetworking: pointerutils.ToPtr(false),
+									EnableAcceleratedNetworking: new(false),
 									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
 										{
-											Name: pointerutils.ToPtr("gateway-vmss-ipconfig"),
+											Name: new("gateway-vmss-ipconfig"),
 											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
 												Subnet: &mgmtcompute.APIEntityReference{
-													ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
+													ID: new("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 												},
-												Primary: pointerutils.ToPtr(true),
+												Primary: new(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-													Name: pointerutils.ToPtr("gateway-vmss-pip"),
+													Name: new("gateway-vmss-pip"),
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{
-														ID: pointerutils.ToPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
+														ID: new("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"),
 													},
 												},
 											},
@@ -398,12 +398,12 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
 						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
 							{
-								Name: pointerutils.ToPtr("gateway-vmss-cse"),
+								Name: new("gateway-vmss-cse"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               pointerutils.ToPtr("Microsoft.Azure.Extensions"),
-									Type:                    pointerutils.ToPtr("CustomScript"),
-									TypeHandlerVersion:      pointerutils.ToPtr("2.0"),
-									AutoUpgradeMinorVersion: pointerutils.ToPtr(true),
+									Publisher:               new("Microsoft.Azure.Extensions"),
+									Type:                    new("CustomScript"),
+									TypeHandlerVersion:      new("2.0"),
+									AutoUpgradeMinorVersion: new(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": customScript,
@@ -415,13 +415,13 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 								// References:
 								// 		https://eng.ms/docs/products/azure-linux/gettingstarted/aks/monitoring
 								//		https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/179541/Linux-AzSecPack-AutoConfig-Onboarding-(manual-for-C-AI)?anchor=3.1.1-using-arm-template-resource-elements
-								Name: pointerutils.ToPtr("AzureMonitorLinuxAgent"),
+								Name: new("AzureMonitorLinuxAgent"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               pointerutils.ToPtr("Microsoft.Azure.Monitor"),
-									EnableAutomaticUpgrade:  pointerutils.ToPtr(true),
-									AutoUpgradeMinorVersion: pointerutils.ToPtr(true),
-									TypeHandlerVersion:      pointerutils.ToPtr("1.0"),
-									Type:                    pointerutils.ToPtr("AzureMonitorLinuxAgent"),
+									Publisher:               new("Microsoft.Azure.Monitor"),
+									EnableAutomaticUpgrade:  new(true),
+									AutoUpgradeMinorVersion: new(true),
+									TypeHandlerVersion:      new("1.0"),
+									Type:                    new("AzureMonitorLinuxAgent"),
 									Settings: map[string]interface{}{
 										"genevaConfiguration": map[string]interface{}{
 											"enable": true,
@@ -433,7 +433,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					},
 					DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 						BootDiagnostics: &mgmtcompute.BootDiagnostics{
-							Enabled: pointerutils.ToPtr(true),
+							Enabled: new(true),
 						},
 					},
 					SecurityProfile: &mgmtcompute.SecurityProfile{
@@ -442,7 +442,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 						SecurityType: mgmtcompute.SecurityTypesTrustedLaunch,
 					},
 				},
-				Overprovision: pointerutils.ToPtr(false),
+				Overprovision: new(false),
 			},
 			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
 				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
@@ -450,9 +450,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-gateway-', resourceGroup().location))]": {},
 				},
 			},
-			Name:     pointerutils.ToPtr("[concat('gateway-vmss-', parameters('vmssName'))]"),
-			Type:     pointerutils.ToPtr("Microsoft.Compute/virtualMachineScaleSets"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Name:     new("[concat('gateway-vmss-', parameters('vmssName'))]"),
+			Type:     new("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: new("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
@@ -477,15 +477,15 @@ func (g *generator) gatewayVMSSAutoscale() *arm.Resource {
 
 	cpuTrigger := func(op mgmtinsights.ComparisonOperationType, threshold float64) *mgmtinsights.MetricTrigger {
 		return &mgmtinsights.MetricTrigger{
-			MetricName:        pointerutils.ToPtr("Percentage CPU"),
-			MetricNamespace:   pointerutils.ToPtr("microsoft.compute/virtualmachinescalesets"),
-			MetricResourceURI: pointerutils.ToPtr(vmssID),
-			TimeGrain:         pointerutils.ToPtr("PT1M"),
+			MetricName:        new("Percentage CPU"),
+			MetricNamespace:   new("microsoft.compute/virtualmachinescalesets"),
+			MetricResourceURI: new(vmssID),
+			TimeGrain:         new("PT1M"),
 			Statistic:         mgmtinsights.MetricStatisticTypeAverage,
-			TimeWindow:        pointerutils.ToPtr("PT5M"),
+			TimeWindow:        new("PT5M"),
 			TimeAggregation:   mgmtinsights.TimeAggregationTypeAverage,
 			Operator:          op,
-			Threshold:         pointerutils.ToPtr(threshold),
+			Threshold:         new(threshold),
 		}
 	}
 
@@ -493,24 +493,24 @@ func (g *generator) gatewayVMSSAutoscale() *arm.Resource {
 		return &mgmtinsights.ScaleAction{
 			Direction: dir,
 			Type:      mgmtinsights.ChangeCount,
-			Value:     pointerutils.ToPtr("1"),
-			Cooldown:  pointerutils.ToPtr("PT5M"),
+			Value:     new("1"),
+			Cooldown:  new("PT5M"),
 		}
 	}
 
 	return &arm.Resource{
 		Resource: mgmtinsights.AutoscaleSettingResource{
 			AutoscaleSetting: &mgmtinsights.AutoscaleSetting{
-				Name:              pointerutils.ToPtr("[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]"),
-				Enabled:           pointerutils.ToPtr(true),
-				TargetResourceURI: pointerutils.ToPtr(vmssID),
+				Name:              new("[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]"),
+				Enabled:           new(true),
+				TargetResourceURI: new(vmssID),
 				Profiles: &[]mgmtinsights.AutoscaleProfile{
 					{
-						Name: pointerutils.ToPtr("gateway-cpu-autoscale"),
+						Name: new("gateway-cpu-autoscale"),
 						Capacity: &mgmtinsights.ScaleCapacity{
-							Minimum: pointerutils.ToPtr("3"),
-							Maximum: pointerutils.ToPtr("7"),
-							Default: pointerutils.ToPtr("3"),
+							Minimum: new("3"),
+							Maximum: new("7"),
+							Default: new("3"),
 						},
 						Rules: &[]mgmtinsights.ScaleRule{
 							{
@@ -525,9 +525,9 @@ func (g *generator) gatewayVMSSAutoscale() *arm.Resource {
 					},
 				},
 			},
-			Name:     pointerutils.ToPtr("[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]"),
-			Type:     pointerutils.ToPtr("Microsoft.Insights/autoscaleSettings"),
-			Location: pointerutils.ToPtr("[resourceGroup().location]"),
+			Name:     new("[concat('gateway-vmss-', parameters('vmssName'), '-autoscale')]"),
+			Type:     new("Microsoft.Insights/autoscaleSettings"),
+			Location: new("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Insights/autoscaleSettings"),
 		DependsOn: []string{

@@ -12,7 +12,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -58,13 +57,13 @@ func (m *manager) logLoadBalancers(ctx context.Context) error {
 		ctx,
 		*lb.ID,
 		&armmonitor.MetricsClientListOptions{
-			Metricnames: pointerutils.ToPtr("DipAvailability,VipAvailability"),
-			Aggregation: pointerutils.ToPtr("average"),
-			Timespan:    pointerutils.ToPtr(timespan),
-			Interval:    pointerutils.ToPtr("PT1M"),
+			Metricnames: new("DipAvailability,VipAvailability"),
+			Aggregation: new("average"),
+			Timespan:    new(timespan),
+			Interval:    new("PT1M"),
 			// Split each metric by FrontendPort so that port 22623 (MCS)
 			// and port 6443 (API) appear as separate time series.
-			Filter: pointerutils.ToPtr("FrontendPort eq '*'"),
+			Filter: new("FrontendPort eq '*'"),
 		},
 	)
 	if err != nil {

@@ -35,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type degradedEtcd struct {
@@ -232,7 +231,7 @@ func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error)
 						backupOrFixEtcd,
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointerutils.ToPtr(true),
+						Privileged: new(true),
 					},
 					Env: []corev1.EnvVar{
 						{
@@ -334,7 +333,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 func newServiceAccount(name string) *unstructured.Unstructured {
 	serviceAcc := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"automountServiceAccountToken": pointerutils.ToPtr(true),
+			"automountServiceAccountToken": new(true),
 		},
 	}
 	serviceAcc.SetAPIVersion("v1")
@@ -634,7 +633,7 @@ func createBackupEtcdDataPod(node string) (*unstructured.Unstructured, error) {
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"SYS_CHROOT"},
 						},
-						Privileged: pointerutils.ToPtr(true),
+						Privileged: new(true),
 					},
 					Env: []corev1.EnvVar{
 						{

@@ -431,7 +431,7 @@ func (c *Cluster) SetupWorkloadIdentity(ctx context.Context, vnetResourceGroup s
 	for _, wi := range platformWorkloadIdentityRoles {
 		c.log.Infof("creating WI: %s", wi.OperatorName)
 		resp, err := c.msiClient.CreateOrUpdate(ctx, vnetResourceGroup, wi.OperatorName, armmsi.Identity{
-			Location: pointerutils.ToPtr(c.Config.Location),
+			Location: new(c.Config.Location),
 		}, nil)
 		if err != nil {
 			return err
@@ -670,7 +670,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 	if c.Config.IsCI {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, c.Config.VnetResourceGroup, mgmtfeatures.ResourceGroup{
-			Location: pointerutils.ToPtr(c.Config.Location),
+			Location: new(c.Config.Location),
 		})
 		if err != nil {
 			return err
@@ -744,7 +744,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 				kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
 				result, err := c.vaultsClient.CheckNameAvailability(
 					ctx,
-					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: pointerutils.ToPtr("Microsoft.KeyVault/vaults")},
+					sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: new("Microsoft.KeyVault/vaults")},
 					nil,
 				)
 				if err != nil {
@@ -778,10 +778,10 @@ func (c *Cluster) Create(ctx context.Context) error {
 			Value: []sdknetwork.Route{
 				{
 					Properties: &sdknetwork.RoutePropertiesFormat{
-						AddressPrefix: pointerutils.ToPtr("0.0.0.0/0"),
+						AddressPrefix: new("0.0.0.0/0"),
 						NextHopType:   pointerutils.ToPtr(sdknetwork.RouteNextHopTypeNone),
 					},
-					Name: pointerutils.ToPtr("blackhole"),
+					Name: new("blackhole"),
 				},
 			},
 		}
@@ -1714,17 +1714,17 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup string)
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &c.ciParentVnet,
 		},
-		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
-		AllowForwardedTraffic:     pointerutils.ToPtr(true),
-		UseRemoteGateways:         pointerutils.ToPtr(true),
+		AllowVirtualNetworkAccess: new(true),
+		AllowForwardedTraffic:     new(true),
+		UseRemoteGateways:         new(true),
 	}
 	rpProp := &sdknetwork.VirtualNetworkPeeringPropertiesFormat{
 		RemoteVirtualNetwork: &sdknetwork.SubResource{
 			ID: &cluster,
 		},
-		AllowVirtualNetworkAccess: pointerutils.ToPtr(true),
-		AllowForwardedTraffic:     pointerutils.ToPtr(true),
-		AllowGatewayTransit:       pointerutils.ToPtr(true),
+		AllowVirtualNetworkAccess: new(true),
+		AllowForwardedTraffic:     new(true),
+		AllowGatewayTransit:       new(true),
 	}
 
 	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", sdknetwork.VirtualNetworkPeering{Properties: clusterProp}, nil)
@@ -1774,8 +1774,8 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 
 	policyDefinition, err := c.policyDefinitionsClient.CreateOrUpdate(ctx, policyName, sdkpolicy.Definition{
 		Properties: &sdkpolicy.DefinitionProperties{
-			DisplayName: pointerutils.ToPtr(policyName),
-			Mode:        pointerutils.ToPtr("Indexed"),
+			DisplayName: new(policyName),
+			Mode:        new("Indexed"),
 			PolicyRule:  policyRule,
 			PolicyType:  pointerutils.ToPtr(sdkpolicy.PolicyTypeCustom),
 		},
@@ -1790,10 +1790,10 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 			Type: pointerutils.ToPtr(sdkpolicy.ResourceIdentityTypeSystemAssigned),
 		},
 		Properties: &sdkpolicy.AssignmentProperties{
-			DisplayName:        pointerutils.ToPtr(assignmentName),
-			PolicyDefinitionID: pointerutils.ToPtr(*policyDefinition.ID),
+			DisplayName:        new(assignmentName),
+			PolicyDefinitionID: new(*policyDefinition.ID),
 		},
-		Location: pointerutils.ToPtr(c.Config.Location),
+		Location: new(c.Config.Location),
 	}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create policy assignment: %w", err)

@@ -4,7 +4,6 @@ package v20250725
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -13,8 +12,8 @@ import (
 func ExampleOpenShiftClusterCredentialsResponse() interface{} {
 	return &OpenShiftClusterCredentials{
 		OpenShiftClusterCredentials: generated.OpenShiftClusterCredentials{
-			KubeadminUsername: pointerutils.ToPtr("kubeadmin"),
-			KubeadminPassword: pointerutils.ToPtr("password"),
+			KubeadminUsername: new("kubeadmin"),
+			KubeadminPassword: new("password"),
 		},
 	}
 }

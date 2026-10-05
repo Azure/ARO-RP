@@ -75,11 +75,11 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			name: "noop",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: pointerutils.ToPtr(assignmentName),
+					Name: new(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
-						Scope:            pointerutils.ToPtr(resourceGroupID),
-						PrincipalID:      pointerutils.ToPtr(fakeClusterSPObjectId),
+						Scope:            new(resourceGroupID),
+						PrincipalID:      new(fakeClusterSPObjectId),
 					},
 				},
 			},
@@ -113,11 +113,11 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			name: "needs delete & create",
 			roleAssignments: []mgmtauthorization.RoleAssignment{
 				{
-					Name: pointerutils.ToPtr(assignmentName),
+					Name: new(assignmentName),
 					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						RoleDefinitionID: pointerutils.ToPtr(rbac.RoleContributor),
-						Scope:            pointerutils.ToPtr(resourceGroupID),
-						PrincipalID:      pointerutils.ToPtr("00000000-0000-0000-0000-000000000001"),
+						Scope:            new(resourceGroupID),
+						PrincipalID:      new("00000000-0000-0000-0000-000000000001"),
 					},
 				},
 			},

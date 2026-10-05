@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestConfigurationFieldParity(t *testing.T) {
@@ -54,10 +53,10 @@ func TestConfigurationFieldParity(t *testing.T) {
 }
 
 func TestMergeConfig(t *testing.T) {
-	databaseAccountName := pointerutils.ToPtr("databaseAccountName")
-	fpServerCertCommonName := pointerutils.ToPtr("fpServerCertCommonName")
-	fpServerSecondaryCommonName := pointerutils.ToPtr("fpServerSecondaryCommonName")
-	kvPrefix := pointerutils.ToPtr("keyvaultPrefix")
+	databaseAccountName := new("databaseAccountName")
+	fpServerCertCommonName := new("fpServerCertCommonName")
+	fpServerSecondaryCommonName := new("fpServerSecondaryCommonName")
+	kvPrefix := new("keyvaultPrefix")
 
 	for _, tt := range []struct {
 		name      string

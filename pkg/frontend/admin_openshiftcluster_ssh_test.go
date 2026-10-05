@@ -28,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -656,8 +655,8 @@ func sshTargetVM(powerCode, nicID string) mgmtcompute.VirtualMachine {
 
 func sshMasterVM(powerCode string) mgmtcompute.VirtualMachine {
 	statuses := []mgmtcompute.InstanceViewStatus{
-		{Code: pointerutils.ToPtr("ProvisioningState/succeeded")},
-		{Code: pointerutils.ToPtr(powerCode)},
+		{Code: new("ProvisioningState/succeeded")},
+		{Code: new(powerCode)},
 	}
 	return mgmtcompute.VirtualMachine{
 		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{

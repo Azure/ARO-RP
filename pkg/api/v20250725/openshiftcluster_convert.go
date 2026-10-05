@@ -5,7 +5,6 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -20,7 +19,7 @@ func toPtrIfNonZero[T comparable](value T) *T {
 	if value == zero {
 		return nil
 	}
-	return pointerutils.ToPtr(value)
+	return new(value)
 }
 
 // ToExternal returns a new external representation of the internal object,
@@ -65,12 +64,12 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 
 	if oc.Properties.ConsoleProfile.URL != "" {
 		out.Properties.ConsoleProfile = &generated.ConsoleProfile{
-			URL: pointerutils.ToPtr(oc.Properties.ConsoleProfile.URL),
+			URL: new(oc.Properties.ConsoleProfile.URL),
 		}
 	}
 
 	if oc.Properties.ClusterProfile.PullSecret != "" {
-		out.Properties.ClusterProfile.PullSecret = pointerutils.ToPtr(string(oc.Properties.ClusterProfile.PullSecret))
+		out.Properties.ClusterProfile.PullSecret = new(string(oc.Properties.ClusterProfile.PullSecret))
 	}
 
 	if oc.Properties.ServicePrincipalProfile != nil {
@@ -78,7 +77,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			ClientID: toPtrIfNonZero(oc.Properties.ServicePrincipalProfile.ClientID),
 		}
 		if oc.Properties.ServicePrincipalProfile.ClientSecret != "" {
-			out.Properties.ServicePrincipalProfile.ClientSecret = pointerutils.ToPtr(string(oc.Properties.ServicePrincipalProfile.ClientSecret))
+			out.Properties.ServicePrincipalProfile.ClientSecret = new(string(oc.Properties.ServicePrincipalProfile.ClientSecret))
 		}
 	}
 
@@ -147,7 +146,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	if len(oc.Tags) > 0 {
 		out.Tags = make(map[string]*string, len(oc.Tags))
 		for k, v := range oc.Tags {
-			out.Tags[k] = pointerutils.ToPtr(v)
+			out.Tags[k] = new(v)
 		}
 	}
 
@@ -191,7 +190,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	if oc.Properties.ClusterProfile.OIDCIssuer != nil {
-		out.Properties.ClusterProfile.OidcIssuer = pointerutils.ToPtr(string(*oc.Properties.ClusterProfile.OIDCIssuer))
+		out.Properties.ClusterProfile.OidcIssuer = new(string(*oc.Properties.ClusterProfile.OIDCIssuer))
 	}
 
 	out.SystemData = &generated.SystemData{

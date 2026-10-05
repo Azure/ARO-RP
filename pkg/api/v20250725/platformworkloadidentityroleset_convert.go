@@ -5,7 +5,6 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -23,16 +22,16 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 		},
 	}
 	if s.ID != "" {
-		out.ID = pointerutils.ToPtr(s.ID)
+		out.ID = new(s.ID)
 	}
 	if s.Name != "" {
-		out.Name = pointerutils.ToPtr(s.Name)
+		out.Name = new(s.Name)
 	}
 	if s.Type != "" {
-		out.Type = pointerutils.ToPtr(s.Type)
+		out.Type = new(s.Type)
 	}
 	if s.Properties.OpenShiftVersion != "" {
-		out.Properties.OpenShiftVersion = pointerutils.ToPtr(s.Properties.OpenShiftVersion)
+		out.Properties.OpenShiftVersion = new(s.Properties.OpenShiftVersion)
 	}
 	if len(s.Properties.PlatformWorkloadIdentityRoles) > 0 {
 		out.Properties.PlatformWorkloadIdentityRoles = make([]*generated.PlatformWorkloadIdentityRole, 0, len(s.Properties.PlatformWorkloadIdentityRoles))
@@ -41,13 +40,13 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 	for _, r := range s.Properties.PlatformWorkloadIdentityRoles {
 		role := &generated.PlatformWorkloadIdentityRole{}
 		if r.OperatorName != "" {
-			role.OperatorName = pointerutils.ToPtr(r.OperatorName)
+			role.OperatorName = new(r.OperatorName)
 		}
 		if r.RoleDefinitionName != "" {
-			role.RoleDefinitionName = pointerutils.ToPtr(r.RoleDefinitionName)
+			role.RoleDefinitionName = new(r.RoleDefinitionName)
 		}
 		if r.RoleDefinitionID != "" {
-			role.RoleDefinitionID = pointerutils.ToPtr(r.RoleDefinitionID)
+			role.RoleDefinitionID = new(r.RoleDefinitionID)
 		}
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}

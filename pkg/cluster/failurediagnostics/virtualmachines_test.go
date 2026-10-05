@@ -21,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -79,12 +78,12 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:     pointerutils.ToPtr("somename"),
-						Location: pointerutils.ToPtr("eastus"),
+						Name:     new("somename"),
+						Location: new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
 								BootDiagnostics: &mgmtcompute.BootDiagnosticsInstanceView{
-									SerialConsoleLogBlobURI: pointerutils.ToPtr("bogusurl"),
+									SerialConsoleLogBlobURI: new("bogusurl"),
 								},
 							},
 						},
@@ -107,8 +106,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -145,8 +144,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -183,8 +182,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
@@ -210,8 +209,8 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:                     pointerutils.ToPtr("somename"),
-						Location:                 pointerutils.ToPtr("eastus"),
+						Name:                     new("somename"),
+						Location:                 new("eastus"),
 						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)

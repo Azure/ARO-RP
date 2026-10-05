@@ -14,7 +14,6 @@ import (
 	sdkpolicyinsights "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/policyinsights/armpolicyinsights"
 
 	mock_armpolicyinsights "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armpolicyinsights"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -102,18 +101,18 @@ func TestParsePolicyRef(t *testing.T) {
 func makeFieldRestrictions(field, effect string, result sdkpolicyinsights.FieldRestrictionResult, values []string) *sdkpolicyinsights.FieldRestrictions {
 	vs := make([]*string, 0, len(values))
 	for _, v := range values {
-		vs = append(vs, pointerutils.ToPtr(v))
+		vs = append(vs, new(v))
 	}
 	return &sdkpolicyinsights.FieldRestrictions{
-		Field: pointerutils.ToPtr(field),
+		Field: new(field),
 		Restrictions: []*sdkpolicyinsights.FieldRestriction{
 			{
-				Result:       pointerutils.ToPtr(result),
-				PolicyEffect: pointerutils.ToPtr(effect),
+				Result:       new(result),
+				PolicyEffect: new(effect),
 				Values:       vs,
 				Policy: &sdkpolicyinsights.PolicyReference{
-					PolicyDefinitionID: pointerutils.ToPtr(testPolicyDefID),
-					PolicyAssignmentID: pointerutils.ToPtr(testPolicyAssignID),
+					PolicyDefinitionID: new(testPolicyDefID),
+					PolicyAssignmentID: new(testPolicyAssignID),
 				},
 			},
 		},

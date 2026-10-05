@@ -23,7 +23,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -163,7 +162,7 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 
 		// Specify the desired state for the MachineSet
 		Spec: machinev1beta1.MachineSetSpec{
-			Replicas: pointerutils.ToPtr(int32(1)),
+			Replicas: new(int32(1)),
 			Template: machinev1beta1.MachineTemplateSpec{
 				// Specify the desired configuration for the machine using ProviderSpec
 				Spec: machinev1beta1.MachineSpec{

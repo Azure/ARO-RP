@@ -22,7 +22,6 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -286,8 +285,8 @@ func TestCheckForKnownError(t *testing.T) {
 }
 
 func TestGetParameters(t *testing.T) {
-	databaseAccountName := pointerutils.ToPtr("databaseAccountName")
-	adminApiCaBundle := pointerutils.ToPtr("adminApiCaBundle")
+	databaseAccountName := new("databaseAccountName")
+	adminApiCaBundle := new("adminApiCaBundle")
 	for _, tt := range []struct {
 		name   string
 		ps     map[string]interface{}

@@ -22,7 +22,6 @@ import (
 	mock_armmonitor "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armmonitor"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -111,7 +110,7 @@ func TestLogLoadBalancers(t *testing.T) {
 			mockLB: func(m *mock_armnetwork.MockLoadBalancersClient) {
 				m.EXPECT().Get(gomock.Any(), lbTestResourceGroup, lbName, nil).
 					Return(armnetwork.LoadBalancersClientGetResponse{
-						LoadBalancer: armnetwork.LoadBalancer{ID: pointerutils.ToPtr(lbID)},
+						LoadBalancer: armnetwork.LoadBalancer{ID: new(lbID)},
 					}, nil)
 			},
 			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {
@@ -133,7 +132,7 @@ func TestLogLoadBalancers(t *testing.T) {
 			mockLB: func(m *mock_armnetwork.MockLoadBalancersClient) {
 				m.EXPECT().Get(gomock.Any(), lbTestResourceGroup, lbName, nil).
 					Return(armnetwork.LoadBalancersClientGetResponse{
-						LoadBalancer: armnetwork.LoadBalancer{ID: pointerutils.ToPtr(lbID)},
+						LoadBalancer: armnetwork.LoadBalancer{ID: new(lbID)},
 					}, nil)
 			},
 			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {
@@ -141,12 +140,12 @@ func TestLogLoadBalancers(t *testing.T) {
 					Return(armmonitor.MetricsClientListResponse{
 						Response: armmonitor.Response{
 							Value: []*armmonitor.Metric{{
-								Name: &armmonitor.LocalizableString{Value: pointerutils.ToPtr("DipAvailability")},
+								Name: &armmonitor.LocalizableString{Value: new("DipAvailability")},
 								Timeseries: []*armmonitor.TimeSeriesElement{{
 									Data: []*armmonitor.MetricValue{
-										{TimeStamp: &t0, Average: pointerutils.ToPtr(100.0)},
-										{TimeStamp: &t1, Average: pointerutils.ToPtr(100.0)},
-										{TimeStamp: &t2, Average: pointerutils.ToPtr(100.0)},
+										{TimeStamp: &t0, Average: new(100.0)},
+										{TimeStamp: &t1, Average: new(100.0)},
+										{TimeStamp: &t2, Average: new(100.0)},
 									},
 								}},
 							}},
@@ -172,7 +171,7 @@ func TestLogLoadBalancers(t *testing.T) {
 			mockLB: func(m *mock_armnetwork.MockLoadBalancersClient) {
 				m.EXPECT().Get(gomock.Any(), lbTestResourceGroup, lbName, nil).
 					Return(armnetwork.LoadBalancersClientGetResponse{
-						LoadBalancer: armnetwork.LoadBalancer{ID: pointerutils.ToPtr(lbID)},
+						LoadBalancer: armnetwork.LoadBalancer{ID: new(lbID)},
 					}, nil)
 			},
 			mockMetrics: func(m *mock_armmonitor.MockMetricsClient) {
@@ -180,12 +179,12 @@ func TestLogLoadBalancers(t *testing.T) {
 					Return(armmonitor.MetricsClientListResponse{
 						Response: armmonitor.Response{
 							Value: []*armmonitor.Metric{{
-								Name: &armmonitor.LocalizableString{Value: pointerutils.ToPtr("DipAvailability")},
+								Name: &armmonitor.LocalizableString{Value: new("DipAvailability")},
 								Timeseries: []*armmonitor.TimeSeriesElement{{
 									Data: []*armmonitor.MetricValue{
-										{TimeStamp: &t0, Average: pointerutils.ToPtr(100.0)},
-										{TimeStamp: &t1, Average: pointerutils.ToPtr(0.0)},
-										{TimeStamp: &t2, Average: pointerutils.ToPtr(0.0)},
+										{TimeStamp: &t0, Average: new(100.0)},
+										{TimeStamp: &t1, Average: new(0.0)},
+										{TimeStamp: &t2, Average: new(0.0)},
 									},
 								}},
 							}},

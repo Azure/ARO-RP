@@ -414,7 +414,7 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 					Spec: corev1.PodSpec{
 						PriorityClassName:            "system-cluster-critical",
 						ServiceAccountName:           "geneva",
-						AutomountServiceAccountToken: pointerutils.ToPtr(false),
+						AutomountServiceAccountToken: new(false),
 						HostAliases:                  hostAliases,
 						Affinity: &corev1.Affinity{
 							NodeAffinity: &corev1.NodeAffinity{
@@ -534,8 +534,8 @@ func (r *Reconciler) otelDaemonSets(cluster *arov1alpha1.Cluster, gatewayEndpoin
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									RunAsUser:                pointerutils.ToPtr(int64(0)),
-									AllowPrivilegeEscalation: pointerutils.ToPtr(false),
+									RunAsUser:                new(int64(0)),
+									AllowPrivilegeEscalation: new(false),
 									Capabilities: &corev1.Capabilities{
 										Drop: []corev1.Capability{"ALL"},
 									},

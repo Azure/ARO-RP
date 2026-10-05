@@ -29,7 +29,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 const (
@@ -439,7 +438,7 @@ func (d *deployer) createSecret(ctx context.Context, kv azsecrets.Client, secret
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(key)),
+		Value: new(base64.StdEncoding.EncodeToString(key)),
 	}, nil)
 	return err
 }
@@ -468,7 +467,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv azsecrets.Client, sec
 
 	d.log.Infof("setting %s", secretName)
 	_, err = kv.SetSecret(ctx, secretName, azsecretssdk.SetSecretParameters{
-		Value: pointerutils.ToPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
+		Value: new(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	}, nil)
 	return true, err
 }
@@ -510,7 +509,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, lbHe
 	for _, vm := range scalesetVMs {
 		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
-			CommandID: pointerutils.ToPtr("RunShellScript"),
+			CommandID: new("RunShellScript"),
 			Script:    &[]string{portalRestartScript},
 		})
 		if err != nil {
