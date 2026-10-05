@@ -224,7 +224,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 		Spec: machinev1beta1.MachineSpec{
 			ProviderSpec: machinev1beta1.ProviderSpec{
 				Value: &kruntime.RawExtension{
-					Raw: []byte(fmt.Sprintf(`{
+					Raw: fmt.Appendf(nil, `{
 "apiVersion": "%v",
 "kind": "AzureMachineProviderSpec",
 "osDisk": {
@@ -235,7 +235,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 "offer": "%v"
 },
 "vmSize": "%v"
-}`, apiVersion, diskSize, imagePublisher, offer, vmSize)),
+}`, apiVersion, diskSize, imagePublisher, offer, vmSize),
 				},
 			},
 		},
