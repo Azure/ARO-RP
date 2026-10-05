@@ -74,7 +74,7 @@ This allows business logic to be invoked by other Go packages without HTTP mocki
 
 - **Imports**: `gci` is used to order Golang imports. See `.golangci.yml`.
 - **Formatting**: `make fmt` (not `gofmt`). Pre-commit hook runs `make fmt`.
-- **Pointer utils**: Use `pkg/util/pointerutils`, not `autorest/to` or `k8s.io/utils/ptr`.
+- **Pointer creation**: Use Go 1.26's `new()`, not `autorest/to` or `k8s.io/utils/ptr`.
 - **Error handling**: Wrap with `fmt.Errorf("...: %w", err)`. Use `errors.Is`/`errors.As`.
 - **No files directly in `pkg/util/`** — must use subpackages.
 
