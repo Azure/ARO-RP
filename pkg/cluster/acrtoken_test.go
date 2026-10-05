@@ -86,7 +86,6 @@ func TestRotateACRToken(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "token is expired, is rotated",
 			oc: func() api.OpenShiftClusterProperties {

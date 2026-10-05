@@ -38,17 +38,17 @@ func (f *FakeACRToken) Delete(ctx context.Context, registryProfile *api.Registry
 	panic("unimplemented")
 }
 
-func (f *FakeACRToken) generateTokenPassword(registryProfile *api.RegistryProfile) string {
+func (f *FakeACRToken) generateTokenPassword(registryProfile *api.RegistryProfile) (string, *time.Time, error) {
 	newTestPassword := uuid.DefaultGenerator.Generate()
 	f.generatedPasswords = append(f.generatedPasswords, newTestPassword)
 	registryProfile.Password = api.SecureString(newTestPassword)
 	registryProfile.IssueDate = pointerutils.ToPtr(f.now().UTC())
-	return newTestPassword
+	return newTestPassword, pointerutils.ToPtr(f.now().UTC()), nil
 }
 
 // EnsureTokenAndPassword implements [acrtoken.Manager].
-func (f *FakeACRToken) EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, error) {
-	return f.generateTokenPassword(registryProfile), nil
+func (f *FakeACRToken) EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, *time.Time, error) {
+	return f.generateTokenPassword(registryProfile)
 }
 
 // NewRegistryProfile implements [acrtoken.Manager].
@@ -61,6 +61,6 @@ func (f *FakeACRToken) NewRegistryProfile(clusterUUID string) *api.RegistryProfi
 
 // RotateTokenPassword implements [acrtoken.Manager].
 func (f *FakeACRToken) RotateTokenPassword(ctx context.Context, registryProfile *api.RegistryProfile) error {
-	_ = f.generateTokenPassword(registryProfile)
-	return nil
+	_, _, err := f.generateTokenPassword(registryProfile)
+	return err
 }

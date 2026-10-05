@@ -94,13 +94,12 @@ func ensureACRToken(ctx context.Context, env env.Interface, doc *api.OpenShiftCl
 
 	if rp.Password == "" {
 		// 2. ensure a token with the chosen name exists and generate a password
-		password, err := token.EnsureTokenAndPassword(ctx, rp)
+		password, issueDate, err := token.EnsureTokenAndPassword(ctx, rp)
 		if err != nil {
 			return nil, err
 		}
-		currentTime := env.Now().UTC()
 		rp.Password = api.SecureString(password)
-		rp.IssueDate = &currentTime
+		rp.IssueDate = pointerutils.ToPtr(issueDate.UTC())
 	}
 
 	return rp, nil
