@@ -54,7 +54,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	generalFixesSteps := []string{
-		"[Action ensureResourceGroup]",
+		"[AuthorizationRetryingAction ensureResourceGroup]",
 		"[Action createOrUpdateDenyAssignment]",
 		"[Action ensureServiceEndpoints]",
 		"[Action populateRegistryStorageAccountName]",
