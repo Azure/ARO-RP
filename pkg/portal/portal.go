@@ -23,13 +23,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/portal/assets"
-	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
@@ -297,13 +295,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 	r.Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
 	r.Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/statistics/{statisticsType}").HandlerFunc(p.statistics)
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 
 	// prometheus
 	if prom != nil {
@@ -373,42 +365,6 @@ func (p *portal) indexPrometheus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
-}
-
-// makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
-func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	dbOpenShiftClusters, err := p.dbGroup.OpenShiftClusters()
-	if err != nil {
-		return nil, err
-	}
-
-	apiVars := mux.Vars(r)
-	subscriptionID := apiVars["subscription"]
-	resourceGroup := apiVars["resourceGroup"]
-	clusterName := apiVars["clusterName"]
-	resourceID := p.getResourceID(subscriptionID, resourceGroup, clusterName)
-	if !validate.RxClusterID.MatchString(resourceID) {
-		return nil, fmt.Errorf("invalid resource ID")
-	}
-
-	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	// In development mode, we can have localhost "fake" APIServers which don't
-	// get proxied, so use a direct dialer for this
-	var dialer proxy.Dialer
-	if p.env.IsLocalDevelopmentMode() && doc.OpenShiftCluster.Properties.APIServerProfile.IP == "127.0.0.1" {
-		dialer, err = proxy.NewDialer(false, p.log)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		dialer = p.dialer
-	}
-
-	return cluster.NewFetchClient(p.log, dialer, doc)
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
