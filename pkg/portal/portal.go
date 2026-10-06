@@ -65,8 +65,7 @@ type portal struct {
 	sessionKey   []byte
 	sshKey       *rsa.PrivateKey
 
-	groupIDs         []string
-	elevatedGroupIDs []string
+	groupIDs []string
 
 	dbGroup portalDBs
 

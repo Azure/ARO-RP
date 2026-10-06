@@ -19,10 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
 
-const (
-	kubeconfigNewTimeout = 6 * time.Hour
-)
-
 type Kubeconfig struct {
 	Log             *logrus.Entry
 	BaseAccessLog   *logrus.Entry

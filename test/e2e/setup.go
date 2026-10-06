@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -78,7 +77,6 @@ const (
 var staticResources embed.FS
 
 var (
-	disallowedInFilenameRegex         = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
 	DefaultEventuallyTimeout          = 5 * time.Minute
 	PropagationDelayEventuallyTimeout = 25 * time.Second
 )
