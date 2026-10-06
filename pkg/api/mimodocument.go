@@ -41,7 +41,7 @@ type MaintenanceManifestDocument struct {
 	Metadata    map[string]any `json:"_metadata,omitempty"`
 
 	ClusterResourceID   string              `json:"clusterResourceID,omitempty"`
-	MaintenanceManifest MaintenanceManifest `json:"maintenanceManifest,omitempty"`
+	MaintenanceManifest MaintenanceManifest `json:"maintenanceManifest"`
 
 	LeaseOwner   string `json:"leaseOwner,omitempty" deep:"-"`
 	LeaseExpires int    `json:"leaseExpires,omitempty" deep:"-"`
@@ -79,7 +79,7 @@ type MaintenanceScheduleDocument struct {
 	LSN         int            `json:"_lsn,omitempty"`
 	Metadata    map[string]any `json:"_metadata,omitempty"`
 
-	MaintenanceSchedule MaintenanceSchedule `json:"maintenanceSchedule,omitempty"`
+	MaintenanceSchedule MaintenanceSchedule `json:"maintenanceSchedule"`
 
 	LeaseOwner   string `json:"leaseOwner,omitempty" deep:"-"`
 	LeaseExpires int    `json:"leaseExpires,omitempty" deep:"-"`
