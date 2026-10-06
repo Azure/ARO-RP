@@ -182,7 +182,6 @@ services:
         condition: service_healthy
     environment:
       <<: *common-env
-      NO_NPM: 1
     ports:
       - "8444:8444"
       - "2222:2222"
