@@ -268,13 +268,13 @@ func policyJSONName(field reflect.StructField) string {
 		{"URL", "Url"},
 	}
 	for _, replacement := range replacements {
-		if strings.HasSuffix(name, replacement.old) {
-			name = strings.TrimSuffix(name, replacement.old) + replacement.new
+		if before, ok := strings.CutSuffix(name, replacement.old); ok {
+			name = before + replacement.new
 			break
 		}
 	}
-	if strings.HasPrefix(name, "VM") {
-		name = "Vm" + strings.TrimPrefix(name, "VM")
+	if after, ok := strings.CutPrefix(name, "VM"); ok {
+		name = "Vm" + after
 	}
 	return strings.ToLower(name[:1]) + name[1:]
 }
