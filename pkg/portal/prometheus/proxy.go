@@ -4,17 +4,11 @@ package prometheus
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"mime"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
-
-	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
 
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
@@ -102,76 +96,33 @@ func (p *Prometheus) RoundTripper(r *http.Request) (*http.Response, error) {
 	return cli.Do(r)
 }
 
-// ModifyResponse: unfortunately Prometheus serves HTML files containing just a
-// couple of absolute links.  Given that we're serving Prometheus under
-// /subscriptions/.../clusterName/prometheus, we need to dig these out and
-// rewrite them.  This is a hack which hopefully goes away once we forward all
-// metrics to Kusto.
+// ModifyResponse neutralises any proxied response that a browser might render
+// as HTML.  The cluster's Prometheus is attacker-controlled: a customer with
+// cluster-admin on their own cluster can make Prometheus return
+// `Content-Type: text/html` carrying inline <script> or event-handler
+// attributes.  Because the portal serves this proxy on its own origin, any such
+// markup would otherwise execute with the authenticated engineer's authority.
+//
+// The legitimate proxied endpoints (/-/ready and /prometheus/api/...) only ever
+// return text/plain or JSON; the Prometheus web UI itself is served from the
+// portal's own embedded assets, not through this proxy.  We therefore never
+// need to render HTML here.  For any response whose media type is text/html (or
+// is missing/sniffable), we force a non-renderable content type and attach a
+// restrictive Content-Security-Policy so the engineer's browser cannot execute
+// cluster-authored script.
 func (p *Prometheus) ModifyResponse(r *http.Response) error {
 	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if mediaType != "text/html" {
-		return nil
+	if mediaType == "" || mediaType == "text/html" {
+		r.Header.Set("Content-Type", "text/plain; charset=utf-8")
 	}
 
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-
-	buf := &bytes.Buffer{}
-
-	n, err := html.Parse(bytes.NewReader(b))
-	if err != nil {
-		buf.Write(b)
-	} else {
-		// walk the HTML parse tree calling makeRelative() on each node
-		walk(n, makeRelative)
-
-		err = html.Render(buf, n)
-		if err != nil {
-			return err
-		}
-
-		r.Header.Set("Content-Length", strconv.FormatInt(int64(buf.Len()), 10))
-	}
-
-	r.Body = io.NopCloser(buf)
+	// Defence in depth: prevent MIME-sniffing into HTML and forbid the browser
+	// from loading or executing any resource (including inline script) should
+	// this body ever reach a rendering context.
+	r.Header.Set("X-Content-Type-Options", "nosniff")
+	r.Header.Set("Content-Security-Policy", "default-src 'none'; sandbox")
 
 	return nil
-}
-
-func makeRelative(n *html.Node) {
-	switch n.DataAtom {
-	case atom.A, atom.Link:
-		// rewrite <a href="/foo"> -> <a href="./foo">
-		// rewrite <link href="/foo"> -> <link href="./foo">
-		for i, attr := range n.Attr {
-			if attr.Namespace == "" && attr.Key == "href" && strings.HasPrefix(n.Attr[i].Val, "/") {
-				n.Attr[i].Val = "." + n.Attr[i].Val
-			}
-		}
-	case atom.Script:
-		// rewrite <script src="/foo"> -> <script src="./foo">
-		for i, attr := range n.Attr {
-			if attr.Namespace == "" && attr.Key == "src" && strings.HasPrefix(n.Attr[i].Val, "/") {
-				n.Attr[i].Val = "." + n.Attr[i].Val
-			}
-		}
-
-		// special hack: find <script>...</script> and rewrite
-		// `var PATH_PREFIX = "";` -> `var PATH_PREFIX = ".";` once.
-		if len(n.Attr) == 0 {
-			n.FirstChild.Data = strings.Replace(n.FirstChild.Data, `var PATH_PREFIX = "";`, `var PATH_PREFIX = ".";`, 1)
-		}
-	}
-}
-
-func walk(n *html.Node, f func(*html.Node)) {
-	f(n)
-
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		walk(c, f)
-	}
 }
 
 func (p *Prometheus) error(r *http.Request, statusCode int, err error) {

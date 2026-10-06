@@ -342,6 +342,14 @@ func TestSecurity(t *testing.T) {
 					tt.checkResponse(t, tt2.authenticated, tt2.elevated, resp)
 				}
 
+				// Every matched portal response must carry the hardening
+				// headers set by the SecurityHeaders middleware.  Unmatched
+				// routes (e.g. /doesnotexist) are served by mux's 404 handler,
+				// which the middleware chain does not run, so skip those.
+				if tt.name != "/doesnotexist" {
+					assertSecurityHeaders(t, resp)
+				}
+
 				// no audit logs for https://server/doesnotexist
 				if tt.authenticatedWantStatusCode == http.StatusNotFound {
 					return
@@ -401,6 +409,33 @@ func TestSecurity(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func assertSecurityHeaders(t *testing.T, resp *http.Response) {
+	t.Helper()
+
+	csp := resp.Header.Get("Content-Security-Policy")
+	// script-src must be strict (no 'unsafe-inline') so that cluster-authored
+	// inline <script> and event-handler attributes cannot execute on the portal
+	// origin.
+	if !strings.Contains(csp, "script-src 'self' 'nonce-") {
+		t.Errorf("Content-Security-Policy missing strict nonce-based script-src: %q", csp)
+	}
+	if strings.Contains(csp, "script-src") && strings.Contains(csp, "'unsafe-inline'") &&
+		!strings.Contains(csp, "style-src 'self' 'unsafe-inline'") {
+		t.Errorf("Content-Security-Policy unexpectedly allows unsafe-inline for script: %q", csp)
+	}
+	if !strings.Contains(csp, "frame-ancestors 'none'") {
+		t.Errorf("Content-Security-Policy missing frame-ancestors 'none': %q", csp)
+	}
+
+	if got := resp.Header.Get("X-Frame-Options"); got != "DENY" {
+		t.Errorf("X-Frame-Options = %q, want %q", got, "DENY")
+	}
+
+	if got := resp.Header.Get("Referrer-Policy"); got != "no-referrer" {
+		t.Errorf("Referrer-Policy = %q, want %q", got, "no-referrer")
 	}
 }
 

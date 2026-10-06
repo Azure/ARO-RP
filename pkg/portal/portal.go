@@ -139,6 +139,7 @@ func NewPortal(env env.Core,
 func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Prometheus, sshStruct *ssh.SSH) (*mux.Router, error) {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
+	r.Use(middleware.SecurityHeaders())
 
 	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
 	if err != nil {
@@ -363,6 +364,7 @@ func (p *portal) indexPrometheus(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
 	err := p.templatePrometheus.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+		"nonce":          middleware.CSPNonce(r.Context()),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
 	if err != nil {

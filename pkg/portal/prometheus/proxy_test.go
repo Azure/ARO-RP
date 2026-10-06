@@ -15,7 +15,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -323,38 +322,52 @@ func TestProxy(t *testing.T) {
 }
 
 func TestModifyResponse(t *testing.T) {
+	// The cluster's Prometheus is attacker-controlled, so ModifyResponse must
+	// never let a browser render or execute a proxied response as HTML.
 	for _, tt := range []struct {
-		name     string
-		body     string
-		wantbody string
+		name            string
+		contentType     string
+		body            string
+		wantContentType string
 	}{
 		{
-			name:     "makes absolute a hrefs relative",
-			body:     `<html><head></head><body><a href="/foo"></a></body></html>`,
-			wantbody: `<html><head></head><body><a href="./foo"></a></body></html>`,
+			name:            "neutralises attacker-controlled HTML into inert text",
+			contentType:     "text/html",
+			body:            `<html><body><script>fetch('/api/clusters')</script><img src="x" onerror="alert(1)"/></body></html>`,
+			wantContentType: "text/plain; charset=utf-8",
 		},
 		{
-			name:     "makes absolute link hrefs relative",
-			body:     `<html><head></head><body><link href="/foo"/></body></html>`,
-			wantbody: `<html><head></head><body><link href="./foo"/></body></html>`,
+			name:            "neutralises HTML with charset parameter",
+			contentType:     "text/html; charset=utf-8",
+			body:            `<script>alert(1)</script>`,
+			wantContentType: "text/plain; charset=utf-8",
 		},
 		{
-			name:     "makes absolute script srcs relative",
-			body:     `<html><head></head><body><script src="/foo"></script></body></html>`,
-			wantbody: `<html><head></head><body><script src="./foo"></script></body></html>`,
+			name:            "neutralises a missing content type",
+			contentType:     "",
+			body:            `<script>alert(1)</script>`,
+			wantContentType: "text/plain; charset=utf-8",
 		},
 		{
-			name:     "makes PATH_PREFIX variable relative",
-			body:     `<html><head></head><body><script>var PATH_PREFIX = "";</script></body></html>`,
-			wantbody: `<html><head></head><body><script>var PATH_PREFIX = ".";</script></body></html>`,
+			name:            "leaves the /-/ready text body untouched",
+			contentType:     "text/plain; charset=utf-8",
+			body:            "Prometheus Server is Ready.\n",
+			wantContentType: "text/plain; charset=utf-8",
+		},
+		{
+			name:            "leaves the /api JSON body untouched",
+			contentType:     "application/json",
+			body:            `{"status":"success"}`,
+			wantContentType: "application/json",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &http.Response{
-				Header: http.Header{
-					"Content-Type": []string{"text/html"},
-				},
-				Body: io.NopCloser(strings.NewReader(tt.body)),
+				Header: http.Header{},
+				Body:   io.NopCloser(strings.NewReader(tt.body)),
+			}
+			if tt.contentType != "" {
+				r.Header.Set("Content-Type", tt.contentType)
 			}
 
 			p := &Prometheus{}
@@ -364,22 +377,27 @@ func TestModifyResponse(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			if got := r.Header.Get("Content-Type"); got != tt.wantContentType {
+				t.Errorf("Content-Type = %q, want %q", got, tt.wantContentType)
+			}
+
+			if got := r.Header.Get("X-Content-Type-Options"); got != "nosniff" {
+				t.Errorf("X-Content-Type-Options = %q, want %q", got, "nosniff")
+			}
+
+			if got := r.Header.Get("Content-Security-Policy"); got != "default-src 'none'; sandbox" {
+				t.Errorf("Content-Security-Policy = %q, want %q", got, "default-src 'none'; sandbox")
+			}
+
+			// The body must be passed through verbatim (never re-parsed or
+			// re-serialised), so the attacker's markup is served as inert text.
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if string(body) != tt.wantbody {
-				t.Errorf("%q", string(body))
-			}
-
-			length, err := strconv.Atoi(r.Header.Get("Content-Length"))
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if length != len(body) {
-				t.Error("length mismatch")
+			if string(body) != tt.body {
+				t.Errorf("body = %q, want %q", string(body), tt.body)
 			}
 		})
 	}
