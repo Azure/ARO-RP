@@ -944,7 +944,7 @@ func TestRestartScriptRestartsOnlyHoldersOfARotatedSecret(t *testing.T) {
 	// called aro-rp-something cannot satisfy a check for aro-rp.
 	const restartPrefix = "systemctl restart "
 	restarted := []string{}
-	for _, command := range strings.Split(portalRestartScript, ";") {
+	for command := range strings.SplitSeq(portalRestartScript, ";") {
 		command = strings.TrimSpace(command)
 		if !strings.HasPrefix(command, restartPrefix) {
 			t.Fatalf("script contains a command that is not a unit restart: %q", command)

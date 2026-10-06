@@ -253,12 +253,12 @@ func (m *manager) runSSHCommand(client *cryptossh.Client, cmd string) error {
 	if timedOut.Load() {
 		logEntry.Warn("command timed out")
 	}
-	for _, line := range strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimRight(stdout.String(), "\n"), "\n") {
 		if line != "" {
 			logEntry.WithField("stream", "stdout").Info(line)
 		}
 	}
-	for _, line := range strings.Split(strings.TrimRight(stderr.String(), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimRight(stderr.String(), "\n"), "\n") {
 		if line != "" {
 			logEntry.WithField("stream", "stderr").Info(line)
 		}

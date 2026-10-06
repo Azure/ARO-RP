@@ -140,7 +140,7 @@ func newProd(ctx context.Context, log *logrus.Entry, service ServiceName) (*prod
 
 	features := os.Getenv("RP_FEATURES")
 	if features != "" {
-		for _, feature := range strings.Split(features, ",") {
+		for feature := range strings.SplitSeq(features, ",") {
 			f, err := FeatureString("Feature" + feature)
 			if err != nil {
 				return nil, err
