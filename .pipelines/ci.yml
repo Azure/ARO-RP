@@ -18,7 +18,6 @@ trigger:
       - .github/workflows/check-coverage.yml
       - .github/workflows/codeql-analysis.yml
       - .github/workflows/maintenance.yml
-      - .github/workflows/npm-audit.yml
       - .github/workflows/prune-tags.yml
       - .github/workflows/release-note.yml
       - .github/workflows/yamllint.yml
@@ -45,7 +44,6 @@ pr:
       - .github/workflows/check-coverage.yml
       - .github/workflows/codeql-analysis.yml
       - .github/workflows/maintenance.yml
-      - .github/workflows/npm-audit.yml
       - .github/workflows/prune-tags.yml
       - .github/workflows/release-note.yml
       - .github/workflows/yamllint.yml
