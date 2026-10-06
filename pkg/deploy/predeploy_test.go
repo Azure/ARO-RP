@@ -50,13 +50,13 @@ var (
 	errGeneric            = errors.New("generic error")
 	deploymentFailedError = &azure.ServiceError{
 		Code:    "DeploymentFailed",
-		Details: []map[string]interface{}{{}},
+		Details: []map[string]any{{}},
 	}
 	deploymentNotFoundError = autorest.DetailedError{
 		Original: &azure.RequestError{
 			ServiceError: &azure.ServiceError{
 				Code:    "DeploymentNotFound",
-				Details: []map[string]interface{}{{}},
+				Details: []map[string]any{{}},
 			},
 		},
 	}

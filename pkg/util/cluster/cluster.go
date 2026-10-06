@@ -689,7 +689,7 @@ func (c *Cluster) Create(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -1743,9 +1743,9 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 	c.log.Info("ensuring testing mutation policy")
 	roleDefID := "/subscriptions/" + c.Config.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/17d1049b-9a84-46fb-8f53-869881c3d3ab"
 	policyName, assignmentName, scope := c.getPolicyConfig(TestingPolicyPrefix)
-	policyRule := map[string]interface{}{
-		"if": map[string]interface{}{
-			"allOf": []map[string]interface{}{
+	policyRule := map[string]any{
+		"if": map[string]any{
+			"allOf": []map[string]any{
 				{
 					"field":  "type",
 					"equals": "Microsoft.Storage/storageAccounts",
@@ -1756,11 +1756,11 @@ func (c *Cluster) ensureTestingPolicy(ctx context.Context) error {
 				},
 			},
 		},
-		"then": map[string]interface{}{
+		"then": map[string]any{
 			"effect": "modify",
-			"details": map[string]interface{}{
+			"details": map[string]any{
 				"roleDefinitionIds": []string{roleDefID},
-				"operations": []map[string]interface{}{
+				"operations": []map[string]any{
 					{
 						"operation": "addOrReplace",
 						"field":     "Microsoft.Storage/storageAccounts/publicNetworkAccess",

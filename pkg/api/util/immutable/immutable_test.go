@@ -500,7 +500,7 @@ func TestPolicyJSONName(t *testing.T) {
 	}
 }
 
-func assertPolicyValidation(t *testing.T, after, before interface{}, policy Policy, wantErr string) {
+func assertPolicyValidation(t *testing.T, after, before any, policy Policy, wantErr string) {
 	t.Helper()
 
 	err := ValidateWithPolicy("", after, before, policy)

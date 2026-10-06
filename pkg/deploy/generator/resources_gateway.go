@@ -403,8 +403,8 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 									Type:                    new("CustomScript"),
 									TypeHandlerVersion:      new("2.0"),
 									AutoUpgradeMinorVersion: new(true),
-									Settings:                map[string]interface{}{},
-									ProtectedSettings: map[string]interface{}{
+									Settings:                map[string]any{},
+									ProtectedSettings: map[string]any{
 										"script": customScript,
 									},
 								},
@@ -421,8 +421,8 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 									AutoUpgradeMinorVersion: new(true),
 									TypeHandlerVersion:      new("1.0"),
 									Type:                    new("AzureMonitorLinuxAgent"),
-									Settings: map[string]interface{}{
-										"genevaConfiguration": map[string]interface{}{
+									Settings: map[string]any{
+										"genevaConfiguration": map[string]any{
 											"enable": true,
 										},
 									},

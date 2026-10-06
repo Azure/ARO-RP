@@ -46,7 +46,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		doc            *api.OpenShiftClusterDocument
-		expectedOutput interface{}
+		expectedOutput any
 		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
 		expectedLogs   []testlog.ExpectedLogEntry
 	}{
@@ -57,7 +57,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"vm listing error: vm explod",
 			},
 		},
@@ -68,7 +68,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"no VMs found",
 			},
 		},
@@ -95,7 +95,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				).Times(1).Return(errors.New("explod"))
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 				"vm boot diagnostics retrieval error for somename: explod",
 			},
@@ -134,7 +134,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -172,7 +172,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -199,7 +199,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 				})
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -284,7 +284,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 					"failedRoleInstance": gomega.Equal("somename"),
 				},
 			},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				`vm somename: {"location":"eastus","properties":{}}`,
 			},
 		},
@@ -294,7 +294,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"cluster document missing",
 			},
 		},
@@ -304,7 +304,7 @@ func TestVirtualMachinesSerialConsole(t *testing.T) {
 			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 			},
 			expectedLogs: []testlog.ExpectedLogEntry{},
-			expectedOutput: []interface{}{
+			expectedOutput: []any{
 				"cluster document missing",
 			},
 		},

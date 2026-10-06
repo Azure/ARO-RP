@@ -2657,7 +2657,7 @@ func TestGenerateFederatedIdentityCredentials(t *testing.T) {
 type subnetPoliciesMatcher struct{}
 
 // Used to compare subnets by field value rather than pointer identity.
-func (s *subnetPoliciesMatcher) Matches(x interface{}) bool {
+func (s *subnetPoliciesMatcher) Matches(x any) bool {
 	subnet, ok := x.(sdknetwork.Subnet)
 	if !ok {
 		return false

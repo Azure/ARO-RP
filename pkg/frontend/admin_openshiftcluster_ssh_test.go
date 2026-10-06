@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -79,7 +80,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 	type test struct {
 		name                string
 		systemDataHeader    string
-		body                interface{}
+		body                any
 		contentType         string // "" => header omitted
 		omitHostKey         bool
 		omitClusterDoc      bool

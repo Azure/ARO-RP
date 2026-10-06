@@ -26,7 +26,7 @@ func toPtrIfNonZero[T comparable](value T) *T {
 // reading from the subset of the internal object's fields that appear in the
 // external representation.  ToExternal does not modify its argument; there is
 // no pointer aliasing between the passed and returned objects
-func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
+func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) any {
 	out := &OpenShiftCluster{
 		OpenShiftCluster: generated.OpenShiftCluster{
 			ID:       toPtrIfNonZero(oc.ID),
@@ -207,7 +207,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
+func (c openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) any {
 	l := &OpenShiftClusterList{
 		OpenShiftClusters: make([]*OpenShiftCluster, 0, len(ocs)),
 		NextLink:          nextLink,
@@ -224,7 +224,7 @@ func (c openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, n
 // all mapped fields from the external representation. ToInternal modifies its
 // argument; there is no pointer aliasing between the passed and returned
 // objects
-func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
+func (c openShiftClusterConverter) ToInternal(_oc any, out *api.OpenShiftCluster) {
 	oc := _oc.(*OpenShiftCluster)
 
 	out.ID = value(oc.ID)
@@ -408,7 +408,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 }
 
 // ExternalNoReadOnly removes all read-only fields from the external representation.
-func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
+func (c openShiftClusterConverter) ExternalNoReadOnly(_oc any) {
 	oc := _oc.(*OpenShiftCluster)
 	oc.Properties.WorkerProfilesStatus = nil
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {

@@ -157,8 +157,8 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 // getParameters returns an *arm.Parameters populated with parameter names and
 // values.  The names are taken from the ps argument and the values are taken
 // from d.config.Configuration.
-func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
-	m := map[string]interface{}{}
+func (d *deployer) getParameters(ps map[string]any) *arm.Parameters {
+	m := map[string]any{}
 	v := reflect.ValueOf(*d.config.Configuration)
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).IsNil() {

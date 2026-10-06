@@ -307,7 +307,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
-							Do(func(arg0, arg1 interface{}) {
+							Do(func(arg0, arg1 any) {
 								cancel()
 							})
 					},
@@ -335,7 +335,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 						}
 						pdpClient.EXPECT().
 							CheckAccess(gomock.Any(), gomock.Any()).
-							Do(func(arg0, arg1 interface{}) {
+							Do(func(arg0, arg1 any) {
 								cancel()
 							})
 					},

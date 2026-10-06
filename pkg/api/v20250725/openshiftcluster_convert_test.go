@@ -526,7 +526,7 @@ func converterExternalCluster() *OpenShiftCluster {
 
 func assertJSONEqual(t *testing.T, got, want []byte) {
 	t.Helper()
-	var gotValue, wantValue interface{}
+	var gotValue, wantValue any
 	if err := json.Unmarshal(got, &gotValue); err != nil {
 		t.Fatalf("unmarshal actual JSON: %v", err)
 	}

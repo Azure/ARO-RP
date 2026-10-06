@@ -14,7 +14,7 @@ import (
 // ignoring dynamic fields such as UUIDs
 type OpenShiftClusterDocument api.OpenShiftClusterDocument
 
-func (m *OpenShiftClusterDocument) Matches(x interface{}) bool {
+func (m *OpenShiftClusterDocument) Matches(x any) bool {
 	doc, ok := x.(*api.OpenShiftClusterDocument)
 	if !ok {
 		return false
@@ -38,7 +38,7 @@ func (m *OpenShiftClusterDocument) String() string {
 // ignoring dynamic fields such as UUIDs
 type AsyncOperationDocument api.AsyncOperationDocument
 
-func (m *AsyncOperationDocument) Matches(x interface{}) bool {
+func (m *AsyncOperationDocument) Matches(x any) bool {
 	doc, ok := x.(*api.AsyncOperationDocument)
 	if !ok {
 		return false

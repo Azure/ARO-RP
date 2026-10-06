@@ -324,7 +324,7 @@ type testResource struct {
 	Uint        uint                     `json:"uint,omitempty"`
 	Float       float64                  `json:"float,omitempty"`
 	Array       [1]*testResource         `json:"array,omitempty"`
-	Interface   interface{}              `json:"interface,omitempty"`
+	Interface   any                      `json:"interface,omitempty"`
 	Map         map[string]*testResource `json:"map,omitempty"`
 	Ptr         *string                  `json:"ptr,omitempty"`
 	Slice       []*testResource          `json:"slice,omitempty"`

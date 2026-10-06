@@ -332,7 +332,7 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 
 func newServiceAccount(name string) *unstructured.Unstructured {
 	serviceAcc := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"automountServiceAccountToken": new(true),
 		},
 	}
@@ -346,7 +346,7 @@ func newServiceAccount(name string) *unstructured.Unstructured {
 
 func newClusterRole(roleName string) *unstructured.Unstructured {
 	clusterRole := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"rules": []rbacv1.PolicyRule{
 				{
 					Verbs:     []string{"get"},
@@ -371,8 +371,8 @@ func newClusterRole(roleName string) *unstructured.Unstructured {
 
 func newClusterRoleBinding(name, roleName string) *unstructured.Unstructured {
 	crb := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"roleRef": map[string]interface{}{
+		Object: map[string]any{
+			"roleRef": map[string]any{
 				"kind":     "ClusterRole",
 				"name":     roleName,
 				"apiGroup": "rbac.authorization.k8s.io",
@@ -396,7 +396,7 @@ func newClusterRoleBinding(name, roleName string) *unstructured.Unstructured {
 // allowPrivilegeEscalation and allowedCapabilities omitted: the recovery pod only needs hostDir access.
 func newSecurityContextConstraint(name, sccUsers string) *unstructured.Unstructured {
 	scc := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"groups":                   []string{},
 			"users":                    []string{sccUsers},
 			"allowPrivilegedContainer": true,

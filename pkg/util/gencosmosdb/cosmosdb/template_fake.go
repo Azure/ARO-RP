@@ -330,7 +330,7 @@ type fakeTemplateIterator struct {
 	done         bool
 }
 
-func (i *fakeTemplateIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeTemplateIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -378,7 +378,7 @@ func (i *fakeTemplateErroringRawIterator) Next(ctx context.Context, maxItemCount
 	return nil, i.err
 }
 
-func (i *fakeTemplateErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeTemplateErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

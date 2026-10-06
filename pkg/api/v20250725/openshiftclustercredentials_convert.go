@@ -15,7 +15,7 @@ type openShiftClusterCredentialsConverter struct{}
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func (openShiftClusterCredentialsConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
+func (openShiftClusterCredentialsConverter) ToExternal(oc *api.OpenShiftCluster) any {
 	out := &OpenShiftClusterCredentials{
 		OpenShiftClusterCredentials: generated.OpenShiftClusterCredentials{
 			KubeadminUsername: new("kubeadmin"),

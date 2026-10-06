@@ -34,7 +34,7 @@ func (e *ValidationError) Error() string {
 //
 // Used for validation in API versions before v20250725, which use hand-written
 // models.
-func Validate(path string, v, w interface{}) error {
+func Validate(path string, v, w any) error {
 	return validate(path, reflect.ValueOf(v), reflect.ValueOf(w), false)
 }
 
@@ -47,7 +47,7 @@ func Validate(path string, v, w interface{}) error {
 //
 // Used for validation in API versions on or after v20250725, which use models
 // generated from TypeSpec.
-func ValidateWithPolicy(path string, v, w interface{}, policy Policy) error {
+func ValidateWithPolicy(path string, v, w any, policy Policy) error {
 	return validateWithPolicy(path, reflect.ValueOf(v), reflect.ValueOf(w), policy, false, false)
 }
 

@@ -45,7 +45,7 @@ func TestDeploy(t *testing.T) {
 		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
 			&azure.ServiceError{
 				Code: "DeploymentFailed",
-				Details: []map[string]interface{}{
+				Details: []map[string]any{
 					{
 						"code":    "BadRequest",
 						"message": "{\r\n  \"code\": \"FooErrorCode\",\r\n  \"message\": \"Not something we can deal with automatically.\"\r\n}",
@@ -58,7 +58,7 @@ func TestDeploy(t *testing.T) {
 		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
 			&azure.ServiceError{
 				Code: "DeploymentFailed",
-				Details: []map[string]interface{}{
+				Details: []map[string]any{
 					{
 						"code":    "BadRequest",
 						"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
@@ -169,7 +169,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	rpLBNotFound := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
@@ -179,7 +179,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	unfamiliarError := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": "{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}",
@@ -189,7 +189,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	multipleErrors := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": "{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}",
@@ -203,7 +203,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	multipleErrorsFirstKnown := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
@@ -217,7 +217,7 @@ func TestCheckForKnownError(t *testing.T) {
 
 	nestedErrorDoesntUnmarshal := &azure.ServiceError{
 		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
+		Details: []map[string]any{
 			{
 				"code":    "BadRequest",
 				"message": "I am just a regular string and not a JSON-encoded string representing another ServiceError.",
@@ -289,7 +289,7 @@ func TestGetParameters(t *testing.T) {
 	adminApiCaBundle := new("adminApiCaBundle")
 	for _, tt := range []struct {
 		name   string
-		ps     map[string]interface{}
+		ps     map[string]any
 		config Configuration
 		want   arm.Parameters
 	}{
@@ -301,7 +301,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name: "when all parameters present, everything is copied",
-			ps: map[string]interface{}{
+			ps: map[string]any{
 				"adminApiCaBundle":    nil,
 				"databaseAccountName": nil,
 			},
@@ -322,7 +322,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name: "when parameters with nil config are present, they are not returned",
-			ps: map[string]interface{}{
+			ps: map[string]any{
 				"adminApiCaBundle":    nil,
 				"databaseAccountName": nil,
 			},
@@ -339,7 +339,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name:   "when nil slice parameter is present it is skipped",
-			ps:     map[string]interface{}{},
+			ps:     map[string]any{},
 			config: Configuration{},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{},
@@ -347,7 +347,7 @@ func TestGetParameters(t *testing.T) {
 		},
 		{
 			name: "when malformed parameter is present, it is skipped",
-			ps: map[string]interface{}{
+			ps: map[string]any{
 				"dutabaseAccountName": nil,
 			},
 			config: Configuration{

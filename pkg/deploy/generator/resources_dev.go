@@ -212,8 +212,8 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 										"Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent",
 									},
 									AutoUpgradeMinorVersion: new(true),
-									Settings:                map[string]interface{}{},
-									ProtectedSettings: map[string]interface{}{
+									Settings:                map[string]any{},
+									ProtectedSettings: map[string]any{
 										"script": customScript,
 									},
 								},
@@ -226,7 +226,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 									TypeHandlerVersion:      new("1.0"),
 									AutoUpgradeMinorVersion: new(true),
 									EnableAutomaticUpgrade:  new(true),
-									Settings: map[string]interface{}{
+									Settings: map[string]any{
 										"GCS_AUTO_CONFIG": true,
 									},
 								},
@@ -239,7 +239,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 									TypeHandlerVersion:      new("2.0"),
 									AutoUpgradeMinorVersion: new(true),
 									EnableAutomaticUpgrade:  new(true),
-									Settings: map[string]interface{}{
+									Settings: map[string]any{
 										"enableGenevaUpload":               true,
 										"enableAutoConfig":                 true,
 										"reportSuccessOnUnsupportedDistro": true,

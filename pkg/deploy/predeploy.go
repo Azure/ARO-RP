@@ -174,13 +174,13 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
@@ -229,13 +229,13 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["location"] = &arm.ParametersParameter{
 		Value: d.config.Location,
 	}
@@ -258,7 +258,7 @@ func (d *deployer) deployRPSubscription(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -281,7 +281,7 @@ func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName,
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
@@ -304,18 +304,18 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
 		Value: isCreate,
 	}
 	// TODO: ugh
-	if _, ok := template["parameters"].(map[string]interface{})["gatewayResourceGroupName"]; ok {
+	if _, ok := template["parameters"].(map[string]any)["gatewayResourceGroupName"]; ok {
 		parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
 			Value: d.config.GatewayResourceGroupName,
 		}

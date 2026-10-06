@@ -16,11 +16,11 @@ import (
 )
 
 // LogLoadBalancers fetches the internal load balancer state and Azure Monitor metrics and logs them.
-func (m *manager) LogLoadBalancers(ctx context.Context) (interface{}, error) {
+func (m *manager) LogLoadBalancers(ctx context.Context) (any, error) {
 	if m.loadBalancers == nil || m.armMonitor == nil {
-		return []interface{}{"load balancer or metrics client missing"}, nil
+		return []any{"load balancer or metrics client missing"}, nil
 	}
-	return []interface{}{}, m.logLoadBalancers(ctx)
+	return []any{}, m.logLoadBalancers(ctx)
 }
 
 func (m *manager) logLoadBalancers(ctx context.Context) error {

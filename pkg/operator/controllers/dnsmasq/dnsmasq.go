@@ -170,7 +170,7 @@ func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatew
 	}
 
 	// canonicalise the machineconfig payload the same way as MCO
-	var i interface{}
+	var i any
 	err = json.Unmarshal(b, &i)
 	if err != nil {
 		return nil, err

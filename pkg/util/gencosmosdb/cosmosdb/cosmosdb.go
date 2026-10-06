@@ -66,7 +66,7 @@ func RetryOnPreconditionFailed(f func() error) (err error) {
 	return
 }
 
-func (c *databaseClient) do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) error {
+func (c *databaseClient) do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out any, headers http.Header) error {
 	var resp *http.Response
 	var err error
 
@@ -98,7 +98,7 @@ func (c *databaseClient) do(ctx context.Context, method, path, resourceType, res
 	return err
 }
 
-func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) (*http.Response, error) {
+func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out any, headers http.Header) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, "https://"+c.databaseHostname+"/"+path, nil)
 	if err != nil {
 		return nil, err

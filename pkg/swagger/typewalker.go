@@ -21,7 +21,7 @@ type ModelAsString bool
 
 type typeWalker struct {
 	pkg                *packages.Package
-	enums              map[types.Type][]interface{}
+	enums              map[types.Type][]any
 	xmsEnumList        []string
 	xmsSecretList      []string
 	xmsIdentifiers     []string
@@ -39,7 +39,7 @@ func newTypeWalker(pkgname string, xmsEnumList, xmsSecretList []string, xmsIdent
 
 	tw := &typeWalker{
 		pkg:                pkgs[0],
-		enums:              map[types.Type][]interface{}{},
+		enums:              map[types.Type][]any{},
 		xmsEnumList:        xmsEnumList,
 		xmsSecretList:      xmsSecretList,
 		xmsIdentifiers:     xmsIdentifiers,

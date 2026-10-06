@@ -34,29 +34,29 @@ func storageAccountResourceID(name string) string {
 }
 
 func TestBuildStorageAccountsValidationMap(t *testing.T) {
-	expectedProps := map[string]interface{}{
+	expectedProps := map[string]any{
 		"/properties/publicNetworkAccess": "Enabled",
 	}
 
 	for _, tt := range []struct {
 		name  string
 		input []string
-		want  map[string]map[string]interface{}
+		want  map[string]map[string]any
 	}{
 		{
 			name:  "empty input returns empty map",
 			input: nil,
-			want:  map[string]map[string]interface{}{},
+			want:  map[string]map[string]any{},
 		},
 		{
 			name:  "skips empty account names",
 			input: []string{"", ""},
-			want:  map[string]map[string]interface{}{},
+			want:  map[string]map[string]any{},
 		},
 		{
 			name:  "single account name is lowercased",
 			input: []string{"MyStorageAccount"},
-			want: map[string]map[string]interface{}{
+			want: map[string]map[string]any{
 				"mystorageaccount": {
 					"resourceType":       "Microsoft.Storage/storageAccounts",
 					"expectedProperties": expectedProps,
@@ -66,7 +66,7 @@ func TestBuildStorageAccountsValidationMap(t *testing.T) {
 		{
 			name:  "multiple account names, some empty, all lowercased",
 			input: []string{"ClusterSA", "", "RegistrySA"},
-			want: map[string]map[string]interface{}{
+			want: map[string]map[string]any{
 				"clustersa": {
 					"resourceType":       "Microsoft.Storage/storageAccounts",
 					"expectedProperties": expectedProps,
@@ -107,7 +107,7 @@ func TestNormalizePath(t *testing.T) {
 }
 
 func TestFindMatchingResourceConfig(t *testing.T) {
-	expectedProps := map[string]interface{}{
+	expectedProps := map[string]any{
 		"/properties/publicNetworkAccess": "Enabled",
 	}
 	validationMap := BuildStorageAccountsValidationMap(whatifDeploymentSA1)
@@ -115,7 +115,7 @@ func TestFindMatchingResourceConfig(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		resourceID string
-		want       map[string]interface{}
+		want       map[string]any
 	}{
 		{
 			name:       "matching storage account (case-insensitive) returns expected properties",
@@ -154,7 +154,7 @@ func TestFindMatchingResourceConfig(t *testing.T) {
 func TestCollectPropertyChanges(t *testing.T) {
 	_, log := testlog.LogForTesting(t)
 
-	expectedProps := map[string]interface{}{
+	expectedProps := map[string]any{
 		"/properties/publicNetworkAccess": "Enabled",
 	}
 

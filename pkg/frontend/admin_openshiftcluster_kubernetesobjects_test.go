@@ -312,10 +312,10 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			name:       "basic coverage",
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"kind":       "ConfigMap",
 					"apiVersion": "v1",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"namespace": "openshift-azure-logging",
 						"name":      "config",
 					},
@@ -332,10 +332,10 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			name:       "secret requested",
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"kind":       "Secret",
 					"apiVersion": "v1",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"namespace": "openshift",
 						"name":      "secret",
 					},
@@ -351,10 +351,10 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			name:       "customer namespace requested",
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"kind":       "ConfigMap",
 					"apiVersion": "v1",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"namespace": "customer",
 						"name":      "config",
 					},
@@ -370,10 +370,10 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			name:       "customer cluster-wide object requested",
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"kind":       "User",
 					"apiVersion": "user.openshift.io/v1",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "username",
 					},
 				},
@@ -388,9 +388,9 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			name:       "missing kind",
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "v1",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"namespace": "openshift",
 						"name":      "config",
 					},
@@ -404,9 +404,9 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			name:       "missing apiVersion",
 			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"kind": "ConfigMap",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"namespace": "openshift",
 						"name":      "config",
 					},

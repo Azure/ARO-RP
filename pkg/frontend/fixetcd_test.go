@@ -637,17 +637,17 @@ func expectWatchEvent(ctx gomock.Matcher, o *unstructured.Unstructured, k *mock_
 	return func() {
 		go func() {
 			w.Add(&unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"kind":       "Pod",
 					"apiVersion": "v1",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name":      o.GetName(),
 						"namespace": o.GetNamespace(),
-						"labels": map[string]interface{}{
+						"labels": map[string]any{
 							"app": "recovery-etcd",
 						},
 					},
-					"status": map[string]interface{}{
+					"status": map[string]any{
 						"phase":   podPhase,
 						"message": message,
 					},

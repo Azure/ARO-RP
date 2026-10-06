@@ -108,7 +108,7 @@ func lookupPolicyRestrictions(
 	apiVersion string,
 	allowedFields map[string]struct{},
 ) map[string][]PolicyAttribution {
-	content := map[string]interface{}{
+	content := map[string]any{
 		"type": resourceType,
 		"name": resourceName,
 	}

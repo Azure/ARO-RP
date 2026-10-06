@@ -43,7 +43,7 @@ func (g *generator) dnsZone(name string) *arm.Resource {
 	}
 }
 
-func (g *generator) securityGroup(name string, securityRules []*armnetwork.SecurityRule, condition interface{}) *arm.Resource {
+func (g *generator) securityGroup(name string, securityRules []*armnetwork.SecurityRule, condition any) *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.SecurityGroup{
 			Properties: &armnetwork.SecurityGroupPropertiesFormat{
@@ -58,7 +58,7 @@ func (g *generator) securityGroup(name string, securityRules []*armnetwork.Secur
 	}
 }
 
-func (g *generator) securityRules(name string, properties *armnetwork.SecurityRulePropertiesFormat, condition interface{}) *arm.Resource {
+func (g *generator) securityRules(name string, properties *armnetwork.SecurityRulePropertiesFormat, condition any) *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.SecurityRule{
 			Properties: properties,
@@ -118,7 +118,7 @@ func (g *generator) storageAccountBlobContainer(name string, storageAccountName 
 	}
 }
 
-func (g *generator) virtualNetwork(name, addressPrefix string, subnets []*armnetwork.Subnet, condition interface{}, dependsOn []string) *arm.Resource {
+func (g *generator) virtualNetwork(name, addressPrefix string, subnets []*armnetwork.Subnet, condition any, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &armnetwork.VirtualNetwork{
 			Properties: &armnetwork.VirtualNetworkPropertiesFormat{
@@ -162,7 +162,7 @@ func (g *generator) virtualNetworkPeering(name, vnetB string, allowGatewayTransi
 	}
 }
 
-func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessPolicyEntry, condition interface{}, enableEntraIdRbac bool, dependsOn []string) *arm.Resource {
+func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessPolicyEntry, condition any, enableEntraIdRbac bool, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtkeyvault.Vault{
 			Properties: &mgmtkeyvault.VaultProperties{

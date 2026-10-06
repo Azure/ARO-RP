@@ -62,14 +62,14 @@ func TestLogLoadBalancers(t *testing.T) {
 		doc         *api.OpenShiftClusterDocument
 		mockLB      func(*mock_armnetwork.MockLoadBalancersClient)
 		mockMetrics func(*mock_armmonitor.MockMetricsClient)
-		wantOutput  []interface{}
+		wantOutput  []any
 		wantErr     string
 		wantLogs    []testlog.ExpectedLogEntry
 	}{
 		{
 			name:       "nil clients returns descriptive entry without panic",
 			doc:        newLBTestDoc(lbTestResourceGroupID, lbTestInfraID),
-			wantOutput: []interface{}{"load balancer or metrics client missing"},
+			wantOutput: []any{"load balancer or metrics client missing"},
 		},
 		{
 			name: "LB Get failure returns error",

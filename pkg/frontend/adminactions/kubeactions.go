@@ -127,7 +127,7 @@ const (
 
 // sends a WebSocket ping control frame
 var pingCodec = websocket.Codec{
-	Marshal: func(v interface{}) ([]byte, byte, error) {
+	Marshal: func(v any) ([]byte, byte, error) {
 		return nil, websocket.PingFrame, nil
 	},
 }

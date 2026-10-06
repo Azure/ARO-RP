@@ -46,14 +46,14 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
-	var template map[string]interface{}
+	var template map[string]any
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters := d.getParameters(template["parameters"].(map[string]any))
 	if d.config.Configuration.AdminAPICABundle != nil {
 		parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),

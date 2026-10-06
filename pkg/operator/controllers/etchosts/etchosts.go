@@ -219,7 +219,7 @@ func EtcHostsMachineConfig(clusterDomain string, apiIntIP string, gatewayDomains
 	}
 
 	// canonicalise the machineconfig payload the same way as MCO
-	var i interface{}
+	var i any
 	err = json.Unmarshal(b, &i)
 	if err != nil {
 		return nil, err

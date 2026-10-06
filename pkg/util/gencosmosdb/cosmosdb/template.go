@@ -61,7 +61,7 @@ type TemplateIterator interface {
 // TemplateRawIterator is a template raw iterator
 type TemplateRawIterator interface {
 	TemplateIterator
-	NextRaw(context.Context, int, interface{}) error
+	NextRaw(context.Context, int, any) error
 }
 
 // NewTemplateClient returns a new template client
@@ -275,7 +275,7 @@ func (i *templateQueryIterator) Next(ctx context.Context, maxItemCount int) (tem
 	return
 }
 
-func (i *templateQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *templateQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw any) (err error) {
 	if i.done {
 		return
 	}

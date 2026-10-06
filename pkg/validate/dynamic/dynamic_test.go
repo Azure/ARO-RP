@@ -786,7 +786,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidFpspVnetAuthorizationDecisionsReadNotAllowed, nil)
@@ -834,7 +834,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspVnetAuthorizationDecisionsReadNotAllowed, nil)
@@ -851,7 +851,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspVnetAuthorizationDecisionsReadNotAllowed, nil)
@@ -867,7 +867,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspVnetAuthorizationDecisionsMissingWrite, nil)
@@ -892,7 +892,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
@@ -908,7 +908,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, nil)
@@ -1012,7 +1012,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
@@ -1029,7 +1029,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
@@ -1045,7 +1045,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidSubnetsAuthorizationDecisionsMissingWrite, nil)
@@ -1070,7 +1070,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
@@ -1086,7 +1086,7 @@ func TestValidateSubnetPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(nil, nil)
@@ -1252,7 +1252,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidFpspRouteTablesAuthorizationDecisionsJoinNotAllowed, nil)
@@ -1317,7 +1317,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
@@ -1340,7 +1340,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
@@ -1362,7 +1362,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(&client.AuthorizationRequest{}, nil)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspRouteTablesAuthorizationDecisionsMissingWrite, nil)
@@ -1604,7 +1604,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidFpspNatGWAuthorizationDecisionsJoinNotAllowed, nil)
@@ -1659,7 +1659,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsReadNotAllowed, nil)
@@ -1682,7 +1682,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsReadNotAllowed, nil)
@@ -1705,7 +1705,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.
 					EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(arg0, arg1 interface{}) {
+					Do(func(arg0, arg1 any) {
 						cancel()
 					}).
 					Return(&invalidCspNatGWAuthorizationDecisionsMissingWrite, nil)
@@ -1976,7 +1976,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Resource: client.ResourceInfo{Id: workerNSGv1},
 				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validFpspNsgAuthorizationDecisions, nil).
@@ -2003,7 +2003,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Resource: client.ResourceInfo{Id: workerNSGv1},
 				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&invalidFpspNsgAuthorizationDecisionsJoinNotAllowed, nil).
@@ -2113,7 +2113,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					Resource: client.ResourceInfo{Id: workerNSGv1},
 				}, nil).AnyTimes()
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validCspNsgAuthorizationDecisions, nil).
@@ -2133,7 +2133,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validCspNsgAuthorizationDecisions, nil).
@@ -2157,7 +2157,7 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			},
 			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_checkaccess.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, env *mock_env.MockInterface) {
 				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
-					Do(func(_, _ interface{}) {
+					Do(func(_, _ any) {
 						cancel()
 					}).
 					Return(&validCspNsgAuthorizationDecisions, nil).

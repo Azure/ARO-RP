@@ -431,7 +431,7 @@ func TestEnrichMismatchesRequestShape(t *testing.T) {
 	if gotReq.ResourceDetails.APIVersion == nil || *gotReq.ResourceDetails.APIVersion != testStorageAPIVersion {
 		t.Errorf("APIVersion = %v, want %s", gotReq.ResourceDetails.APIVersion, testStorageAPIVersion)
 	}
-	content, ok := gotReq.ResourceDetails.ResourceContent.(map[string]interface{})
+	content, ok := gotReq.ResourceDetails.ResourceContent.(map[string]any)
 	if !ok {
 		t.Fatalf("ResourceContent is not map[string]interface{}: %T", gotReq.ResourceDetails.ResourceContent)
 	}

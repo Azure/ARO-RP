@@ -154,7 +154,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					msiRequiredPermissionsList,
 					validTestToken,
 				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 any) {
 					cancel()
 				}).Return(&msiAllowedActions, nil).AnyTimes()
 			},
@@ -196,7 +196,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					msiRequiredPermissionsList,
 					validTestToken,
 				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 any) {
 					cancel()
 				}).Return(&msiNotAllowedActions, nil).AnyTimes()
 			},
@@ -216,7 +216,7 @@ func TestValidateClusterUserAssignedIdentity(t *testing.T) {
 					msiRequiredPermissionsList,
 					validTestToken,
 				).AnyTimes().Return(&msiAuthZRequest, nil)
-				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 interface{}) {
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), msiAuthZRequest).Do(func(arg0, arg1 any) {
 					cancel()
 				}).Return(&msiActionMissing, nil).AnyTimes()
 			},

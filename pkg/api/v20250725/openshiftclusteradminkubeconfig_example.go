@@ -11,7 +11,7 @@ import (
 
 // ExampleOpenShiftClusterAdminKubeconfigResponse returns an example
 // OpenShiftClusterAdminKubeconfig object that the RP might return to an end-user
-func ExampleOpenShiftClusterAdminKubeconfigResponse() interface{} {
+func ExampleOpenShiftClusterAdminKubeconfigResponse() any {
 	return &OpenShiftClusterAdminKubeconfig{
 		OpenShiftClusterAdminKubeconfig: generated.OpenShiftClusterAdminKubeconfig{
 			Kubeconfig: new(base64.StdEncoding.EncodeToString([]byte("{}"))),

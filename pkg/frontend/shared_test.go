@@ -260,7 +260,7 @@ func (ti *testInfra) buildFixtures(fixtures func(*testdatabase.Fixture)) error {
 	return ti.fixture.Create()
 }
 
-func (ti *testInfra) request(method, url string, header http.Header, in interface{}) (*http.Response, []byte, error) {
+func (ti *testInfra) request(method, url string, header http.Header, in any) (*http.Response, []byte, error) {
 	var b []byte
 
 	if in != nil {
@@ -292,7 +292,7 @@ func (ti *testInfra) request(method, url string, header http.Header, in interfac
 	return resp, b, nil
 }
 
-func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse interface{}, opts ...cmp.Option) error {
+func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse any, opts ...cmp.Option) error {
 	if resp.StatusCode != wantStatusCode {
 		return fmt.Errorf("unexpected status code %d, wanted %d: %s", resp.StatusCode, wantStatusCode, string(b))
 	}

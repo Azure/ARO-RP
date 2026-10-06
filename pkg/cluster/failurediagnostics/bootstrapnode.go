@@ -40,19 +40,19 @@ var bootstrapNodeSSHProbeProperties = &armnetwork.ProbePropertiesFormat{
 
 // LogBootstrapNode reconfigures the ILB, establishes an SSH connection to the
 // bootstrap node, and runs the embedded diagnostic script.
-func (m *manager) LogBootstrapNode(ctx context.Context) (interface{}, error) {
+func (m *manager) LogBootstrapNode(ctx context.Context) (any, error) {
 	if m.armInterfaces == nil || m.loadBalancers == nil {
-		return []interface{}{"lb or interface client missing"}, nil
+		return []any{"lb or interface client missing"}, nil
 	}
 	client, err := m.setupBootstrapNodeSSH(ctx)
 	if err != nil {
-		return []interface{}{fmt.Sprintf("bootstrap node SSH error: %v", err)}, nil
+		return []any{fmt.Sprintf("bootstrap node SSH error: %v", err)}, nil
 	}
 	defer client.Close()
 	if err := m.runDiagCommands(client, bootstrapNodeDiagCommands); err != nil {
 		m.log.WithError(err).Error("running bootstrap node diagnostic commands")
 	}
-	return []interface{}{}, nil
+	return []any{}, nil
 }
 
 // setupBootstrapNodeSSH reconfigures the internal load balancer to expose the
