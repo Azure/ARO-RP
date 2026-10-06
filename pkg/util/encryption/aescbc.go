@@ -37,7 +37,12 @@ func (c *aes256Sha512) Open(input []byte) ([]byte, error) {
 		return nil, fmt.Errorf("encrypted value too short")
 	}
 
-	return c.aead.Open(nil, nil, input, nil)
+	b, err := c.aead.Open(nil, nil, input, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrKeyMismatch, err)
+	}
+
+	return b, nil
 }
 
 func (c *aes256Sha512) Seal(input []byte) ([]byte, error) {

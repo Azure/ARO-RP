@@ -40,7 +40,12 @@ func (c *xChaCha20Poly1305) Open(input []byte) ([]byte, error) {
 	nonce := input[:c.aead.NonceSize()]
 	data := input[c.aead.NonceSize():]
 
-	return c.aead.Open(nil, nonce, data, nil)
+	b, err := c.aead.Open(nil, nonce, data, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrKeyMismatch, err)
+	}
+
+	return b, nil
 }
 
 func (c *xChaCha20Poly1305) Seal(input []byte) ([]byte, error) {
