@@ -50,6 +50,7 @@ func New(baseLog *logrus.Entry,
 		Log:             baseLog,
 		AuditLog:        auditLog,
 		OtelAuditClient: otelAuditClient,
+		BaseAccessLog:   baseAccessLog,
 
 		servingCert: servingCert,
 
