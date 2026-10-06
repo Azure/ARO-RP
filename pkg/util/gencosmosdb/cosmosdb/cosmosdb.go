@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"mime"
 	"net/http"
 	"net/textproto"
@@ -90,9 +91,7 @@ func (c *databaseClient) do(ctx context.Context, method, path, resourceType, res
 		for k := range headers {
 			delete(headers, k)
 		}
-		for k, v := range resp.Header {
-			headers[k] = v
-		}
+		maps.Copy(headers, resp.Header)
 	}
 
 	return err

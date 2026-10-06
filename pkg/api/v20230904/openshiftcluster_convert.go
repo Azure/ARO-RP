@@ -4,6 +4,8 @@ package v20230904
 // Licensed under the Apache License 2.0.
 
 import (
+	"maps"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -103,9 +105,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) any {
 
 	if oc.Tags != nil {
 		out.Tags = make(map[string]string, len(oc.Tags))
-		for k, v := range oc.Tags {
-			out.Tags[k] = v
-		}
+		maps.Copy(out.Tags, oc.Tags)
 	}
 
 	out.SystemData = &SystemData{
@@ -149,9 +149,7 @@ func (c openShiftClusterConverter) ToInternal(_oc any, out *api.OpenShiftCluster
 	out.Tags = nil
 	if oc.Tags != nil {
 		out.Tags = make(map[string]string, len(oc.Tags))
-		for k, v := range oc.Tags {
-			out.Tags[k] = v
-		}
+		maps.Copy(out.Tags, oc.Tags)
 	}
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.ClusterProfile.PullSecret = api.SecureString(oc.Properties.ClusterProfile.PullSecret)
