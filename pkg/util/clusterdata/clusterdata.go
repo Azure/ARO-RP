@@ -74,7 +74,6 @@ func (p ParallelEnricher) Enrich(ctx context.Context, log *logrus.Entry, ocs ...
 	wg.Add(len(ocs))
 	for _, oc := range ocs {
 		// https://golang.org/doc/faq#closures_and_goroutines
-		oc := oc
 		go func() {
 			defer recover.Panic(log)
 			defer wg.Done()

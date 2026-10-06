@@ -805,7 +805,6 @@ func TestPreResizeControlPlaneVMsValidation(t *testing.T) {
 			wantError:      `500: InternalServerError: : step [Action pkg/frontend.(*preResizeValidator).validateAPIServerReadyz] encountered error: connection refused`,
 		},
 	} {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
