@@ -1,4 +1,0 @@
-paths:
-  - portal/v2
-paths-ignore:
-  - portal/v2/node_modules
