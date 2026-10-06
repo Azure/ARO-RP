@@ -46,18 +46,12 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 	err = env.ValidateVars(
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
-		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
 	)
 	if err != nil {
 		return err
 	}
 
 	groupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"))
-	if err != nil {
-		return err
-	}
-
-	elevatedGroupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"))
 	if err != nil {
 		return err
 	}
@@ -211,7 +205,7 @@ func portal(ctx context.Context, _log *logrus.Entry, auditLog *logrus.Entry) err
 		return err
 	}
 
-	p := pkgportal.NewPortal(_env, auditLog, _env.LoggerForComponent("portal"), _env.LoggerForComponent("portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
+	p := pkgportal.NewPortal(_env, auditLog, _env.LoggerForComponent("portal"), _env.LoggerForComponent("portal-access"), outelAuditClient, l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, dbGroup, dialer, m)
 
 	return p.Run(ctx)
 }
