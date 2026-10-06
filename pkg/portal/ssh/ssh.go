@@ -7,11 +7,8 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
-	"mime"
 	"net"
 	"net/http"
-	"strings"
 	"text/template"
 	"time"
 
@@ -19,14 +16,10 @@ import (
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	utilssh "github.com/Azure/ARO-RP/pkg/util/ssh"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 const (
@@ -38,8 +31,6 @@ type SSH struct {
 	log           *logrus.Entry
 	baseAccessLog *logrus.Entry
 	l             net.Listener
-
-	elevatedGroupIDs []string
 
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbPortal            database.Portal
@@ -56,7 +47,6 @@ func New(env env.Core,
 	baseAccessLog *logrus.Entry,
 	l net.Listener,
 	hostKey *rsa.PrivateKey,
-	elevatedGroupIDs []string,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
@@ -71,8 +61,6 @@ func New(env env.Core,
 		log:           log,
 		baseAccessLog: baseAccessLog,
 		l:             l,
-
-		elevatedGroupIDs: elevatedGroupIDs,
 
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbPortal:            dbPortal,
@@ -108,76 +96,6 @@ type response struct {
 	Command  string `json:"command,omitempty"`
 	Password string `json:"password,omitempty"`
 	Error    string `json:"error,omitempty"`
-}
-
-// New creates a new temporary password from the request params and sends it
-// through the writer
-func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 9 {
-		http.Error(w, "invalid resourceId", http.StatusBadRequest)
-		return
-	}
-
-	resourceID := strings.Join(parts[:9], "/")
-	if !validate.RxClusterID.MatchString(resourceID) {
-		http.Error(w, fmt.Sprintf("invalid resourceId %q", resourceID), http.StatusBadRequest)
-		return
-	}
-
-	mediatype, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if mediatype != "application/json" {
-		http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
-		return
-	}
-
-	var req *request
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil || req.Master < 0 || req.Master > 2 {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	elevated := len(stringutils.GroupsIntersect(s.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
-	if !elevated {
-		s.sendResponse(w, "", "", "", "Elevated access is required.", s.env.IsLocalDevelopmentMode())
-		return
-	}
-
-	username := r.Context().Value(middleware.ContextKeyUsername).(string)
-	username = strings.SplitN(username, "@", 2)[0]
-
-	password := s.dbPortal.NewUUID()
-	portalDoc := &api.PortalDocument{
-		ID:  password,
-		TTL: int(sshNewTimeout / time.Second),
-		Portal: &api.Portal{
-			Username: ctx.Value(middleware.ContextKeyUsername).(string),
-			ID:       resourceID,
-			SSH: &api.SSH{
-				Master: req.Master,
-			},
-		},
-	}
-
-	_, err = s.dbPortal.Create(ctx, portalDoc)
-	if err != nil {
-		s.internalServerError(w, err)
-		return
-	}
-
-	host := r.Host
-	if strings.ContainsRune(r.Host, ':') {
-		host, _, err = net.SplitHostPort(r.Host)
-		if err != nil {
-			s.internalServerError(w, err)
-			return
-		}
-	}
-
-	s.sendResponse(w, host, username, password, "", s.env.IsLocalDevelopmentMode())
 }
 
 func (s *SSH) sendResponse(w http.ResponseWriter, hostname, username, password, error string, isLocalDevelopmentMode bool) {
