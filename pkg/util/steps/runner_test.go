@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -332,6 +334,43 @@ func TestStepRunner(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+		})
+	}
+}
+
+func TestRunPreservesCloudError(t *testing.T) {
+	cloudErr := api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidLinkedVNet,
+		"properties.workerProfiles[0].subnetId",
+		"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+	)
+
+	for _, tt := range []struct {
+		name    string
+		stepErr error
+		wantMsg string
+	}{
+		{
+			name:    "bare CloudError is preserved",
+			stepErr: cloudErr,
+			wantMsg: cloudErr.Error(),
+		},
+		{
+			name:    "wrapped CloudError is preserved",
+			stepErr: fmt.Errorf("step failed: %w", cloudErr),
+			wantMsg: "step failed: " + cloudErr.Error(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			_, log := testlog.New()
+
+			_, err := Run(ctx, log, time.Second, []Step{
+				Action(func(context.Context) error { return tt.stepErr }),
+			}, nil, "aro-managed-rg")
+
+			utilerror.AssertErrorMessage(t, err, tt.wantMsg)
 		})
 	}
 }
