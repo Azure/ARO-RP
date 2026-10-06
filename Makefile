@@ -308,10 +308,6 @@ runlocal-actuator:
 runlocal-scheduler:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro ${ARO_CMD_ARGS} mimo-scheduler
 
-.PHONY: build-portal
-build-portal:
-	cd portal/v2 && npm install && npm run build
-
 .PHONY: pyenv
 pyenv:
 	python3 -m venv pyenv
@@ -422,11 +418,6 @@ fix-gh-actions: $(PINACT) ## Pin unpinned GitHub Actions to SHA
 	@echo "Pinning GitHub Actions to SHA..."
 	@$(PINACT) run
 	@echo "Done. Please review the changes."
-
-.PHONY: lint-admin-portal
-lint-admin-portal:
-	docker build --platform=$(PLATFORM) --build-arg REGISTRY=$(REGISTRY) --build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
-	docker run --platform=$(PLATFORM) -t --rm linter:latest
 
 .PHONY: test-python
 test-python: pyenv az
