@@ -85,8 +85,8 @@ func digestFromReference(reference string) (string, error) {
 // repoFromReference extracts the repository from an image reference,
 // stripping any tag or digest suffix.
 func repoFromReference(reference string) string {
-	if idx := strings.Index(reference, "@"); idx != -1 {
-		return reference[:idx]
+	if before, _, ok := strings.Cut(reference, "@"); ok {
+		return before
 	}
 	if idx := strings.LastIndex(reference, ":"); idx != -1 {
 		if slashIdx := strings.LastIndex(reference, "/"); slashIdx < idx {
