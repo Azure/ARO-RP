@@ -41,7 +41,7 @@ func rotateACRTokenWithManager(th mimo.TaskContext, manager acrtoken.Manager, fo
 	if err != nil {
 		return mimo.TerminalError(err)
 	}
-	err = cluster.RotateACRToken(th, th.Environment(), th.Log(), ch, th.GetOpenShiftClusterDocument(), manager, th.PatchOpenShiftClusterDocument, force)
+	_, err = cluster.RotateACRToken(th, th.Environment(), th.Log(), ch, th.GetOpenShiftClusterDocument(), manager, th.PatchOpenShiftClusterDocument, force)
 	if err != nil {
 		if errors.Is(err, cluster.ErrCannotRotateACRTokensInDev) {
 			return mimo.TerminalError(err)

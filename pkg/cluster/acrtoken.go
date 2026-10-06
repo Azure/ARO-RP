@@ -120,14 +120,15 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return m.db.PatchWithLease(ctx, m.doc.Key, oscdm)
 	}
 
-	return RotateACRToken(ctx, m.env, m.log, m.ch, m.doc, token, updateDB, false)
+	m.doc, err = RotateACRToken(ctx, m.env, m.log, m.ch, m.doc, token, updateDB, false)
+	return err
 }
 
-func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, ch clienthelper.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager, updateDB database.OpenShiftClusterDocumentMutatorRunner, force bool) error {
+func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, ch clienthelper.Interface, doc *api.OpenShiftClusterDocument, token acrtoken.Manager, updateDB database.OpenShiftClusterDocumentMutatorRunner, force bool) (*api.OpenShiftClusterDocument, error) {
 	var err error
 	// we do not want to rotate tokens in local development
 	if env.IsLocalDevelopmentMode() || env.IsCI() {
-		return ErrCannotRotateACRTokensInDev
+		return doc, ErrCannotRotateACRTokensInDev
 	}
 
 	registryProfile := doc.OpenShiftCluster.GetRegistryProfile(env.ACRDomain())
@@ -135,13 +136,13 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		log.Infof("registry profile missing, creating it")
 		registryProfile, err = ensureACRToken(ctx, env, doc, token)
 		if err != nil {
-			return err
+			return doc, err
 		}
 	} else {
 		shouldRotate, _, durationUntilRotate, validityRemaining := acrtoken.ShouldRotateToken(env, registryProfile)
 		log.Infof("token has %s validity remaining, should rotate in %s", validityRemaining.String(), durationUntilRotate.String())
 		if !shouldRotate && !force {
-			return nil
+			return doc, nil
 		} else if !shouldRotate && force {
 			log.Infof("force rotating token before rotation period")
 		}
@@ -149,7 +150,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		log.Infof("rotating ACR token")
 		err := token.RotateTokenPassword(ctx, registryProfile)
 		if err != nil {
-			return err
+			return doc, err
 		}
 	}
 
@@ -157,7 +158,7 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 	// secret is stored as a .dockerconfigjson string in the .dockerconfigjson key
 	encodedDockerConfigJson, _, err := pullsecret.SetRegistryProfiles("", registryProfile)
 	if err != nil {
-		return err
+		return doc, err
 	}
 
 	applyConfiguration := corev1ac.Secret(operator.SecretName, operator.Namespace).WithData(
@@ -169,19 +170,19 @@ func RotateACRToken(ctx context.Context, env env.Interface, log *logrus.Entry, c
 		return ch.Apply(ctx, applyConfiguration, &client.ApplyOptions{FieldManager: "aro-rp", Force: pointerutils.ToPtr(true)})
 	})
 	if err != nil {
-		return fmt.Errorf("when applying pullsecret: %w", err)
+		return doc, fmt.Errorf("when applying pullsecret: %w", err)
 	}
 
 	err = rotateOpenShiftConfigSecret(ctx, log, ch, []byte(encodedDockerConfigJson))
 	if err != nil {
-		return fmt.Errorf("when rotating OpenShift secret: %w", err)
+		return doc, fmt.Errorf("when rotating OpenShift secret: %w", err)
 	}
 
-	_, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
+	doc, err = updateDB(ctx, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.PutRegistryProfile(registryProfile)
 		return nil
 	})
-	return err
+	return doc, err
 }
 
 func rotateOpenShiftConfigSecret(ctx context.Context, log *logrus.Entry, ch clienthelper.Interface, encodedDockerConfigJson []byte) error {
