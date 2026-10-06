@@ -472,7 +472,7 @@ func TestPolicyJSONName(t *testing.T) {
 		Location             string
 	}
 
-	typeOfModel := reflect.TypeOf(model{})
+	typeOfModel := reflect.TypeFor[model]()
 	tests := []struct {
 		field string
 		want  string

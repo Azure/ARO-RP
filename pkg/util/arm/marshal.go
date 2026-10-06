@@ -121,7 +121,7 @@ func (r *Resource) UnmarshalJSON(b []byte) error {
 }
 
 var (
-	stringType         = reflect.TypeOf("")
+	stringType         = reflect.TypeFor[string]()
 	emptyInterfaceType = reflect.ValueOf([]any(nil)).Type().Elem()
 )
 
@@ -139,7 +139,7 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 	switch v.Kind() {
 	case reflect.Array:
 		var t reflect.Type
-		if v.Type() == reflect.TypeOf(gofrsuuid.UUID{}) {
+		if v.Type() == reflect.TypeFor[gofrsuuid.UUID]() {
 			// keep uuid.UUID - encoding/json will detect it and marshal it into
 			// a string
 			t = v.Type()

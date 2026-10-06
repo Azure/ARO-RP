@@ -17,12 +17,12 @@ var secretPreservingJSONHandle *codec.JsonHandle
 func init() {
 	secretPreservingJSONHandle = &codec.JsonHandle{}
 
-	err := secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeOf(SecureBytes{}), 1, secureHidingExt{})
+	err := secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeFor[SecureBytes](), 1, secureHidingExt{})
 	if err != nil {
 		panic(err)
 	}
 
-	err = secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeOf((*SecureString)(nil)), 1, secureHidingExt{})
+	err = secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeFor[*SecureString](), 1, secureHidingExt{})
 	if err != nil {
 		panic(err)
 	}

@@ -18,7 +18,7 @@ func TestConfigurationFieldParity(t *testing.T) {
 	// create a map whose keys are all the fields of Configuration
 	m := map[string]struct{}{}
 
-	typ := reflect.TypeOf(Configuration{})
+	typ := reflect.TypeFor[Configuration]()
 	for field := range typ.Fields() {
 		m[strings.SplitN(field.Tag.Get("json"), ",", 2)[0]] = struct{}{}
 	}
