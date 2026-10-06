@@ -130,8 +130,7 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 
 	case *types.Struct:
 		s.Type = "object"
-		for i := 0; i < t.NumFields(); i++ {
-			field := t.Field(i)
+		for field := range t.Fields() {
 			if field.Exported() {
 				nodes, _ := tw.getNodes(field.Pos())
 				nodeField, ok := getNodeField(nodes)

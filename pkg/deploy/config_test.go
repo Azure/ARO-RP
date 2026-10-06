@@ -19,8 +19,8 @@ func TestConfigurationFieldParity(t *testing.T) {
 	m := map[string]struct{}{}
 
 	typ := reflect.TypeOf(Configuration{})
-	for i := 0; i < typ.NumField(); i++ {
-		m[strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)[0]] = struct{}{}
+	for field := range typ.Fields() {
+		m[strings.SplitN(field.Tag.Get("json"), ",", 2)[0]] = struct{}{}
 	}
 
 	for _, paramsFile := range []string{
@@ -107,7 +107,7 @@ func TestConfigNilable(t *testing.T) {
 	cfg := Configuration{}
 	val := reflect.ValueOf(cfg)
 
-	for i := 0; i < val.NumField(); i++ {
-		val.Field(i).IsNil()
+	for _, field := range val.Fields() {
+		field.IsNil()
 	}
 }
