@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"
@@ -30,13 +29,9 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/ARO-RP/test/util/testpoller"
 )
 
-var (
-	nonElevatedGroupIDs = []string{"00000000-1111-1111-1111-000000000000"}
-	elevatedGroupIDs    = []string{"00000000-0000-0000-0000-000000000000"}
-)
+var nonElevatedGroupIDs = []string{"00000000-1111-1111-1111-000000000000"}
 
 func TestSecurity(t *testing.T) {
 	ctx := context.Background()
@@ -94,7 +89,7 @@ func TestSecurity(t *testing.T) {
 		WithOpenShiftClusters(dbOpenShiftClusters).
 		WithPortal(dbPortal)
 
-	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, otelAudit, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbg, nil, &noop.Noop{})
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, otelAudit, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, dbg, nil, &noop.Noop{})
 	go func() {
 		err := p.Run(ctx)
 		if err != nil {
@@ -116,41 +111,8 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/", nil)
 			},
-			unauthenticatedWantStatusCode: 307,
-			authenticatedWantStatusCode:   200,
-			wantAuditOperation:            "GET /",
-			wantAuditTargetResources: []audit.TargetResource{
-				{
-					TargetResourceType: "",
-					TargetResourceName: "/",
-				},
-			},
-		},
-		{
-			name: "/asset-manifest.json",
-			request: func() (*http.Request, error) {
-				return http.NewRequest(http.MethodGet, "https://server/asset-manifest.json", nil)
-			},
-			wantAuditOperation: "GET /asset-manifest.json",
-			wantAuditTargetResources: []audit.TargetResource{
-				{
-					TargetResourceType: "",
-					TargetResourceName: "/asset-manifest.json",
-				},
-			},
-		},
-		{
-			name: "/api/clusters",
-			request: func() (*http.Request, error) {
-				return http.NewRequest(http.MethodGet, "https://server/api/clusters", nil)
-			},
-			wantAuditOperation: "GET /api/clusters",
-			wantAuditTargetResources: []audit.TargetResource{
-				{
-					TargetResourceType: "",
-					TargetResourceName: "/api/clusters",
-				},
-			},
+			unauthenticatedWantStatusCode: 404,
+			authenticatedWantStatusCode:   404,
 		},
 		{
 			name: "/api/logout",
@@ -197,19 +159,6 @@ func TestSecurity(t *testing.T) {
 			},
 		},
 		{
-			name: "/kubeconfig/new",
-			request: func() (*http.Request, error) {
-				return http.NewRequest(http.MethodPost, "https://server/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/resourceName/kubeconfig/new", nil)
-			},
-			wantAuditOperation: "POST /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/kubeconfig/new",
-			wantAuditTargetResources: []audit.TargetResource{
-				{
-					TargetResourceType: "kubeconfig",
-					TargetResourceName: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/kubeconfig/new",
-				},
-			},
-		},
-		{
 			name: "/prometheus",
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodPost, "https://server/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/resourceName/prometheus", nil)
@@ -222,47 +171,6 @@ func TestSecurity(t *testing.T) {
 					TargetResourceName: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/prometheus",
 				},
 			},
-		},
-		{
-			name: "/ssh/new",
-			request: func() (*http.Request, error) {
-				req, err := http.NewRequest(http.MethodPost, "https://server/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/resourceName/ssh/new", strings.NewReader("{}"))
-				if err != nil {
-					return nil, err
-				}
-				req.Header.Set("Content-Type", "application/json")
-
-				return req, nil
-			},
-			checkResponse: func(t *testing.T, authenticated, elevated bool, resp *http.Response) {
-				if authenticated && !elevated {
-					var e struct {
-						Error string `json:"error,omitempty"`
-					}
-					err := json.NewDecoder(resp.Body).Decode(&e)
-					if err != nil {
-						t.Fatal(err)
-					}
-					if e.Error != "Elevated access is required." {
-						t.Error(e.Error)
-					}
-				}
-			},
-			wantAuditOperation: "POST /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/ssh/new",
-			wantAuditTargetResources: []audit.TargetResource{
-				{
-					TargetResourceType: "ssh",
-					TargetResourceName: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/ssh/new",
-				},
-			},
-		},
-		{
-			name: "/doesnotexist",
-			request: func() (*http.Request, error) {
-				return http.NewRequest(http.MethodGet, "https://server/doesnotexist", nil)
-			},
-			unauthenticatedWantStatusCode: http.StatusNotFound,
-			authenticatedWantStatusCode:   http.StatusNotFound,
 		},
 	} {
 		for _, tt2 := range []struct {
@@ -278,12 +186,6 @@ func TestSecurity(t *testing.T) {
 			{
 				name:           "authenticated",
 				authenticated:  true,
-				wantStatusCode: tt.authenticatedWantStatusCode,
-			},
-			{
-				name:           "elevated",
-				authenticated:  true,
-				elevated:       true,
 				wantStatusCode: tt.authenticatedWantStatusCode,
 			},
 		} {
@@ -304,11 +206,7 @@ func TestSecurity(t *testing.T) {
 				}
 
 				if tt2.authenticated {
-					var groups []string
-					if tt2.elevated {
-						groups = elevatedGroupIDs
-					}
-					err = addAuth(req, groups)
+					err = addAuth(req, []string{})
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -344,48 +242,15 @@ func TestSecurity(t *testing.T) {
 
 				// Every matched portal response must carry the hardening
 				// headers set by the SecurityHeaders middleware.  Unmatched
-				// routes (e.g. /doesnotexist) are served by mux's 404 handler,
+				// routes (e.g. /) are served by mux's 404 handler,
 				// which the middleware chain does not run, so skip those.
-				if tt.name != "/doesnotexist" {
+				if tt.name != "/" {
 					assertSecurityHeaders(t, resp)
 				}
 
-				// no audit logs for https://server/doesnotexist
+				// no audit logs for 404s
 				if tt.authenticatedWantStatusCode == http.StatusNotFound {
 					return
-				}
-
-				// perform some polling on static files because the http.ServeContent() calls in the
-				// portal's serve() and index() handlers[1] issued a call to io.Copy()[2]
-				// causes a race condition with the audit hook. The response was returned
-				// to the client and the testlog.AssertAuditPayloads() was called immediately,
-				// while the audit hook was still in-flight.
-				//
-				// note that the audit logs will still be recorded and emitted by the audit
-				// hook, so this is a non-issue in the Geneva environment.
-				//
-				// [1] https://github.com/Azure/ARO-RP/blob/master/pkg/portal/portal.go#L222-L247
-				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
-				//
-				// TODO: there is a data race that exists only within this test independent of the polling
-				// race mentioned above. AllEntries returns a copy of the current entries within logrus,
-				// but the underlying data within the entry is not copied over.  When we attempt to
-				// get the entry in the Data map for the MetadataPayload, there is a slight chance that
-				// the Payload will change during this access, resulting in the e2e panicking.
-				// `go test -race -timeout 30s -run ^TestSecurity$ ./pkg/portal` should show the race and
-				// where the concurrent read/write is occurring.
-				if tt.name == "/" || tt.name == "/asset-manifest.json" {
-					err = testpoller.Poll(1*time.Second, 5*time.Millisecond, func() (bool, error) {
-						if len(auditHook.AllEntries()) == 1 {
-							if _, ok := auditHook.AllEntries()[0].Data[audit.MetadataPayload]; ok {
-								return true, nil
-							}
-						}
-						return false, nil
-					})
-					if err != nil {
-						t.Error(err)
-					}
 				}
 
 				if tt.wantAuditOperation != "" {
