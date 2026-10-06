@@ -659,10 +659,6 @@ dev-env-stop: ## Stop the containerized RP
 	USERID=$(DEV_ENV_USERID) PLATFORM=$(PLATFORM) \
 		$(DEV_ENV_COMPOSE) down aro-dev-env
 
-.PHONY: run-selenium
-run-selenium:
-	docker compose up selenium
-
 .PHONY: validate-roledef
 validate-roledef:
 	go run ./hack/role -verified-version "$(OCP_VERSION)" -oc-bin=$(OC)

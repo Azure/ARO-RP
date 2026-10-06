@@ -72,8 +72,6 @@ variables:
     value: default-tag # Default fallback TAG
   - name: ARO_IMAGE
     value: arosvcdev.azurecr.io/aro:$(TAG)
-  - name: ARO_SELENIUM_HOSTNAME
-    value: localhost
   - name: E2E_LABEL
     value: "!smoke&&!regressiontest"
   - name: ARO_ARM_FAULT_FIRST
@@ -305,7 +303,6 @@ stages:
           # Log the output from the services in case of failure
           - bash: |
               docker compose logs vpn
-              docker compose logs selenium
               docker compose logs rp
               docker compose logs mimoactuator
               docker compose logs portal
@@ -452,7 +449,6 @@ stages:
           # Log the output from the services in case of failure
           - bash: |
               docker compose logs vpn
-              docker compose logs selenium
               docker compose logs rp
               docker compose logs mimoactuator
               docker compose logs portal

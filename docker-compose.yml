@@ -62,18 +62,6 @@ services:
       timeout: 3s
       retries: 3
 
-  selenium:
-    image: selenium/standalone-edge:4.10.0-20230607
-    container_name: selenium-container
-    network_mode: host
-    ports:
-      - "4444:4444"
-    healthcheck:
-      test: ["CMD", "curl", "-sS", "-f", "http://localhost:4444"]
-      interval: 20s
-      timeout: 20s
-      retries: 3
-
   rp:
     image: ${LOCAL_ARO_RP_IMAGE}:${VERSION} # Using localhost/aro for local image
     build:
@@ -227,11 +215,9 @@ services:
         condition: service_healthy
       portal:
         condition: service_healthy
-      selenium:
-        condition: service_healthy
+
     environment:
       <<: *common-env
-      ARO_SELENIUM_HOSTNAME:
       CLUSTER:
       E2E_DELETE_CLUSTER:
       E2E_LABEL:
