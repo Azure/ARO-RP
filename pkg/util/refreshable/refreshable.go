@@ -6,6 +6,7 @@ package refreshable
 import (
 	"context"
 	"sync"
+	"time"
 
 	sdkazcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -43,7 +44,14 @@ func (c *tokenCredential) GetToken(ctx context.Context, options policy.TokenRequ
 	cred := c.cred
 	c.m.RUnlock()
 
-	return cred.GetToken(ctx, options)
+	tk, err := cred.GetToken(ctx, options)
+	if err != nil {
+		return tk, err
+	}
+
+	tk.ExpiresOn = time.Time{}
+
+	return tk, nil
 }
 
 func (c *tokenCredential) Rebuild() error {
