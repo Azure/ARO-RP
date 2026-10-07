@@ -126,6 +126,14 @@ func (c *multi) Open(input []byte) ([]byte, error) {
 		return b, nil
 	}
 
+	// Only a failure which a different key could cure is worth a refresh: the
+	// input failed authentication, or there were no keys to try. An input
+	// rejected for its form, such as one too short to hold a nonce, would be
+	// rejected under any key.
+	if !errors.Is(err, ErrKeyMismatch) && !errors.Is(err, errNoOpeners) {
+		return nil, err
+	}
+
 	// A failure to open may mean nothing worse than that this process's keys
 	// are stale. The services which hold a multi are long-lived and enumerate
 	// the secret versions once, at start-up, so a version created since then is

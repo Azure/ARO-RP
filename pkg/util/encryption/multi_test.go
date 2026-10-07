@@ -4,8 +4,10 @@ package encryption
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -118,7 +120,7 @@ func TestOpenWithNoOpeners(t *testing.T) {
 // input is not among the ones it enumerated at start-up.
 func TestOpenRefreshesStaleKeys(t *testing.T) {
 	mockInput := []byte("fakeInput")
-	staleErr := errors.New("fake error from the stale opener")
+	staleErr := fmt.Errorf("%w: fake error from the stale opener", ErrKeyMismatch)
 
 	for _, tt := range []struct {
 		name       string
@@ -150,7 +152,7 @@ func TestOpenRefreshesStaleKeys(t *testing.T) {
 				fresh.EXPECT().Open(mockInput).Return(nil, errors.New("fake error from the fresh opener"))
 			},
 			// The original error is reported, not the one from the retry.
-			wantErr:   "fake error from the stale opener",
+			wantErr:   "encryption: key mismatch: fake error from the stale opener",
 			wantLoads: 1,
 		},
 		{
@@ -161,7 +163,7 @@ func TestOpenRefreshesStaleKeys(t *testing.T) {
 			mocks: func(stale *mock_encryption.MockAEAD, fresh *mock_encryption.MockAEAD) {
 				stale.EXPECT().Open(mockInput).Return(nil, staleErr)
 			},
-			wantErr:   "fake error from the stale opener",
+			wantErr:   "encryption: key mismatch: fake error from the stale opener",
 			wantLoads: 1,
 		},
 	} {
@@ -243,7 +245,7 @@ func TestOpenRetriesAfterAConcurrentRefresh(t *testing.T) {
 	controller := gomock.NewController(t)
 
 	stale := mock_encryption.NewMockAEAD(controller)
-	stale.EXPECT().Open(gomock.Any()).Return(nil, errors.New("chacha20poly1305: message authentication failed")).AnyTimes()
+	stale.EXPECT().Open(gomock.Any()).Return(nil, fmt.Errorf("%w: chacha20poly1305: message authentication failed", ErrKeyMismatch)).AnyTimes()
 
 	fresh := mock_encryption.NewMockAEAD(controller)
 	fresh.EXPECT().Open([]byte("sealed")).Return([]byte("opened"), nil).AnyTimes()
@@ -324,7 +326,7 @@ func TestOpenRefreshesOnTheFirstFailureAfterConstruction(t *testing.T) {
 	controller := gomock.NewController(t)
 
 	stale := mock_encryption.NewMockAEAD(controller)
-	stale.EXPECT().Open(gomock.Any()).Return(nil, errors.New("chacha20poly1305: message authentication failed")).AnyTimes()
+	stale.EXPECT().Open(gomock.Any()).Return(nil, fmt.Errorf("%w: chacha20poly1305: message authentication failed", ErrKeyMismatch)).AnyTimes()
 
 	fresh := mock_encryption.NewMockAEAD(controller)
 	fresh.EXPECT().Open([]byte("sealed")).Return([]byte("opened"), nil).AnyTimes()
@@ -373,6 +375,105 @@ func TestWithMinRefreshIntervalIgnoresNonPositiveDurations(t *testing.T) {
 
 			if m.minRefreshInterval != tt.want {
 				t.Errorf("minRefreshInterval = %s, want %s", m.minRefreshInterval, tt.want)
+			}
+		})
+	}
+}
+
+// Open refreshes only when a different key could open the input: when the
+// input failed authentication, or there were no keys to try. Real ciphers are
+// used rather than mocks, because the decision rests on each of them wrapping
+// its authentication failures in ErrKeyMismatch, and a cipher which stopped
+// doing so would otherwise stop refreshes without failing any test.
+func TestOpenRefreshesOnlyWhenAKeyCouldOpenTheInput(t *testing.T) {
+	newAES := func(b byte) AEAD {
+		t.Helper()
+		c, err := NewAES256SHA512(t.Context(), bytes.Repeat([]byte{b}, 64))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	newChaCha := func(b byte) AEAD {
+		t.Helper()
+		c, err := NewXChaCha20Poly1305(t.Context(), bytes.Repeat([]byte{b}, 32))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	seal := func(c AEAD) []byte {
+		t.Helper()
+		b, err := c.Seal([]byte("opened"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
+	}
+
+	staleAES, freshAES := newAES(1), newAES(2)
+	staleChaCha, freshChaCha := newChaCha(1), newChaCha(2)
+
+	for _, tt := range []struct {
+		name      string
+		stale     []AEAD
+		fresh     []AEAD
+		input     []byte
+		wantErr   string
+		wantLoads int
+	}{
+		{
+			name:      "a key mismatch under AES refreshes",
+			stale:     []AEAD{staleAES},
+			fresh:     []AEAD{freshAES},
+			input:     seal(freshAES),
+			wantLoads: 1,
+		},
+		{
+			// Openers are held AES first and ChaCha last, as Key Vault loads
+			// them, so the error which decides is the ChaCha opener's.
+			name:      "a key mismatch under ChaCha refreshes",
+			stale:     []AEAD{staleAES, staleChaCha},
+			fresh:     []AEAD{staleAES, freshChaCha},
+			input:     seal(freshChaCha),
+			wantLoads: 1,
+		},
+		{
+			name:      "no keys to try refreshes",
+			fresh:     []AEAD{freshAES},
+			input:     seal(freshAES),
+			wantLoads: 1,
+		},
+		{
+			name:      "an input too short for any key does not refresh",
+			stale:     []AEAD{staleAES, staleChaCha},
+			fresh:     []AEAD{freshAES},
+			input:     make([]byte, 16),
+			wantErr:   "encrypted value too short",
+			wantLoads: 0,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			loads := 0
+			now := time.Unix(0, 0)
+
+			m := &multi{
+				loader: loaderFunc(func(context.Context) (*keySet, error) {
+					loads++
+					return &keySet{openers: tt.fresh}, nil
+				}),
+				minRefreshInterval: time.Hour,
+				now:                func() time.Time { return now },
+			}
+			m.keys.Store(&keySet{openers: tt.stale})
+
+			got, err := m.Open(tt.input)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if tt.wantErr == "" && !reflect.DeepEqual(got, []byte("opened")) {
+				t.Errorf("multi.Open() = %q, want %q", got, []byte("opened"))
+			}
+			if loads != tt.wantLoads {
+				t.Errorf("keyLoader.load() called %d times, want %d", loads, tt.wantLoads)
 			}
 		})
 	}
