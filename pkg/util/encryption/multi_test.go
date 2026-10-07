@@ -244,25 +244,32 @@ func TestOpenRetriesAfterAConcurrentRefresh(t *testing.T) {
 
 	controller := gomock.NewController(t)
 
+	// The loader is held until every caller has failed against the stale keys.
+	// Each has then taken its snapshot of the key set before the refresh
+	// replaces it, so each must find the keys replaced by whichever caller
+	// performed the load, and all but that one must do so without loading.
+	var failed int64
+	allFailed := make(chan struct{})
+
 	stale := mock_encryption.NewMockAEAD(controller)
-	stale.EXPECT().Open(gomock.Any()).Return(nil, fmt.Errorf("%w: chacha20poly1305: message authentication failed", ErrKeyMismatch)).AnyTimes()
+	stale.EXPECT().Open(gomock.Any()).DoAndReturn(func([]byte) ([]byte, error) {
+		if atomic.AddInt64(&failed, 1) == callers {
+			close(allFailed)
+		}
+		return nil, fmt.Errorf("%w: chacha20poly1305: message authentication failed", ErrKeyMismatch)
+	}).Times(callers)
 
 	fresh := mock_encryption.NewMockAEAD(controller)
-	fresh.EXPECT().Open([]byte("sealed")).Return([]byte("opened"), nil).AnyTimes()
+	fresh.EXPECT().Open([]byte("sealed")).Return([]byte("opened"), nil).Times(callers)
 
 	now := time.Unix(0, 0)
 
-	// Released once every caller is under way, so that they all reach refresh
-	// together and contend for it.
 	release := make(chan struct{})
-	entered := make(chan struct{})
 	var loads int64
 
 	m := &multi{
 		loader: loaderFunc(func(context.Context) (*keySet, error) {
-			if atomic.AddInt64(&loads, 1) == 1 {
-				close(entered)
-			}
+			atomic.AddInt64(&loads, 1)
 			<-release
 			return &keySet{openers: []AEAD{fresh}}, nil
 		}),
@@ -284,11 +291,7 @@ func TestOpenRetriesAfterAConcurrentRefresh(t *testing.T) {
 		}()
 	}
 
-	// Wait for the loader to be entered rather than sleeping. A fixed sleep
-	// either wastes time or, on a slow host, releases before any caller has
-	// reached refresh, which would leave the contention this test exists for
-	// unexercised.
-	<-entered
+	<-allFailed
 	close(release)
 	wg.Wait()
 
