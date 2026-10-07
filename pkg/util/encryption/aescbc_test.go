@@ -77,6 +77,14 @@ func TestAES256SHA512Open(t *testing.T) {
 			input:   make([]byte, 31),
 			wantErr: "encrypted value too short",
 		},
+		{
+			// One byte short of an IV, a block and a tag: malformed, not a key
+			// mismatch.
+			name:    "invalid - too short to hold a block and a tag",
+			key:     []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e\xab\x79\x86\x50\xfb\xce\xdc\x9d\xdd\x1c\x01\x32\xd6\x03\x99\xe6\x59\x81\x37\xb3\xdb\x67\x6f\x12\x34\x1d\xb9\x58\x18\x31\x30\x57"),
+			input:   make([]byte, 63),
+			wantErr: "encrypted value too short",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			cipher, err := NewAES256SHA512(context.Background(), tt.key)
@@ -141,5 +149,31 @@ func TestAES256SHA512Seal(t *testing.T) {
 				t.Error(hex.EncodeToString(sealed))
 			}
 		})
+	}
+}
+
+// Open's length check must admit every ciphertext Seal produces, however short
+// the plaintext.
+func TestAES256SHA512OpensEverySealedLength(t *testing.T) {
+	cipher, err := NewAES256SHA512(t.Context(), make([]byte, 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for n := range 101 {
+		plaintext := bytes.Repeat([]byte{'x'}, n)
+
+		sealed, err := cipher.Seal(plaintext)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		opened, err := cipher.Open(sealed)
+		if err != nil {
+			t.Errorf("Open(Seal(%d bytes)) returned unexpected error: %v", n, err)
+		}
+		if !bytes.Equal(opened, plaintext) {
+			t.Errorf("Open(Seal(%d bytes)) = %q, want %q", n, opened, plaintext)
+		}
 	}
 }

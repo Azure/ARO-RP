@@ -18,6 +18,17 @@ type aes256Sha512 struct {
 	randReader io.Reader
 }
 
+// aes256Sha512MinSize is the length of the shortest ciphertext Seal produces:
+// a 16-byte IV, one 16-byte block of padded plaintext, and a 32-byte tag. An
+// input any shorter cannot have been sealed under any key, and is reported as
+// malformed rather than as a key mismatch.
+//
+// It is not NonceSize()+Overhead(), as it is for XChaCha20-Poly1305. etm's
+// Overhead() is an upper bound which already counts the IV, and also counts a
+// length field that is never written, so that sum is 88, and would reject
+// every valid ciphertext of a plaintext up to 31 bytes long.
+const aes256Sha512MinSize = 16 + 16 + 32
+
 var _ AEAD = (*aes256Sha512)(nil)
 
 func NewAES256SHA512(ctx context.Context, key []byte) (AEAD, error) {
@@ -33,7 +44,7 @@ func NewAES256SHA512(ctx context.Context, key []byte) (AEAD, error) {
 }
 
 func (c *aes256Sha512) Open(input []byte) ([]byte, error) {
-	if len(input) < 32 {
+	if len(input) < aes256Sha512MinSize {
 		return nil, fmt.Errorf("encrypted value too short")
 	}
 

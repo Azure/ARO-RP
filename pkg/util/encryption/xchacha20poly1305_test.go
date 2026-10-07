@@ -70,6 +70,13 @@ func TestXChaCha20Poly1305Open(t *testing.T) {
 			input:   make([]byte, 23),
 			wantErr: "encrypted value too short",
 		},
+		{
+			// Room for a nonce but not a tag: malformed, not a key mismatch.
+			name:    "invalid - too short to hold a tag",
+			key:     []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
+			input:   make([]byte, 39),
+			wantErr: "encrypted value too short",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			aead, err := NewXChaCha20Poly1305(context.Background(), tt.key)
@@ -134,5 +141,31 @@ func TestXChaCha20Poly1305Seal(t *testing.T) {
 				t.Error(hex.EncodeToString(sealed))
 			}
 		})
+	}
+}
+
+// Open's length check must admit every ciphertext Seal produces, however short
+// the plaintext.
+func TestXChaCha20Poly1305OpensEverySealedLength(t *testing.T) {
+	aead, err := NewXChaCha20Poly1305(t.Context(), make([]byte, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for n := range 101 {
+		plaintext := bytes.Repeat([]byte{'x'}, n)
+
+		sealed, err := aead.Seal(plaintext)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		opened, err := aead.Open(sealed)
+		if err != nil {
+			t.Errorf("Open(Seal(%d bytes)) returned unexpected error: %v", n, err)
+		}
+		if !bytes.Equal(opened, plaintext) {
+			t.Errorf("Open(Seal(%d bytes)) = %q, want %q", n, opened, plaintext)
+		}
 	}
 }

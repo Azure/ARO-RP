@@ -448,10 +448,12 @@ func TestOpenRefreshesOnlyWhenAKeyCouldOpenTheInput(t *testing.T) {
 			wantLoads: 1,
 		},
 		{
-			name:      "an input too short for any key does not refresh",
+			// Long enough to hold a ChaCha nonce but not its tag. The cipher
+			// itself would call it an authentication failure.
+			name:      "an input too short to hold a tag does not refresh",
 			stale:     []AEAD{staleAES, staleChaCha},
 			fresh:     []AEAD{freshAES},
-			input:     make([]byte, 16),
+			input:     make([]byte, 39),
 			wantErr:   "encrypted value too short",
 			wantLoads: 0,
 		},
