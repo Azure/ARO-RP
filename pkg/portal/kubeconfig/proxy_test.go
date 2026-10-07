@@ -399,7 +399,7 @@ func TestProxy(t *testing.T) {
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
 			otelAudit := testlog.NewOtelAuditClient()
-			k := New(baseLog, audit, otelAudit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer)
+			k := New(baseLog, audit, otelAudit, _env, baseAccessLog, nil, dbOpenShiftClusters, dbPortal, dialer)
 
 			unauthenticatedRouter := &mux.Router{}
 			unauthenticatedRouter.Use(middleware.Bearer(k.DbPortal))

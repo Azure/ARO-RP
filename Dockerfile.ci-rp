@@ -3,32 +3,11 @@ ARG BUILDER_REPOSITORY=openshift-release-dev/golang-builder--partner-share
 ARG BUILDER_TAG=rhel-9-golang-1.26-openshift-4.23
 ARG REGISTRY
 ARG REPOSITORY=ubi9/ubi-minimal
-ARG NODE_BUILDER_REPOSITORY=ubi9/nodejs-22
-ARG NODE_BUILDER_TAG=latest
 ARG TAG=latest
 ARG ARO_VERSION
 
 ###############################################################################
-# Stage 1: Build the SRE Portal Assets
-###############################################################################
-FROM ${REGISTRY}/${NODE_BUILDER_REPOSITORY}:${NODE_BUILDER_TAG} AS portal-build
-LABEL aro-portal-build=true
-WORKDIR /build/portal/v2
-USER root
-ENV DO_NOT_TRACK=1
-
-# Copying package files and installing dependencies
-COPY portal/v2/package*.json ./
-
-# Clean install the package
-RUN npm ci
-
-# Copying the rest of the source and build
-COPY --chown=root:root portal/v2/ ./
-RUN npm run lint && npm run build
-
-###############################################################################
-# Stage 2: Compile the Golang RP code
+# Compile the Golang RP code
 ###############################################################################
 FROM ${BUILDER_REGISTRY}/${BUILDER_REPOSITORY}:${BUILDER_TAG} AS builder
 ARG ARO_VERSION
@@ -57,9 +36,6 @@ COPY cmd cmd
 COPY pkg pkg
 COPY test test
 
-# Ensure JS assets are available before generating Go code
-COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build
-
 # Build RP and E2E test suite bins
 RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./cmd/aro
 
@@ -77,7 +53,7 @@ RUN gotestsum --format pkgname --junitfile report.xml -- -coverpkg=./... -coverp
 RUN hack/fips/validate-fips.sh ./aro
 
 ###############################################################################
-# Stage 3: final is our slim image with minimal layers and tools
+# final is our slim image with minimal layers and tools
 ###############################################################################
 FROM ${REGISTRY}/${REPOSITORY}:${TAG} AS final
 LABEL aro-final=true

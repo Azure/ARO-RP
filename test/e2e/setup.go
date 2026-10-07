@@ -8,12 +8,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"fmt"
-	"math"
-	"net/url"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -24,7 +19,6 @@ import (
 	"github.com/jongio/azidext/go/azidext"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
-	"github.com/tebeka/selenium"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
@@ -59,8 +53,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	utilcluster "github.com/Azure/ARO-RP/pkg/util/cluster"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/util/dynamic"
 )
 
@@ -85,7 +77,6 @@ const (
 var staticResources embed.FS
 
 var (
-	disallowedInFilenameRegex         = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
 	DefaultEventuallyTimeout          = 5 * time.Minute
 	PropagationDelayEventuallyTimeout = 25 * time.Second
 )
@@ -144,12 +135,6 @@ func skipIfNotInDevelopmentEnv() {
 	}
 }
 
-func skipIfSeleniumNotEnabled() {
-	if os.Getenv("ARO_SELENIUM_HOSTNAME") == "" {
-		Skip("ARO_SELENIUM_HOSTNAME not set, skipping portal e2e")
-	}
-}
-
 func skipIfMIMOActuatorNotEnabled() {
 	if os.Getenv("ARO_E2E_MIMO") == "" {
 		Skip("ARO_E2E_MIMO not set, skipping MIMO e2e")
@@ -164,138 +149,6 @@ func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
 
 func isHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) bool {
 	return adminAPICluster.Properties.HiveProfile != (admin.HiveProfile{})
-}
-
-func SaveScreenshot(wd selenium.WebDriver, e error) {
-	log.Infof("Error : %s", e.Error())
-	log.Info("Taking Screenshot and saving page source")
-	imageBytes, err := wd.Screenshot()
-	if err != nil {
-		panic(err)
-	}
-
-	sourceString, err := wd.PageSource()
-	if err != nil {
-		panic(err)
-	}
-
-	errorString := disallowedInFilenameRegex.ReplaceAllString(e.Error(), "_")
-
-	// If the string is too long, snip it and add a random component, keeping to
-	// 100 characters total filename length once the file type is added on
-	if len(errorString) > 95 {
-		errorString = errorString[:59] + "_" + uuid.DefaultGenerator.Generate()
-	}
-
-	imagePath := "./" + errorString + ".png"
-	sourcePath := "./" + errorString + ".html"
-
-	imageAbsPath, err := filepath.Abs(imagePath)
-	if err != nil {
-		panic(err)
-	}
-	sourceAbsPath, err := filepath.Abs(sourcePath)
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.WriteFile(imageAbsPath, imageBytes, 0o666)
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0o666)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Infof("Screenshot saved to %s", imageAbsPath)
-	log.Infof("Page Source saved to %s", sourceAbsPath)
-}
-
-func adminPortalSessionSetup() (string, *selenium.WebDriver) {
-	const (
-		hubPort  = 4444
-		hostPort = 8444
-	)
-	hubAddress, exists := os.LookupEnv("ARO_SELENIUM_HOSTNAME")
-	if !exists {
-		hubAddress = "localhost"
-	}
-	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
-
-	caps := selenium.Capabilities{
-		"browserName":         "MicrosoftEdge",
-		"acceptInsecureCerts": true,
-	}
-	wd := selenium.WebDriver(nil)
-
-	_, err := url.ParseRequestURI(fmt.Sprintf("https://%s:%d", hubAddress, hubPort))
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < 10; i++ {
-		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://%s:%d/wd/hub", hubAddress, hubPort))
-		if wd != nil {
-			err = nil
-			break
-		}
-		time.Sleep(time.Second)
-	}
-
-	if err != nil {
-		panic(err)
-	}
-
-	log := utillog.GetLogger()
-
-	// Navigate to the simple playground interface.
-	host, exists := os.LookupEnv("PORTAL_HOSTNAME")
-	if !exists {
-		host = fmt.Sprintf("https://localhost:%d", hostPort)
-	}
-
-	if err := wd.Get(host + "/healthz/ready"); err != nil {
-		log.Infof("Could not get to %s. With error : %s", host+"/healthz/ready", err.Error())
-	}
-
-	mainPortalPath := host + "/portal"
-	if err := wd.Get(mainPortalPath); err != nil {
-		log.Infof("Failed to reach main portal path at %s. Error: %s", mainPortalPath, err.Error())
-	}
-	var portalAuthCmd string
-	portalAuthArgs := make([]string, 0)
-	if os.Getenv("CI") != "" {
-		// In CI we have a prebuilt portalauth binary
-		portalAuthCmd = "./portalauth"
-	} else {
-		portalAuthCmd = "go"
-		portalAuthArgs = []string{"run", "./hack/portalauth"}
-	}
-
-	portalAuthArgs = append(portalAuthArgs, "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS")
-
-	cmd := exec.Command(portalAuthCmd, portalAuthArgs...)
-	output, err := cmd.Output()
-	if err != nil {
-		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
-	}
-
-	os.Setenv("SESSION", string(output))
-
-	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
-
-	cookie := &selenium.Cookie{
-		Name:   "session",
-		Value:  os.Getenv("SESSION"),
-		Expiry: math.MaxUint32,
-	}
-
-	if err := wd.AddCookie(cookie); err != nil {
-		panic(err)
-	}
-	return host, &wd
 }
 
 func resourceIDFromEnv() string {
