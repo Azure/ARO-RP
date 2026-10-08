@@ -22,3 +22,11 @@ func (c *loadBalancersClient) CreateOrUpdateAndWait(ctx context.Context, resourc
 	_, err = poller.PollUntilDone(ctx, nil)
 	return err
 }
+
+func (c *loadBalancerLoadBalancingRulesClient) HealthAndWait(ctx context.Context, resourceGroupName string, loadBalancerName string, loadBalancingRuleName string, options *armnetwork.LoadBalancerLoadBalancingRulesClientBeginHealthOptions) (armnetwork.LoadBalancerLoadBalancingRulesClientHealthResponse, error) {
+	poller, err := c.BeginHealth(ctx, resourceGroupName, loadBalancerName, loadBalancingRuleName, options)
+	if err != nil {
+		return armnetwork.LoadBalancerLoadBalancingRulesClientHealthResponse{}, err
+	}
+	return poller.PollUntilDone(ctx, nil)
+}
