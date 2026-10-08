@@ -33,14 +33,23 @@ func NewXChaCha20Poly1305(ctx context.Context, key []byte) (AEAD, error) {
 }
 
 func (c *xChaCha20Poly1305) Open(input []byte) ([]byte, error) {
-	if len(input) < c.aead.NonceSize() {
+	// An input without room for both a nonce and a tag cannot have been sealed
+	// under any key. Reporting it as malformed, rather than letting the cipher
+	// report it as an authentication failure, keeps it from being taken for a
+	// key mismatch. The overhead of XChaCha20-Poly1305 is exactly the tag.
+	if len(input) < c.aead.NonceSize()+c.aead.Overhead() {
 		return nil, fmt.Errorf("encrypted value too short")
 	}
 
 	nonce := input[:c.aead.NonceSize()]
 	data := input[c.aead.NonceSize():]
 
-	return c.aead.Open(nil, nonce, data, nil)
+	b, err := c.aead.Open(nil, nonce, data, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrKeyMismatch, err)
+	}
+
+	return b, nil
 }
 
 func (c *xChaCha20Poly1305) Seal(input []byte) ([]byte, error) {

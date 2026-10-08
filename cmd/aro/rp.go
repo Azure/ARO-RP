@@ -110,7 +110,7 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 	clusterm := statsd.NewMetricsForCluster(ctx, _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 	go clusterm.Run(stop)
 
-	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName, encryption.WithLogger(_log))
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func rp(ctx context.Context, _log, auditLog *logrus.Entry) error {
 
 	go database.EmitOpenShiftClustersMetrics(ctx, _env.LoggerForComponent("metrics"), dbOpenShiftClusters, metrics)
 
-	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName)
+	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName, encryption.WithLogger(_log))
 	if err != nil {
 		return err
 	}

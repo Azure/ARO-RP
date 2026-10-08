@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"io"
 	"testing"
 
@@ -43,11 +44,12 @@ func TestNewXChaCha20Poly1305(t *testing.T) {
 
 func TestXChaCha20Poly1305Open(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		key        []byte
-		input      []byte
-		wantOpened []byte
-		wantErr    string
+		name        string
+		key         []byte
+		input       []byte
+		wantOpened  []byte
+		wantErr     string
+		keyMismatch bool
 	}{
 		{
 			name:       "valid",
@@ -56,15 +58,23 @@ func TestXChaCha20Poly1305Open(t *testing.T) {
 			wantOpened: []byte("test"),
 		},
 		{
-			name:    "invalid - encrypted value tampered with",
-			key:     []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
-			input:   []byte("\xda\x1c\x3c\x05\xb2\xf3\xc5\x93\x20\x9f\x9b\x67\x43\x8c\x0c\x3d\x9c\x33\x5b\x16\xd6\x9a\x9c\xf2\x9c\xf6\xe9\xbd\xdd\xe3\x1d\x54\xde\x41\xa2\x99\x56\x6a\xfc\x9a\xf3\x58\x73\x03"),
-			wantErr: "chacha20poly1305: message authentication failed",
+			name:        "invalid - encrypted value tampered with",
+			key:         []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
+			input:       []byte("\xda\x1c\x3c\x05\xb2\xf3\xc5\x93\x20\x9f\x9b\x67\x43\x8c\x0c\x3d\x9c\x33\x5b\x16\xd6\x9a\x9c\xf2\x9c\xf6\xe9\xbd\xdd\xe3\x1d\x54\xde\x41\xa2\x99\x56\x6a\xfc\x9a\xf3\x58\x73\x03"),
+			wantErr:     "encryption: key mismatch: chacha20poly1305: message authentication failed",
+			keyMismatch: true,
 		},
 		{
 			name:    "invalid - too short",
 			key:     []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
 			input:   make([]byte, 23),
+			wantErr: "encrypted value too short",
+		},
+		{
+			// Room for a nonce but not a tag: malformed, not a key mismatch.
+			name:    "invalid - too short to hold a tag",
+			key:     []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
+			input:   make([]byte, 39),
 			wantErr: "encrypted value too short",
 		},
 	} {
@@ -76,6 +86,9 @@ func TestXChaCha20Poly1305Open(t *testing.T) {
 
 			opened, err := aead.Open(tt.input)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if got := errors.Is(err, ErrKeyMismatch); got != tt.keyMismatch {
+				t.Errorf("errors.Is(err, ErrKeyMismatch) = %t, want %t", got, tt.keyMismatch)
+			}
 
 			if !bytes.Equal(tt.wantOpened, opened) {
 				t.Error(string(opened))
@@ -128,5 +141,31 @@ func TestXChaCha20Poly1305Seal(t *testing.T) {
 				t.Error(hex.EncodeToString(sealed))
 			}
 		})
+	}
+}
+
+// Open's length check must admit every ciphertext Seal produces, however short
+// the plaintext.
+func TestXChaCha20Poly1305OpensEverySealedLength(t *testing.T) {
+	aead, err := NewXChaCha20Poly1305(t.Context(), make([]byte, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for n := range 101 {
+		plaintext := bytes.Repeat([]byte{'x'}, n)
+
+		sealed, err := aead.Seal(plaintext)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		opened, err := aead.Open(sealed)
+		if err != nil {
+			t.Errorf("Open(Seal(%d bytes)) returned unexpected error: %v", n, err)
+		}
+		if !bytes.Equal(opened, plaintext) {
+			t.Errorf("Open(Seal(%d bytes)) = %q, want %q", n, opened, plaintext)
+		}
 	}
 }
