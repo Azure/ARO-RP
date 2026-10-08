@@ -222,7 +222,11 @@ func (c *multi) refresh() {
 	was := len(c.keys.Load().openers)
 	c.keys.Store(keys)
 
-	if c.log != nil && len(keys.openers) != was {
+	// Logged whether or not anything changed. A refresh which finds nothing new
+	// means that no version in Key Vault opens the input, and an operator needs
+	// to be able to tell that apart from a refresh which recovered, and from no
+	// refresh at all. The rate limit bounds this to one line per interval.
+	if c.log != nil {
 		c.log.Infof("refreshed encryption keys: %d openers, was %d", len(keys.openers), was)
 	}
 }

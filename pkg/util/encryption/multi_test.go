@@ -14,10 +14,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mock_encryption "github.com/Azure/ARO-RP/pkg/util/mocks/encryption"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // loaderFunc adapts a function to the keyLoader interface.
@@ -232,6 +235,74 @@ func TestRefreshIsRateLimited(t *testing.T) {
 	m.refresh()
 	if loads != 2 {
 		t.Errorf("keyLoader.load() called %d times after minRefreshInterval elapsed, want 2", loads)
+	}
+}
+
+// Every refresh is logged, including one which finds nothing new: that is the
+// refresh which shows no version in Key Vault opens the input, and it must be
+// distinguishable both from one which recovered and from no refresh at all.
+func TestRefreshLogsEveryRefresh(t *testing.T) {
+	one := []AEAD{nil}
+	two := []AEAD{nil, nil}
+
+	for _, tt := range []struct {
+		name        string
+		load        func() (*keySet, error)
+		rateLimited bool
+		wantLogs    []testlog.ExpectedLogEntry
+	}{
+		{
+			name: "a refresh which finds a new version",
+			load: func() (*keySet, error) { return &keySet{openers: two}, nil },
+			wantLogs: []testlog.ExpectedLogEntry{{
+				"level": gomega.Equal(logrus.InfoLevel),
+				"msg":   gomega.Equal("refreshed encryption keys: 2 openers, was 1"),
+			}},
+		},
+		{
+			name: "a refresh which finds nothing new",
+			load: func() (*keySet, error) { return &keySet{openers: one}, nil },
+			wantLogs: []testlog.ExpectedLogEntry{{
+				"level": gomega.Equal(logrus.InfoLevel),
+				"msg":   gomega.Equal("refreshed encryption keys: 1 openers, was 1"),
+			}},
+		},
+		{
+			name: "a refresh which fails",
+			load: func() (*keySet, error) { return nil, errors.New("fake error from key vault") },
+			wantLogs: []testlog.ExpectedLogEntry{{
+				"level": gomega.Equal(logrus.WarnLevel),
+				"msg":   gomega.Equal("failed refreshing encryption keys: fake error from key vault"),
+			}},
+		},
+		{
+			name:        "a rate-limited refresh",
+			load:        func() (*keySet, error) { return &keySet{openers: two}, nil },
+			rateLimited: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hook, log := testlog.LogForTesting(t)
+			now := time.Unix(0, 0)
+
+			m := &multi{
+				loader:             loaderFunc(func(context.Context) (*keySet, error) { return tt.load() }),
+				log:                log,
+				minRefreshInterval: time.Hour,
+				now:                func() time.Time { return now },
+			}
+			m.keys.Store(&keySet{openers: one})
+			m.lastRefreshed = now.Add(-time.Hour)
+			if tt.rateLimited {
+				m.lastRefreshed = now
+			}
+
+			m.refresh()
+
+			if err := testlog.AssertLoggingOutput(hook, tt.wantLogs); err != nil {
+				t.Error(err)
+			}
+		})
 	}
 }
 
