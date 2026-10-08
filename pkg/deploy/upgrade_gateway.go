@@ -5,6 +5,8 @@ package deploy
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -15,17 +17,30 @@ import (
 )
 
 const (
-	gatewayVMSSPrefix = "gateway-vmss-"
+	gatewayVMSSPrefix    = "gateway-vmss-"
+	gatewayLBName        = "gateway-lb-internal"
+	gatewayHTTPRuleName  = "gateway-lbrule-http"
+	gatewayHTTPSRuleName = "gateway-lbrule-https"
+	gatewayOTelRuleName  = "gateway-lbrule-otel"
 )
 
 func (d *deployer) UpgradeGateway(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 40*time.Minute)
 	defer cancel()
-	err := d.gatewayWaitForReadiness(timeoutCtx, gatewayVMSSPrefix+d.version)
+	vmssName := gatewayVMSSPrefix + d.version
+	scalesetVMs, err := d.gatewayWaitForReadiness(timeoutCtx, vmssName)
 	if err != nil {
 		// delete VMSS since VMSS instances are not healthy
 		if *d.config.Configuration.VMSSCleanupEnabled {
-			d.vmssCleaner.RemoveFailedNewScaleset(ctx, d.config.GatewayResourceGroupName, gatewayVMSSPrefix+d.version)
+			d.vmssCleaner.RemoveFailedNewScaleset(ctx, d.config.GatewayResourceGroupName, vmssName)
+		}
+		return err
+	}
+
+	err = d.gatewayWaitForLoadBalancerHealth(timeoutCtx, vmssName, scalesetVMs)
+	if err != nil {
+		if *d.config.Configuration.VMSSCleanupEnabled {
+			d.vmssCleaner.RemoveFailedNewScaleset(ctx, d.config.GatewayResourceGroupName, vmssName)
 		}
 		return err
 	}
@@ -36,14 +51,14 @@ func (d *deployer) UpgradeGateway(ctx context.Context) error {
 	return d.gatewayRemoveOldScalesets(cleanupCtx)
 }
 
-func (d *deployer) gatewayWaitForReadiness(ctx context.Context, vmssName string) error {
+func (d *deployer) gatewayWaitForReadiness(ctx context.Context, vmssName string) ([]mgmtcompute.VirtualMachineScaleSetVM, error) {
 	scalesetVMs, err := d.vmssvms.List(ctx, d.config.GatewayResourceGroupName, vmssName, "", "", "")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
 			if !d.isVMInstanceHealthy(ctx, d.config.GatewayResourceGroupName, vmssName, *vm.InstanceID) {
 				return false, nil
@@ -52,6 +67,57 @@ func (d *deployer) gatewayWaitForReadiness(ctx context.Context, vmssName string)
 
 		return true, nil
 	}, ctx.Done())
+	return scalesetVMs, err
+}
+
+func (d *deployer) gatewayWaitForLoadBalancerHealth(ctx context.Context, vmssName string, scalesetVMs []mgmtcompute.VirtualMachineScaleSetVM) error {
+	if len(scalesetVMs) == 0 {
+		return fmt.Errorf("VMSS %s has no instances", vmssName)
+	}
+
+	instanceIDs := make([]string, 0, len(scalesetVMs))
+	for _, vm := range scalesetVMs {
+		if vm.InstanceID == nil {
+			return fmt.Errorf("VMSS instance has no instance ID")
+		}
+		instanceIDs = append(instanceIDs, *vm.InstanceID)
+	}
+
+	d.log.Printf("waiting for %s instances to be healthy on all gateway load balancing rules", vmssName)
+	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		return d.gatewayLoadBalancerRulesHealthy(ctx, vmssName, instanceIDs)
+	}, ctx.Done())
+}
+
+func (d *deployer) gatewayLoadBalancerRulesHealthy(ctx context.Context, vmssName string, instanceIDs []string) (bool, error) {
+	for _, ruleName := range []string{gatewayHTTPRuleName, gatewayHTTPSRuleName, gatewayOTelRuleName} {
+		health, err := d.loadbalancingrules.HealthAndWait(ctx, d.config.GatewayResourceGroupName, gatewayLBName, ruleName, nil)
+		if err != nil {
+			return false, fmt.Errorf("getting health for gateway load balancing rule %s: %w", ruleName, err)
+		}
+
+		for _, instanceID := range instanceIDs {
+			backendFound := false
+			instancePath := strings.ToLower(fmt.Sprintf("/virtualMachineScaleSets/%s/virtualMachines/%s/", vmssName, instanceID))
+			for _, backend := range health.LoadBalancerBackendAddresses {
+				if backend == nil || backend.NetworkInterfaceIPConfigurationID == nil || backend.NetworkInterfaceIPConfigurationID.ID == nil {
+					continue
+				}
+				if strings.Contains(strings.ToLower(*backend.NetworkInterfaceIPConfigurationID.ID), instancePath) {
+					backendFound = true
+					if backend.State == nil || !strings.EqualFold(*backend.State, "Up") {
+						return false, nil
+					}
+					break
+				}
+			}
+			if !backendFound {
+				return false, nil
+			}
+		}
+	}
+
+	return true, nil
 }
 
 func (d *deployer) gatewayRemoveOldScalesets(ctx context.Context) error {

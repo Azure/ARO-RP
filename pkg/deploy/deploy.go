@@ -60,6 +60,7 @@ type deployer struct {
 	userassignedidentities       msi.UserAssignedIdentitiesClient
 	providers                    features.ProvidersClient
 	publicipaddresses            armnetwork.PublicIPAddressesClient
+	loadbalancingrules           armnetwork.LoadBalancerLoadBalancingRulesClient
 	resourceskus                 armcompute.ResourceSKUsClient
 	roleassignments              authorization.RoleAssignmentsClient
 	vmss                         compute.VirtualMachineScaleSetsClient
@@ -114,6 +115,11 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 		return nil, fmt.Errorf("failed to instantiate publicipaddresses client: %w", err)
 	}
 
+	loadBalancingRulesClient, err := armnetwork.NewLoadBalancerLoadBalancingRulesClient(config.SubscriptionID, tokenCredential, _env.Environment().ArmClientOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate loadbalancingrules client: %w", err)
+	}
+
 	resourceSKUsClient, err := armcompute.NewResourceSKUsClient(config.SubscriptionID, tokenCredential, _env.Environment().ArmClientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate resourceSKUs client: %w", err)
@@ -141,6 +147,7 @@ func New(ctx context.Context, _env env.Core, config *RPConfig, version string, t
 		roleassignments:              authorization.NewRoleAssignmentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		resourceskus:                 resourceSKUsClient,
 		publicipaddresses:            publicIpAddressesClient,
+		loadbalancingrules:           loadBalancingRulesClient,
 		vmss:                         vmssClient,
 		vmssvms:                      compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		zones:                        dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
