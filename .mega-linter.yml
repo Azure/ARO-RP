@@ -4,9 +4,13 @@
 APPLY_FIXES: none
 ENABLE_LINTERS:
   - YAML_YAMLLINT
+  - BASH_SHELLCHECK
 EXCLUDED_DIRECTORIES:
   - "vendor"
   - "node_modules"
+BASH_SHELLCHECK_CONFIG_FILE: .shellcheckrc
+BASH_SHELLCHECK_FILTER_REGEX_INCLUDE: (^pkg/deploy/generator/scripts/.*\.sh$|^pkg/frontend/scripts/backupandfixetcd\.sh$)
+BASH_SHELLCHECK_DISABLE_ERRORS: false
 YAML_YAMLLINT_CONFIG_FILE: .yaml-lint.yml
 LINTER_RULES_PATH: .
 PRINT_ALPACA: false
