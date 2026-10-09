@@ -12,6 +12,15 @@ steps:
     displayName: ⚙️ Login to ACR
 
   - script: |
+      set -euo pipefail
+      source ./hack/devtools/rp_dev_helper.sh
+      mirror_mise_otel_image "$MISE_OTEL_DESTINATION_ACR"
+    env:
+      MISE_OTEL_DESTINATION_ACR: ${{ parameters.dst_acr_name }}
+    name: import_mise_otel_image_to_acr
+    displayName: Import MISE OTEL image to developer ACR
+
+  - script: |
       set -e
       go run ./cmd/aro mirror ${{ parameters.mirrorTag }}
 
