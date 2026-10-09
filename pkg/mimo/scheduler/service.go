@@ -264,6 +264,15 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 		return err
 	}
 
+	// Deferred rather than called at the end, so that Run also waits for the
+	// changefeeds if it panics. Deferred calls run last-in first-out, so this
+	// runs before done is closed; it cancels ctx itself because on a panic
+	// nothing else will have done so yet.
+	defer func() {
+		cancel(nil)
+		s.changefeeds.Wait()
+	}()
+
 	t := time.NewTicker(s.schedulePollInterval)
 
 	lastGotDocs := make(map[string]*api.MaintenanceScheduleDocument)
@@ -286,7 +295,6 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	// If we're here, we're exiting
 	s.baseLog.Print("exiting, waiting for all workers to finish")
 	s.b.StopAndWait()
-	s.changefeeds.Wait()
 	return nil
 }
 

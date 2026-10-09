@@ -8,6 +8,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1072,6 +1073,21 @@ func (c *blockingClusters) Continuation() string {
 	return ""
 }
 
+// panickingSchedules is a MaintenanceSchedules whose GetValid panics once told
+// to, which makes the scheduler's poll loop, and so Run, panic.
+type panickingSchedules struct {
+	database.MaintenanceSchedules
+
+	panicking atomic.Bool
+}
+
+func (s *panickingSchedules) GetValid(ctx context.Context, continuation string) (cosmosdb.MaintenanceScheduleDocumentIterator, error) {
+	if s.panicking.Load() {
+		panic("GetValid panicked")
+	}
+	return s.MaintenanceSchedules.GetValid(ctx, continuation)
+}
+
 // Run must not report itself done while a changefeed is still running, however
 // it comes to exit: a caller which waits on done may then release what the
 // changefeed uses.
@@ -1080,11 +1096,11 @@ func TestSchedulerWaitsForChangefeedsBeforeReturning(t *testing.T) {
 		name string
 		// exit starts Run with the given done channel and returns a function
 		// which makes it exit.
-		exit func(svc *service, done chan struct{}) func()
+		exit func(svc *service, schedules *panickingSchedules, done chan struct{}) func()
 	}{
 		{
 			name: "stop channel closed",
-			exit: func(svc *service, done chan struct{}) func() {
+			exit: func(svc *service, _ *panickingSchedules, done chan struct{}) func() {
 				stop := make(chan struct{})
 				go svc.Run(t.Context(), stop, done)
 				return func() { close(stop) }
@@ -1094,10 +1110,19 @@ func TestSchedulerWaitsForChangefeedsBeforeReturning(t *testing.T) {
 			// There is no stop channel to close, so a changefeed which waited on
 			// stop rather than on the context would never exit.
 			name: "context cancelled",
-			exit: func(svc *service, done chan struct{}) func() {
+			exit: func(svc *service, _ *panickingSchedules, done chan struct{}) func() {
 				ctx, cancel := context.WithCancel(t.Context())
 				go svc.Run(ctx, nil, done)
 				return cancel
+			},
+		},
+		{
+			// Run recovers from a panic and closes done as it unwinds, so it
+			// must wait for the changefeeds on that path too.
+			name: "Run panics",
+			exit: func(svc *service, schedules *panickingSchedules, done chan struct{}) func() {
+				go svc.Run(t.Context(), nil, done)
+				return func() { schedules.panicking.Store(true) }
 			},
 		},
 	} {
@@ -1107,11 +1132,12 @@ func TestSchedulerWaitsForChangefeedsBeforeReturning(t *testing.T) {
 			_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
 
 			_, log := testlog.LogForTesting(t)
-			schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+			fakeSchedules, _ := testdatabase.NewFakeMaintenanceSchedules()
 			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
 			subscriptions, _ := testdatabase.NewFakeSubscriptions()
 			poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
 
+			schedules := &panickingSchedules{MaintenanceSchedules: fakeSchedules}
 			blocking := &blockingClusters{
 				OpenShiftClusters: clusters,
 				entered:           make(chan struct{}),
@@ -1133,7 +1159,7 @@ func TestSchedulerWaitsForChangefeedsBeforeReturning(t *testing.T) {
 			svc.emitHeartbeat = false
 
 			done := make(chan struct{})
-			exit := tt.exit(svc, done)
+			exit := tt.exit(svc, schedules, done)
 
 			<-blocking.entered
 			exit()
