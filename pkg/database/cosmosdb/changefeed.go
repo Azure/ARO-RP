@@ -199,3 +199,71 @@ func NewResilientGatewayDocumentChangeFeed(c GatewayDocumentClient, options *Opt
 		},
 	)
 }
+
+// NewResilientOpenShiftVersionDocumentChangeFeed returns a change feed iterator
+// which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientOpenShiftVersionDocumentChangeFeed(c OpenShiftVersionDocumentClient, options *Options) OpenShiftVersionDocumentIterator {
+	cc, ok := c.(*openShiftVersionDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.OpenShiftVersionDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientPlatformWorkloadIdentityRoleSetDocumentChangeFeed returns a change
+// feed iterator which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientPlatformWorkloadIdentityRoleSetDocumentChangeFeed(c PlatformWorkloadIdentityRoleSetDocumentClient, options *Options) PlatformWorkloadIdentityRoleSetDocumentIterator {
+	cc, ok := c.(*platformWorkloadIdentityRoleSetDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.PlatformWorkloadIdentityRoleSetDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientMaintenanceManifestDocumentChangeFeed returns a change feed
+// iterator which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientMaintenanceManifestDocumentChangeFeed(c MaintenanceManifestDocumentClient, options *Options) MaintenanceManifestDocumentIterator {
+	cc, ok := c.(*maintenanceManifestDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.MaintenanceManifestDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientMaintenanceScheduleDocumentChangeFeed returns a change feed
+// iterator which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientMaintenanceScheduleDocumentChangeFeed(c MaintenanceScheduleDocumentClient, options *Options) MaintenanceScheduleDocumentIterator {
+	cc, ok := c.(*maintenanceScheduleDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.MaintenanceScheduleDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}

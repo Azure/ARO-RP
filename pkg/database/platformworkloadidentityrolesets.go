@@ -44,7 +44,7 @@ func NewPlatformWorkloadIdentityRoleSetsWithProvidedClient(client cosmosdb.Platf
 }
 
 func (c *platformWorkloadIdentityRoleSets) ChangeFeed() cosmosdb.PlatformWorkloadIdentityRoleSetDocumentIterator {
-	return c.c.ChangeFeed(nil)
+	return cosmosdb.NewResilientPlatformWorkloadIdentityRoleSetDocumentChangeFeed(c.c, nil)
 }
 
 func (c *platformWorkloadIdentityRoleSets) Create(ctx context.Context, doc *api.PlatformWorkloadIdentityRoleSetDocument) (*api.PlatformWorkloadIdentityRoleSetDocument, error) {

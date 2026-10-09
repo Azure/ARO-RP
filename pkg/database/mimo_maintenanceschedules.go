@@ -129,7 +129,7 @@ func (c *maintenanceSchedules) update(ctx context.Context, doc *api.MaintenanceS
 }
 
 func (c *maintenanceSchedules) ChangeFeed() cosmosdb.MaintenanceScheduleDocumentIterator {
-	return c.c.ChangeFeed(nil)
+	return cosmosdb.NewResilientMaintenanceScheduleDocumentChangeFeed(c.c, nil)
 }
 
 func (c *maintenanceSchedules) Delete(ctx context.Context, id string) error {
