@@ -4,6 +4,7 @@ package scheduler
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -23,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/changefeed"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -1041,6 +1043,114 @@ func TestShouldReevaluateUnconditionally(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			got := shouldReevaluateUnconditionally(tC.now, tC.lastRan, tC.interval, tC.delayFraction)
 			require.Equal(t, tC.expectedValue, got)
+		})
+	}
+}
+
+// blockingClusters is an OpenShiftClusters whose change feed blocks in Next
+// until released. Next ignores its context, so that the changefeed goroutine
+// outlives the signal to stop for as long as the test chooses.
+type blockingClusters struct {
+	database.OpenShiftClusters
+
+	entered     chan struct{}
+	enteredOnce sync.Once
+	release     chan struct{}
+}
+
+func (c *blockingClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator {
+	return c
+}
+
+func (c *blockingClusters) Next(context.Context, int) (*api.OpenShiftClusterDocuments, error) {
+	c.enteredOnce.Do(func() { close(c.entered) })
+	<-c.release
+	return nil, nil
+}
+
+func (c *blockingClusters) Continuation() string {
+	return ""
+}
+
+// Run must not report itself done while a changefeed is still running, however
+// it comes to exit: a caller which waits on done may then release what the
+// changefeed uses.
+func TestSchedulerWaitsForChangefeedsBeforeReturning(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		// exit starts Run with the given done channel and returns a function
+		// which makes it exit.
+		exit func(svc *service, done chan struct{}) func()
+	}{
+		{
+			name: "stop channel closed",
+			exit: func(svc *service, done chan struct{}) func() {
+				stop := make(chan struct{})
+				go svc.Run(t.Context(), stop, done)
+				return func() { close(stop) }
+			},
+		},
+		{
+			// There is no stop channel to close, so a changefeed which waited on
+			// stop rather than on the context would never exit.
+			name: "context cancelled",
+			exit: func(svc *service, done chan struct{}) func() {
+				ctx, cancel := context.WithCancel(t.Context())
+				go svc.Run(ctx, nil, done)
+				return cancel
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().Now().AnyTimes().DoAndReturn(time.Now)
+
+			_, log := testlog.LogForTesting(t)
+			schedules, _ := testdatabase.NewFakeMaintenanceSchedules()
+			clusters, _ := testdatabase.NewFakeOpenShiftClusters()
+			subscriptions, _ := testdatabase.NewFakeSubscriptions()
+			poolWorkers, _ := testdatabase.NewFakePoolWorkers(_env.Now, uuid.DefaultGenerator.Generate())
+
+			blocking := &blockingClusters{
+				OpenShiftClusters: clusters,
+				entered:           make(chan struct{}),
+				release:           make(chan struct{}),
+			}
+			release := sync.OnceFunc(func() { close(blocking.release) })
+			t.Cleanup(release)
+
+			dbs := database.NewDBGroup().
+				WithMaintenanceSchedules(schedules).
+				WithSubscriptions(subscriptions).
+				WithOpenShiftClusters(blocking).
+				WithPoolWorkers(poolWorkers)
+
+			svc := NewService(_env, log, dbs, &noop.Noop{})
+			svc.schedulePollInterval = time.Millisecond
+			svc.changefeedInterval = time.Millisecond
+			svc.serveHealthz = false
+			svc.emitHeartbeat = false
+
+			done := make(chan struct{})
+			exit := tt.exit(svc, done)
+
+			<-blocking.entered
+			exit()
+
+			select {
+			case <-done:
+				t.Fatal("Run returned while a changefeed was still running")
+			case <-time.After(100 * time.Millisecond):
+			}
+
+			release()
+
+			select {
+			case <-done:
+			case <-time.After(5 * time.Second):
+				t.Fatal("Run did not return after the changefeed was released")
+			}
 		})
 	}
 }

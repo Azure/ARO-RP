@@ -66,9 +66,9 @@ type service struct {
 	workerCount  *atomic.Int32
 	newScheduler newSchedulerFunc
 
-	// changefeeds tracks the goroutines started by startChangefeeds, so that a
-	// caller which closes their stop channel can wait for them to exit rather
-	// than leaving them running.
+	// changefeeds tracks the goroutines started by startChangefeeds. Run waits
+	// for them before it returns, so that a caller which waits on done can
+	// release what they use.
 	changefeeds sync.WaitGroup
 
 	buckets  atomic.Value // []int
@@ -255,7 +255,11 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 		return context.Cause(ctx)
 	}
 
-	err = s.startChangefeeds(ctx, stop)
+	// The changefeeds stop on ctx rather than on stop. ctx is cancelled when
+	// stop closes, but also when Run exits for any other reason, and stop may
+	// be nil; a changefeed waiting on stop alone could then never exit, and Run
+	// waits for them below.
+	err = s.startChangefeeds(ctx, ctx.Done())
 	if err != nil {
 		return err
 	}
@@ -282,6 +286,7 @@ func (s *service) Run(_ctx context.Context, stop <-chan struct{}, done chan<- st
 	// If we're here, we're exiting
 	s.baseLog.Print("exiting, waiting for all workers to finish")
 	s.b.StopAndWait()
+	s.changefeeds.Wait()
 	return nil
 }
 
