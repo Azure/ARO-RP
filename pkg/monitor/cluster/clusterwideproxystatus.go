@@ -120,6 +120,9 @@ func (mon *Monitor) emitCWPStatus(ctx context.Context) error {
 
 		// Check worker profiles
 		for _, workerProfile := range mon.oc.Properties.WorkerProfiles {
+			if workerProfile.SubnetID == "" {
+				continue
+			}
 			workerSubnetResource, err := azure.ParseResourceID(workerProfile.SubnetID)
 			if err != nil {
 				mon.log.Errorf("failed to parse the subnetID '%s': %v", workerProfile.SubnetID, err)
