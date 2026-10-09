@@ -1,0 +1,276 @@
+package cosmosdb
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+	"net/http"
+	"strconv"
+
+	pkg "github.com/Azure/ARO-RP/pkg/api"
+)
+
+// defaultChangeFeedMaxFailures is how many consecutive failures at the same
+// position are tolerated before a resilient change feed gives up on the page
+// and moves on.
+//
+// The consumers poll every ten seconds or less often, so thirty-six failures
+// is at least six minutes of uninterrupted failure. That is far longer than
+// any throttling or transient service fault, and so short against the time a
+// stalled feed can otherwise go unnoticed that the choice is not delicate.
+//
+// It must, though, outlast the five minutes pkg/util/encryption allows between
+// refreshes of its keys. A page which fails only because this process's keys
+// are stale becomes readable at the next refresh, and skipping it before then
+// would drop documents which were about to be delivered. At ten-second polls
+// the last of n failures falls 10(n-1) seconds after the first, so thirty fell
+// ten seconds short in the worst case; thirty-six leaves room for a slow poll.
+const defaultChangeFeedMaxFailures = 36
+
+// A resilientChangeFeedIterator is a change feed iterator which can make
+// progress past a page it cannot read.
+//
+// The generated iterators cannot. Their continuation advances only after a
+// successful read, so a page which fails deterministically — because a document
+// in it cannot be decoded, say, because the key which sealed it is not held —
+// is re-requested from the same position on every poll, for as long as the
+// process runs. Nothing downstream of the feed is then updated again.
+//
+// This type re-implements Next with that error path corrected. It is
+// hand-written so as to leave the generated files alone; the generator now
+// lives in cmd/gencosmosdb, and if the correction moves into its template,
+// this file can be deleted.
+type resilientChangeFeedIterator[T any] struct {
+	client     *databaseClient
+	path       string
+	options    *Options
+	setOptions func(*Options, http.Header) error
+
+	continuation        string
+	consecutiveFailures int
+	maxFailures         int
+	pagesSkipped        int
+}
+
+func newResilientChangeFeedIterator[T any](client *databaseClient, path string, options *Options, setOptions func(*Options, http.Header) error) *resilientChangeFeedIterator[T] {
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &resilientChangeFeedIterator[T]{
+		client:       client,
+		path:         path,
+		options:      options,
+		setOptions:   setOptions,
+		continuation: continuation,
+		maxFailures:  defaultChangeFeedMaxFailures,
+	}
+}
+
+func (i *resilientChangeFeedIterator[T]) Next(ctx context.Context, maxItemCount int) (*T, error) {
+	headers := http.Header{}
+	headers.Set("A-IM", "Incremental feed")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
+	if i.continuation != "" {
+		headers.Set("If-None-Match", i.continuation)
+	}
+
+	err := i.setOptions(i.options, headers)
+	if err != nil {
+		return nil, err
+	}
+
+	var docs *T
+	err = i.client.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &docs, headers)
+	if IsErrorStatusCode(err, http.StatusNotModified) {
+		err = nil
+	}
+	if err != nil {
+		i.onFailure(headers, err)
+		return nil, err
+	}
+
+	i.consecutiveFailures = 0
+	i.continuation = headers.Get("Etag")
+
+	return docs, nil
+}
+
+// onFailure records a failed read and, once the same position has failed
+// maxFailures times in succession, advances past it.
+//
+// The position to advance to is already in hand. do copies the response headers
+// into the caller's map whenever there was a response at all, and _do returns
+// the response alongside a decode error, so the Etag naming the page after this
+// one is present even though the read failed.
+//
+// It is absent whenever do has no response to copy it from. That is so after a
+// transport error, and also when a response arrived but was not JSON: _do
+// returns no response with that error, even when the status was the one
+// expected. The advance is conditional on it for that reason. An empty
+// If-None-Match asks Cosmos DB to read the feed from the beginning, so
+// advancing to "" would reset the feed, re-read the whole collection, and
+// arrive back at the same page. The guard is load-bearing rather than
+// defensive.
+//
+// Requiring maxFailures consecutive failures, and resetting the count on any
+// success, means the threshold measures persistence: a page is only ever
+// skipped when it cannot be read at all, never during a passing fault.
+func (i *resilientChangeFeedIterator[T]) onFailure(headers http.Header, err error) {
+	i.consecutiveFailures++
+
+	// Acting on every maxFailures'th failure rather than on every failure past
+	// the first threshold keeps a feed which cannot advance from logging on
+	// every poll, while still having it report itself periodically.
+	if i.consecutiveFailures%i.maxFailures != 0 {
+		return
+	}
+
+	etag := headers.Get("Etag")
+	if etag == "" || etag == i.continuation {
+		i.client.log.Errorf("changefeed %s: %d consecutive failures with no position to advance to; the feed is stalled: %s", i.path, i.consecutiveFailures, err)
+		return
+	}
+
+	i.client.log.Errorf("changefeed %s: advancing past a page which failed %d times in succession; its contents will not be delivered: %s", i.path, i.consecutiveFailures, err)
+
+	i.continuation = etag
+	i.consecutiveFailures = 0
+	i.pagesSkipped++
+}
+
+// PagesSkipped is the number of pages this iterator has given up on and
+// advanced past. It only ever rises, so that a skip remains visible after the
+// feed recovers: the consecutive-failure count resets on the next success, and
+// a page whose contents were never delivered would otherwise leave nothing
+// behind but a log line.
+func (i *resilientChangeFeedIterator[T]) PagesSkipped() int {
+	return i.pagesSkipped
+}
+
+func (i *resilientChangeFeedIterator[T]) Continuation() string {
+	return i.continuation
+}
+
+// NewResilientOpenShiftClusterDocumentChangeFeed returns a change feed iterator
+// which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientOpenShiftClusterDocumentChangeFeed(c OpenShiftClusterDocumentClient, options *Options) OpenShiftClusterDocumentIterator {
+	cc, ok := c.(*openShiftClusterDocumentClient)
+	if !ok {
+		// Not a real Cosmos DB client — the fake, in all current cases. It has
+		// no failing page to get past.
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.OpenShiftClusterDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientSubscriptionDocumentChangeFeed returns a change feed iterator
+// which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientSubscriptionDocumentChangeFeed(c SubscriptionDocumentClient, options *Options) SubscriptionDocumentIterator {
+	cc, ok := c.(*subscriptionDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.SubscriptionDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientGatewayDocumentChangeFeed returns a change feed iterator which
+// can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientGatewayDocumentChangeFeed(c GatewayDocumentClient, options *Options) GatewayDocumentIterator {
+	cc, ok := c.(*gatewayDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.GatewayDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientOpenShiftVersionDocumentChangeFeed returns a change feed iterator
+// which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientOpenShiftVersionDocumentChangeFeed(c OpenShiftVersionDocumentClient, options *Options) OpenShiftVersionDocumentIterator {
+	cc, ok := c.(*openShiftVersionDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.OpenShiftVersionDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientPlatformWorkloadIdentityRoleSetDocumentChangeFeed returns a change
+// feed iterator which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientPlatformWorkloadIdentityRoleSetDocumentChangeFeed(c PlatformWorkloadIdentityRoleSetDocumentClient, options *Options) PlatformWorkloadIdentityRoleSetDocumentIterator {
+	cc, ok := c.(*platformWorkloadIdentityRoleSetDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.PlatformWorkloadIdentityRoleSetDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientMaintenanceManifestDocumentChangeFeed returns a change feed
+// iterator which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientMaintenanceManifestDocumentChangeFeed(c MaintenanceManifestDocumentClient, options *Options) MaintenanceManifestDocumentIterator {
+	cc, ok := c.(*maintenanceManifestDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.MaintenanceManifestDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
+
+// NewResilientMaintenanceScheduleDocumentChangeFeed returns a change feed
+// iterator which can make progress past a page it cannot read. See
+// resilientChangeFeedIterator.
+func NewResilientMaintenanceScheduleDocumentChangeFeed(c MaintenanceScheduleDocumentClient, options *Options) MaintenanceScheduleDocumentIterator {
+	cc, ok := c.(*maintenanceScheduleDocumentClient)
+	if !ok {
+		return c.ChangeFeed(options)
+	}
+
+	return newResilientChangeFeedIterator[pkg.MaintenanceScheduleDocuments](
+		cc.databaseClient, cc.path, options,
+		func(options *Options, headers http.Header) error {
+			return cc.setOptions(options, nil, headers)
+		},
+	)
+}
