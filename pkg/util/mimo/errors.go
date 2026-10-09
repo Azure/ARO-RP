@@ -30,6 +30,10 @@ func (f wrappedMIMOError) Error() string {
 	return fmt.Sprintf("%s: %s", f.variety, f.error.Error())
 }
 
+func (f wrappedMIMOError) Unwrap() error {
+	return f.error
+}
+
 func NewMIMOError(err error, variety MIMOErrorVariety) MIMOError {
 	return wrappedMIMOError{
 		error:   err,

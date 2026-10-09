@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 // Maximum lifetime of the ACR token
@@ -28,10 +27,8 @@ const (
 )
 
 type Manager interface {
-	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
-	NewRegistryProfile() *api.RegistryProfile
-	PutRegistryProfile(oc *api.OpenShiftCluster, registryProfile *api.RegistryProfile)
-	EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, error)
+	NewRegistryProfile(clusterUUID string) *api.RegistryProfile
+	EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, *time.Time, error)
 	RotateTokenPassword(ctx context.Context, registryProfile *api.RegistryProfile) error
 	Delete(ctx context.Context, registryProfile *api.RegistryProfile) error
 }
@@ -42,8 +39,6 @@ type manager struct {
 
 	tokens     armcontainerregistry.TokensClient
 	registries armcontainerregistry.RegistriesClient
-
-	uuid uuid.Generator
 }
 
 func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClient, registriesClient armcontainerregistry.RegistriesClient) (Manager, error) {
@@ -58,56 +53,22 @@ func NewManager(env env.Interface, tokensClient armcontainerregistry.TokensClien
 
 		tokens:     tokensClient,
 		registries: registriesClient,
-		uuid:       uuid.DefaultGenerator,
 	}
 
 	return m, nil
 }
 
-func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
-	for i, registryProfile := range oc.Properties.RegistryProfiles {
-		if registryProfile.Name == m.env.ACRDomain() {
-			return oc.Properties.RegistryProfiles[i]
-		}
-	}
-
-	return nil
-}
-
-func GetRegistryProfileFromSlice(_env env.Interface, registryProfiles []*api.RegistryProfile) *api.RegistryProfile {
-	for _, registryProfile := range registryProfiles {
-		if registryProfile.Name == _env.ACRDomain() {
-			return registryProfile
-		}
-	}
-
-	return nil
-}
-
-func (m *manager) NewRegistryProfile() *api.RegistryProfile {
-	currentTime := m.env.Now().UTC()
+func (m *manager) NewRegistryProfile(clusterUUID string) *api.RegistryProfile {
 	return &api.RegistryProfile{
-		Name:      m.env.ACRDomain(),
-		Username:  "token-" + m.uuid.Generate(),
-		IssueDate: &currentTime,
+		Name:     m.env.ACRDomain(),
+		Username: "token-" + clusterUUID,
 	}
-}
-
-func (m *manager) PutRegistryProfile(oc *api.OpenShiftCluster, registryProfile *api.RegistryProfile) {
-	for i, _existingRegistryProfile := range oc.Properties.RegistryProfiles {
-		if _existingRegistryProfile.Name == registryProfile.Name {
-			oc.Properties.RegistryProfiles[i] = registryProfile
-			return
-		}
-	}
-
-	oc.Properties.RegistryProfiles = append(oc.Properties.RegistryProfiles, registryProfile)
 }
 
 // EnsureTokenAndPassword ensures a token exists with the given username,
 // generates a new password for it and returns it
 // https://docs.microsoft.com/en-us/azure/container-registry/container-registry-repository-scoped-permissions
-func (m *manager) EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, error) {
+func (m *manager) EnsureTokenAndPassword(ctx context.Context, registryProfile *api.RegistryProfile) (string, *time.Time, error) {
 	// We don't use anything from the token body so just ignore it
 	_, err := m.tokens.CreateAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, registryProfile.Username, sdkarmcontainerregistry.Token{
 		Properties: &sdkarmcontainerregistry.TokenProperties{
@@ -117,15 +78,15 @@ func (m *manager) EnsureTokenAndPassword(ctx context.Context, registryProfile *a
 	})
 	// Ignore StatusConflict errors (it means it's already created)
 	if err != nil && !azureerrors.IsStatusConflictError(err) {
-		return "", err
+		return "", nil, err
 	}
 
 	return m.generateTokenPassword(ctx, sdkarmcontainerregistry.TokenPasswordNamePassword1, registryProfile)
 }
 
-// RotateTokenPassword chooses either the unused token password or the token
-// password with the oldest creation date, generates a new password, and
-// then updates the registry profile with the newly generated password.
+// RotateTokenPassword chooses the token that is not presently in use, generates
+// a new password, and then updates the registry profile with the newly
+// generated password.
 func (m *manager) RotateTokenPassword(ctx context.Context, registryProfile *api.RegistryProfile) error {
 	tokenProperties, err := m.tokens.GetTokenProperties(ctx, m.r.ResourceGroup, m.r.ResourceName, registryProfile.Username)
 	if err != nil {
@@ -152,46 +113,62 @@ func (m *manager) RotateTokenPassword(ctx context.Context, registryProfile *api.
 		} else {
 			passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 		}
-	// Passwords has two entries: compare creation dates, renew oldest
+	// Passwords has two entries: renew password that isn't in active use by the
+	// RegistryProfile (by matching issueDate), and if neither is, fall back to
+	// renewing the oldest. We hope to avoid renewing the in-use password
+	// because two successive rotations of the oldest that don't get applied to
+	// the cluster (e.g. because timeouts) will cause the in-cluster secret to
+	// become invalid and image pulls to stop working.
 	case len(tokenPasswords) == 2:
-		var oldest *sdkarmcontainerregistry.TokenPassword
-		for _, p := range tokenPasswords {
-			if p.CreationTime == nil {
-				oldest = p
-				break
+		if tokenPasswords[0].CreationTime != nil &&
+			registryProfile.IssueDate != nil &&
+			tokenPasswords[0].CreationTime.Equal(*registryProfile.IssueDate) {
+			passwordToRenew = *tokenPasswords[1].Name
+		} else if tokenPasswords[1].CreationTime != nil &&
+			registryProfile.IssueDate != nil &&
+			tokenPasswords[1].CreationTime.Equal(*registryProfile.IssueDate) {
+			passwordToRenew = *tokenPasswords[0].Name
+		} else {
+			var oldest *sdkarmcontainerregistry.TokenPassword
+			for _, p := range tokenPasswords {
+				if p.CreationTime == nil {
+					oldest = p
+					break
+				}
 			}
-		}
-		if oldest == nil {
-			if tokenPasswords[0].CreationTime.Before(*tokenPasswords[1].CreationTime) {
-				oldest = tokenPasswords[0]
-			} else {
-				oldest = tokenPasswords[1]
+			if oldest == nil {
+				if tokenPasswords[0].CreationTime.Before(*tokenPasswords[1].CreationTime) {
+					oldest = tokenPasswords[0]
+				} else {
+					oldest = tokenPasswords[1]
+				}
 			}
+			passwordToRenew = *oldest.Name
 		}
-		passwordToRenew = *oldest.Name
 	// default case, including passwords having zero entries: generate password 1
 	// this shouldn't ever happen, which guarantees it will happen
 	default:
 		passwordToRenew = sdkarmcontainerregistry.TokenPasswordNamePassword1
 	}
 
-	newPassword, err := m.generateTokenPassword(ctx, passwordToRenew, registryProfile)
+	newPassword, issueDate, err := m.generateTokenPassword(ctx, passwordToRenew, registryProfile)
 	if err != nil {
 		return err
 	}
 	registryProfile.Password = api.SecureString(newPassword)
+	registryProfile.IssueDate = issueDate
 	return nil
 }
 
 // generateTokenPassword takes an existing ACR token and generates
 // a password for the specified password name
-func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarmcontainerregistry.TokenPasswordName, registryProfile *api.RegistryProfile) (string, error) {
+func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarmcontainerregistry.TokenPasswordName, registryProfile *api.RegistryProfile) (string, *time.Time, error) {
 	creds, err := m.registries.GenerateCredentialsAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, sdkarmcontainerregistry.GenerateCredentialsParameters{
 		TokenID: pointerutils.ToPtr(m.env.ACRResourceID() + "/tokens/" + registryProfile.Username),
 		Name:    pointerutils.ToPtr(passwordName),
 	})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	// response details from Azure API
@@ -199,11 +176,11 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName sdkarm
 
 	for _, pw := range creds.Passwords {
 		if pw.Name != nil && *pw.Name == passwordName {
-			return *pw.Value, nil
+			return *pw.Value, pointerutils.ToPtr(pw.CreationTime.UTC()), nil
 		}
 	}
 
-	return *(creds.Passwords)[0].Value, nil
+	return *(creds.Passwords)[0].Value, pointerutils.ToPtr(creds.Passwords[0].CreationTime.UTC()), nil
 }
 
 func (m *manager) Delete(ctx context.Context, registryProfile *api.RegistryProfile) error {

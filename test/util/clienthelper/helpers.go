@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -83,9 +84,16 @@ func copyForComparison(inObj any) (client.Object, error) {
 		return nil, fmt.Errorf("cannot convert %v to runtime.Object", runtimeObj)
 	}
 
-	// Don't test for the resourceversion
+	// see controller-runtime/pkg/envtest/komega/equalobject.go
+	ourObj.SetUID(types.UID(""))
+	ourObj.SetGeneration(0)
+	ourObj.SetCreationTimestamp(metav1.Time{})
+	ourObj.SetManagedFields(nil)
+	ourObj.SetDeletionGracePeriodSeconds(nil)
+	ourObj.SetDeletionTimestamp(nil)
+	ourObj.SetSelfLink("")
+	ourObj.SetGenerateName("")
 	ourObj.SetResourceVersion("")
-	// Don't test for the typemeta
 	ourObj.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
 
 	return ourObj, nil
