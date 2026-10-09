@@ -31,8 +31,9 @@ const defaultChangeFeedMaxFailures = 30
 // process runs. Nothing downstream of the feed is then updated again.
 //
 // This type re-implements Next with that error path corrected. It is
-// hand-written because the generated files must not be edited; if the change is
-// taken upstream into the generator, this file can be deleted.
+// hand-written so as to leave the generated files alone; the generator now
+// lives in cmd/gencosmosdb, and if the correction moves into its template,
+// this file can be deleted.
 type resilientChangeFeedIterator[T any] struct {
 	client     *databaseClient
 	path       string
@@ -98,11 +99,14 @@ func (i *resilientChangeFeedIterator[T]) Next(ctx context.Context, maxItemCount 
 // the response alongside a decode error, so the Etag naming the page after this
 // one is present even though the read failed.
 //
-// It is absent when there was no response — a transport error, for instance —
-// which is why the advance is conditional on it. An empty If-None-Match asks
-// Cosmos DB to read the feed from the beginning, so advancing to "" would reset
-// the feed, re-read the whole collection, and arrive back at the same page.
-// The guard is load-bearing rather than defensive.
+// It is absent whenever do has no response to copy it from. That is so after a
+// transport error, and also when a response arrived but was not JSON: _do
+// returns no response with that error, even when the status was the one
+// expected. The advance is conditional on it for that reason. An empty
+// If-None-Match asks Cosmos DB to read the feed from the beginning, so
+// advancing to "" would reset the feed, re-read the whole collection, and
+// arrive back at the same page. The guard is load-bearing rather than
+// defensive.
 //
 // Requiring maxFailures consecutive failures, and resetting the count on any
 // success, means the threshold measures persistence: a page is only ever
