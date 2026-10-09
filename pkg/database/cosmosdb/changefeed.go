@@ -15,11 +15,18 @@ import (
 // position are tolerated before a resilient change feed gives up on the page
 // and moves on.
 //
-// The consumers poll every ten seconds, so thirty failures is five minutes of
-// uninterrupted failure. That is far longer than any throttling or transient
-// service fault, and so short against the time a stalled feed can otherwise go
-// unnoticed that the choice is not delicate.
-const defaultChangeFeedMaxFailures = 30
+// The consumers poll every ten seconds or less often, so thirty-six failures
+// is at least six minutes of uninterrupted failure. That is far longer than
+// any throttling or transient service fault, and so short against the time a
+// stalled feed can otherwise go unnoticed that the choice is not delicate.
+//
+// It must, though, outlast the five minutes pkg/util/encryption allows between
+// refreshes of its keys. A page which fails only because this process's keys
+// are stale becomes readable at the next refresh, and skipping it before then
+// would drop documents which were about to be delivered. At ten-second polls
+// the last of n failures falls 10(n-1) seconds after the first, so thirty fell
+// ten seconds short in the worst case; thirty-six leaves room for a slow poll.
+const defaultChangeFeedMaxFailures = 36
 
 // A resilientChangeFeedIterator is a change feed iterator which can make
 // progress past a page it cannot read.
