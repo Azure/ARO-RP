@@ -221,8 +221,8 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 			vmSkus: []string{"bigmachine_v1", "smallmachine_v4", "smallmachine_v5"},
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
 				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
-					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
-						for _, s := range []*armcompute.ResourceSKU{
+					Return(func(yield func(armcompute.ResourceSKU, error) bool) {
+						for _, s := range []armcompute.ResourceSKU{
 							{
 								Name:         pointerutils.ToPtr("bigmachine_v1"),
 								ResourceType: pointerutils.ToPtr("virtualMachines"),
@@ -317,8 +317,8 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 									},
 								},
 							},
-							// An actual nil
-							nil,
+							// Zero-value SKU (no name, no type)
+							{},
 							// Nil restriction info
 							{
 								Name:         pointerutils.ToPtr("smallmachine_v1"),
@@ -387,8 +387,8 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 			vmSkus: []string{"bigmachine_v1", "bigmachine_v1", "smallmachine_v4"},
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
 				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
-					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
-						for _, s := range []*armcompute.ResourceSKU{
+					Return(func(yield func(armcompute.ResourceSKU, error) bool) {
+						for _, s := range []armcompute.ResourceSKU{
 							{
 								Name:         pointerutils.ToPtr("bigmachine_v1"),
 								ResourceType: pointerutils.ToPtr("virtualMachines"),
@@ -444,8 +444,8 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 			vmSkus: []string{"bigmachine_v5"},
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
 				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
-					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
-						for _, s := range []*armcompute.ResourceSKU{
+					Return(func(yield func(armcompute.ResourceSKU, error) bool) {
+						for _, s := range []armcompute.ResourceSKU{
 							{
 								Name:         pointerutils.ToPtr("bigmachine_v1"),
 								ResourceType: pointerutils.ToPtr("virtualMachines"),
@@ -471,7 +471,7 @@ func TestSelectVMSkusInCurrentRegion(t *testing.T) {
 								return
 							}
 						}
-						yield(nil, errors.New("this is an error"))
+						yield(armcompute.ResourceSKU{}, errors.New("this is an error"))
 					})
 			},
 			wantError: "this is an error",
@@ -504,8 +504,8 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 			name: "happypath",
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
 				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
-					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
-						for _, s := range []*armcompute.ResourceSKU{
+					Return(func(yield func(armcompute.ResourceSKU, error) bool) {
+						for _, s := range []armcompute.ResourceSKU{
 							{
 								Name:         pointerutils.ToPtr("bigmachine_v1"),
 								ResourceType: pointerutils.ToPtr("virtualMachines"),
@@ -571,8 +571,8 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 									},
 								},
 							},
-							// An actual nil
-							nil,
+							// Zero-value SKU (no name, no type)
+							{},
 							// Restricted in this region
 							{
 								Name:         pointerutils.ToPtr("smallmachine_v2"),
@@ -660,8 +660,8 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 			name: "duplicate VM structs don't lead to duplicated names",
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
 				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).Return(
-					func(yield func(*armcompute.ResourceSKU, error) bool) {
-						for _, s := range []*armcompute.ResourceSKU{
+					func(yield func(armcompute.ResourceSKU, error) bool) {
+						for _, s := range []armcompute.ResourceSKU{
 							{
 								Name:         pointerutils.ToPtr("bigmachine_v1"),
 								ResourceType: pointerutils.ToPtr("virtualMachines"),
@@ -741,8 +741,8 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 			name: "error in pagination",
 			mocks: func(mrsc *mock_armcompute.MockResourceSKUsClient) {
 				mrsc.EXPECT().List(gomock.Any(), "location eq northus2", false).
-					Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
-						for _, s := range []*armcompute.ResourceSKU{
+					Return(func(yield func(armcompute.ResourceSKU, error) bool) {
+						for _, s := range []armcompute.ResourceSKU{
 							{
 								Name:         pointerutils.ToPtr("bigmachine_v1"),
 								ResourceType: pointerutils.ToPtr("virtualMachines"),
@@ -768,7 +768,7 @@ func TestListUnrestrictedSKUNames(t *testing.T) {
 								return
 							}
 						}
-						yield(nil, errors.New("this is an error"))
+						yield(armcompute.ResourceSKU{}, errors.New("this is an error"))
 					})
 			},
 			wantError: "this is an error",
