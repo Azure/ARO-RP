@@ -72,7 +72,13 @@ func RunChangefeed[F any, X api.DocumentList[F]](
 
 	defer recover.Panic(log)
 
-	dimensions := map[string]string{"name": name}
+	// Each emission gets a map of its own. The statsd emitter writes its own
+	// dimensions into the map it is given, on this goroutine, and encodes it
+	// later on another, so a map given to it twice can be written while it is
+	// being read, which the Go runtime treats as fatal.
+	dimensions := func() map[string]string {
+		return map[string]string{"name": name}
+	}
 
 	lastSuccessfulPoll := time.Now()
 	consecutiveFailures := 0
@@ -115,11 +121,11 @@ func RunChangefeed[F any, X api.DocumentList[F]](
 		// Emitted on every poll, successful or not. A feed which has stopped
 		// advancing is otherwise indistinguishable from one with nothing to
 		// report, which is how a month-long stall went unnoticed.
-		m.EmitGauge(MetricStaleness, int64(time.Since(lastSuccessfulPoll).Seconds()), dimensions)
-		m.EmitGauge(MetricConsecutiveFailures, int64(consecutiveFailures), dimensions)
+		m.EmitGauge(MetricStaleness, int64(time.Since(lastSuccessfulPoll).Seconds()), dimensions())
+		m.EmitGauge(MetricConsecutiveFailures, int64(consecutiveFailures), dimensions())
 
 		if s, ok := iterator.(skipReporter); ok {
-			m.EmitGauge(MetricPagesSkipped, int64(s.PagesSkipped()), dimensions)
+			m.EmitGauge(MetricPagesSkipped, int64(s.PagesSkipped()), dimensions())
 		}
 
 		select {

@@ -6,6 +6,7 @@ package changefeed
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -277,5 +278,47 @@ func TestChangefeedEmitsSkippedPagesOnlyWhenReported(t *testing.T) {
 
 			assert.Equal(t, tt.want, m.gauges[MetricPagesSkipped], MetricPagesSkipped)
 		})
+	}
+}
+
+// writingEmitter writes a dimension into every map it is given, as the statsd
+// emitter does, and keeps each one.
+type writingEmitter struct {
+	dimensions []map[string]string
+}
+
+func (e *writingEmitter) EmitFloat(string, float64, map[string]string) {}
+
+func (e *writingEmitter) EmitGauge(_ string, _ int64, dimensions map[string]string) {
+	dimensions["location"] = "test"
+	e.dimensions = append(e.dimensions, dimensions)
+}
+
+// The statsd emitter writes its own dimensions into the map it is given and
+// encodes it later on another goroutine. A map given to it twice can therefore
+// be written while it is being read, which the Go runtime treats as fatal, so
+// every emission must have a map of its own.
+func TestChangefeedGivesEachEmissionItsOwnDimensions(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
+	stopChan := make(chan struct{})
+	m := &writingEmitter{}
+	s := &scriptedChangefeed{errs: []error{nil, nil}, stopChan: stopChan}
+
+	RunChangefeed(t.Context(), log, m, "OpenShiftClusterDocument",
+		&skippingChangefeed{scriptedChangefeed: s}, time.Millisecond, 1, &fakeResponder{}, stopChan)
+
+	// Three gauges on each of at least two polls.
+	assert.GreaterOrEqual(t, len(m.dimensions), 6, "emissions")
+
+	seen := map[uintptr]int{}
+	for i, d := range m.dimensions {
+		p := reflect.ValueOf(d).Pointer()
+		if j, ok := seen[p]; ok {
+			t.Errorf("emission %d was given the same dimensions map as emission %d", i, j)
+		}
+		seen[p] = i
+
+		assert.Equal(t, "OpenShiftClusterDocument", d["name"], "emission %d", i)
 	}
 }
