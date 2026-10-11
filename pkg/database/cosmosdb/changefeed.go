@@ -15,17 +15,22 @@ import (
 // position are tolerated before a resilient change feed gives up on the page
 // and moves on.
 //
-// The consumers poll every ten seconds or less often, so thirty-six failures
-// is at least six minutes of uninterrupted failure. That is far longer than
-// any throttling or transient service fault, and so short against the time a
-// stalled feed can otherwise go unnoticed that the choice is not delicate.
+// At ten-second polls, thirty-six failures is about six minutes of
+// uninterrupted failure. That is far longer than any throttling or transient
+// service fault, and so short against the time a stalled feed can otherwise go
+// unnoticed that the choice is not delicate.
 //
-// It must, though, outlast the five minutes pkg/util/encryption allows between
-// refreshes of its keys. A page which fails only because this process's keys
-// are stale becomes readable at the next refresh, and skipping it before then
-// would drop documents which were about to be delivered. At ten-second polls
-// the last of n failures falls 10(n-1) seconds after the first, so thirty fell
-// ten seconds short in the worst case; thirty-six leaves room for a slow poll.
+// On the cluster feed it must also outlast the five minutes
+// pkg/util/encryption allows between refreshes of its keys. Cluster documents
+// are the only ones with encrypted fields, so the only ones a stale key can
+// make unreadable, and such a page becomes readable at the next refresh;
+// skipping it before then would drop documents which were about to be
+// delivered. The scheduler and the monitor read that feed every ten seconds, at
+// which the last of n failures falls 10(n-1) seconds after the first, so thirty
+// fell ten seconds short in the worst case; thirty-six leaves room for a slow
+// poll. A count serves only because that interval is fixed: a reader of the
+// cluster feed which polled faster would need the threshold expressed as a
+// time.
 const defaultChangeFeedMaxFailures = 36
 
 // A resilientChangeFeedIterator is a change feed iterator which can make
