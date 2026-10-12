@@ -332,7 +332,7 @@ type fakeGatewayDocumentIterator struct {
 	done             bool
 }
 
-func (i *fakeGatewayDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeGatewayDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakeGatewayDocumentIterator) Next(ctx context.Context, maxItemCount int
 		i.continuation = len(i.gatewayDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.gatewayDocuments) {
-			max = len(i.gatewayDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.gatewayDocuments))
 		gatewayDocuments = i.gatewayDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakeGatewayDocumentErroringRawIterator) Next(ctx context.Context, maxIt
 	return nil, i.err
 }
 
-func (i *fakeGatewayDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeGatewayDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

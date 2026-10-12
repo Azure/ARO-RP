@@ -63,7 +63,7 @@ type OpenShiftVersionDocumentIterator interface {
 // OpenShiftVersionDocumentRawIterator is a openShiftVersionDocument raw iterator
 type OpenShiftVersionDocumentRawIterator interface {
 	OpenShiftVersionDocumentIterator
-	NextRaw(context.Context, int, interface{}) error
+	NextRaw(context.Context, int, any) error
 }
 
 // NewOpenShiftVersionDocumentClient returns a new openShiftVersionDocument client
@@ -277,7 +277,7 @@ func (i *openShiftVersionDocumentQueryIterator) Next(ctx context.Context, maxIte
 	return
 }
 
-func (i *openShiftVersionDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *openShiftVersionDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw any) (err error) {
 	if i.done {
 		return
 	}

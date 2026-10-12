@@ -332,7 +332,7 @@ type fakeOpenShiftClusterDocumentIterator struct {
 	done                      bool
 }
 
-func (i *fakeOpenShiftClusterDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeOpenShiftClusterDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakeOpenShiftClusterDocumentIterator) Next(ctx context.Context, maxItem
 		i.continuation = len(i.openShiftClusterDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.openShiftClusterDocuments) {
-			max = len(i.openShiftClusterDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.openShiftClusterDocuments))
 		openShiftClusterDocuments = i.openShiftClusterDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakeOpenShiftClusterDocumentErroringRawIterator) Next(ctx context.Conte
 	return nil, i.err
 }
 
-func (i *fakeOpenShiftClusterDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakeOpenShiftClusterDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 
