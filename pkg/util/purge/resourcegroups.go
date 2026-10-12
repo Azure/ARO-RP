@@ -55,7 +55,7 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 			return err
 		}
 
-		_, err = rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
+		err = rc.resourcegroupscli.DeleteAndWait(ctx, *resourceGroup.Name)
 		if err != nil {
 			return err
 		}
