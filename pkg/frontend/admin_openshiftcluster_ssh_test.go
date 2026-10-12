@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -115,7 +114,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "master 0 issued by SRE",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			azureMock: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-0", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
@@ -127,7 +126,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "master 2 issued by SRE",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(2)},
+			body:             &adminSSHRequest{Master: new(2)},
 			contentType:      "application/json",
 			azureMock: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-2", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
@@ -139,7 +138,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "falls back to createdBy when lastModifiedBy is empty",
 			systemDataHeader: `{"createdBy":"creator@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(1)},
+			body:             &adminSSHRequest{Master: new(1)},
 			contentType:      "application/json",
 			azureMock: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-1", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
@@ -151,7 +150,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "missing SystemData header returns 400",
 			systemDataHeader: "",
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			wantStatusCode:   http.StatusBadRequest,
 			wantError:        "400: InvalidParameter: : The caller identity could not be determined from the request.",
@@ -159,7 +158,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "portal host key unavailable returns 503",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			omitHostKey:      true,
 			wantStatusCode:   http.StatusServiceUnavailable,
@@ -168,7 +167,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "wrong Content-Type returns 415",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "text/plain",
 			wantStatusCode:   http.StatusUnsupportedMediaType,
 			wantError:        "415: UnsupportedMediaType: : The content media type 'text/plain' is not supported. Only 'application/json' is supported.",
@@ -176,7 +175,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "master out of range returns 400",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(3)},
+			body:             &adminSSHRequest{Master: new(3)},
 			contentType:      "application/json",
 			wantStatusCode:   http.StatusBadRequest,
 			wantError:        "400: InvalidParameter: master: master must be 0, 1, or 2.",
@@ -184,7 +183,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "cosmos create failure surfaces 500",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			azureMock: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-0", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/running"), nil)
@@ -196,7 +195,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "cluster not found returns 404 without minting a portal document",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			omitClusterDoc:   true,
 			wantStatusCode:   http.StatusNotFound,
@@ -205,7 +204,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "identity with shell metacharacters returns 400",
 			systemDataHeader: `{"lastModifiedBy":"evil;rm -rf@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			wantStatusCode:   http.StatusBadRequest,
 			wantError:        "400: InvalidParameter: : The caller identity contains unsupported characters.",
@@ -213,7 +212,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "empty local-part identity returns 400",
 			systemDataHeader: `{"lastModifiedBy":"@contoso"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			wantStatusCode:   http.StatusBadRequest,
 			wantError:        "400: InvalidParameter: : The caller identity contains unsupported characters.",
@@ -221,7 +220,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "deallocated master returns 400",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(1)},
+			body:             &adminSSHRequest{Master: new(1)},
 			contentType:      "application/json",
 			azureMock: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-1", mgmtcompute.InstanceView).Return(sshMasterVM("PowerState/deallocated"), nil)
@@ -232,7 +231,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 		{
 			name:             "azure power-state lookup error is non-fatal",
 			systemDataHeader: `{"lastModifiedBy":"sre@redhat.com"}`,
-			body:             &adminSSHRequest{Master: pointerutils.ToPtr(0)},
+			body:             &adminSSHRequest{Master: new(0)},
 			contentType:      "application/json",
 			azureMock: func(a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().GetVirtualMachine(gomock.Any(), "test-cluster", "aro-infra-master-0", mgmtcompute.InstanceView).Return(mgmtcompute.VirtualMachine{}, errors.New("azure boom"))
@@ -290,7 +289,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 			systemDataHeader:    `{"lastModifiedBy":"sre@redhat.com"}`,
 			body:                &adminSSHRequest{VMName: "aro-infra-master-0"},
 			contentType:         "application/json",
-			architectureVersion: pointerutils.ToPtr(api.ArchitectureVersionV1),
+			architectureVersion: new(api.ArchitectureVersionV1),
 			azureMock: func(a *mock_adminactions.MockAzureActions) {
 				poolID := sshPoolID("aro-infra-internal-lb", "ssh-0")
 				nicID := "/subscriptions/sub/resourceGroups/test-cluster/providers/Microsoft.Network/networkInterfaces/master-nic"
@@ -649,7 +648,7 @@ func TestAdminOpenShiftClusterSSHNewElevated(t *testing.T) {
 
 func sshTargetVM(powerCode, nicID string) mgmtcompute.VirtualMachine {
 	vm := sshMasterVM(powerCode)
-	interfaces := []mgmtcompute.NetworkInterfaceReference{{ID: pointerutils.ToPtr(nicID)}}
+	interfaces := []mgmtcompute.NetworkInterfaceReference{{ID: new(nicID)}}
 	vm.NetworkProfile = &mgmtcompute.NetworkProfile{NetworkInterfaces: &interfaces}
 	return vm
 }

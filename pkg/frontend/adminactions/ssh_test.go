@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
@@ -39,12 +38,12 @@ func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
 			name: "returns valid pool IDs",
 			mock: func(client *mock_armnetwork.MockInterfacesClient) {
 				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{
-					Interface: armnetwork.Interface{ID: pointerutils.ToPtr(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
+					Interface: armnetwork.Interface{ID: new(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
 						IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
 							{Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-								Subnet: &armnetwork.Subnet{ID: pointerutils.ToPtr(subnetID)},
+								Subnet: &armnetwork.Subnet{ID: new(subnetID)},
 								LoadBalancerBackendAddressPools: []*armnetwork.BackendAddressPool{
-									{ID: pointerutils.ToPtr(poolID)},
+									{ID: new(poolID)},
 								},
 							}},
 						},
@@ -57,9 +56,9 @@ func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
 			name: "allows empty pool list",
 			mock: func(client *mock_armnetwork.MockInterfacesClient) {
 				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{
-					Interface: armnetwork.Interface{ID: pointerutils.ToPtr(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
+					Interface: armnetwork.Interface{ID: new(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
 						IPConfigurations: []*armnetwork.InterfaceIPConfiguration{{
-							Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{Subnet: &armnetwork.Subnet{ID: pointerutils.ToPtr(subnetID)}},
+							Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{Subnet: &armnetwork.Subnet{ID: new(subnetID)}},
 						}},
 					}},
 				}, nil)
@@ -69,7 +68,7 @@ func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
 		{
 			name: "rejects nil NIC properties",
 			mock: func(client *mock_armnetwork.MockInterfacesClient) {
-				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{Interface: armnetwork.Interface{ID: pointerutils.ToPtr(nicID)}}, nil)
+				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{Interface: armnetwork.Interface{ID: new(nicID)}}, nil)
 			},
 			wantErr: `network interface "master-nic" has nil properties`,
 		},
@@ -77,7 +76,7 @@ func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
 			name: "rejects nil IP configuration",
 			mock: func(client *mock_armnetwork.MockInterfacesClient) {
 				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{
-					Interface: armnetwork.Interface{ID: pointerutils.ToPtr(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
+					Interface: armnetwork.Interface{ID: new(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
 						IPConfigurations: []*armnetwork.InterfaceIPConfiguration{nil},
 					}},
 				}, nil)
@@ -88,7 +87,7 @@ func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
 			name: "rejects nil IP configuration properties",
 			mock: func(client *mock_armnetwork.MockInterfacesClient) {
 				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{
-					Interface: armnetwork.Interface{ID: pointerutils.ToPtr(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
+					Interface: armnetwork.Interface{ID: new(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
 						IPConfigurations: []*armnetwork.InterfaceIPConfiguration{{}},
 					}},
 				}, nil)
@@ -99,10 +98,10 @@ func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
 			name: "rejects nil backend pool",
 			mock: func(client *mock_armnetwork.MockInterfacesClient) {
 				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{
-					Interface: armnetwork.Interface{ID: pointerutils.ToPtr(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
+					Interface: armnetwork.Interface{ID: new(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
 						IPConfigurations: []*armnetwork.InterfaceIPConfiguration{{
 							Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-								Subnet:                          &armnetwork.Subnet{ID: pointerutils.ToPtr(subnetID)},
+								Subnet:                          &armnetwork.Subnet{ID: new(subnetID)},
 								LoadBalancerBackendAddressPools: []*armnetwork.BackendAddressPool{nil},
 							},
 						}},
@@ -115,10 +114,10 @@ func TestGetNetworkInterfaceSSHInfo(t *testing.T) {
 			name: "rejects nil backend pool ID",
 			mock: func(client *mock_armnetwork.MockInterfacesClient) {
 				client.EXPECT().Get(gomock.Any(), resourceGroup, nicName, nil).Return(armnetwork.InterfacesClientGetResponse{
-					Interface: armnetwork.Interface{ID: pointerutils.ToPtr(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
+					Interface: armnetwork.Interface{ID: new(nicID), Properties: &armnetwork.InterfacePropertiesFormat{
 						IPConfigurations: []*armnetwork.InterfaceIPConfiguration{{
 							Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-								Subnet:                          &armnetwork.Subnet{ID: pointerutils.ToPtr(subnetID)},
+								Subnet:                          &armnetwork.Subnet{ID: new(subnetID)},
 								LoadBalancerBackendAddressPools: []*armnetwork.BackendAddressPool{{}},
 							},
 						}},
@@ -176,31 +175,31 @@ func TestGetSSHRouteStatus(t *testing.T) {
 	makeLB := func(backendNICIDs []string) armnetwork.LoadBalancer {
 		backendIPConfigurations := make([]*armnetwork.InterfaceIPConfiguration, 0, len(backendNICIDs))
 		for _, nicID := range backendNICIDs {
-			backendIPConfigurations = append(backendIPConfigurations, &armnetwork.InterfaceIPConfiguration{ID: pointerutils.ToPtr(nicID + "/ipConfigurations/ipconfig1")})
+			backendIPConfigurations = append(backendIPConfigurations, &armnetwork.InterfaceIPConfiguration{ID: new(nicID + "/ipConfigurations/ipconfig1")})
 		}
 		return armnetwork.LoadBalancer{Properties: &armnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-				{ID: pointerutils.ToPtr(frontendID), Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{PrivateIPAddress: pointerutils.ToPtr(frontendIP)}},
-				{ID: pointerutils.ToPtr(otherFrontendID), Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{PrivateIPAddress: pointerutils.ToPtr("10.0.0.5")}},
+				{ID: new(frontendID), Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{PrivateIPAddress: new(frontendIP)}},
+				{ID: new(otherFrontendID), Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{PrivateIPAddress: new("10.0.0.5")}},
 			},
 			BackendAddressPools: []*armnetwork.BackendAddressPool{{
-				ID:         pointerutils.ToPtr(backendPoolID),
+				ID:         new(backendPoolID),
 				Properties: &armnetwork.BackendAddressPoolPropertiesFormat{BackendIPConfigurations: backendIPConfigurations},
 			}},
 			LoadBalancingRules: []*armnetwork.LoadBalancingRule{
 				{Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-					FrontendIPConfiguration: &armnetwork.SubResource{ID: pointerutils.ToPtr(frontendID)},
-					BackendAddressPool:      &armnetwork.SubResource{ID: pointerutils.ToPtr(backendPoolID)},
-					FrontendPort:            pointerutils.ToPtr(frontendPort),
-					BackendPort:             pointerutils.ToPtr[int32](22),
-					Protocol:                pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+					FrontendIPConfiguration: &armnetwork.SubResource{ID: new(frontendID)},
+					BackendAddressPool:      &armnetwork.SubResource{ID: new(backendPoolID)},
+					FrontendPort:            new(frontendPort),
+					BackendPort:             new(int32(22)),
+					Protocol:                new(armnetwork.TransportProtocolTCP),
 				}},
 				{Properties: &armnetwork.LoadBalancingRulePropertiesFormat{
-					FrontendIPConfiguration: &armnetwork.SubResource{ID: pointerutils.ToPtr(otherFrontendID)},
-					BackendAddressPool:      &armnetwork.SubResource{ID: pointerutils.ToPtr(backendPoolID)},
-					FrontendPort:            pointerutils.ToPtr(frontendPort),
-					BackendPort:             pointerutils.ToPtr[int32](22),
-					Protocol:                pointerutils.ToPtr(armnetwork.TransportProtocolTCP),
+					FrontendIPConfiguration: &armnetwork.SubResource{ID: new(otherFrontendID)},
+					BackendAddressPool:      &armnetwork.SubResource{ID: new(backendPoolID)},
+					FrontendPort:            new(frontendPort),
+					BackendPort:             new(int32(22)),
+					Protocol:                new(armnetwork.TransportProtocolTCP),
 				}},
 			},
 		}}

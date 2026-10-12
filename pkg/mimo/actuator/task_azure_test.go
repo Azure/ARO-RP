@@ -145,8 +145,8 @@ func TestAzureInitClusterTenant(t *testing.T) {
 		Get: func(ctx context.Context, resourceGroupName, loadBalancerName string, options *armnetwork.LoadBalancersClientGetOptions) (resp azcorefake.Responder[armnetwork.LoadBalancersClientGetResponse], errResp azcorefake.ErrorResponder) {
 			body := armnetwork.LoadBalancersClientGetResponse{
 				LoadBalancer: armnetwork.LoadBalancer{
-					Name: pointerutils.ToPtr(loadBalancerName),
-					ID: pointerutils.ToPtr(azure.Resource{
+					Name: new(loadBalancerName),
+					ID: new(azure.Resource{
 						SubscriptionID: "456",
 						ResourceGroup:  resourceGroupName,
 						Provider:       "Microsoft.Network",
@@ -183,8 +183,8 @@ func TestAzureInitClusterTenant(t *testing.T) {
 	require.NoError(err)
 	require.Equal(
 		armnetwork.LoadBalancer{
-			Name: pointerutils.ToPtr("b"),
-			ID:   pointerutils.ToPtr("/subscriptions/456/resourceGroups/a/providers/Microsoft.Network/loadBalancers/b"),
+			Name: new("b"),
+			ID:   new("/subscriptions/456/resourceGroups/a/providers/Microsoft.Network/loadBalancers/b"),
 		},
 		p.LoadBalancer)
 
