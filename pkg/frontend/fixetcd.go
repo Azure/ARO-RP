@@ -194,15 +194,16 @@ func getPeerPods(pods []corev1.Pod, de *degradedEtcd, cluster string) (string, e
 		return "", err
 	}
 
-	var peerPods string
+	var peerPods strings.Builder
 	for _, p := range pods {
 		if regNode.MatchString(p.Spec.NodeName) &&
 			regPod.MatchString(p.Name) &&
 			p.Name != de.Pod {
-			peerPods += p.Name + " "
+			peerPods.WriteString(p.Name)
+			peerPods.WriteString(" ")
 		}
 	}
-	return peerPods, nil
+	return peerPods.String(), nil
 }
 
 func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error) {
