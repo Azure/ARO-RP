@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -31,6 +32,7 @@ type azClusterTenantClients struct {
 	loadBalancerClient        *armnetwork.LoadBalancersClient
 	resourceSKUsClient        *armcompute.ResourceSKUsClient
 	privateLinkServicesClient *armnetwork.PrivateLinkServicesClient
+	roleAssignmentsClient     *armauthorization.RoleAssignmentsClient
 }
 
 type azRPTenantClients struct {
@@ -90,6 +92,24 @@ func (t *th) LoadBalancersClient() (armnetwork.LoadBalancersClient, error) {
 	}
 
 	return *t.azClusterTenant.loadBalancerClient, nil
+}
+
+func (t *th) RoleAssignmentsClient() (armauthorization.RoleAssignmentsClient, error) {
+	err := t.setupClusterAzureClients()
+	if err != nil {
+		return nil, err
+	}
+
+	if t.azClusterTenant.roleAssignmentsClient == nil {
+		roleAssignmentsClient, err := armauthorization.NewRoleAssignmentsClient(t.sub.ID, t.azClusterTenant.fpCred, t.env.ArmClientOptions())
+		if err != nil {
+			return nil, fmt.Errorf("failure creating RoleAssignmentsClient: %w", err)
+		}
+
+		t.azClusterTenant.roleAssignmentsClient = &roleAssignmentsClient
+	}
+
+	return *t.azClusterTenant.roleAssignmentsClient, nil
 }
 
 func (t *th) ResourceSKUsClient() (armcompute.ResourceSKUsClient, error) {
