@@ -46,12 +46,6 @@ var DefaultInstallStream = Stream{
 	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:3ef832b8bb0d56331035ba54af36c36be46d6c6dc1a41e300055692f02bb001d",
 }
 
-// FluentbitImage contains the location of the Fluentbit container image
-func FluentbitImage(acrDomain string) string {
-	// https://github.com/microsoft/azurelinux/releases
-	return acrDomain + "/fluentbit:5.0.0-cm3.0.20260519@sha256:70f23886afaedfef5fd9b3488fd82ef43b6cb7534d19d544cb6f0eecfd25659a"
-}
-
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
