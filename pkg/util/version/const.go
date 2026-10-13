@@ -58,12 +58,6 @@ func MdmImage(acrDomain string) string {
 	return acrDomain + "/geneva/distroless/mdm:2.202610022014.0-20261005-1@sha256:cad8c6b5faf6c11f7b2c3096e1bc229e28cb6b1b0b2dbc5945302f806b1ce3f9"
 }
 
-// MdsdImage contains the location of the MDSD container image
-// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-func MdsdImage(acrDomain string) string {
-	return acrDomain + "/geneva/distroless/mdsd:1.40.3-20260409-1@sha256:1fb51857a0a34e7e7445a91c0a1082d97df235349a66a166a58c86029c80ea89"
-}
-
 // MUOImage contains the location of the Managed Upgrade Operator container image
 func MUOImage(acrDomain string) string {
 	return acrDomain + "/app-sre/managed-upgrade-operator:" + MUOImageTag
