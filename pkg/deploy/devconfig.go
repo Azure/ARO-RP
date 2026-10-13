@@ -96,7 +96,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				MimoSchedulesProvisionedThroughput: 1000,
 			},
 			DisableCosmosDBFirewall:           pointerutils.ToPtr(true),
-			FluentbitImage:                    pointerutils.ToPtr(version.FluentbitImage(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
+			FluentbitImage:                    pointerutils.ToPtr(azureUniquePrefix + "aro." + _env.Environment().ContainerRegistryDNSSuffix + "/fluentbit:5.0.0-cm3.0.20260519@sha256:70f23886afaedfef5fd9b3488fd82ef43b6cb7534d19d544cb6f0eecfd25659a"),
 			GatewayOtelCollectorImage:         pointerutils.ToPtr(""),
 			GatewayOtelKustoIngestionEndpoint: pointerutils.ToPtr(""),
 			FPClientID:                        pointerutils.ToPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
