@@ -10,7 +10,10 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"golang.org/x/sync/errgroup"
 )
+
+const maxConcurrentResourceGroupOperations = 5
 
 // CleanResourceGroups loop through the resourgroups in the subscription
 // and deleted everything that is not marked for deletion
@@ -23,7 +26,7 @@ func (rc *ResourceCleaner) CleanResourceGroups(ctx context.Context) error {
 	}
 
 	sort.Slice(gs, func(i, j int) bool { return *gs[i].Name < *gs[j].Name })
-	var wg sync.WaitGroup
+	var resourceGroupsToDelete []mgmtfeatures.ResourceGroup
 	for _, g := range gs {
 		if !rc.shouldDelete(g, rc.log) {
 			continue
@@ -34,24 +37,56 @@ func (rc *ResourceCleaner) CleanResourceGroups(ctx context.Context) error {
 			continue
 		}
 
-		wg.Go(func() {
-			err := rc.cleanResourceGroup(ctx, g)
-			if err != nil {
-				rc.log.Errorf("error cleaning resource group %v: %v", *g.Name, err)
-			}
-		})
+		resourceGroupsToDelete = append(resourceGroupsToDelete, g)
 	}
-	wg.Wait()
+
+	resourceGroupsToDelete = runResourceGroupTasks(resourceGroupsToDelete, func(g mgmtfeatures.ResourceGroup) error {
+		err := rc.cleanResourceGroupResources(ctx, g)
+		if err != nil {
+			rc.log.Errorf("error cleaning resource group %v: %v", *g.Name, err)
+		}
+		return err
+	})
+
+	runResourceGroupTasks(resourceGroupsToDelete, func(g mgmtfeatures.ResourceGroup) error {
+		err := rc.resourcegroupscli.DeleteAndWait(ctx, *g.Name)
+		if err != nil {
+			rc.log.Errorf("error deleting resource group %v: %v", *g.Name, err)
+			return err
+		}
+		rc.log.Printf("Deleted ResourceGroup: %s", *g.Name)
+		return nil
+	})
 
 	return nil
 }
 
-// cleanResourceGroup cleans the group in an order:
+func runResourceGroupTasks(resourceGroups []mgmtfeatures.ResourceGroup, task func(mgmtfeatures.ResourceGroup) error) []mgmtfeatures.ResourceGroup {
+	var group errgroup.Group
+	group.SetLimit(maxConcurrentResourceGroupOperations)
+	var mu sync.Mutex
+	succeeded := make([]mgmtfeatures.ResourceGroup, 0, len(resourceGroups))
+
+	for _, g := range resourceGroups {
+		group.Go(func() error {
+			if err := task(g); err != nil {
+				return nil
+			}
+			mu.Lock()
+			succeeded = append(succeeded, g)
+			mu.Unlock()
+			return nil
+		})
+	}
+	_ = group.Wait()
+
+	return succeeded
+}
+
+// cleanResourceGroupResources prepares the group for deletion:
 //   - unassign subnets
 //   - clean private links
-//   - checks ARO presence -> store app object ID for futher use
-//   - deletes resource group
-func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
+func (rc *ResourceCleaner) cleanResourceGroupResources(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
 	rc.log.Printf("Deleting ResourceGroup: %s", *resourceGroup.Name)
 	err := rc.cleanNetworking(ctx, resourceGroup)
 	if err != nil {
@@ -62,12 +97,6 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 	if err != nil {
 		return err
 	}
-
-	err = rc.resourcegroupscli.DeleteAndWait(ctx, *resourceGroup.Name)
-	if err != nil {
-		return err
-	}
-	rc.log.Printf("Deleted ResourceGroup: %s", *resourceGroup.Name)
 
 	return nil
 }
