@@ -8,9 +8,10 @@ import (
 	"sort"
 	"sync"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"golang.org/x/sync/errgroup"
 )
 
 const maxConcurrentResourceGroupOperations = 5
