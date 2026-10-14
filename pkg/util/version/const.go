@@ -76,7 +76,7 @@ func GateKeeperImage(acrDomain string) string {
 
 // MiseImage contains the location of the Mise container image
 func MiseImage(acrDomain string) string {
-	return acrDomain + "/msftonly/mise:1.42.1-azurelinux3.0-distroless"
+	return acrDomain + "/msftonly/mise:1.45.1-azurelinux3.0-distroless"
 }
 
 // OtelImage contains the location of the OpenTelemetry container image for MISE
