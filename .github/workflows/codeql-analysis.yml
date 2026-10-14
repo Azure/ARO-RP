@@ -27,8 +27,6 @@ jobs:
         include:
           - language: 'go'
             runs-on: ['self-hosted', '1ES.Pool=ubuntu2204']
-          - language: 'javascript'
-            runs-on: ['ubuntu-latest']
           - language: 'python'
             runs-on: ['ubuntu-latest']
 
