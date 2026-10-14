@@ -44,10 +44,10 @@ func (m *MockResourceSKUsClient) EXPECT() *MockResourceSKUsClientMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockResourceSKUsClient) List(ctx context.Context, filter string, includeExtendedLocations bool) iter.Seq2[*armcompute.ResourceSKU, error] {
+func (m *MockResourceSKUsClient) List(ctx context.Context, filter string, includeExtendedLocations bool) iter.Seq2[armcompute.ResourceSKU, error] {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, filter, includeExtendedLocations)
-	ret0, _ := ret[0].(iter.Seq2[*armcompute.ResourceSKU, error])
+	ret0, _ := ret[0].(iter.Seq2[armcompute.ResourceSKU, error])
 	return ret0
 }
 
