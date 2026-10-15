@@ -38,6 +38,7 @@ import (
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_blob "github.com/Azure/ARO-RP/pkg/util/mocks/blob"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_graph "github.com/Azure/ARO-RP/pkg/util/mocks/graph"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
@@ -2674,4 +2675,74 @@ func (s *subnetPoliciesMatcher) Matches(x interface{}) bool {
 
 func (s *subnetPoliciesMatcher) String() string {
 	return "subnet with PrivateLinkServiceNetworkPolicies set to Disabled"
+}
+
+func TestWaitForStorageAccountRBAC(t *testing.T) {
+	ctx := context.Background()
+	errForbidden := errors.New("403 AuthorizationPermissionMismatch")
+
+	miwiProfile := &api.PlatformWorkloadIdentityProfile{}
+
+	for _, tt := range []struct {
+		name       string
+		profile    *api.PlatformWorkloadIdentityProfile
+		spProfile  *api.ServicePrincipalProfile
+		mockExists func(g *mock_graph.MockManager)
+		wantErr    string
+	}{
+		{
+			name:      "service principal cluster skips the check",
+			spProfile: &api.ServicePrincipalProfile{},
+		},
+		{
+			name:    "workload identity, graph exists",
+			profile: miwiProfile,
+			mockExists: func(g *mock_graph.MockManager) {
+				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(true, nil)
+			},
+		},
+		{
+			name:    "workload identity, graph not found is success",
+			profile: miwiProfile,
+			mockExists: func(g *mock_graph.MockManager) {
+				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, nil)
+			},
+		},
+		{
+			name:    "workload identity, error is returned",
+			profile: miwiProfile,
+			mockExists: func(g *mock_graph.MockManager) {
+				g.EXPECT().Exists(ctx, "rg", "clusterabc").Return(false, errForbidden)
+			},
+			wantErr: errForbidden.Error(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			g := mock_graph.NewMockManager(controller)
+			if tt.mockExists != nil {
+				tt.mockExists(g)
+			}
+
+			m := &manager{
+				graph: g,
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							StorageSuffix:                   "abc",
+							PlatformWorkloadIdentityProfile: tt.profile,
+							ServicePrincipalProfile:         tt.spProfile,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: "/subscriptions/sub/resourceGroups/rg",
+							},
+						},
+					},
+				},
+			}
+
+			err := m.waitForStorageAccountRBAC(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
 }

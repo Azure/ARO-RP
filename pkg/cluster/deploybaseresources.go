@@ -276,6 +276,18 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	return arm.MismatchesToCloudError(mismatches)
 }
 
+// MIWI only, waitForStorageAccountRBAC waits for storage data plane RBAC to propagate
+func (m *manager) waitForStorageAccountRBAC(ctx context.Context) error {
+	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
+		return nil
+	}
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	_, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
+	return err
+}
+
 func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.Resource) {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	azureRegion := strings.ToLower(m.doc.OpenShiftCluster.Location) // Used in k8s object names, so must pass DNS-1123 validation

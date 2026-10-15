@@ -430,6 +430,7 @@ func (m *manager) bootstrap() []steps.Step {
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.waitForStorageAccountRBAC, m.managedResourceGroupName()),
 			steps.AuthorizationRetryingAction(nil, m.federateIdentityCredentials, m.managedResourceGroupName()),
 		)
 	}
