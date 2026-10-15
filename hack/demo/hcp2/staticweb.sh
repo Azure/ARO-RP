@@ -155,7 +155,11 @@ KEYVAULT_ID=$(az keyvault show --name "${KEYVAULT_NAME}" --query id --output tsv
 az role assignment create --assignee-object-id "${KMS_MI_PID}" --assignee-principal-type ServicePrincipal --role "${KEY_VAULT_CRYPTO_USER_ROLE}" --scope "${KEYVAULT_ID}"
 
 # create the cluster
-az aro hcp cluster create --name "${CLUSTER_NAME}" --resource-group "${CUSTOMER_RG_NAME}" --location "${LOCATION}" --version "${CLUSTER_VERSION}" --channel-group stable --subnet-id "${SUBNET_ID}" --vnet-integration-subnet-id "${VNET_INTEGRATION_SUBNET_ID}" --nsg "${NSG_ID}" --managed-resource-group-name "${MANAGED_RESOURCE_GROUP}" --key-management-mode CustomerManaged --etcd-encryption-type KMS --kms-vault-name "${KEYVAULT_NAME}" --vault-visibility Public --kms-active-key "{name:${KMS_KEY_NAME},version:${KMS_KEY_VERSION}}" --api-visibility Public --ingress-visibility Public --user-assigned-identities "{${SERVICE_MI_ID}:{},${CLUSTER_API_AZURE_MI_ID}:{},${CONTROL_PLANE_MI_ID}:{},${CLOUD_CONTROLLER_MANAGER_MI_ID}:{},${INGRESS_MI_ID}:{},${DISK_CSI_DRIVER_MI_ID}:{},${FILE_CSI_DRIVER_MI_ID}:{},${IMAGE_REGISTRY_MI_ID}:{},${CLOUD_NETWORK_CONFIG_MI_ID}:{},${KMS_MI_ID}:{}}" --operators-authentication "{user-assigned-identities:{control-plane-operators:{cluster-api-azure:${CLUSTER_API_AZURE_MI_ID},control-plane:${CONTROL_PLANE_MI_ID},cloud-controller-manager:${CLOUD_CONTROLLER_MANAGER_MI_ID},ingress:${INGRESS_MI_ID},disk-csi-driver:${DISK_CSI_DRIVER_MI_ID},file-csi-driver:${FILE_CSI_DRIVER_MI_ID},image-registry:${IMAGE_REGISTRY_MI_ID},cloud-network-config:${CLOUD_NETWORK_CONFIG_MI_ID},kms:${KMS_MI_ID}},data-plane-operators:{disk-csi-driver:${DP_DISK_CSI_DRIVER_MI_ID},file-csi-driver:${DP_FILE_CSI_DRIVER_MI_ID},image-registry:${DP_IMAGE_REGISTRY_MI_ID}},service-managed-identity:${SERVICE_MI_ID}}}"
+az aro hcp cluster create --name "${CLUSTER_NAME}" --resource-group "${CUSTOMER_RG_NAME}" --location "${LOCATION}" --version "${CLUSTER_VERSION}" --channel-group stable \
+  --subnet-id "${SUBNET_ID}" --vnet-integration-subnet-id "${VNET_INTEGRATION_SUBNET_ID}" --nsg "${NSG_ID}" --managed-resource-group-name "${MANAGED_RESOURCE_GROUP}" \
+  --key-management-mode CustomerManaged --etcd-encryption-type KMS --kms-vault-name "${KEYVAULT_NAME}" --vault-visibility Public \
+  --kms-active-key "{name:${KMS_KEY_NAME},version:${KMS_KEY_VERSION}}" --api-visibility Public --ingress-visibility Public \
+  --user-assigned-identities "{${SERVICE_MI_ID}:{},${CLUSTER_API_AZURE_MI_ID}:{},${CONTROL_PLANE_MI_ID}:{},${CLOUD_CONTROLLER_MANAGER_MI_ID}:{},${INGRESS_MI_ID}:{},${DISK_CSI_DRIVER_MI_ID}:{},${FILE_CSI_DRIVER_MI_ID}:{},${IMAGE_REGISTRY_MI_ID}:{},${CLOUD_NETWORK_CONFIG_MI_ID}:{},${KMS_MI_ID}:{}}" --operators-authentication "{user-assigned-identities:{control-plane-operators:{cluster-api-azure:${CLUSTER_API_AZURE_MI_ID},control-plane:${CONTROL_PLANE_MI_ID},cloud-controller-manager:${CLOUD_CONTROLLER_MANAGER_MI_ID},ingress:${INGRESS_MI_ID},disk-csi-driver:${DISK_CSI_DRIVER_MI_ID},file-csi-driver:${FILE_CSI_DRIVER_MI_ID},image-registry:${IMAGE_REGISTRY_MI_ID},cloud-network-config:${CLOUD_NETWORK_CONFIG_MI_ID},kms:${KMS_MI_ID}},data-plane-operators:{disk-csi-driver:${DP_DISK_CSI_DRIVER_MI_ID},file-csi-driver:${DP_FILE_CSI_DRIVER_MI_ID},image-registry:${DP_IMAGE_REGISTRY_MI_ID}},service-managed-identity:${SERVICE_MI_ID}}}"
 
 # create the nodepool
 az aro hcp cluster nodepool create --cluster-name "${CLUSTER_NAME}" --name "${NP_NAME}" --resource-group "${CUSTOMER_RG_NAME}" --replicas 2 --vm-size Standard_D8s_v3 --version "${NP_VERSION}" --channel-group stable
@@ -164,17 +168,24 @@ az aro hcp cluster nodepool create --cluster-name "${CLUSTER_NAME}" --name "${NP
 az aro hcp cluster request-credential --admin -g $CUSTOMER_RG_NAME -n $CLUSTER_NAME -f $kubeconfig
 export KUBECONFIG=$kubeconfig
 
+# set up a namespace for a static web server to identify which cluster this is
 oc create namespace staticweb
 oc config set contexts.${CLUSTER_NAME}.namespace staticweb
+
+# deploy nginx in it
 oc create deployment nginx --image=nginxinc/nginx-unprivileged:latest -r 2 --port 8080
 pod=$(oc get pod -l app=nginx -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | head -1)
 oc wait --for=condition=Ready pod/$pod
+
+# create a volume to hold a basic index.html
 oc set volume deploy/nginx --add --name=staticweb --type=pvc --claim-size=1M --claim-class=azurefile-csi --claim-mode=ReadOnlyMany --mount-path=/usr/share/nginx/html/
 pod=$(oc get pod --sort-by .metadata.creationTimestamp -l app=nginx -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | tail -1)
 oc wait --for=condition=Ready pod/$pod
 echo "welcome to cluster2" > index.html
 oc cp ./index.html $pod:/usr/share/nginx/html/ 
 rm ./index.html
+
+# expose the nginx service and stash the route's hostname for use in AFD
 oc create service clusterip nginx --tcp=8080:8080
 oc expose service nginx
 oc get route nginx -o jsonpath='{.status.ingress[0].host}{"\n"}' > cluster2_route.txt
