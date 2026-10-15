@@ -6,8 +6,12 @@ group=bcdrfrontdoor
 profile=fdprofile
 endpoint=staticweb
 origingroup=og
+# uncomment these for ARO standard bcdr testing
 mainroute=$(cat cluster1/cluster1_route.txt)
 failoverroute=$(cat cluster2/cluster2_route.txt)
+# uncomment these for ARO HCP bcdr testing
+#mainroute=$(cat hcp1/cluster1_route.txt)
+#failoverroute=$(cat hcp2/cluster2_route.txt)
 
 az group create -l $location -g $group
 az afd profile create -g $group -n $profile --sku Standard_AzureFrontDoor
