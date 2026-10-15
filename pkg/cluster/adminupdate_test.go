@@ -56,7 +56,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 	generalFixesSteps := []string{
 		"[Action ensureResourceGroup]",
 		"[Action createOrUpdateDenyAssignment]",
-		"[Action ensureServiceEndpoints]",
+		"[Action ensureServiceEndpointsForUpdate]",
 		"[Action populateRegistryStorageAccountName]",
 		"[Action migrateStorageAccounts]",
 		"[Action fixSSH]",
