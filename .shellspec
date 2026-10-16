@@ -1,0 +1,4 @@
+--default-path test/bash/spec
+--helperdir test/bash/spec
+--shell bash
+--execdir @project
