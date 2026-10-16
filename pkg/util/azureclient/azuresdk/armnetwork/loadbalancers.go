@@ -32,6 +32,26 @@ func NewLoadBalancersClient(subscriptionID string, credential azcore.TokenCreden
 	return &loadBalancersClient{LoadBalancersClient: clientFactory.NewLoadBalancersClient()}, nil
 }
 
+// LoadBalancerLoadBalancingRulesClient is a minimal interface for Azure LoadBalancerLoadBalancingRulesClient
+type LoadBalancerLoadBalancingRulesClient interface {
+	HealthAndWait(ctx context.Context, resourceGroupName string, loadBalancerName string, loadBalancingRuleName string, options *armnetwork.LoadBalancerLoadBalancingRulesClientBeginHealthOptions) (armnetwork.LoadBalancerLoadBalancingRulesClientHealthResponse, error)
+}
+
+type loadBalancerLoadBalancingRulesClient struct {
+	*armnetwork.LoadBalancerLoadBalancingRulesClient
+}
+
+var _ LoadBalancerLoadBalancingRulesClient = &loadBalancerLoadBalancingRulesClient{}
+
+// NewLoadBalancerLoadBalancingRulesClient creates a new LoadBalancerLoadBalancingRulesClient
+func NewLoadBalancerLoadBalancingRulesClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (LoadBalancerLoadBalancingRulesClient, error) {
+	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, options)
+	if err != nil {
+		return nil, err
+	}
+	return &loadBalancerLoadBalancingRulesClient{LoadBalancerLoadBalancingRulesClient: clientFactory.NewLoadBalancerLoadBalancingRulesClient()}, nil
+}
+
 type LoadBalancerBackendAddressPoolsClient interface {
 	Get(ctx context.Context, resourceGroupName string, loadBalancerName string, backendAddressPoolName string, options *armnetwork.LoadBalancerBackendAddressPoolsClientGetOptions) (result armnetwork.LoadBalancerBackendAddressPoolsClientGetResponse, err error)
 }
