@@ -17,7 +17,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_armauthorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armauthorization"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	testtasks "github.com/Azure/ARO-RP/test/mimo/tasks"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -49,8 +48,8 @@ func TestEnsureClusterServicePrincipalRBAC(t *testing.T) {
 	wantCreateParameters := sdkauthorization.RoleAssignmentCreateParameters{
 		Properties: &sdkauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: &contributorID,
-			PrincipalID:      pointerutils.ToPtr(spObjectID),
-			PrincipalType:    pointerutils.ToPtr(sdkauthorization.PrincipalTypeServicePrincipal),
+			PrincipalID:      new(spObjectID),
+			PrincipalType:    new(sdkauthorization.PrincipalTypeServicePrincipal),
 		},
 	}
 
