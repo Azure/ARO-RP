@@ -1,0 +1,29 @@
+---
+description: Enforce isolated worktrees for all code changes
+alwaysApply: true
+---
+
+# Worktree Isolation
+
+- Never edit host checkout files for implementation work.
+- Start each task in an isolated git worktree: `git worktree add -b <branch-name> .worktrees/<task-name> master`
+- Always branch from `master` (the default branch for ARO-RP).
+- Keep host checkout read-only — use it only for exploration, review, and context.
+- Only include task-related files in commits.
+
+## Before Starting
+
+1. Run `gh pr list --state open` to check for parallel work that may conflict.
+2. Create the worktree from the host checkout root.
+3. Verify ancestry: `git merge-base --is-ancestor master HEAD`
+
+## Branch Naming (Non-Blocking)
+
+- Preferred branch format: `<github-alias>/<jira-id>/<short-description>`.
+- Example: `tuxerrante/aro-1234/feature-description`.
+- This is a non-blocking quality gate: follow when possible, but do not stop work if an existing branch name differs.
+
+## Implementation
+
+- All edits, builds, and tests happen inside the worktree directory.
+- Never `cd` back to host checkout to make changes.

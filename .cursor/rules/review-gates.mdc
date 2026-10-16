@@ -1,0 +1,50 @@
+---
+description: Reviewer checklist for catching high-impact PR issues early
+alwaysApply: true
+---
+
+# Review Gates
+
+Use this checklist when reviewing other people's PRs.
+
+## 1) Branch and PR Hygiene
+
+- Is the PR clearly scoped to one concern?
+- Any unrelated files (lockfiles/generated files) that should be split out?
+- Do commands and branch references match this repo (`master`, not `main`)?
+
+## 2) Correct Types and Interfaces
+
+- Are typed Kubernetes APIs used where available (not ad-hoc untyped objects)?
+- Are existing domain types reused instead of introducing duplicate local variants?
+- Are type assertions safe and justified?
+
+## 3) Error Taxonomy and Client Contract
+
+- Are `CloudError` code/status/target aligned with actual semantics?
+- Do server-side failures avoid exposing raw internal error text to callers?
+- Are nil checks present in error-only code paths (to avoid panic while handling errors)?
+- If logic changed, do test names and PR description still match behavior?
+
+## 4) Logging Consistency
+
+- Is one logging style used consistently in the flow/package?
+- Are logger APIs used idiomatically (e.g., avoid bypassing wrapper helpers)?
+- Do logs avoid leaking secrets or user-provided free text?
+
+## 5) Streaming / HTTP Behavior
+
+- Any mixed response modes (`text/plain` stream vs JSON error) that can corrupt output?
+- Are headers/status set at the correct time for streaming endpoints?
+
+## 6) Concurrency, Cleanup, and Timeouts
+
+- Any race-prone counters or shared state updates that need CAS/atomic discipline?
+- Are cleanup paths bounded with timeout contexts?
+- Are resources cleaned up predictably on partial-failure paths?
+
+## 7) Tests that Prove Non-Obvious Behavior
+
+- Added/updated tests for side effects (body restoration, cleanup, retries, throttling)?
+- Success path and failure path both covered?
+- Does the test actually assert returned errors/results (no ignored return values)?
