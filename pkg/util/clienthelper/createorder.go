@@ -18,17 +18,17 @@ import (
 // to be brought forward
 var createOrderMap = map[reflect.Type]int{
 	// non-namespaced resources
-	reflect.TypeOf(&extensionsv1.CustomResourceDefinition{}): -9, // before custom resources
-	reflect.TypeOf(&rbacv1.ClusterRole{}):                    -7, // before workload resources
-	reflect.TypeOf(&rbacv1.ClusterRoleBinding{}):             -6, // before workload resources
-	reflect.TypeOf(&securityv1.SecurityContextConstraints{}): -5, // before workload resources
+	reflect.TypeFor[*extensionsv1.CustomResourceDefinition](): -9, // before custom resources
+	reflect.TypeFor[*rbacv1.ClusterRole]():                    -7, // before workload resources
+	reflect.TypeFor[*rbacv1.ClusterRoleBinding]():             -6, // before workload resources
+	reflect.TypeFor[*securityv1.SecurityContextConstraints](): -5, // before workload resources
 
-	reflect.TypeOf(&corev1.Namespace{}): -4, // before namespaced resources
+	reflect.TypeFor[*corev1.Namespace](): -4, // before namespaced resources
 
 	// namespaced resources
-	reflect.TypeOf(&corev1.ConfigMap{}):      -3, // before workload resources
-	reflect.TypeOf(&corev1.Secret{}):         -2, // before workload resources
-	reflect.TypeOf(&corev1.ServiceAccount{}): -1, // before workload resources
+	reflect.TypeFor[*corev1.ConfigMap]():      -3, // before workload resources
+	reflect.TypeFor[*corev1.Secret]():         -2, // before workload resources
+	reflect.TypeFor[*corev1.ServiceAccount](): -1, // before workload resources
 
 	// everything else defaults to 0
 }

@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/util/holmes"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 //go:embed staticresources/holmes-config.yaml
@@ -204,8 +203,8 @@ func (hr *clusterManager) InvestigateCluster(ctx context.Context, hiveNamespace 
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						RunAsNonRoot:             pointerutils.ToPtr(true),
-						AllowPrivilegeEscalation: pointerutils.ToPtr(false),
+						RunAsNonRoot:             new(true),
+						AllowPrivilegeEscalation: new(false),
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{"ALL"},
 						},

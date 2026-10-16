@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testenvtest "github.com/Azure/ARO-RP/test/envtest"
 	testacrtoken "github.com/Azure/ARO-RP/test/util/acrtoken"
@@ -228,7 +227,7 @@ func TestRotateACRToken(t *testing.T) {
 						Name:      "pull-secret",
 						Namespace: "openshift-config",
 					},
-					Immutable: pointerutils.ToPtr(true),
+					Immutable: new(true),
 					Type:      corev1.SecretTypeDockerConfigJson,
 					Data: map[string][]byte{
 						"somethingElse":     {},
@@ -323,7 +322,7 @@ func TestRotateACRToken(t *testing.T) {
 						Name:      "pull-secret",
 						Namespace: "openshift-config",
 					},
-					Immutable: pointerutils.ToPtr(true),
+					Immutable: new(true),
 					Type:      corev1.SecretTypeDockerConfigJson,
 					Data: map[string][]byte{
 						".dockerconfigjson": []byte(`{}`),

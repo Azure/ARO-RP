@@ -28,7 +28,7 @@ type ResourceTypeMeta struct {
 	Properties `json:"properties"`
 }
 
-type Properties map[string]interface{}
+type Properties map[string]any
 
 type ValidationStatus string
 

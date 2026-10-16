@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	jwt "github.com/golang-jwt/jwt/v4"
 
@@ -34,10 +35,8 @@ func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, spTokenCredenti
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", err.Error())
 	}
 
-	for _, role := range c.Roles {
-		if role == "Application.ReadWrite.OwnedBy" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
-		}
+	if slices.Contains(c.Roles, "Application.ReadWrite.OwnedBy") {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
 	}
 
 	return nil

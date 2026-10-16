@@ -86,7 +86,7 @@ func TestPreflightValidation(t *testing.T) {
 		}
 	}
 	`
-	preflightPayload := []byte(fmt.Sprintf(preflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+	preflightPayload := fmt.Appendf(nil, preflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 		location, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, version.DefaultInstallStream.Version.String(),
 		mockSubID, mockSubID, netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -95,7 +95,7 @@ func TestPreflightValidation(t *testing.T) {
 		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 		api.EncryptionAtHostEnabled, workerSub,
 		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-		encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic))
+		encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic)
 
 	managedIdentityClusterPreflightPayloadTemplate := `
 	{
@@ -250,7 +250,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, clusterMSI, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							platformIdentities, netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -259,7 +259,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic),
 					},
 				}
 			},
@@ -277,7 +277,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, "", defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							platformIdentities, netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -286,7 +286,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic),
 					},
 				}
 			},
@@ -307,7 +307,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, "", defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							"", netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -316,7 +316,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic),
 					},
 				}
 			},
@@ -337,7 +337,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, clusterMSI, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							missingPlatformIdentities, netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -346,7 +346,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic),
 					},
 				}
 			},
@@ -368,7 +368,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, clusterMSI, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							incorrectPlatformIdentities, netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -377,7 +377,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic),
 					},
 				}
 			},
@@ -399,7 +399,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, clusterMSI, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							fmt.Sprintf(extraPlatformIdentities, ""), netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -408,7 +408,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, ingressProfileIP, api.VisibilityPublic),
 					},
 				}
 			},
@@ -430,7 +430,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(`
+						fmt.Appendf(nil, `
 							{
 								"apiVersion": "%s",
 								"id": "%s",
@@ -453,7 +453,7 @@ func TestPreflightValidation(t *testing.T) {
 							`, apiVersion, clusterId,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
-							location, defaultProfile, version.DefaultInstallStream.Version.String(), api.FipsValidatedModulesEnabled, mockSubID, mockSubID)),
+							location, defaultProfile, version.DefaultInstallStream.Version.String(), api.FipsValidatedModulesEnabled, mockSubID, mockSubID),
 					},
 				}
 			},
@@ -473,7 +473,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(`
+						fmt.Appendf(nil, `
 							{
 								"apiVersion": "%s",
 								"id": "%s",
@@ -485,7 +485,7 @@ func TestPreflightValidation(t *testing.T) {
 							`, apiVersion, "resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
-							location)),
+							location),
 					},
 				}
 			},
@@ -506,7 +506,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(`
+						fmt.Appendf(nil, `
 							{
 								"apiVersion": "%s",
 								"id": "%s",
@@ -568,7 +568,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
 							encryptionSet, api.VisibilityPublic, defaultProfile, api.VisibilityPublic,
-							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.IngressProfiles[0].IP)),
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.IngressProfiles[0].IP),
 					},
 				}
 			},
@@ -637,7 +637,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(preflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, preflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, version.DefaultInstallStream.Version.String(),
 							mockSubID, mockSubID, netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -646,7 +646,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, "", api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, "", api.VisibilityPublic),
 					},
 				}
 			},
@@ -825,7 +825,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, clusterMSI, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							fmt.Sprintf(extraPlatformIdentities, ""), netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -834,7 +834,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, "", api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, "", api.VisibilityPublic),
 					},
 				}
 			},
@@ -949,7 +949,7 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(fmt.Sprintf(managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						fmt.Appendf(nil, managedIdentityClusterPreflightPayloadTemplate, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 							location, clusterMSI, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, defaultVersion,
 							fmt.Sprintf(extraPlatformIdentities, upgradeableTo), netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
@@ -958,7 +958,7 @@ func TestPreflightValidation(t *testing.T) {
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
 							api.EncryptionAtHostEnabled, workerSub,
 							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
-							encryptionSet, api.VisibilityPublic, defaultProfile, "", api.VisibilityPublic)),
+							encryptionSet, api.VisibilityPublic, defaultProfile, "", api.VisibilityPublic),
 					},
 				}
 			},

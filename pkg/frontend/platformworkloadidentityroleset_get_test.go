@@ -11,9 +11,8 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/api/v20220904"
-	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
@@ -60,18 +59,18 @@ func TestGetPlatformWorkloadIdentityRoleSet(t *testing.T) {
 			wantResponse: &v20250725.PlatformWorkloadIdentityRoleSet{
 				PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
 					Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{
-						OpenShiftVersion: pointerutils.ToPtr(availableMinorVersion),
+						OpenShiftVersion: new(availableMinorVersion),
 						PlatformWorkloadIdentityRoles: []*generated.PlatformWorkloadIdentityRole{
 							{
-								OperatorName:       pointerutils.ToPtr("CloudControllerManager"),
-								RoleDefinitionName: pointerutils.ToPtr("Azure RedHat OpenShift Cloud Controller Manager Role"),
-								RoleDefinitionID:   pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
+								OperatorName:       new("CloudControllerManager"),
+								RoleDefinitionName: new("Azure RedHat OpenShift Cloud Controller Manager Role"),
+								RoleDefinitionID:   new("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
 							},
 						},
 					},
-					ID:   pointerutils.ToPtr("mockID"),
-					Name: pointerutils.ToPtr(availableMinorVersion),
-					Type: pointerutils.ToPtr(api.PlatformWorkloadIdentityRoleSetsType),
+					ID:   new("mockID"),
+					Name: new(availableMinorVersion),
+					Type: new(api.PlatformWorkloadIdentityRoleSetsType),
 				},
 			},
 		},

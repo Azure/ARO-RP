@@ -17,7 +17,7 @@ type AsyncOperation struct {
 	InitialProvisioningState ProvisioningState `json:"initialStatus,omitempty"`
 	ProvisioningState        ProvisioningState `json:"status,omitempty"`
 
-	StartTime time.Time  `json:"startTime,omitempty" deep:"-"`
+	StartTime time.Time  `json:"startTime" deep:"-"`
 	EndTime   *time.Time `json:"endTime,omitempty" deep:"-"`
 
 	Error *CloudErrorBody `json:"error,omitempty"`

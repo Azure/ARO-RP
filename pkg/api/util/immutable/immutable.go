@@ -34,7 +34,7 @@ func (e *ValidationError) Error() string {
 //
 // Used for validation in API versions before v20250725, which use hand-written
 // models.
-func Validate(path string, v, w interface{}) error {
+func Validate(path string, v, w any) error {
 	return validate(path, reflect.ValueOf(v), reflect.ValueOf(w), false)
 }
 
@@ -47,7 +47,7 @@ func Validate(path string, v, w interface{}) error {
 //
 // Used for validation in API versions on or after v20250725, which use models
 // generated from TypeSpec.
-func ValidateWithPolicy(path string, v, w interface{}, policy Policy) error {
+func ValidateWithPolicy(path string, v, w any, policy Policy) error {
 	return validateWithPolicy(path, reflect.ValueOf(v), reflect.ValueOf(w), policy, false, false)
 }
 
@@ -268,13 +268,13 @@ func policyJSONName(field reflect.StructField) string {
 		{"URL", "Url"},
 	}
 	for _, replacement := range replacements {
-		if strings.HasSuffix(name, replacement.old) {
-			name = strings.TrimSuffix(name, replacement.old) + replacement.new
+		if before, ok := strings.CutSuffix(name, replacement.old); ok {
+			name = before + replacement.new
 			break
 		}
 	}
-	if strings.HasPrefix(name, "VM") {
-		name = "Vm" + strings.TrimPrefix(name, "VM")
+	if after, ok := strings.CutPrefix(name, "VM"); ok {
+		name = "Vm" + after
 	}
 	return strings.ToLower(name[:1]) + name[1:]
 }

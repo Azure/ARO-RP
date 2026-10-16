@@ -35,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type degradedEtcd struct {
@@ -195,15 +194,16 @@ func getPeerPods(pods []corev1.Pod, de *degradedEtcd, cluster string) (string, e
 		return "", err
 	}
 
-	var peerPods string
+	var peerPods strings.Builder
 	for _, p := range pods {
 		if regNode.MatchString(p.Spec.NodeName) &&
 			regPod.MatchString(p.Name) &&
 			p.Name != de.Pod {
-			peerPods += p.Name + " "
+			peerPods.WriteString(p.Name)
+			peerPods.WriteString(" ")
 		}
 	}
-	return peerPods, nil
+	return peerPods.String(), nil
 }
 
 func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error) {
@@ -232,7 +232,7 @@ func newPodFixPeers(peerPods, deNode string) (*unstructured.Unstructured, error)
 						backupOrFixEtcd,
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointerutils.ToPtr(true),
+						Privileged: new(true),
 					},
 					Env: []corev1.EnvVar{
 						{
@@ -333,8 +333,8 @@ func fixPeers(ctx context.Context, log *logrus.Entry, de *degradedEtcd, pods *co
 
 func newServiceAccount(name string) *unstructured.Unstructured {
 	serviceAcc := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"automountServiceAccountToken": pointerutils.ToPtr(true),
+		Object: map[string]any{
+			"automountServiceAccountToken": new(true),
 		},
 	}
 	serviceAcc.SetAPIVersion("v1")
@@ -347,7 +347,7 @@ func newServiceAccount(name string) *unstructured.Unstructured {
 
 func newClusterRole(roleName string) *unstructured.Unstructured {
 	clusterRole := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"rules": []rbacv1.PolicyRule{
 				{
 					Verbs:     []string{"get"},
@@ -372,8 +372,8 @@ func newClusterRole(roleName string) *unstructured.Unstructured {
 
 func newClusterRoleBinding(name, roleName string) *unstructured.Unstructured {
 	crb := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"roleRef": map[string]interface{}{
+		Object: map[string]any{
+			"roleRef": map[string]any{
 				"kind":     "ClusterRole",
 				"name":     roleName,
 				"apiGroup": "rbac.authorization.k8s.io",
@@ -397,7 +397,7 @@ func newClusterRoleBinding(name, roleName string) *unstructured.Unstructured {
 // allowPrivilegeEscalation and allowedCapabilities omitted: the recovery pod only needs hostDir access.
 func newSecurityContextConstraint(name, sccUsers string) *unstructured.Unstructured {
 	scc := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"groups":                   []string{},
 			"users":                    []string{sccUsers},
 			"allowPrivilegedContainer": true,
@@ -634,7 +634,7 @@ func createBackupEtcdDataPod(node string) (*unstructured.Unstructured, error) {
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"SYS_CHROOT"},
 						},
-						Privileged: pointerutils.ToPtr(true),
+						Privileged: new(true),
 					},
 					Env: []corev1.EnvVar{
 						{

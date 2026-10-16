@@ -6,67 +6,67 @@ package api
 const APIVersionKey = "api-version"
 
 type OpenShiftClusterConverter interface {
-	ToExternal(*OpenShiftCluster) interface{}
-	ToExternalList([]*OpenShiftCluster, string) interface{}
-	ToInternal(interface{}, *OpenShiftCluster)
-	ExternalNoReadOnly(interface{})
+	ToExternal(*OpenShiftCluster) any
+	ToExternalList([]*OpenShiftCluster, string) any
+	ToInternal(any, *OpenShiftCluster)
+	ExternalNoReadOnly(any)
 }
 
 type OpenShiftClusterStaticValidator interface {
-	Static(interface{}, *OpenShiftCluster, string, string, bool, ArchitectureVersion, string) error
+	Static(any, *OpenShiftCluster, string, string, bool, ArchitectureVersion, string) error
 }
 
 type OpenShiftClusterCredentialsConverter interface {
-	ToExternal(*OpenShiftCluster) interface{}
+	ToExternal(*OpenShiftCluster) any
 }
 
 type OpenShiftClusterAdminKubeconfigConverter interface {
-	ToExternal(*OpenShiftCluster) interface{}
+	ToExternal(*OpenShiftCluster) any
 }
 
 type OpenShiftVersionConverter interface {
-	ToExternal(*OpenShiftVersion) interface{}
-	ToExternalList([]*OpenShiftVersion) interface{}
-	ToInternal(interface{}, *OpenShiftVersion)
+	ToExternal(*OpenShiftVersion) any
+	ToExternalList([]*OpenShiftVersion) any
+	ToInternal(any, *OpenShiftVersion)
 }
 
 type OpenShiftVersionStaticValidator interface {
-	Static(interface{}, *OpenShiftVersion) error
+	Static(any, *OpenShiftVersion) error
 }
 
 type PlatformWorkloadIdentityRoleSetConverter interface {
-	ToExternal(*PlatformWorkloadIdentityRoleSet) interface{}
-	ToExternalList([]*PlatformWorkloadIdentityRoleSet) interface{}
-	ToInternal(interface{}, *PlatformWorkloadIdentityRoleSet)
+	ToExternal(*PlatformWorkloadIdentityRoleSet) any
+	ToExternalList([]*PlatformWorkloadIdentityRoleSet) any
+	ToInternal(any, *PlatformWorkloadIdentityRoleSet)
 }
 
 type PlatformWorkloadIdentityRoleSetStaticValidator interface {
-	Static(interface{}, *PlatformWorkloadIdentityRoleSet) error
+	Static(any, *PlatformWorkloadIdentityRoleSet) error
 }
 
 type MaintenanceManifestConverter interface {
-	ToExternal(doc *MaintenanceManifestDocument, clusterNamespaced bool) interface{}
-	ToExternalList(docs []*MaintenanceManifestDocument, nextLink string, clusterNamespaced bool) interface{}
-	ToInternal(interface{}, *MaintenanceManifestDocument)
+	ToExternal(doc *MaintenanceManifestDocument, clusterNamespaced bool) any
+	ToExternalList(docs []*MaintenanceManifestDocument, nextLink string, clusterNamespaced bool) any
+	ToInternal(any, *MaintenanceManifestDocument)
 }
 
 type MaintenanceManifestStaticValidator interface {
-	Static(interface{}, *MaintenanceManifestDocument) error
+	Static(any, *MaintenanceManifestDocument) error
 }
 
 type MaintenanceScheduleConverter interface {
-	ToExternal(doc *MaintenanceScheduleDocument) interface{}
-	ToExternalList(docs []*MaintenanceScheduleDocument, nextLink string) interface{}
-	ToInternal(interface{}, *MaintenanceScheduleDocument)
+	ToExternal(doc *MaintenanceScheduleDocument) any
+	ToExternalList(docs []*MaintenanceScheduleDocument, nextLink string) any
+	ToInternal(any, *MaintenanceScheduleDocument)
 }
 
 type MaintenanceScheduleStaticValidator interface {
-	Static(interface{}, *MaintenanceScheduleDocument) error
+	Static(any, *MaintenanceScheduleDocument) error
 }
 
 type BillingDocumentConverter interface {
-	ToExternal(doc *BillingDocument) interface{}
-	ToExternalList(docs []*BillingDocument, nextLink string) interface{}
+	ToExternal(doc *BillingDocument) any
+	ToExternalList(docs []*BillingDocument, nextLink string) any
 }
 
 // Version is a set of endpoints implemented by each API version

@@ -332,7 +332,7 @@ type fakePlatformWorkloadIdentityRoleSetDocumentIterator struct {
 	done                                     bool
 }
 
-func (i *fakePlatformWorkloadIdentityRoleSetDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakePlatformWorkloadIdentityRoleSetDocumentIterator) NextRaw(ctx context.Context, maxItemCount int, out any) error {
 	return ErrNotImplemented
 }
 
@@ -347,10 +347,7 @@ func (i *fakePlatformWorkloadIdentityRoleSetDocumentIterator) Next(ctx context.C
 		i.continuation = len(i.platformWorkloadIdentityRoleSetDocuments)
 		i.done = true
 	} else {
-		max := i.continuation + maxItemCount
-		if max > len(i.platformWorkloadIdentityRoleSetDocuments) {
-			max = len(i.platformWorkloadIdentityRoleSetDocuments)
-		}
+		max := min(i.continuation+maxItemCount, len(i.platformWorkloadIdentityRoleSetDocuments))
 		platformWorkloadIdentityRoleSetDocuments = i.platformWorkloadIdentityRoleSetDocuments[i.continuation:max]
 		i.continuation = max
 		i.done = i.Continuation() == ""
@@ -383,7 +380,7 @@ func (i *fakePlatformWorkloadIdentityRoleSetDocumentErroringRawIterator) Next(ct
 	return nil, i.err
 }
 
-func (i *fakePlatformWorkloadIdentityRoleSetDocumentErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+func (i *fakePlatformWorkloadIdentityRoleSetDocumentErroringRawIterator) NextRaw(context.Context, int, any) error {
 	return i.err
 }
 

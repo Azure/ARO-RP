@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 	fakemetrics "github.com/Azure/ARO-RP/test/util/metrics"
@@ -41,7 +40,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 						Generation: 4,
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas: pointerutils.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 					},
 					Status: appsv1.DeploymentStatus{
 						Replicas:            1,
@@ -57,7 +56,7 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 						Generation: 4,
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas: pointerutils.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 					},
 					Status: appsv1.DeploymentStatus{
 						Replicas:            1,

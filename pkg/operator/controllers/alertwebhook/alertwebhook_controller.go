@@ -69,20 +69,20 @@ func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) er
 		return err
 	}
 
-	var am map[string]interface{}
+	var am map[string]any
 	err = yaml.Unmarshal(s.Data["alertmanager.yaml"], &am)
 	if err != nil {
 		return err
 	}
 
-	receivers, ok := am["receivers"].([]interface{})
+	receivers, ok := am["receivers"].([]any)
 	if !ok {
 		return nil
 	}
 
 	var changed bool
 	for _, r := range receivers {
-		r, ok := r.(map[string]interface{})
+		r, ok := r.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -91,8 +91,8 @@ func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) er
 			continue
 		}
 
-		webhookConfigs := []interface{}{
-			map[string]interface{}{"url": addr},
+		webhookConfigs := []any{
+			map[string]any{"url": addr},
 		}
 
 		if !reflect.DeepEqual(r["webhook_configs"], webhookConfigs) {

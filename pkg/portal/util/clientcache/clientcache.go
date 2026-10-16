@@ -13,15 +13,15 @@ import (
 // connections across multiple incoming calls, saving us TCP, TLS and proxy
 // initialisations.
 type ClientCache interface {
-	Get(interface{}) *http.Client
-	Put(interface{}, *http.Client)
+	Get(any) *http.Client
+	Put(any, *http.Client)
 }
 
 type clientCache struct {
 	mu  sync.Mutex
 	now func() time.Time
 	ttl time.Duration
-	m   map[interface{}]*v
+	m   map[any]*v
 }
 
 type v struct {
@@ -34,7 +34,7 @@ func New(ttl time.Duration) ClientCache {
 	return &clientCache{
 		now: time.Now,
 		ttl: ttl,
-		m:   map[interface{}]*v{},
+		m:   map[any]*v{},
 	}
 }
 
@@ -49,7 +49,7 @@ func (c *clientCache) expire() {
 	}
 }
 
-func (c *clientCache) Get(k interface{}) (cli *http.Client) {
+func (c *clientCache) Get(k any) (cli *http.Client) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -63,7 +63,7 @@ func (c *clientCache) Get(k interface{}) (cli *http.Client) {
 	return
 }
 
-func (c *clientCache) Put(k interface{}, cli *http.Client) {
+func (c *clientCache) Put(k any, cli *http.Client) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

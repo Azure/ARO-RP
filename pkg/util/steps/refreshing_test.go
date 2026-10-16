@@ -61,7 +61,7 @@ func TestCreateActionableError(t *testing.T) {
 			rawErr: &azure.ServiceError{
 				Code:    "DeploymentFailed",
 				Message: "Unknown service error",
-				Details: []map[string]interface{}{
+				Details: []map[string]any{
 					{
 						"code":    "Forbidden",
 						"message": "{\"error\": {\"code\": \"AuthorizationFailed\"} }",

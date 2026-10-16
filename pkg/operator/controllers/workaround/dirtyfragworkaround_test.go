@@ -342,7 +342,7 @@ func TestDirtyfragWorkaroundEnsureMarshalError(t *testing.T) {
 	workaround := &dirtyfragworkaround{
 		log: log,
 		ch:  clienthelper.NewWithClient(log, cl),
-		marshal: func(v interface{}) ([]byte, error) {
+		marshal: func(v any) ([]byte, error) {
 			return nil, expectedErr
 		},
 	}

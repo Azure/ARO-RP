@@ -16,7 +16,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilcontainerservice "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerservice"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 //go:embed testdata
@@ -32,17 +31,17 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	managedClustersList := []*armcontainerservice.ManagedCluster{
 		{
-			Name:     pointerutils.ToPtr("aro-aks-cluster-001"),
-			Location: pointerutils.ToPtr("eastus"),
+			Name:     new("aro-aks-cluster-001"),
+			Location: new("eastus"),
 			Properties: &armcontainerservice.ManagedClusterProperties{
-				NodeResourceGroup: pointerutils.ToPtr("rp-eastus-aks1"),
+				NodeResourceGroup: new("rp-eastus-aks1"),
 			},
 		},
 		{
-			Name:     pointerutils.ToPtr("aro-aks-cluster-002"),
-			Location: pointerutils.ToPtr("eastus"),
+			Name:     new("aro-aks-cluster-002"),
+			Location: new("eastus"),
 			Properties: &armcontainerservice.ManagedClusterProperties{
-				NodeResourceGroup: pointerutils.ToPtr("rp-eastus-aks2"),
+				NodeResourceGroup: new("rp-eastus-aks2"),
 			},
 		},
 	}
@@ -54,7 +53,7 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	kcresp := []*armcontainerservice.CredentialResult{
 		{
-			Name:  pointerutils.ToPtr("admin config"),
+			Name:  new("admin config"),
 			Value: kc,
 		},
 	}

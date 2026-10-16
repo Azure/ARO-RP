@@ -85,8 +85,8 @@ func digestFromReference(reference string) (string, error) {
 // repoFromReference extracts the repository from an image reference,
 // stripping any tag or digest suffix.
 func repoFromReference(reference string) string {
-	if idx := strings.Index(reference, "@"); idx != -1 {
-		return reference[:idx]
+	if before, _, ok := strings.Cut(reference, "@"); ok {
+		return before
 	}
 	if idx := strings.LastIndex(reference, ":"); idx != -1 {
 		if slashIdx := strings.LastIndex(reference, "/"); slashIdx < idx {
@@ -144,14 +144,13 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 
 	wg := &sync.WaitGroup{}
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
+	for i := range 10 {
+		wg.Go(func() {
 			l := log.WithField("worker", i)
 			for w := range ch {
 				l.Debugf("mirroring %s", w.tag)
 				var err error
-				for retry := 0; retry < 6; retry++ {
+				for range 6 {
 					workTime := time.Now()
 					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
 					l.WithField("duration", time.Since(workTime)).WithField("tag", w.tag).WithError(err).Debug("completed")
@@ -173,8 +172,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 
 				results <- err
 			}
-			wg.Done()
-		}()
+		})
 	}
 
 	go func() {

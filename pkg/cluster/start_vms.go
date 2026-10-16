@@ -26,7 +26,6 @@ func (m *manager) startVMs(ctx context.Context) error {
 	{
 		g, groupCtx := errgroup.WithContext(ctx)
 		for i, vm := range vms {
-			i, vm := i, vm // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() (err error) {
 				vms[i], err = m.virtualMachines.Get(groupCtx, resourceGroupName, *vm.Name, mgmtcompute.InstanceView)
 				return
@@ -66,7 +65,6 @@ func (m *manager) startVMs(ctx context.Context) error {
 	{
 		g, groupCtx := errgroup.WithContext(ctx)
 		for _, vm := range vmsToStart {
-			vm := vm // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
 				return arm.Retryable(groupCtx, func() error {
 					return m.virtualMachines.StartAndWait(groupCtx, resourceGroupName, *vm.Name)

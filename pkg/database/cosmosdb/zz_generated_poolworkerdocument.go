@@ -63,7 +63,7 @@ type PoolWorkerDocumentIterator interface {
 // PoolWorkerDocumentRawIterator is a poolWorkerDocument raw iterator
 type PoolWorkerDocumentRawIterator interface {
 	PoolWorkerDocumentIterator
-	NextRaw(context.Context, int, interface{}) error
+	NextRaw(context.Context, int, any) error
 }
 
 // NewPoolWorkerDocumentClient returns a new poolWorkerDocument client
@@ -277,7 +277,7 @@ func (i *poolWorkerDocumentQueryIterator) Next(ctx context.Context, maxItemCount
 	return
 }
 
-func (i *poolWorkerDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *poolWorkerDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw any) (err error) {
 	if i.done {
 		return
 	}

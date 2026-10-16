@@ -11,8 +11,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
-	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	v20250725 "github.com/Azure/ARO-RP/pkg/api/v20250725"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
@@ -51,11 +50,11 @@ func TestGetInstallVersions(t *testing.T) {
 			wantResponse: v20250725.OpenShiftVersion{
 				OpenShiftVersion: generated.OpenShiftVersion{
 					Properties: &generated.OpenShiftVersionProperties{
-						Version: pointerutils.ToPtr(availableVersion),
+						Version: new(availableVersion),
 					},
-					Name: pointerutils.ToPtr(availableVersion),
-					ID:   pointerutils.ToPtr("mockID"),
-					Type: pointerutils.ToPtr(api.OpenShiftVersionsType),
+					Name: new(availableVersion),
+					ID:   new("mockID"),
+					Type: new(api.OpenShiftVersionsType),
 				},
 			},
 		},

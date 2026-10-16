@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -111,7 +110,7 @@ func newEncryptedStorageClass(diskEncryptionSetID, encryptedStorageClassName, pr
 		},
 		Provisioner:          provisioner,
 		VolumeBindingMode:    &volumeBindingMode,
-		AllowVolumeExpansion: pointerutils.ToPtr(true),
+		AllowVolumeExpansion: new(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"kind":                "Managed",

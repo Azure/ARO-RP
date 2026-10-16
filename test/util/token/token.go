@@ -11,9 +11,9 @@ import (
 )
 
 type Custom struct {
-	ObjectId   string                 `json:"oid"`
-	ClaimNames map[string]interface{} `json:"_claim_names"`
-	Groups     []string               `json:"groups"`
+	ObjectId   string         `json:"oid"`
+	ClaimNames map[string]any `json:"_claim_names"`
+	Groups     []string       `json:"groups"`
 	jwt.RegisteredClaims
 }
 
@@ -24,7 +24,7 @@ func CreateTestToken(oid string, fakeClaims *Custom) (string, error) {
 	// Create the custom claims
 	claims := Custom{
 		ObjectId: oid,
-		ClaimNames: map[string]interface{}{
+		ClaimNames: map[string]any{
 			"example_claim": "example_value",
 		},
 		RegisteredClaims: jwt.RegisteredClaims{

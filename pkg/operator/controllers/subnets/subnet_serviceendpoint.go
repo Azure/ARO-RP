@@ -14,7 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s subnet.Subnet) error {
@@ -53,8 +52,8 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 			}
 			if !found {
 				subnetObject.Properties.ServiceEndpoints = append(subnetObject.Properties.ServiceEndpoints, &armnetwork.ServiceEndpointPropertiesFormat{
-					Service:   pointerutils.ToPtr(endpoint),
-					Locations: []*string{pointerutils.ToPtr("*")},
+					Service:   new(endpoint),
+					Locations: []*string{new("*")},
 				})
 				changed = true
 			}

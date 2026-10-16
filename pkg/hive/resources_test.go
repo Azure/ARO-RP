@@ -14,7 +14,6 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -153,7 +152,7 @@ func TestBoundSASigningKeySecret(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					ClusterProfile: api.ClusterProfile{
-						BoundServiceAccountSigningKey: pointerutils.ToPtr(api.SecureString("fakeboundserviceaccountsigningkey")),
+						BoundServiceAccountSigningKey: new(api.SecureString("fakeboundserviceaccountsigningkey")),
 					},
 				},
 			},

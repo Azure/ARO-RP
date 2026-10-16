@@ -13,7 +13,6 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 func TestValidateProviders(t *testing.T) {
@@ -29,28 +28,28 @@ func TestValidateProviders(t *testing.T) {
 			name: "pass",
 			mockProviders: []mgmtfeatures.Provider{
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Authorization"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Authorization"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Compute"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Compute"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Network"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Network"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Storage"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Storage"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("otherRegisteredProvider"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("otherRegisteredProvider"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("otherNotRegisteredProvider"),
-					RegistrationState: pointerutils.ToPtr("NotRegistered"),
+					Namespace:         new("otherNotRegisteredProvider"),
+					RegistrationState: new("NotRegistered"),
 				},
 			},
 		},
@@ -58,28 +57,28 @@ func TestValidateProviders(t *testing.T) {
 			name: "fail: compute not registered",
 			mockProviders: []mgmtfeatures.Provider{
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Authorization"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Authorization"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Compute"),
-					RegistrationState: pointerutils.ToPtr("NotRegistered"),
+					Namespace:         new("Microsoft.Compute"),
+					RegistrationState: new("NotRegistered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Network"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Network"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Storage"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Storage"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("otherRegisteredProvider"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("otherRegisteredProvider"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("otherNotRegisteredProvider"),
-					RegistrationState: pointerutils.ToPtr("NotRegistered"),
+					Namespace:         new("otherNotRegisteredProvider"),
+					RegistrationState: new("NotRegistered"),
 				},
 			},
 			wantErr: "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Compute' is not registered.",
@@ -88,24 +87,24 @@ func TestValidateProviders(t *testing.T) {
 			name: "fail: storage missing",
 			mockProviders: []mgmtfeatures.Provider{
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Authorization"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Authorization"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Compute"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Compute"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("Microsoft.Network"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("Microsoft.Network"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("otherRegisteredProvider"),
-					RegistrationState: pointerutils.ToPtr("Registered"),
+					Namespace:         new("otherRegisteredProvider"),
+					RegistrationState: new("Registered"),
 				},
 				{
-					Namespace:         pointerutils.ToPtr("otherNotRegisteredProvider"),
-					RegistrationState: pointerutils.ToPtr("NotRegistered"),
+					Namespace:         new("otherNotRegisteredProvider"),
+					RegistrationState: new("NotRegistered"),
 				},
 			},
 			wantErr: "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Storage' is not registered.",

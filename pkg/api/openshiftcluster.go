@@ -21,9 +21,9 @@ type OpenShiftCluster struct {
 	Name       string                     `json:"name,omitempty"`
 	Type       string                     `json:"type,omitempty"`
 	Location   string                     `json:"location,omitempty"`
-	SystemData SystemData                 `json:"systemData,omitempty"`
+	SystemData SystemData                 `json:"systemData"`
 	Tags       map[string]string          `json:"tags,omitempty"`
-	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+	Properties OpenShiftClusterProperties `json:"properties"`
 	Identity   *ManagedServiceIdentity    `json:"managedServiceIdentity,omitempty"`
 
 	// this property is used in the enrichers. Should not be marshalled
@@ -164,7 +164,7 @@ type OpenShiftClusterProperties struct {
 	// Only new clusters have this set
 	Zones []string `json:"zones,omitempty"`
 
-	CreatedAt time.Time `json:"createdAt,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
 
 	// CreatedBy is the RP version (Git commit hash) that created this cluster
 	CreatedBy string `json:"createdBy,omitempty"`
@@ -173,19 +173,19 @@ type OpenShiftClusterProperties struct {
 	// admin updated this cluster
 	ProvisionedBy string `json:"provisionedBy,omitempty"`
 
-	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
+	ClusterProfile ClusterProfile `json:"clusterProfile"`
 
-	FeatureProfile FeatureProfile `json:"featureProfile,omitempty"`
+	FeatureProfile FeatureProfile `json:"featureProfile"`
 
-	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
+	ConsoleProfile ConsoleProfile `json:"consoleProfile"`
 
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
 	PlatformWorkloadIdentityProfile *PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
 
-	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
+	NetworkProfile NetworkProfile `json:"networkProfile"`
 
-	MasterProfile MasterProfile `json:"masterProfile,omitempty"`
+	MasterProfile MasterProfile `json:"masterProfile"`
 
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
@@ -193,7 +193,7 @@ type OpenShiftClusterProperties struct {
 	// WorkerProfilesStatus is used to store the enriched worker profile data
 	WorkerProfilesStatus []WorkerProfile `json:"workerProfilesStatus,omitempty" swagger:"readOnly"`
 
-	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
+	APIServerProfile APIServerProfile `json:"apiserverProfile"`
 
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
 
@@ -221,7 +221,7 @@ type OpenShiftClusterProperties struct {
 
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 
-	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
+	HiveProfile HiveProfile `json:"hiveProfile"`
 
 	MaintenanceState MaintenanceState `json:"maintenanceState,omitempty"`
 }
@@ -918,7 +918,7 @@ type RegistryProfile struct {
 type Install struct {
 	MissingFields
 
-	Now   time.Time    `json:"now,omitempty"`
+	Now   time.Time    `json:"now"`
 	Phase InstallPhase `json:"phase"`
 }
 

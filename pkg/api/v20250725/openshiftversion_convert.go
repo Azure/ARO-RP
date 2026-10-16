@@ -5,7 +5,6 @@ package v20250725
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
@@ -16,26 +15,26 @@ type openShiftVersionConverter struct{}
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{} {
+func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) any {
 	out := &OpenShiftVersion{
 		OpenShiftVersion: generated.OpenShiftVersion{
 			Properties: &generated.OpenShiftVersionProperties{
-				Version: pointerutils.ToPtr(v.Properties.Version),
+				Version: new(v.Properties.Version),
 			},
-			Name: pointerutils.ToPtr(v.Name),
-			Type: pointerutils.ToPtr(v.Type),
+			Name: new(v.Name),
+			Type: new(v.Type),
 		},
 	}
 	if v.ID != "" {
-		out.ID = pointerutils.ToPtr(v.ID)
+		out.ID = new(v.ID)
 	}
 
 	if value(out.Name) == "" {
-		out.Name = pointerutils.ToPtr(v.Properties.Version)
+		out.Name = new(v.Properties.Version)
 	}
 
 	if value(out.Type) == "" {
-		out.Type = pointerutils.ToPtr(api.OpenShiftVersionsType)
+		out.Type = new(api.OpenShiftVersionsType)
 	}
 
 	return out
@@ -43,7 +42,7 @@ func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{}
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) interface{} {
+func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) any {
 	l := &OpenShiftVersionList{
 		OpenShiftVersions: make([]*OpenShiftVersion, 0, len(vers)),
 	}
@@ -59,7 +58,7 @@ func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) 
 // all mapped fields from the external representation. ToInternal modifies its
 // argument; there is no pointer aliasing between the passed and returned
 // objects
-func (c openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShiftVersion) {
+func (c openShiftVersionConverter) ToInternal(_new any, out *api.OpenShiftVersion) {
 	new := _new.(*OpenShiftVersion)
 	out.Properties.Version = value(new.Properties.Version)
 	out.Name = value(new.Properties.Version)

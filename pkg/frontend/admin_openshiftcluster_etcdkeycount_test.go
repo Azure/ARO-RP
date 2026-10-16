@@ -54,7 +54,7 @@ func TestAdminPostEtcdKeyCount(t *testing.T) {
 			},
 			wantStatusCode:          http.StatusOK,
 			wantResponseContentType: "text/plain",
-			wantResponse:            []byte(fmt.Sprintf("Executing in %s/etcd-master-0/%s...\n42 default\n18 kube-system\nDone.\n\n", namespaceEtcds, etcdContainerName)),
+			wantResponse:            fmt.Appendf(nil, "Executing in %s/etcd-master-0/%s...\n42 default\n18 kube-system\nDone.\n\n", namespaceEtcds, etcdContainerName),
 		},
 		{
 			name:   "exec failure streams Command failed",
@@ -67,7 +67,7 @@ func TestAdminPostEtcdKeyCount(t *testing.T) {
 			},
 			wantStatusCode:          http.StatusOK,
 			wantResponseContentType: "text/plain",
-			wantResponse:            []byte(fmt.Sprintf("Executing in %s/etcd-master-0/%s...\nCommand failed: connection refused\n\n", namespaceEtcds, etcdContainerName)),
+			wantResponse:            fmt.Appendf(nil, "Executing in %s/etcd-master-0/%s...\nCommand failed: connection refused\n\n", namespaceEtcds, etcdContainerName),
 		},
 		{
 			name:   "stderr output is prefixed with stderr header",
@@ -83,7 +83,7 @@ func TestAdminPostEtcdKeyCount(t *testing.T) {
 			},
 			wantStatusCode:          http.StatusOK,
 			wantResponseContentType: "text/plain",
-			wantResponse:            []byte(fmt.Sprintf("Executing in %s/etcd-master-0/%s...\nstderr:\netcdctl: connection refused\nDone.\n\n", namespaceEtcds, etcdContainerName)),
+			wantResponse:            fmt.Appendf(nil, "Executing in %s/etcd-master-0/%s...\nstderr:\netcdctl: connection refused\nDone.\n\n", namespaceEtcds, etcdContainerName),
 		},
 		{
 			name:                    "missing vmName returns 400",
