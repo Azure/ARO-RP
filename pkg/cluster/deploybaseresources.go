@@ -276,11 +276,8 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	return arm.MismatchesToCloudError(mismatches)
 }
 
-// MIWI only, waitForStorageAccountRBAC waits for storage data plane RBAC to propagate
-func (m *manager) waitForStorageAccountRBAC(ctx context.Context) error {
-	if !m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
-		return nil
-	}
+// waitForClusterGraphAccess confirms blob access for the cluster storage account
+func (m *manager) waitForClusterGraphAccess(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
