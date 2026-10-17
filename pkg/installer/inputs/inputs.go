@@ -264,6 +264,8 @@ func (b *Builder) addProductionEnvironment(inputs *InstallerInputs) error {
 	if inputs.InstallerIdentityClientID == "" {
 		return fmt.Errorf("ARO_INSTALLER_IDENTITY_CLIENT_ID must be set for AKS Job installation in production")
 	}
+	inputs.EnvironmentVariables["ARO_INSTALLER_IDENTITY_CLIENT_ID"] = inputs.InstallerIdentityClientID
+	inputs.EnvironmentVariables["AZURE_ENVIRONMENT"] = b.env.Environment().Name
 
 	return nil
 }
