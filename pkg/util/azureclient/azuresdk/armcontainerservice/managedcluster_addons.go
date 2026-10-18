@@ -26,9 +26,11 @@ func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context,
 }
 
 func (r *managedClustersClient) ListClusterUserCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (armcontainerservice.ManagedClustersClientListClusterUserCredentialsResponse, error) {
-	return r.ManagedClustersClient.ListClusterUserCredentials(ctx, resourceGroupName, resourceName, &armcontainerservice.ManagedClustersClientListClusterUserCredentialsOptions{
-		ServerFqdn: pointerutils.ToPtr(serverFqdn),
-	})
+	options := &armcontainerservice.ManagedClustersClientListClusterUserCredentialsOptions{}
+	if serverFqdn != "" {
+		options.ServerFqdn = pointerutils.ToPtr(serverFqdn)
+	}
+	return r.ManagedClustersClient.ListClusterUserCredentials(ctx, resourceGroupName, resourceName, options)
 }
 
 func (r *managedClustersClient) List(ctx context.Context) *runtime.Pager[armcontainerservice.ManagedClustersClientListResponse] {

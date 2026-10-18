@@ -87,7 +87,7 @@ func TestProdInstallerRestConfig(t *testing.T) {
 			if resourceName != "aro-classic-int-eastus-svc" {
 				t.Fatalf("unexpected cluster name: %s", resourceName)
 			}
-			if options == nil || options.ServerFqdn == nil || *options.ServerFqdn != "public" {
+			if options != nil && options.ServerFqdn != nil {
 				t.Fatalf("unexpected server FQDN options: %#v", options)
 			}
 

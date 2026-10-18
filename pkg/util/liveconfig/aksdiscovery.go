@@ -146,7 +146,7 @@ func (p *prod) installerAKSRestConfig(ctx context.Context) (*rest.Config, error)
 		return rest.CopyConfig(p.cachedInstallerConfig), nil
 	}
 
-	result, err := p.managedClustersClient.ListClusterUserCredentials(ctx, resourceGroup, clusterName, "public")
+	result, err := p.managedClustersClient.ListClusterUserCredentials(ctx, resourceGroup, clusterName, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user credentials for installer AKS cluster %s/%s: %w", resourceGroup, clusterName, err)
 	}
