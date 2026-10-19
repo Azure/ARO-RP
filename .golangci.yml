@@ -193,20 +193,12 @@ linters:
       - linters:
           - importas
         path: (.+/)?zz_generated_(.+)\.go
-      # bindata.go should not be modernized automatically
-      - linters:
-          - exptostd
-          - govet
-        path: bindata.go
       - linters:
           - importas
         path: pkg/operator/(clientset|mocks)/(.+)\.go
       - linters:
           - importas
         path: pkg/util/mocks/(.+)\.go
-      - linters:
-          - staticcheck
-        path: (.+/)?bindata.go
       # Deprecated k8s APIs that need porting to new ones piecemeal
       - linters:
           - staticcheck
