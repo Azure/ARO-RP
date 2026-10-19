@@ -29,17 +29,17 @@ $(BINGO): $(BINGO_DIR)/bingo.mod
 	@echo "(re)installing $(GOBIN)/bingo-v0.10.0"
 	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=bingo.mod -o=$(GOBIN)/bingo-v0.10.0 "github.com/bwplotka/bingo"
 
-CLIENT_GEN := $(GOBIN)/client-gen-v0.25.16
+CLIENT_GEN := $(GOBIN)/client-gen-v0.34.9
 $(CLIENT_GEN): $(BINGO_DIR)/client-gen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/client-gen-v0.25.16"
-	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=client-gen.mod -o=$(GOBIN)/client-gen-v0.25.16 "k8s.io/code-generator/cmd/client-gen"
+	@echo "(re)installing $(GOBIN)/client-gen-v0.34.9"
+	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=client-gen.mod -o=$(GOBIN)/client-gen-v0.34.9 "k8s.io/code-generator/cmd/client-gen"
 
-CONTROLLER_GEN := $(GOBIN)/controller-gen-v0.16.5
+CONTROLLER_GEN := $(GOBIN)/controller-gen-v0.19.0
 $(CONTROLLER_GEN): $(BINGO_DIR)/controller-gen.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/controller-gen-v0.16.5"
-	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=controller-gen.mod -o=$(GOBIN)/controller-gen-v0.16.5 "sigs.k8s.io/controller-tools/cmd/controller-gen"
+	@echo "(re)installing $(GOBIN)/controller-gen-v0.19.0"
+	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=controller-gen.mod -o=$(GOBIN)/controller-gen-v0.19.0 "sigs.k8s.io/controller-tools/cmd/controller-gen"
 
 ENUMER := $(GOBIN)/enumer-v1.5.11
 $(ENUMER): $(BINGO_DIR)/enumer.mod
@@ -52,12 +52,6 @@ $(FIPS_DETECT): $(BINGO_DIR)/fips-detect.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
 	@echo "(re)installing $(GOBIN)/fips-detect-v0.0.0-20230309083406-7157dae5bafd"
 	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=fips-detect.mod -o=$(GOBIN)/fips-detect-v0.0.0-20230309083406-7157dae5bafd "github.com/acardace/fips-detect"
-
-GENCOSMOSDB := $(GOBIN)/gencosmosdb-v0.0.0-20260603170134-b6a927df2721
-$(GENCOSMOSDB): $(BINGO_DIR)/gencosmosdb.mod
-	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/gencosmosdb-v0.0.0-20260603170134-b6a927df2721"
-	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=gencosmosdb.mod -o=$(GOBIN)/gencosmosdb-v0.0.0-20260603170134-b6a927df2721 "github.com/bennerv/go-cosmosdb/cmd/gencosmosdb"
 
 GO_BINDATA := $(GOBIN)/go-bindata-v3.1.2+incompatible
 $(GO_BINDATA): $(BINGO_DIR)/go-bindata.mod
@@ -113,15 +107,21 @@ $(MOCKGEN): $(BINGO_DIR)/mockgen.mod
 	@echo "(re)installing $(GOBIN)/mockgen-v0.6.0"
 	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=mockgen.mod -o=$(GOBIN)/mockgen-v0.6.0 "go.uber.org/mock/mockgen"
 
-OTELCOLLECTORBUILDER := $(GOBIN)/otelcollectorbuilder-v0.153.0
+OTELCOLLECTORBUILDER := $(GOBIN)/otelcollectorbuilder-v0.159.0
 $(OTELCOLLECTORBUILDER): $(BINGO_DIR)/otelcollectorbuilder.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/otelcollectorbuilder-v0.153.0"
-	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=otelcollectorbuilder.mod -o=$(GOBIN)/otelcollectorbuilder-v0.153.0 "go.opentelemetry.io/collector/cmd/builder"
+	@echo "(re)installing $(GOBIN)/otelcollectorbuilder-v0.159.0"
+	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=otelcollectorbuilder.mod -o=$(GOBIN)/otelcollectorbuilder-v0.159.0 "go.opentelemetry.io/collector/cmd/builder"
 
 PINACT := $(GOBIN)/pinact-v1.6.0
 $(PINACT): $(BINGO_DIR)/pinact.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
 	@echo "(re)installing $(GOBIN)/pinact-v1.6.0"
 	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=pinact.mod -o=$(GOBIN)/pinact-v1.6.0 "github.com/suzuki-shunsuke/pinact/cmd/pinact"
+
+SETUP_ENVTEST := $(GOBIN)/setup-envtest-v0.0.0-20260125163108-a19ec76a3c5d
+$(SETUP_ENVTEST): $(BINGO_DIR)/setup-envtest.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/setup-envtest-v0.0.0-20260125163108-a19ec76a3c5d"
+	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=setup-envtest.mod -o=$(GOBIN)/setup-envtest-v0.0.0-20260125163108-a19ec76a3c5d "sigs.k8s.io/controller-runtime/tools/setup-envtest"
 

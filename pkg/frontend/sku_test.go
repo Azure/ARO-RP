@@ -226,7 +226,6 @@ func TestValidateVMSku(t *testing.T) {
 			}
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
 				Location: "eastus",
@@ -320,13 +319,13 @@ func TestValidateVMSku(t *testing.T) {
 			resourceSkusClient := mock_armcompute.NewMockResourceSKUsClient(controller)
 			resourceSkusClient.EXPECT().
 				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus"), false).
-				Return(func(yield func(*armcompute.ResourceSKU, error) bool) {
+				Return(func(yield func(armcompute.ResourceSKU, error) bool) {
 					if tt.resourceSkusClientErr != nil {
-						yield(nil, tt.resourceSkusClientErr)
+						yield(armcompute.ResourceSKU{}, tt.resourceSkusClientErr)
 						return
 					}
 					for _, v := range skus {
-						if !yield(v, nil) {
+						if !yield(*v, nil) {
 							return
 						}
 					}

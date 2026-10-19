@@ -20,6 +20,8 @@ import (
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+
+	adminactions "github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 )
 
 // MockAzureActions is a mock of AzureActions interface.
@@ -46,6 +48,63 @@ func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
+// CreateCRG mocks base method.
+func (m *MockAzureActions) CreateCRG(ctx context.Context, clusterRG, location string, zones []string, crgName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCRG", ctx, clusterRG, location, zones, crgName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateCRG indicates an expected call of CreateCRG.
+func (mr *MockAzureActionsMockRecorder) CreateCRG(ctx, clusterRG, location, zones, crgName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCRG", reflect.TypeOf((*MockAzureActions)(nil).CreateCRG), ctx, clusterRG, location, zones, crgName)
+}
+
+// CreateCapacityReservation mocks base method.
+func (m *MockAzureActions) CreateCapacityReservation(ctx context.Context, clusterRG, location, zone, targetSKU, crgName string, capacity int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCapacityReservation", ctx, clusterRG, location, zone, targetSKU, crgName, capacity)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateCapacityReservation indicates an expected call of CreateCapacityReservation.
+func (mr *MockAzureActionsMockRecorder) CreateCapacityReservation(ctx, clusterRG, location, zone, targetSKU, crgName, capacity any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCapacityReservation", reflect.TypeOf((*MockAzureActions)(nil).CreateCapacityReservation), ctx, clusterRG, location, zone, targetSKU, crgName, capacity)
+}
+
+// DeleteCRG mocks base method.
+func (m *MockAzureActions) DeleteCRG(ctx context.Context, clusterRG, crgName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCRG", ctx, clusterRG, crgName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteCRG indicates an expected call of DeleteCRG.
+func (mr *MockAzureActionsMockRecorder) DeleteCRG(ctx, clusterRG, crgName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCRG", reflect.TypeOf((*MockAzureActions)(nil).DeleteCRG), ctx, clusterRG, crgName)
+}
+
+// DeleteCapacityReservation mocks base method.
+func (m *MockAzureActions) DeleteCapacityReservation(ctx context.Context, clusterRG, crgName, zone string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCapacityReservation", ctx, clusterRG, crgName, zone)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteCapacityReservation indicates an expected call of DeleteCapacityReservation.
+func (mr *MockAzureActionsMockRecorder) DeleteCapacityReservation(ctx, clusterRG, crgName, zone any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCapacityReservation", reflect.TypeOf((*MockAzureActions)(nil).DeleteCapacityReservation), ctx, clusterRG, crgName, zone)
+}
+
 // GetEffectiveRouteTable mocks base method.
 func (m *MockAzureActions) GetEffectiveRouteTable(ctx context.Context, nicName string) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -59,6 +118,36 @@ func (m *MockAzureActions) GetEffectiveRouteTable(ctx context.Context, nicName s
 func (mr *MockAzureActionsMockRecorder) GetEffectiveRouteTable(ctx, nicName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEffectiveRouteTable", reflect.TypeOf((*MockAzureActions)(nil).GetEffectiveRouteTable), ctx, nicName)
+}
+
+// GetNetworkInterfaceSSHInfo mocks base method.
+func (m *MockAzureActions) GetNetworkInterfaceSSHInfo(ctx context.Context, resourceGroupName, networkInterfaceName string) (*adminactions.NetworkInterfaceSSHInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNetworkInterfaceSSHInfo", ctx, resourceGroupName, networkInterfaceName)
+	ret0, _ := ret[0].(*adminactions.NetworkInterfaceSSHInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNetworkInterfaceSSHInfo indicates an expected call of GetNetworkInterfaceSSHInfo.
+func (mr *MockAzureActionsMockRecorder) GetNetworkInterfaceSSHInfo(ctx, resourceGroupName, networkInterfaceName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkInterfaceSSHInfo", reflect.TypeOf((*MockAzureActions)(nil).GetNetworkInterfaceSSHInfo), ctx, resourceGroupName, networkInterfaceName)
+}
+
+// GetSSHRouteStatus mocks base method.
+func (m *MockAzureActions) GetSSHRouteStatus(ctx context.Context, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP string, frontendPort int32) (*adminactions.SSHRouteStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSSHRouteStatus", ctx, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP, frontendPort)
+	ret0, _ := ret[0].(*adminactions.SSHRouteStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSSHRouteStatus indicates an expected call of GetSSHRouteStatus.
+func (mr *MockAzureActionsMockRecorder) GetSSHRouteStatus(ctx, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP, frontendPort any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSSHRouteStatus", reflect.TypeOf((*MockAzureActions)(nil).GetSSHRouteStatus), ctx, resourceGroupName, clusterResourceGroupID, loadBalancerName, backendPoolID, selectedNetworkInterfaceID, frontendIP, frontendPort)
 }
 
 // GetVirtualMachine mocks base method.
@@ -89,6 +178,21 @@ func (m *MockAzureActions) GroupResourceList(ctx context.Context) ([]features.Ge
 func (mr *MockAzureActionsMockRecorder) GroupResourceList(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupResourceList", reflect.TypeOf((*MockAzureActions)(nil).GroupResourceList), ctx)
+}
+
+// ListComputeUsage mocks base method.
+func (m *MockAzureActions) ListComputeUsage(ctx context.Context, location string) ([]compute.Usage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListComputeUsage", ctx, location)
+	ret0, _ := ret[0].([]compute.Usage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListComputeUsage indicates an expected call of ListComputeUsage.
+func (mr *MockAzureActionsMockRecorder) ListComputeUsage(ctx, location any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListComputeUsage", reflect.TypeOf((*MockAzureActions)(nil).ListComputeUsage), ctx, location)
 }
 
 // NICReconcileFailedState mocks base method.

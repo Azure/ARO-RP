@@ -31,6 +31,7 @@ import (
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminEtcdCertificateRenew(t *testing.T) {
@@ -298,8 +299,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 1,
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -319,8 +320,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 2,
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -449,8 +450,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 1,
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -470,8 +471,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 2,
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -645,8 +646,8 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 1,
 						},
-						LatestAvailableRevision: 1,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -666,8 +667,8 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 2,
 						},
-						LatestAvailableRevision: 2,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -687,8 +688,8 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 									Status: operatorv1.ConditionFalse,
 								},
 							},
+							LatestAvailableRevision: 3,
 						},
-						LatestAvailableRevision: 3,
 						NodeStatuses: []operatorv1.NodeStatus{
 							{
 								NodeName:        "master-0",
@@ -799,7 +800,7 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			log := logrus.NewEntry(logrus.New())
+			_, log := testlog.LogForTesting(t)
 
 			err = f._postAdminOpenShiftClusterEtcdCertificateRenew(ctx, strings.ToLower(tt.resourceID), log, time.Duration(tt.timeout)*time.Second)
 			utilerror.AssertErrorMessage(t, err, tt.wantError)

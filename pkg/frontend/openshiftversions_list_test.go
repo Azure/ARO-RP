@@ -14,7 +14,9 @@ import (
 	"github.com/coreos/go-semver/semver"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
 
@@ -28,7 +30,7 @@ func TestListInstallVersions(t *testing.T) {
 		changeFeed     map[string]*api.OpenShiftVersion
 		apiVersion     string
 		wantStatusCode int
-		wantResponse   v20220904.OpenShiftVersionList
+		wantResponse   v20250725.OpenShiftVersionList
 		wantError      string
 	}
 
@@ -50,23 +52,23 @@ func TestListInstallVersions(t *testing.T) {
 					},
 				},
 			},
-			apiVersion:     "2024-08-12-preview",
+			apiVersion:     "2025-07-25",
 			wantStatusCode: http.StatusOK,
-			wantResponse: v20220904.OpenShiftVersionList{
-				OpenShiftVersions: []*v20220904.OpenShiftVersion{
+			wantResponse: v20250725.OpenShiftVersionList{
+				OpenShiftVersions: []*v20250725.OpenShiftVersion{
 					{
-						Properties: v20220904.OpenShiftVersionProperties{
-							Version: "4.11.0",
+						OpenShiftVersion: generated.OpenShiftVersion{
+							Properties: &generated.OpenShiftVersionProperties{Version: pointerutils.ToPtr("4.11.0")},
+							Type:       pointerutils.ToPtr(api.OpenShiftVersionsType),
+							Name:       pointerutils.ToPtr("4.11.0"),
 						},
-						Type: api.OpenShiftVersionsType,
-						Name: "4.11.0",
 					},
 					{
-						Properties: v20220904.OpenShiftVersionProperties{
-							Version: "4.11.5",
+						OpenShiftVersion: generated.OpenShiftVersion{
+							Properties: &generated.OpenShiftVersionProperties{Version: pointerutils.ToPtr("4.11.5")},
+							Type:       pointerutils.ToPtr(api.OpenShiftVersionsType),
+							Name:       pointerutils.ToPtr("4.11.5"),
 						},
-						Type: api.OpenShiftVersionsType,
-						Name: "4.11.5",
 					},
 				},
 			},
@@ -107,13 +109,13 @@ func TestListInstallVersions(t *testing.T) {
 
 			// sort the response as the version order might be changed
 			if b != nil && resp.StatusCode == http.StatusOK {
-				var v v20220904.OpenShiftVersionList
+				var v v20250725.OpenShiftVersionList
 				if err = json.Unmarshal(b, &v); err != nil {
 					t.Error(err)
 				}
 
 				sort.Slice(v.OpenShiftVersions, func(i, j int) bool {
-					return semver.New(v.OpenShiftVersions[i].Properties.Version).LessThan(*semver.New(v.OpenShiftVersions[j].Properties.Version))
+					return semver.New(*v.OpenShiftVersions[i].Properties.Version).LessThan(*semver.New(*v.OpenShiftVersions[j].Properties.Version))
 				})
 
 				b, err = json.Marshal(v)

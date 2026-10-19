@@ -32,11 +32,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmonitor"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armmsi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armpolicyinsights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azsecrets"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -73,6 +75,7 @@ type manager struct {
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
 	fpAuthorizer      refreshable.Authorizer
+	fpCredRefresher   refreshable.Rebuilder
 	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
@@ -100,6 +103,7 @@ type manager struct {
 	armSubnets                    armnetwork.SubnetsClient
 	userAssignedIdentities        armmsi.UserAssignedIdentitiesClient
 	armMonitor                    armmonitor.MetricsClient
+	armPolicyRestrictions         armpolicyinsights.PolicyRestrictionsClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -123,6 +127,7 @@ type manager struct {
 	fpServicePrincipalID string
 
 	aroOperatorDeployer deploy.Operator
+	newACRTokenManager  func(env.Interface) (acrtoken.Manager, error)
 
 	msiDataplane                           dataplane.ClientFactory
 	clusterMsiKeyVaultStore                azsecrets.Client
@@ -154,7 +159,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	fpCredClusterTenant, err := _env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID, nil)
+	fpCredClusterTenant, err := refreshable.NewFPTokenCredential(_env, subscriptionDoc.Subscription.Properties.TenantID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -169,10 +174,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 	fpspID := tokenClaims.ObjectId
 
-	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID(), nil)
+	fpCredRPTenant, err := refreshable.NewFPTokenCredential(_env, _env.TenantID(), nil)
 	if err != nil {
 		return nil, err
 	}
+
+	fpCredRefresher := refreshable.NewMultiRebuilder(fpAuthorizer, fpCredClusterTenant, fpCredRPTenant)
 
 	msiCredential, err := _env.NewMSITokenCredential()
 	if err != nil {
@@ -231,6 +238,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armPolicyRestrictions, err := armpolicyinsights.NewPolicyRestrictionsClient(r.SubscriptionID, fpCredClusterTenant, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	storage, err := storage.NewManager(r.SubscriptionID, _env.Environment().StorageEndpointSuffix, fpCredClusterTenant, doc.OpenShiftCluster.UsesWorkloadIdentity(), clientOptions)
 	if err != nil {
 		return nil, err
@@ -274,6 +286,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		doc:                           doc,
 		subscriptionDoc:               subscriptionDoc,
 		fpAuthorizer:                  fpAuthorizer,
+		fpCredRefresher:               fpCredRefresher,
 		localFpAuthorizer:             localFPAuthorizer,
 		metricsEmitter:                metricsEmitter,
 		disks:                         compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
@@ -298,6 +311,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armClusterPrivateLinkServices: clusterRPPrivateLinkServices,
 		armSubnets:                    armSubnetsClient,
 		armMonitor:                    armMonitorClient,
+		armPolicyRestrictions:         armPolicyRestrictions,
 
 		dns:                                    dns.NewManager(_env, fpCredRPTenant),
 		storage:                                storage,
@@ -309,6 +323,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		openShiftClusterDocumentVersioner:      new(openShiftClusterDocumentVersionerService),
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 		fpServicePrincipalID:                   fpspID,
+		newACRTokenManager:                     newACRTokenManager,
 	}
 
 	if doc.OpenShiftCluster.UsesWorkloadIdentity() {

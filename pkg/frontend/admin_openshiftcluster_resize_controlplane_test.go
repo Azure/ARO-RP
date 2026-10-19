@@ -15,11 +15,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -157,81 +155,6 @@ func machineJSONWithoutProviderSpecValue(name, vmSize string) []byte {
 	return b
 }
 
-func TestCheckCPMSNotActive(t *testing.T) {
-	ctx := context.Background()
-
-	cpmsGR := schema.GroupResource{Group: "machine.openshift.io", Resource: "controlplanemachinesets"}
-
-	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_adminactions.MockKubeActions)
-		wantErr string
-	}{
-		{
-			name: "CPMS not found - safe to proceed",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(nil, kerrors.NewNotFound(cpmsGR, "cluster"))
-			},
-		},
-		{
-			name: "CPMS inactive - safe to proceed",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(cpmsJSON("Inactive"), nil)
-			},
-		},
-		{
-			name: "CPMS active - blocked",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(cpmsJSON("Active"), nil)
-			},
-			wantErr: "409: RequestNotAllowed: : ControlPlaneMachineSet is currently Active. Deactivate CPMS before running this operation.",
-		},
-		{
-			name: "CPMS with empty state - safe to proceed",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(cpmsJSON(""), nil)
-			},
-		},
-		{
-			name: "KubeGet returns non-NotFound error - fails closed",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return(nil, errors.New("connection refused"))
-			},
-			wantErr: "500: InternalServerError: : failed to check ControlPlaneMachineSet state: connection refused",
-		},
-		{
-			name: "CPMS returns invalid JSON - fails closed",
-			mocks: func(k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().
-					KubeGet(gomock.Any(), "ControlPlaneMachineSet.machine.openshift.io", machineNamespace, "cluster").
-					Return([]byte("not-json"), nil)
-			},
-			wantErr: "500: InternalServerError: : failed to parse ControlPlaneMachineSet object: invalid character 'o' in literal null (expecting 'u')",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			k := mock_adminactions.NewMockKubeActions(ctrl)
-			tt.mocks(k)
-
-			err := checkCPMSNotActive(ctx, k)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
 func TestIsNodeReady(t *testing.T) {
 	ctx := context.Background()
 
@@ -295,7 +218,6 @@ func TestIsNodeReady(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(k)
@@ -331,7 +253,7 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachine("master-1", desiredSize, running),
 					masterMachine("master-2", desiredSize, running),
 				)
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(machines, nil)
 				gomock.InOrder(
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
 						Return(nodeJSON("master-2", true), nil),
@@ -362,7 +284,7 @@ func TestResizeControlPlane(t *testing.T) {
 					masterMachine("master-1", desiredSize, running),
 					masterMachine("master-2", "Standard_D8s_v3", running),
 				)
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(machines, nil)
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(machines, nil)
 
 				gomock.InOrder(
 					k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-2").
@@ -407,7 +329,7 @@ func TestResizeControlPlane(t *testing.T) {
 		{
 			name: "pre-loop gate fails when node is not ready",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 					masterMachineListJSON(masterMachine("master-0", desiredSize, running)), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 					Return(nodeJSON("master-0", false), nil)
@@ -417,7 +339,7 @@ func TestResizeControlPlane(t *testing.T) {
 		{
 			name: "pre-loop gate fails when node is unschedulable",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(
 					masterMachineListJSON(masterMachine("master-0", desiredSize, running)), nil)
 				k.EXPECT().KubeGet(gomock.Any(), "Node", "", "master-0").
 					Return(nodeJSONWithSchedulability("master-0", true, true), nil)
@@ -427,14 +349,13 @@ func TestResizeControlPlane(t *testing.T) {
 		{
 			name: "no control plane machines found",
 			mocks: func(k *mock_adminactions.MockKubeActions, a *mock_adminactions.MockAzureActions) {
-				k.EXPECT().KubeList(gomock.Any(), "Machine", machineNamespace).Return(masterMachineListJSON(), nil)
+				k.EXPECT().KubeList(gomock.Any(), machineGroupKind, machineNamespace).Return(masterMachineListJSON(), nil)
 			},
 			wantErr: "409: RequestNotAllowed: : No control plane machines found. Resize cannot proceed.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			a := mock_adminactions.NewMockAzureActions(ctrl)
@@ -506,7 +427,6 @@ func TestUpdateMachineVMSize(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(k)
@@ -523,7 +443,6 @@ func TestSetNodeInstanceTypeLabels(t *testing.T) {
 
 	t.Run("rejects empty vmSize", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
 
 		k := mock_adminactions.NewMockKubeActions(ctrl)
 
@@ -628,7 +547,6 @@ func TestSetNodeInstanceTypeLabels(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			k := mock_adminactions.NewMockKubeActions(ctrl)
 			tt.mocks(t, k)
@@ -825,9 +743,6 @@ func TestAdminResizeControlPlane(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			// Avoid creating real Azure quota clients in handler tests.
-			f.validateResizeQuota = quotaCheckDisabled
 
 			go f.Run(ctx, nil, nil)
 

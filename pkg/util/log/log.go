@@ -69,6 +69,12 @@ func getBaseLogger() *logrus.Logger {
 
 	logger.AddHook(&logrHook{})
 
+	// Sanitize user-controlled content out of every entry before any emitting
+	// hook (e.g. journald) runs, to guard against CRLF log injection.  This is
+	// a global backstop; call sites should still sanitize with Sanitize() so
+	// that static analysis can see the barrier.
+	logger.AddHook(&sanitizeHook{})
+
 	return logger
 }
 
@@ -137,14 +143,14 @@ func EnrichWithPath(log *logrus.Entry, path string) *logrus.Entry {
 
 	fields := logrus.Fields{}
 	if m[1] != "" {
-		fields["subscription_id"] = m[1]
+		fields["subscription_id"] = Sanitize(m[1])
 	}
 	if m[2] != "" {
-		fields["resource_group"] = m[2]
+		fields["resource_group"] = Sanitize(m[2])
 	}
 	if m[5] != "" {
-		fields["resource_name"] = m[5]
-		fields["resource_id"] = "/subscriptions/" + m[1] + "/resourcegroups/" + m[2] + "/providers/" + m[3] + "/" + m[4] + "/" + m[5]
+		fields["resource_name"] = Sanitize(m[5])
+		fields["resource_id"] = Sanitize("/subscriptions/" + m[1] + "/resourcegroups/" + m[2] + "/providers/" + m[3] + "/" + m[4] + "/" + m[5])
 	}
 
 	return log.WithFields(fields)
@@ -162,11 +168,11 @@ func EnrichWithCorrelationData(log *logrus.Entry, correlationData *api.Correlati
 	}
 
 	return log.WithFields(logrus.Fields{
-		"correlation_id":        correlationData.CorrelationID,
-		"client_request_id":     correlationData.ClientRequestID,
-		"operation_id":          correlationData.OperationID,
-		"request_id":            correlationData.RequestID,
-		"client_principal_name": correlationData.ClientPrincipalName,
+		"correlation_id":        Sanitize(correlationData.CorrelationID),
+		"client_request_id":     Sanitize(correlationData.ClientRequestID),
+		"operation_id":          Sanitize(correlationData.OperationID),
+		"request_id":            Sanitize(correlationData.RequestID),
+		"client_principal_name": Sanitize(correlationData.ClientPrincipalName),
 		"request_time":          correlationData.RequestTime,
 	})
 }

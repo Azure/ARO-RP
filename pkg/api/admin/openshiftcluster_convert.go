@@ -29,6 +29,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			MaintenanceTask:         MaintenanceTask(oc.Properties.MaintenanceTask),
 			OperatorFlags:           OperatorFlags(oc.Properties.OperatorFlags),
 			OperatorVersion:         oc.Properties.OperatorVersion,
+			Zones:                   oc.Properties.Zones,
 			CreatedAt:               oc.Properties.CreatedAt,
 			CreatedBy:               oc.Properties.CreatedBy,
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
@@ -287,6 +288,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.MaintenanceTask = api.MaintenanceTask(oc.Properties.MaintenanceTask)
 	out.Properties.OperatorFlags = api.OperatorFlags(oc.Properties.OperatorFlags)
 	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
+	out.Properties.Zones = oc.Properties.Zones
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
 	out.Properties.MaintenanceState = api.MaintenanceState(oc.Properties.MaintenanceState)

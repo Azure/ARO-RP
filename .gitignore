@@ -24,10 +24,10 @@ gomock_reflect_*
 /secrets*
 /mdm_statsd.socket
 /uts.txt
-/cover*.out
-/cover_coverpkg.out
-/coverage.*
-/report.xml
+cover*.out
+cover_coverpkg.out
+coverage.*
+report.xml
 /e2e-report.xml
 /deploy/config.yaml
 **/*.swp

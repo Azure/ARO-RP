@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,9 +21,13 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
+	configv1 "github.com/openshift/api/config/v1"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 
 	armredhatopenshift "github.com/Azure/ARO-RP/pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -57,9 +62,6 @@ var _ = Describe("Update clusters", func() {
 	})
 
 	It("must restart the aro-operator-master Deployment", func(ctx context.Context) {
-		if isMiwi {
-			Skip("This test is not relevant for miwi clusters")
-		}
 		By("saving the current revision of the aro-operator-master Deployment")
 		getFunc := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get
 		deployment := GetK8sObjectWithRetry(ctx, getFunc, "aro-operator-master", metav1.GetOptions{})
@@ -84,12 +86,14 @@ var _ = Describe("Update clusters", func() {
 		Expect(newRevision).To(Equal(oldRevision + 1))
 	})
 
-	It("should successfully replace platform workload identity", func(ctx context.Context) {
+	It("should successfully replace the ARO operator platform workload identity", func(ctx context.Context) {
 		if !isMiwi {
 			Skip("This test is only relevant for workload identity clusters")
 		}
 
 		federatedCredentialRoleDefinitionID := "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole
+		operatorName := "aro-operator"
+		replacementIdentityName := operatorName + "-e2e-replace"
 
 		By("getting the current cluster to read existing platform workload identities")
 		var oc armredhatopenshift.OpenShiftClustersClientGetResponse
@@ -112,15 +116,6 @@ var _ = Describe("Update clusters", func() {
 				g.Expect(identity.PrincipalID).NotTo(BeNil())
 			}
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-		By("picking an operator identity to replace")
-		var operatorName string
-		for name := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			operatorName = name
-			break
-		}
-		replacementIdentityName := operatorName + "-e2e-replace"
-		By(fmt.Sprintf("targeting operator %q for identity replacement", operatorName))
 
 		By("looking up the operator's role definition from platform workload identity role sets")
 		clusterVersion := *oc.Properties.ClusterProfile.Version
@@ -208,12 +203,27 @@ var _ = Describe("Update clusters", func() {
 		replacementResourceID := *msiResp.ID
 		replacementPrincipalID := *msiResp.Properties.PrincipalID
 
+		// After the operator restart later in the test, all the ServicePrincipalValid status tells us is that
+		// the operator can start up and can acquire an Azure auth token using whatever identity is provided to it.
+		// Deleting the original identity before doing the replacement and restart ensures that the operator can't
+		// pass the status condition checks by starting up using the old identity.
+		By("deleting the original identity")
+		var originalMsi armmsi.UserAssignedIdentitiesClientGetResponse
+		Eventually(func(g Gomega, ctx context.Context) {
+			var err error
+			originalMsi, err = clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(originalMsi.Properties).NotTo(BeNil())
+			g.Expect(originalMsi.Properties.PrincipalID).NotTo(BeNil())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := clients.UserAssignedIdentities.Delete(ctx, vnetResourceGroup, operatorName, nil)
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
 		DeferCleanup(func(ctx context.Context) {
-			By("cleaning up the original identity and its role assignments")
-			originalMsi, err := clients.UserAssignedIdentities.Get(ctx, vnetResourceGroup, operatorName, nil)
-			if err != nil {
-				return
-			}
+			By("cleaning up any remaining role assignments for the original identity")
 			if originalMsi.Properties != nil && originalMsi.Properties.PrincipalID != nil {
 				roleAssignments, err := clients.RoleAssignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *originalMsi.Properties.PrincipalID))
 				if err == nil {
@@ -224,7 +234,6 @@ var _ = Describe("Update clusters", func() {
 					}
 				}
 			}
-			_, _ = clients.UserAssignedIdentities.Delete(ctx, vnetResourceGroup, operatorName, nil)
 		})
 
 		By("assigning the operator's role to the replacement identity at VNet scope")
@@ -311,22 +320,25 @@ var _ = Describe("Update clusters", func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("sending the PATCH request to replace the operator identity")
-		err := clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{
-			Properties: &armredhatopenshift.OpenShiftClusterProperties{
-				PlatformWorkloadIdentityProfile: &armredhatopenshift.PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]*armredhatopenshift.PlatformWorkloadIdentity{
-						operatorName: {
-							ResourceID: &replacementResourceID,
+		Eventually(func(g Gomega, ctx context.Context) {
+			err := clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, armredhatopenshift.OpenShiftClusterUpdate{
+				Properties: &armredhatopenshift.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &armredhatopenshift.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]*armredhatopenshift.PlatformWorkloadIdentity{
+							operatorName: {
+								ResourceID: &replacementResourceID,
+							},
 						},
 					},
 				},
-			},
-		})
-		Expect(err).NotTo(HaveOccurred())
+			})
+			g.Expect(err).NotTo(HaveOccurred())
+			// Optionally, to avoid waiting here, get the replacement identity ready in e2e BeforeSuite.
+		}).WithContext(ctx).WithTimeout(PropagationDelayEventuallyTimeout).Should(Succeed())
 
 		By("verifying the identity was replaced")
 		Eventually(func(g Gomega, ctx context.Context) {
-			oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
+			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName, nil)
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(oc.Properties).NotTo(BeNil())
 			g.Expect(oc.Properties.PlatformWorkloadIdentityProfile).NotTo(BeNil())
@@ -336,6 +348,35 @@ var _ = Describe("Update clusters", func() {
 			g.Expect(identity.ResourceID).NotTo(BeNil())
 			g.Expect(*identity.ResourceID).To(Equal(replacementResourceID))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("verifying the old identity no longer has any role assignments at managed resource group scope")
+		Eventually(func(g Gomega, ctx context.Context) {
+			roleAssignments, err := clients.RoleAssignments.ListForResourceGroup(ctx, stringutils.LastTokenByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/'), "atScope()")
+			g.Expect(err).NotTo(HaveOccurred())
+			for _, ra := range roleAssignments {
+				g.Expect(ra.PrincipalID).NotTo(Equal(originalMsi.Properties.PrincipalID), "old identity %s still has role assignment %s at managed resource group scope", operatorName, *ra.Name)
+			}
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("verifying that all the conditions on the cluster resource are set to true")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			for _, condition := range arov1alpha1.ClusterChecksTypes() {
+				g.Expect(conditions.IsTrue(co.Status.Conditions, condition)).To(BeTrue(), "Condition %s", condition)
+			}
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+		By("verifying that all the conditions on the cluster operator are set to the expected values")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded)).To(BeTrue())
+		}).WithContext(ctx).WithTimeout(30 * time.Second).Should(Succeed())
 	})
 
 	// This tests the API which is most commonly generated by

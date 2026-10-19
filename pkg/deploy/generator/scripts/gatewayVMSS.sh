@@ -5,24 +5,28 @@ set -o errexit \
     -o nounset
 
 main() {
+    # check we are FIPS enabled
+    fips_verify
+
     # transaction attempt retry time in seconds
     # shellcheck disable=SC2034
     local -ri retry_wait_time=30
     # shellcheck disable=SC2068
     local -ri pkg_retry_count=60
+    local -ri repo_retry_count=5
 
     create_required_dirs
     configure_sshd
     configure_rpm_repos retry_wait_time \
-                    "$pkg_retry_count"
+                    "$repo_retry_count"
 
     # shellcheck disable=SC2034
-    local -ar exclude_pkgs=(
-        "-x WALinuxAgent"
-        "-x WALinuxAgent-udev"
-    )
+    local -a exclude_pkgs=()
+    if rpm -q WALinuxAgent &>/dev/null; then
+        exclude_pkgs+=("-x" "WALinuxAgent")
+    fi
 
-    dnf_update_pkgs exclude_pkgs \
+    tdnf_update_pkgs exclude_pkgs \
                     retry_wait_time \
                     "$pkg_retry_count"
 
@@ -30,6 +34,8 @@ main() {
     local -ra install_pkgs=(
         azure-cli
         azure-mdsd
+        crun
+        netavark
         podman
         podman-docker
         openssl-perl
@@ -37,16 +43,11 @@ main() {
         python3
         # required for podman networking
         firewalld
-        # Required to enable fips
-        grubby
-        dracut-fips
     )
 
-    dnf_install_pkgs install_pkgs \
+    tdnf_install_pkgs install_pkgs \
                      retry_wait_time \
                      "$pkg_retry_count"
-
-    fips_configure
 
     # shellcheck disable=SC2119
     configure_logrotate
@@ -108,6 +109,38 @@ main() {
 	Match gateway-otel-collector
 	Add Environment \${ENVIRONMENT}
 	Set COMPONENT gateway-otel-collector
+
+# Attached container output has a single journald priority, so normalize the
+# embedded Logrus and Zap levels before forwarding it.
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=(fatal|panic)\s)|(^[0-9TZ:.\-+]+\t(fatal|panic)\t)
+	Set PRIORITY 2
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=error\s)|(^[0-9TZ:.\-+]+\t(dpanic|error)\t)
+	Set PRIORITY 3
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=warning\s)|(^[0-9TZ:.\-+]+\twarn\t)
+	Set PRIORITY 4
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=info\s)|(^[0-9TZ:.\-+]+\tinfo\t)
+	Set PRIORITY 6
+
+[FILTER]
+	Name modify
+	Match gateway-otel-collector
+	Condition Key_value_matches MESSAGE (^time=\"[^\"]+\"\slevel=debug\s)|(^[0-9TZ:.\-+]+\tdebug\t)
+	Set PRIORITY 7
 
 [FILTER]
 	Name rewrite_tag

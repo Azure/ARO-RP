@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
@@ -60,9 +59,8 @@ func TestSecurity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	keyvault := mock_azsecrets.NewMockClient(controller)
 	keyvault.EXPECT().GetSecret(gomock.Any(), env.RPServerSecretName, "", nil).AnyTimes().Return(azsecrets.GetSecretResponse{Secret: azsecrets.Secret{Value: pointerutils.ToPtr(string(serverPki))}}, nil)

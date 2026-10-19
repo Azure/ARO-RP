@@ -198,11 +198,14 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		return err
 	}
 
+	clusterStorageAccount := m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true, true)
+	imageRegistryStorageAccount := m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true, false)
+
 	resources := []*arm.Resource{
-		m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true, true),
+		clusterStorageAccount,
 		m.storageAccountBlobContainer(clusterStorageAccountName, graph.IgnitionContainer),
 		m.storageAccountBlobContainer(clusterStorageAccountName, graph.GraphContainer),
-		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true, false),
+		imageRegistryStorageAccount,
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
 		m.networkPrivateLinkService(azureRegion),
@@ -252,9 +255,25 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		Resources:      resources,
 	}
 
-	return arm.Retryable(ctx, func() error {
+	err = arm.Retryable(ctx, func() error {
 		return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 	}, m.log, "deploying base resources")
+	if err != nil {
+		return err
+	}
+
+	validateResourceTemplate := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Resources: []*arm.Resource{
+			clusterStorageAccount,
+			imageRegistryStorageAccount,
+		},
+	}
+	resourcesToValidate := arm.BuildStorageAccountsValidationMap(clusterStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName)
+	mismatches := arm.ValidateDeploymentWithWhatIf(ctx, m.log, m.deployments, resourceGroup, "storage", validateResourceTemplate, resourcesToValidate)
+	arm.EnrichMismatchesWithPolicyContext(ctx, m.log, m.armPolicyRestrictions, resourceGroup, mismatches)
+	return arm.MismatchesToCloudError(mismatches)
 }
 
 func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.Resource) {

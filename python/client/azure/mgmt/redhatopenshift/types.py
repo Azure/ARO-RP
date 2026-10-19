@@ -45,19 +45,19 @@ class APIServerProfile(TypedDict, total=False):
 class ClusterProfile(TypedDict, total=False):
     """ClusterProfile represents a cluster profile.
 
-    :ivar pull_secret: The pull secret for the cluster.
-    :vartype pull_secret: str
+    :ivar pullSecret: The pull secret for the cluster.
+    :vartype pullSecret: str
     :ivar domain: The domain for the cluster.
     :vartype domain: str
     :ivar version: The version of the cluster.
     :vartype version: str
-    :ivar resource_group_id: The ID of the cluster resource group.
-    :vartype resource_group_id: str
-    :ivar fips_validated_modules: If FIPS validated crypto modules are used. Known values are:
+    :ivar resourceGroupId: The ID of the cluster resource group.
+    :vartype resourceGroupId: str
+    :ivar fipsValidatedModules: If FIPS validated crypto modules are used. Known values are:
      "Disabled" and "Enabled".
-    :vartype fips_validated_modules: Union[str, "FipsValidatedModules"]
-    :ivar oidc_issuer: The URL of the managed OIDC issuer in a workload identity cluster.
-    :vartype oidc_issuer: str
+    :vartype fipsValidatedModules: Union[str, "FipsValidatedModules"]
+    :ivar oidcIssuer: The URL of the managed OIDC issuer in a workload identity cluster.
+    :vartype oidcIssuer: str
     """
 
     pullSecret: str
@@ -119,12 +119,12 @@ class IngressProfile(TypedDict, total=False):
 class LoadBalancerProfile(TypedDict, total=False):
     """LoadBalancerProfile represents the profile of the cluster public load balancer.
 
-    :ivar managed_outbound_ips: The desired managed outbound IPs for the cluster public load
+    :ivar managedOutboundIps: The desired managed outbound IPs for the cluster public load
      balancer.
-    :vartype managed_outbound_ips: "ManagedOutboundIPs"
-    :ivar effective_outbound_ips: The list of effective outbound IP addresses of the public load
+    :vartype managedOutboundIps: "ManagedOutboundIPs"
+    :ivar effectiveOutboundIps: The list of effective outbound IP addresses of the public load
      balancer.
-    :vartype effective_outbound_ips: list["EffectiveOutboundIP"]
+    :vartype effectiveOutboundIps: list["EffectiveOutboundIP"]
     """
 
     managedOutboundIps: "ManagedOutboundIPs"
@@ -152,17 +152,17 @@ class ManagedOutboundIPs(TypedDict, total=False):
 class ManagedServiceIdentity(TypedDict, total=False):
     """Managed service identity (system assigned and/or user assigned identities).
 
-    :ivar principal_id: The service principal ID of the system assigned identity. This property
-     will only be provided for a system assigned identity.
-    :vartype principal_id: str
-    :ivar tenant_id: The tenant ID of the system assigned identity. This property will only be
+    :ivar principalId: The service principal ID of the system assigned identity. This property will
+     only be provided for a system assigned identity.
+    :vartype principalId: str
+    :ivar tenantId: The tenant ID of the system assigned identity. This property will only be
      provided for a system assigned identity.
-    :vartype tenant_id: str
+    :vartype tenantId: str
     :ivar type: The type of managed identity assigned to this resource. Required. Known values are:
      "None", "SystemAssigned", "UserAssigned", and "SystemAssigned,UserAssigned".
     :vartype type: Union[str, "ManagedServiceIdentityType"]
-    :ivar user_assigned_identities: The identities assigned to this resource by the user.
-    :vartype user_assigned_identities: dict[str, "UserAssignedIdentity"]
+    :ivar userAssignedIdentities: The identities assigned to this resource by the user.
+    :vartype userAssignedIdentities: dict[str, "UserAssignedIdentity"]
     """
 
     principalId: str
@@ -181,16 +181,15 @@ class ManagedServiceIdentity(TypedDict, total=False):
 class MasterProfile(TypedDict, total=False):
     """MasterProfile represents a master profile.
 
-    :ivar vm_size: The size of the master VMs.
-    :vartype vm_size: str
-    :ivar subnet_id: The Azure resource ID of the master subnet.
-    :vartype subnet_id: str
-    :ivar encryption_at_host: Whether master virtual machines are encrypted at host. Known values
+    :ivar vmSize: The size of the master VMs.
+    :vartype vmSize: str
+    :ivar subnetId: The Azure resource ID of the master subnet.
+    :vartype subnetId: str
+    :ivar encryptionAtHost: Whether master virtual machines are encrypted at host. Known values
      are: "Disabled" and "Enabled".
-    :vartype encryption_at_host: Union[str, "EncryptionAtHost"]
-    :ivar disk_encryption_set_id: The resource ID of an associated DiskEncryptionSet, if
-     applicable.
-    :vartype disk_encryption_set_id: str
+    :vartype encryptionAtHost: Union[str, "EncryptionAtHost"]
+    :ivar diskEncryptionSetId: The resource ID of an associated DiskEncryptionSet, if applicable.
+    :vartype diskEncryptionSetId: str
     """
 
     vmSize: str
@@ -207,18 +206,18 @@ class MasterProfile(TypedDict, total=False):
 class NetworkProfile(TypedDict, total=False):
     """NetworkProfile represents a network profile.
 
-    :ivar pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
-    :vartype pod_cidr: str
-    :ivar service_cidr: The CIDR used for OpenShift/Kubernetes Services.
-    :vartype service_cidr: str
-    :ivar outbound_type: The OutboundType used for egress traffic. Known values are: "Loadbalancer"
+    :ivar podCidr: The CIDR used for OpenShift/Kubernetes Pods.
+    :vartype podCidr: str
+    :ivar serviceCidr: The CIDR used for OpenShift/Kubernetes Services.
+    :vartype serviceCidr: str
+    :ivar outboundType: The OutboundType used for egress traffic. Known values are: "Loadbalancer"
      and "UserDefinedRouting".
-    :vartype outbound_type: Union[str, "OutboundType"]
-    :ivar load_balancer_profile: The cluster load balancer profile.
-    :vartype load_balancer_profile: "LoadBalancerProfile"
-    :ivar preconfigured_nsg: Specifies whether subnets are pre-attached with an NSG. Known values
+    :vartype outboundType: Union[str, "OutboundType"]
+    :ivar loadBalancerProfile: The cluster load balancer profile.
+    :vartype loadBalancerProfile: "LoadBalancerProfile"
+    :ivar preconfiguredNSG: Specifies whether subnets are pre-attached with an NSG. Known values
      are: "Disabled" and "Enabled".
-    :vartype preconfigured_nsg: Union[str, "PreconfiguredNSG"]
+    :vartype preconfiguredNSG: Union[str, "PreconfiguredNSG"]
     """
 
     podCidr: str
@@ -246,9 +245,9 @@ class Resource(TypedDict, total=False):
     :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
      "Microsoft.Storage/storageAccounts".
     :vartype type: str
-    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+    :ivar systemData: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
-    :vartype system_data: "SystemData"
+    :vartype systemData: "SystemData"
     """
 
     id: str
@@ -274,9 +273,9 @@ class TrackedResource(Resource):
     :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
      "Microsoft.Storage/storageAccounts".
     :vartype type: str
-    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+    :ivar systemData: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
-    :vartype system_data: "SystemData"
+    :vartype systemData: "SystemData"
     :ivar tags: Resource tags.
     :vartype tags: dict[str, str]
     :ivar location: The geo-location where the resource lives. Required.
@@ -300,9 +299,9 @@ class OpenShiftCluster(TrackedResource):
     :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
      "Microsoft.Storage/storageAccounts".
     :vartype type: str
-    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+    :ivar systemData: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
-    :vartype system_data: "SystemData"
+    :vartype systemData: "SystemData"
     :ivar tags: Resource tags.
     :vartype tags: dict[str, str]
     :ivar location: The geo-location where the resource lives. Required.
@@ -322,29 +321,29 @@ class OpenShiftCluster(TrackedResource):
 class OpenShiftClusterProperties(TypedDict, total=False):
     """OpenShiftClusterProperties represents an OpenShift cluster's properties.
 
-    :ivar provisioning_state: The cluster provisioning state. Known values are: "AdminUpdating",
+    :ivar provisioningState: The cluster provisioning state. Known values are: "AdminUpdating",
      "Canceled", "Creating", "Deleting", "Failed", "Succeeded", and "Updating".
-    :vartype provisioning_state: Union[str, "ProvisioningState"]
-    :ivar cluster_profile: The cluster profile.
-    :vartype cluster_profile: "ClusterProfile"
-    :ivar console_profile: The console profile.
-    :vartype console_profile: "ConsoleProfile"
-    :ivar service_principal_profile: The cluster service principal profile.
-    :vartype service_principal_profile: "ServicePrincipalProfile"
-    :ivar platform_workload_identity_profile: The workload identity profile.
-    :vartype platform_workload_identity_profile: "PlatformWorkloadIdentityProfile"
-    :ivar network_profile: The cluster network profile.
-    :vartype network_profile: "NetworkProfile"
-    :ivar master_profile: The cluster master profile.
-    :vartype master_profile: "MasterProfile"
-    :ivar worker_profiles: The cluster worker profiles.
-    :vartype worker_profiles: list["WorkerProfile"]
-    :ivar worker_profiles_status: The cluster worker profiles status.
-    :vartype worker_profiles_status: list["WorkerProfile"]
-    :ivar apiserver_profile: The cluster API server profile.
-    :vartype apiserver_profile: "APIServerProfile"
-    :ivar ingress_profiles: The cluster ingress profiles.
-    :vartype ingress_profiles: list["IngressProfile"]
+    :vartype provisioningState: Union[str, "ProvisioningState"]
+    :ivar clusterProfile: The cluster profile.
+    :vartype clusterProfile: "ClusterProfile"
+    :ivar consoleProfile: The console profile.
+    :vartype consoleProfile: "ConsoleProfile"
+    :ivar servicePrincipalProfile: The cluster service principal profile.
+    :vartype servicePrincipalProfile: "ServicePrincipalProfile"
+    :ivar platformWorkloadIdentityProfile: The workload identity profile.
+    :vartype platformWorkloadIdentityProfile: "PlatformWorkloadIdentityProfile"
+    :ivar networkProfile: The cluster network profile.
+    :vartype networkProfile: "NetworkProfile"
+    :ivar masterProfile: The cluster master profile.
+    :vartype masterProfile: "MasterProfile"
+    :ivar workerProfiles: The cluster worker profiles.
+    :vartype workerProfiles: list["WorkerProfile"]
+    :ivar workerProfilesStatus: The cluster worker profiles status.
+    :vartype workerProfilesStatus: list["WorkerProfile"]
+    :ivar apiserverProfile: The cluster API server profile.
+    :vartype apiserverProfile: "APIServerProfile"
+    :ivar ingressProfiles: The cluster ingress profiles.
+    :vartype ingressProfiles: list["IngressProfile"]
     """
 
     provisioningState: Union[str, "ProvisioningState"]
@@ -395,12 +394,12 @@ class OpenShiftClusterUpdate(TypedDict, total=False):
 class PlatformWorkloadIdentity(TypedDict, total=False):
     """PlatformWorkloadIdentity stores information representing a single workload identity.
 
-    :ivar resource_id: The resource ID of the PlatformWorkloadIdentity resource.
-    :vartype resource_id: str
-    :ivar client_id: The ClientID of the PlatformWorkloadIdentity resource.
-    :vartype client_id: str
-    :ivar object_id: The ObjectID of the PlatformWorkloadIdentity resource.
-    :vartype object_id: str
+    :ivar resourceId: The resource ID of the PlatformWorkloadIdentity resource.
+    :vartype resourceId: str
+    :ivar clientId: The ClientID of the PlatformWorkloadIdentity resource.
+    :vartype clientId: str
+    :ivar objectId: The ObjectID of the PlatformWorkloadIdentity resource.
+    :vartype objectId: str
     """
 
     resourceId: str
@@ -415,11 +414,11 @@ class PlatformWorkloadIdentityProfile(TypedDict, total=False):
     """PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload
     identity clusters.
 
-    :ivar upgradeable_to: UpgradeableTo stores a single OpenShift version a workload identity
+    :ivar upgradeableTo: UpgradeableTo stores a single OpenShift version a workload identity
      cluster can be upgraded to.
-    :vartype upgradeable_to: str
-    :ivar platform_workload_identities: Dictionary of <PlatformWorkloadIdentity>.
-    :vartype platform_workload_identities: dict[str, "PlatformWorkloadIdentity"]
+    :vartype upgradeableTo: str
+    :ivar platformWorkloadIdentities: Dictionary of <PlatformWorkloadIdentity>.
+    :vartype platformWorkloadIdentities: dict[str, "PlatformWorkloadIdentity"]
     """
 
     upgradeableTo: str
@@ -431,10 +430,10 @@ class PlatformWorkloadIdentityProfile(TypedDict, total=False):
 class ServicePrincipalProfile(TypedDict, total=False):
     """ServicePrincipalProfile represents a service principal profile.
 
-    :ivar client_id: The client ID used for the cluster.
-    :vartype client_id: str
-    :ivar client_secret: The client secret used for the cluster.
-    :vartype client_secret: str
+    :ivar clientId: The client ID used for the cluster.
+    :vartype clientId: str
+    :ivar clientSecret: The client secret used for the cluster.
+    :vartype clientSecret: str
     """
 
     clientId: str
@@ -446,20 +445,20 @@ class ServicePrincipalProfile(TypedDict, total=False):
 class SystemData(TypedDict, total=False):
     """Metadata pertaining to creation and last modification of the resource.
 
-    :ivar created_by: The identity that created the resource.
-    :vartype created_by: str
-    :ivar created_by_type: The type of identity that created the resource. Known values are:
-     "User", "Application", "ManagedIdentity", and "Key".
-    :vartype created_by_type: Union[str, "CreatedByType"]
-    :ivar created_at: The timestamp of resource creation (UTC).
-    :vartype created_at: str
-    :ivar last_modified_by: The identity that last modified the resource.
-    :vartype last_modified_by: str
-    :ivar last_modified_by_type: The type of identity that last modified the resource. Known values
+    :ivar createdBy: The identity that created the resource.
+    :vartype createdBy: str
+    :ivar createdByType: The type of identity that created the resource. Known values are: "User",
+     "Application", "ManagedIdentity", and "Key".
+    :vartype createdByType: Union[str, "CreatedByType"]
+    :ivar createdAt: The timestamp of resource creation (UTC).
+    :vartype createdAt: str
+    :ivar lastModifiedBy: The identity that last modified the resource.
+    :vartype lastModifiedBy: str
+    :ivar lastModifiedByType: The type of identity that last modified the resource. Known values
      are: "User", "Application", "ManagedIdentity", and "Key".
-    :vartype last_modified_by_type: Union[str, "CreatedByType"]
-    :ivar last_modified_at: The timestamp of resource last modification (UTC).
-    :vartype last_modified_at: str
+    :vartype lastModifiedByType: Union[str, "CreatedByType"]
+    :ivar lastModifiedAt: The timestamp of resource last modification (UTC).
+    :vartype lastModifiedAt: str
     """
 
     createdBy: str
@@ -481,10 +480,10 @@ class SystemData(TypedDict, total=False):
 class UserAssignedIdentity(TypedDict, total=False):
     """User assigned identity properties.
 
-    :ivar principal_id: The principal ID of the assigned identity.
-    :vartype principal_id: str
-    :ivar client_id: The client ID of the assigned identity.
-    :vartype client_id: str
+    :ivar principalId: The principal ID of the assigned identity.
+    :vartype principalId: str
+    :ivar clientId: The client ID of the assigned identity.
+    :vartype clientId: str
     """
 
     principalId: str
@@ -498,20 +497,19 @@ class WorkerProfile(TypedDict, total=False):
 
     :ivar name: The worker profile name.
     :vartype name: str
-    :ivar vm_size: The size of the worker VMs.
-    :vartype vm_size: str
-    :ivar disk_size_gb: The disk size of the worker VMs.
-    :vartype disk_size_gb: int
-    :ivar subnet_id: The Azure resource ID of the worker subnet.
-    :vartype subnet_id: str
+    :ivar vmSize: The size of the worker VMs.
+    :vartype vmSize: str
+    :ivar diskSizeGB: The disk size of the worker VMs.
+    :vartype diskSizeGB: int
+    :ivar subnetId: The Azure resource ID of the worker subnet.
+    :vartype subnetId: str
     :ivar count: The number of worker VMs.
     :vartype count: int
-    :ivar encryption_at_host: Whether master virtual machines are encrypted at host. Known values
+    :ivar encryptionAtHost: Whether master virtual machines are encrypted at host. Known values
      are: "Disabled" and "Enabled".
-    :vartype encryption_at_host: Union[str, "EncryptionAtHost"]
-    :ivar disk_encryption_set_id: The resource ID of an associated DiskEncryptionSet, if
-     applicable.
-    :vartype disk_encryption_set_id: str
+    :vartype encryptionAtHost: Union[str, "EncryptionAtHost"]
+    :ivar diskEncryptionSetId: The resource ID of an associated DiskEncryptionSet, if applicable.
+    :vartype diskEncryptionSetId: str
     """
 
     name: str

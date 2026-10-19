@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/sirupsen/logrus"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/openshift/hive/apis/hive/v1/azure"
@@ -37,9 +35,12 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestEnsureDeleted(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	ctx := context.Background()
 
 	builder := fake.NewClientBuilder().WithRuntimeObjects(&corev1.ConfigMap{
@@ -57,7 +58,7 @@ func TestEnsureDeleted(t *testing.T) {
 			return nil
 		})
 
-	ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
+	ch := NewWithClient(log, client)
 
 	err := ch.EnsureDeleted(ctx,
 		schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
@@ -90,54 +91,6 @@ func TestEnsureDeleted(t *testing.T) {
 
 func TestMerge(t *testing.T) {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
-
-	mhc := &machinev1beta1.MachineHealthCheck{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aro-machinehealthcheck",
-			Namespace: "openshift-machine-api",
-		},
-		Spec: machinev1beta1.MachineHealthCheckSpec{
-			Selector: metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "machine.openshift.io/cluster-api-machineset",
-						Operator: metav1.LabelSelectorOpExists,
-					},
-				},
-			},
-			UnhealthyConditions: []machinev1beta1.UnhealthyCondition{
-				{
-					Type:    corev1.NodeReady,
-					Timeout: metav1.Duration{Duration: 15 * time.Minute},
-					Status:  corev1.ConditionFalse,
-				},
-			},
-			NodeStartupTimeout: &metav1.Duration{Duration: 25 * time.Minute},
-		},
-	}
-
-	mhcWithStatus := mhc.DeepCopy()
-	mhcWithStatus.Status = machinev1beta1.MachineHealthCheckStatus{
-		Conditions: machinev1beta1.Conditions{
-			{
-				Type:               machinev1beta1.RemediationAllowedCondition,
-				Status:             corev1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: time.Now()},
-			},
-		},
-		CurrentHealthy:      pointerutils.ToPtr(3),
-		ExpectedMachines:    pointerutils.ToPtr(3),
-		RemediationsAllowed: 1,
-	}
-
-	mhcWithAnnotation := mhc.DeepCopy()
-	mhcWithAnnotation.Annotations = map[string]string{
-		"cluster.x-k8s.io/paused": "",
-	}
-
-	mhcWithStatusAndAnnotation := mhc.DeepCopy()
-	mhcWithStatusAndAnnotation.Status = *mhcWithStatus.Status.DeepCopy()
-	mhcWithStatusAndAnnotation.Annotations = mhcWithAnnotation.Annotations
 
 	for _, tt := range []struct {
 		name             string
@@ -1568,6 +1521,8 @@ func TestMergeApply(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			gvks, _, err := scheme.Scheme.ObjectKinds(tt.old)
@@ -1590,7 +1545,7 @@ func TestMergeApply(t *testing.T) {
 
 			ch := &clientHelper{
 				Client: clientFake,
-				log:    logrus.NewEntry(logrus.StandardLogger()),
+				log:    log,
 			}
 
 			err = ch.ensureOne(ctx, tt.new)
@@ -1652,10 +1607,6 @@ func TestGetOne(t *testing.T) {
 					Namespace:       "somewhere",
 					ResourceVersion: "1",
 				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
-				},
 				StringData: map[string]string{
 					"secret": "squirrels",
 				},
@@ -1685,10 +1636,12 @@ func TestGetOne(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			ctx := context.Background()
 
 			clientFake := fake.NewClientBuilder().WithRuntimeObjects(tt.existing...).Build()
-			ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			ch := NewWithClient(log, clientFake)
 
 			gvks, _, err := scheme.Scheme.ObjectKinds(tt.want)
 			if err != nil {

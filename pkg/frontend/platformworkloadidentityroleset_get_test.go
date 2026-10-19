@@ -11,7 +11,10 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/v20220904"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
 
@@ -46,28 +49,30 @@ func TestGetPlatformWorkloadIdentityRoleSet(t *testing.T) {
 		apiVersion     string
 		minorVersion   string
 		wantStatusCode int
-		wantResponse   *v20240812preview.PlatformWorkloadIdentityRoleSet
+		wantResponse   *v20250725.PlatformWorkloadIdentityRoleSet
 		wantError      string
 	}{
 		{
 			name:           "GET request results in StatusOK",
-			apiVersion:     "2024-08-12-preview",
+			apiVersion:     "2025-07-25",
 			minorVersion:   availableMinorVersion,
 			wantStatusCode: 200,
-			wantResponse: &v20240812preview.PlatformWorkloadIdentityRoleSet{
-				Properties: v20240812preview.PlatformWorkloadIdentityRoleSetProperties{
-					OpenShiftVersion: availableMinorVersion,
-					PlatformWorkloadIdentityRoles: []v20240812preview.PlatformWorkloadIdentityRole{
-						{
-							OperatorName:       "CloudControllerManager",
-							RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
-							RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+			wantResponse: &v20250725.PlatformWorkloadIdentityRoleSet{
+				PlatformWorkloadIdentityRoleSet: generated.PlatformWorkloadIdentityRoleSet{
+					Properties: &generated.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: pointerutils.ToPtr(availableMinorVersion),
+						PlatformWorkloadIdentityRoles: []*generated.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       pointerutils.ToPtr("CloudControllerManager"),
+								RoleDefinitionName: pointerutils.ToPtr("Azure RedHat OpenShift Cloud Controller Manager Role"),
+								RoleDefinitionID:   pointerutils.ToPtr("/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4"),
+							},
 						},
 					},
+					ID:   pointerutils.ToPtr("mockID"),
+					Name: pointerutils.ToPtr(availableMinorVersion),
+					Type: pointerutils.ToPtr(api.PlatformWorkloadIdentityRoleSetsType),
 				},
-				ID:   "mockID",
-				Name: availableMinorVersion,
-				Type: api.PlatformWorkloadIdentityRoleSetsType,
 			},
 		},
 		{
@@ -79,17 +84,17 @@ func TestGetPlatformWorkloadIdentityRoleSet(t *testing.T) {
 		},
 		{
 			name:           "GET request with old API version that doesn't support MIWI results in StatusBadRequest",
-			apiVersion:     "2022-09-04",
+			apiVersion:     v20220904.APIVersion,
 			minorVersion:   availableMinorVersion,
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidResourceType: : The endpoint could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-09-04'.",
 		},
 		{
 			name:           "GET request with not available minor version results in StatusBadRequest",
-			apiVersion:     "2024-08-12-preview",
+			apiVersion:     "2025-07-25",
 			minorVersion:   "4.13",
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: ResourceNotFound: : The Resource platformWorkloadIdentityRoleSet with version '4.13' was not found in the namespace 'microsoft.redhatopenshift' for api version '2024-08-12-preview'.",
+			wantError:      "400: ResourceNotFound: : The Resource platformWorkloadIdentityRoleSet with version '4.13' was not found in the namespace 'microsoft.redhatopenshift' for api version '2025-07-25'.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -116,7 +121,7 @@ func TestGetPlatformWorkloadIdentityRoleSet(t *testing.T) {
 
 			// unmarshal and marshal the response body to match string content
 			if b != nil && resp.StatusCode == http.StatusOK {
-				var r v20240812preview.PlatformWorkloadIdentityRoleSet
+				var r v20250725.PlatformWorkloadIdentityRoleSet
 				if err = json.Unmarshal(b, &r); err != nil {
 					t.Error(err)
 				}

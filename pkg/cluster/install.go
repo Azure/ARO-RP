@@ -95,9 +95,9 @@ func (m *manager) getZerothSteps() []steps.Step {
 			steps.Action(m.fixupClusterMsiTenantID),
 			steps.Action(m.ensureClusterMsiCertificate),
 			steps.Action(m.initializeClusterMsiClients),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.platformWorkloadIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.clusterIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.platformWorkloadIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
 		}
 
 		bootstrap = append(bootstrap, managedIdentitySteps...)
@@ -122,7 +122,7 @@ func (m *manager) getEnsureAPIServerReadySteps() []steps.Step {
 
 func (m *manager) getGeneralFixesSteps() []steps.Step {
 	stepsThatDontNeedAPIServer := []steps.Step{
-		steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.ensureResourceGroup, m.managedResourceGroupName()), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
@@ -130,8 +130,8 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.fixSSH),
 	}
 	stepsThatNeedAPIServer := []steps.Step{
-		steps.Action(m.fixSREKubeconfig),
-		steps.Action(m.fixUserAdminKubeconfig),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.fixSREKubeconfig, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.fixUserAdminKubeconfig, m.managedResourceGroupName()),
 		steps.Action(m.createOrUpdateRouterIPFromCluster),
 
 		steps.Action(m.ensureGatewayUpgrade),
@@ -152,7 +152,7 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 	s := []steps.Step{
 		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.correctCertificateIssuer),
-		steps.Action(m.fixMCSCert),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.fixMCSCert, m.managedResourceGroupName()),
 		steps.Action(m.fixMCSUserData),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
@@ -248,20 +248,20 @@ func (m *manager) Update(ctx context.Context) error {
 		)
 	}
 
-	s = append(s, steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources, m.managedResourceGroupName()))
+	s = append(s, steps.AuthorizationRetryingAction(m.fpCredRefresher, m.validateResources, m.managedResourceGroupName()))
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.clusterIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
 			steps.Action(m.ensurePlatformWorkloadIdentityRBAC),
-			steps.Action(m.federateIdentityCredentials),
+			steps.AuthorizationRetryingAction(nil, m.federateIdentityCredentials, m.managedResourceGroupName()),
 		)
 	} else {
 		s = append(s,
 			// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
 			// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.fixupClusterSPObjectID, m.managedResourceGroupName()),
 
 			// CSP credentials rotation flow steps
 			steps.Action(m.createOrUpdateClusterServicePrincipalRBAC))
@@ -277,7 +277,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.correctCertificateIssuer),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.fixUserAdminKubeconfig),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.fixUserAdminKubeconfig, m.managedResourceGroupName()),
 		steps.Action(m.reconcileLoadBalancerProfile),
 		steps.Action(m.reconcileSoftwareDefinedNetwork),
 		steps.Action(m.ensureCredentialsRequest),
@@ -293,10 +293,15 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.updateOpenShiftSecret),
 			steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
 			steps.Action(m.updateAROSecret),
-			steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
-			steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
 		)
 	}
+
+	// For service principal clusters: the operator restart picks up changes made by m.updateOpenShiftSecret
+	// For managed identity clusters: the operator restart picks up changes made by m.deployPlatformWorkloadIdentitySecrets
+	s = append(s,
+		steps.Action(m.restartAROOperatorMaster),
+		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
+	)
 
 	if m.adoptViaHive {
 		s = append(s,
@@ -393,19 +398,19 @@ func (m *manager) bootstrap() []steps.Step {
 	}
 
 	s = append(s,
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateZones, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.validateResources, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.validateZones, m.managedResourceGroupName()),
 	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterIdentityIDs, m.managedResourceGroupName()),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.clusterIdentityIDs, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.persistPlatformWorkloadIdentityIDs, m.managedResourceGroupName()),
 		)
 	} else {
 		s = append(s,
 			steps.Action(m.initializeClusterSPClients),
-			steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID, m.managedResourceGroupName()),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.clusterSPObjectID, m.managedResourceGroupName()),
 		)
 	}
 	s = append(s,
@@ -417,24 +422,25 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.populateMTUSize),
 		steps.Action(m.createDNS),
 		steps.Action(m.createOIDC),
-		steps.Action(m.ensureResourceGroup),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.ensureResourceGroup, m.managedResourceGroupName()),
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.deployBaseResourceTemplate, m.managedResourceGroupName()),
 	)
 
 	if m.doc.OpenShiftCluster.UsesWorkloadIdentity() {
 		s = append(s,
-			steps.Action(m.federateIdentityCredentials),
+			steps.AuthorizationRetryingAction(nil, m.federateIdentityCredentials, m.managedResourceGroupName()),
 		)
 	}
 
 	s = append(s,
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.attachNSGs, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.updateAPIIPEarly, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createOrUpdateRouterIPEarly, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.ensureGatewayCreate, m.managedResourceGroupName()),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.createAPIServerPrivateEndpoint, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.attachNSGs, m.managedResourceGroupName()),
+		// Allow extra time for ARM authorization to propagate to the internal load balancer.
+		steps.AuthorizationRetryingActionWithTimeout(m.fpCredRefresher, m.updateAPIIPEarly, m.managedResourceGroupName(), 15*time.Minute),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.createOrUpdateRouterIPEarly, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.ensureGatewayCreate, m.managedResourceGroupName()),
+		steps.AuthorizationRetryingAction(m.fpCredRefresher, m.createAPIServerPrivateEndpoint, m.managedResourceGroupName()),
 		steps.Action(m.createCertificates),
 	)
 
@@ -451,7 +457,7 @@ func (m *manager) bootstrap() []steps.Step {
 			// Give Hive 60 minutes to install the cluster, since this includes
 			// all of bootstrapping being complete
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
-			steps.Action(m.generateKubeconfigs),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.generateKubeconfigs, m.managedResourceGroupName()),
 		)
 
 	case api.InstallerBackendAKSJob:
@@ -463,7 +469,7 @@ func (m *manager) bootstrap() []steps.Step {
 	case api.InstallerBackendPodman:
 		s = append(s,
 			steps.Action(m.runPodmanInstaller),
-			steps.Action(m.generateKubeconfigs),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.generateKubeconfigs, m.managedResourceGroupName()),
 		)
 
 		if m.adoptViaHive {
@@ -524,7 +530,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.disableUpdates),
 			steps.Condition(m.clusterVersionReady, 30*time.Minute, true),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
-			steps.Action(m.updateClusterData),
+			steps.AuthorizationRetryingAction(m.fpCredRefresher, m.updateClusterData, m.managedResourceGroupName()),
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),

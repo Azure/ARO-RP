@@ -6,9 +6,22 @@ package v20250725
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
 type openShiftClusterConverter struct{}
+
+// toPtrIfNonZero returns a pointer to the value if it is non-zero and returns nil otherwise.
+// Since the generated API models use pointer types for all fields, this helper function ensures
+// that pointers to zero values are excluded from API responses. In other words, it helps ensure
+// that *effectively* empty fields are excluded from API responses.
+func toPtrIfNonZero[T comparable](value T) *T {
+	var zero T
+	if value == zero {
+		return nil
+	}
+	return pointerutils.ToPtr(value)
+}
 
 // ToExternal returns a new external representation of the internal object,
 // reading from the subset of the internal object's fields that appear in the
@@ -16,63 +29,73 @@ type openShiftClusterConverter struct{}
 // no pointer aliasing between the passed and returned objects
 func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftCluster{
-		ID:       oc.ID,
-		Name:     oc.Name,
-		Type:     oc.Type,
-		Location: oc.Location,
-		Properties: OpenShiftClusterProperties{
-			ProvisioningState: ProvisioningState(oc.Properties.ProvisioningState),
-			ClusterProfile: ClusterProfile{
-				PullSecret:           string(oc.Properties.ClusterProfile.PullSecret),
-				Domain:               oc.Properties.ClusterProfile.Domain,
-				Version:              oc.Properties.ClusterProfile.Version,
-				ResourceGroupID:      oc.Properties.ClusterProfile.ResourceGroupID,
-				FipsValidatedModules: FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules),
-			},
-			ConsoleProfile: ConsoleProfile{
-				URL: oc.Properties.ConsoleProfile.URL,
-			},
-			NetworkProfile: NetworkProfile{
-				PodCIDR:          oc.Properties.NetworkProfile.PodCIDR,
-				ServiceCIDR:      oc.Properties.NetworkProfile.ServiceCIDR,
-				OutboundType:     OutboundType(oc.Properties.NetworkProfile.OutboundType),
-				PreconfiguredNSG: PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG),
-			},
-			MasterProfile: MasterProfile{
-				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
-				SubnetID:            oc.Properties.MasterProfile.SubnetID,
-				EncryptionAtHost:    EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost),
-				DiskEncryptionSetID: oc.Properties.MasterProfile.DiskEncryptionSetID,
-			},
-			APIServerProfile: APIServerProfile{
-				Visibility: Visibility(oc.Properties.APIServerProfile.Visibility),
-				URL:        oc.Properties.APIServerProfile.URL,
-				IP:         oc.Properties.APIServerProfile.IP,
+		OpenShiftCluster: generated.OpenShiftCluster{
+			ID:       toPtrIfNonZero(oc.ID),
+			Name:     toPtrIfNonZero(oc.Name),
+			Type:     toPtrIfNonZero(oc.Type),
+			Location: toPtrIfNonZero(oc.Location),
+			Properties: &generated.OpenShiftClusterProperties{
+				ProvisioningState: toPtrIfNonZero(generated.ProvisioningState(oc.Properties.ProvisioningState)),
+				ClusterProfile: &generated.ClusterProfile{
+					Domain:               toPtrIfNonZero(oc.Properties.ClusterProfile.Domain),
+					Version:              toPtrIfNonZero(oc.Properties.ClusterProfile.Version),
+					ResourceGroupID:      toPtrIfNonZero(oc.Properties.ClusterProfile.ResourceGroupID),
+					FipsValidatedModules: toPtrIfNonZero(generated.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)),
+				},
+				NetworkProfile: &generated.NetworkProfile{
+					PodCidr:          toPtrIfNonZero(oc.Properties.NetworkProfile.PodCIDR),
+					ServiceCidr:      toPtrIfNonZero(oc.Properties.NetworkProfile.ServiceCIDR),
+					OutboundType:     toPtrIfNonZero(generated.OutboundType(oc.Properties.NetworkProfile.OutboundType)),
+					PreconfiguredNSG: toPtrIfNonZero(generated.PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG)),
+				},
+				MasterProfile: &generated.MasterProfile{
+					VMSize:              toPtrIfNonZero(string(oc.Properties.MasterProfile.VMSize)),
+					SubnetID:            toPtrIfNonZero(oc.Properties.MasterProfile.SubnetID),
+					EncryptionAtHost:    toPtrIfNonZero(generated.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)),
+					DiskEncryptionSetID: toPtrIfNonZero(oc.Properties.MasterProfile.DiskEncryptionSetID),
+				},
+				ApiserverProfile: &generated.APIServerProfile{
+					Visibility: toPtrIfNonZero(generated.Visibility(oc.Properties.APIServerProfile.Visibility)),
+					URL:        toPtrIfNonZero(oc.Properties.APIServerProfile.URL),
+					IP:         toPtrIfNonZero(oc.Properties.APIServerProfile.IP),
+				},
 			},
 		},
 	}
 
+	if oc.Properties.ConsoleProfile.URL != "" {
+		out.Properties.ConsoleProfile = &generated.ConsoleProfile{
+			URL: pointerutils.ToPtr(oc.Properties.ConsoleProfile.URL),
+		}
+	}
+
+	if oc.Properties.ClusterProfile.PullSecret != "" {
+		out.Properties.ClusterProfile.PullSecret = pointerutils.ToPtr(string(oc.Properties.ClusterProfile.PullSecret))
+	}
+
 	if oc.Properties.ServicePrincipalProfile != nil {
-		out.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{
-			ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
+		out.Properties.ServicePrincipalProfile = &generated.ServicePrincipalProfile{
+			ClientID: toPtrIfNonZero(oc.Properties.ServicePrincipalProfile.ClientID),
+		}
+		if oc.Properties.ServicePrincipalProfile.ClientSecret != "" {
+			out.Properties.ServicePrincipalProfile.ClientSecret = pointerutils.ToPtr(string(oc.Properties.ServicePrincipalProfile.ClientSecret))
 		}
 	}
 
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
-		out.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{}
+		out.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{}
 
 		if oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs = &ManagedOutboundIPs{
-				Count: oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count,
+			out.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs = &generated.ManagedOutboundIPs{
+				Count: toPtrIfNonZero(int32(oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count)),
 			}
 		}
 
 		if oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = make([]EffectiveOutboundIP, 0, len(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
+			out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = make([]*generated.EffectiveOutboundIP, 0, len(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
 			for _, effectiveOutboundIP := range oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs {
-				out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = append(out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs, EffectiveOutboundIP{
-					ID: effectiveOutboundIP.ID,
+				out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = append(out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs, &generated.EffectiveOutboundIP{
+					ID: toPtrIfNonZero(effectiveOutboundIP.ID),
 				})
 			}
 		}
@@ -80,100 +103,104 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 
 	if oc.Properties.WorkerProfiles != nil {
 		workerProfiles := oc.Properties.WorkerProfiles
-		out.Properties.WorkerProfiles = make([]WorkerProfile, 0, len(workerProfiles))
+		out.Properties.WorkerProfiles = make([]*generated.WorkerProfile, 0, len(workerProfiles))
 		for _, p := range workerProfiles {
-			out.Properties.WorkerProfiles = append(out.Properties.WorkerProfiles, WorkerProfile{
-				Name:                p.Name,
-				VMSize:              VMSize(p.VMSize),
-				DiskSizeGB:          p.DiskSizeGB,
-				SubnetID:            p.SubnetID,
-				Count:               p.Count,
-				EncryptionAtHost:    EncryptionAtHost(p.EncryptionAtHost),
-				DiskEncryptionSetID: p.DiskEncryptionSetID,
+			out.Properties.WorkerProfiles = append(out.Properties.WorkerProfiles, &generated.WorkerProfile{
+				Name:                toPtrIfNonZero(p.Name),
+				VMSize:              toPtrIfNonZero(string(p.VMSize)),
+				DiskSizeGB:          toPtrIfNonZero(int32(p.DiskSizeGB)),
+				SubnetID:            toPtrIfNonZero(p.SubnetID),
+				Count:               toPtrIfNonZero(int32(p.Count)),
+				EncryptionAtHost:    toPtrIfNonZero(generated.EncryptionAtHost(p.EncryptionAtHost)),
+				DiskEncryptionSetID: toPtrIfNonZero(p.DiskEncryptionSetID),
 			})
 		}
 	}
 
 	if oc.Properties.WorkerProfilesStatus != nil {
 		workerProfiles := oc.Properties.WorkerProfilesStatus
-		out.Properties.WorkerProfilesStatus = make([]WorkerProfile, 0, len(workerProfiles))
+		out.Properties.WorkerProfilesStatus = make([]*generated.WorkerProfile, 0, len(workerProfiles))
 		for _, p := range workerProfiles {
-			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, WorkerProfile{
-				Name:                p.Name,
-				VMSize:              VMSize(p.VMSize),
-				DiskSizeGB:          p.DiskSizeGB,
-				SubnetID:            p.SubnetID,
-				Count:               p.Count,
-				EncryptionAtHost:    EncryptionAtHost(p.EncryptionAtHost),
-				DiskEncryptionSetID: p.DiskEncryptionSetID,
+			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, &generated.WorkerProfile{
+				Name:                toPtrIfNonZero(p.Name),
+				VMSize:              toPtrIfNonZero(string(p.VMSize)),
+				DiskSizeGB:          toPtrIfNonZero(int32(p.DiskSizeGB)),
+				SubnetID:            toPtrIfNonZero(p.SubnetID),
+				Count:               toPtrIfNonZero(int32(p.Count)),
+				EncryptionAtHost:    toPtrIfNonZero(generated.EncryptionAtHost(p.EncryptionAtHost)),
+				DiskEncryptionSetID: toPtrIfNonZero(p.DiskEncryptionSetID),
 			})
 		}
 	}
 
 	if oc.Properties.IngressProfiles != nil {
-		out.Properties.IngressProfiles = make([]IngressProfile, 0, len(oc.Properties.IngressProfiles))
+		out.Properties.IngressProfiles = make([]*generated.IngressProfile, 0, len(oc.Properties.IngressProfiles))
 		for _, p := range oc.Properties.IngressProfiles {
-			out.Properties.IngressProfiles = append(out.Properties.IngressProfiles, IngressProfile{
-				Name:       p.Name,
-				Visibility: Visibility(p.Visibility),
-				IP:         p.IP,
+			out.Properties.IngressProfiles = append(out.Properties.IngressProfiles, &generated.IngressProfile{
+				Name:       toPtrIfNonZero(p.Name),
+				Visibility: toPtrIfNonZero(generated.Visibility(p.Visibility)),
+				IP:         toPtrIfNonZero(p.IP),
 			})
 		}
 	}
 
-	if oc.Tags != nil {
-		out.Tags = make(map[string]string, len(oc.Tags))
+	if len(oc.Tags) > 0 {
+		out.Tags = make(map[string]*string, len(oc.Tags))
 		for k, v := range oc.Tags {
-			out.Tags[k] = v
+			out.Tags[k] = pointerutils.ToPtr(v)
 		}
 	}
 
 	if oc.Identity != nil {
-		out.Identity = &ManagedServiceIdentity{}
-		out.Identity.Type = ManagedServiceIdentityType(oc.Identity.Type)
-		out.Identity.PrincipalID = oc.Identity.PrincipalID
-		out.Identity.TenantID = oc.Identity.TenantID
-		out.Identity.UserAssignedIdentities = make(map[string]UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
-		for k := range oc.Identity.UserAssignedIdentities {
-			var temp UserAssignedIdentity
-			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
-			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
-			out.Identity.UserAssignedIdentities[k] = temp
+		out.Identity = &generated.ManagedServiceIdentity{}
+		out.Identity.Type = toPtrIfNonZero(generated.ManagedServiceIdentityType(oc.Identity.Type))
+		out.Identity.PrincipalID = toPtrIfNonZero(oc.Identity.PrincipalID)
+		out.Identity.TenantID = toPtrIfNonZero(oc.Identity.TenantID)
+		if len(oc.Identity.UserAssignedIdentities) > 0 {
+			out.Identity.UserAssignedIdentities = make(map[string]*generated.UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
+			for k := range oc.Identity.UserAssignedIdentities {
+				temp := &generated.UserAssignedIdentity{}
+				temp.ClientID = toPtrIfNonZero(oc.Identity.UserAssignedIdentities[k].ClientID)
+				temp.PrincipalID = toPtrIfNonZero(oc.Identity.UserAssignedIdentities[k].PrincipalID)
+				out.Identity.UserAssignedIdentities[k] = temp
+			}
 		}
 	}
 
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
-		out.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{}
+		out.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{}
 
 		if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
-			temp := UpgradeableTo(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
+			temp := string(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
 			out.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = &temp
 		}
 
-		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
+		if len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities) > 0 {
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make(map[string]*generated.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
-		for k := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			pwi := PlatformWorkloadIdentity{
-				ClientID:   oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ClientID,
-				ObjectID:   oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ObjectID,
-				ResourceID: oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ResourceID,
+			for k := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+				pwi := &generated.PlatformWorkloadIdentity{
+					ClientID:   toPtrIfNonZero(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ClientID),
+					ObjectID:   toPtrIfNonZero(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ObjectID),
+					ResourceID: toPtrIfNonZero(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k].ResourceID),
+				}
+
+				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = pwi
 			}
-
-			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = pwi
 		}
 	}
 
 	if oc.Properties.ClusterProfile.OIDCIssuer != nil {
-		out.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(OIDCIssuer(*oc.Properties.ClusterProfile.OIDCIssuer))
+		out.Properties.ClusterProfile.OidcIssuer = pointerutils.ToPtr(string(*oc.Properties.ClusterProfile.OIDCIssuer))
 	}
 
-	out.SystemData = &SystemData{
-		CreatedBy:          oc.SystemData.CreatedBy,
+	out.SystemData = &generated.SystemData{
+		CreatedBy:          toPtrIfNonZero(oc.SystemData.CreatedBy),
 		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      CreatedByType(oc.SystemData.CreatedByType),
-		LastModifiedBy:     oc.SystemData.LastModifiedBy,
+		CreatedByType:      toPtrIfNonZero(generated.CreatedByType(oc.SystemData.CreatedByType)),
+		LastModifiedBy:     toPtrIfNonZero(oc.SystemData.LastModifiedBy),
 		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: CreatedByType(oc.SystemData.LastModifiedByType),
+		LastModifiedByType: toPtrIfNonZero(generated.CreatedByType(oc.SystemData.LastModifiedByType)),
 	}
 
 	return out
@@ -201,15 +228,15 @@ func (c openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, n
 func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
 	oc := _oc.(*OpenShiftCluster)
 
-	out.ID = oc.ID
-	out.Name = oc.Name
-	out.Type = oc.Type
-	out.Location = oc.Location
+	out.ID = value(oc.ID)
+	out.Name = value(oc.Name)
+	out.Type = value(oc.Type)
+	out.Location = value(oc.Location)
 	out.Tags = nil
 	if oc.Tags != nil {
 		out.Tags = make(map[string]string, len(oc.Tags))
 		for k, v := range oc.Tags {
-			out.Tags[k] = v
+			out.Tags[k] = value(v)
 		}
 	}
 
@@ -217,31 +244,33 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		if out.Identity == nil {
 			out.Identity = &api.ManagedServiceIdentity{}
 		}
-		out.Identity.Type = api.ManagedServiceIdentityType(oc.Identity.Type)
-		out.Identity.PrincipalID = oc.Identity.PrincipalID
-		out.Identity.TenantID = oc.Identity.TenantID
+		out.Identity.Type = api.ManagedServiceIdentityType(value(oc.Identity.Type))
+		out.Identity.PrincipalID = value(oc.Identity.PrincipalID)
+		out.Identity.TenantID = value(oc.Identity.TenantID)
 		out.Identity.UserAssignedIdentities = make(map[string]api.UserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
 		for k := range oc.Identity.UserAssignedIdentities {
 			var temp api.UserAssignedIdentity
-			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
-			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
+			if oc.Identity.UserAssignedIdentities[k] != nil {
+				temp.ClientID = value(oc.Identity.UserAssignedIdentities[k].ClientID)
+				temp.PrincipalID = value(oc.Identity.UserAssignedIdentities[k].PrincipalID)
+			}
 			out.Identity.UserAssignedIdentities[k] = temp
 		}
 	}
 
-	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
-	out.Properties.ClusterProfile.PullSecret = api.SecureString(oc.Properties.ClusterProfile.PullSecret)
-	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
-	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
-	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
-	if oc.Properties.ConsoleProfile.URL != "" {
-		out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
+	out.Properties.ProvisioningState = api.ProvisioningState(value(oc.Properties.ProvisioningState))
+	out.Properties.ClusterProfile.PullSecret = api.SecureString(value(oc.Properties.ClusterProfile.PullSecret))
+	out.Properties.ClusterProfile.Domain = value(oc.Properties.ClusterProfile.Domain)
+	out.Properties.ClusterProfile.Version = value(oc.Properties.ClusterProfile.Version)
+	out.Properties.ClusterProfile.ResourceGroupID = value(oc.Properties.ClusterProfile.ResourceGroupID)
+	if oc.Properties.ConsoleProfile != nil && value(oc.Properties.ConsoleProfile.URL) != "" {
+		out.Properties.ConsoleProfile.URL = value(oc.Properties.ConsoleProfile.URL)
 	}
-	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
+	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(value(oc.Properties.ClusterProfile.FipsValidatedModules))
 	if oc.Properties.ServicePrincipalProfile != nil {
 		out.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{
-			ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret: api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret),
+			ClientID:     value(oc.Properties.ServicePrincipalProfile.ClientID),
+			ClientSecret: api.SecureString(value(oc.Properties.ServicePrincipalProfile.ClientSecret)),
 		}
 	}
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
@@ -259,25 +288,28 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 
 		for k, identity := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if identity == nil {
+				continue
+			}
 			if pwi, exists := out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k]; exists {
-				if pwi.ResourceID != identity.ResourceID {
+				if pwi.ResourceID != value(identity.ResourceID) {
 					pwi.ClientID = ""
 					pwi.ObjectID = ""
 				}
-				pwi.ResourceID = identity.ResourceID
+				pwi.ResourceID = value(identity.ResourceID)
 				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = pwi
 			} else {
 				out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[k] = api.PlatformWorkloadIdentity{
-					ResourceID: identity.ResourceID,
+					ResourceID: value(identity.ResourceID),
 				}
 			}
 		}
 	}
 
-	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
-	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
-	out.Properties.NetworkProfile.OutboundType = api.OutboundType(oc.Properties.NetworkProfile.OutboundType)
-	out.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG)
+	out.Properties.NetworkProfile.PodCIDR = value(oc.Properties.NetworkProfile.PodCidr)
+	out.Properties.NetworkProfile.ServiceCIDR = value(oc.Properties.NetworkProfile.ServiceCidr)
+	out.Properties.NetworkProfile.OutboundType = api.OutboundType(value(oc.Properties.NetworkProfile.OutboundType))
+	out.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSG(value(oc.Properties.NetworkProfile.PreconfiguredNSG))
 
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
 		loadBalancerProfile := api.LoadBalancerProfile{}
@@ -293,74 +325,85 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 
 		if oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
 			out.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs = &api.ManagedOutboundIPs{
-				Count: oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count,
+				Count: int(value(oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count)),
 			}
 		}
 		if oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs != nil {
 			out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = make([]api.EffectiveOutboundIP, len(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
 			for i := range oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs {
-				out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs[i].ID = oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs[i].ID
+				if oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs[i] != nil {
+					out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs[i].ID = value(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs[i].ID)
+				}
 			}
 		}
 	}
 
-	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
-	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
-	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)
-	out.Properties.MasterProfile.DiskEncryptionSetID = oc.Properties.MasterProfile.DiskEncryptionSetID
+	out.Properties.MasterProfile.VMSize = api.VMSize(value(oc.Properties.MasterProfile.VMSize))
+	out.Properties.MasterProfile.SubnetID = value(oc.Properties.MasterProfile.SubnetID)
+	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(value(oc.Properties.MasterProfile.EncryptionAtHost))
+	out.Properties.MasterProfile.DiskEncryptionSetID = value(oc.Properties.MasterProfile.DiskEncryptionSetID)
 	out.Properties.WorkerProfiles = nil
 	if oc.Properties.WorkerProfiles != nil {
 		out.Properties.WorkerProfiles = make([]api.WorkerProfile, len(oc.Properties.WorkerProfiles))
 		for i := range oc.Properties.WorkerProfiles {
-			out.Properties.WorkerProfiles[i].Name = oc.Properties.WorkerProfiles[i].Name
-			out.Properties.WorkerProfiles[i].VMSize = api.VMSize(oc.Properties.WorkerProfiles[i].VMSize)
-			out.Properties.WorkerProfiles[i].DiskSizeGB = oc.Properties.WorkerProfiles[i].DiskSizeGB
-			out.Properties.WorkerProfiles[i].SubnetID = oc.Properties.WorkerProfiles[i].SubnetID
-			out.Properties.WorkerProfiles[i].Count = oc.Properties.WorkerProfiles[i].Count
-			out.Properties.WorkerProfiles[i].EncryptionAtHost = api.EncryptionAtHost(oc.Properties.WorkerProfiles[i].EncryptionAtHost)
-			out.Properties.WorkerProfiles[i].DiskEncryptionSetID = oc.Properties.WorkerProfiles[i].DiskEncryptionSetID
+			if oc.Properties.WorkerProfiles[i] == nil {
+				continue
+			}
+			out.Properties.WorkerProfiles[i].Name = value(oc.Properties.WorkerProfiles[i].Name)
+			out.Properties.WorkerProfiles[i].VMSize = api.VMSize(value(oc.Properties.WorkerProfiles[i].VMSize))
+			out.Properties.WorkerProfiles[i].DiskSizeGB = int(value(oc.Properties.WorkerProfiles[i].DiskSizeGB))
+			out.Properties.WorkerProfiles[i].SubnetID = value(oc.Properties.WorkerProfiles[i].SubnetID)
+			out.Properties.WorkerProfiles[i].Count = int(value(oc.Properties.WorkerProfiles[i].Count))
+			out.Properties.WorkerProfiles[i].EncryptionAtHost = api.EncryptionAtHost(value(oc.Properties.WorkerProfiles[i].EncryptionAtHost))
+			out.Properties.WorkerProfiles[i].DiskEncryptionSetID = value(oc.Properties.WorkerProfiles[i].DiskEncryptionSetID)
 		}
 	}
 	out.Properties.WorkerProfilesStatus = nil
 	if oc.Properties.WorkerProfilesStatus != nil {
 		out.Properties.WorkerProfilesStatus = make([]api.WorkerProfile, len(oc.Properties.WorkerProfilesStatus))
 		for i := range oc.Properties.WorkerProfilesStatus {
-			out.Properties.WorkerProfilesStatus[i].Name = oc.Properties.WorkerProfilesStatus[i].Name
-			out.Properties.WorkerProfilesStatus[i].VMSize = api.VMSize(oc.Properties.WorkerProfilesStatus[i].VMSize)
-			out.Properties.WorkerProfilesStatus[i].DiskSizeGB = oc.Properties.WorkerProfilesStatus[i].DiskSizeGB
-			out.Properties.WorkerProfilesStatus[i].SubnetID = oc.Properties.WorkerProfilesStatus[i].SubnetID
-			out.Properties.WorkerProfilesStatus[i].Count = oc.Properties.WorkerProfilesStatus[i].Count
-			out.Properties.WorkerProfilesStatus[i].EncryptionAtHost = api.EncryptionAtHost(oc.Properties.WorkerProfilesStatus[i].EncryptionAtHost)
-			out.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID = oc.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID
+			if oc.Properties.WorkerProfilesStatus[i] == nil {
+				continue
+			}
+			out.Properties.WorkerProfilesStatus[i].Name = value(oc.Properties.WorkerProfilesStatus[i].Name)
+			out.Properties.WorkerProfilesStatus[i].VMSize = api.VMSize(value(oc.Properties.WorkerProfilesStatus[i].VMSize))
+			out.Properties.WorkerProfilesStatus[i].DiskSizeGB = int(value(oc.Properties.WorkerProfilesStatus[i].DiskSizeGB))
+			out.Properties.WorkerProfilesStatus[i].SubnetID = value(oc.Properties.WorkerProfilesStatus[i].SubnetID)
+			out.Properties.WorkerProfilesStatus[i].Count = int(value(oc.Properties.WorkerProfilesStatus[i].Count))
+			out.Properties.WorkerProfilesStatus[i].EncryptionAtHost = api.EncryptionAtHost(value(oc.Properties.WorkerProfilesStatus[i].EncryptionAtHost))
+			out.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID = value(oc.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID)
 		}
 	}
-	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)
-	if oc.Properties.APIServerProfile.URL != "" {
-		out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
+	out.Properties.APIServerProfile.Visibility = api.Visibility(value(oc.Properties.ApiserverProfile.Visibility))
+	if value(oc.Properties.ApiserverProfile.URL) != "" {
+		out.Properties.APIServerProfile.URL = value(oc.Properties.ApiserverProfile.URL)
 	}
-	if oc.Properties.APIServerProfile.IP != "" {
-		out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
+	if value(oc.Properties.ApiserverProfile.IP) != "" {
+		out.Properties.APIServerProfile.IP = value(oc.Properties.ApiserverProfile.IP)
 	}
 	out.Properties.IngressProfiles = nil
 	if oc.Properties.IngressProfiles != nil {
 		out.Properties.IngressProfiles = make([]api.IngressProfile, len(oc.Properties.IngressProfiles))
 		for i := range oc.Properties.IngressProfiles {
-			out.Properties.IngressProfiles[i].Name = oc.Properties.IngressProfiles[i].Name
-			out.Properties.IngressProfiles[i].Visibility = api.Visibility(oc.Properties.IngressProfiles[i].Visibility)
-			if oc.Properties.IngressProfiles[i].IP != "" {
-				out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
+			if oc.Properties.IngressProfiles[i] == nil {
+				continue
+			}
+			out.Properties.IngressProfiles[i].Name = value(oc.Properties.IngressProfiles[i].Name)
+			out.Properties.IngressProfiles[i].Visibility = api.Visibility(value(oc.Properties.IngressProfiles[i].Visibility))
+			if value(oc.Properties.IngressProfiles[i].IP) != "" {
+				out.Properties.IngressProfiles[i].IP = value(oc.Properties.IngressProfiles[i].IP)
 			}
 		}
 	}
 
 	if oc.SystemData != nil {
 		out.SystemData = api.SystemData{
-			CreatedBy:          oc.SystemData.CreatedBy,
+			CreatedBy:          value(oc.SystemData.CreatedBy),
 			CreatedAt:          oc.SystemData.CreatedAt,
-			CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
-			LastModifiedBy:     oc.SystemData.LastModifiedBy,
+			CreatedByType:      api.CreatedByType(value(oc.SystemData.CreatedByType)),
+			LastModifiedBy:     value(oc.SystemData.LastModifiedBy),
 			LastModifiedAt:     oc.SystemData.LastModifiedAt,
-			LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
+			LastModifiedByType: api.CreatedByType(value(oc.SystemData.LastModifiedByType)),
 		}
 	}
 }
@@ -373,29 +416,39 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
 	}
 	oc.SystemData = nil
-	oc.Properties.ConsoleProfile.URL = ""
-	oc.Properties.APIServerProfile.URL = ""
-	oc.Properties.APIServerProfile.IP = ""
-	for i := range oc.Properties.IngressProfiles {
-		oc.Properties.IngressProfiles[i].IP = ""
+	if oc.Properties.ConsoleProfile != nil {
+		oc.Properties.ConsoleProfile.URL = nil
 	}
-	oc.Properties.ClusterProfile.OIDCIssuer = nil
+	oc.Properties.ApiserverProfile.URL = nil
+	oc.Properties.ApiserverProfile.IP = nil
+	for i := range oc.Properties.IngressProfiles {
+		if oc.Properties.IngressProfiles[i] != nil {
+			oc.Properties.IngressProfiles[i].IP = nil
+		}
+	}
+	oc.Properties.ClusterProfile.OidcIssuer = nil
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil {
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			if entry, ok := oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i]; ok {
-				entry.ClientID = ""
-				entry.ObjectID = ""
+				if entry == nil {
+					continue
+				}
+				entry.ClientID = nil
+				entry.ObjectID = nil
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i] = entry
 			}
 		}
 	}
 	if oc.Identity != nil {
-		oc.Identity.PrincipalID = ""
-		oc.Identity.TenantID = ""
+		oc.Identity.PrincipalID = nil
+		oc.Identity.TenantID = nil
 		for i := range oc.Identity.UserAssignedIdentities {
 			if entry, ok := oc.Identity.UserAssignedIdentities[i]; ok {
-				entry.ClientID = ""
-				entry.PrincipalID = ""
+				if entry == nil {
+					continue
+				}
+				entry.ClientID = nil
+				entry.PrincipalID = nil
 				oc.Identity.UserAssignedIdentities[i] = entry
 			}
 		}

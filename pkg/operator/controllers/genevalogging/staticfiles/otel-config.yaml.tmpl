@@ -26,6 +26,7 @@ receivers:
       - /var/log/containers/*_openshift-network-operator_*.log
       - /var/log/containers/*_openshift-machine-config-operator_*.log
       - /var/log/containers/*_openshift-machine-api_*.log
+      - /var/log/containers/*_openshift-cloud-controller-manager_*.log
 {{- else }}
       - /var/log/containers/*_default_*.log
       - /var/log/containers/*_kube-*_*.log
@@ -411,6 +412,7 @@ not ((IsString(body) and (
     IsMatch(body, "level=(error|warn|warning)")
     or IsMatch(body, "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
     or IsMatch(body, "Update error .*: ClusterOperatorDegraded")
+    or IsMatch(body, "failed to reconcile machine")
     or IsMatch(body, "\\terror\\t|\\twarn\\t")))
   or (IsMap(body) and (
     (IsString(body["severity"]) and (
@@ -419,6 +421,7 @@ not ((IsString(body) and (
     or (IsString(body["message"]) and (
       IsMatch(body["message"], "level=(error|warn|warning)")
       or IsMatch(body["message"], "\\bE[0-9]{4}\\b|\\bW[0-9]{4}\\b")
+      or IsMatch(body["message"], "failed to reconcile machine")
       or IsMatch(body["message"], "Update error .*: ClusterOperatorDegraded"))))))
 {{- end -}}
 {{- define "keep-journald-high-signal-expr" -}}

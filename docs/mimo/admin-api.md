@@ -24,6 +24,7 @@ Replace `SUBSCRIPTION_ID`, `RESOURCE_GROUP`, and `CLUSTER_NAME` with the target 
 
 - TLS cert rotation: `9b741734-6505-447f-8510-85eb0ae561a2`
 - Operator flags update: `b41749fc-af26-4ab7-b5a1-e03f3ee4cba6`
+- Restore cluster service principal RBAC: `3d2a7f16-5c48-4b91-9e03-7a1f8cbe4d52`
 
 The operator-flags task is used for fleet rollouts of
 `properties.operatorFlags` changes (for example OTEL profile and source-field

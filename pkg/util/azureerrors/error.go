@@ -20,6 +20,9 @@ import (
 // transientConflictBody is the ARM body text for transient 409s; undocumented, observed in production.
 const transientConflictBody = "Please retry later"
 
+// federatedIdentityCredentialWrite is the ARM action for writing federated identity credentials.
+const federatedIdentityCredentialWrite = "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write"
+
 const (
 	CODE_AUTHFAILED       = "AuthorizationFailed"
 	CODE_DEPLOYACTIVE     = "DeploymentActive"
@@ -205,6 +208,12 @@ func IsUnauthorizedClientError(err error) bool {
 // See https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes#aadsts-error-codes
 func IsClientSecretKeysExpired(err error) bool {
 	return strings.Contains(err.Error(), "AADSTS7000222")
+}
+
+// IsFederatedIdentityCredentialWriteForbiddenError returns true if the error is a 403 Forbidden error
+// that occurred during an attempt to write a federated identity credential.
+func IsFederatedIdentityCredentialWriteForbiddenError(err error) bool {
+	return strings.Contains(err.Error(), "does not have authorization to perform action '"+federatedIdentityCredentialWrite+"'")
 }
 
 // ResourceGroupNotFound returns true if the error is an ResourceGroupNotFound error
@@ -396,7 +405,7 @@ func resourceGroupsFromMessage(msg string) []string {
 	return rgs
 }
 
-// IsRetryableError returns true for transient ARM errors: 429, 409+Retry-After, 409+transientConflictBody, or "RetryableError" in the message.
+// IsRetryableError returns true for transient ARM errors: 429, Retry-After header present, transientConflictBody, or "RetryableError" in the message.
 func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
@@ -415,13 +424,8 @@ func IsRetryableError(err error) bool {
 		if responseError.StatusCode == http.StatusTooManyRequests {
 			return true
 		}
-		if responseError.StatusCode == http.StatusConflict {
-			if responseError.RawResponse != nil && responseError.RawResponse.Header.Get("Retry-After") != "" {
-				return true
-			}
-			if strings.Contains(errMsg, transientConflictBody) {
-				return true
-			}
+		if responseError.RawResponse != nil && responseError.RawResponse.Header.Get("Retry-After") != "" {
+			return true
 		}
 	}
 
@@ -430,14 +434,13 @@ func IsRetryableError(err error) bool {
 		if detailedErr.StatusCode == http.StatusTooManyRequests {
 			return true
 		}
-		if detailedErr.StatusCode == http.StatusConflict {
-			if detailedErr.Response != nil && detailedErr.Response.Header.Get("Retry-After") != "" {
-				return true
-			}
-			if strings.Contains(errMsg, transientConflictBody) {
-				return true
-			}
+		if detailedErr.Response != nil && detailedErr.Response.Header.Get("Retry-After") != "" {
+			return true
 		}
+	}
+
+	if strings.Contains(errMsg, transientConflictBody) {
+		return true
 	}
 
 	// AADSTS errors indicate transient AAD token propagation failures (e.g. newly

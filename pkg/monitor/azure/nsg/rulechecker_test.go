@@ -7,11 +7,10 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestToPrefix(t *testing.T) {
@@ -61,7 +60,8 @@ func TestToPrefix(t *testing.T) {
 }
 
 func TestToPrefixes(t *testing.T) {
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
+
 	for _, tt := range []struct {
 		name string
 		in   []string
@@ -366,7 +366,7 @@ func TestPropertiesIsNothing(t *testing.T) {
 }
 
 func TestRuleCheckerIsInvalidDenyRule(t *testing.T) {
-	log := logrus.NewEntry(logrus.New())
+	_, log := testlog.LogForTesting(t)
 	masterPrefixes := []netip.Prefix{
 		netip.MustParsePrefix("10.0.0.0/24"),
 		netip.MustParsePrefix("11.0.0.0/24"),

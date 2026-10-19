@@ -23,6 +23,7 @@ const (
 	OpenshiftClustersPrefixQuery                = `SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)`
 	OpenshiftClustersClientIdQuery              = `SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID`
 	OpenshiftClustersResourceGroupQuery         = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
+	OpenshiftClustersResourceGroupIDOnlyQuery   = `SELECT doc.id FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
 	OpenshiftClustersClusterResourceIDOnlyQuery = `SELECT doc.id, doc.key, doc.bucket FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState NOT IN ("Creating", "Deleting")`
 )
 
@@ -56,6 +57,7 @@ type OpenShiftClusters interface {
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string) (*api.OpenShiftClusterDocument, error)
 	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
 	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
+	GetIDsByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
 	GetAllResourceIDs(ctx context.Context, continuation string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	DoDequeue(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	NewUUID() string
@@ -362,6 +364,27 @@ func (c *openShiftClusters) GetByClientID(ctx context.Context, partitionKey, cli
 func (c *openShiftClusters) GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error) {
 	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
 		Query: OpenshiftClustersResourceGroupQuery,
+		Parameters: []cosmosdb.Parameter{
+			{
+				Name:  "@resourceGroupID",
+				Value: resourceGroupID,
+			},
+		},
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
+}
+
+// GetIDsByClusterResourceGroupID returns cluster documents containing only doc.id
+// for the given managed resource group. Unlike GetByClusterResourceGroupID it does
+// not project the full OpenShiftCluster payload, so callers that only need to know
+// which document generations exist avoid decoding fields that may be brittle to
+// schema drift (e.g. stored documents predating a scalar→struct change).
+func (c *openShiftClusters) GetIDsByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error) {
+	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
+		Query: OpenshiftClustersResourceGroupIDOnlyQuery,
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@resourceGroupID",

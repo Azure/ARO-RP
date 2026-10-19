@@ -129,7 +129,6 @@ func TestCreate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -255,7 +254,6 @@ func TestUpdate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -433,7 +431,6 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -561,7 +558,6 @@ func TestDelete(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
@@ -624,7 +620,6 @@ func TestManagedDomain(t *testing.T) {
 	} {
 		t.Run(tt.domain, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Domain().AnyTimes().Return("eastus.aroapp.io")
@@ -671,7 +666,6 @@ func TestManagedDomainPrefix(t *testing.T) {
 	} {
 		t.Run(tt.domain, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")

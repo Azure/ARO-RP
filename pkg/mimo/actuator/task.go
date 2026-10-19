@@ -33,7 +33,8 @@ type th struct {
 
 	_ch clienthelper.Interface
 
-	az *azClients
+	azClusterTenant *azClusterTenantClients
+	azRPTenant      *azRPTenantClients
 }
 
 // force interface checking

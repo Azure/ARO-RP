@@ -25,6 +25,7 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	mcv1 "github.com/openshift/api/machineconfiguration/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesv1 "github.com/openshift/api/samples/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -59,4 +60,5 @@ func init() {
 	utilruntime.Must(imageregistryv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(templatesv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(kubevirtv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(samplesv1.AddToScheme(scheme.Scheme))
 }

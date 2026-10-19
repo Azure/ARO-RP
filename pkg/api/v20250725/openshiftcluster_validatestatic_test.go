@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/test/validate"
 	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 )
 
 type validateTest struct {
@@ -44,95 +45,97 @@ const (
 
 var (
 	subscriptionID    = "00000000-0000-0000-0000-000000000000"
-	platformIdentity1 = PlatformWorkloadIdentity{
-		ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+	platformIdentity1 = &generated.PlatformWorkloadIdentity{
+		ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name"),
 	}
-	platformIdentity2 = PlatformWorkloadIdentity{
-		ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-two",
+	platformIdentity2 = &generated.PlatformWorkloadIdentity{
+		ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name-two"),
 	}
-	clusterIdentity1 = UserAssignedIdentity{}
+	clusterIdentity1 = &generated.UserAssignedIdentity{}
 )
 
 func getResourceID(clusterName string) string {
 	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/%s", subscriptionID, clusterName)
 }
 
-func validSystemData() *SystemData {
+func validSystemData() *generated.SystemData {
 	timestamp, err := time.Parse(time.RFC3339, "2021-01-23T12:34:54.0000000Z")
 	if err != nil {
 		panic(err)
 	}
 
-	return &SystemData{
-		CreatedBy:          "00000000-0000-0000-0000-000000000000",
-		CreatedByType:      CreatedByTypeApplication,
+	return &generated.SystemData{
+		CreatedBy:          pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+		CreatedByType:      pointerutils.ToPtr(generated.CreatedByTypeApplication),
 		CreatedAt:          &timestamp,
-		LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
-		LastModifiedByType: CreatedByTypeApplication,
+		LastModifiedBy:     pointerutils.ToPtr("00000000-0000-0000-0000-000000000000"),
+		LastModifiedByType: pointerutils.ToPtr(generated.CreatedByTypeApplication),
 		LastModifiedAt:     &timestamp,
 	}
 }
 
 func validOpenShiftCluster(name, location, version string) *OpenShiftCluster {
 	oc := &OpenShiftCluster{
-		ID:       getResourceID(name),
-		Name:     name,
-		Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
-		Location: location,
-		Tags: Tags{
-			"key": "value",
-		},
-		Properties: OpenShiftClusterProperties{
-			ProvisioningState: ProvisioningStateSucceeded,
-			ClusterProfile: ClusterProfile{
-				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
-				Domain:               "cluster.location.aroapp.io",
-				Version:              version,
-				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
-				FipsValidatedModules: FipsValidatedModulesDisabled,
+		OpenShiftCluster: generated.OpenShiftCluster{
+			ID:       pointerutils.ToPtr(getResourceID(name)),
+			Name:     pointerutils.ToPtr(name),
+			Type:     pointerutils.ToPtr("Microsoft.RedHatOpenShift/OpenShiftClusters"),
+			Location: pointerutils.ToPtr(location),
+			Tags: map[string]*string{
+				"key": pointerutils.ToPtr("value"),
 			},
-			ConsoleProfile: ConsoleProfile{
-				URL: "",
-			},
-			ServicePrincipalProfile: &ServicePrincipalProfile{
-				ClientSecret: "clientSecret",
-				ClientID:     "11111111-1111-1111-1111-111111111111",
-			},
-			NetworkProfile: NetworkProfile{
-				PodCIDR:      "10.128.0.0/14",
-				ServiceCIDR:  "172.30.0.0/16",
-				OutboundType: OutboundTypeLoadbalancer,
-				LoadBalancerProfile: &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 1,
+			Properties: &generated.OpenShiftClusterProperties{
+				ProvisioningState: pointerutils.ToPtr(generated.ProvisioningStateSucceeded),
+				ClusterProfile: &generated.ClusterProfile{
+					PullSecret:           pointerutils.ToPtr(`{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`),
+					Domain:               pointerutils.ToPtr("cluster.location.aroapp.io"),
+					Version:              pointerutils.ToPtr(version),
+					ResourceGroupID:      pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)),
+					FipsValidatedModules: pointerutils.ToPtr(generated.FipsValidatedModulesDisabled),
+				},
+				ConsoleProfile: &generated.ConsoleProfile{
+					URL: pointerutils.ToPtr(""),
+				},
+				ServicePrincipalProfile: &generated.ServicePrincipalProfile{
+					ClientSecret: pointerutils.ToPtr("clientSecret"),
+					ClientID:     pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
+				},
+				NetworkProfile: &generated.NetworkProfile{
+					PodCidr:      pointerutils.ToPtr("10.128.0.0/14"),
+					ServiceCidr:  pointerutils.ToPtr("172.30.0.0/16"),
+					OutboundType: pointerutils.ToPtr(generated.OutboundTypeLoadbalancer),
+					LoadBalancerProfile: &generated.LoadBalancerProfile{
+						ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+							Count: pointerutils.ToPtr(int32(1)),
+						},
 					},
 				},
-			},
-			MasterProfile: MasterProfile{
-				VMSize:           "Standard_D8s_v3",
-				EncryptionAtHost: EncryptionAtHostDisabled,
-				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
-			},
-			WorkerProfiles: []WorkerProfile{
-				{
-					Name:             "worker",
-					VMSize:           "Standard_D4s_v3",
-					EncryptionAtHost: EncryptionAtHostDisabled,
-					DiskSizeGB:       128,
-					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
-					Count:            3,
+				MasterProfile: &generated.MasterProfile{
+					VMSize:           pointerutils.ToPtr("Standard_D8s_v3"),
+					EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+					SubnetID:         pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)),
 				},
-			},
-			APIServerProfile: APIServerProfile{
-				Visibility: VisibilityPublic,
-				URL:        "",
-				IP:         "",
-			},
-			IngressProfiles: []IngressProfile{
-				{
-					Name:       "default",
-					Visibility: VisibilityPublic,
-					IP:         "",
+				WorkerProfiles: []*generated.WorkerProfile{
+					{
+						Name:             pointerutils.ToPtr("worker"),
+						VMSize:           pointerutils.ToPtr("Standard_D4s_v3"),
+						EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+						DiskSizeGB:       pointerutils.ToPtr(int32(128)),
+						SubnetID:         pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
+						Count:            pointerutils.ToPtr(int32(3)),
+					},
+				},
+				ApiserverProfile: &generated.APIServerProfile{
+					Visibility: pointerutils.ToPtr(generated.VisibilityPublic),
+					URL:        pointerutils.ToPtr(""),
+					IP:         pointerutils.ToPtr(""),
+				},
+				IngressProfiles: []*generated.IngressProfile{
+					{
+						Name:       pointerutils.ToPtr("default"),
+						Visibility: pointerutils.ToPtr(generated.VisibilityPublic),
+						IP:         pointerutils.ToPtr(""),
+					},
 				},
 			},
 		},
@@ -195,10 +198,10 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 
 					ext := validOCForTest()
 					ext.SystemData = validSystemData()
-					ext.Properties.ConsoleProfile.URL = consoleProfileUrl
-					ext.Properties.APIServerProfile.URL = apiserverProfileUrl
-					ext.Properties.APIServerProfile.IP = apiserverProfileIp
-					ext.Properties.IngressProfiles[0].IP = ingressProfileIp
+					*ext.Properties.ConsoleProfile.URL = consoleProfileUrl
+					*ext.Properties.ApiserverProfile.URL = apiserverProfileUrl
+					*ext.Properties.ApiserverProfile.IP = apiserverProfileIp
+					*ext.Properties.IngressProfiles[0].IP = ingressProfileIp
 					current.Properties.ArchitectureVersion = *tt.architectureVersion
 
 					(&openShiftClusterConverter{}).ToInternal(ext, current)
@@ -238,28 +241,28 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 		{
 			name: "id wrong",
 			modify: func(oc *OpenShiftCluster) {
-				oc.ID = "wrong"
+				*oc.ID = "wrong"
 			},
 			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName'.",
 		},
 		{
 			name: "name wrong",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Name = "wrong"
+				*oc.Name = "wrong"
 			},
 			wantErr: "400: MismatchingResourceName: name: The provided resource name 'wrong' did not match the name in the Url 'resourceName'.",
 		},
 		{
 			name: "type wrong",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Type = "wrong"
+				*oc.Type = "wrong"
 			},
 			wantErr: "400: MismatchingResourceType: type: The provided resource type 'wrong' did not match the name in the Url 'Microsoft.RedHatOpenShift/openShiftClusters'.",
 		},
 		{
 			name: "location invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Location = "invalid"
+				*oc.Location = "invalid"
 			},
 			wantErr: "400: InvalidParameter: location: The provided location 'invalid' is invalid.",
 		},
@@ -267,6 +270,117 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 
 	runTests(t, testModeCreate, commonTests)
 	runTests(t, testModeUpdate, commonTests)
+}
+
+func TestOpenShiftClusterStaticValidateNilInputs(t *testing.T) {
+	validator := &openShiftClusterStaticValidator{
+		location:   "location",
+		domain:     "location.aroapp.io",
+		resourceID: getResourceID("resourceName"),
+		r: azure.Resource{
+			SubscriptionID: subscriptionID,
+			ResourceGroup:  "resourceGroup",
+			Provider:       "Microsoft.RedHatOpenShift",
+			ResourceType:   "openshiftClusters",
+			ResourceName:   "resourceName",
+		},
+	}
+
+	tests := []struct {
+		name       string
+		validate   func() error
+		wantTarget string
+	}{
+		{
+			name: "nil properties",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties = nil
+				return validator.validate(oc, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties",
+		},
+		{
+			name: "nil cluster profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.ClusterProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.clusterProfile",
+		},
+		{
+			name: "nil network profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.NetworkProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.networkProfile",
+		},
+		{
+			name: "nil master profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.MasterProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.masterProfile",
+		},
+		{
+			name: "nil API server profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.ApiserverProfile = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.apiserverProfile",
+		},
+		{
+			name: "nil worker profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.WorkerProfiles[0] = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.workerProfiles[0]",
+		},
+		{
+			name: "nil ingress profile",
+			validate: func() error {
+				oc := validOpenShiftCluster("resourceName", validator.location, "4.10.0")
+				oc.Properties.IngressProfiles[0] = nil
+				return validator.validateProperties("properties", oc.Properties, true, api.ArchitectureVersionV2)
+			},
+			wantTarget: "properties.ingressProfiles[0]",
+		},
+		{
+			name: "nil platform workload identity",
+			validate: func() error {
+				return validator.validatePlatformWorkloadIdentityProfile("properties.platformWorkloadIdentityProfile", &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{"operator": nil},
+				})
+			},
+			wantTarget: "properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[operator]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.validate()
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+
+			cloudErr, ok := err.(*api.CloudError)
+			if !ok {
+				t.Fatalf("expected *api.CloudError, got %T", err)
+			}
+			if cloudErr.Target != tt.wantTarget {
+				t.Errorf("got target %q, want %q", cloudErr.Target, tt.wantTarget)
+			}
+		})
+	}
 }
 
 func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
@@ -277,7 +391,7 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 		{
 			name: "provisioningState invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ProvisioningState = "invalid"
+				*oc.Properties.ProvisioningState = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
 		},
@@ -293,21 +407,21 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 		{
 			name: "multiple workerProfiles invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles = []WorkerProfile{{}, {}}
+				oc.Properties.WorkerProfiles = []*generated.WorkerProfile{{}, {}}
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles: There should be exactly one worker profile.",
 		},
 		{
 			name: "workerProfileStatus nonNil",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfilesStatus = []WorkerProfile{
+				oc.Properties.WorkerProfilesStatus = []*generated.WorkerProfile{
 					{
-						Name:             "worker",
-						VMSize:           "Standard_D4s_v3",
-						EncryptionAtHost: EncryptionAtHostDisabled,
-						DiskSizeGB:       128,
-						SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
-						Count:            3,
+						Name:             pointerutils.ToPtr("worker"),
+						VMSize:           pointerutils.ToPtr("Standard_D4s_v3"),
+						EncryptionAtHost: pointerutils.ToPtr(generated.EncryptionAtHostDisabled),
+						DiskSizeGB:       pointerutils.ToPtr(int32(128)),
+						SubnetID:         pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)),
+						Count:            pointerutils.ToPtr(int32(3)),
 					},
 				}
 			},
@@ -328,84 +442,84 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 		{
 			name: "pull secret not a map",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.PullSecret = "1"
+				*oc.Properties.ClusterProfile.PullSecret = "1"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.pullSecret: The provided pull secret is invalid.",
 		},
 		{
 			name: "pull secret invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.PullSecret = "{"
+				*oc.Properties.ClusterProfile.PullSecret = "{"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.pullSecret: The provided pull secret is invalid.",
 		},
 		{
 			name: "empty domain invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = ""
+				*oc.Properties.ClusterProfile.Domain = ""
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '' is invalid.",
 		},
 		{
 			name: "upper case domain invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "BAD"
+				*oc.Properties.ClusterProfile.Domain = "BAD"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'BAD' is invalid.",
 		},
 		{
 			name: "domain invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "!"
+				*oc.Properties.ClusterProfile.Domain = "!"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '!' is invalid.",
 		},
 		{
 			name: "wrong location managed domain invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "cluster.wronglocation.aroapp.io"
+				*oc.Properties.ClusterProfile.Domain = "cluster.wronglocation.aroapp.io"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'cluster.wronglocation.aroapp.io' is invalid.",
 		},
 		{
 			name: "double part managed domain invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "foo.bar.location.aroapp.io"
+				*oc.Properties.ClusterProfile.Domain = "foo.bar.location.aroapp.io"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'foo.bar.location.aroapp.io' is invalid.",
 		},
 		{
 			name: "resourceGroupId invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.ResourceGroupID = "invalid"
+				*oc.Properties.ClusterProfile.ResourceGroupID = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group 'invalid' is invalid.",
 		},
 		{
 			name: "cluster resource group subscriptionId not matching cluster subscriptionId",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster"
+				*oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster' is invalid: must be in same subscription as cluster.",
 		},
 		{
 			name: "cluster resourceGroup and external resourceGroup equal",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup"
+				*oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup' is invalid: must be different from resourceGroup of the OpenShift cluster object.",
 		},
 		{
 			name: "fips validated modules invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.FipsValidatedModules = "invalid"
+				*oc.Properties.ClusterProfile.FipsValidatedModules = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.fipsValidatedModules: The provided value 'invalid' is invalid.",
 		},
 		{
 			name: "fips validated modules empty",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.FipsValidatedModules = ""
+				*oc.Properties.ClusterProfile.FipsValidatedModules = ""
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.fipsValidatedModules: The provided value '' is invalid.",
 		},
@@ -415,13 +529,13 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 		{
 			name: "empty pull secret valid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.PullSecret = ""
+				*oc.Properties.ClusterProfile.PullSecret = ""
 			},
 		},
 		{
 			name: "leading digit domain invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "4k7f9clk"
+				*oc.Properties.ClusterProfile.Domain = "4k7f9clk"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '4k7f9clk' is invalid.",
 		},
@@ -431,7 +545,7 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 		{
 			name: "leading digit domain valid",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "4k7f9clk"
+				*oc.Properties.ClusterProfile.Domain = "4k7f9clk"
 			},
 		},
 	}
@@ -450,7 +564,7 @@ func TestOpenShiftClusterStaticValidateConsoleProfile(t *testing.T) {
 		{
 			name: "console url invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ConsoleProfile.URL = "\x00"
+				*oc.Properties.ConsoleProfile.URL = "\x00"
 			},
 			wantErr: "400: InvalidParameter: properties.consoleProfile.url: The provided console URL '\x00' is invalid.",
 		},
@@ -460,7 +574,7 @@ func TestOpenShiftClusterStaticValidateConsoleProfile(t *testing.T) {
 		{
 			name: "empty console url valid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ConsoleProfile.URL = ""
+				*oc.Properties.ConsoleProfile.URL = ""
 			},
 		},
 	}
@@ -478,14 +592,14 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 		{
 			name: "clientID invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = "invalid"
+				*oc.Properties.ServicePrincipalProfile.ClientID = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.clientId: The provided client ID 'invalid' is invalid.",
 		},
 		{
 			name: "empty clientSecret invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientSecret = ""
+				*oc.Properties.ServicePrincipalProfile.ClientSecret = ""
 			},
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.clientSecret: The provided client secret is invalid.",
 		},
@@ -503,65 +617,65 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		{
 			name: "podCidr invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "invalid"
+				*oc.Properties.NetworkProfile.PodCidr = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.podCidr: The provided pod CIDR 'invalid' is invalid: 'invalid CIDR address: invalid'.",
 		},
 		{
 			name: "ipv6 podCidr invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "::0/0"
+				*oc.Properties.NetworkProfile.PodCidr = "::0/0"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.podCidr: The provided pod CIDR '::0/0' is invalid: must be IPv4.",
 		},
 		{
 			name: "serviceCidr invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "invalid"
+				*oc.Properties.NetworkProfile.ServiceCidr = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided service CIDR 'invalid' is invalid: 'invalid CIDR address: invalid'.",
 		},
 		{
 			name: "ipv6 serviceCidr invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "::0/0"
+				*oc.Properties.NetworkProfile.ServiceCidr = "::0/0"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided service CIDR '::0/0' is invalid: must be IPv4.",
 		},
 		{
 			name: "podCidr too small",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "10.0.0.0/19"
+				*oc.Properties.NetworkProfile.PodCidr = "10.0.0.0/19"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.podCidr: The provided vnet CIDR '10.0.0.0/19' is invalid: must be /18 or larger.",
 		},
 		{
 			name: "serviceCidr too small",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/23"
+				*oc.Properties.NetworkProfile.ServiceCidr = "10.0.0.0/23"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided vnet CIDR '10.0.0.0/23' is invalid: must be /22 or larger.",
 		},
 		{
 			name: "OutboundType is empty",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.OutboundType = ""
+				*oc.Properties.NetworkProfile.OutboundType = ""
 			},
 			wantErr: "",
 		},
 		{
 			name: "OutboundType is invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.OutboundType = "invalid"
+				*oc.Properties.NetworkProfile.OutboundType = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.outboundType: The provided outboundType 'invalid' is invalid: must be UserDefinedRouting or Loadbalancer.",
 		},
 		{
 			name: "OutboundType is invalid with UserDefinedRouting and public ingress",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.OutboundType = OutboundTypeUserDefinedRouting
-				oc.Properties.IngressProfiles[0].Visibility = VisibilityPublic
-				oc.Properties.APIServerProfile.Visibility = VisibilityPrivate
+				*oc.Properties.NetworkProfile.OutboundType = generated.OutboundTypeUserDefinedRouting
+				*oc.Properties.IngressProfiles[0].Visibility = generated.VisibilityPublic
+				*oc.Properties.ApiserverProfile.Visibility = generated.VisibilityPrivate
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.outboundType: The provided outboundType 'UserDefinedRouting' is invalid: cannot use UserDefinedRouting if either API Server Visibility or Ingress Visibility is public.",
 		},
@@ -574,12 +688,12 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		{
 			name: "LoadBalancerProfile invalid when used with UserDefinedRouting",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.OutboundType = OutboundTypeUserDefinedRouting
-				oc.Properties.IngressProfiles[0].Visibility = VisibilityPrivate
-				oc.Properties.APIServerProfile.Visibility = VisibilityPrivate
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 3,
+				*oc.Properties.NetworkProfile.OutboundType = generated.OutboundTypeUserDefinedRouting
+				*oc.Properties.IngressProfiles[0].Visibility = generated.VisibilityPrivate
+				*oc.Properties.ApiserverProfile.Visibility = generated.VisibilityPrivate
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(3)),
 					},
 				}
 			},
@@ -588,7 +702,7 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		{
 			name: "Not passing in a LoadBalancerProfile is valid.",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.OutboundType = OutboundTypeLoadbalancer
+				*oc.Properties.NetworkProfile.OutboundType = generated.OutboundTypeLoadbalancer
 				oc.Properties.NetworkProfile.LoadBalancerProfile = nil
 			},
 			wantErr: "",
@@ -596,56 +710,56 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		{
 			name: "podCidr invalid network",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "10.254.0.0/14"
+				*oc.Properties.NetworkProfile.PodCidr = "10.254.0.0/14"
 			},
 			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.podCidr: The provided pod CIDR '10.254.0.0/14' is invalid, expecting: '10.252.0.0/14'.",
 		},
 		{
 			name: "serviceCidr invalid network",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.150.0/16"
+				*oc.Properties.NetworkProfile.ServiceCidr = "10.0.150.0/16"
 			},
 			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.serviceCidr: The provided service CIDR '10.0.150.0/16' is invalid, expecting: '10.0.0.0/16'.",
 		},
 		{
 			name: "podCidr invalid CIDR-1",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/18"
+				*oc.Properties.NetworkProfile.PodCidr = "100.64.0.0/18"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/18' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "podCidr invalid CIDR-2",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "169.254.169.0/29"
+				*oc.Properties.NetworkProfile.PodCidr = "169.254.169.0/29"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.0/29' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "podCidr invalid CIDR-3",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/16"
+				*oc.Properties.NetworkProfile.PodCidr = "100.88.0.0/16"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/16' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "serviceCidr invalid CIDR-1",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/16"
+				*oc.Properties.NetworkProfile.ServiceCidr = "100.64.0.0/16"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/16' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "serviceCidr invalid CIDR-2",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "169.254.169.1/29"
+				*oc.Properties.NetworkProfile.ServiceCidr = "169.254.169.1/29"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.1/29' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "serviceCidr invalid CIDR-3",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/32"
+				*oc.Properties.NetworkProfile.ServiceCidr = "100.88.0.0/32"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/32' IP address range in any other CIDR definitions in your cluster.",
 		},
@@ -656,42 +770,42 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		{
 			name: "podCidr invalid CIDR-1",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/18"
+				*oc.Properties.NetworkProfile.PodCidr = "100.64.0.0/18"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/18' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "podCidr invalid CIDR-2",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "169.254.169.0/29"
+				*oc.Properties.NetworkProfile.PodCidr = "169.254.169.0/29"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.0/29' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "podCidr invalid CIDR-3",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/16"
+				*oc.Properties.NetworkProfile.PodCidr = "100.88.0.0/16"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/16' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "serviceCidr invalid CIDR-1",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/16"
+				*oc.Properties.NetworkProfile.ServiceCidr = "100.64.0.0/16"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.64.0.0/16' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "serviceCidr invalid CIDR-2",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "169.254.169.1/29"
+				*oc.Properties.NetworkProfile.ServiceCidr = "169.254.169.1/29"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '169.254.169.1/29' IP address range in any other CIDR definitions in your cluster.",
 		},
 		{
 			name: "serviceCidr invalid CIDR-3",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/32"
+				*oc.Properties.NetworkProfile.ServiceCidr = "100.88.0.0/32"
 			},
 			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '100.88.0.0/32' IP address range in any other CIDR definitions in your cluster.",
 		},
@@ -702,46 +816,46 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		{
 			name: "existing cluster with overlapping podCidr allowed on update-1",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15" // Overlaps with 100.64.0.0/16
+				*oc.Properties.NetworkProfile.PodCidr = "100.64.0.0/15" // Overlaps with 100.64.0.0/16
 			},
 			wantErr: "", // Should be allowed on updates - existing overlap tolerated
 		},
 		{
 			name: "existing cluster with overlapping podCidr allowed on update-2",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "100.88.0.0/15" // Overlaps with 100.88.0.0/16
+				*oc.Properties.NetworkProfile.PodCidr = "100.88.0.0/15" // Overlaps with 100.88.0.0/16
 			},
 			wantErr: "", // Should be allowed on updates - existing overlap tolerated
 		},
 		{
 			name: "existing cluster with overlapping serviceCidr allowed on update-1",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/15" // Overlaps with 100.64.0.0/16
+				*oc.Properties.NetworkProfile.ServiceCidr = "100.64.0.0/15" // Overlaps with 100.64.0.0/16
 			},
 			wantErr: "", // Should be allowed on updates - existing overlap tolerated
 		},
 		{
 			name: "existing cluster with overlapping serviceCidr allowed on update-2",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.ServiceCIDR = "100.88.0.0/15" // Overlaps with 100.88.0.0/16
+				*oc.Properties.NetworkProfile.ServiceCidr = "100.88.0.0/15" // Overlaps with 100.88.0.0/16
 			},
 			wantErr: "", // Should be allowed on updates - existing overlap tolerated
 		},
 		{
 			name: "existing cluster with small overlapping range allowed on update",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "169.254.128.0/18" // Properly aligned, overlaps with 169.254.169.0/29
+				*oc.Properties.NetworkProfile.PodCidr = "169.254.128.0/18" // Properly aligned, overlaps with 169.254.169.0/29
 			},
 			wantErr: "", // Should be allowed on updates - existing overlap tolerated
 		},
 		{
 			name: "existing cluster with service update - no network changes",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/15" // Existing overlapping range
+				*oc.Properties.NetworkProfile.PodCidr = "100.64.0.0/15" // Existing overlapping range
 			},
 			modify: func(oc *OpenShiftCluster) {
 				// Simulate service principal update - network profile unchanged
-				oc.Properties.ServicePrincipalProfile.ClientSecret = "new-secret"
+				*oc.Properties.ServicePrincipalProfile.ClientSecret = "new-secret"
 			},
 			wantErr: "", // Should be allowed - updating other fields with existing overlapping CIDR
 		},
@@ -772,9 +886,9 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 		{
 			name: "LoadBalancerProfile.ManagedOutboundIPs is valid with 20 managed IPs",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 20,
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(20)),
 					},
 				}
 			},
@@ -783,9 +897,9 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 		{
 			name: "LoadBalancerProfile.ManagedOutboundIPs is invalid with greater than 20 managed IPs",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 21,
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(21)),
 					},
 				}
 			},
@@ -794,9 +908,9 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 		{
 			name: "LoadBalancerProfile.ManagedOutboundIPs is invalid with less than 1 managed IP",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 0,
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(0)),
 					},
 				}
 			},
@@ -808,13 +922,13 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 		{
 			name: "LoadBalancerProfile.EffectiveOutboundIPs is read only",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 1,
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(1)),
 					},
-					EffectiveOutboundIPs: []EffectiveOutboundIP{
+					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{
 						{
-							ID: "someId",
+							ID: pointerutils.ToPtr("someId"),
 						},
 					},
 				}
@@ -827,9 +941,9 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 		{
 			name: "LoadBalancerProfile.ManagedOutboundIPs is invalid with multiple managed IPs and architecture v1",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 20,
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(20)),
 					},
 				}
 			},
@@ -852,50 +966,50 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 		{
 			name: "vmSize unsupported",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = "Standard_D2s_v3"
+				*oc.Properties.MasterProfile.VMSize = "Standard_D2s_v3"
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided VM size 'Standard_D2s_v3' is invalid for the 'master' role.",
 		},
 		{
 			name: "subnetId invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.SubnetID = "invalid"
+				*oc.Properties.MasterProfile.SubnetID = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.subnetId: The provided master VM subnet 'invalid' is invalid.",
 		},
 		{
 			name: "subnet subscriptionId not matching cluster subscriptionId",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.SubnetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"
+				*oc.Properties.MasterProfile.SubnetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.subnetId: The provided master VM subnet '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be in same subscription as cluster.",
 		},
 		{
 			name: "disk encryption set is invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.DiskEncryptionSetID = "invalid"
-				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = "invalid"
+				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr("invalid")
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = pointerutils.ToPtr("invalid")
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.diskEncryptionSetId: The provided master disk encryption set 'invalid' is invalid.",
 		},
 		{
 			name: "disk encryption set not matching cluster subscriptionId",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.DiskEncryptionSetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1"
+				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr("/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1")
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.diskEncryptionSetId: The provided master disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be in same subscription as cluster.",
 		},
 		{
 			name: "encryption at host invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.EncryptionAtHost = "Banana"
+				*oc.Properties.MasterProfile.EncryptionAtHost = "Banana"
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: The provided value 'Banana' is invalid.",
 		},
 		{
 			name: "encryption at host empty",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.EncryptionAtHost = ""
+				*oc.Properties.MasterProfile.EncryptionAtHost = ""
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: The provided value '' is invalid.",
 		},
@@ -906,15 +1020,15 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			name: "disk encryption set is valid",
 			modify: func(oc *OpenShiftCluster) {
 				desID := fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID)
-				oc.Properties.MasterProfile.DiskEncryptionSetID = desID
-				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = desID
+				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr(desID)
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = pointerutils.ToPtr(desID)
 			},
 		},
 		{
 			name:           "vmSize invalid for version",
 			clusterVersion: pointerutils.ToPtr("4.10.0"),
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
+				*oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D8s_v6' is invalid for the chosen OpenShift version.",
 		},
@@ -922,7 +1036,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			name:           "vmSize valid for version",
 			clusterVersion: pointerutils.ToPtr("4.20.0"),
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
+				*oc.Properties.MasterProfile.VMSize = "Standard_D8s_v6"
 			},
 		},
 	}
@@ -940,14 +1054,14 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		{
 			name: "name invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].Name = "invalid"
+				*oc.Properties.WorkerProfiles[0].Name = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['invalid'].name: The provided worker name 'invalid' is invalid.",
 		},
 		{
 			name: "vmSize invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "invalid"
+				*oc.Properties.WorkerProfiles[0].VMSize = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'invalid' is invalid for the 'worker' role.",
 		},
@@ -955,7 +1069,7 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			name:           "vmSize invalid for version",
 			clusterVersion: pointerutils.ToPtr("4.10.0"),
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
+				*oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D8s_v6' is invalid for the chosen OpenShift version.",
 		},
@@ -963,20 +1077,20 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			name:           "vmSize valid for version",
 			clusterVersion: pointerutils.ToPtr("4.20.0"),
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
+				*oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v6"
 			},
 		},
 		{
 			name: "vmSize too small (prod)",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
+				*oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'Standard_D2s_v3' is invalid for the 'worker' role.",
 		},
 		{
 			name: "vmSize too big (dev)",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
+				*oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
 			},
 			requireD2sWorkers: true,
 			wantErr:           "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided VM size 'Standard_D4s_v3' is invalid for the 'worker' role.",
@@ -984,64 +1098,64 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		{
 			name: "disk too small",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].DiskSizeGB = 127
+				*oc.Properties.WorkerProfiles[0].DiskSizeGB = 127
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].diskSizeGB: The provided worker disk size '127' is invalid.",
 		},
 		{
 			name: "subnetId invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].SubnetID = "invalid"
+				*oc.Properties.WorkerProfiles[0].SubnetID = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet 'invalid' is invalid.",
 		},
 		{
 			name: "master and worker subnets not in same vnet",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker", subscriptionID)
+				*oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker", subscriptionID)
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "master and worker subnets not different",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.MasterProfile.SubnetID
+				*oc.Properties.WorkerProfiles[0].SubnetID = *oc.Properties.MasterProfile.SubnetID
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "count too small",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].Count = 1
+				*oc.Properties.WorkerProfiles[0].Count = 1
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '1' is invalid.",
 		},
 		{
 			name: "count too big",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].Count = 51
+				*oc.Properties.WorkerProfiles[0].Count = 51
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '51' is invalid.",
 		},
 		{
 			name: "disk encryption set not matching master disk encryption set",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.DiskEncryptionSetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID)
-				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1"
+				oc.Properties.MasterProfile.DiskEncryptionSetID = pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID))
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = pointerutils.ToPtr("/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1")
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be the same as master disk encryption set '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set'.",
 		},
 		{
 			name: "encryption at host invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].EncryptionAtHost = "Banana"
+				*oc.Properties.WorkerProfiles[0].EncryptionAtHost = "Banana"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].encryptionAtHost: The provided value 'Banana' is invalid.",
 		},
 		{
 			name: "encryption at host empty",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].EncryptionAtHost = ""
+				*oc.Properties.WorkerProfiles[0].EncryptionAtHost = ""
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].encryptionAtHost: The provided value '' is invalid.",
 		},
@@ -1059,28 +1173,28 @@ func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 		{
 			name: "visibility invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.Visibility = "invalid"
+				*oc.Properties.ApiserverProfile.Visibility = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.apiserverProfile.visibility: The provided visibility 'invalid' is invalid.",
 		},
 		{
 			name: "url invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.URL = "\x00"
+				*oc.Properties.ApiserverProfile.URL = "\x00"
 			},
 			wantErr: "400: InvalidParameter: properties.apiserverProfile.url: The provided URL '\x00' is invalid.",
 		},
 		{
 			name: "ip invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.IP = "invalid"
+				*oc.Properties.ApiserverProfile.IP = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.apiserverProfile.ip: The provided IP 'invalid' is invalid.",
 		},
 		{
 			name: "ipv6 ip invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.IP = "::"
+				*oc.Properties.ApiserverProfile.IP = "::"
 			},
 			wantErr: "400: InvalidParameter: properties.apiserverProfile.ip: The provided IP '::' is invalid: must be IPv4.",
 		},
@@ -1090,13 +1204,13 @@ func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 		{
 			name: "empty url valid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.URL = ""
+				*oc.Properties.ApiserverProfile.URL = ""
 			},
 		},
 		{
 			name: "empty ip valid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.IP = ""
+				*oc.Properties.ApiserverProfile.IP = ""
 			},
 		},
 	}
@@ -1121,42 +1235,42 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 		{
 			name: "no profiles invalid",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles = []IngressProfile{}
+				oc.Properties.IngressProfiles = []*generated.IngressProfile{}
 			},
 			wantErr: "400: InvalidParameter: properties.ingressProfiles: There should be exactly one ingress profile.",
 		},
 		{
 			name: "name invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].Name = "invalid"
+				*oc.Properties.IngressProfiles[0].Name = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.ingressProfiles['invalid'].name: The provided ingress name 'invalid' is invalid.",
 		},
 		{
 			name: "visibility invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].Visibility = "invalid"
+				*oc.Properties.IngressProfiles[0].Visibility = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].visibility: The provided visibility 'invalid' is invalid.",
 		},
 		{
 			name: "ip invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].IP = "invalid"
+				*oc.Properties.IngressProfiles[0].IP = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].ip: The provided IP 'invalid' is invalid.",
 		},
 		{
 			name: "ipv6 ip invalid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].IP = "::"
+				*oc.Properties.IngressProfiles[0].IP = "::"
 			},
 			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].ip: The provided IP '::' is invalid: must be IPv4.",
 		},
 		{
 			name: "empty ip valid",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].IP = ""
+				*oc.Properties.IngressProfiles[0].IP = ""
 			},
 		},
 	}
@@ -1173,151 +1287,151 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:   "valid id case change",
-			modify: func(oc *OpenShiftCluster) { oc.ID = strings.ToUpper(oc.ID) },
+			modify: func(oc *OpenShiftCluster) { *oc.ID = strings.ToUpper(*oc.ID) },
 		},
 		{
 			name:   "valid name case change",
-			modify: func(oc *OpenShiftCluster) { oc.Name = strings.ToUpper(oc.Name) },
+			modify: func(oc *OpenShiftCluster) { *oc.Name = strings.ToUpper(*oc.Name) },
 		},
 		{
 			name:   "valid type case change",
-			modify: func(oc *OpenShiftCluster) { oc.Type = strings.ToUpper(oc.Type) },
+			modify: func(oc *OpenShiftCluster) { *oc.Type = strings.ToUpper(*oc.Type) },
 		},
 		{
 			name:    "location change",
-			modify:  func(oc *OpenShiftCluster) { oc.Location = strings.ToUpper(oc.Location) },
+			modify:  func(oc *OpenShiftCluster) { *oc.Location = strings.ToUpper(*oc.Location) },
 			wantErr: "400: PropertyChangeNotAllowed: location: Changing property 'location' is not allowed.",
 		},
 		{
 			name:   "valid tags change",
-			modify: func(oc *OpenShiftCluster) { oc.Tags = Tags{"new": "value"} },
+			modify: func(oc *OpenShiftCluster) { oc.Tags = map[string]*string{"new": pointerutils.ToPtr("value")} },
 		},
 		{
 			name:    "provisioningState change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = ProvisioningStateFailed },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.ProvisioningState = generated.ProvisioningStateFailed },
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
 			name:    "console url change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleProfile.URL = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.ConsoleProfile.URL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.consoleProfile.url: Changing property 'properties.consoleProfile.url' is not allowed.",
 		},
 		{
 			name:    "pull secret change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.PullSecret = `{"auths":{}}` },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.ClusterProfile.PullSecret = `{"auths":{}}` },
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.pullSecret: Changing property 'properties.clusterProfile.pullSecret' is not allowed.",
 		},
 		{
 			name:    "domain change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Domain = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.ClusterProfile.Domain = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
 		},
 		{
 			name:    "version change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Version = "4.3.999" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.ClusterProfile.Version = "4.3.999" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.version: Changing property 'properties.clusterProfile.version' is not allowed.",
 		},
 		{
 			name: "resource group change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID[:strings.LastIndexByte(oc.Properties.ClusterProfile.ResourceGroupID, '/')] + "/changed"
+				*oc.Properties.ClusterProfile.ResourceGroupID = (*oc.Properties.ClusterProfile.ResourceGroupID)[:strings.LastIndexByte(*oc.Properties.ClusterProfile.ResourceGroupID, '/')] + "/changed"
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.resourceGroupId: Changing property 'properties.clusterProfile.resourceGroupId' is not allowed.",
 		},
 		{
 			name: "apiServer private change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.Visibility = VisibilityPrivate
+				*oc.Properties.ApiserverProfile.Visibility = generated.VisibilityPrivate
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.visibility: Changing property 'properties.apiserverProfile.visibility' is not allowed.",
 		},
 		{
 			name:    "apiServer url change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.URL = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.ApiserverProfile.URL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.url: Changing property 'properties.apiserverProfile.url' is not allowed.",
 		},
 		{
 			name:    "apiServer ip change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IP = "2.3.4.5" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.ApiserverProfile.IP = "2.3.4.5" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.ip: Changing property 'properties.apiserverProfile.ip' is not allowed.",
 		},
 		{
 			name: "ingress private change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].Visibility = VisibilityPrivate
+				*oc.Properties.IngressProfiles[0].Visibility = generated.VisibilityPrivate
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].visibility: Changing property 'properties.ingressProfiles['default'].visibility' is not allowed.",
 		},
 		{
 			name:    "ingress ip change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].IP = "2.3.4.5" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.IngressProfiles[0].IP = "2.3.4.5" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
 		},
 		{
 			name: "clientId change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = uuid.DefaultGenerator.Generate()
+				*oc.Properties.ServicePrincipalProfile.ClientID = uuid.DefaultGenerator.Generate()
 			},
 		},
 		{
 			name:   "clientSecret change",
-			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
+			modify: func(oc *OpenShiftCluster) { *oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
 		},
 		{
 			name:    "podCidr change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PodCIDR = "10.0.0.0/8" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.NetworkProfile.PodCidr = "10.0.0.0/8" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.podCidr: Changing property 'properties.networkProfile.podCidr' is not allowed.",
 		},
 		{
 			name:    "serviceCidr change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/8" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.NetworkProfile.ServiceCidr = "10.0.0.0/8" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
 		},
 		{
 			name: "outboundType change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.OutboundType = OutboundTypeUserDefinedRouting
+				*oc.Properties.NetworkProfile.OutboundType = generated.OutboundTypeUserDefinedRouting
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.outboundType: The provided outboundType 'UserDefinedRouting' is invalid: cannot use UserDefinedRouting if either API Server Visibility or Ingress Visibility is public.",
 		},
 		{
 			name: "master subnetId change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID[:strings.LastIndexByte(oc.Properties.MasterProfile.SubnetID, '/')] + "/changed"
+				*oc.Properties.MasterProfile.SubnetID = (*oc.Properties.MasterProfile.SubnetID)[:strings.LastIndexByte(*oc.Properties.MasterProfile.SubnetID, '/')] + "/changed"
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
 		},
 		{
 			name:    "worker name change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Name = "new-name" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.WorkerProfiles[0].Name = "new-name" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['new-name'].name: Changing property 'properties.workerProfiles['new-name'].name' is not allowed.",
 		},
 		{
 			name:    "worker vmSize change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v3" },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v3" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
 			name:    "worker diskSizeGB change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].DiskSizeGB++ },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.WorkerProfiles[0].DiskSizeGB++ },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].diskSizeGB: Changing property 'properties.workerProfiles['worker'].diskSizeGB' is not allowed.",
 		},
 		{
 			name: "worker subnetId change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.WorkerProfiles[0].SubnetID[:strings.LastIndexByte(oc.Properties.WorkerProfiles[0].SubnetID, '/')] + "/changed"
+				*oc.Properties.WorkerProfiles[0].SubnetID = (*oc.Properties.WorkerProfiles[0].SubnetID)[:strings.LastIndexByte(*oc.Properties.WorkerProfiles[0].SubnetID, '/')] + "/changed"
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].subnetId: Changing property 'properties.workerProfiles['worker'].subnetId' is not allowed.",
 		},
 		{
 			name:    "workerProfiles count change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count++ },
+			modify:  func(oc *OpenShiftCluster) { *oc.Properties.WorkerProfiles[0].Count++ },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].count: Changing property 'properties.workerProfiles['worker'].count' is not allowed.",
 		},
 		{
 			name: "number of workerProfiles changes",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles = []WorkerProfile{{}, {}}
+				oc.Properties.WorkerProfiles = []*generated.WorkerProfile{{}, {}}
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
 		},
@@ -1331,24 +1445,24 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name: "systemData set to empty",
 			modify: func(oc *OpenShiftCluster) {
-				oc.SystemData = &SystemData{}
+				oc.SystemData = &generated.SystemData{}
 			},
 			wantErr: "400: PropertyChangeNotAllowed: systemData: Changing property 'systemData' is not allowed.",
 		},
 		{
 			name: "systemData LastUpdated changed",
 			modify: func(oc *OpenShiftCluster) {
-				oc.SystemData = &SystemData{}
-				oc.SystemData.LastModifiedBy = "Bob"
+				oc.SystemData = &generated.SystemData{}
+				oc.SystemData.LastModifiedBy = pointerutils.ToPtr("Bob")
 			},
 			wantErr: "400: PropertyChangeNotAllowed: systemData: Changing property 'systemData' is not allowed.",
 		},
 		{
 			name: "update LoadBalancerProfile.ManagedOutboundIPs.Count",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 5,
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(5)),
 					},
 				}
 			},
@@ -1357,18 +1471,18 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name: "update LoadBalancerProfile.EffectiveOutboundIPs",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []EffectiveOutboundIP{
-					{ID: "resourceId"},
+				oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = []*generated.EffectiveOutboundIP{
+					{ID: pointerutils.ToPtr("resourceId")},
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
-					ManagedOutboundIPs: &ManagedOutboundIPs{
-						Count: 5,
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &generated.LoadBalancerProfile{
+					ManagedOutboundIPs: &generated.ManagedOutboundIPs{
+						Count: pointerutils.ToPtr(int32(5)),
 					},
-					EffectiveOutboundIPs: []EffectiveOutboundIP{
+					EffectiveOutboundIPs: []*generated.EffectiveOutboundIP{
 						{
-							ID: "BadResourceId",
+							ID: pointerutils.ToPtr("BadResourceId"),
 						},
 					},
 				}
@@ -1381,8 +1495,8 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 }
 
 func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testing.T) {
-	validUpgradeableToValue := UpgradeableTo("4.14.29")
-	invalidUpgradeableToValue := UpgradeableTo("16.107.invalid")
+	validUpgradeableToValue := string("4.14.29")
+	invalidUpgradeableToValue := string("16.107.invalid")
 
 	createTests := []*validateTest{
 		{
@@ -1394,16 +1508,16 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "valid workloadIdentityProfile",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"name": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": {
-							ClientID:    "11111111-1111-1111-1111-111111111111",
-							PrincipalID: "SOMETHING",
+							ClientID:    pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
+							PrincipalID: pointerutils.ToPtr("SOMETHING"),
 						},
 					},
 				}
@@ -1413,18 +1527,18 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "invalid resourceID",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": {
-							ClientID:    "11111111-1111-1111-1111-111111111111",
-							PrincipalID: "SOMETHING",
+							ClientID:    pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
+							PrincipalID: pointerutils.ToPtr("SOMETHING"),
 						},
 					},
 				}
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": {
-							ResourceID: "BAD",
+							ResourceID: pointerutils.ToPtr("BAD"),
 						},
 					},
 				}
@@ -1435,16 +1549,16 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "wrong resource type",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": {
-							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/otherThing/fake-cluster-name",
+							ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/otherThing/fake-cluster-name"),
 						},
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1454,19 +1568,19 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "no credentials with identities",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"name": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
-				oc.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{
-					ClientID:     "11111111-1111-1111-1111-111111111111",
-					ClientSecret: "BAD",
+				oc.Properties.ServicePrincipalProfile = &generated.ServicePrincipalProfile{
+					ClientID:     pointerutils.ToPtr("11111111-1111-1111-1111-111111111111"),
+					ClientSecret: pointerutils.ToPtr("BAD"),
 				}
 			},
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Cannot use identities and service principal credentials at the same time.",
@@ -1474,8 +1588,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "cluster identity missing platform workload identity",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1485,8 +1599,8 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "platform workload identity missing cluster identity",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"operator_name": {},
 					},
 				}
@@ -1497,28 +1611,28 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "platform workload identity - cluster identity map is empty",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"operator_name": {},
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Identity = &ManagedServiceIdentity{}
+				oc.Identity = &generated.ManagedServiceIdentity{}
 			},
 			wantErr: "400: InvalidParameter: identity: The provided cluster identity is invalid; there should be exactly one.",
 		},
 		{
 			name: "operator name missing",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"": {
-							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+							ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name"),
 						},
 					},
 				}
@@ -1537,13 +1651,13 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "duplicate operator identities",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR":         platformIdentity1,
 						"ANOTHER-FAKE-OPERATOR": platformIdentity1,
 					},
@@ -1555,16 +1669,16 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "duplicate operator identities, different cases",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 						"ANOTHER-FAKE-OPERATOR": {
-							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/FAKE-CLUSTER-NAME",
+							ResourceID: pointerutils.ToPtr("/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/FAKE-CLUSTER-NAME"),
 						},
 					},
 				}
@@ -1575,14 +1689,14 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "valid UpgradeableTo value",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"Dummy": {},
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 					},
 					UpgradeableTo: &validUpgradeableToValue,
@@ -1592,14 +1706,14 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "invalid UpgradeableTo value",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"Dummy": {},
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 					},
 					UpgradeableTo: &invalidUpgradeableToValue,
@@ -1610,13 +1724,13 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "No platform identities provided in PlatformWorkloadIdentityProfile - nil",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"Dummy": {},
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
 					UpgradeableTo: &invalidUpgradeableToValue,
 				}
 			},
@@ -1625,14 +1739,14 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "No platform identities provided in PlatformWorkloadIdentityProfile - empty map",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"Dummy": {},
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{},
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{},
 					UpgradeableTo:              &invalidUpgradeableToValue,
 				}
 			},
@@ -1644,13 +1758,13 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "addition of operator identity",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1663,20 +1777,20 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "invalid change of operator identity name",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 			},
 			modify: func(oc *OpenShiftCluster) {
-				pwi := map[string]PlatformWorkloadIdentity{
+				pwi := map[string]*generated.PlatformWorkloadIdentity{
 					"FAKE-OPERATOR-OTHER": platformIdentity1,
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = pwi
@@ -1686,13 +1800,13 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "valid change of operator identity resource ID",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
@@ -1705,21 +1819,21 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "change of operator identity order",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"OPERATOR-1": platformIdentity1,
 						"OPERATOR-2": platformIdentity2,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]*generated.PlatformWorkloadIdentity{
 					"OPERATOR-1": platformIdentity1,
 					"OPERATOR-2": platformIdentity2,
 				}
@@ -1728,20 +1842,20 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "invalid change of operator identity name and resource ID",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"FAKE-OPERATOR": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 			},
 			modify: func(oc *OpenShiftCluster) {
-				pwi := map[string]PlatformWorkloadIdentity{
+				pwi := map[string]*generated.PlatformWorkloadIdentity{
 					"FAKE-OPERATOR-OTHER": platformIdentity2,
 				}
 				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = pwi
@@ -1751,21 +1865,21 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "invalid removal of identity",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"operator1": platformIdentity1,
 						"operator2": platformIdentity2,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]*generated.PlatformWorkloadIdentity{
 					"operator1": platformIdentity1,
 				}
 			},
@@ -1774,33 +1888,33 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 		{
 			name: "No platform identities provided in PlatformWorkloadIdentityProfile - empty map",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"operator1": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}
 				oc.Properties.ServicePrincipalProfile = nil
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]PlatformWorkloadIdentity{}
+				oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = map[string]*generated.PlatformWorkloadIdentity{}
 			},
 			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.platformWorkloadIdentities: The set of platform workload identities cannot be empty.",
 		},
 		{
 			name: "No platform identities provided in PlatformWorkloadIdentityProfile - nil",
 			current: func(oc *OpenShiftCluster) {
-				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
-					PlatformWorkloadIdentities: map[string]PlatformWorkloadIdentity{
+				oc.Properties.PlatformWorkloadIdentityProfile = &generated.PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: map[string]*generated.PlatformWorkloadIdentity{
 						"operator1": platformIdentity1,
 					},
 				}
-				oc.Identity = &ManagedServiceIdentity{
-					UserAssignedIdentities: map[string]UserAssignedIdentity{
+				oc.Identity = &generated.ManagedServiceIdentity{
+					UserAssignedIdentities: map[string]*generated.UserAssignedIdentity{
 						"first": clusterIdentity1,
 					},
 				}

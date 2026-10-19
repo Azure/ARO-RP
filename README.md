@@ -213,5 +213,4 @@ For non‑urgent questions or suggestions, you may open an issue in this reposit
 
 * https://docs.microsoft.com/en-gb/rest/api/cosmos-db
 
-* https://github.com/jewzaam/go-cosmosdb
 *  https://www.redhat.com/en/technologies/cloud-computing/openshift/azure

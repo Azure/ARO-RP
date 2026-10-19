@@ -17,7 +17,10 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
+
+const RBACPropagationRetrySteps = 12
 
 // TransientBackoff is the retry schedule for ARM write operations when no Retry-After
 // header is present. It is a var so tests can override it; tests that mutate it must
@@ -30,11 +33,25 @@ var TransientBackoff = wait.Backoff{
 	Cap:      60 * time.Second,
 }
 
-// Retryable wraps f with transient ARM retry and logs each retry attempt.
+// Retryable wraps f with transient ARM retry and logs each attempt.
 // If the error carries a Retry-After header, that duration is used as the sleep;
-// otherwise TransientBackoff governs the schedule.
+// otherwise, TransientBackoff governs the schedule.
+
 func Retryable(ctx context.Context, f func() error, log *logrus.Entry, desc string) error {
+	return RetryableWith(ctx, azureerrors.IsRetryableError, f, log, desc, nil)
+}
+
+// RetryOptions configures optional behavior for RetryableWith.
+type RetryOptions struct {
+	Steps int
+}
+
+// RetryableWith is like Retryable but with a custom error predicate.
+func RetryableWith(ctx context.Context, isRetryable func(error) bool, f func() error, log *logrus.Entry, desc string, opts *RetryOptions) error {
 	b := TransientBackoff
+	if opts != nil && opts.Steps > 0 {
+		b.Steps = opts.Steps
+	}
 	steps := b.Steps
 	var lastErr error
 	for i := 0; i < steps; i++ {
@@ -42,7 +59,7 @@ func Retryable(ctx context.Context, f func() error, log *logrus.Entry, desc stri
 		if lastErr == nil {
 			return nil
 		}
-		if !azureerrors.IsRetryableError(lastErr) {
+		if !isRetryable(lastErr) {
 			return lastErr
 		}
 		if i == steps-1 {
@@ -52,7 +69,7 @@ func Retryable(ctx context.Context, f func() error, log *logrus.Entry, desc stri
 		if d := retryAfterDuration(lastErr); d > 0 {
 			sleep = d
 		}
-		log.WithField("retry_after", sleep.Seconds()).Warnf("error on %s, retrying: %v", desc, lastErr)
+		log.WithField("retry_after", sleep.Seconds()).Warnf("error on %s, retrying: %v", utillog.Sanitize(desc), utillog.Sanitize(lastErr.Error()))
 		select {
 		case <-time.After(sleep):
 		case <-ctx.Done():

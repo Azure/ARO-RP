@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -22,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestReconcileOutboundIPs(t *testing.T) {
@@ -113,10 +113,10 @@ func TestReconcileOutboundIPs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
+			tt.m.log = log
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 
 			if tt.mocks != nil {
@@ -273,10 +273,10 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
+			tt.m.log = log
 
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 
@@ -1031,7 +1031,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: []error{fmt.Errorf("failed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error"), fmt.Errorf("failed to cleanup unused managed ips\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
+			expectedErr: []error{fmt.Errorf("failed to cleanup unused managed ips:\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error"), fmt.Errorf("failed to cleanup unused managed ips:\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
 		},
 		{
 			name:  "all errors propagated",
@@ -1102,7 +1102,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: []error{fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create required IPs\ncreation of ip address uuid2-outbound-pip-v4 failed with error: failed to create ip\nfailed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
+			expectedErr: []error{fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create required IPs:\ncreation of ip address uuid2-outbound-pip-v4 failed with error: failed to create ip\nfailed to cleanup unused managed ips:\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1115,11 +1115,11 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 				t.Fatal(err)
 			}
 			tt.m.db = openShiftClustersDatabase
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			_, log := testlog.LogForTesting(t)
+			tt.m.log = log
 
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 			loadBalancersClient := mock_armnetwork.NewMockLoadBalancersClient(controller)
 			publicIPAddressClient := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
 
@@ -1133,7 +1133,12 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			err = tt.m.reconcileLoadBalancerProfile(ctx)
 			// Expect error to be in the array of errors provided or to be nil
 			if tt.expectedErr != nil {
-				assert.Contains(t, tt.expectedErr, err, "Unexpected error exception")
+				require.Error(t, err, "Expected an error but got none")
+				expectedErrMsgs := make([]string, len(tt.expectedErr))
+				for i, e := range tt.expectedErr {
+					expectedErrMsgs[i] = e.Error()
+				}
+				assert.Contains(t, expectedErrMsgs, err.Error(), "Unexpected error exception")
 			} else {
 				require.NoError(t, err, "Unexpected error exception")
 			}

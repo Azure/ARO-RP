@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	ktesting "k8s.io/client-go/testing"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorv1fake "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -141,7 +142,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeDelete(gomock.Any(), clusterRole.GroupVersionKind().GroupKind().String(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).Times(1).Return(nil)
 				k.EXPECT().KubeDelete(gomock.Any(), crb.GroupVersionKind().GroupKind().String(), crb.GetNamespace(), crb.GetName(), true, nil).Times(1).Return(nil)
 
-				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1fake.FakeEtcds{})
+				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1.Etcd{})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -211,7 +212,7 @@ func TestFixEtcd(t *testing.T) {
 				k.EXPECT().KubeDelete(gomock.Any(), clusterRole.GroupVersionKind().GroupKind().String(), clusterRole.GetNamespace(), clusterRole.GetName(), true, nil).MaxTimes(1).Return(nil)
 				k.EXPECT().KubeDelete(gomock.Any(), crb.GroupVersionKind().GroupKind().String(), crb.GetNamespace(), crb.GetName(), true, nil).MaxTimes(1).Return(nil)
 
-				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1fake.FakeEtcds{})
+				err = codec.NewEncoder(buf, &codec.JsonHandle{}).Encode(&operatorv1.Etcd{})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -607,11 +608,10 @@ func TestFixEtcd(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			containerLogs, err := f.fixEtcd(ctx, ti.log, ti.env, doc, k, &operatorv1fake.FakeEtcds{
-				Fake: &operatorv1fake.FakeOperatorV1{
-					Fake: &ktesting.Fake{},
-				},
-			})
+			fake := &operatorv1fake.FakeOperatorV1{
+				Fake: &ktesting.Fake{},
+			}
+			containerLogs, err := f.fixEtcd(ctx, ti.log, ti.env, doc, k, fake.Etcds())
 			ti.log.Infof("Container logs: \n%s", containerLogs)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {

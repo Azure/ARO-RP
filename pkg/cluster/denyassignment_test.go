@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -19,13 +18,15 @@ import (
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 	ctx := context.Background()
 	clusterRGName := "test-cluster"
+	_, log := testlog.LogForTesting(t)
 	m := &manager{
-		log: logrus.NewEntry(logrus.StandardLogger()),
+		log: log,
 	}
 
 	for _, tt := range []struct {
@@ -237,7 +238,6 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)

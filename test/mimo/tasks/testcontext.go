@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcompute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armcontainerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
@@ -35,6 +36,7 @@ type fakeTestContext struct {
 	interfacesClient          *armnetwork.InterfacesClient
 	loadBalancerClient        *armnetwork.LoadBalancersClient
 	resourceSKUsClient        *armcompute.ResourceSKUsClient
+	roleAssignmentsClient     *armauthorization.RoleAssignmentsClient
 	privateLinkServicesClient *armnetwork.PrivateLinkServicesClient
 	registriesClient          *armcontainerregistry.RegistriesClient
 	tokensClient              *armcontainerregistry.TokensClient
@@ -67,6 +69,12 @@ func WithSubscriptionDocument(doc *api.SubscriptionDocument) Option {
 func WithLoadBalancersClient(c armnetwork.LoadBalancersClient) Option {
 	return func(ftc *fakeTestContext) {
 		ftc.loadBalancerClient = &c
+	}
+}
+
+func WithRoleAssignmentsClient(c armauthorization.RoleAssignmentsClient) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.roleAssignmentsClient = &c
 	}
 }
 
@@ -199,6 +207,13 @@ func (t *fakeTestContext) LoadBalancersClient() (armnetwork.LoadBalancersClient,
 	return *t.loadBalancerClient, nil
 }
 
+func (t *fakeTestContext) RoleAssignmentsClient() (armauthorization.RoleAssignmentsClient, error) {
+	if t.roleAssignmentsClient == nil {
+		return nil, fmt.Errorf("no RoleAssignments client provided")
+	}
+	return *t.roleAssignmentsClient, nil
+}
+
 func (t *fakeTestContext) ResourceSKUsClient() (armcompute.ResourceSKUsClient, error) {
 	if t.resourceSKUsClient == nil {
 		return nil, fmt.Errorf("no ResourceSKUs client provided")
@@ -220,14 +235,14 @@ func (t *fakeTestContext) InterfacesClient() (armnetwork.InterfacesClient, error
 	return *t.interfacesClient, nil
 }
 
-func (t *fakeTestContext) RegistriesClient() (armcontainerregistry.RegistriesClient, error) {
+func (t *fakeTestContext) FirstPartyRegistriesClient() (armcontainerregistry.RegistriesClient, error) {
 	if t.registriesClient == nil {
 		return nil, fmt.Errorf("no armcontainerregistry.RegistriesClient provided")
 	}
 	return *t.registriesClient, nil
 }
 
-func (t *fakeTestContext) TokensClient() (armcontainerregistry.TokensClient, error) {
+func (t *fakeTestContext) FirstPartyTokensClient() (armcontainerregistry.TokensClient, error) {
 	if t.tokensClient == nil {
 		return nil, fmt.Errorf("no armcontainerregistry.TokensClient provided")
 	}

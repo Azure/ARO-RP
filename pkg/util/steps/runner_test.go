@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -26,6 +28,10 @@ func successfulFunc(context.Context) error { return nil }
 func failingFunc(context.Context) error    { return errors.New("oh no!") }
 func failingAzureError(context.Context) error {
 	return errors.New("Status=403 Code=\"AuthorizationFailed\"")
+}
+
+func failingFederatedIdentityCredentialWrite(context.Context) error {
+	return errors.New("the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope")
 }
 
 func failingODataError(context.Context) error {
@@ -106,6 +112,25 @@ func TestStepRunner(t *testing.T) {
 				},
 			},
 			wantErr: "Status=403 Code=\"AuthorizationFailed\"",
+		},
+		{
+			name: "A forbidden federated identity credential write returns a cluster MSI permissions error",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(failingFederatedIdentityCredentialWrite),
+				}
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.failingFederatedIdentityCredentialWrite]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action pkg/util/steps.failingFederatedIdentityCredentialWrite] encountered error: 400: InvalidClusterMSIPermissions: encountered error: the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope"),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+			wantErr: "400: InvalidClusterMSIPermissions: encountered error: the client does not have authorization to perform action 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write' over the requested scope",
 		},
 		{
 			name: "An odata error will fail the run",
@@ -298,7 +323,6 @@ func TestStepRunner(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			h, log := testlog.New()
 			steps := tt.steps(controller)
@@ -310,6 +334,43 @@ func TestStepRunner(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+		})
+	}
+}
+
+func TestRunPreservesCloudError(t *testing.T) {
+	cloudErr := api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidLinkedVNet,
+		"properties.workerProfiles[0].subnetId",
+		"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+	)
+
+	for _, tt := range []struct {
+		name    string
+		stepErr error
+		wantMsg string
+	}{
+		{
+			name:    "bare CloudError is preserved",
+			stepErr: cloudErr,
+			wantMsg: cloudErr.Error(),
+		},
+		{
+			name:    "wrapped CloudError is preserved",
+			stepErr: fmt.Errorf("step failed: %w", cloudErr),
+			wantMsg: "step failed: " + cloudErr.Error(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			_, log := testlog.New()
+
+			_, err := Run(ctx, log, time.Second, []Step{
+				Action(func(context.Context) error { return tt.stepErr }),
+			}, nil, "aro-managed-rg")
+
+			utilerror.AssertErrorMessage(t, err, tt.wantMsg)
 		})
 	}
 }
@@ -339,6 +400,83 @@ func TestStepMetricsNameFormatting(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			if got := tt.step.metricsName(); got != tt.want {
 				t.Errorf("incorrect step metrics name, want: %s, got: %s", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestRunWithWrappedError(t *testing.T) {
+	simpleError := errors.New("oh no")
+	failure := func(ctx context.Context) error { return simpleError }
+
+	tests := []struct {
+		name        string // description of this test case
+		steps       []Step
+		wantEntries []testlog.ExpectedLogEntry
+		wantError   error
+	}{
+		{
+			name: "Test no err",
+			steps: []Step{
+				Action(successfulFunc),
+				Action(successfulFunc),
+				Action(successfulFunc),
+			},
+
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+			},
+		},
+		{
+			name: "Test Error wrapped",
+			steps: []Step{
+				Action(successfulFunc),
+				Action(failure),
+			},
+			wantError: simpleError,
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.TestRunWithWrappedError.func1]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action pkg/util/steps.TestRunWithWrappedError.func1] encountered error: oh no"),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			h, log := testlog.New()
+			steps := tt.steps
+
+			_, err := RunWithWrappedError(ctx, log, steps)
+
+			if !errors.Is(err, tt.wantError) {
+				t.Errorf("got error '%v', but wanted error '%v'", err, tt.wantError)
+			}
+
+			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
+			if err != nil {
+				t.Error(err)
 			}
 		})
 	}

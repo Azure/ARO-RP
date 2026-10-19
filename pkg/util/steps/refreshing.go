@@ -23,21 +23,30 @@ import (
 
 var ErrWantRefresh = errors.New("want refresh")
 
-// AuthorizationRefreshingAction returns a wrapper Step which will refresh
-// `authorizer` if the step returns an Azure AuthenticationError and rerun it.
-// The step will be retried until `retryTimeout` is hit. Any other error will be
-// returned directly.
-func AuthorizationRetryingAction(r refreshable.Authorizer, action actionFunction, managedRGName string) Step {
+// AuthorizationRetryingAction returns a wrapper Step which retries Azure
+// authorization errors for up to 10 minutes. If auth is non-nil, the
+// credentials it holds are rebuilt before each retry (forcing a fresh access
+// token, which in turn forces ARM to re-evaluate role assignments rather than
+// serve its per-token cache); a nil auth enables retry-only behavior.
+// Any other error is returned directly.
+func AuthorizationRetryingAction(r refreshable.Rebuilder, action actionFunction, managedRGName string) Step {
+	return AuthorizationRetryingActionWithTimeout(r, action, managedRGName, 0)
+}
+
+// AuthorizationRetryingActionWithTimeout overrides the authorization retry window.
+// A zero timeout uses the default 10 minutes. Individual calls are not timed out.
+func AuthorizationRetryingActionWithTimeout(r refreshable.Rebuilder, action actionFunction, managedRGName string, timeout time.Duration) Step {
 	return &authorizationRefreshingActionStep{
 		auth:          r,
 		f:             action,
 		managedRGName: managedRGName,
+		retryTimeout:  timeout,
 	}
 }
 
 type authorizationRefreshingActionStep struct {
 	f             actionFunction
-	auth          refreshable.Authorizer
+	auth          refreshable.Rebuilder
 	retryTimeout  time.Duration
 	pollInterval  time.Duration
 	managedRGName string
@@ -76,19 +85,26 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		err = s.f(ctx)
 
 		// If we haven't timed out and there is an error that is either an
-		// unauthorized client (AADSTS700016) or "AuthorizationFailed" (likely
-		// role propagation delay) then refresh and retry.
+		// unauthorized client (AADSTS700016), HTTP 403, or
+		// "AuthorizationFailed" (likely role propagation delay) then retry.
 		if timeoutCtx.Err() == nil && err != nil &&
 			(azureerrors.IsUnauthorizedClientError(err) ||
+				azureerrors.IsStatusForbiddenError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.HasLinkedAuthorizationFailedError(err) ||
 				azureerrors.IsInvalidSecretError(err) ||
 				azureerrors.IsDeploymentMissingPermissionsError(err) ||
 				err == ErrWantRefresh) {
-			log.Printf("auth error, refreshing and retrying: %v", err)
-			// Try refreshing auth.
-			err = s.auth.Rebuild()
-			return false, err // retry step
+			log.Printf("auth error, retrying: %v", err)
+			if s.auth != nil {
+				rebuildErr := s.auth.Rebuild()
+				if rebuildErr != nil {
+					log.Printf("auth credential rebuild failed: %v", rebuildErr)
+					err = rebuildErr
+				}
+				return false, rebuildErr
+			}
+			return false, nil
 		}
 		if err != nil {
 			log.Printf("non-auth error, giving up: %v", err)
@@ -96,6 +112,9 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		return true, err
 	}, timeoutCtx.Done())
 
+	if s.auth == nil {
+		return err
+	}
 	return CreateActionableError(err, s.managedRGName)
 }
 
@@ -129,6 +148,19 @@ func CreateActionableError(err error, managedRGName string) error {
 	log.Printf("Converting to user actionable error: %v [%T]", err, err)
 
 	if err == nil {
+		return nil
+	}
+
+	// If the error is (or wraps) a CloudError it is already user-actionable;
+	// return it unchanged. This must come before the managed-resource-group
+	// check below, since a CloudError message can legitimately reference the
+	// managed resource group (e.g. an NSG that lives in it) and would
+	// otherwise be misclassified as an InternalServerError. Return the
+	// original err (not the extracted CloudError) so the full error chain and
+	// its contextual message are preserved; callers can still discover the
+	// CloudError with errors.As.
+	var cloudErr *api.CloudError
+	if errors.As(err, &cloudErr) {
 		return err
 	}
 

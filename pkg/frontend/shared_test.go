@@ -104,7 +104,7 @@ type testInfra struct {
 }
 
 func newTestInfra(t *testing.T) *testInfra {
-	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sWorkers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableMISE: false, env.FeatureEnforceMISE: false})
+	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sWorkers: false, env.FeatureDisableReadinessDelay: true, env.FeatureEnableMISE: false, env.FeatureEnforceMISE: false})
 }
 
 func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *testInfra {
@@ -120,7 +120,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	// Return "not found" for any secret other than RPServerSecretName (e.g., Holmes config secrets).
 	keyvault.EXPECT().GetSecret(gomock.Any(), gomock.Not(gomock.Eq(env.RPServerSecretName)), gomock.Any(), gomock.Any()).AnyTimes().Return(azsecrets.GetSecretResponse{}, fmt.Errorf("secret not found"))
 
-	log := logrus.NewEntry(logrus.StandardLogger())
+	_, log := testlog.LogForTesting(t)
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
@@ -247,7 +247,6 @@ func (ti *testInfra) WithPortal() *testInfra {
 }
 
 func (ti *testInfra) done() {
-	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
 	err := ti.l.Close()
 	if err != nil {
@@ -307,7 +306,7 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 		}
 
 		if diff := cmp.Diff(cloudErr.Error(), wantError, opts...); diff != "" {
-			return fmt.Errorf("unexpected error (-want +got):\n%s", diff)
+			return fmt.Errorf("unexpected error (+want -got):\n%s", diff)
 		}
 
 		return nil

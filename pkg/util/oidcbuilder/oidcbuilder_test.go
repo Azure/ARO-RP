@@ -146,7 +146,6 @@ func TestEnsureOIDCDocs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			blobsClient := mock_azblob.NewMockBlobsClient(controller)
 
@@ -178,7 +177,6 @@ func getTestKeyData(t *testing.T) ([]byte, []byte, []byte) {
 	testKeyBitSize := 2048
 
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().OIDCKeyBitSize().Return(testKeyBitSize)
@@ -268,7 +266,6 @@ Generic Error
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			blobsClient := mock_azblob.NewMockBlobsClient(controller)
 
@@ -300,7 +297,6 @@ func TestGenerateBlobContainerURL(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
 

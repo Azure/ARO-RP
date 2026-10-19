@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
@@ -63,7 +64,7 @@ func (f *frontend) _postAdminOpenShiftClusterRunJob(ctx context.Context, r *http
 		return err
 	}
 
-	log = log.WithField("resourceID", resourceID)
+	log = log.WithField("resourceID", utillog.Sanitize(resourceID))
 	opCtx, opCancel := context.WithTimeout(ctx, adminActionStreamTimeout)
 	// panic recovery is in runJobStream
 	go func() {

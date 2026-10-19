@@ -10,15 +10,18 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"testing/synctest"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type expectCloudErrorFields struct {
@@ -141,6 +144,38 @@ func TestCreateActionableError(t *testing.T) {
 			},
 		},
 		{
+			testName:      "CloudError naming the managed resource group is preserved",
+			managedRGName: "aro-managed-rg",
+			rawErr: api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"properties.workerProfiles[0].subnetId",
+				"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+			),
+			expectCloudError: &expectCloudErrorFields{
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"properties.workerProfiles[0].subnetId",
+				"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+			},
+		},
+		{
+			testName:      "Wrapped CloudError naming the managed resource group is preserved",
+			managedRGName: "aro-managed-rg",
+			rawErr: fmt.Errorf("step failed: %w", api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"properties.workerProfiles[0].subnetId",
+				"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+			)),
+			expectCloudError: &expectCloudErrorFields{
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"properties.workerProfiles[0].subnetId",
+				"The provided subnet '/subscriptions/sub/resourceGroups/customer-vnet-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker' is invalid: must have network security group '/subscriptions/sub/resourceGroups/aro-managed-rg/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.",
+			},
+		},
+		{
 			testName:      "AuthorizationFailed with no managedRGName falls back to SP credentials error",
 			managedRGName: "",
 			rawErr: autorest.DetailedError{
@@ -189,6 +224,70 @@ type fakeRefreshableAuthorizer struct {
 	rebuildErr    error
 }
 
+func TestAuthorizationRetryingActionTimeout(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		timeout   time.Duration
+		succeedAt time.Duration
+		wantTime  time.Duration
+		wantError bool
+	}{
+		{
+			name:      "default still stops at ten minutes",
+			wantTime:  10 * time.Minute,
+			wantError: true,
+		},
+		{
+			name:      "extended window succeeds after ten minutes",
+			timeout:   15 * time.Minute,
+			succeedAt: 12 * time.Minute,
+			wantTime:  12 * time.Minute,
+		},
+		{
+			name:      "extended window returns persistent error at fifteen minutes",
+			timeout:   15 * time.Minute,
+			wantTime:  15 * time.Minute,
+			wantError: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				_, log := testlog.LogForTesting(t)
+				auth := &fakeRefreshableAuthorizer{}
+				forbiddenErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
+				start := time.Now()
+				var attempts []time.Duration
+				action := func(context.Context) error {
+					elapsed := time.Since(start)
+					attempts = append(attempts, elapsed)
+					if tt.succeedAt != 0 && elapsed >= tt.succeedAt {
+						return nil
+					}
+					return forbiddenErr
+				}
+				step := AuthorizationRetryingAction(auth, action, "")
+				if tt.timeout != 0 {
+					step = AuthorizationRetryingActionWithTimeout(auth, action, "", tt.timeout)
+				}
+
+				err := step.run(t.Context(), log)
+
+				if tt.wantError {
+					require.ErrorIs(t, err, forbiddenErr)
+				} else {
+					require.NoError(t, err)
+				}
+				assert.Equal(t, tt.wantTime, time.Since(start))
+				assert.Equal(t, time.Duration(0), attempts[0])
+				for i := 1; i < len(attempts); i++ {
+					assert.Equal(t, 30*time.Second, attempts[i]-attempts[i-1])
+				}
+				assert.Positive(t, auth.rebuildCalled)
+			})
+		})
+	}
+}
+
 func (f *fakeRefreshableAuthorizer) Rebuild() error {
 	f.rebuildCalled++
 	return f.rebuildErr
@@ -199,33 +298,46 @@ func (f *fakeRefreshableAuthorizer) WithAuthorization() autorest.PrepareDecorato
 }
 
 func TestAuthorizationRefreshingActionRetries(t *testing.T) {
+	forbiddenErr := &azcore.ResponseError{StatusCode: http.StatusForbidden}
+	rebuildErr := errors.New("authorizer rebuild failed")
+
 	for _, tt := range []struct {
 		name           string
 		errors         []error
+		auth           *fakeRefreshableAuthorizer
+		retryTimeout   time.Duration
+		pollInterval   time.Duration
+		repeatLastErr  bool
 		expectRetries  bool
+		expectRebuild  bool
 		expectFinalErr string
+		expectError    error
 	}{
 		{
 			name:           "AuthorizationFailed is retried then succeeds",
 			errors:         []error{autorest.DetailedError{Original: &azure.ServiceError{Code: "AuthorizationFailed"}}, nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "LinkedAuthorizationFailed is retried then succeeds",
 			errors:         []error{autorest.DetailedError{Original: &azure.ServiceError{Code: "LinkedAuthorizationFailed"}}, nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "UnauthorizedClient (AADSTS700016) is retried then succeeds",
 			errors:         []error{fmt.Errorf("AADSTS700016: application not found"), nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "InvalidSecret (AADSTS7000215) is retried then succeeds",
 			errors:         []error{fmt.Errorf("AADSTS7000215: invalid client secret"), nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
@@ -235,29 +347,72 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 				autorest.DetailedError{Original: &azure.ServiceError{Code: "InvalidTemplateDeployment", Message: "Authorization failed for template resource 'foo'"}},
 				nil,
 			},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "ErrWantRefresh is retried then succeeds",
 			errors:         []error{ErrWantRefresh, nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  true,
 			expectFinalErr: "",
 		},
 		{
 			name:           "non-auth error is not retried",
 			errors:         []error{fmt.Errorf("some other error")},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  false,
 			expectFinalErr: "some other error",
 		},
 		{
 			name:           "nil error succeeds immediately",
 			errors:         []error{nil},
+			auth:           &fakeRefreshableAuthorizer{},
 			expectRetries:  false,
 			expectFinalErr: "",
 		},
+		{
+			name:          "forbidden error without authorizer is retried then succeeds",
+			errors:        []error{forbiddenErr, nil},
+			expectRetries: true,
+		},
+		{
+			name:         "forbidden error without authorizer returns last error after retry timeout",
+			errors:       []error{forbiddenErr},
+			retryTimeout: time.Millisecond,
+			pollInterval: 30 * time.Second,
+			expectError:  forbiddenErr,
+		},
+		{
+			name:          "persistent forbidden error with authorizer returns error after retry timeout",
+			errors:        []error{forbiddenErr},
+			auth:          &fakeRefreshableAuthorizer{},
+			retryTimeout:  100 * time.Millisecond,
+			pollInterval:  30 * time.Second,
+			repeatLastErr: true,
+			expectRebuild: true,
+			expectError:   forbiddenErr,
+		},
+		{
+			name:          "authorizer rebuild error is returned",
+			errors:        []error{forbiddenErr},
+			auth:          &fakeRefreshableAuthorizer{rebuildErr: rebuildErr},
+			expectRebuild: true,
+			expectError:   rebuildErr,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+			retryTimeout := tt.retryTimeout
+			if retryTimeout == 0 {
+				retryTimeout = time.Second
+			}
+			pollInterval := tt.pollInterval
+			if pollInterval == 0 {
+				pollInterval = time.Millisecond
+			}
+
 			callCount := 0
 			action := func(ctx context.Context) error {
 				idx := callCount
@@ -265,29 +420,40 @@ func TestAuthorizationRefreshingActionRetries(t *testing.T) {
 				if idx < len(tt.errors) {
 					return tt.errors[idx]
 				}
+				if tt.repeatLastErr {
+					return tt.errors[len(tt.errors)-1]
+				}
 				return nil
 			}
 
-			auth := &fakeRefreshableAuthorizer{}
 			s := &authorizationRefreshingActionStep{
 				f:             action,
-				auth:          auth,
-				retryTimeout:  30 * time.Second,
-				pollInterval:  1 * time.Millisecond,
+				retryTimeout:  retryTimeout,
+				pollInterval:  pollInterval,
 				managedRGName: "",
 			}
+			if tt.auth != nil {
+				s.auth = tt.auth
+			}
 
-			err := s.run(context.Background(), logrus.NewEntry(logrus.StandardLogger()))
+			err := s.run(t.Context(), log)
 
 			if tt.expectRetries {
 				assert.Greater(t, callCount, 1, "action should have been called more than once")
-				assert.Positive(t, auth.rebuildCalled, "Rebuild should have been called")
 			} else {
 				assert.Equal(t, 1, callCount, "action should have been called exactly once")
-				assert.Equal(t, 0, auth.rebuildCalled, "Rebuild should not have been called")
+			}
+			if tt.auth != nil {
+				if tt.expectRetries || tt.expectRebuild {
+					assert.Positive(t, tt.auth.rebuildCalled, "Rebuild should have been called")
+				} else {
+					assert.Equal(t, 0, tt.auth.rebuildCalled, "Rebuild should not have been called")
+				}
 			}
 
-			if tt.expectFinalErr == "" {
+			if tt.expectError != nil {
+				assert.ErrorIs(t, err, tt.expectError)
+			} else if tt.expectFinalErr == "" {
 				assert.NoError(t, err)
 			} else {
 				assert.ErrorContains(t, err, tt.expectFinalErr)

@@ -536,12 +536,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						// https://eng.ms/docs/products/azure-linux/gettingstarted/azurevm/azurevm
 						ImageReference: &mgmtcompute.ImageReference{
-							// cbl-mariner-2-gen2-fips is not supported by Automatic OS Updates
-							// therefore the non fips image is used, and fips is configured manually
-							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
-							// https://eng.ms/docs/cloud-ai-platform/azure-core/azure-compute/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryusageinstructions#vmss-deployment-with-1p-image-galleryarm-template
-							// https://eng.ms/docs/cloud-ai-platform/azure-core/core-compute-and-host/compute-platform-arunki/azure-compute-artifacts/azure-compute-artifacts-docs/project-standard/1pgalleryimagereference#cbl-mariner-2-images
-							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/cbl-mariner-2-gen2/versions/latest"),
+							SharedGalleryImageID: pointerutils.ToPtr("/sharedGalleries/CblMariner.1P/images/azure-linux-3-gen2-fips/versions/latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -1191,32 +1186,6 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 		},
-	}
-}
-
-func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtauthorization.RoleDefinition{
-			Name: pointerutils.ToPtr("[parameters('tokenContributorRoleID')]"),
-			Type: pointerutils.ToPtr("Microsoft.Authorization/roleDefinitions"),
-			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-				RoleName:         pointerutils.ToPtr("[parameters('tokenContributorRoleName')]"),
-				AssignableScopes: &[]string{"[subscription().id]"},
-				Permissions: &[]mgmtauthorization.Permission{
-					{
-						Actions: &[]string{
-							"Microsoft.ContainerRegistry/registries/generateCredentials/action",
-							"Microsoft.ContainerRegistry/registries/scopeMaps/read",
-							"Microsoft.ContainerRegistry/registries/tokens/delete",
-							"Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
-							"Microsoft.ContainerRegistry/registries/tokens/read",
-							"Microsoft.ContainerRegistry/registries/tokens/write",
-						},
-					},
-				},
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Authorization/roleDefinitions"),
 	}
 }
 

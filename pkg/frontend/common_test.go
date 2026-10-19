@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // newKubeActionsTestFrontend creates a frontend for streaming admin endpoint unit tests
@@ -75,7 +77,22 @@ func newKubeActionsTestFrontend(
 	if err != nil {
 		t.Fatal(err)
 	}
-	go f.Run(ctx, nil, nil)
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+
+	t.Cleanup(func() {
+		close(stop)
+
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatal("frontend failed to stop after 10s")
+		}
+	})
+
+	go f.Run(ctx, stop, done)
+
 	return ti, k
 }
 
@@ -133,8 +150,10 @@ func TestLimitedWriter(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+
 			var buf bytes.Buffer
-			lw := newLimitedWriter(&buf, "stdout", logrus.NewEntry(logrus.New()))
+			lw := newLimitedWriter(&buf, "stdout", log)
 
 			for _, w := range tt.writes {
 				n, err := lw.Write([]byte(w))
@@ -158,9 +177,11 @@ func TestLimitedWriter(t *testing.T) {
 }
 
 func TestLimitedWriter_UnderlyingWriterError(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
+
 	wantErr := errors.New("disk full")
 	ew := &errWriter{err: wantErr}
-	lw := newLimitedWriter(ew, "stdout", logrus.NewEntry(logrus.New()))
+	lw := newLimitedWriter(ew, "stdout", log)
 
 	n, err := lw.Write([]byte("hello"))
 	if !errors.Is(err, wantErr) {

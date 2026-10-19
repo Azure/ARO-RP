@@ -76,74 +76,79 @@ func SupportedOSDisk(vmSku *sdkcompute.ResourceSKU) string {
 	return standardDisk
 }
 
+// rangeVMSkusInCurrentRegion streams Resource SKUs for location and invokes
+// visit for each VM SKU found in that location, applying the filtering
+// shared by SelectVMSkusInCurrentRegion and ListUnrestrictedVMSkusInCurrentRegion.
+// visit returns false to stop iteration early.
+func rangeVMSkusInCurrentRegion(ctx context.Context, resourceSkusClient armcompute.ResourceSKUsClient, location string, visit func(sku sdkcompute.ResourceSKU) bool) error {
+	filter := fmt.Sprintf("location eq %s", location)
+
+	for sku, err := range resourceSkusClient.List(ctx, filter, false) {
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrListVMResourceSKUs, err)
+		}
+
+		if sku.ResourceType == nil || sku.Name == nil {
+			continue
+		}
+
+		// We only care about VMs and ones with locations/locationinfo
+		if *sku.ResourceType != "virtualMachines" || len(sku.Locations) == 0 || len(sku.LocationInfo) == 0 {
+			continue
+		}
+
+		// Make sure it's actually in our location
+		if !slices.ContainsFunc(sku.Locations, func(s *string) bool { return s != nil && strings.EqualFold(*s, location) }) {
+			continue
+		}
+
+		if !visit(sku) {
+			break
+		}
+	}
+
+	return nil
+}
+
+// SelectVMSkusInCurrentRegion returns the requested VM SKUs for location.
+// It early-exits once all requested SKUs are found, avoiding decoding the
+// remainder of the (potentially 100+ MB) catalog.
 func SelectVMSkusInCurrentRegion(ctx context.Context, resourceSkusClient armcompute.ResourceSKUsClient, location string, skuNames []string) (map[string]*sdkcompute.ResourceSKU, error) {
 	// Sort and compact so that we only have one instance of each SKU in the list
 	slices.Sort(skuNames)
 	skuNames = slices.Compact(skuNames)
 
 	vmskus := map[string]*sdkcompute.ResourceSKU{}
-	filter := fmt.Sprintf("location eq %s", location)
-	skusIter := resourceSkusClient.List(ctx, filter, false)
 
-	for sku, err := range skusIter {
-		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrListVMResourceSKUs, err)
-		}
-
-		if sku == nil || sku.ResourceType == nil || sku.Name == nil {
-			continue
-		}
-
-		// We only care about VMs and ones with locations/locationinfo
-		if *sku.ResourceType != "virtualMachines" || len(sku.Locations) == 0 || len(sku.LocationInfo) == 0 {
-			continue
-		}
-
-		// Make sure it's actually in our location
-		if !slices.ContainsFunc(sku.Locations, func(s *string) bool { return s != nil && strings.EqualFold(*s, location) }) {
-			continue
-		}
-
+	err := rangeVMSkusInCurrentRegion(ctx, resourceSkusClient, location, func(sku sdkcompute.ResourceSKU) bool {
 		if slices.Contains(skuNames, *sku.Name) {
-			vmskus[*sku.Name] = sku
+			s := sku
+			vmskus[*sku.Name] = &s
 		}
 
-		// If we've already found all the SKUs we want, exit
-		if len(vmskus) == len(skuNames) {
-			break
-		}
+		// If we've already found all the SKUs we want, stop iterating
+		return len(vmskus) != len(skuNames)
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return vmskus, nil
 }
 
+// ListUnrestrictedVMSkusInCurrentRegion returns the names of all
+// unrestricted VM SKUs in location.
 func ListUnrestrictedVMSkusInCurrentRegion(ctx context.Context, resourceSkusClient armcompute.ResourceSKUsClient, location string) ([]string, error) {
 	vmskus := []string{}
-	filter := fmt.Sprintf("location eq %s", location)
-	skusIter := resourceSkusClient.List(ctx, filter, false)
 
-	for sku, err := range skusIter {
-		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrListVMResourceSKUs, err)
-		}
-
-		if sku == nil || sku.ResourceType == nil || sku.Name == nil {
-			continue
-		}
-
-		// We only care about VMs and ones with locations/locationinfo
-		if *sku.ResourceType != "virtualMachines" || len(sku.Locations) == 0 || len(sku.LocationInfo) == 0 {
-			continue
-		}
-
-		// Make sure it's actually in our location
-		if !slices.ContainsFunc(sku.Locations, func(s *string) bool { return s != nil && strings.EqualFold(*s, location) }) {
-			continue
-		}
-
-		if !IsRestricted(sku, location) {
+	err := rangeVMSkusInCurrentRegion(ctx, resourceSkusClient, location, func(sku sdkcompute.ResourceSKU) bool {
+		if !IsRestricted(&sku, location) {
 			vmskus = append(vmskus, *sku.Name)
 		}
+		return true
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	slices.Sort(vmskus)

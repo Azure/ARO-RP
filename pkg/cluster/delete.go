@@ -227,7 +227,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 
 			case "microsoft.network/privatednszones":
 				m.log.Printf("deleting private DNS nested resources of %s", *resource.ID)
-				err = DeletePrivateDNSVNetLinks(ctx, m.virtualNetworkLinks, *resource.ID)
+				err = DeletePrivateDNSVNetLinks(ctx, m.log, m.virtualNetworkLinks, *resource.ID)
 				if err != nil {
 					return err
 				}
@@ -631,7 +631,7 @@ func (m *manager) Delete(ctx context.Context) error {
 			return err
 		}
 
-		rp := acrManager.GetRegistryProfile(m.doc.OpenShiftCluster)
+		rp := m.doc.OpenShiftCluster.GetRegistryProfile(m.env.ACRDomain())
 		if rp != nil {
 			err = acrManager.Delete(ctx, rp)
 			if err != nil {

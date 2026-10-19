@@ -1053,11 +1053,13 @@ StartLimitIntervalSec=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/gateway-otel-collector
+SyslogIdentifier=gateway-otel-collector
 ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --hostname %H \
   --name %N \
   --rm \
+  --log-driver=none \
   --network=${PODMAN_NETWORK} \
   --ip ${IPADDRESS} \
   --cpu-shares 512 \
@@ -1106,7 +1108,7 @@ configure_service_mdsd() {
 
     # shellcheck disable=SC2034
     local -r mdsd_override_conf_filename="$mdsd_service_dir/override.conf"
-    local -r mdsd_certificate_san="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')"
+    local -r mdsd_certificate_san="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN *= *//')"
     # shellcheck disable=SC2034
     local -r mdsd_override_conf_file="[Unit]
 After=network-online.target"

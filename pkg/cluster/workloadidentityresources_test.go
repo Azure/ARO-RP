@@ -9,7 +9,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestGenerateWorkloadIdentityResources(t *testing.T) {
@@ -102,10 +102,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 			},
 			want: map[string]kruntime.Object{
 				"openshift-foo-azure-cloud-credentials-credentials.yaml": &corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-foo",
 						Name:      "azure-cloud-credentials",
@@ -120,10 +116,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 				"openshift-bar-azure-cloud-credentials-credentials.yaml": &corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-bar",
 						Name:      "azure-cloud-credentials",
@@ -138,10 +130,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 				ccoSecretFilename: &corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ccoSecretNamespace,
 						Name:      ccoSecretName,
@@ -152,10 +140,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 					},
 				},
 				authenticationConfigFilename: &configv1.Authentication{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "config.openshift.io/v1",
-						Kind:       "Authentication",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: authenticationConfigName,
 					},
@@ -168,7 +152,6 @@ func TestGenerateWorkloadIdentityResources(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
 			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
@@ -266,10 +249,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			want: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "openshift-foo",
 						Name:            "azure-cloud-credentials",
@@ -285,10 +264,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "openshift-bar",
 						Name:            "azure-cloud-credentials",
@@ -304,10 +279,6 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "openshift-azure-operator",
 						Name:            "azure-cloud-credentials",
@@ -327,12 +298,12 @@ func TestDeployPlatformWorkloadIdentitySecrets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			clientFake := ctrlfake.NewClientBuilder().Build()
 
-			ch := clienthelper.NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			ch := clienthelper.NewWithClient(log, clientFake)
 
 			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
 			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
@@ -429,10 +400,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-foo",
 						Name:      "azure-cloud-credentials",
@@ -447,10 +414,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-bar",
 						Name:      "azure-cloud-credentials",
@@ -467,19 +430,11 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantNamespaces: []*corev1.Namespace{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openshift-foo",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openshift-bar",
 					},
@@ -530,10 +485,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "openshift-foo",
 						Name:      "azure-cloud-credentials",
@@ -550,10 +501,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 			},
 			wantNamespaces: []*corev1.Namespace{
 				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Namespace",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "openshift-foo",
 					},
@@ -563,7 +510,6 @@ func TestGeneratePlatformWorkloadIdentitySecrets(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			platformWorkloadIdentityRolesByVersion := mock_platformworkloadidentity.NewMockPlatformWorkloadIdentityRolesByVersion(controller)
 			platformWorkloadIdentityRolesByVersion.EXPECT().GetPlatformWorkloadIdentityRolesByRoleName().AnyTimes().Return(tt.roles)
@@ -615,10 +561,6 @@ func TestGenerateCloudCredentialOperatorSecret(t *testing.T) {
 			name:                 "generates static CCO secret",
 			usesWorkloadIdentity: true,
 			want: &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ccoSecretNamespace,
 					Name:      ccoSecretName,
@@ -681,10 +623,6 @@ func TestGenerateAuthenticationConfig(t *testing.T) {
 			usesWorkloadIdentity: true,
 			oidcIssuer:           (*api.OIDCIssuer)(&oidcIssuer),
 			want: &configv1.Authentication{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "config.openshift.io/v1",
-					Kind:       "Authentication",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: authenticationConfigName,
 				},
@@ -811,6 +749,8 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 
 	roleDefinitionId1 := fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", "00000000-00000001-00000000-00000000")
 	roleDefinitionId2 := fmt.Sprintf("/providers/Microsoft.Authorization/roleDefinitions/%s", "00000000-00000002-00000000-00000000")
+
+	fpspPrincipalId := "ffffffff-ffff-ffff-ffff-ffffffffffff"
 
 	for _, tt := range []struct {
 		name                    string
@@ -981,7 +921,32 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 			},
 		},
 		{
-			name: "identity object id replaced - doesn't delete old roleassignment as old object id is lost and creates new",
+			name: "preserves any role assignments for the first-party service principal",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						PlatformWorkloadIdentities: map[string]api.PlatformWorkloadIdentity{},
+					},
+				},
+			},
+			roles: map[string][]api.PlatformWorkloadIdentityRole{},
+			existingRoleAssignments: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &fpspPrincipalId,
+					},
+				},
+			},
+			wantDeleted: []mgmtauthorization.RoleAssignment{},
+		},
+		{
+			name: "identity object id replaced - deletes old roleassignment as old object id is lost and creates new",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
@@ -1016,6 +981,16 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 			},
 			wantAdded: []*arm.Resource{
 				workloadIdentityResourceGroupRBAC(stringutils.LastTokenByte(roleDefinitionId1, '/'), objectId2),
+			},
+			wantDeleted: []mgmtauthorization.RoleAssignment{
+				{
+					Name: &roleName1,
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            &resourceGroupID,
+						RoleDefinitionID: pointerutils.ToPtr(fmt.Sprintf("/subscriptions/%s%s", subscriptionId, roleDefinitionId1)),
+						PrincipalID:      &objectId1,
+					},
+				},
 			},
 		},
 		{
@@ -1225,7 +1200,6 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			roleAssignments := mock_authorization.NewMockRoleAssignmentsClient(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)
@@ -1263,8 +1237,9 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 				roleAssignments.EXPECT().Delete(gomock.Eq(ctx), gomock.Eq(*wantDeleted.Scope), gomock.Eq(*wantDeleted.Name))
 			}
 
+			_, log := testlog.LogForTesting(t)
 			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				log: log,
 				subscriptionDoc: &api.SubscriptionDocument{
 					ID: subscriptionId,
 				},
@@ -1274,6 +1249,7 @@ func TestEnsurePlatformWorkloadIdentityRBAC(t *testing.T) {
 				roleAssignments:                        roleAssignments,
 				deployments:                            deployments,
 				platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
+				fpServicePrincipalID:                   fpspPrincipalId,
 			}
 
 			err := m.ensurePlatformWorkloadIdentityRBAC(ctx)

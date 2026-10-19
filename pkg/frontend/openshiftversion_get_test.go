@@ -11,7 +11,9 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20240812preview "github.com/Azure/ARO-RP/pkg/api/v20240812preview"
+	"github.com/Azure/ARO-RP/pkg/api/util/pointerutils"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725"
+	"github.com/Azure/ARO-RP/pkg/api/v20250725/generated"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
 
@@ -36,23 +38,25 @@ func TestGetInstallVersions(t *testing.T) {
 		apiVersion     string
 		version        string
 		wantStatusCode int
-		wantResponse   v20240812preview.OpenShiftVersion
+		wantResponse   v20250725.OpenShiftVersion
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
 			name:           "return available version",
-			apiVersion:     "2024-08-12-preview",
+			apiVersion:     "2025-07-25",
 			version:        availableVersion,
 			wantStatusCode: http.StatusOK,
-			wantResponse: v20240812preview.OpenShiftVersion{
-				Properties: v20240812preview.OpenShiftVersionProperties{
-					Version: availableVersion,
+			wantResponse: v20250725.OpenShiftVersion{
+				OpenShiftVersion: generated.OpenShiftVersion{
+					Properties: &generated.OpenShiftVersionProperties{
+						Version: pointerutils.ToPtr(availableVersion),
+					},
+					Name: pointerutils.ToPtr(availableVersion),
+					ID:   pointerutils.ToPtr("mockID"),
+					Type: pointerutils.ToPtr(api.OpenShiftVersionsType),
 				},
-				Name: availableVersion,
-				ID:   "mockID",
-				Type: api.OpenShiftVersionsType,
 			},
 		},
 		{
@@ -63,10 +67,10 @@ func TestGetInstallVersions(t *testing.T) {
 		},
 		{
 			name:           "openshift version not available",
-			apiVersion:     "2024-08-12-preview",
+			apiVersion:     "2025-07-25",
 			version:        "4.13.5",
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: ResourceNotFound: : The Resource openShiftVersion with version '4.13.5' was not found in the namespace 'microsoft.redhatopenshift' for api version '2024-08-12-preview'.",
+			wantError:      "400: ResourceNotFound: : The Resource openShiftVersion with version '4.13.5' was not found in the namespace 'microsoft.redhatopenshift' for api version '2025-07-25'.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -98,7 +102,7 @@ func TestGetInstallVersions(t *testing.T) {
 
 			// unmarshal and marshal the response body to match string content
 			if b != nil && resp.StatusCode == http.StatusOK {
-				var r v20240812preview.OpenShiftVersion
+				var r v20250725.OpenShiftVersion
 				if err = json.Unmarshal(b, &r); err != nil {
 					t.Error(err)
 				}

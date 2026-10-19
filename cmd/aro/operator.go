@@ -206,7 +206,7 @@ func operator(log *logrus.Entry) error {
 		}
 		if err = (machinehealthcheck.NewReconciler(
 			log.WithField("controller", machinehealthcheck.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
 		}
 		if err = (networkpolicy.NewReconciler(

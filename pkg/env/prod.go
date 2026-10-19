@@ -497,8 +497,8 @@ func (p *prod) MsiDataplaneClientOptions(correlationData *api.CorrelationData) (
 func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
 	return azureclient.PolicyFunc(func(req *policy.Request) (*http.Response, error) {
 		log := log.WithFields(logrus.Fields{
-			"method": req.Raw().Method,
-			"url":    req.Raw().URL,
+			"method": utillog.Sanitize(req.Raw().Method),
+			"url":    utillog.Sanitize(req.Raw().URL.String()),
 		})
 		if req.Raw().Body != nil {
 			body, err := io.ReadAll(req.Raw().Body)
@@ -508,7 +508,7 @@ func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
 			if err := req.Raw().Body.Close(); err != nil {
 				log.WithError(err).Error("error closing request body")
 			}
-			log = log.WithField("body", string(body))
+			log = log.WithField("body", utillog.Sanitize(string(body)))
 			req.Raw().Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the delegate can use it
 		}
 		log.Info("Sending request.")
@@ -544,7 +544,7 @@ func ClientDebugLoggerMiddleware(log *logrus.Entry) policy.Policy {
 				// error codes don't have anything in them that we need to censor
 				responseBody = string(body)
 			}
-			log = log.WithField("body", responseBody)
+			log = log.WithField("body", utillog.Sanitize(responseBody))
 			resp.Body = io.NopCloser(bytes.NewBuffer(body)) // reset body so the upstream round-trippers can use it
 		}
 		log.Info("Received response.")

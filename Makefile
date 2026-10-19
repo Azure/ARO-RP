@@ -24,13 +24,17 @@ endif
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-MARINER_VERSION = 20260102
-FLUENTBIT_VERSION = 4.2.2
-FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
+AZURELINUX_VERSION = 3.0.20260519
+FLUENTBIT_VERSION = 5.0.0
+FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(AZURELINUX_VERSION)
 GATEKEEPER_VERSION = v3.19.2
 HOLMESGPT_VERSION ?= 0.36.0
 HOLMESGPT_REF ?= $(HOLMESGPT_VERSION)
 HOLMESGPT_BASE_REGISTRY ?= registry.access.redhat.com
+ENVTEST_KUBERNETES_VERSION=1.33.0 # 1.33, corresponds with OCP 4.20
+
+# Set this to the latest/current API version. TypeSpec only generates based on the latest API version.
+TYPESPEC_API_VERSION = v20250725
 
 include .bingo/Variables.mk
 
@@ -123,8 +127,8 @@ client: generate generate-swagger-typespec client-generate lint-go-fix lint-go
 
 .PHONY: client-generate
 client-generate:
-	hack/api/generate-from-typespec.sh go
-	hack/api/generate-from-typespec.sh python
+	hack/api/generate-from-typespec.sh go-testsdk $(TYPESPEC_API_VERSION)
+	hack/api/generate-from-typespec.sh python-testsdk $(TYPESPEC_API_VERSION)
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -154,12 +158,16 @@ generate-swagger-legacy:
 
 .PHONY: generate-swagger-typespec
 generate-swagger-typespec:
-	hack/api/generate-from-typespec.sh swagger
+	hack/api/generate-from-typespec.sh swagger $(TYPESPEC_API_VERSION)
 	$(MAKE) swagger-checksums
+
+.PHONY: generate-api-models
+generate-api-models:
+	hack/api/generate-from-typespec.sh go-api-models $(TYPESPEC_API_VERSION)
 
 .PHONY: generate-api-examples
 generate-api-examples:
-	hack/api/generate-from-typespec.sh examples
+	hack/api/generate-from-typespec.sh examples $(TYPESPEC_API_VERSION)
 	$(MAKE) swagger-checksums
 
 .PHONY: swagger-checksums
@@ -218,7 +226,7 @@ image-telemetryexporter:
 
 .PHONY: image-fluentbit
 image-fluentbit:
-	docker build --platform=$(PLATFORM) --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=$(PLATFORM) --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg AZURELINUX_VERSION=$(AZURELINUX_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 .PHONY: image-proxy
 image-proxy:
@@ -375,6 +383,7 @@ validate-fips: $(BINGO)
 
 .PHONY: unit-test-go
 unit-test-go: $(GOTESTSUM)
+	cd pkg/api/ && $(GOTESTSUM) --format pkgname ./...
 	$(GOTESTSUM) --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
 .PHONY: unit-test-go-coverpkg
@@ -403,6 +412,10 @@ validate-lint-go-fix: lint-go-fix
 		exit 1; \
 	fi
 
+.PHONY: setup-envtest
+setup-envtest: $(SETUP_ENVTEST)
+	$(SETUP_ENVTEST) use $(ENVTEST_KUBERNETES_VERSION)
+
 .PHONY: validate-gh-actions
 validate-gh-actions: $(PINACT) ## Validate GitHub Actions are pinned to SHA
 	@echo "Checking that all GitHub Actions are pinned to SHA..."
@@ -423,8 +436,9 @@ lint-admin-portal:
 .PHONY: test-python
 test-python: pyenv az
 	. pyenv/bin/activate && \
-		azdev linter && \
-		azdev style && \
+		azdev test aro && \
+		azdev linter aro && \
+		azdev style aro && \
 		hack/unit-test-python.sh
 
 .PHONY: test-python-podman
@@ -588,6 +602,7 @@ ci-rp:
 		--build-arg REGISTRY=$(REGISTRY) \
 		--build-arg BUILDER_REGISTRY=$(BUILDER_REGISTRY) \
 		--build-arg ARO_VERSION=$(VERSION) \
+		--build-arg ENVTEST_KUBERNETES_VERSION=$(ENVTEST_KUBERNETES_VERSION) \
 		--no-cache=$(NO_CACHE) \
 		-t $(LOCAL_ARO_RP_IMAGE):$(VERSION)
 
@@ -595,6 +610,8 @@ ci-rp:
 	docker create --name extract_cover_out ${LOCAL_ARO_RP_IMAGE}:${VERSION}; \
 	docker cp extract_cover_out:/app/report.xml ./report.xml; \
 	docker cp extract_cover_out:/app/coverage.xml ./coverage.xml; \
+	docker cp extract_cover_out:/app/reportapi.xml ./reportapi.xml; \
+	docker cp extract_cover_out:/app/coverageapi.xml ./coverageapi.xml; \
 	docker rm extract_cover_out;
 
 .PHONY: aro-e2e

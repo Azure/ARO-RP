@@ -52,6 +52,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	utilarmredhatopenshift "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armredhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armresources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -84,8 +85,9 @@ const (
 var staticResources embed.FS
 
 var (
-	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
-	DefaultEventuallyTimeout  = 5 * time.Minute
+	disallowedInFilenameRegex         = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+	DefaultEventuallyTimeout          = 5 * time.Minute
+	PropagationDelayEventuallyTimeout = 25 * time.Second
 )
 
 type clientSet struct {
@@ -106,6 +108,7 @@ type clientSet struct {
 	UserAssignedIdentities armmsi.UserAssignedIdentitiesClient
 	RoleAssignments        authorization.RoleAssignmentsClient
 	RoleDefinitions        authorization.RoleDefinitionsClient
+	Tags                   armresources.TagsClient
 
 	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
@@ -537,6 +540,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, fmt.Errorf("error creating operations client: %w", err)
 	}
 
+	tagsClient, err := armresources.NewTagsClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientSet{
 		Operations:                       operationsClient,
 		OpenshiftClusters:                clusters,
@@ -555,6 +563,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		UserAssignedIdentities: *msiClient,
 		RoleAssignments:        authorization.NewRoleAssignmentsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		RoleDefinitions:        authorization.NewRoleDefinitionsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Tags:                   tagsClient,
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,

@@ -147,11 +147,10 @@ func TestAdminEtcdRecovery(t *testing.T) {
 
 			k := mock_adminactions.NewMockKubeActions(ti.controller)
 			if tt.mocks != nil {
-				tt.mocks(ctx, ti, k, ti.log, ti.env, tt.doc, newEtcdPods(t, tt.doc, false, false, false), &operatorv1fake.FakeEtcds{
-					Fake: &operatorv1fake.FakeOperatorV1{
-						Fake: &ktesting.Fake{},
-					},
-				})
+				fake := &operatorv1fake.FakeOperatorV1{
+					Fake: &ktesting.Fake{},
+				}
+				tt.mocks(ctx, ti, k, ti.log, ti.env, tt.doc, newEtcdPods(t, tt.doc, false, false, false), fake.Etcds())
 			}
 
 			kubeActionsFactory := func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {

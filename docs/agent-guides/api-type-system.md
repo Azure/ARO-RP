@@ -59,7 +59,7 @@ converter := f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConver
 
 ## Files Per API Version
 
-Each `pkg/api/v*` directory contains:
+For `v20240812preview` and earlier versions, `pkg/api/v*` directory contains:
 
 | File pattern | Purpose |
 |-------------|---------|
@@ -72,11 +72,17 @@ Each `pkg/api/v*` directory contains:
 
 Plus parallel files for: `openshiftclustercredentials`, `openshiftclusteradminkubeconfig`, `openshiftversion`, `platformworkloadidentityroleset`.
 
+For `v20250725` and later versions, there is one additional file:
+
+| File pattern | Purpose |
+|-------------|---------|
+| `openshiftcluster_updatepolicy.go` | Stores an `immutable.Policy` used in static validation |
+
 ## Swagger Generation
 
 ### For v20250725 and later API versions
 
-The source of truth is now the Typespec contained in `api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp` rather than the Go types defined in `pkg/api/$VERSION`. Currently the Go types for v20250725 are maintained separately from the TypeSpec, but we aim to generate the Go types from the TypeSpec soon.
+The source of truth is now the Typespec contained in `api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp`. The Go API models in `pkg/api/v*` are generated from the TypeSpec and stored in `pkg/api/v*/generated`.
 
 ```
 api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/*.tsp -> hack/api/generate-from-typespec.sh swagger
@@ -87,6 +93,8 @@ api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters
 
 ### For v20240812preview and preceding API versions
 
+The Swagger API spec is generated from the handwritten Go model types.
+
 ```
 pkg/api/v*/openshiftcluster.go  →  hack/swagger-legacy/swagger.go  →  swagger/{stable|preview}/{version}/redhatopenshift.json
 ```
@@ -96,12 +104,11 @@ pkg/api/v*/openshiftcluster.go  →  hack/swagger-legacy/swagger.go  →  swagge
 
 ## Client Generation
 
-```
-api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp  →  TypeSpec (invoked via npm scripts in api/package.json)  →  pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift
+`api/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/OpenShiftClusters/client.tsp`  →  TypeSpec (invoked via npm scripts in api/package.json)  →  `pkg/client/sdk/resourcemanager/redhatopenshift/armredhatopenshift`
 
 - Make target: `make client-generate`
 - Generates both Go SDK and Python SDK clients
-- Generates based on the latest API version in the TypeSpec (currently `2025-07-25`)
+- Generates based on the latest API version in the TypeSpec
 
 ## Adding New VM Sizes Checklist
 

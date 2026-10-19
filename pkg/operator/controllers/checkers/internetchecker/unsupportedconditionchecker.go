@@ -12,6 +12,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	consolev1 "github.com/openshift/api/console/v1"
@@ -104,7 +105,7 @@ func (ucc *UnsupportedConditionChecker) setClusterOperatorStatus(ctx context.Con
 		Reason:             reasonAsExpected,
 	}
 
-	v1helpers.SetStatusCondition(&co.Status.Conditions, condition)
+	v1helpers.SetStatusCondition(&co.Status.Conditions, condition, clock.RealClock{})
 
 	_, err = ucc.configcli.ConfigV1().ClusterOperators().UpdateStatus(ctx, co, metav1.UpdateOptions{})
 	if err != nil {

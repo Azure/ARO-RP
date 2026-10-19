@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"go.uber.org/mock/gomock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +26,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func clusterVersionForTest(version string) *configv1.ClusterVersion {
@@ -212,14 +213,10 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -240,7 +237,7 @@ func TestGuardRailsReconcilerGatekeeper(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				deployer:          dep,
 				dh:                dh,
 				client:            clientBuilder.Build(),
@@ -356,14 +353,10 @@ func TestReconcileVAP(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -382,7 +375,7 @@ func TestReconcileVAP(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:           logrus.NewEntry(logrus.StandardLogger()),
+				log:           log,
 				deployer:      dep,
 				client:        testclienthelper.NewAROFakeClientBuilder(cluster, cv).Build(),
 				dh:            dh,
@@ -447,7 +440,6 @@ func TestIsMandatoryVAPResource(t *testing.T) {
 
 func TestEnsureMandatoryVAP(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	ensured := map[string]*unstructured.Unstructured{}
 	dh := mock_dynamichelper.NewMockInterface(controller)
@@ -492,14 +484,10 @@ func TestEnsureMandatoryVAP(t *testing.T) {
 }
 
 func TestDeployVAPUsesLatestClusterState(t *testing.T) {
+	_, log := testlog.LogForTesting(t)
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	cluster := &arov1alpha1.Cluster{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Cluster",
-			APIVersion: "aro.openshift.io/v1alpha1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
 		},
@@ -540,7 +528,7 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 	dh.EXPECT().IsConstraintTemplateReady(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 
 	r := &Reconciler{
-		log:    logrus.NewEntry(logrus.StandardLogger()),
+		log:    log,
 		client: testclienthelper.NewAROFakeClientBuilder(cluster).Build(),
 		dh:     dh,
 	}
@@ -595,8 +583,6 @@ func TestDeployVAPUsesLatestClusterState(t *testing.T) {
 }
 
 func TestResolveGuardrailsMethod(t *testing.T) {
-	r := &Reconciler{log: logrus.NewEntry(logrus.StandardLogger())}
-
 	tests := []struct {
 		method        string
 		lt417         bool
@@ -620,6 +606,9 @@ func TestResolveGuardrailsMethod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.method+"/"+map[bool]string{true: "lt417", false: "ge417"}[tt.lt417], func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
+			r := &Reconciler{log: log}
+
 			got := r.resolveGuardrailsMethod(tt.method, tt.lt417)
 			if got != tt.useGatekeeper {
 				t.Errorf("resolveGuardrailsMethod(%q, lt417=%v) = %v, want %v",
@@ -701,14 +690,10 @@ func TestReconcileMethodSelection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, log := testlog.LogForTesting(t)
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Cluster",
-					APIVersion: "aro.openshift.io/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: tt.flags,
@@ -726,7 +711,7 @@ func TestReconcileMethodSelection(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				deployer:          dep,
 				dh:                dh,
 				client:            testclienthelper.NewAROFakeClientBuilder(cluster, cv).Build(),

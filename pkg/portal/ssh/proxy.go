@@ -27,7 +27,27 @@ import (
 const (
 	keepAliveInterval = time.Second * 30
 	keepAliveRequest  = "keep-alive"
+	bootstrapSSHPort  = 2199
+	masterSSHPortMax  = 2202
 )
+
+func resolveSSHDestination(ssh *api.SSH) (string, int, error) {
+	if ssh.VMName != "" || ssh.Port != 0 {
+		if ssh.VMName == "" || ssh.Port == 0 {
+			return "", 0, fmt.Errorf("VM name and port are both required for an explicit SSH destination")
+		}
+		if ssh.Port < bootstrapSSHPort || ssh.Port > masterSSHPortMax {
+			return "", 0, fmt.Errorf("invalid SSH port %d", ssh.Port)
+		}
+		return ssh.VMName, ssh.Port, nil
+	}
+
+	if ssh.Master < 0 || ssh.Master > 2 {
+		return "", 0, fmt.Errorf("invalid master index %d", ssh.Master)
+	}
+
+	return fmt.Sprintf("master-%d", ssh.Master), 2200 + ssh.Master, nil
+}
 
 // This file handles smart proxying of SSH connections between SRE->portal and
 // portal->cluster.  We don't want to give the SRE the cluster SSH key, thus
@@ -88,6 +108,8 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 
 	var portalDoc *api.PortalDocument
 	var connmetadata cryptossh.ConnMetadata
+	var targetName string
+	var targetPort int
 
 	// PasswordCallback is called via NewServerConn to validate the one-time
 	// password provided.
@@ -104,6 +126,11 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 				connmetadata.User() != strings.SplitN(portalDoc.Portal.Username, "@", 2)[0] ||
 				portalDoc.Portal.SSH.Authenticated {
 				return fmt.Errorf("invalid username")
+			}
+
+			targetName, targetPort, err = resolveSSHDestination(portalDoc.Portal.SSH)
+			if err != nil {
+				return err
 			}
 
 			portalDoc.Portal.SSH.Authenticated = true
@@ -133,7 +160,7 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 	// Log the incoming connection attempt.
 	accessLog := utillog.EnrichWithPath(s.baseAccessLog, portalDoc.Portal.ID)
 	accessLog = accessLog.WithFields(logrus.Fields{
-		"hostname":    fmt.Sprintf("master-%d", portalDoc.Portal.SSH.Master),
+		"hostname":    targetName,
 		"remote_addr": clientConn.RemoteAddr().String(),
 		"username":    portalDoc.Portal.Username,
 	})
@@ -145,7 +172,7 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 		return err
 	}
 
-	address := fmt.Sprintf("%s:%d", openShiftDoc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP, 2200+portalDoc.Portal.SSH.Master)
+	address := fmt.Sprintf("%s:%d", openShiftDoc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP, targetPort)
 
 	c2, err := s.dialer.DialContext(ctx, "tcp", address)
 	if err != nil {

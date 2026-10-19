@@ -101,7 +101,7 @@ func updateCorrelationDataAndEnrichLogWithRequest(correlationData *api.Correlati
 
 	l = utillog.EnrichWithCorrelationData(l, correlationData)
 	l = l.WithFields(logrus.Fields{
-		"request_URL": req.URL.Host,
+		"request_URL": utillog.Sanitize(req.URL.Host),
 		"LOGKIND":     outboundRequests,
 	})
 
@@ -146,8 +146,8 @@ func logOutboundFailureIfNeeded(correlationData *api.CorrelationData, req *http.
 
 	l := utillog.EnrichWithCorrelationData(utillog.GetLogger(), correlationData)
 	l = l.WithFields(logrus.Fields{
-		"request_host":   req.URL.Host,
-		"request_method": req.Method,
+		"request_host":   utillog.Sanitize(req.URL.Host),
+		"request_method": utillog.Sanitize(req.Method),
 		responseCode:     statusCode,
 	})
 

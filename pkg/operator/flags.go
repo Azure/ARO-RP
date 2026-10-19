@@ -19,6 +19,7 @@ const (
 	GenevaLoggingOTelMasterProfile      = "aro.genevalogging.otel.master.profile"
 	GenevaLoggingOTelWorkerProfile      = "aro.genevalogging.otel.worker.profile"
 	GenevaLoggingOTelEmitSourceFields   = "aro.genevalogging.otel.emitsourcefields"
+	GenevaLoggingOTelComponentHealth    = "aro.genevalogging.otel.componenthealth"
 	GenevaLoggingOTelProfileMaxLogs     = "max-logs"
 	GenevaLoggingOTelProfileReducedLogs = "reduced-logs"
 	GenevaLoggingOTelProfileMinimalLogs = "minimal-logs"
@@ -92,6 +93,7 @@ func DefaultOperatorFlags() map[string]string {
 		RestartDnsmasqEnabled:              FlagFalse,
 		GenevaLoggingEnabled:               FlagTrue,
 		GenevaLoggingOTelProfile:           GenevaLoggingOTelProfileMinimalLogs,
+		GenevaLoggingOTelComponentHealth:   FlagFalse,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,
 		MachineEnabled:                     FlagTrue,

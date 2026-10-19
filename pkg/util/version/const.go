@@ -49,13 +49,13 @@ var DefaultInstallStream = Stream{
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
 	// https://github.com/microsoft/azurelinux/releases
-	return acrDomain + "/fluentbit:4.2.2-cm20260102@sha256:1fff6f37417000c443cfd0812b5a5ac27af2480215b848335dfb48f68b8e1c7f"
+	return acrDomain + "/fluentbit:5.0.0-cm3.0.20260519@sha256:70f23886afaedfef5fd9b3488fd82ef43b6cb7534d19d544cb6f0eecfd25659a"
 }
 
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/geneva/distroless/mdm:2.202604071548.0-20260407-1@sha256:390a13ab26a4c90baa9d1a47ef2b502b7ec635840587d89d05120b6952fe680b"
+	return acrDomain + "/geneva/distroless/mdm:2.202610022014.0-20261005-1@sha256:cad8c6b5faf6c11f7b2c3096e1bc229e28cb6b1b0b2dbc5945302f806b1ce3f9"
 }
 
 // MdsdImage contains the location of the MDSD container image
@@ -76,7 +76,7 @@ func GateKeeperImage(acrDomain string) string {
 
 // MiseImage contains the location of the Mise container image
 func MiseImage(acrDomain string) string {
-	return acrDomain + "/msftonly/mise:1.42.1-azurelinux3.0-distroless"
+	return acrDomain + "/msftonly/mise:1.45.1-azurelinux3.0-distroless"
 }
 
 // OtelImage contains the location of the OpenTelemetry container image for MISE

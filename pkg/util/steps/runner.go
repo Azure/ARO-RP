@@ -67,32 +67,47 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 		startTime := time.Now()
 		err := step.run(ctx, log)
 		if err != nil {
-			if managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, managedRGName) {
-				err = api.NewCloudError(
-					http.StatusInternalServerError,
-					api.CloudErrorCodeInternalServerError,
-					"encountered error",
-					err.Error())
-			} else if azureerrors.IsUnauthorizedClientError(err) ||
-				azureerrors.IsInvalidSecretError(err) ||
-				azureerrors.HasAuthorizationFailedError(err) {
-				err = api.NewCloudError(
-					http.StatusBadRequest,
-					api.CloudErrorCodeInvalidServicePrincipalCredentials,
-					"encountered error",
-					err.Error())
-			} else if oDataError := (&msgraph_errors.ODataError{}); errors.As(err, &oDataError) {
-				if *oDataError.GetErrorEscaped().GetCode() == "Authorization_IdentityNotFound" {
+			// Preserve an existing (or wrapped) CloudError as-is; only classify raw, non-CloudError errors below.
+			var cloudErr *api.CloudError
+			if !errors.As(err, &cloudErr) {
+				if managedRGName != "" && azureerrors.IsManagedResourceGroupError(err, managedRGName) {
+					err = api.NewCloudError(
+						http.StatusInternalServerError,
+						api.CloudErrorCodeInternalServerError,
+						"encountered error",
+						err.Error())
+				} else if azureerrors.IsFederatedIdentityCredentialWriteForbiddenError(err) {
+					// Dynamic validation should theoretically catch this before we get here. In practice we found
+					// it didn't. Federated identity credential write calls are currently the only post-validation
+					// API calls that use the cluster MSI - if there are ever more, this branch needs to be extended
+					// to handle them. If we were to fail to extend this check, the customer would end up seeing an
+					// "InvalidServicePrincipalCredentials" error instead (see next branch below), which would be incorrect.
+					err = api.NewCloudError(
+						http.StatusBadRequest,
+						api.CloudErrorCodeInvalidClusterMSIPermissions,
+						"encountered error",
+						err.Error())
+				} else if azureerrors.IsUnauthorizedClientError(err) ||
+					azureerrors.IsInvalidSecretError(err) ||
+					azureerrors.HasAuthorizationFailedError(err) {
 					err = api.NewCloudError(
 						http.StatusBadRequest,
 						api.CloudErrorCodeInvalidServicePrincipalCredentials,
 						"encountered error",
-						fmt.Sprintf(
-							"%s: %s",
-							*oDataError.GetErrorEscaped().GetCode(),
-							*oDataError.GetErrorEscaped().GetMessage()))
-				} else {
-					spew.Fdump(log.Writer(), oDataError.GetErrorEscaped())
+						err.Error())
+				} else if oDataError := (&msgraph_errors.ODataError{}); errors.As(err, &oDataError) {
+					if *oDataError.GetErrorEscaped().GetCode() == "Authorization_IdentityNotFound" {
+						err = api.NewCloudError(
+							http.StatusBadRequest,
+							api.CloudErrorCodeInvalidServicePrincipalCredentials,
+							"encountered error",
+							fmt.Sprintf(
+								"%s: %s",
+								*oDataError.GetErrorEscaped().GetCode(),
+								*oDataError.GetErrorEscaped().GetMessage()))
+					} else {
+						spew.Fdump(log.Writer(), oDataError.GetErrorEscaped())
+					}
 				}
 			}
 			log.Errorf("step %s encountered error: %s", step, err.Error())
@@ -103,6 +118,29 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 			currentTime := now()
 			stepTimeRun[step.metricsName()] = int64(currentTime.Sub(startTime).Seconds())
 		}
+	}
+	return stepTimeRun, nil
+}
+
+// RunWithWrappedError executes the provided steps in order until one fails or
+// all steps are completed. Unlike Run, errors from failed steps are wrapped
+// with the step name for additional context, and no Azure-specific error
+// classification is performed. Time cost for each step run will be recorded
+// for metrics usage.
+func RunWithWrappedError(ctx context.Context, log *logrus.Entry, steps []Step) (map[string]int64, error) {
+	stepTimeRun := make(map[string]int64)
+	for _, step := range steps {
+		log.Infof("running step %s", step)
+
+		startTime := time.Now()
+		err := step.run(ctx, log)
+		if err != nil {
+			log.Errorf("step %s encountered error: %s", step, err.Error())
+			return nil, fmt.Errorf("step %s encountered error: %w", step, err)
+		}
+
+		currentTime := time.Now()
+		stepTimeRun[step.metricsName()] = int64(currentTime.Sub(startTime).Seconds())
 	}
 	return stepTimeRun, nil
 }

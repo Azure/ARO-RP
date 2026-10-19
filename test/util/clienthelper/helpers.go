@@ -13,9 +13,11 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -24,34 +26,19 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme" // ensure the init() which registers all of the OpenShift objects runs
 )
-
-// TallyCounts will update tally with the Kubernetes Kinds that pass through
-// this hook.
-func TallyCounts(tally map[string]int) hookFunc {
-	return func(obj client.Object) error {
-		m := meta.NewAccessor()
-		kind, err := m.Kind(obj)
-		if err != nil {
-			return err
-		}
-
-		tally[kind] += 1
-		return nil
-	}
-}
 
 // TallyCountsAndKey will update tally with the Kubernetes Kind, object
 // namespace, and object name (separated by '/') that pass through this hook.
 func TallyCountsAndKey(tally map[string]int) hookFunc {
 	return func(obj client.Object) error {
-		m := meta.NewAccessor()
-		kind, err := m.Kind(obj)
+		vers, _, err := scheme.Scheme.ObjectKinds(obj)
 		if err != nil {
-			return err
+			return fmt.Errorf("when looking up objectkinds: %w", err)
 		}
 
-		key := kind + "/" + types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}.String()
+		key := vers[0].Kind + "/" + types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}.String()
 		tally[key] += 1
 		return nil
 	}
@@ -73,7 +60,7 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 		actual = map[string]int{}
 	}
 
-	diff := cmp.Diff(actual, expected, cmpopts.EquateEmpty())
+	diff := cmp.Diff(expected, actual, cmpopts.EquateEmpty())
 	if diff == "" {
 		return nil, nil
 	}
@@ -97,9 +84,16 @@ func copyForComparison(inObj any) (client.Object, error) {
 		return nil, fmt.Errorf("cannot convert %v to runtime.Object", runtimeObj)
 	}
 
-	// Don't test for the resourceversion
+	// see controller-runtime/pkg/envtest/komega/equalobject.go
+	ourObj.SetUID(types.UID(""))
+	ourObj.SetGeneration(0)
+	ourObj.SetCreationTimestamp(metav1.Time{})
+	ourObj.SetManagedFields(nil)
+	ourObj.SetDeletionGracePeriodSeconds(nil)
+	ourObj.SetDeletionTimestamp(nil)
+	ourObj.SetSelfLink("")
+	ourObj.SetGenerateName("")
 	ourObj.SetResourceVersion("")
-	// Don't test for the typemeta
 	ourObj.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
 
 	return ourObj, nil
