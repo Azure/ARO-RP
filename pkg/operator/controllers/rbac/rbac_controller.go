@@ -57,7 +57,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 	var resources []kruntime.Object
-	err = fs.WalkDir(staticResources, "staticresources", func(path string, d fs.DirEntry, err error) error {
+	fserr := fs.WalkDir(staticResources, "staticresources", func(path string, d fs.DirEntry, _ error) error {
+		// ignore the error being passed in as it is only for directory read
+		// failures (which as this is a static fs, should not happen anyway)
+
+		// We only care about the files
 		if d.IsDir() {
 			return nil
 		}
@@ -75,9 +79,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		resources = append(resources, resource)
 		return nil
 	})
-	if err != nil {
-		r.log.Error(err)
-		return reconcile.Result{}, err
+	if fserr != nil {
+		r.log.Error(fserr)
+		return reconcile.Result{}, fserr
 	}
 
 	err = dynamichelper.SetControllerReferences(resources, instance)
