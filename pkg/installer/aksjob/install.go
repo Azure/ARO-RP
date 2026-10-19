@@ -5,6 +5,7 @@ package aksjob
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -65,16 +66,38 @@ func (m *manager) Install(ctx context.Context, installerInputs *inputs.Installer
 	}
 
 	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil, "")
-	if err == nil {
-		_, err = steps.Run(ctx, m.log, 10*time.Second, []steps.Step{
-			steps.Condition(func(ctx context.Context) (bool, error) {
-				return m.jobCompleted(ctx, installerInputs)
-			}, installerInputs.Timeout, true),
-		}, nil, "")
+	if err != nil {
+		if logErr := m.collectLogs(ctx, installerInputs); logErr != nil {
+			m.log.WithError(logErr).Warn("failed to collect installer logs")
+		}
+		return err
 	}
 
-	if logErr := m.collectLogs(ctx, installerInputs); logErr != nil {
-		m.log.WithError(logErr).Warn("failed to collect installer logs")
+	// The Job deadline can remove the Pod before the completion poll returns.
+	// Forward logs while it runs instead of depending on a final snapshot.
+	logCtx, cancelLogs := context.WithCancel(ctx)
+	logResult := make(chan installerLogResult, 1)
+	go func() {
+		forwarded, streamErr := m.streamLogs(logCtx, installerInputs)
+		logResult <- installerLogResult{forwarded: forwarded, err: streamErr}
+	}()
+
+	_, err = steps.Run(ctx, m.log, 10*time.Second, []steps.Step{
+		steps.Condition(func(ctx context.Context) (bool, error) {
+			return m.jobCompleted(ctx, installerInputs)
+		}, installerInputs.Timeout, true),
+	}, nil, "")
+
+	cancelLogs()
+	result := <-logResult
+	streamFailed := result.err != nil && !stderrors.Is(result.err, context.Canceled)
+	if streamFailed {
+		m.log.WithError(result.err).Warn("failed to stream installer logs; logs may be incomplete")
+	}
+	if !result.forwarded || streamFailed {
+		if logErr := m.collectLogs(ctx, installerInputs); logErr != nil {
+			m.log.WithError(logErr).Warn("failed to collect installer logs")
+		}
 	}
 
 	return err
@@ -543,7 +566,7 @@ func truncateInstallerLogs(logs string) string {
 		return logs
 	}
 
-	const marker = "\n... installer logs truncated ...\n"
+	const marker = installerLogTruncationMarker
 	remaining := maxInstallerLogBytes - len(marker)
 	first := remaining / 2
 	last := remaining - first
